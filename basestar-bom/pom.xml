@@ -14,7 +14,8 @@
 
     <properties>
         <awssdk.version>2.10.86</awssdk.version>
-        <jackson.version>2.9.8</jackson.version>
+        <jackson.version>2.9.10</jackson.version>
+        <jackson-databind.version>2.9.10.3</jackson-databind.version>
         <bson4jackson.version>2.9.2</bson4jackson.version>
         <guava.version>28.1-jre</guava.version>
         <slf4j.version>1.7.29</slf4j.version>
@@ -171,7 +172,7 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
-                <version>${jackson.version}</version>
+                <version>${jackson-databind.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>

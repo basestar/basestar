@@ -50,12 +50,12 @@
 
     <distributionManagement>
         <snapshotRepository>
-            <id>s3-snapshot</id>
-            <url>s3://basestar-repo/snapshot</url>
+            <id>github</id>
+            <url>https://maven.pkg.github.com/basestar/basestar</url>
         </snapshotRepository>
         <repository>
-            <id>s3-release</id>
-            <url>s3://basestar-repo/release</url>
+            <id>github</id>
+            <url>https://maven.pkg.github.com/basestar/basestar</url>
         </repository>
     </distributionManagement>
 
