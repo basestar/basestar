@@ -1,0 +1,111 @@
+package io.basestar.expression.function;
+
+import io.basestar.expression.Context;
+import io.basestar.expression.Expression;
+import io.basestar.expression.ExpressionVisitor;
+import io.basestar.expression.PathTransform;
+import io.basestar.expression.constant.Constant;
+import io.basestar.expression.iterate.ForAll;
+import io.basestar.util.Path;
+import lombok.Data;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+/**
+ * With
+ *
+ * Call the provided expression with additional bound variables
+ */
+
+@Data
+public class With implements Expression {
+
+    private static final String TOKEN = "with";
+
+    public static final int PRECEDENCE = ForAll.PRECEDENCE + 1;
+
+    private final Map<String, Expression> with;
+
+    private final Expression yield;
+
+    @Override
+    public Expression bind(final Context context, final PathTransform root) {
+
+        boolean constant = true;
+        boolean changed = false;
+        final Map<String, Expression> with = new HashMap<>();
+        for(final Map.Entry<String, Expression> entry : this.with.entrySet()) {
+            final Expression before = entry.getValue();
+            final Expression after = before.bind(context, root);
+            with.put(entry.getKey(), after);
+            constant = constant && after instanceof Constant;
+            changed = changed || after != before;
+        }
+        if(constant) {
+            final Expression _return = this.yield.bind(context, PathTransform.closure(with.keySet(), root));
+            if(_return instanceof Constant) {
+                return _return;
+            } else {
+                return new With(with, _return);
+            }
+        } else if(changed) {
+            return new With(with, yield);
+        } else {
+            return this;
+        }
+    }
+
+    @Override
+    public Object evaluate(final Context context) {
+
+        final Map<String, Object> with = new HashMap<>();
+        for(final Map.Entry<String, Expression> entry : this.with.entrySet()) {
+            with.put(entry.getKey(), entry.getValue().evaluate(context));
+        }
+        return yield.evaluate(context.with(with));
+    }
+
+    @Override
+    public Set<Path> paths() {
+
+        return Stream.concat(Stream.of(yield), with.values().stream())
+                .flatMap(v -> v.paths().stream())
+                .collect(Collectors.toSet());
+    }
+
+//    @Override
+//    public Query query() {
+//
+//        return Query.and();
+//    }
+
+    @Override
+    public String token() {
+
+        return TOKEN;
+    }
+
+    @Override
+    public int precedence() {
+
+        return PRECEDENCE;
+    }
+
+    @Override
+    public <T> T visit(final ExpressionVisitor<T> visitor) {
+
+        return visitor.visitWith(this);
+    }
+
+    @Override
+    public String toString() {
+
+        return TOKEN + "(" + with.entrySet().stream()
+                .map(entry -> entry.getKey() + " = " + entry.getValue())
+                .collect(Collectors.joining(", ")) + ") " + yield;
+    }
+}

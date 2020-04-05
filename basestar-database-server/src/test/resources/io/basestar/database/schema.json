@@ -1,0 +1,162 @@
+{
+  "Simple": {
+    "properties": {
+      "boolean": {
+        "type": "boolean"
+      },
+      "number": {
+        "type": "number"
+      },
+      "string": {
+        "type": "string"
+      },
+      "array": {
+        "type": {
+          "array": {
+            "type": "string"
+          }
+        }
+      },
+      "map": {
+        "type": {
+          "map": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "Indexed": {
+    "properties": {
+      "value": {
+        "type": "string"
+      }
+    },
+    "indexes": {
+      "index": {
+        "partition": [
+          "value"
+        ]
+      }
+    }
+  },
+  "RefSource": {
+    "properties": {
+      "target": {
+        "type": "RefTarget"
+      }
+    },
+    "indexes": {
+      "index": {
+        "partition": [
+          "target.id"
+        ]
+      }
+    }
+  },
+  "RefTarget": {
+    "properties": {
+      "value": {
+        "type": "string"
+      },
+      "target": {
+        "type": "RefTarget"
+      }
+    },
+    "links": {
+      "sources": {
+        "schema": "RefSource",
+        "query": "target.id == this.id"
+      }
+    }
+  },
+  "SimplePerms": {
+    "properties": {
+      "owner": {
+        "type": "User"
+      }
+    },
+    "permissions": {
+      "create": {
+        "expression": "caller.id == after.owner.id"
+      }
+    }
+  },
+  "User": {
+  },
+  "MultiIndexed": {
+    "@merge": "./blah",
+    "properties": {
+      "value": {
+        "type": {
+          "array": "string"
+        },
+        "required": true
+      }
+    },
+    "indexes": {
+      "index": {
+        "over": {
+          "v": "value"
+        },
+        "consistency": "ASYNC",
+        "partition": [
+          "v"
+        ]
+      }
+    }
+  },
+  "Animal": {
+    "properties": {
+      "name": {
+        "type": "string"
+      },
+      "class": {
+        "type": "string"
+      }
+    },
+    "indexes": {
+      "name": {
+        "partition": "name",
+        "unique": true,
+        "consistency": "ATOMIC"
+      },
+      "class": {
+        "partition": "class"
+      }
+    }
+  },
+  "Cat": {
+    "extend": "Animal",
+    "properties": {
+      "breed": {
+        "type": "string"
+      },
+      "class": {
+        "type": "string",
+        "expression": "'Mammal'"
+      }
+    }
+  },
+  "Dog": {
+    "extend": "Animal",
+    "properties": {
+      "breed": {
+        "type": "string"
+      },
+      "class": {
+        "type": "string",
+        "expression": "'Mammal'"
+      }
+    }
+  },
+  "Kennel": {
+    "properties": {
+      "residents": {
+        "type": {
+          "array": "Animal"
+        }
+      }
+    }
+  }
+}

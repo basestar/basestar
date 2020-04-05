@@ -1,0 +1,145 @@
+Team:
+
+  properties:
+    owner:
+      type:
+        ref: User
+      expression: this.owner ?? caller
+
+  links:
+    users:
+      schema: TeamUser
+      query: team.id == this.id
+#    projects:
+#      schema: TeamProject
+#      query: team.id == this.id
+    invites:
+      schema: TeamInvite
+      query: team.id == this.id
+
+  permissions:
+    read:
+      expression: this.owner.id == caller.id
+        || this.id in caller.invites.map(t -> t.team.id)
+        || this.id in caller.teams.map(t -> t.team.id)
+      expand:
+        - caller.invites
+        - caller.teams
+    update:
+      expression: (before.owner.id == caller.id && after.owner.id == before.owner.id)
+        || before.users.anyMatch(u -> u.id == caller.id && u.permissions.contains("UPDATE"))
+      expand:
+        - before.users
+    delete:
+      expression: before.owner.id == caller.id
+
+
+TeamPermission:
+
+  type: enum
+  values:
+    - UPDATE
+    - INVITE
+
+
+TeamUser:
+
+  properties:
+    team:
+      type:
+        ref: Team
+      immutable: true
+    user:
+      type:
+        ref: User
+      immutable: true
+    permissions:
+      type:
+        array: TeamPermission
+
+  indexes:
+    team:
+      partition: team.id
+      sort: user.id
+      unique: true
+      consistency: ATOMIC
+    user:
+      partition: user.id
+      sort: team.id
+      unique: true
+      consistency: ATOMIC
+
+  permissions:
+    read:
+      expression: this.id in caller.teams.map(t -> t.team.id)
+      expand:
+        - caller.teams
+    create:
+      expression: after.user.id == caller.id
+#        && after.team.invites.anyMatch(i -> i.user.id == after.user.id && i.team.id == after.team.id && i.permissions.containsAll(after.permissions))
+      expand:
+        - after.team.invites
+    update:
+      expression: before.team.owner.id == caller.id
+        || before.team.users.anyMatch(u -> u.user.id == caller.id && u.project.id && u.permissions.contains("UPDATE"))
+      expand:
+        - before.team.users
+    delete:
+      expression: before.team.owner.id == caller.id
+        || before.team.users.anyMatch(u -> u.user.id == caller.id && u.project.id && u.permissions.contains("UPDATE"))
+      expand:
+        - before.team.users
+
+
+TeamInvite:
+
+  properties:
+    team:
+      type:
+        ref: Team
+    user:
+      type:
+        ref: User
+    permissions:
+      type:
+        array: TeamPermission
+
+  indexes:
+    team:
+      partition: team.id
+      sort: user.id
+      unique: true
+      consistency: ATOMIC
+    user:
+      partition: user.id
+      sort: team.id
+      unique: true
+      consistency: ATOMIC
+
+#  links:
+#    member:
+#      schema: TeamMember
+#      query: team.id == this.team.id && user.id == this.user.id
+
+  permissions:
+    read:
+      expression: this.team.id in caller.teams.map(t -> t.id)
+        || this.team.id in caller.invites.map(t -> t.team.id)
+      expand:
+        - caller.teams
+        - caller.invites
+    create:
+      expression: after.team.owner.id == caller.id
+        || after.team.users.anyMatch(u -> u.id == caller.id && u.permissions.contains("UPDATE"))
+      expand:
+        - after.team.users
+    update:
+      expression: before.team.owner.id == caller.id
+        || before.team.users.anyMatch(u -> u.id == caller.id && u.permissions.contains("UPDATE"))
+      expand:
+        - before.team.users
+    delete:
+      expression: before.team.owner.id == caller.id
+        || before.team.users.anyMatch(u -> u.id == caller.id && u.permissions.contains("UPDATE"))
+      expand:
+        - before.team.users

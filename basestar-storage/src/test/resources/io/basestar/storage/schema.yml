@@ -1,0 +1,105 @@
+Address:
+  properties:
+    country:
+      type: string
+    state:
+      type: string
+    city:
+      type: string
+    zip:
+      type: string
+  indexes:
+    Country:
+      sparse: true
+      partition:
+        - country
+      sort:
+        - city
+        - zip
+    State:
+      sparse: true
+      partition:
+        - state
+      sort:
+        - city
+        - zip
+
+Simple:
+  properties:
+    boolean:
+      type: boolean
+    integer:
+      type: integer
+    number:
+      type: number
+    string:
+      type: string
+    binary:
+      type: binary
+    struct:
+      type: Point
+    object:
+      type: Simple
+    arrayBoolean:
+      type:
+        array: boolean
+    arrayInteger:
+      type:
+        array: integer
+    arrayNumber:
+      type:
+        array: number
+    arrayString:
+      type:
+        array: string
+    arrayBinary:
+      type:
+        array: binary
+    arrayStruct:
+      type:
+        array: Point
+    arrayObject:
+      type:
+        array: Simple
+    mapBoolean:
+      type:
+        map: boolean
+    mapInteger:
+      type:
+        map: integer
+    mapNumber:
+      type:
+        map: number
+    mapString:
+      type:
+        map: string
+    mapBinary:
+      type:
+        map: binary
+    mapStruct:
+      type:
+        map: Point
+    mapObject:
+      type:
+        map: Simple
+
+Point:
+  type: struct
+  properties:
+    x:
+      type: integer
+    y:
+      type: integer
+
+Pointset:
+  properties:
+    points:
+      type:
+        array: Point
+  indexes:
+    points:
+      over:
+        p: points
+      partition:
+        - p.x
+        - p.y

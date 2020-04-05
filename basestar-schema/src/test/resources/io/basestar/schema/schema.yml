@@ -1,0 +1,30 @@
+
+# path: x
+Post:
+  properties:
+    string:
+      type: string
+    ref:
+      type: Post
+
+# path: x/comments/y
+Comment:
+  properties:
+    string:
+      type: string
+  indexes:
+    parent:
+      over:
+        blah: blah
+      partition:
+        - blah.id
+      consistency: ASYNC
+
+User:
+  properties:
+    email:
+      type: string
+
+#  links:
+                     ##    link:
+                     ##      schema: Simple

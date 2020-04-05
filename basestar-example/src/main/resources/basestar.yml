@@ -1,0 +1,30 @@
+
+service: ${env.SERVICE}
+env: ${env.ENV}
+
+namespace:
+  - schema/object.yml
+  - schema/project.yml
+
+auth:
+  provider: cognito
+  callerSchena: User
+  configuration:
+    userPoolId: ${env.USER_POOL_ID}
+
+api:
+
+stream:
+
+
+event:
+  provider: sns
+  configuration:
+    topicArn: ${env.EVENT_TOPIC_ARN}
+
+storage:
+  provider: dynamodb
+  provision: false
+  configuration:
+    prefix: ${env.PREFIX}
+

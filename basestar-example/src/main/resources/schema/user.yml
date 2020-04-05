@@ -1,0 +1,39 @@
+
+User:
+
+  properties:
+    email:
+      type:
+        string:
+          pattern: email
+        required: true
+        visibility:
+          expression: this.id == caller.id
+    owner:
+      type:
+        ref: User
+      expression: this.owner ?? caller
+
+
+  links:
+    teams:
+      schema: TeamUser
+      query: user.id == this.id
+    invites:
+      schema: TeamInvite
+      query: user.id == this.id
+    projects:
+      schema: ProjectUser
+      query: user.id == this.id
+
+  indexes:
+    email:
+      partition: email
+      unique: true
+      consistency: ATOMIC
+
+  permissions:
+    create:
+      expression: after.id == caller.id
+    update:
+      expression: before.id == caller.id

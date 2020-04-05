@@ -1,0 +1,23 @@
+Object:
+
+  properties:
+    creator:
+      type:
+        ref: User
+      expression: creator ?? ctx.caller
+    updator:
+      type:
+        ref: User
+      expression: ctx.caller
+    owner:
+      type:
+        ref: User
+      expression: owner ?? ctx.caller
+
+  permissions:
+    # owner must be the caller
+    create:
+      expression: ctx.request.owner.id == ctx.caller.id
+    # prevent changing the owner unless the owner is the caller
+    update:
+      expression: owner.id == ctx.request.owner.id || owner.id == ctx.caller.id

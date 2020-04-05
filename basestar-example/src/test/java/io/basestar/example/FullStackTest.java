@@ -1,0 +1,221 @@
+package io.basestar.example;
+
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Multimap;
+import io.basestar.api.API;
+import io.basestar.api.APIResponse;
+import io.basestar.auth.Authenticator;
+import io.basestar.database.DatabaseServer;
+import io.basestar.database.api.DatabaseAPI;
+import io.basestar.event.Pump;
+import io.basestar.event.sns.SNSEmitter;
+import io.basestar.event.sqs.SQSReceiver;
+import io.basestar.schema.Namespace;
+import io.basestar.schema.Reserved;
+import io.basestar.storage.Storage;
+import io.basestar.storage.dynamodb.DynamoDBRouting;
+import io.basestar.storage.dynamodb.DynamoDBStorage;
+import io.basestar.storage.dynamodb.DynamoDBUtils;
+import io.basestar.storage.s3.S3Stash;
+import io.basestar.test.Localstack;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
+import software.amazon.awssdk.services.dynamodb.model.TableDescription;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
+import software.amazon.awssdk.services.sns.SnsAsyncClient;
+import software.amazon.awssdk.services.sns.model.CreateTopicRequest;
+import software.amazon.awssdk.services.sns.model.SubscribeRequest;
+import software.amazon.awssdk.services.sns.model.SubscribeResponse;
+import software.amazon.awssdk.services.sqs.SqsAsyncClient;
+import software.amazon.awssdk.services.sqs.model.CreateQueueRequest;
+
+import java.io.IOException;
+import java.net.URI;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+public class FullStackTest {
+
+    @BeforeAll
+    public static void startLocalStack() {
+
+        Localstack.start();
+    }
+
+    @Test
+    public void test() throws IOException {
+
+        final S3AsyncClient s3 = S3AsyncClient.builder()
+                .endpointOverride(URI.create(Localstack.S3_ENDPOINT))
+                .build();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(s3::close));
+
+        final DynamoDbAsyncClient ddb = DynamoDbAsyncClient.builder()
+                .endpointOverride(URI.create(Localstack.DDB_ENDPOINT))
+                .build();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(ddb::close));
+
+        final SqsAsyncClient sqs = SqsAsyncClient.builder()
+                .endpointOverride(URI.create(Localstack.SQS_ENDPOINT))
+                .build();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(sqs::close));
+
+        final SnsAsyncClient sns = SnsAsyncClient.builder()
+                .endpointOverride(URI.create(Localstack.SNS_ENDPOINT))
+                .build();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(sns::close));
+
+        // Create SQS queue
+
+        final String queueName = UUID.randomUUID().toString();
+        final String queueUrl = sqs.createQueue(CreateQueueRequest.builder()
+                .queueName(queueName).build()).join().queueUrl();
+
+        // Create SNS topic
+
+        final String topicName = UUID.randomUUID().toString();
+        final String topicArn = sns.createTopic(CreateTopicRequest.builder()
+                .name(topicName).build()).join().topicArn();
+
+        // Subscribe queue to topic
+
+        final Map<String, String> attrs = ImmutableMap.of("RawMessageDelivery", "true");
+
+        final SubscribeResponse response = sns.subscribe(SubscribeRequest.builder().topicArn(topicArn)
+                .protocol("sqs").endpoint(queueUrl).attributes(attrs).build()).join();
+
+        System.err.println(response.subscriptionArn());
+
+        // Oversize buckets
+
+        final String storageOversizeBucket = UUID.randomUUID().toString();
+        s3.createBucket(CreateBucketRequest.builder().bucket(storageOversizeBucket).build()).join();
+
+        final String eventOversizeBucket = UUID.randomUUID().toString();
+        s3.createBucket(CreateBucketRequest.builder().bucket(eventOversizeBucket).build()).join();
+
+        // Event emitter/receiver
+
+        final S3Stash eventOversize = S3Stash.builder()
+                .setClient(s3).setBucket(eventOversizeBucket).build();
+
+        final SQSReceiver receiver = SQSReceiver.builder()
+                .setClient(sqs)
+                .setQueueUrl(queueUrl)
+                .setOversizeStash(eventOversize)
+                .build();
+
+        final SNSEmitter emitter = SNSEmitter.builder()
+                .setClient(sns)
+                .setTopicArn(topicArn)
+                .setOversizeStash(eventOversize)
+                .build();
+
+        // Storage configuration
+
+        final S3Stash storageOversize = S3Stash.builder()
+                .setClient(s3).setBucket(storageOversizeBucket).build();
+
+        final DynamoDBRouting ddbRouting = new DynamoDBRouting.SingleTable(UUID.randomUUID() + "-");
+        final Storage storage = DynamoDBStorage.builder().setClient(ddb).setRouting(ddbRouting)
+                .setOversizeStash(storageOversize).setEventStrategy(Storage.EventStrategy.EMIT)
+                .build();
+
+        // Create tables
+
+        for(final TableDescription table : ddbRouting.tables(Collections.emptyList()).values()) {
+            ddb.createTable(DynamoDBUtils.createTableRequest(table)).join();
+        }
+
+        // Database
+
+        final Namespace namespace = Namespace.load(FullStackTest.class.getResource("schema.yml"));
+        final DatabaseServer database = new DatabaseServer(namespace, storage, emitter);
+
+        //  Event pump
+
+        final Pump pump = Pump.create(receiver, database,2, 10);
+        pump.start();
+
+        final Authenticator authenticator = new TestAuthenticator();
+
+        final API api = new DatabaseAPI(authenticator, database);
+
+        final Multimap<String, String> headers = HashMultimap.create();
+        headers.put("Authorization", "user1");
+
+        final APIResponse createUser1 = api.handle(TestRequests.put("User/user1", HashMultimap.create(), headers, ImmutableMap.of(
+        ))).join();
+        assertEquals(200, createUser1.getStatusCode());
+
+        final APIResponse createUser2 = api.handle(TestRequests.put("User/user2", HashMultimap.create(), headers, ImmutableMap.of(
+        ))).join();
+        assertEquals(200, createUser2.getStatusCode());
+
+        final APIResponse createGroup1 = api.handle(TestRequests.put("Group/group1", HashMultimap.create(), headers, ImmutableMap.of(
+                "owner", ImmutableMap.of(
+                        Reserved.ID, "user1"
+                ),
+                "members", ImmutableList.of(
+                        ImmutableMap.of(
+                                Reserved.ID, "user1"
+                        ),
+                        ImmutableMap.of(
+                                Reserved.ID, "user2"
+                        )
+                )
+        ))).join();
+        assertEquals(200, createGroup1.getStatusCode());
+        System.err.println(TestRequests.responseBody(createGroup1, Map.class));
+
+        final APIResponse queryGroups = api.handle(TestRequests.get("Group", HashMultimap.create(), headers)).join();
+        assertEquals(200, queryGroups.getStatusCode());
+        System.err.println(TestRequests.responseBody(queryGroups, List.class));
+
+        // Cannot create this group because caller != owner
+        final APIResponse createGroup2 = api.handle(TestRequests.put("Group/group2", HashMultimap.create(), headers, ImmutableMap.of(
+                "owner", ImmutableMap.of(
+                        Reserved.ID, "user2"
+                )
+        ))).join();
+        assertEquals(403, createGroup2.getStatusCode());
+
+        pump.flush();
+
+        final Multimap<String, String> expand = HashMultimap.create();
+        expand.put("expand", "groups");
+        final APIResponse userGroups = api.handle(TestRequests.get("User/user1", expand, headers)).join();
+        assertEquals(200, userGroups.getStatusCode());
+        System.err.println(TestRequests.responseBody(userGroups, Map.class));
+
+        final APIResponse createProject1 = api.handle(TestRequests.put("Project/project1", HashMultimap.create(), headers, ImmutableMap.of(
+                "owner", ImmutableMap.of(
+                        Reserved.ID, "group1"
+                )
+        ))).join();
+        assertEquals(200, createProject1.getStatusCode());
+        System.err.println(TestRequests.responseBody(createProject1, Map.class));
+
+        pump.stop();
+    }
+
+    private Multimap<String, String> query(final String query) {
+
+        final Multimap<String, String> result = HashMultimap.create();
+        result.put("query", query);
+        return result;
+    }
+
+}

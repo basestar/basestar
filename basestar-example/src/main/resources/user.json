@@ -1,0 +1,56 @@
+{
+  "types": {
+    "User": {
+//      "inject": {
+//        "caller": {
+//          "expand": [
+//            "memberships"
+//          ]
+//        }
+//      },
+      "properties": {
+        "email": {
+          "type": {
+            "string": {
+              "pattern": "email"
+            },
+            "required": true,
+            "visibility": {
+              "expression": "this.me"
+            }
+          }
+        }
+      },
+      "transients": {
+        "me": {
+          "expression": "caller.id == this.id",
+          "visibility": true
+        }
+      },
+      "links": {
+        "memberships": {
+          "type": "TeamMember",
+          "query": "user.id == this.id"
+        },
+        "projects": {
+          "type": "ProjectUser",
+          "query": "user.id == this.id"
+        }
+      },
+      "indexes": {
+        "email": {
+          "partition": ["email"],
+          "unique": true
+        }
+      },
+      "permissions": {
+        "create": {
+          "expression": "request.id == caller.id"
+        },
+        "update": {
+          "expression": "this.id == caller.id"
+        }
+      }
+    }
+  }
+}

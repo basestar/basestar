@@ -1,0 +1,208 @@
+package io.basestar.schema.use;
+
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Multimap;
+import io.basestar.schema.Expander;
+import io.basestar.schema.Instance;
+import io.basestar.schema.Schema;
+import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.util.Path;
+import lombok.Data;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * Map Type
+ *
+ * <strong>Example</strong>
+ * <pre>
+ * type:
+ *   map: string
+ * </pre>
+ */
+
+@Data
+public class UseMap<T> implements Use<Map<String, T>> {
+
+    public static final String NAME = "map";
+
+    public static final String EXPAND_WILDCARD = "*";
+
+    private final Use<T> type;
+
+    @Override
+    public <R> R visit(final Visitor<R> visitor) {
+
+        return visitor.visitMap(this);
+    }
+
+    public static UseMap<?> from(final Object config) {
+
+        final Use<?> type;
+        if(config instanceof String) {
+            type = Use.fromConfig(config);
+        } else if(config instanceof Map) {
+            type = Use.fromConfig(((Map)config).get("type"));
+        } else {
+            throw new InvalidTypeException();
+        }
+        return new UseMap<>(type);
+    }
+
+    @Override
+    public Object toJson() {
+
+        return ImmutableMap.of(
+                NAME, type
+        );
+    }
+
+    @Override
+    public UseMap<?> resolve(final Schema.Resolver resolver) {
+
+        return new UseMap<>(this.type.resolve(resolver));
+    }
+
+    @Override
+    public Map<String, T> create(final Object value) {
+
+        if(value == null) {
+            return null;
+        } else if(value instanceof Map) {
+            return ((Map<?, ?>)value).entrySet().stream()
+                    .collect(Collectors.toMap(entry -> entry.getKey().toString(), entry -> type.create(entry.getValue())));
+        } else {
+            throw new InvalidTypeException();
+        }
+    }
+
+    @Override
+    public Code code() {
+
+        return Code.MAP;
+    }
+
+    @Override
+    public void serializeValue(final Map<String, T> value, final DataOutput out) throws IOException {
+
+        out.writeInt(value.size());
+        for(final Map.Entry<String, T> entry : new TreeMap<>(value).entrySet()) {
+            UseString.DEFAULT.serializeValue(entry.getKey(), out);
+            type.serialize(entry.getValue(), out);
+        }
+    }
+
+    @Override
+    public Map<String, T> deserializeValue(final DataInput in) throws IOException {
+
+        return deserializeAnyValue(in);
+    }
+
+    public static <T> Map<String, T> deserializeAnyValue(final DataInput in) throws IOException {
+
+        final Map<String, T> result = new HashMap<>();
+        final int size = in.readInt();
+        for(int i = 0; i != size; ++i) {
+            final String key = UseString.DEFAULT.deserializeValue(in);
+            final T value = Use.deserializeAny(in);
+            result.put(key, value);
+        }
+        return result;
+    }
+
+    @Override
+    public Use<?> typeOf(final Path path) {
+
+        if(path.isEmpty()) {
+            return this;
+        } else {
+            return type.typeOf(path);
+        }
+    }
+
+//    @Override
+//    public void serialize(final Map<String, T> value, final DataOutput out) throws IOException {
+//
+//        if(value != null) {
+//            out.writeInt(Code.MAP.ordinal());
+//            for(final Map.Entry<String, T> entry : new TreeMap<>(value).entrySet()) {
+//                out.write((entry.getKey()).getBytes(Charsets.UTF_8));
+//                type.serialize(entry.getValue(), out);
+//            }
+//        } else {
+//            out.writeInt(Code.NULL.ordinal());
+//        }
+//    }
+
+    @Override
+    public Map<String, T> expand(final Map<String, T> value, final Expander expander, final Set<Path> expand) {
+
+        if(value != null) {
+            final Map<String, T> changed = new HashMap<>();
+            final Map<String, Set<Path>> branch = Path.branch(expand);
+            for(final Map.Entry<String, T> entry : value.entrySet()) {
+                Set<Path> branchExpand = branch.get(entry.getKey());
+                if(branchExpand == null) {
+                    branchExpand = branch.get(EXPAND_WILDCARD);
+                }
+//                if(branchExpand != null) {
+                final T before = entry.getValue();
+                final T after = type.expand(before, expander, branchExpand);
+                if(before != after) {
+                    changed.put(entry.getKey(), after);
+                }
+//                }
+            }
+            if(changed.isEmpty()) {
+                return value;
+            } else {
+                final Map<String, T> copy = new HashMap<>(value);
+                copy.putAll(changed);
+                return copy;
+            }
+        } else {
+            return null;
+        }
+    }
+
+//    @Override
+//    public Map<String, Object> openApiType() {
+//
+//        return ImmutableMap.of(
+//                "type", "object",
+//                "additionalProperties", type.openApiType()
+//        );
+//    }
+
+    @Override
+    public Set<Path> requireExpand(final Set<Path> paths) {
+
+        final Set<Path> result = new HashSet<>();
+        Path.branch(paths)
+                .forEach((head, tail) -> type.requireExpand(tail)
+                        .forEach(path -> result.add(Path.of(head).with(path))));
+        return result;
+    }
+
+    @Override
+    public Multimap<Path, Instance> refs(final Map<String, T> value) {
+
+        final Multimap<Path, Instance> result = HashMultimap.create();
+        if(value != null) {
+            value.forEach((k, v) -> type.refs(v).forEach((k2, v2) ->
+                    result.put(Path.of(k).with(k2), v2)));
+        }
+        return result;
+    }
+
+    @Override
+    public String toString() {
+
+        return NAME + "<" + type + ">";
+    }
+}
