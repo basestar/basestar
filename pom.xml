@@ -8,6 +8,21 @@
     <artifactId>basestar</artifactId>
     <packaging>pom</packaging>
     <version>1.0-SNAPSHOT</version>
+
+    <inceptionYear>2019</inceptionYear>
+    <organization>
+        <name>Basestar.IO</name>
+        <url>https://github.com/basestar</url>
+    </organization>
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+            <comments>A business-friendly OSS license</comments>
+        </license>
+    </licenses>
+
     <modules>
         <module>basestar-api</module>
         <module>basestar-auth</module>
@@ -170,7 +185,23 @@
                     </dependency>
                 </dependencies>
             </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <version>1.20</version>
+                <configuration>
+                    <verbose>false</verbose>
+                    <addSvnKeyWords>true</addSvnKeyWords>
+                    <licenseName>apache_v2</licenseName>
+                    <roots>
+                        <root>src/main/java</root>
+                        <root>src/test/java</root>
+                    </roots>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
+
+
 
 </project>

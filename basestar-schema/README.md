@@ -44,6 +44,10 @@ MyObject:
 
 **Fields**
 
+- `slot` **int**
+
+  
+
 - `version` **long**
 
   Current version of the schema, defaults to 1
@@ -51,6 +55,10 @@ MyObject:
 - `extend` **string (name)**
 
   Parent schema, may be another object schema or a struct schema
+
+- `history` **io.basestar.schema.History**
+
+  History configuration
 
 - `description` **string**
 
@@ -96,6 +104,10 @@ MyStruct:
 
 **Fields**
 
+- `slot` **int**
+
+  
+
 - `version` **long**
 
   Current version of the schema, defaults to 1
@@ -129,6 +141,10 @@ MyEnum:
 </pre>
 
 **Fields**
+
+- `slot` **int**
+
+  
 
 - `description` **string**
 
