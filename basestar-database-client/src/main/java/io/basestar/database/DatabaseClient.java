@@ -3,10 +3,8 @@ package io.basestar.database;
 /*-
  * #%L
  * basestar-database-client
- * $Id:$
- * $HeadURL:$
  * %%
- * Copyright (C) 2020 basestar.io
+ * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
