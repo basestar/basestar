@@ -24,7 +24,7 @@ import io.basestar.schema.use.*;
 
 public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
 
-    public static AttributeTypeVisitor INSTANCE = new AttributeTypeVisitor();
+    public static final AttributeTypeVisitor INSTANCE = new AttributeTypeVisitor();
 
     @Override
     public AttributeType<?> visitBoolean(final UseBoolean type) {
@@ -94,7 +94,7 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
 
     public static class ForArray implements Use.Visitor<AttributeType<?>> {
 
-        public static ForArray INSTANCE = new ForArray();
+        public static final ForArray INSTANCE = new ForArray();
 
         @Override
         public AttributeType<?> visitBoolean(final UseBoolean type) {

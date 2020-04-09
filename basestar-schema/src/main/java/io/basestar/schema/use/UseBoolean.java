@@ -39,7 +39,7 @@ import java.io.IOException;
 @Data
 public class UseBoolean implements UseScalar<Boolean> {
 
-    public static UseBoolean DEFAULT = new UseBoolean();
+    public static final UseBoolean DEFAULT = new UseBoolean();
 
     public static final String NAME = "boolean";
 

@@ -52,6 +52,7 @@ public class DefaultPump implements Pump {
 
     private final Object lock = new Object();
 
+    @SuppressWarnings("all")
     private final Random random = new Random();
 
     private volatile int count;
@@ -138,7 +139,7 @@ public class DefaultPump implements Pump {
 
     private long delay() {
 
-        return MIN_DELAY_MILLIS + random.nextInt(MAX_DELAY_MILLIS - MIN_DELAY_MILLIS);
+        return (long)MIN_DELAY_MILLIS + (long)random.nextInt(MAX_DELAY_MILLIS - MIN_DELAY_MILLIS);
     }
 
     @Override

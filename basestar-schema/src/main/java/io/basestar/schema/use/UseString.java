@@ -43,7 +43,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class UseString implements UseScalar<String> {
 
-    public static UseString DEFAULT = new UseString(null);
+    public static final UseString DEFAULT = new UseString(null);
 
     public static final String NAME = "string";
 

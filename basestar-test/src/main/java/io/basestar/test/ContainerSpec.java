@@ -50,6 +50,7 @@ public class ContainerSpec {
         this.env = ImmutableList.copyOf(builder.env());
         this.ports = ImmutableList.copyOf(builder.ports());
         this.waitFor = builder.waitFor();
+        @SuppressWarnings("all")
         final Hasher hasher = Hashing.md5().newHasher();
         hasher.putString(image, Charsets.UTF_8);
         env.stream().sorted().forEach(e ->

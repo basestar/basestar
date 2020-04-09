@@ -29,6 +29,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HttpString;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -38,6 +39,7 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutionException;
 
 @Data
+@Slf4j
 public class UndertowHandler implements HttpHandler {
 
     private final API api;
@@ -94,14 +96,17 @@ public class UndertowHandler implements HttpHandler {
             response.getHeaders()
                     .forEach((k, v) -> exchange.getResponseHeaders().put(HttpString.tryFromString(k), v));
 
-            try(final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            try (final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
                 response.writeTo(baos);
                 exchange.getResponseSender().send(ByteBuffer.wrap(baos.toByteArray()));
 
             }
             exchange.endExchange();
 
-        } catch (final IOException | InterruptedException | ExecutionException e) {
+        } catch (final InterruptedException e) {
+            log.warn("Interrupted during request handling", e);
+            Thread.currentThread().interrupt();
+        } catch (final IOException | ExecutionException e) {
             throw new IllegalStateException(e);
         }
     }

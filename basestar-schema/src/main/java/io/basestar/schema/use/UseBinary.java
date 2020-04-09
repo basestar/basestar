@@ -42,7 +42,7 @@ import java.io.IOException;
 @Data
 public class UseBinary implements UseScalar<byte[]> {
 
-    public static UseBinary DEFAULT = new UseBinary();
+    public static final UseBinary DEFAULT = new UseBinary();
 
     public static final String NAME = "binary";
 

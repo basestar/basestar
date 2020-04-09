@@ -14,6 +14,10 @@
         <name>Basestar.IO</name>
         <url>https://github.com/basestar</url>
     </organization>
+
+    <name>Basestar</name>
+    <url>https://github.com/basestar/basestar</url>
+
     <licenses>
         <license>
             <name>Apache License, Version 2.0</name>
@@ -22,6 +26,30 @@
             <comments>A business-friendly OSS license</comments>
         </license>
     </licenses>
+
+    <properties>
+        <lombok.version>1.18.6</lombok.version>
+        <junit.version>5.4.0</junit.version>
+    </properties>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <!--<repository>-->
+        <!--<id>ossrh</id>-->
+        <!--<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/-->
+        <!--</url>-->
+        <!--</repository>-->
+    </distributionManagement>
+
+    <scm>
+        <connection>scm:git:git://github.com/basestar/basestar.git</connection>
+        <developerConnection>scm:git:git@github.com:basestar/basestar.git</developerConnection>
+        <url>https://github.com/basestar/basestar</url>
+        <tag>HEAD</tag>
+    </scm>
 
     <modules>
         <module>basestar-api</module>
@@ -58,37 +86,7 @@
         <module>basestar-storage-hazelcast</module>
     </modules>
 
-    <properties>
-        <lombok.version>1.18.6</lombok.version>
-        <junit.version>5.4.0</junit.version>
-    </properties>
-
-    <distributionManagement>
-        <snapshotRepository>
-            <id>github</id>
-            <url>https://maven.pkg.github.com/basestar/basestar</url>
-        </snapshotRepository>
-        <repository>
-            <id>github</id>
-            <url>https://maven.pkg.github.com/basestar/basestar</url>
-        </repository>
-    </distributionManagement>
-
-    <repositories>
-        <repository>
-            <id>github</id>
-            <url>https://maven.pkg.github.com/basestar/freemarker-doclet</url>
-        </repository>
-    </repositories>
-
     <build>
-        <extensions>
-            <extension>
-                <groupId>com.github.seahen</groupId>
-                <artifactId>maven-s3-wagon</artifactId>
-                <version>1.3.0</version>
-            </extension>
-        </extensions>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -105,7 +103,7 @@
                 <version>1.18.12.0</version>
                 <executions>
                     <execution>
-                        <phase>prepare-package</phase>
+                        <phase>validate</phase>
                         <goals>
                             <goal>delombok</goal>
                         </goals>
@@ -120,6 +118,19 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.0.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>3.1.1</version>
                 <configuration>
@@ -128,49 +139,32 @@
                 </configuration>
                 <executions>
                     <execution>
-                        <id>html-docs</id>
-                        <phase>prepare-package</phase>
+                        <id>attach-javadocs</id>
                         <goals>
-                            <goal>javadoc</goal>
+                            <goal>jar</goal>
                         </goals>
                         <configuration>
                             <useStandardDocletOptions>true</useStandardDocletOptions>
                         </configuration>
                     </execution>
-                    <execution>
-                        <id>xml-docs</id>
-                        <phase>prepare-package</phase>
-                        <goals>
-                            <goal>javadoc</goal>
-                        </goals>
-                        <configuration>
-                            <doclet>com.github.markusbernhardt.xmldoclet.XmlDoclet</doclet>
-                            <useStandardDocletOptions>false</useStandardDocletOptions>
-                            <docletArtifact>
-                                <groupId>com.github.markusbernhardt</groupId>
-                                <artifactId>xml-doclet</artifactId>
-                                <version>1.0.5</version>
-                            </docletArtifact>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>ftl-docs</id>
-                        <phase>prepare-package</phase>
-                        <goals>
-                            <goal>javadoc</goal>
-                        </goals>
-                        <configuration>
-                            <failOnError>false</failOnError>
-                            <doclet>br.com.diogoko.doclet.FreeMarkerDoclet</doclet>
-                            <additionalOptions>-o "${project.basedir}/README.md" -ft "${project.basedir}/src/doc/README.md.ftl"</additionalOptions>
-                            <useStandardDocletOptions>false</useStandardDocletOptions>
-                            <docletArtifact>
-                                <groupId>io.basestar</groupId>
-                                <artifactId>freemarker-doclet</artifactId>
-                                <version>1.1.0</version>
-                            </docletArtifact>
-                        </configuration>
-                    </execution>
+                    <!--<execution>-->
+                    <!--<id>ftl-docs</id>-->
+                    <!--<phase>prepare-package</phase>-->
+                    <!--<goals>-->
+                    <!--<goal>javadoc</goal>-->
+                    <!--</goals>-->
+                    <!--<configuration>-->
+                    <!--<failOnError>false</failOnError>-->
+                    <!--<doclet>br.com.diogoko.doclet.FreeMarkerDoclet</doclet>-->
+                    <!--<additionalOptions>-o "${project.basedir}/README.md" -ft "${project.basedir}/src/doc/README.md.ftl"</additionalOptions>-->
+                    <!--<useStandardDocletOptions>false</useStandardDocletOptions>-->
+                    <!--<docletArtifact>-->
+                    <!--<groupId>io.basestar</groupId>-->
+                    <!--<artifactId>freemarker-doclet</artifactId>-->
+                    <!--<version>1.1.0</version>-->
+                    <!--</docletArtifact>-->
+                    <!--</configuration>-->
+                    <!--</execution>-->
                 </executions>
             </plugin>
             <plugin>
@@ -186,6 +180,25 @@
                 </dependencies>
             </plugin>
             <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.5</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>license-maven-plugin</artifactId>
                 <version>1.20</version>
@@ -196,15 +209,66 @@
                     <canUpdateCopyright>true</canUpdateCopyright>
                     <canUpdateDescription>true</canUpdateDescription>
                     <canUpdateLicense>true</canUpdateLicense>
+                    <includes>
+                        <include>**/*.java</include>
+                    </includes>
                     <roots>
                         <root>src/main/java</root>
                         <root>src/test/java</root>
                     </roots>
                 </configuration>
             </plugin>
+            <plugin>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <version>2.8.2</version>
+                <executions>
+                    <execution>
+                        <id>default-deploy</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>deploy</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.sonatype.plugins</groupId>
+                <artifactId>nexus-staging-maven-plugin</artifactId>
+                <version>1.6.7</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <serverId>ossrh</serverId>
+                    <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>1.6</version>
+                <configuration>
+                    <gpgArguments>
+                        <arg>--pinentry-mode</arg>
+                        <arg>loopback</arg>
+                    </gpgArguments>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!--<plugin>-->
+                <!--<groupId>org.sonarsource.scanner.maven</groupId>-->
+                <!--<artifactId>sonar-maven-plugin</artifactId>-->
+                <!--<version>3.7.0.1746</version>-->
+            <!--</plugin>-->
         </plugins>
     </build>
-
 
 
 </project>

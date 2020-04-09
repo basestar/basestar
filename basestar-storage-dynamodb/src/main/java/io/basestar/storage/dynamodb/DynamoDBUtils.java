@@ -119,31 +119,31 @@ public class DynamoDBUtils {
         return values.entrySet().stream()
                 .mapToLong(entry -> {
                     final long keySize = stringSize(entry.getKey());
-                    return 1 + keySize + attributeValueSize(entry.getValue());
+                    return 1L + keySize + attributeValueSize(entry.getValue());
                 }).sum();
     }
 
     private static long stringSize(final String str) {
 
-        return 1 + str.getBytes(Charsets.UTF_8).length;
+        return 1L + str.getBytes(Charsets.UTF_8).length;
     }
 
     public static long attributeValueSize(final AttributeValue value) {
 
         if(value == null || value.nul() != null) {
-            return 1;
+            return 1L;
         } else if(value.bool() != null) {
-            return 1;
+            return 1L;
         } else if(value.n() != null) {
-            return 21;
+            return 21L;
         } else if(value.s() != null) {
             return stringSize(value.s());
         } else if(value.b() != null){
-            return value.b().asByteArray().length + 1;
+            return value.b().asByteArray().length + 1L;
         } else if(value.hasL()) {
-            return 3 + value.l().stream().mapToLong(v -> 1 + attributeValueSize(v)).sum();
+            return 3L + value.l().stream().mapToLong(v -> 1L + attributeValueSize(v)).sum();
         } else if(value.hasM()) {
-            return 3 + itemSize(value.m());
+            return 3L + itemSize(value.m());
         } else {
             throw new IllegalStateException("Unknown item type: " + value);
         }

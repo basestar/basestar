@@ -61,19 +61,15 @@ public class BasestarFactory extends JsonFactory {
         this.delegate = delegate;
     }
 
-    private JsonParser parser(final JsonParser parser, final URL url) throws IOException {
-
-        try {
-            return parser(parser, url.toURI());
-        } catch (final URISyntaxException e) {
-            throw new IOException(e);
-        }
-    }
-
     private JsonParser parser(final JsonParser parser, final URI uri) throws IOException {
 
-        final JsonNode node = process((JsonNode)parser.readValueAsTree(), uri);
-        return new TreeTraversingParser(node, parser.getCodec());
+        try {
+            final JsonNode node = process((JsonNode) parser.readValueAsTree(), uri);
+            return new TreeTraversingParser(node, parser.getCodec());
+        } catch (final Exception e) {
+            parser.close();
+            throw e;
+        }
     }
 
     private JsonNode process(final JsonNode node, final URI uri) throws IOException {
@@ -177,61 +173,76 @@ public class BasestarFactory extends JsonFactory {
     @Override
     public JsonParser createParser(final File f) throws IOException {
 
-        return parser(delegate.createParser(f), f.toURI());
+        final URI uri = f.toURI();
+        return parser(delegate.createParser(f), uri);
     }
 
     @Override
     public JsonParser createParser(final URL url) throws IOException {
 
-        return parser(delegate.createParser(url), url);
+        final URI uri;
+        try {
+            uri = url.toURI();
+        } catch (final URISyntaxException e) {
+            throw new IOException(e);
+        }
+        return parser(delegate.createParser(url), uri);
     }
 
     @Override
     public JsonParser createParser(final InputStream in) throws IOException {
 
-        return parser(delegate.createParser(in), workDir());
+        final URI uri = workDir();
+        return parser(delegate.createParser(in), uri);
     }
 
     @Override
     public JsonParser createParser(final Reader r) throws IOException {
 
-        return parser(delegate.createParser(r), workDir());
+        final URI uri = workDir();
+        return parser(delegate.createParser(r), uri);
     }
 
     @Override
     public JsonParser createParser(final byte[] data) throws IOException {
 
-        return parser(delegate.createParser(data), workDir());
+        final URI uri = workDir();
+        return parser(delegate.createParser(data), uri);
     }
 
     @Override
     public JsonParser createParser(final byte[] data, final int offset, final int len) throws IOException {
 
-        return parser(delegate.createParser(data, offset, len), workDir());
+        final URI uri = workDir();
+        return parser(delegate.createParser(data, offset, len), uri);
     }
 
     @Override
     public JsonParser createParser(final String content) throws IOException {
 
-        return parser(delegate.createParser(content), workDir());
+        final URI uri = workDir();
+        return parser(delegate.createParser(content), uri);
     }
 
     @Override
     public JsonParser createParser(final char[] content) throws IOException {
 
-        return parser(delegate.createParser(content), workDir());
+        final URI uri = workDir();
+        return parser(delegate.createParser(content), uri);
     }
 
     @Override
     public JsonParser createParser(final char[] content, final int offset, final int len) throws IOException {
 
-        return parser(delegate.createParser(content, offset, len), workDir());
+        final URI uri = workDir();
+        return parser(delegate.createParser(content, offset, len), uri);
     }
 
     @Override
     public JsonParser createParser(final DataInput in) throws IOException {
 
-        return parser(delegate.createParser(in), workDir());
+        final URI uri = workDir();
+        return parser(delegate.createParser(in), uri);
     }
 
     /*private static class ParserImpl extends ParserBase {

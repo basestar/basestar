@@ -368,22 +368,14 @@ public class SQLStorage implements Storage {
             public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
 
                 // FIXME
-                if (index.isMultiValue()) {
-                    throw new UnsupportedOperationException();
-                } else {
-                    throw new UnsupportedOperationException();
-                }
+                throw new UnsupportedOperationException();
             }
 
             @Override
             public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
 
                 // FIXME
-                if (index.isMultiValue()) {
-                    throw new UnsupportedOperationException();
-                } else {
-                    throw new UnsupportedOperationException();
-                }
+                throw new UnsupportedOperationException();
             }
 
             @Override

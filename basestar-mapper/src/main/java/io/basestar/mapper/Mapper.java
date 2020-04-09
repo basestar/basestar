@@ -96,7 +96,7 @@ public class Mapper {
 //        final Map<String, >
 
         with.properties().stream()
-                .map(prop -> {
+                .forEach(prop -> {
 
             try {
 
@@ -137,7 +137,7 @@ public class Mapper {
                 throw new IllegalStateException("Failed to map property", e);
             }
 
-            return null;
+//            return null;
 
         });
 

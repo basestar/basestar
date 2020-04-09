@@ -499,13 +499,13 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         }
     }
 
-    @SuppressWarnings("deprecation")
     public String hash(final Map<String, Object> object) {
 
         try {
             try (final ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 final DataOutputStream daos = new DataOutputStream(baos)) {
                 serializeProperties(object, daos);
+                @SuppressWarnings("all")
                 final byte[] bytes = Hashing.md5().newHasher().putBytes(baos.toByteArray()).hash().asBytes();
                 return BaseEncoding.base64().encode(bytes);
             }

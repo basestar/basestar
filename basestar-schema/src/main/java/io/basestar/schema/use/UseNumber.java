@@ -41,7 +41,7 @@ import java.io.IOException;
 @Data
 public class UseNumber implements UseScalar<Double> {
 
-    public static UseNumber DEFAULT = new UseNumber();
+    public static final UseNumber DEFAULT = new UseNumber();
 
     public static final String NAME = "number";
 

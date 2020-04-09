@@ -25,8 +25,7 @@ import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.jooq.DSLContext;
-import org.jooq.Name;
+import org.jooq.*;
 import org.jooq.impl.DSL;
 
 import java.util.Collection;
@@ -72,8 +71,12 @@ public interface SQLRouting {
         @Override
         public void createTables(final DSLContext context, final Collection<ObjectSchema> schemas) {
 
-            context.createSchemaIfNotExists(DSL.name(objectSchemaName)).execute();
-            context.createSchemaIfNotExists(DSL.name(historySchemaName)).execute();
+            try(final CreateSchemaFinalStep create = context.createSchemaIfNotExists(DSL.name(objectSchemaName))) {
+                create.execute();
+            }
+            try(final CreateSchemaFinalStep create = context.createSchemaIfNotExists(DSL.name(historySchemaName))) {
+                create.execute();
+            }
 
             for(final ObjectSchema schema : schemas) {
 
@@ -81,38 +84,42 @@ public interface SQLRouting {
                 final Name historyTableName = DSL.name(DSL.name(historySchemaName), DSL.name(schema.getName()));
 
                 log.info("Creating table {}", objectTableName);
-                context.createTableIfNotExists(objectTableName)
+                try(final CreateTableFinalStep create = context.createTableIfNotExists(objectTableName)
                         .columns(SQLUtils.fields(schema))
-                        .constraint(DSL.primaryKey(Reserved.ID))
-                        .execute();
+                        .constraint(DSL.primaryKey(Reserved.ID))) {
+                    create.execute();
+                }
 
                 for(final Index index : schema.getAllIndexes().values()) {
                     if(index.isMultiValue()) {
                         final Name indexTableName = indexTableName(schema, index);
                         log.info("Creating multi-value index table {}", indexTableName);
-                        context.createTableIfNotExists(indexTableName(schema, index))
+                        try(final CreateTableFinalStep create = context.createTableIfNotExists(indexTableName(schema, index))
                                 .columns(SQLUtils.fields(schema, index))
-                                .constraints(SQLUtils.primaryKey(schema, index))
-                                .execute();
+                                .constraints(SQLUtils.primaryKey(schema, index))) {
+                            create.execute();
+                        }
                     } else if(index.isUnique()) {
                         log.info("Creating unique index {}:{}", objectTableName, index.getName());
-                        context.createUniqueIndexIfNotExists(index.getName())
-                                .on(DSL.table(objectTableName), SQLUtils.orderFields(index))
-                                .execute();
+                        try(final CreateIndexFinalStep create = context.createUniqueIndexIfNotExists(index.getName())
+                                .on(DSL.table(objectTableName), SQLUtils.orderFields(index))) {
+                            create.execute();
+                        }
                     } else {
                         log.info("Creating index {}:{}", objectTableName, index.getName());
-                        context.createIndexIfNotExists(index.getName())
-                                .on(DSL.table(objectTableName), SQLUtils.orderFields(index))
-                                .execute();
+                        try(final CreateIndexFinalStep create = context.createIndexIfNotExists(index.getName())
+                                .on(DSL.table(objectTableName), SQLUtils.orderFields(index))) {
+                            create.execute();
+                        }
                     }
-
                 }
 
                 log.info("Creating table {}", historyTableName);
-                context.createTableIfNotExists(historyTableName)
+                try(final CreateTableFinalStep create = context.createTableIfNotExists(historyTableName)
                         .columns(SQLUtils.fields(schema))
-                        .constraint(DSL.primaryKey(Reserved.ID, Reserved.VERSION))
-                        .execute();
+                        .constraint(DSL.primaryKey(Reserved.ID, Reserved.VERSION))) {
+                    create.execute();
+                }
             }
         }
 

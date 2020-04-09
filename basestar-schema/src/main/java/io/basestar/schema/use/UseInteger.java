@@ -41,7 +41,7 @@ import java.io.IOException;
 @Data
 public class UseInteger implements UseScalar<Long> {
 
-    public static UseInteger DEFAULT = new UseInteger();
+    public static final UseInteger DEFAULT = new UseInteger();
 
     public static final String NAME = "integer";
 
