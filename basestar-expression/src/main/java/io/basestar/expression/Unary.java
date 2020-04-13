@@ -64,4 +64,10 @@ public interface Unary extends Expression {
         }
         return str.toString();
     }
+
+    @Override
+    default boolean isConstant(final Set<String> closure) {
+
+        return getOperand().isConstant(closure);
+    }
 }

@@ -26,7 +26,6 @@ import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.PathTransform;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.function.With;
-import io.basestar.expression.type.Values;
 import io.basestar.util.Path;
 import lombok.Data;
 
@@ -120,6 +119,12 @@ public class LiteralArray implements Expression {
     }
 
     @Override
+    public boolean isConstant(final Set<String> closure) {
+
+        return args.stream().allMatch(arg -> arg.isConstant(closure));
+    }
+
+    @Override
     public <T> T visit(final ExpressionVisitor<T> visitor) {
 
         return visitor.visitLiteralArray(this);
@@ -128,6 +133,6 @@ public class LiteralArray implements Expression {
     @Override
     public String toString() {
 
-        return Values.toString(args);
+        return "[" + args.stream().map(Expression::toString).collect(Collectors.joining(", ")) + "]";
     }
 }

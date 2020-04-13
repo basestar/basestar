@@ -89,12 +89,14 @@ public class UseArray<T> implements Use<List<T>> {
     }
 
     @Override
-    public List<T> create(final Object value) {
+    public List<T> create(final Object value, final boolean expand) {
 
         if(value == null) {
             return null;
         } else if(value instanceof Collection) {
-            return ((Collection<?>)value).stream().map(type::create).collect(Collectors.toList());
+            return ((Collection<?>)value).stream()
+                    .map(v -> type.create(v, expand))
+                    .collect(Collectors.toList());
         } else {
             throw new InvalidTypeException();
         }
@@ -169,9 +171,9 @@ public class UseArray<T> implements Use<List<T>> {
 
     @Override
     @Deprecated
-    public Set<Path> requireExpand(final Set<Path> paths) {
+    public Set<Path> requiredExpand(final Set<Path> paths) {
 
-        return type.requireExpand(paths);
+        return type.requiredExpand(paths);
     }
 
     @Override

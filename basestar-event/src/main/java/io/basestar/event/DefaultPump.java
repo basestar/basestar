@@ -38,6 +38,8 @@ public class DefaultPump implements Pump {
 
     private static final int MAX_DELAY_MILLIS = 500;
 
+    private static final int SHUTDOWN_WAIT_SECONDS = 60;
+
     private final Receiver receiver;
 
     private final Handler<Event> handler;
@@ -57,8 +59,6 @@ public class DefaultPump implements Pump {
 
     private volatile int count;
 
-//    private final Multimap<Class<?>, Handler<?>> registry = HashMultimap.create();
-
     public DefaultPump(final Receiver receiver, final Handler<Event> handler, final int minThreads, final int maxThreads) {
 
         this.receiver = receiver;
@@ -68,12 +68,6 @@ public class DefaultPump implements Pump {
         this.executorService = Executors.newScheduledThreadPool(minThreads);
         Metrics.gauge("events.pump.threads", this, t -> t.count);
     }
-
-//    @Override
-//    public <E extends Event> void subscribe(final Class<E> event, final Handler<E> handler) {
-//
-//        registry.put(event, handler);
-//    }
 
     @Override
     public void start() {
@@ -86,6 +80,13 @@ public class DefaultPump implements Pump {
     @Override
     public void flush() {
 
+        while(true) {
+            final Integer results = receiver.receive(handler).join();
+            assert results != null;
+            if(results == 0) {
+                return;
+            }
+        }
     }
 
     private void another() {
@@ -127,16 +128,6 @@ public class DefaultPump implements Pump {
         }
     }
 
-//    @SuppressWarnings("unchecked")
-//    private CompletableFuture<?> receive(final Event event) {
-//
-////        final List<CompletableFuture<?>> futures = new ArrayList<>();
-////        for(final Handler<?> handler : registry.get(event.getClass())) {
-////            futures.add(((Handler<Event>) handler).handle(event));
-////        }
-////        return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]));
-//    }
-
     private long delay() {
 
         return (long)MIN_DELAY_MILLIS + (long)random.nextInt(MAX_DELAY_MILLIS - MIN_DELAY_MILLIS);
@@ -145,5 +136,17 @@ public class DefaultPump implements Pump {
     @Override
     public void stop() {
 
+        executorService.shutdown();
+        try {
+            if (!executorService.awaitTermination(SHUTDOWN_WAIT_SECONDS, TimeUnit.SECONDS)) {
+                executorService.shutdownNow();
+                if (!executorService.awaitTermination(SHUTDOWN_WAIT_SECONDS, TimeUnit.SECONDS)) {
+                    log.error("Failed to shut down executor service");
+                }
+            }
+        } catch (final InterruptedException e) {
+            executorService.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 }

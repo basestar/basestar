@@ -48,4 +48,14 @@ public class ExceptionMetadata {
 
         return data;
     }
+
+    public static ExceptionMetadata notFound() {
+
+        return new ExceptionMetadata().setStatus(404);
+    }
+
+    public static ExceptionMetadata methodNotAllowed() {
+
+        return new ExceptionMetadata().setStatus(405);
+    }
 }

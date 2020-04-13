@@ -44,7 +44,7 @@ public interface Member extends Named, Described {
 //
 //    }
 
-    interface Resolver {
+    public interface Resolver {
 
         @JsonIgnore
         Map<String, ? extends Member> getDeclaredMembers();

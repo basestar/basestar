@@ -440,6 +440,38 @@ public class TestExpression {
         assertEquals(Path.of("m", "id"), ((PathConstant)((Where)bound).getRhs()).getPath());
     }
 
+    @Test
+    public void testBindOf() {
+
+        final Expression expression = Expression.parse("k of [1, 2, 3]");
+        final Expression bound = expression.bind(Context.init());
+        assertTrue(bound instanceof Constant);
+    }
+
+    @Test
+    public void testBindForArray() {
+
+        final Expression expression = Expression.parse("[k for k of [1, 2, 3]]");
+        final Expression bound = expression.bind(Context.init());
+        assertTrue(bound instanceof Constant);
+    }
+
+    @Test
+    public void testBindForSet() {
+
+        final Expression expression = Expression.parse("{k for k of [1, 2, 3]}");
+        final Expression bound = expression.bind(Context.init());
+        assertTrue(bound instanceof Constant);
+    }
+
+    @Test
+    public void testBindForMap() {
+
+        final Expression expression = Expression.parse("{k:k * 2 for k of [1, 2, 3]}");
+        final Expression bound = expression.bind(Context.init());
+        assertTrue(bound instanceof Constant);
+    }
+
 //    @Test
 //    public void testPatternMatching() {
 ////

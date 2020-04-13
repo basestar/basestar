@@ -9,13 +9,13 @@ Team:
   links:
     users:
       schema: TeamUser
-      query: team.id == this.id
+      expression: team.id == this.id
 #    projects:
 #      schema: TeamProject
-#      query: team.id == this.id
+#      expression: team.id == this.id
     invites:
       schema: TeamInvite
-      query: team.id == this.id
+      expression: team.id == this.id
 
   permissions:
     read:
@@ -119,7 +119,7 @@ TeamInvite:
 #  links:
 #    member:
 #      schema: TeamMember
-#      query: team.id == this.team.id && user.id == this.user.id
+#      expression: team.id == this.team.id && user.id == this.user.id
 
   permissions:
     read:

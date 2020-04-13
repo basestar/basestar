@@ -61,7 +61,7 @@ public class UseBoolean implements UseScalar<Boolean> {
     }
 
     @Override
-    public Boolean create(final Object value) {
+    public Boolean create(final Object value, final boolean expand) {
 
         if(value == null) {
             return null;

@@ -20,7 +20,10 @@ package io.basestar.api;
  * #L%
  */
 
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import io.basestar.exception.ExceptionMetadata;
+import io.basestar.exception.HasExceptionMetadata;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -32,4 +35,84 @@ public interface APIResponse {
     Multimap<String, String> getHeaders();
 
     void writeTo(OutputStream out) throws IOException;
+
+    static APIResponse success(final APIRequest request) {
+
+        return success(request, null);
+    }
+
+    static APIResponse success(final APIRequest request, final Object data) {
+
+        return success(request, null, data);
+    }
+
+    static APIResponse success(final APIRequest request, final Multimap<String, String> extraHeaders,
+                               final Object data) {
+
+        return response(request, 200, extraHeaders, data);
+    }
+
+    static APIResponse error(final APIRequest request, final Throwable e) {
+
+        e.printStackTrace(System.err);
+        final ExceptionMetadata metadata = exceptionMetadata(e);
+        return error(request, metadata);
+    }
+
+    static APIResponse error(final APIRequest request, final ExceptionMetadata e) {
+
+        return response(request, e.getStatus(), null, e.getData());
+    }
+
+    static ExceptionMetadata exceptionMetadata(final Throwable e) {
+
+        if(e instanceof HasExceptionMetadata) {
+            return ((HasExceptionMetadata)e).getMetadata();
+        } else if(e.getCause() != null) {
+            return exceptionMetadata(e.getCause());
+        } else {
+            return new ExceptionMetadata().setStatus(500).setCode("UnknownError").setMessage(e.getMessage());
+        }
+    }
+
+    static APIResponse response(final APIRequest request, final int status, final Object data) {
+
+        return response(request, status, null, data);
+    }
+
+    static APIResponse response(final APIRequest request, final int status,
+                                final Multimap<String, String> extraHeaders, final Object data) {
+
+        final APIFormat format = request.getAccept();
+        final Multimap<String, String> headers = HashMultimap.create();
+        headers.put("Content-Type", format.getContentType());
+        headers.put("Access-Control-Allow-Origin", "*");
+        headers.put("Access-Control-Allow-Methods", "*");
+        headers.put("Access-Control-Allow-Headers", "*");
+        if(extraHeaders != null) {
+            headers.putAll(extraHeaders);
+        }
+
+        return new APIResponse() {
+            @Override
+            public int getStatusCode() {
+
+                return status;
+            }
+
+            @Override
+            public Multimap<String, String> getHeaders() {
+
+                return headers;
+            }
+
+            @Override
+            public void writeTo(final OutputStream out) throws IOException {
+
+                if(data != null) {
+                    format.getMapper().writerWithDefaultPrettyPrinter().writeValue(out, data);
+                }
+            }
+        };
+    }
 }

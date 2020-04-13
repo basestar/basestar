@@ -95,28 +95,8 @@ public class Or implements Expression {
             return false;
         } else {
             return terms.stream().anyMatch(v -> v.evaluatePredicate(context));
-//            Object prev = terms.get(0).evaluate(context);
-//            if(Values.isTruthy(prev)) {
-//                return prev;
-//            } else {
-//                for (final Expression expr : terms.subList(1, terms.size())) {
-//                    final Object next = expr.evaluate(context);
-//                    if (Values.isTruthy(next)) {
-//                        return next;
-//                    } else {
-//                        prev = next;
-//                    }
-//                }
-//                return prev;
-//            }
         }
     }
-
-//    @Override
-//    public Query query() {
-//
-//        return Query.and();
-//    }
 
     @Override
     public Set<Path> paths() {
@@ -135,6 +115,12 @@ public class Or implements Expression {
     public int precedence() {
 
         return PRECEDENCE;
+    }
+
+    @Override
+    public boolean isConstant(final Set<String> closure) {
+
+        return terms.stream().allMatch(term -> term.isConstant(closure));
     }
 
     @Override

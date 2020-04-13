@@ -118,7 +118,7 @@ public class Mappings {
                     }
 
                     @Override
-                    public FieldType visitRef(final UseObject type) {
+                    public FieldType visitRef(final UseRef type) {
 
                         final Map<String, FieldType> properties = new HashMap<>();
                         ObjectSchema.REF_SCHEMA.forEach((k, v) -> properties.put(k, v.visit(this)));

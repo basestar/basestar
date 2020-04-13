@@ -25,6 +25,7 @@ import com.google.common.collect.*;
 import io.basestar.auth.Caller;
 import io.basestar.auth.exception.PermissionDeniedException;
 import io.basestar.database.event.*;
+import io.basestar.database.link.LinkDataVisitor;
 import io.basestar.database.options.*;
 import io.basestar.event.Emitter;
 import io.basestar.event.Event;
@@ -130,7 +131,7 @@ public class DatabaseServer implements Database, Handler<Event> {
 
                             return cast(objectSchema, raw).thenCompose(initial -> {
 
-                                final ObjectSchema castSchema = schema(Instance.getSchema(initial));
+                                final ObjectSchema castSchema = objectSchema(Instance.getSchema(initial));
 
                                 final Set<Path> permissionExpand = readExpand(castSchema, permission, options.getExpand(), Path.of(VAR_THIS));
                                 final Set<Path> readExpand = Nullsafe.of(options.getExpand());
@@ -150,13 +151,92 @@ public class DatabaseServer implements Database, Handler<Event> {
                 });
     }
 
-    @Override
-    public CompletableFuture<Instance> create(final Caller caller, final String schema, final String id, final Map<String, Object> data, final CreateOptions options) {
+    // Collect, evaluate and validate all instances referenced from a root
 
-        log.debug("Create: id={}, data={}, options={}", id, data, options);
+    final Instance deepCreate(final Caller caller, final ObjectSchema schema, final String id, final Map<String, Object> input, final LocalDateTime now) {
+
+        final Map<String, Object> initial = new HashMap<>(schema.create(input));
+
+        // Id in path overrides id specified in body
+        final String requestedId = id == null ? Instance.getId(initial) : id;
+
+        // FIXME: split validation so that required validation can be applied here
+        // FIXME: or make evaluation (including id evaluation) respect dependencies
+
+        final String actualId;
+        if(schema.getId() != null) {
+            actualId = schema.getId().evaluate(requestedId, context(caller, ImmutableMap.of(
+                    VAR_THIS, initial
+            )));
+        } else if(requestedId != null) {
+            actualId = requestedId;
+        } else {
+            actualId = UUID.randomUUID().toString();
+        }
+
+        Instance.setId(initial, actualId);
+        Instance.setVersion(initial, 1L);
+        Instance.setCreated(initial, now);
+        Instance.setUpdated(initial, now);
+        Instance.setHash(initial, schema.hash(initial));
+
+        final Instance evaluated = schema.evaluate(initial, context(caller, ImmutableMap.of(
+                VAR_THIS, initial
+        )));
+
+        schema.validate(evaluated, context(caller, ImmutableMap.of(
+                VAR_THIS, evaluated
+        )));
+
+//        final Multimap<String, Instance> result = HashMultimap.create();
+//        result.put(schema.getName(), evaluated);
+
+        final Map<String, Object> result = new HashMap<>(evaluated);
+        schema.getAllLinks().forEach((linkName, link) -> {
+            // Read from provided input rather than evaluated instance, because schema.create ignores links
+            final Collection<? extends Map<String, Object>> linkInput = Instance.getLink(input, linkName);
+            if(linkInput != null && !linkInput.isEmpty()) {
+                result.put(linkName, deepCreateLinks(caller, link, evaluated, linkInput, now));
+            }
+        });
+        return new Instance(result);
+    }
+
+    private List<Instance> deepCreateLinks(final Caller caller, final Link link, final Instance parent, final Collection<? extends Map<String, Object>> input, final LocalDateTime now) {
+
+        final Expression linkExpression = link.getExpression().bind(context(ImmutableMap.of(
+                VAR_THIS, parent
+        )));
+        final Map<String, Object> initialLinkData = linkExpression.visit(LinkDataVisitor.INSTANCE);
+        if (initialLinkData.isEmpty()) {
+            throw new IllegalStateException("Cannot initialize link data for " + link.getName()
+                    + " using provided expression");
+        }
+        final List<Instance> result = new ArrayList<>();
+        input.forEach(linkValue -> {
+            final String linkSchemaName = Instance.getSchema(linkValue);
+            final ObjectSchema linkSchema;
+            if(linkSchemaName != null) {
+                linkSchema = namespace.requireObjectSchema(linkSchemaName);
+            } else {
+                linkSchema = link.getSchema();
+            }
+            final Map<String, Object> linkData = new HashMap<>(linkValue);
+            // FIXME: should throw if provided link data tries to override initial link data
+            linkData.putAll(initialLinkData);
+            result.add(deepCreate(caller, linkSchema, null, linkData, now));
+        });
+        return result;
+    }
+
+    @Override
+    public CompletableFuture<Instance> create(final Caller caller, final String schema, final String initialId, final Map<String, Object> data, final CreateOptions options) {
+
+        log.debug("Create: id={}, data={}, options={}", initialId, data, options);
 
         final ObjectSchema objectSchema = namespace.requireObjectSchema(schema);
         final Storage.EventStrategy eventStrategy = storage.eventStrategy(objectSchema);
+
         final Permission permission = objectSchema.getPermission(Permission.CREATE);
 
         final Consistency consistency = Consistency.ATOMIC;
@@ -167,6 +247,23 @@ public class DatabaseServer implements Database, Handler<Event> {
                     final Map<String, Object> initial = new HashMap<>(objectSchema.create(data));
 
                     final LocalDateTime now = LocalDateTime.now();
+
+                    // FIXME: split validation so that required validation can be applied here
+                    // FIXME: or make evaluation (including id evaluation) respect dependencies
+
+                    // Id in path overrides id specified in body
+                    final String requestedId = initialId == null ? Instance.getId(initial) : initialId;
+
+                    final String id;
+                    if(objectSchema.getId() != null) {
+                        id = objectSchema.getId().evaluate(requestedId, context(expandedCaller, ImmutableMap.of(
+                                VAR_THIS, initial
+                        )));
+                    } else if(requestedId != null) {
+                        id = requestedId;
+                    } else {
+                        id = UUID.randomUUID().toString();
+                    }
 
                     Instance.setId(initial, id);
                     Instance.setVersion(initial, 1L);
@@ -490,7 +587,7 @@ public class DatabaseServer implements Database, Handler<Event> {
             final ObjectSchema linkSchema = link.getSchema();
             final Permission permission = linkSchema.getPermission(Permission.READ);
 
-            return pageImpl(caller, permission, schema, id, link.getQuery(), link.getSchema(), link.getSort(), options);
+            return pageImpl(caller, permission, schema, id, link.getExpression(), link.getSchema(), link.getSort(), options);
 
         } else {
             throw new IllegalStateException("Member must be a link");
@@ -626,7 +723,7 @@ public class DatabaseServer implements Database, Handler<Event> {
         } else {
             final String id = Instance.getId(data);
             final Long version = Instance.getVersion(data);
-            final ObjectSchema castSchema = schema(castSchemaName);
+            final ObjectSchema castSchema = objectSchema(castSchemaName);
             return readImpl(castSchema, id, version)
                     .thenApply(castSchema::create);
         }
@@ -643,13 +740,13 @@ public class DatabaseServer implements Database, Handler<Event> {
         });
         if(needed.isEmpty()) {
             return CompletableFuture.completedFuture(data.map(v -> {
-                final ObjectSchema schema = schema(Instance.getSchema(v));
+                final ObjectSchema schema = objectSchema(Instance.getSchema(v));
                 return schema.create(v);
             }));
         } else {
             final Storage.ReadTransaction readTransaction = storage.read(Consistency.NONE);
             needed.asMap().forEach((schemaName, items) -> {
-                final ObjectSchema schema = schema(schemaName);
+                final ObjectSchema schema = objectSchema(schemaName);
                 items.forEach(item -> {
                     final String id = Instance.getId(item);
                     final Long version = Instance.getVersion(item);
@@ -665,7 +762,7 @@ public class DatabaseServer implements Database, Handler<Event> {
                 return data.map(v -> {
                     final RefKey key = RefKey.from(v);
                     final Map<String, Object> result = MoreObjects.firstNonNull(mapped.get(key), v);
-                    final ObjectSchema schema = schema(Instance.getSchema(result));
+                    final ObjectSchema schema = objectSchema(Instance.getSchema(result));
                     return schema.create(result);
                 });
             });
@@ -684,7 +781,7 @@ public class DatabaseServer implements Database, Handler<Event> {
         if(needed.isEmpty()) {
             final Map<ExpandKey<RefKey>, Instance> results = new HashMap<>();
             data.forEach((k, v) -> {
-                final ObjectSchema schema = schema(Instance.getSchema(v));
+                final ObjectSchema schema = objectSchema(Instance.getSchema(v));
                 final Instance instance = schema.create(v);
                 results.put(k, instance);
             });
@@ -692,7 +789,7 @@ public class DatabaseServer implements Database, Handler<Event> {
         } else {
             final Storage.ReadTransaction readTransaction = storage.read(Consistency.NONE);
             needed.asMap().forEach((schemaName, items) -> {
-                final ObjectSchema schema = schema(schemaName);
+                final ObjectSchema schema = objectSchema(schemaName);
                 items.forEach(item -> {
                     final String id = Instance.getId(item);
                     final Long version = Instance.getVersion(item);
@@ -709,7 +806,7 @@ public class DatabaseServer implements Database, Handler<Event> {
                 data.forEach((k, v) ->  {
                     final RefKey key = RefKey.from(v);
                     final Map<String, Object> result = MoreObjects.firstNonNull(mapped.get(key), v);
-                    final ObjectSchema schema = schema(Instance.getSchema(result));
+                    final ObjectSchema schema = objectSchema(Instance.getSchema(result));
                     final Instance instance = schema.create(result);
                     remapped.put(k, instance);
                 });
@@ -720,8 +817,30 @@ public class DatabaseServer implements Database, Handler<Event> {
 
     private CompletableFuture<Caller> expandCaller(final Caller caller, final Permission permission) {
 
+        if(permission == null) {
+            return expandCaller(caller, false, Collections.emptySet());
+        } else {
+            return expandCaller(caller, permission.isAnonymous(), permission.getExpand());
+        }
+    }
+
+    private CompletableFuture<Caller> expandCaller(final Caller caller, final Collection<Permission> permissions) {
+
+        if(permissions.isEmpty()) {
+            return expandCaller(caller, false, Collections.emptySet());
+        } else {
+            final boolean anonymous = permissions.stream().allMatch(Permission::isAnonymous);
+            final Set<Path> expand = permissions.stream().flatMap(v -> v.getExpand().stream())
+                    .collect(Collectors.toSet());
+            return expandCaller(caller, anonymous, expand);
+        }
+    }
+
+
+    private CompletableFuture<Caller> expandCaller(final Caller caller, final boolean anonymous, final Set<Path> permissionExpand) {
+
         if(caller.isAnon()) {
-            if(permission == null || !permission.isAnonymous()) {
+            if(!anonymous) {
                 throw new PermissionDeniedException("Anonymous not allowed");
             }
         }
@@ -734,12 +853,9 @@ public class DatabaseServer implements Database, Handler<Event> {
 
             final ObjectSchema callerSchema = namespace.requireObjectSchema(CALLER_SCHEMA);
 
-            final Set<Path> expand = new HashSet<>();
-            if(permission != null) {
-                final Set<Path> paths = Path.children(permission.getExpand(), Path.of(VAR_CALLER));
-                // FIXME?
-                expand.addAll(callerSchema.requiredExpand(paths));
-            }
+            final Set<Path> paths = Path.children(permissionExpand, Path.of(VAR_CALLER));
+            // FIXME?
+            final Set<Path> expand = callerSchema.requiredExpand(paths);
 
             if(caller instanceof ExpandedCaller) {
 
@@ -839,7 +955,7 @@ public class DatabaseServer implements Database, Handler<Event> {
                 final Storage.ReadTransaction readTransaction = storage.read(consistency);
                 refs.forEach(ref -> {
                     final RefKey refKey = ref.getKey();
-                    final ObjectSchema objectSchema = schema(refKey.getSchema());
+                    final ObjectSchema objectSchema = objectSchema(refKey.getSchema());
                     readTransaction.readObject(objectSchema, refKey.getId());
                 });
 
@@ -850,7 +966,7 @@ public class DatabaseServer implements Database, Handler<Event> {
 
                         final String schemaName = Instance.getSchema(initial);
                         final String id = Instance.getId(initial);
-                        final ObjectSchema schema = schema(schemaName);
+                        final ObjectSchema schema = objectSchema(schemaName);
                         final Permission permission = schema.getPermission(Permission.READ);
 
                         final Instance object = schema.create(initial);
@@ -1011,14 +1127,14 @@ public class DatabaseServer implements Database, Handler<Event> {
 //        }
 //    }
 
-    private ObjectSchema schema(final String schema) {
+    private ObjectSchema objectSchema(final String schema) {
 
         return namespace.requireObjectSchema(schema);
     }
 
     private CompletableFuture<?> onObjectCreated(final ObjectCreatedEvent event) {
 
-        final ObjectSchema schema = schema(event.getSchema());
+        final ObjectSchema schema = objectSchema(event.getSchema());
         final StorageTraits traits = storage.storageTraits(schema);
         final String id = event.getId();
         final Map<String, Object> after = event.getAfter();
@@ -1044,7 +1160,7 @@ public class DatabaseServer implements Database, Handler<Event> {
 
     private CompletableFuture<?> onObjectUpdated(final ObjectUpdatedEvent event) {
 
-        final ObjectSchema schema = schema(event.getSchema());
+        final ObjectSchema schema = objectSchema(event.getSchema());
         final StorageTraits traits = storage.storageTraits(schema);
         final String id = event.getId();
         final long version = event.getVersion();
@@ -1078,7 +1194,7 @@ public class DatabaseServer implements Database, Handler<Event> {
 
     private CompletableFuture<?> onObjectDeleted(final ObjectDeletedEvent event) {
 
-        final ObjectSchema schema = schema(event.getSchema());
+        final ObjectSchema schema = objectSchema(event.getSchema());
         final StorageTraits traits = storage.storageTraits(schema);
         final String id = event.getId();
         final long version = event.getVersion();
@@ -1097,7 +1213,7 @@ public class DatabaseServer implements Database, Handler<Event> {
 
     private CompletableFuture<?> onAsyncIndexCreated(final AsyncIndexCreatedEvent event) {
 
-        final ObjectSchema schema = schema(event.getSchema());
+        final ObjectSchema schema = objectSchema(event.getSchema());
         final Index index = schema.requireIndex(event.getIndex(), true);
         final Storage.WriteTransaction write = storage.write(Consistency.ASYNC);
         write.createIndex(schema, index, event.getId(), event.getVersion(), event.getKey(), event.getProjection());
@@ -1106,7 +1222,7 @@ public class DatabaseServer implements Database, Handler<Event> {
 
     private CompletableFuture<?> onAsyncIndexUpdated(final AsyncIndexUpdatedEvent event) {
 
-        final ObjectSchema schema = schema(event.getSchema());
+        final ObjectSchema schema = objectSchema(event.getSchema());
         final Index index = schema.requireIndex(event.getIndex(), true);
         final Storage.WriteTransaction write = storage.write(Consistency.ASYNC);
         write.updateIndex(schema, index, event.getId(), event.getVersion(), event.getKey(), event.getProjection());
@@ -1115,7 +1231,7 @@ public class DatabaseServer implements Database, Handler<Event> {
 
     private CompletableFuture<?> onAsyncIndexDeleted(final AsyncIndexDeletedEvent event) {
 
-        final ObjectSchema schema = schema(event.getSchema());
+        final ObjectSchema schema = objectSchema(event.getSchema());
         final Index index = schema.requireIndex(event.getIndex(), true);
         final Storage.WriteTransaction write = storage.write(Consistency.ASYNC);
         write.deleteIndex(schema, index, event.getId(), event.getVersion(), event.getKey());
@@ -1124,7 +1240,7 @@ public class DatabaseServer implements Database, Handler<Event> {
 
     private CompletableFuture<?> onAsyncHistoryCreated(final AsyncHistoryCreatedEvent event) {
 
-        final ObjectSchema schema = schema(event.getSchema());
+        final ObjectSchema schema = objectSchema(event.getSchema());
         final Storage.WriteTransaction write = storage.write(Consistency.ASYNC);
         write.createHistory(schema, event.getId(), event.getVersion(), event.getAfter());
         return write.commit();

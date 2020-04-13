@@ -89,13 +89,16 @@ public class UseMap<T> implements Use<Map<String, T>> {
     }
 
     @Override
-    public Map<String, T> create(final Object value) {
+    public Map<String, T> create(final Object value, final boolean expand) {
 
         if(value == null) {
             return null;
         } else if(value instanceof Map) {
             return ((Map<?, ?>)value).entrySet().stream()
-                    .collect(Collectors.toMap(entry -> entry.getKey().toString(), entry -> type.create(entry.getValue())));
+                    .collect(Collectors.toMap(
+                            entry -> entry.getKey().toString(),
+                            entry -> type.create(entry.getValue(), expand)
+                    ));
         } else {
             throw new InvalidTypeException();
         }
@@ -200,11 +203,11 @@ public class UseMap<T> implements Use<Map<String, T>> {
 //    }
 
     @Override
-    public Set<Path> requireExpand(final Set<Path> paths) {
+    public Set<Path> requiredExpand(final Set<Path> paths) {
 
         final Set<Path> result = new HashSet<>();
         Path.branch(paths)
-                .forEach((head, tail) -> type.requireExpand(tail)
+                .forEach((head, tail) -> type.requiredExpand(tail)
                         .forEach(path -> result.add(Path.of(head).with(path))));
         return result;
     }

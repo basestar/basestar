@@ -64,7 +64,7 @@ public class UseBinary implements UseScalar<byte[]> {
     }
 
     @Override
-    public byte[] create(final Object value) {
+    public byte[] create(final Object value, final boolean expand) {
 
         if(value == null) {
             return null;

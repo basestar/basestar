@@ -41,6 +41,22 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
 
     InstanceSchema getExtend();
 
+    default Set<Path> requiredExpand(final Set<Path> paths) {
+
+        final Set<Path> result = new HashSet<>();
+        for (final Map.Entry<String, Set<Path>> branch : Path.branch(paths).entrySet()) {
+            final Member member = getMember(branch.getKey(), true);
+            if(member != null) {
+                for(final Path tail : member.requireExpand(branch.getValue())) {
+                    result.add(Path.of(branch.getKey()).with(tail));
+                }
+            }
+        }
+        return Path.simplify(result);
+    }
+
+    boolean isConcrete();
+
     default Use<?> typeOf(final Path path) {
 
         if(path.isEmpty()) {
@@ -66,10 +82,10 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         }
     }
 
-    default Map<String, Object> readProperties(final Map<String, Object> object) {
+    default Map<String, Object> readProperties(final Map<String, Object> object, final boolean expand) {
 
         final Map<String, Object> result = new HashMap<>();
-        getAllProperties().forEach((k, v) -> result.put(k, v.create(object.get(k))));
+        getAllProperties().forEach((k, v) -> result.put(k, v.create(object.get(k), expand)));
         return Collections.unmodifiableMap(result);
     }
 

@@ -14,7 +14,7 @@ User:
     links:
       groups:
         schema: Group
-        query: member.id == this.id for any member in members
+        expression: member.id == this.id for any member in members
 
 Group:
     type: object

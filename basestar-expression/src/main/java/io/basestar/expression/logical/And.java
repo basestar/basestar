@@ -96,27 +96,8 @@ public class And implements Expression {
             return true;
         } else {
             return terms.stream().allMatch(v -> v.evaluatePredicate(context));
-
-//            Object next = terms.get(0).evaluate(context);
-//            if(Values.isTruthy(next)) {
-//                for(final Expression expr : terms.subList(1, terms.size())) {
-//                    next = expr.evaluate(context);
-//                    if(!Values.isTruthy(next)) {
-//                        return next;
-//                    }
-//                }
-//                return next;
-//            } else {
-//                return next;
-//            }
         }
     }
-
-//    @Override
-//    public Query query() {
-//
-//        return Query.and();
-//    }
 
     @Override
     public Set<Path> paths() {
@@ -135,6 +116,12 @@ public class And implements Expression {
     public int precedence() {
 
         return PRECEDENCE;
+    }
+
+    @Override
+    public boolean isConstant(final Set<String> closure) {
+
+        return terms.stream().allMatch(term -> term.isConstant(closure));
     }
 
     @Override

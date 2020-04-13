@@ -70,7 +70,7 @@ public class DisjunctionVisitor implements ExpressionVisitor.Defaulting<Set<Expr
             final Object value = ((Constant)rhs).getValue();
             if(value instanceof Collection<?>) {
                 return ((Collection<?>) value).stream()
-                        .map(v -> new Eq(new PathConstant(path), new Constant(value)))
+                        .map(v -> new Eq(new PathConstant(path), new Constant(v)))
                         .collect(Collectors.toSet());
             } else {
                 return Collections.singleton(expression);

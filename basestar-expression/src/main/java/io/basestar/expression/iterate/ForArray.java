@@ -21,11 +21,13 @@ package io.basestar.expression.iterate;
  */
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.PathTransform;
+import io.basestar.expression.constant.Constant;
 import io.basestar.util.Path;
 import lombok.Data;
 
@@ -66,9 +68,12 @@ public class ForArray implements Expression {
     @Override
     public Expression bind(final Context context, final PathTransform root) {
 
-        final Expression yield = this.yield.bind(context, PathTransform.closure(iter.closure(), root));
+        final Set<String> closure = iter.closure();
+        final Expression yield = this.yield.bind(context, PathTransform.closure(closure, root));
         final Expression iter = this.iter.bind(context, root);
-        if(yield == this.yield && iter == this.iter) {
+        if(iter instanceof Constant && yield.isConstant(closure)) {
+            return new Constant(evaluate(context, yield, ((Constant) iter).getValue()));
+        } else if(yield == this.yield && iter == this.iter) {
             return this;
         } else {
             return new ForArray(yield, iter);
@@ -78,14 +83,18 @@ public class ForArray implements Expression {
     @Override
     public List<?> evaluate(final Context context) {
 
-        final Object iter = this.iter.evaluate(context);
+        return evaluate(context, yield, iter.evaluate(context));
+    }
+
+    private List<?> evaluate(final Context context, final Expression yield, final Object iter) {
+
         if(iter instanceof Iterator<?>) {
             final List<Object> result = new ArrayList<>();
             Streams.stream((Iterator<?>)iter)
                     .forEach(v -> {
                         @SuppressWarnings("unchecked")
                         final Map<String, Object> scope = (Map<String, Object>)v;
-                        final Object value = this.yield.evaluate(context.with(scope));
+                        final Object value = yield.evaluate(context.with(scope));
                         result.add(value);
                     });
             return result;
@@ -119,6 +128,17 @@ public class ForArray implements Expression {
     public int precedence() {
 
         return PRECEDENCE;
+    }
+
+    @Override
+    public boolean isConstant(final Set<String> closure) {
+
+        if(iter.isConstant(closure)) {
+            final Set<String> fullClosure = Sets.union(closure, iter.closure());
+            return yield.isConstant(fullClosure);
+        } else {
+            return false;
+        }
     }
 
     @Override

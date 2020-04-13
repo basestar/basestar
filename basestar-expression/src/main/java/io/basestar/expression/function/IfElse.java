@@ -128,6 +128,12 @@ public class IfElse implements Expression {
     }
 
     @Override
+    public boolean isConstant(final Set<String> closure) {
+
+        return predicate.isConstant(closure) && then.isConstant(closure) && otherwise.isConstant(closure);
+    }
+
+    @Override
     public <T> T visit(final ExpressionVisitor<T> visitor) {
 
         return visitor.visitIfElse(this);

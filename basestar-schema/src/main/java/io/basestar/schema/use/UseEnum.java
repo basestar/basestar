@@ -60,9 +60,9 @@ public class UseEnum implements UseScalar<String> {
 
     @Override
     @SuppressWarnings("unchecked")
-    public String create(final Object value) {
+    public String create(final Object value, final boolean expand) {
 
-        return type.create(value);
+        return type.create(value, expand);
     }
 
     @Override

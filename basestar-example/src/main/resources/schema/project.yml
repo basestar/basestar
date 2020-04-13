@@ -25,14 +25,14 @@ Project:
   links:
 #    tasks:
 #      schema: Task
-#      query: project.id == this.id
+#      expression: project.id == this.id
     teams:
       schema: ProjectTeam
-      query: project.id == this.id
+      expression: project.id == this.id
 #      delete: RESTRICT
     users:
       schema: ProjectUser
-      query: project.id == this.id
+      expression: project.id == this.id
 #      delete: RESTRICT
 
   indexes:
@@ -83,7 +83,7 @@ ProjectTeam:
   links:
     tasks:
       schema: TeamUser
-      query: user.id == this.id
+      expression: user.id == this.id
 
   indexes:
     project:

@@ -77,6 +77,12 @@ public class Constant implements Expression {
     }
 
     @Override
+    public boolean isConstant(final Set<String> closure) {
+
+        return true;
+    }
+
+    @Override
     public <T> T visit(final ExpressionVisitor<T> visitor) {
 
         return visitor.visitConstant(this);

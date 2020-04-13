@@ -107,6 +107,12 @@ public class LambdaCall implements Expression {
     }
 
     @Override
+    public boolean isConstant(final Set<String> closure) {
+
+        return false;
+    }
+
+    @Override
     public <T> T visit(final ExpressionVisitor<T> visitor) {
 
         return visitor.visitLambdaCall(this);

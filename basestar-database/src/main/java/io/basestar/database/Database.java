@@ -30,7 +30,6 @@ import io.basestar.util.PagingToken;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 public interface Database {
@@ -53,7 +52,7 @@ public interface Database {
 
     default CompletableFuture<Instance> create(final Caller caller, final String schema, final Map<String, Object> data, final CreateOptions options) {
 
-        return create(caller, schema, UUID.randomUUID().toString(), data, options);
+        return create(caller, schema, null, data, options);
     }
 
     default CompletableFuture<Instance> create(final Caller caller, final String schema, final String id, final Map<String, Object> data) {
@@ -92,4 +91,6 @@ public interface Database {
     CompletableFuture<PagedList<Instance>> page(Caller caller, String schema, String id, String rel, QueryOptions options);
 
     CompletableFuture<PagingToken> reindex(Caller caller, Map<String, ? extends Collection<String>> schemaIndexes, int count, PagingToken paging);
+
+
 }

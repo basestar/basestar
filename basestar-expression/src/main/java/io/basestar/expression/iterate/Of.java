@@ -26,6 +26,7 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.PathTransform;
+import io.basestar.expression.constant.Constant;
 import io.basestar.expression.literal.LiteralObject;
 import io.basestar.util.Path;
 import lombok.Data;
@@ -84,7 +85,9 @@ public class Of implements Expression {
     public Expression bind(final Context context, final PathTransform root) {
 
         final Expression expr = this.expr.bind(context, root);
-        if(expr == this.expr) {
+        if(expr instanceof Constant) {
+            return new Constant(evaluate(((Constant) expr).getValue()));
+        } else if(expr == this.expr) {
             return this;
         } else {
             return new Of(key, value, expr);
@@ -105,6 +108,11 @@ public class Of implements Expression {
     public Iterator<?> evaluate(final Context context) {
 
         final Object with = this.expr.evaluate(context);
+        return evaluate(with);
+    }
+
+    private Iterator<?> evaluate(final Object with) {
+
         if(with instanceof Collection<?>) {
             if(key == null) {
                 return ((Collection<?>) with).stream()
@@ -155,6 +163,12 @@ public class Of implements Expression {
     public int precedence() {
 
         return PRECEDENCE;
+    }
+
+    @Override
+    public boolean isConstant(final Set<String> closure) {
+
+        return expr.isConstant(closure);
     }
 
     @Override

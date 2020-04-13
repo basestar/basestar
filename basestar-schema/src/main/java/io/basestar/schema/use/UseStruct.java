@@ -90,12 +90,12 @@ public class UseStruct implements Use<Instance> {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Instance create(final Object value) {
+    public Instance create(final Object value, final boolean expand) {
 
         if(value == null) {
             return null;
         } else if(value instanceof Map) {
-            return schema.create((Map<String, Object>)value);
+            return schema.create((Map<String, Object>)value, expand);
         } else {
             throw new InvalidTypeException();
         }
@@ -143,7 +143,7 @@ public class UseStruct implements Use<Instance> {
 
     @Override
     @Deprecated
-    public Set<Path> requireExpand(final Set<Path> paths) {
+    public Set<Path> requiredExpand(final Set<Path> paths) {
 
         return schema.requiredExpand(paths);
     }

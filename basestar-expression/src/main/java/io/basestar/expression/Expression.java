@@ -44,6 +44,12 @@ public interface Expression extends Serializable {
         return Values.isTruthy(evaluate(context));
     }
 
+    // FIXME: this should try to coerce to the target type
+    default <T> T evaluateAs(final Class<T> as, final Context context) {
+
+        return as.cast(evaluate(context));
+    }
+
     //    Query query();
 
     Set<Path> paths();
@@ -52,11 +58,18 @@ public interface Expression extends Serializable {
 
     int precedence();
 
+    boolean isConstant(Set<String> closure);
+
     <T> T visit(ExpressionVisitor<T> visitor);
 
     default Set<String> closure() {
 
         return Collections.emptySet();
+    }
+
+    default boolean isConstant() {
+
+        return isConstant(Collections.emptySet());
     }
 
     static Expression parse(final String expr) {

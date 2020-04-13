@@ -55,7 +55,12 @@ public interface Use<T> extends Serializable {
 
     Use<?> resolve(Schema.Resolver resolver);
 
-    T create(Object value);
+    T create(Object value, boolean expand);
+
+    default T create(Object value) {
+
+        return create(value, false);
+    }
 
     Code code();
 
@@ -171,7 +176,7 @@ public interface Use<T> extends Serializable {
             case MAP:
                 return (T)UseMap.deserializeAnyValue(in);
             case REF:
-                return (T)UseObject.deserializeAnyValue(in);
+                return (T)UseRef.deserializeAnyValue(in);
             case STRUCT:
                 return (T)UseStruct.deserializeAnyValue(in);
             case BINARY:
@@ -187,8 +192,8 @@ public interface Use<T> extends Serializable {
 
 //    Map<String,Object> openApiType();
 
-    @Deprecated
-    Set<Path> requireExpand(Set<Path> paths);
+
+    Set<Path> requiredExpand(Set<Path> paths);
 
     @Deprecated
     Multimap<Path, Instance> refs(T value);
@@ -210,7 +215,7 @@ public interface Use<T> extends Serializable {
 
         R visitEnum(UseEnum type);
 
-        R visitRef(UseObject type);
+        R visitRef(UseRef type);
 
         <T> R visitArray(UseArray<T> type);
 

@@ -7,7 +7,7 @@
     <groupId>io.basestar</groupId>
     <artifactId>basestar</artifactId>
     <packaging>pom</packaging>
-    <version>1.1.SNAPSHOT</version>
+    <version>1.1-SNAPSHOT</version>
 
     <inceptionYear>2019</inceptionYear>
     <organization>
@@ -98,6 +98,7 @@
         <module>basestar-test</module>
         <module>basestar-storage-cognito</module>
         <module>basestar-storage-hazelcast</module>
+        <module>basestar-graphql</module>
     </modules>
 
     <build>
@@ -117,7 +118,7 @@
                 <version>1.18.12.0</version>
                 <executions>
                     <execution>
-                        <phase>validate</phase>
+                        <phase>prepare-package</phase>
                         <goals>
                             <goal>delombok</goal>
                         </goals>
@@ -269,7 +270,7 @@
                 <executions>
                     <execution>
                         <id>sign-artifacts</id>
-                        <phase>verify</phase>
+                        <phase>deploy</phase>
                         <goals>
                             <goal>sign</goal>
                         </goals>

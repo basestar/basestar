@@ -179,7 +179,7 @@ public class Index implements Named, Described {
                 }
             }
         }
-        if(unique && !consistency.equals(Consistency.ATOMIC)) {
+        if(unique && !Consistency.ATOMIC.equals(consistency)) {
             throw new IndexValidationException("Unique index must have " + Consistency.ATOMIC + " consistency");
         }
     }
@@ -376,7 +376,7 @@ public class Index implements Named, Described {
         }
     }
 
-    interface Resolver {
+    public interface Resolver {
 
         Map<String, Index> getDeclaredIndexes();
 

@@ -50,7 +50,7 @@ import java.util.Set;
  */
 
 @Data
-public class UseObject implements Use<Instance> {
+public class UseRef implements Use<Instance> {
 
     public static final String NAME = "ref";
 
@@ -63,9 +63,9 @@ public class UseObject implements Use<Instance> {
         return visitor.visitRef(this);
     }
 
-    public static UseObject from(final ObjectSchema schema, final Object config) {
+    public static UseRef from(final ObjectSchema schema, final Object config) {
 
-        return new UseObject(schema);
+        return new UseRef(schema);
     }
 
     @Override
@@ -77,9 +77,9 @@ public class UseObject implements Use<Instance> {
     }
 
     @Override
-    public UseObject resolve(final Schema.Resolver resolver) {
+    public UseRef resolve(final Schema.Resolver resolver) {
 
-        return new UseObject(resolver.requireObjectSchema(schema.getName()));
+        return new UseRef(resolver.requireObjectSchema(schema.getName()));
     }
 
     @Override
@@ -94,16 +94,21 @@ public class UseObject implements Use<Instance> {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Instance create(final Object value) {
+    public Instance create(final Object value, final boolean expand) {
 
         if(value == null) {
             return null;
         } else if(value instanceof Map) {
-            final String id = Instance.getId((Map<String, Object>)value);
+            final Map<String, Object> map = (Map<String, Object>)value;
+            final String id = Instance.getId(map);
             if(id == null) {
                 return null;
             } else {
-                return ObjectSchema.ref(id);
+                if(expand) {
+                    return schema.create(map, true);
+                } else {
+                    return ObjectSchema.ref(id);
+                }
             }
         } else {
             throw new InvalidTypeException();
@@ -177,7 +182,7 @@ public class UseObject implements Use<Instance> {
 
     @Override
     @Deprecated
-    public Set<Path> requireExpand(final Set<Path> paths) {
+    public Set<Path> requiredExpand(final Set<Path> paths) {
 
         final Set<Path> copy = Sets.newHashSet(paths);
         copy.remove(Path.of(Reserved.SCHEMA));

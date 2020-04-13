@@ -95,4 +95,10 @@ public interface Binary extends Expression {
 
         return getRhs().bind(context, root);
     }
+
+    @Override
+    default boolean isConstant(final Set<String> closure) {
+
+        return getLhs().isConstant(closure) && getRhs().isConstant(closure);
+    }
 }

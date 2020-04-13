@@ -25,6 +25,7 @@ import com.google.common.collect.Maps;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.AbstractMap;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
@@ -119,10 +120,9 @@ public class Instance extends AbstractMap<String, Object> implements Serializabl
         return this;
     }
 
-    @SuppressWarnings("unchecked")
-    public <T> T get(final String name, final T value) {
+    public <T> T get(final String name, final Class<T> as) {
 
-        return (T)backing.get(name);
+        return as.cast(backing.get(name));
     }
 
 //    public <T> T getProperty(final String name, final Class<T> cls) {
@@ -203,6 +203,12 @@ public class Instance extends AbstractMap<String, Object> implements Serializabl
     public static void setUpdated(final Map<String, Object> object, final LocalDateTime updated) {
 
         object.put(Reserved.UPDATED, updated == null ? null : updated.toString());
+    }
+
+    @SuppressWarnings("unchecked")
+    public static Collection<? extends Map<String, Object>> getLink(final Map<String, Object> data, final String link) {
+
+        return (Collection<? extends Map<String, Object>>)data.get(link);
     }
 }
 

@@ -121,6 +121,12 @@ public class PathConstant implements Expression {
     }
 
     @Override
+    public boolean isConstant(final Set<String> closure) {
+
+        return closure.stream().anyMatch(c -> path.isChildOrEqual(Path.of(c)));
+    }
+
+    @Override
     public <T> T visit(final ExpressionVisitor<T> visitor) {
 
         return visitor.visitPathConstant(this);

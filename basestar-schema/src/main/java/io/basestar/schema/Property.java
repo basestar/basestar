@@ -137,7 +137,7 @@ public class Property implements Member {
     @Deprecated
     public Set<Path> requireExpand(final Set<Path> paths) {
 
-        return type.requireExpand(paths);
+        return type.requiredExpand(paths);
     }
 
     @Override
@@ -146,9 +146,9 @@ public class Property implements Member {
         return type.typeOf(path);
     }
 
-    public Object create(final Object value) {
+    public Object create(final Object value, final boolean expand) {
 
-        return type.create(value);
+        return type.create(value, expand);
     }
 
     public <T> T cast(final Object o, final Class<T> as) {
@@ -179,7 +179,7 @@ public class Property implements Member {
         if(expression != null) {
 //            final Map<String, Object> newContext = new HashMap<>(context);
 //            newContext.put(VAR_VALUE, value);
-            return type.create(expression.evaluate(context.with(VAR_VALUE, value)));
+            return type.create(expression.evaluate(context.with(VAR_VALUE, value)), true);
         } else {
             return value;
         }
@@ -206,7 +206,7 @@ public class Property implements Member {
         return violations;
     }
 
-    interface Resolver {
+    public interface Resolver {
 
         Map<String, Property> getDeclaredProperties();
 

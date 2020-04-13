@@ -8,7 +8,7 @@ User:
     links:
       groups:
         schema: Group
-        query: m.id == this.id for any m of members
+        expression: m.id == this.id for any m of members
 
 
 Group:

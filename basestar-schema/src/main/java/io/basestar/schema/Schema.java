@@ -48,7 +48,12 @@ public interface Schema<T> extends Named, Described {
         Schema<T> build(Resolver.Cyclic resolver, String name, int slot);
     }
 
-    T create(Object value);
+    default T create(Object value) {
+
+        return create(value, false);
+    }
+
+    T create(Object value, boolean expand);
 
     int getSlot();
 

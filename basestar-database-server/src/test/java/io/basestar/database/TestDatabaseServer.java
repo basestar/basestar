@@ -56,8 +56,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
-//import io.basestar.database.storage.LoggingStorage;
-
 public class TestDatabaseServer {
 
     private static final String SIMPLE = "Simple";
@@ -71,6 +69,8 @@ public class TestDatabaseServer {
     private static final String REF_TARGET = "RefTarget";
 
     private static final String SIMPLE_PERMS = "SimplePerms";
+
+    private static final String CUSTOM_ID = "CustomId";
 
     private static final String ANIMAL = "Animal";
 
@@ -372,6 +372,17 @@ public class TestDatabaseServer {
             )).get()));
     }
 
+
+    @Test
+    public void customId() throws Exception {
+
+        final Map<String, Object> createA = database.create(Caller.SUPER, CUSTOM_ID, ImmutableMap.of(
+                "x", "x"
+        )).get();
+        assertNotNull(createA);
+        assertEquals("custom:x", Instance.getId(createA));
+    }
+
     @Test
     @SuppressWarnings("unchecked")
     public void polymorphicCreate() {
@@ -430,6 +441,20 @@ public class TestDatabaseServer {
         assertTrue(residents.stream().allMatch(v -> v.get("breed") != null));
     }
 
+    @Test
+    public void nestedCreate() throws Exception {
+
+        final String refA = UUID.randomUUID().toString();
+        final Map<String, Object> createRefA = database.create(caller, REF_TARGET, refA, ImmutableMap.of(
+                "value", "test",
+                "sources", ImmutableList.of(
+                        ImmutableMap.of(
+
+                        )
+                )
+        )).get();
+
+    }
 
     private Executable cause(final Executable target) {
 

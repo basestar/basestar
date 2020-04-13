@@ -25,7 +25,6 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.PathTransform;
 import io.basestar.expression.constant.Constant;
-import io.basestar.expression.type.Values;
 import io.basestar.util.Path;
 import lombok.Data;
 
@@ -92,12 +91,6 @@ public class LiteralObject implements Expression {
                 .collect(Collectors.toSet());
     }
 
-//    @Override
-//    public Query query() {
-//
-//        return Query.and();
-//    }
-
     @Override
     public String token() {
 
@@ -111,6 +104,13 @@ public class LiteralObject implements Expression {
     }
 
     @Override
+    public boolean isConstant(final Set<String> closure) {
+
+        return args.entrySet().stream()
+                .allMatch(arg -> arg.getKey().isConstant(closure) && arg.getValue().isConstant(closure));
+    }
+
+    @Override
     public <T> T visit(final ExpressionVisitor<T> visitor) {
 
         return visitor.visitLiteralObject(this);
@@ -119,6 +119,7 @@ public class LiteralObject implements Expression {
     @Override
     public String toString() {
 
-        return Values.toString(args);
+        return "{" + args.entrySet().stream().map(e -> e.getKey().toString() + ": " + e.getValue().toString())
+                .collect(Collectors.joining(", ")) + "}";
     }
 }

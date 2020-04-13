@@ -63,7 +63,7 @@ public class UseInteger implements UseScalar<Long> {
     }
 
     @Override
-    public Long create(final Object value) {
+    public Long create(final Object value, final boolean expand) {
 
         if(value == null) {
             return null;

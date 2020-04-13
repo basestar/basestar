@@ -46,7 +46,7 @@ public interface UseScalar<T> extends Use<T> {
 
     @Override
     @Deprecated
-    default Set<Path> requireExpand(final Set<Path> paths) {
+    default Set<Path> requiredExpand(final Set<Path> paths) {
 
         return Collections.emptySet();
     }

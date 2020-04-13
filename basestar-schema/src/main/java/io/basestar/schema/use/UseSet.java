@@ -99,12 +99,14 @@ public class UseSet<T> implements Use<Set<T>> {
     }
 
     @Override
-    public Set<T> create(final Object value) {
+    public Set<T> create(final Object value, final boolean expand) {
 
         if(value == null) {
             return null;
         } else if(value instanceof Collection) {
-            return ((Collection<?>)value).stream().map(type::create).collect(Collectors.toSet());
+            return ((Collection<?>)value).stream()
+                    .map(v -> type.create(v, expand))
+                    .collect(Collectors.toSet());
         } else {
             throw new InvalidTypeException();
         }
@@ -169,9 +171,9 @@ public class UseSet<T> implements Use<Set<T>> {
 
     @Override
     @Deprecated
-    public Set<Path> requireExpand(final Set<Path> paths) {
+    public Set<Path> requiredExpand(final Set<Path> paths) {
 
-        return type.requireExpand(paths);
+        return type.requiredExpand(paths);
     }
 
     @Override

@@ -21,11 +21,13 @@ package io.basestar.expression.iterate;
  */
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.PathTransform;
+import io.basestar.expression.constant.Constant;
 import io.basestar.expression.function.IfElse;
 import io.basestar.util.Path;
 import lombok.Data;
@@ -74,11 +76,14 @@ public class ForObject implements Expression {
     @Override
     public Expression bind(final Context context, final PathTransform root) {
 
-        final PathTransform closureTransform = PathTransform.closure(iter.closure(), root);
+        final Set<String> closure = iter.closure();
+        final PathTransform closureTransform = PathTransform.closure(closure, root);
         final Expression yieldKey = this.yieldKey.bind(context, closureTransform);
         final Expression yieldValue = this.yieldValue.bind(context, closureTransform);
         final Expression iter = this.iter.bind(context, root);
-        if(yieldKey == this.yieldKey && yieldValue == this.yieldValue && iter == this.iter) {
+        if(iter instanceof Constant && yieldKey.isConstant(closure) && yieldValue.isConstant(closure)) {
+            return new Constant(evaluate(context, yieldKey, yieldValue, ((Constant) iter).getValue()));
+        } else if(yieldKey == this.yieldKey && yieldValue == this.yieldValue && iter == this.iter) {
             return this;
         } else {
             return new ForObject(yieldKey, yieldValue, iter);
@@ -88,7 +93,11 @@ public class ForObject implements Expression {
     @Override
     public Map<String, ?> evaluate(final Context context) {
 
-        final Object iter = this.iter.evaluate(context);
+        return evaluate(context, yieldKey, yieldValue, iter.evaluate(context));
+    }
+
+    private Map<String, ?> evaluate(final Context context, final Expression yieldKey, final Expression yieldValue, final Object iter) {
+
         if(iter instanceof Iterator<?>) {
             final Map<String, Object> result = new HashMap<>();
             Streams.stream((Iterator<?>)iter)
@@ -115,12 +124,6 @@ public class ForObject implements Expression {
                 .build();
     }
 
-//    @Override
-//    public Query query() {
-//
-//        return Query.and();
-//    }
-
     @Override
     public String token() {
 
@@ -131,6 +134,17 @@ public class ForObject implements Expression {
     public int precedence() {
 
         return PRECEDENCE;
+    }
+
+    @Override
+    public boolean isConstant(final Set<String> closure) {
+
+        if(iter.isConstant(closure)) {
+            final Set<String> fullClosure = Sets.union(closure, iter.closure());
+            return yieldKey.isConstant(fullClosure) && yieldValue.isConstant(fullClosure);
+        } else {
+            return false;
+        }
     }
 
     @Override

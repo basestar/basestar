@@ -59,14 +59,14 @@ public class UseNamed implements Use<Object> {
         } else if(schema instanceof StructSchema) {
             return UseStruct.from((StructSchema) schema, config);
         } else if(schema instanceof ObjectSchema) {
-            return UseObject.from((ObjectSchema) schema, config);
+            return UseRef.from((ObjectSchema) schema, config);
         } else {
             throw new MissingTypeException(name);
         }
     }
 
     @Override
-    public Object create(final Object value) {
+    public Object create(final Object value, final boolean expand) {
 
         throw new UnsupportedOperationException();
     }
@@ -91,7 +91,7 @@ public class UseNamed implements Use<Object> {
 
     @Override
     @Deprecated
-    public Set<Path> requireExpand(final Set<Path> paths) {
+    public Set<Path> requiredExpand(final Set<Path> paths) {
 
         throw new UnsupportedOperationException();
     }

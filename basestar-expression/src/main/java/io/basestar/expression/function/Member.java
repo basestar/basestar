@@ -112,6 +112,12 @@ public class Member implements Expression {
     }
 
     @Override
+    public boolean isConstant(final Set<String> closure) {
+
+        return with.isConstant(closure);
+    }
+
+    @Override
     public <T> T visit(final ExpressionVisitor<T> visitor) {
 
         return visitor.visitMember(this);

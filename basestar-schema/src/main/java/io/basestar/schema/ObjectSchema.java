@@ -88,6 +88,11 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
     @Nullable
     private final InstanceSchema extend;
 
+    /** Id configuration */
+
+    @Nullable
+    private final Id id;
+
     /** History configuration */
 
     @Nonnull
@@ -156,6 +161,8 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
     @JsonIgnore
     private final SortedMap<String, Permission> allPermissions;
 
+    private final boolean concrete;
+
     @Data
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -168,6 +175,9 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
 
         @Nullable
         private String extend;
+
+        @Nullable
+        private Id.Builder id;
 
         @Nullable
         private History history;
@@ -198,6 +208,8 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         private Map<String, Permission.Builder> permissions;
+
+        private Boolean concrete;
 
         public Builder setProperty(final String name, final Property.Builder v) {
 
@@ -266,6 +278,7 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
             this.extend = null;
         }
         this.description = builder.getDescription();
+        this.id = builder.getId() == null ? null : builder.getId().build();
         this.history = Nullsafe.of(builder.getHistory(), History.ENABLED);
         this.declaredProperties = ImmutableSortedMap.copyOf(Nullsafe.of(builder.getProperties()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, e.getKey()))));
@@ -277,6 +290,7 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(e.getKey()))));
         this.declaredPermissions = ImmutableSortedMap.copyOf(Nullsafe.of(builder.getPermissions()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(e.getKey()))));
+        this.concrete = Nullsafe.of(builder.getConcrete(), Boolean.TRUE);
         if(Reserved.isReserved(name)) {
             throw new ReservedNameException(name);
         }
@@ -426,13 +440,14 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         return Collections.unmodifiableMap(result);
     }
 
+    @Override
     @SuppressWarnings("unchecked")
-    public Instance create(final Object value) {
+    public Instance create(final Object value, final boolean expand) {
 
         if(value == null) {
             return null;
         } else if(value instanceof Map) {
-            return create((Map<String, Object>)value);
+            return create((Map<String, Object>)value, expand);
         } else {
             throw new InvalidTypeException();
         }
@@ -447,9 +462,9 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         return results;
     }
 
-    public Instance create(final Map<String, Object> value) {
+    public Instance create(final Map<String, Object> value, final boolean expand) {
 
-        final HashMap<String, Object> result = new HashMap<>(readProperties(value));
+        final HashMap<String, Object> result = new HashMap<>(readProperties(value, expand));
         Instance.setSchema(result, this.getName());
         result.putAll(readMeta(value));
         if(result.get(Reserved.HASH) == null) {
@@ -490,9 +505,16 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
 
     public void validate(final Path path, final Map<String, Object> before, final Map<String, Object> after, final Context context) {
 
-        final Set<Constraint.Violation> violations = getAllProperties().values().stream()
+
+        final Set<Constraint.Violation> violations = new HashSet<>();
+
+        if(id != null) {
+            violations.addAll(id.validate(path, Instance.getId(after), context));
+        }
+
+        violations.addAll(getAllProperties().values().stream()
                 .flatMap(v -> v.validate(path, before.get(v.getName()), after.get(v.getName()), context).stream())
-                .collect(Collectors.toSet());
+                .collect(Collectors.toSet()));
 
         if(!violations.isEmpty()) {
             throw new ConstraintViolationException(violations);
@@ -548,21 +570,6 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         Instance.setUpdated(data, updated == null ? null : LocalDateTime.parse(updated));
         Instance.setHash(data, hash);
         return data;
-    }
-
-    @Deprecated
-    public Set<Path> requiredExpand(final Set<Path> paths) {
-
-        final Set<Path> result = new HashSet<>();
-        for (final Map.Entry<String, Set<Path>> branch : Path.branch(paths).entrySet()) {
-            final Member member = getMember(branch.getKey(), true);
-            if(member != null) {
-                for(final Path tail : member.requireExpand(branch.getValue())) {
-                    result.add(Path.of(branch.getKey()).with(tail));
-                }
-            }
-        }
-        return Path.simplify(result);
     }
 
     public static Instance ref(final String key) {

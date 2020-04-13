@@ -75,6 +75,25 @@ public class TestDisjunctionVisitor {
     }
 
     @Test
+    public void testIn() {
+
+        final Expression root = Expression.parse("x.a in [1, 2]");
+        final Expression bound = root.bind(Context.init());
+        final Set<Expression> result = disjunction(bound);
+
+        assertEquals(ImmutableSet.of(
+            new Eq(
+                    new PathConstant(Path.of("x", "a")),
+                    new Constant(1L)
+            ),
+            new Eq(
+                    new PathConstant(Path.of("x", "a")),
+                    new Constant(2L)
+            )
+        ), result);
+    }
+
+    @Test
     public void testForAnyOr() {
 
         final Expression root = Expression.parse("x.a || x.b for any x of y").bind(Context.init());
@@ -86,6 +105,32 @@ public class TestDisjunctionVisitor {
                         new Of("x", new PathConstant(Path.of("y")))),
                 new ForAny(
                         new PathConstant(Path.of("x", "b")),
+                        new Of("x", new PathConstant(Path.of("y"))))
+        ), result);
+
+        // x.a || x.b for any x of y
+        // x.a for any x of y || x.b for any x of y
+    }
+
+    @Test
+    public void testForAnyIn() {
+
+        final Expression root = Expression.parse("x.a in [1, 2] for any x of y");
+        final Expression bound = root.bind(Context.init());
+        final Set<Expression> result = disjunction(bound);
+
+        assertEquals(ImmutableSet.of(
+                new ForAny(
+                        new Eq(
+                                new PathConstant(Path.of("x", "a")),
+                                new Constant(1L)
+                        ),
+                        new Of("x", new PathConstant(Path.of("y")))),
+                new ForAny(
+                        new Eq(
+                                new PathConstant(Path.of("x", "a")),
+                                new Constant(2L)
+                        ),
                         new Of("x", new PathConstant(Path.of("y"))))
         ), result);
 

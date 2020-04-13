@@ -106,7 +106,7 @@ public class EnumSchema implements Schema<String> {
     }
 
     @Override
-    public String create(final Object value) {
+    public String create(final Object value, final boolean expand) {
 
         if(value == null) {
             return null;

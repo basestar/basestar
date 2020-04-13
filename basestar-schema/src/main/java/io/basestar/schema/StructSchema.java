@@ -98,6 +98,8 @@ public class StructSchema implements InstanceSchema {
     @JsonProperty("properties")
     private final SortedMap<String, Property> declaredProperties;
 
+    private final boolean concrete;
+
     @Data
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -113,6 +115,9 @@ public class StructSchema implements InstanceSchema {
 
         @Nullable
         private String description;
+
+        @Nullable
+        private Boolean concrete;
 
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
@@ -150,6 +155,7 @@ public class StructSchema implements InstanceSchema {
         this.description = builder.getDescription();
         this.declaredProperties = ImmutableSortedMap.copyOf(Nullsafe.of(builder.getProperties()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, e.getKey()))));
+        this.concrete = Nullsafe.of(builder.getConcrete(), Boolean.TRUE);
         if(Reserved.isReserved(name)) {
             throw new ReservedNameException(name);
         }
@@ -200,21 +206,22 @@ public class StructSchema implements InstanceSchema {
 //        return Collections.unmodifiableMap(result);
 //    }
 
+    @Override
     @SuppressWarnings("unchecked")
-    public Instance create(final Object value) {
+    public Instance create(final Object value, final boolean expand) {
 
         if(value == null) {
             return null;
         } else if(value instanceof Map) {
-            return create((Map<String, Object>)value);
+            return create((Map<String, Object>)value, expand);
         } else {
             throw new InvalidTypeException();
         }
     }
 
-    public Instance create(final Map<String, Object> value) {
+    public Instance create(final Map<String, Object> value, final boolean expand) {
 
-        return new Instance(readProperties(value));
+        return new Instance(readProperties(value, expand));
     }
 
     public void serialize(final Map<String, Object> object, final DataOutput out) throws IOException {
@@ -227,7 +234,7 @@ public class StructSchema implements InstanceSchema {
         return new Instance(InstanceSchema.deserializeProperties(in));
     }
 
-    @Deprecated
+    @Override
     public Set<Path> requiredExpand(final Set<Path> paths) {
 
         final Set<Path> result = new HashSet<>();

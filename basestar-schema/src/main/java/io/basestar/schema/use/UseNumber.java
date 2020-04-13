@@ -63,7 +63,7 @@ public class UseNumber implements UseScalar<Double> {
     }
 
     @Override
-    public Double create(final Object value) {
+    public Double create(final Object value, final boolean expand) {
 
         if(value == null) {
             return null;

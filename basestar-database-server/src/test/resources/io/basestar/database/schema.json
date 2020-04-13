@@ -66,7 +66,7 @@
     "links": {
       "sources": {
         "schema": "RefSource",
-        "query": "target.id == this.id"
+        "expression": "target.id == this.id"
       }
     }
   },
@@ -156,6 +156,16 @@
         "type": {
           "array": "Animal"
         }
+      }
+    }
+  },
+  "CustomId": {
+    "id": {
+      "expression": "\"custom:\" + this.x"
+    },
+    "properties": {
+      "x": {
+        "type": "string"
       }
     }
   }

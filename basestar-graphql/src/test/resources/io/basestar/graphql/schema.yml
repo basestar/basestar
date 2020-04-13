@@ -1,0 +1,35 @@
+Test1:
+  type: object
+  description: Project
+  properties:
+    x:
+      type: string
+    y:
+      type: integer
+    z:
+      type:
+        map: Test4
+  links:
+    a:
+      schema: Test3
+      expression: test.id == this.id
+
+Test2:
+  type: struct
+  properties:
+    x:
+      type: string
+
+Test3:
+  type: object
+  concrete: false
+  properties:
+    test:
+      type: Test1
+  indexes:
+    test:
+      partition: test.id
+
+Test4:
+  extend: Test3
+  type: object

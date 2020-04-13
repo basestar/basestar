@@ -18,13 +18,13 @@ User:
   links:
     teams:
       schema: TeamUser
-      query: user.id == this.id
+      expression: user.id == this.id
     invites:
       schema: TeamInvite
-      query: user.id == this.id
+      expression: user.id == this.id
     projects:
       schema: ProjectUser
-      query: user.id == this.id
+      expression: user.id == this.id
 
   indexes:
     email:

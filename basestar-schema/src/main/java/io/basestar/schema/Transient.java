@@ -129,7 +129,7 @@ public class Transient implements Member {
         return Collections.emptySet();
     }
 
-    interface Resolver {
+    public interface Resolver {
 
         Map<String, Transient> getDeclaredTransients();
 

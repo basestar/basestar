@@ -65,7 +65,7 @@ public class Link implements Member {
     private final ObjectSchema schema;
 
     @Nonnull
-    private final Expression query;
+    private final Expression expression;
 
     @Nonnull
     private final List<Sort> sort;
@@ -84,7 +84,7 @@ public class Link implements Member {
         @Nullable
         @JsonSerialize(using = ToStringSerializer.class)
         @JsonDeserialize(using = ExpressionDeseriaizer.class)
-        private Expression query;
+        private Expression expression;
 
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
@@ -107,7 +107,7 @@ public class Link implements Member {
         this.name = name;
         this.description = builder.getDescription();
         this.schema = resolver.requireObjectSchema(builder.getSchema());
-        this.query = Nullsafe.of(builder.getQuery());
+        this.expression = Nullsafe.of(builder.getExpression());
         this.sort = Nullsafe.immutableCopy(builder.getSort());
         if(Reserved.isReserved(name)) {
             throw new ReservedNameException(name);
@@ -142,7 +142,7 @@ public class Link implements Member {
         throw new UnsupportedOperationException();
     }
 
-    interface Resolver {
+    public interface Resolver {
 
         Map<String, Link> getDeclaredLinks();
 

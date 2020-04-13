@@ -26,15 +26,12 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 import io.basestar.BuildMetadata;
 import io.basestar.api.API;
-import io.basestar.api.APIFormat;
 import io.basestar.api.APIRequest;
 import io.basestar.api.APIResponse;
 import io.basestar.auth.Authenticator;
 import io.basestar.auth.Caller;
 import io.basestar.database.Database;
 import io.basestar.database.options.*;
-import io.basestar.exception.ExceptionMetadata;
-import io.basestar.exception.HasExceptionMetadata;
 import io.basestar.expression.Expression;
 import io.basestar.util.PagedList;
 import io.basestar.util.PagingToken;
@@ -43,7 +40,6 @@ import io.basestar.util.Sort;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
@@ -92,7 +88,7 @@ public class DatabaseAPI implements API {
                             return health(request);
                         case 1:
                             if (path.get(0).equals("favicon.ico")) {
-                                return CompletableFuture.completedFuture(response(request,404, null));
+                                return CompletableFuture.completedFuture(APIResponse.response(request,404, null));
                             } else {
                                 return query(caller, path.get(0), request);
                                 //return type(caller, request);
@@ -132,13 +128,13 @@ public class DatabaseAPI implements API {
 
         } catch (final Exception e) {
 
-            return CompletableFuture.completedFuture(error(request, e));
+            return CompletableFuture.completedFuture(APIResponse.error(request, e));
         }
     }
 
     private CompletableFuture<APIResponse> health(final APIRequest request) {
 
-        return CompletableFuture.completedFuture(success(request, ImmutableMap.of(
+        return CompletableFuture.completedFuture(APIResponse.success(request, ImmutableMap.of(
                 "basestar", ImmutableMap.of(
                         "version", BuildMetadata.VERSION,
                         "buildTimestamp", BuildMetadata.TIMESTAMP
@@ -148,7 +144,7 @@ public class DatabaseAPI implements API {
 
     private CompletableFuture<APIResponse> head(final APIRequest request) {
 
-        return CompletableFuture.completedFuture(success(request,null));
+        return CompletableFuture.completedFuture(APIResponse.success(request,null));
     }
 
     private CompletableFuture<APIResponse> create(final Caller caller, final String schema, final APIRequest request) throws IOException {
@@ -210,7 +206,7 @@ public class DatabaseAPI implements API {
 
         final Expression query = parseQuery(request);
 
-        return respond(request, database.query(caller, schema, query, options));
+        return respondPaged(request, database.query(caller, schema, query, options));
     }
 
     private CompletableFuture<APIResponse> page(final Caller caller, final String schema, final String id, final String rel, final APIRequest request) {
@@ -220,7 +216,7 @@ public class DatabaseAPI implements API {
                 .setExpand(parseExpand(request))
                 .setPaging(parsePaging(request));
 
-        return respond(request, database.page(caller, schema, id, rel, options));
+        return respondPaged(request, database.page(caller, schema, id, rel, options));
     }
 
     private Set<Path> parseExpand(final APIRequest request) {
@@ -304,81 +300,37 @@ public class DatabaseAPI implements API {
 
     private CompletableFuture<APIResponse> respond(final APIRequest request, final CompletableFuture<?> future) {
 
-        return future.thenApply(v -> success(request, v))
-                .exceptionally(v -> error(request, v));
+        return future.thenApply(v -> APIResponse.success(request, v))
+                .exceptionally(v -> APIResponse.error(request, v));
     }
 
-    private APIResponse success(final APIRequest request, final Object v) {
 
-        return response(request, v == null ? 204 : 200, v);
+    private CompletableFuture<APIResponse> respondPaged(final APIRequest request, final CompletableFuture<? extends PagedList<?>> future) {
+
+        return future.thenApply(v -> APIResponse.success(request, linkHeaders(request, v), v))
+                .exceptionally(v -> APIResponse.error(request, v));
     }
 
-    private APIResponse error(final APIRequest request, final Throwable e) {
+    private Multimap<String, String> linkHeaders(final APIRequest request, final PagedList<?> paged) {
 
-        e.printStackTrace(System.err);
-        final ExceptionMetadata metadata = exceptionMetadata(e);
-        return response(request, metadata.getStatus(), metadata);
-    }
-
-    private ExceptionMetadata exceptionMetadata(final Throwable e) {
-
-        if(e instanceof HasExceptionMetadata) {
-            return ((HasExceptionMetadata)e).getMetadata();
-        } else if(e.getCause() != null) {
-            return exceptionMetadata(e.getCause());
+        if(paged.hasPaging()) {
+            final Multimap<String, String> headers = HashMultimap.create();
+            final String path = request.getPath();
+            final HashMultimap<String, String> query = HashMultimap.create(request.getQuery());
+            query.removeAll("paging");
+            query.put("paging", paged.getPaging().toString());
+            final String url = path + "?" + query.entries().stream()
+                    .map(e -> {
+                        try {
+                            return e.getKey() + "=" + URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8.toString());
+                        } catch (final IOException x) {
+                            throw new IllegalStateException(x);
+                        }
+                    }).collect(Collectors.joining("&"));
+            headers.put("Link", "<" + url + ">; rel=\"next\"");
+            return headers;
         } else {
-            return new ExceptionMetadata().setStatus(500).setCode("UnknownError").setMessage(e.getMessage());
+            return null;
         }
-    }
-
-    private APIResponse response(final APIRequest request, final int status, final Object v) {
-
-        final APIFormat format = request.getAccept();
-        final Multimap<String, String> headers = HashMultimap.create();
-        headers.put("Content-Type", format.getContentType());
-        headers.put("Access-Control-Allow-Origin", "*");
-        headers.put("Access-Control-Allow-Methods", "*");
-        headers.put("Access-Control-Allow-Headers", "*");
-        headers.put("Access-Control-Expose-Headers", "Link");
-        if(v instanceof PagedList<?>) {
-            final PagedList<?> paged = (PagedList<?>)v;
-            if(paged.hasPaging()) {
-                final String path = request.getPath();
-                final HashMultimap<String, String> query = HashMultimap.create(request.getQuery());
-                query.removeAll("paging");
-                query.put("paging", paged.getPaging().toString());
-                final String url = path + "?" + query.entries().stream()
-                        .map(e -> {
-                            try {
-                                return e.getKey() + "=" + URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8.toString());
-                            } catch (final IOException x) {
-                                throw new IllegalStateException(x);
-                            }
-                        }).collect(Collectors.joining("&"));
-                headers.put("Link", "<" + url + ">; rel=\"next\"");
-            }
-        }
-
-        return new APIResponse() {
-            @Override
-            public int getStatusCode() {
-
-                return status;
-            }
-
-            @Override
-            public Multimap<String, String> getHeaders() {
-
-                return headers;
-            }
-
-            @Override
-            public void writeTo(final OutputStream out) throws IOException {
-
-                if(v != null) {
-                    format.getMapper().writerWithDefaultPrettyPrinter().writeValue(out, v);
-                }
-            }
-        };
     }
 }

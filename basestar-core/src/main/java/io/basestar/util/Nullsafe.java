@@ -20,6 +20,8 @@ package io.basestar.util;
  * #L%
  */
 
+import com.google.common.base.Verify;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.*;
@@ -29,6 +31,7 @@ public class Nullsafe {
     @Nonnull
     public static <T> T of(@Nullable final T v, @Nonnull final T or) {
 
+        Verify.verifyNotNull(or);
         return v == null ? or : v;
     }
 
@@ -46,6 +49,12 @@ public class Nullsafe {
     public static String of(@Nullable final String s) {
 
         return s == null ? "" : s;
+    }
+
+    @Nonnull
+    public static Boolean of(@Nullable final Boolean n) {
+
+        return n == null ? Boolean.FALSE : n;
     }
 
     @Nonnull
