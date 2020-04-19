@@ -158,7 +158,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             }
         });
 
-        return expandCaller(caller, beforeCallerExpand).thenCompose(beforeCaller -> {
+        return expandCaller(Context.init(), caller, beforeCallerExpand).thenCompose(beforeCaller -> {
 
             final Context beforeContext = context(beforeCaller);
 
@@ -182,8 +182,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         }
                     });
 
-                    return expand(beforeUnexpanded)
-                            .thenApply(expanded -> processActionResults(beforeContext, expanded));
+                    return expand(beforeContext, beforeUnexpanded)
+                            .thenApply(this::processActionResults);
                 });
             } else {
                 beforeFuture = CompletableFuture.completedFuture(Collections.emptyMap());
@@ -245,7 +245,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                 final Storage overlayStorage = new OverlayStorage(storage, overlay.values());
                 final ReadProcessor readOverlay = new ReadProcessor(namespace, overlayStorage);
 
-                return readOverlay.expandCaller(beforeCaller, afterCallerExpand).thenCompose(afterCaller -> {
+                return readOverlay.expandCaller(beforeContext, beforeCaller, afterCallerExpand).thenCompose(afterCaller -> {
 
                     final Context afterContext = context(afterCaller);
 
@@ -253,8 +253,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                     if (afterKeys.isEmpty()) {
                         afterFuture = CompletableFuture.completedFuture(Collections.emptyMap());
                     } else {
-                        afterFuture = readOverlay.expand(afterKeys)
-                                .thenApply(expanded -> processActionResults(afterContext, expanded));
+                        afterFuture = readOverlay.expand(afterContext, afterKeys)
+                                .thenApply(this::processActionResults);
                     }
 
                     return afterFuture.thenCompose(afterResults -> {
@@ -322,14 +322,10 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         });
     }
 
-    private Map<RefKey, Instance> processActionResults(final Context context, final Map<ExpandKey<RefKey>, Instance> expanded) {
+    private Map<RefKey, Instance> processActionResults(final Map<ExpandKey<RefKey>, Instance> expanded) {
 
         final Map<RefKey, Instance> results = new HashMap<>();
-        expanded.forEach((k, v) -> {
-            final ObjectSchema schema = objectSchema(Instance.getSchema(v));
-            final Instance evaluated = schema.evaluateTransients(context, v, k.getExpand());
-            results.put(k.getKey(), evaluated);
-        });
+        expanded.forEach((k, v) -> results.put(k.getKey(), v));
         return results;
     }
 
@@ -411,9 +407,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         final ObjectSchema schema = objectSchema(Instance.getSchema(instance));
         final Permission read = schema.getPermission(Permission.READ);
-        final Instance transients = schema.evaluateTransients(context(caller), instance, expand);
-        checkPermission(caller, schema, read, ImmutableMap.of(VAR_THIS, transients));
-        final Instance visible = schema.applyVisibility(context(caller), transients);
+        checkPermission(caller, schema, read, ImmutableMap.of(VAR_THIS, instance));
+        final Instance visible = schema.applyVisibility(context(caller), instance);
         return schema.expand(visible, Expander.noop(), expand);
     }
 
@@ -431,7 +426,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final Set<Path> readExpand = Sets.union(Path.children(permissionExpand, Path.of(VAR_THIS)), Nullsafe.of(expand));
         final Set<Path> transientExpand = schema.transientExpand(Path.of(), readExpand);
 
-        return expandCaller(caller, callerExpand).thenCompose(expandedCaller -> expand(instance, transientExpand)
+        return expandCaller(Context.init(), caller, callerExpand)
+                .thenCompose(expandedCaller -> expand(context(expandedCaller), instance, transientExpand)
                 .thenApply(v -> restrict(caller, v, expand)));
     }
 
@@ -450,7 +446,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             readExpand.addAll(transientExpand);
         }
 
-        return expandCaller(caller, callerExpand).thenCompose(expandedCaller -> expand(instances, readExpand)
+        return expandCaller(Context.init(), caller, callerExpand)
+                .thenCompose(expandedCaller -> expand(context(expandedCaller), instances, readExpand)
                 .thenApply(vs -> vs.map(v -> restrict(caller, v, expand))));
     }
 
@@ -500,7 +497,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                     }
                     final PagingToken paging = options.getPaging();
 
-                    return queryLinkImpl(link, owner, count, paging)
+                    return queryLinkImpl(context(caller), link, owner, count, paging)
                             .thenCompose(results -> expandAndRestrict(caller, results, options.getExpand()));
                 });
     }
@@ -542,7 +539,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         final Expression unrooted = bound.bind(Context.init(), PathTransform.unroot(Path.of(Reserved.THIS)));
 
-        return queryImpl(objectSchema, unrooted, sort, count, paging)
+        return queryImpl(context, objectSchema, unrooted, sort, count, paging)
                 .thenCompose(results -> expandAndRestrict(caller, results, options.getExpand()));
     }
 

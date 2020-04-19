@@ -64,7 +64,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         getAllMembers().forEach((name, member) -> {
             if(branch.containsKey(name)) {
                 final Set<Path> memberExpand = branch.get(name);
-                transientExpand.addAll(member.transientExpand(path, memberExpand));
+                transientExpand.addAll(member.transientExpand(path.with(name), memberExpand));
             }
         });
         return transientExpand;

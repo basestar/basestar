@@ -161,8 +161,9 @@ public class Transient implements Member {
         final Set<Path> result = new HashSet<>();
         this.expand.forEach(p -> {
             if(p.isChild(Path.of(Schema.VAR_THIS))) {
-                // Move expand from this to expand on the parameter path
-                result.add(path.with(p.withoutFirst()));
+                // Move expand from this to expand on the parameter path, have to remove the
+                // last parent path element, because it will point to this transient
+                result.add(path.withoutLast().with(p.withoutFirst()));
             } else {
                 result.add(p);
             }
@@ -221,13 +222,13 @@ public class Transient implements Member {
         @Override
         public <T> Void visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
 
-            return type.visit(this);
+            return type.getType().visit(this);
         }
 
         @Override
         public <T> Void visitMap(final UseMap<T> type) {
 
-            return type.visit(this);
+            return type.getType().visit(this);
         }
     }
 }

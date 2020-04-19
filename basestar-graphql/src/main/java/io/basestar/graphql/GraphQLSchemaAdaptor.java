@@ -224,8 +224,9 @@ public class GraphQLSchemaAdaptor {
         if(property.getDescription() != null) {
             builder.description(new Description(property.getDescription(), null, true));
         }
+        // Cannot use NonNullType because value may come from an expression
         final Type<?> type = inputType(property.getType());
-        builder.type(property.isRequired() ? new NonNullType(type) : type);
+        builder.type(type);
         return builder.build();
     }
 

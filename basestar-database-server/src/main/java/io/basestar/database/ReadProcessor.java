@@ -96,22 +96,20 @@ public class ReadProcessor {
         }
     }
 
-    protected CompletableFuture<PagedList<Instance>> queryLinkImpl(final Link link, final Instance owner,
+    protected CompletableFuture<PagedList<Instance>> queryLinkImpl(final Context context, final Link link, final Instance owner,
                                                                    final int count, final PagingToken paging) {
 
         final Expression expression = link.getExpression()
-                .bind(Context.init(ImmutableMap.of(
+                .bind(context.with(ImmutableMap.of(
                         Reserved.THIS, owner
                 )));
 
         final ObjectSchema linkSchema = link.getSchema();
-        return queryImpl(linkSchema, expression, link.getSort(), count, paging);
+        return queryImpl(context, linkSchema, expression, link.getSort(), count, paging);
     }
 
-    protected CompletableFuture<PagedList<Instance>> queryImpl(final ObjectSchema objectSchema, final Expression expression,
+    protected CompletableFuture<PagedList<Instance>> queryImpl(final Context context, final ObjectSchema objectSchema, final Expression expression,
                                                                final List<Sort> sort, final int count, final PagingToken paging) {
-
-        final Context context = Context.init();
 
         final List<Sort> pageSort = ImmutableList.<Sort>builder()
                 .addAll(sort)
@@ -138,7 +136,7 @@ public class ReadProcessor {
         }
     }
 
-    protected CompletableFuture<Instance> expand(final Instance item, final Set<Path> expand) {
+    protected CompletableFuture<Instance> expand(final Context context, final Instance item, final Set<Path> expand) {
 
         if(item == null) {
             return CompletableFuture.completedFuture(null);
@@ -146,12 +144,12 @@ public class ReadProcessor {
             return CompletableFuture.completedFuture(item);
         } else {
             final ExpandKey<RefKey> expandKey = ExpandKey.from(RefKey.from(item), expand);
-            return expand(Collections.singletonMap(expandKey, item))
+            return expand(context, Collections.singletonMap(expandKey, item))
                     .thenApply(results -> results.get(expandKey));
         }
     }
 
-    protected CompletableFuture<PagedList<Instance>> expand(final PagedList<Instance> items, final Set<Path> expand) {
+    protected CompletableFuture<PagedList<Instance>> expand(final Context context, final PagedList<Instance> items, final Set<Path> expand) {
 
         if(items == null) {
             return CompletableFuture.completedFuture(null);
@@ -163,7 +161,7 @@ public class ReadProcessor {
                             item -> ExpandKey.from(RefKey.from(item), expand),
                             item -> item
                     ));
-            return expand(expandKeys)
+            return expand(context, expandKeys)
                     .thenApply(expanded -> items.withPage(
                             items.stream()
                                     .map(v -> expanded.get(ExpandKey.from(RefKey.from(v), expand)))
@@ -172,7 +170,20 @@ public class ReadProcessor {
         }
     }
 
-    protected CompletableFuture<Map<ExpandKey<RefKey>, Instance>> expand(final Map<ExpandKey<RefKey>, Instance> items) {
+    protected CompletableFuture<Map<ExpandKey<RefKey>, Instance>> expand(final Context context, final Map<ExpandKey<RefKey>, Instance> items) {
+
+        return expandImpl(context, items)
+                .thenApply(results -> {
+                    final Map<ExpandKey<RefKey>, Instance> evaluated = new HashMap<>();
+                    results.forEach((k, v) -> {
+                        final ObjectSchema schema = objectSchema(Instance.getSchema(v));
+                        evaluated.put(k, schema.evaluateTransients(context, v, k.getExpand()));
+                    });
+                    return evaluated;
+                });
+    }
+
+    protected CompletableFuture<Map<ExpandKey<RefKey>, Instance>> expandImpl(final Context context, final Map<ExpandKey<RefKey>, Instance> items) {
 
         final Set<ExpandKey<RefKey>> refs = new HashSet<>();
         final Map<ExpandKey<LinkKey>, CompletableFuture<PagedList<Instance>>> links = new HashMap<>();
@@ -201,7 +212,7 @@ public class ReadProcessor {
                         final ExpandKey<LinkKey> linkKey = ExpandKey.from(LinkKey.from(refKey, link.getName()), expand);
                         log.debug("Expanding link: {}", linkKey);
                         // FIXME: do we need to pre-expand here? original implementation did
-                        links.put(linkKey, queryLinkImpl(link, object, EXPAND_LINK_SIZE, null));
+                        links.put(linkKey, queryLinkImpl(context, link, object, EXPAND_LINK_SIZE, null));
                         return null;
                     }
                 }, ref.getExpand());
@@ -245,7 +256,7 @@ public class ReadProcessor {
                         });
                     }
 
-                    return cast(resolved).thenCompose(this::expand).thenApply(expanded -> {
+                    return cast(resolved).thenCompose(v -> expand(context, v)).thenApply(expanded -> {
 
                         final Map<ExpandKey<RefKey>, Instance> result = new HashMap<>();
 
@@ -393,7 +404,7 @@ public class ReadProcessor {
         }
     }
 
-    protected CompletableFuture<Caller> expandCaller(final Caller caller, final Set<Path> expand) {
+    protected CompletableFuture<Caller> expandCaller(final Context context, final Caller caller, final Set<Path> expand) {
 
         if(caller.getId() == null || caller.isSuper()) {
 
@@ -404,14 +415,14 @@ public class ReadProcessor {
             if(caller instanceof ExpandedCaller) {
 
                 final Instance object = ((ExpandedCaller)caller).getObject();
-                return expand(object, expand)
+                return expand(context, object, expand)
                         .thenApply(result -> result == object ? caller : new ExpandedCaller(caller, result));
 
             } else {
 
                 final ObjectSchema schema = objectSchema(caller.getSchema());
                 return readImpl(schema, caller.getId(), null)
-                        .thenCompose(unexpanded -> expand(unexpanded, expand))
+                        .thenCompose(unexpanded -> expand(context, unexpanded, expand))
                         .thenApply(result -> new ExpandedCaller(caller, result));
             }
         }

@@ -23,7 +23,6 @@ package io.basestar.schema.use;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
 import io.basestar.expression.Context;
 import io.basestar.schema.Expander;
 import io.basestar.schema.Instance;
@@ -244,13 +243,9 @@ public class UseMap<T> implements Use<Map<String, T>> {
     public Set<Path> transientExpand(final Path path, final Set<Path> expand) {
 
         final Map<String, Set<Path>> branch = Path.branch(expand);
-        if(!expand.isEmpty()) {
-            final Set<Path> all = branch.values().stream().flatMap(Collection::stream)
-                    .collect(Collectors.toSet());
-            return Sets.union(expand, type.transientExpand(path, all));
-        } else {
-            return expand;
-        }
+        final Set<Path> result = new HashSet<>(expand);
+        branch.forEach((k, v) -> result.addAll(type.transientExpand(path.with(k), v)));
+        return result;
     }
 
     private static <T> Map<String, T> transform(final Map<String, T> value, final BiFunction<String, T, T> fn) {
