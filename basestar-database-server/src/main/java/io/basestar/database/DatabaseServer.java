@@ -21,12 +21,21 @@ package io.basestar.database;
  */
 
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.*;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import io.basestar.auth.Caller;
 import io.basestar.auth.exception.PermissionDeniedException;
+import io.basestar.database.action.Action;
+import io.basestar.database.action.CreateAction;
+import io.basestar.database.action.DeleteAction;
+import io.basestar.database.action.UpdateAction;
 import io.basestar.database.event.*;
-import io.basestar.database.link.LinkDataVisitor;
+import io.basestar.database.exception.BatchKeyRepeatedException;
 import io.basestar.database.options.*;
+import io.basestar.database.util.ExpandKey;
+import io.basestar.database.util.RefKey;
 import io.basestar.event.Emitter;
 import io.basestar.event.Event;
 import io.basestar.event.Handler;
@@ -36,42 +45,28 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.PathTransform;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.logical.And;
-import io.basestar.expression.methods.Methods;
 import io.basestar.schema.*;
+import io.basestar.storage.OverlayStorage;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
 import io.basestar.storage.exception.ObjectMissingException;
 import io.basestar.storage.util.IndexRecordDiff;
-import io.basestar.storage.util.Pager;
 import io.basestar.util.*;
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Slf4j
-public class DatabaseServer implements Database, Handler<Event> {
-
-    public static final String VAR_CALLER = "caller";
-
-    public static final String VAR_BEFORE = "before";
-
-    public static final String VAR_AFTER = "after";
-
-    public static final String VAR_THIS = Reserved.THIS;
+public class DatabaseServer extends ReadProcessor implements Database, Handler<Event>, CommonVars {
 
     public static final String CALLER_SCHEMA = "User";
 
     private static final boolean TOMBSTONE = false;
 
-    private final Namespace namespace;
-
-    private final Storage storage;
+    private static final String SINGLE_BATCH_ROOT = "$";
 
     private final Emitter emitter;
 
@@ -93,8 +88,7 @@ public class DatabaseServer implements Database, Handler<Event> {
 
     public DatabaseServer(final Namespace namespace, final Storage storage, final Emitter emitter) {
 
-        this.namespace = namespace;
-        this.storage = storage;
+        super(namespace, storage);
         this.emitter = emitter;
     }
 
@@ -111,198 +105,271 @@ public class DatabaseServer implements Database, Handler<Event> {
     }
 
     @Override
-    public CompletableFuture<Instance> read(final Caller caller, final String schema, final String id, final ReadOptions options) {
+    public CompletableFuture<Map<String, Instance>> transaction(final Caller caller, final TransactionOptions options) {
 
-        log.debug("Read: id={}, options={}", id, options);
+        log.debug("Batch: options={}", options);
 
-        final ObjectSchema objectSchema = namespace.requireObjectSchema(schema);
-        final Permission permission = objectSchema.getPermission(Permission.READ);
+        final Map<String, Action> actions = new HashMap<>();
+        options.getActions().forEach((name, action) -> {
+            if (action instanceof CreateOptions) {
+                final CreateOptions create = (CreateOptions)action;
+                actions.put(name, new CreateAction(objectSchema(create.getSchema()), create));
+            } else if (action instanceof UpdateOptions) {
+                final UpdateOptions update = (UpdateOptions)action;
+                actions.put(name, new UpdateAction(objectSchema(update.getSchema()), update));
+            } else if (action instanceof DeleteOptions) {
+                final DeleteOptions delete = (DeleteOptions)action;
+                actions.put(name, new DeleteAction(objectSchema(delete.getSchema()), delete));
+            }
+        });
 
-        return expandCaller(caller, permission)
-                .thenCompose(expandedCaller -> {
+        return batch(caller, actions);
+    }
 
-                    // Will make 2 reads if the request schema doesn't match result schema
+    private CompletableFuture<Instance> single(final Caller caller, final Action action) {
 
-                    return readImpl(objectSchema, id, options.getVersion()).thenCompose(raw -> {
+        return batch(caller, ImmutableMap.of(SINGLE_BATCH_ROOT, action))
+                .thenApply(v -> v.get(SINGLE_BATCH_ROOT));
+    }
 
-                        if (raw == null) {
-                            return CompletableFuture.completedFuture(null);
-                        } else {
+    private Set<Path> permissionExpand(final ObjectSchema schema, final Permission permission) {
 
-                            return cast(objectSchema, raw).thenCompose(initial -> {
+        return permission == null ? Collections.emptySet() : Nullsafe.of(permission.getExpand());
+    }
 
-                                final ObjectSchema castSchema = objectSchema(Instance.getSchema(initial));
+    private CompletableFuture<Map<String, Instance>> batch(final Caller caller, final Map<String, Action> actions) {
 
-                                final Set<Path> permissionExpand = readExpand(castSchema, permission, options.getExpand(), Path.of(VAR_THIS));
-                                final Set<Path> readExpand = Nullsafe.of(options.getExpand());
-                                final Set<Path> mergedExpand = Sets.union(readExpand, permissionExpand);
-                                return expand(caller, initial, mergedExpand).thenApply(expanded -> {
+        final Set<RefKey> beforeCheck = new HashSet<>();
+        final Set<ExpandKey<RefKey>> beforeKeys = new HashSet<>();
+        final Set<Path> beforeCallerExpand = new HashSet<>();
 
-                                    checkPermission(expandedCaller, castSchema, permission, ImmutableMap.of(
-                                            VAR_THIS, expanded
-                                    ));
+        actions.forEach((name, action) -> {
+            final String id = action.id();
+            if (id != null) {
+                final ObjectSchema schema = action.schema();
+                final RefKey key = new RefKey(schema.getName(), id);
+                if (!beforeCheck.add(key)) {
+                    throw new BatchKeyRepeatedException(key.getSchema(), key.getId());
+                }
+                final Set<Path> permissionExpand = Sets.union(
+                        permissionExpand(schema, action.permission()),
+                        // Always need read permission for the target object
+                        permissionExpand(schema, schema.getPermission(Permission.READ))
+                );
+                beforeCallerExpand.addAll(Path.children(permissionExpand, Path.of(VAR_CALLER)));
+                final Set<Path> expand = Path.children(permissionExpand, Path.of(VAR_BEFORE));
+                beforeKeys.add(ExpandKey.from(key, expand));
+            }
+        });
 
-                                    return castSchema.expand(expanded, Expander.noop(), readExpand);
-                                });
+        return expandCaller(caller, beforeCallerExpand).thenCompose(beforeCaller -> {
 
-                            });
+            // Read initial values
+
+            final CompletableFuture<Map<RefKey, Instance>> beforeFuture;
+            if (!beforeKeys.isEmpty()) {
+                final Storage.ReadTransaction read = storage.read(Consistency.NONE);
+                beforeKeys.forEach(expandKey -> {
+                    final RefKey key = expandKey.getKey();
+                    read.readObject(objectSchema(key.getSchema()), key.getId());
+                });
+                beforeFuture = read.read().thenCompose(readResults -> {
+
+                    final Map<ExpandKey<RefKey>, Instance> beforeUnexpanded = new HashMap<>();
+                    beforeKeys.forEach(expandKey -> {
+                        final RefKey key = expandKey.getKey();
+                        final Map<String, Object> data = readResults.getObject(key.getSchema(), key.getId());
+                        if (data != null) {
+                            beforeUnexpanded.put(expandKey, objectSchema(key.getSchema()).create(data));
                         }
                     });
+
+                    return expand(beforeUnexpanded)
+                            .thenApply(expanded -> {
+                                final Map<RefKey, Instance> results = new HashMap<>();
+                                expanded.forEach((k, v) -> results.put(k.getKey(), v));
+                                return results;
+                            });
                 });
-    }
-
-    // Collect, evaluate and validate all instances referenced from a root
-
-    final Instance deepCreate(final Caller caller, final ObjectSchema schema, final String id, final Map<String, Object> input, final LocalDateTime now) {
-
-        final Map<String, Object> initial = new HashMap<>(schema.create(input));
-
-        // Id in path overrides id specified in body
-        final String requestedId = id == null ? Instance.getId(initial) : id;
-
-        // FIXME: split validation so that required validation can be applied here
-        // FIXME: or make evaluation (including id evaluation) respect dependencies
-
-        final String actualId;
-        if(schema.getId() != null) {
-            actualId = schema.getId().evaluate(requestedId, context(caller, ImmutableMap.of(
-                    VAR_THIS, initial
-            )));
-        } else if(requestedId != null) {
-            actualId = requestedId;
-        } else {
-            actualId = UUID.randomUUID().toString();
-        }
-
-        Instance.setId(initial, actualId);
-        Instance.setVersion(initial, 1L);
-        Instance.setCreated(initial, now);
-        Instance.setUpdated(initial, now);
-        Instance.setHash(initial, schema.hash(initial));
-
-        final Instance evaluated = schema.evaluate(initial, context(caller, ImmutableMap.of(
-                VAR_THIS, initial
-        )));
-
-        schema.validate(evaluated, context(caller, ImmutableMap.of(
-                VAR_THIS, evaluated
-        )));
-
-//        final Multimap<String, Instance> result = HashMultimap.create();
-//        result.put(schema.getName(), evaluated);
-
-        final Map<String, Object> result = new HashMap<>(evaluated);
-        schema.getAllLinks().forEach((linkName, link) -> {
-            // Read from provided input rather than evaluated instance, because schema.create ignores links
-            final Collection<? extends Map<String, Object>> linkInput = Instance.getLink(input, linkName);
-            if(linkInput != null && !linkInput.isEmpty()) {
-                result.put(linkName, deepCreateLinks(caller, link, evaluated, linkInput, now));
-            }
-        });
-        return new Instance(result);
-    }
-
-    private List<Instance> deepCreateLinks(final Caller caller, final Link link, final Instance parent, final Collection<? extends Map<String, Object>> input, final LocalDateTime now) {
-
-        final Expression linkExpression = link.getExpression().bind(context(ImmutableMap.of(
-                VAR_THIS, parent
-        )));
-        final Map<String, Object> initialLinkData = linkExpression.visit(LinkDataVisitor.INSTANCE);
-        if (initialLinkData.isEmpty()) {
-            throw new IllegalStateException("Cannot initialize link data for " + link.getName()
-                    + " using provided expression");
-        }
-        final List<Instance> result = new ArrayList<>();
-        input.forEach(linkValue -> {
-            final String linkSchemaName = Instance.getSchema(linkValue);
-            final ObjectSchema linkSchema;
-            if(linkSchemaName != null) {
-                linkSchema = namespace.requireObjectSchema(linkSchemaName);
             } else {
-                linkSchema = link.getSchema();
+                beforeFuture = CompletableFuture.completedFuture(Collections.emptyMap());
             }
-            final Map<String, Object> linkData = new HashMap<>(linkValue);
-            // FIXME: should throw if provided link data tries to override initial link data
-            linkData.putAll(initialLinkData);
-            result.add(deepCreate(caller, linkSchema, null, linkData, now));
-        });
-        return result;
-    }
 
-    @Override
-    public CompletableFuture<Instance> create(final Caller caller, final String schema, final String initialId, final Map<String, Object> data, final CreateOptions options) {
+            return beforeFuture.thenCompose(beforeResults -> {
 
-        log.debug("Create: id={}, data={}, options={}", initialId, data, options);
+                final Context context = context(caller);
 
-        final ObjectSchema objectSchema = namespace.requireObjectSchema(schema);
-        final Storage.EventStrategy eventStrategy = storage.eventStrategy(objectSchema);
+                final Set<RefKey> afterCheck = new HashSet<>();
+                final Map<ExpandKey<RefKey>, Instance> afterKeys = new HashMap<>();
+                final Set<Path> afterCallerExpand = new HashSet<>();
 
-        final Permission permission = objectSchema.getPermission(Permission.CREATE);
+                final Map<String, RefKey> resultLookup = new HashMap<>();
+                final Map<String, Instance> overlay = new HashMap<>();
 
-        final Consistency consistency = Consistency.ATOMIC;
+                // Compute changes
 
-        return expandCaller(caller, permission)
-                .thenCompose(expandedCaller -> {
-
-                    final Map<String, Object> initial = new HashMap<>(objectSchema.create(data));
-
-                    final LocalDateTime now = LocalDateTime.now();
-
-                    // FIXME: split validation so that required validation can be applied here
-                    // FIXME: or make evaluation (including id evaluation) respect dependencies
-
-                    // Id in path overrides id specified in body
-                    final String requestedId = initialId == null ? Instance.getId(initial) : initialId;
-
-                    final String id;
-                    if(objectSchema.getId() != null) {
-                        id = objectSchema.getId().evaluate(requestedId, context(expandedCaller, ImmutableMap.of(
-                                VAR_THIS, initial
-                        )));
-                    } else if(requestedId != null) {
-                        id = requestedId;
+                actionOrder(actions).forEach(name-> {
+                    final Action action = actions.get(name);
+                    final ObjectSchema schema = action.schema();
+                    final String id = action.id();
+                    final RefKey beforeKey;
+                    final Instance before;
+                    if (id != null) {
+                        beforeKey = new RefKey(schema.getName(), id);
+                        before = beforeResults.get(beforeKey);
                     } else {
-                        id = UUID.randomUUID().toString();
+                        beforeKey = null;
+                        before = null;
+                    }
+                    final Instance after = action.after(context.with(overlay), before);
+                    if (after != null) {
+                        final RefKey afterKey = RefKey.from(after);
+                        if (!afterCheck.add(afterKey)) {
+                            throw new BatchKeyRepeatedException(afterKey.getSchema(), afterKey.getId());
+                        }
+                        resultLookup.put(name, afterKey);
+                        overlay.put(name, after);
+                        assert beforeKey == null || beforeKey.equals(afterKey);
+                        final Set<Path> permissionExpand = permissionExpand(schema, action.permission());
+                        afterCallerExpand.addAll(Path.children(permissionExpand, Path.of(VAR_CALLER)));
+                        final Set<Path> expand = Sets.union(
+                                Path.children(permissionExpand, Path.of(VAR_AFTER)),
+                                Nullsafe.of(action.afterExpand())
+                        );
+                        final ExpandKey<RefKey> expandKey = ExpandKey.from(afterKey, expand);
+                        afterKeys.put(expandKey, after);
+                    } else {
+                        assert beforeKey != null;
+                        if (!afterCheck.add(beforeKey)) {
+                            throw new BatchKeyRepeatedException(beforeKey.getSchema(), beforeKey.getId());
+                        }
+                        resultLookup.put(name, beforeKey);
+                    }
+                });
+
+                // Perform expansion using overlay storage, so that permissions can reference other batch actions
+
+                final Storage overlayStorage = new OverlayStorage(storage, overlay.values());
+                final ReadProcessor readOverlay = new ReadProcessor(namespace, overlayStorage);
+
+                return readOverlay.expandCaller(beforeCaller, afterCallerExpand).thenCompose(afterCaller -> {
+
+                    final CompletableFuture<Map<RefKey, Instance>> afterFuture;
+                    if (afterKeys.isEmpty()) {
+                        afterFuture = CompletableFuture.completedFuture(Collections.emptyMap());
+                    } else {
+                        afterFuture = readOverlay.expand(afterKeys)
+                                .thenApply(expanded -> {
+                                    final Map<RefKey, Instance> results = new HashMap<>();
+                                    expanded.forEach((k, v) -> results.put(k.getKey(), v));
+                                    return results;
+                                });
                     }
 
-                    Instance.setId(initial, id);
-                    Instance.setVersion(initial, 1L);
-                    Instance.setCreated(initial, now);
-                    Instance.setUpdated(initial, now);
-                    Instance.setHash(initial, objectSchema.hash(initial));
+                    return afterFuture.thenCompose(afterResults -> {
 
-                    final Instance evaluated = objectSchema.evaluate(initial, context(expandedCaller, ImmutableMap.of(
-                            VAR_THIS, initial
-                    )));
-
-                    objectSchema.validate(evaluated, context(expandedCaller, ImmutableMap.of(
-                            VAR_THIS, evaluated
-                    )));
-
-                    final Set<Path> requestExpand = readExpand(objectSchema, permission, options.getExpand(), Path.of(VAR_AFTER));
-                    return expand(expandedCaller, evaluated, requestExpand).thenCompose(after -> {
-
-                        checkPermission(expandedCaller, objectSchema, permission, ImmutableMap.of(
-                                VAR_AFTER, after
-                        ));
-
-                        final Storage.WriteTransaction writeTransaction = storage.write(consistency);
-
-                        writeTransaction.createObject(objectSchema, id, after);
-
-                        objectHierarchy(objectSchema).forEach(superSchema -> {
-
-                            final Instance superAfter = superSchema.create(after);
-                            writeTransaction.createObject(superSchema, id, superAfter);
+                        // Check permissions
+                        actions.forEach((name, action) -> {
+                            final ObjectSchema schema = action.schema();
+                            final RefKey key = resultLookup.get(name);
+                            final Permission permission = action.permission();
+                            final Instance before = beforeResults.get(key);
+                            final Instance after = afterResults.get(key);
+                            final Map<String, Object> scope = new HashMap<>();
+                            // FIXME: might make sense for before/after to be allowed to be null in scope
+                            if(before != null) {
+                                scope.put(VAR_BEFORE, before);
+                            }
+                            if(after != null) {
+                                scope.put(VAR_AFTER, after);
+                            }
+                            checkPermission(afterCaller, schema, permission, scope);
                         });
 
-                        return writeTransaction.commit()
-                                .thenCompose(ignored -> emitCreateObject(eventStrategy, objectSchema, id, after))
-                                .thenApply(ignored -> after);
+                        final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC);
 
+                        final Map<String, Instance> results = new HashMap<>();
+                        final Set<Event> events = new HashSet<>();
+
+                        // Perform writes
+                        actions.forEach((name, action) -> {
+                            final ObjectSchema schema = action.schema();
+                            final RefKey key = resultLookup.get(name);
+                            assert key != null;
+                            final Instance before = beforeResults.get(key);
+                            final Instance after = afterResults.get(key);
+                            if (before == null) {
+                                assert after != null;
+                                writeCreate(write, schema, key.getId(), after);
+                            } else if (after != null) {
+                                writeUpdate(write, schema, key.getId(), before, after);
+                            } else {
+                                writeDelete(write, schema, key.getId(), before);
+                            }
+                            if (storage.eventStrategy(schema) == Storage.EventStrategy.EMIT) {
+                                events.add(action.event(before, after));
+                            }
+                            // Remove superfluous expand data that was only used for permissions
+                            final Instance restricted;
+                            if(after == null) {
+                                restricted = null;
+                            } else {
+                                restricted = schema.expand(after, Expander.noop(), Nullsafe.of(action.afterExpand()));
+                            }
+                            results.put(name, restricted);
+                        });
+
+                        return write.commit()
+                                .thenCompose(ignored -> emitter.emit(events))
+                                .thenApply(ignored -> results);
                     });
 
                 });
+            });
+
+        });
+    }
+
+    private List<String> actionOrder(final Map<String, Action> actions) {
+
+        return Lists.newArrayList(actions.keySet());
+//        return TopologicalSort.sort(actions.keySet(),
+//                k -> Path.children(actions.get(k).paths(), Path.of(VAR_BATCH)).stream()
+//                        .map(AbstractPath::first).filter(v -> actions.keySet().contains(v))
+//                        .collect(Collectors.toList()));
+    }
+
+    private void writeCreate(final Storage.WriteTransaction write, final ObjectSchema schema, final String id, final Instance after) {
+
+        write.createObject(schema, id, after);
+
+        objectHierarchy(schema).forEach(superSchema -> {
+
+            final Instance superAfter = superSchema.create(after);
+            write.createObject(superSchema, id, superAfter);
+        });
+    }
+
+    private void writeUpdate(final Storage.WriteTransaction write, final ObjectSchema schema, final String id, final Instance before, final Instance after) {
+
+        write.updateObject(schema, id, before, after);
+
+        objectHierarchy(schema).forEach(superSchema -> {
+
+            final Instance superBefore = superSchema.create(before);
+            final Instance superAfter = superSchema.create(after);
+            write.updateObject(superSchema, id, superBefore, superAfter);
+        });
+    }
+
+    private void writeDelete(final Storage.WriteTransaction write, final ObjectSchema schema, final String id, final Instance before) {
+
+        write.deleteObject(schema, id, before);
+
+        objectHierarchy(schema).forEach(superSchema -> {
+            final Instance superBefore = superSchema.create(before);
+            write.deleteObject(superSchema, id, superBefore);
+        });
     }
 
     private List<ObjectSchema> objectHierarchy(final ObjectSchema schema) {
@@ -320,346 +387,160 @@ public class DatabaseServer implements Database, Handler<Event> {
     }
 
     @Override
-    public CompletableFuture<Instance> update(final Caller caller, final String schema, final String id, final Map<String, Object> data, final UpdateOptions options) {
+    public CompletableFuture<Instance> read(final Caller caller, final ReadOptions options) {
 
-        return update(caller, schema, id, current -> {
-            final UpdateOptions.Mode mode = MoreObjects.firstNonNull(options.getMode(), UpdateOptions.Mode.REPLACE);
-            switch (mode) {
-                case REPLACE:
-                    return data;
-                case MERGE:
-                    final Map<String, Object> merged = new HashMap<>(current);
-                    merged.putAll(data);
-                    return merged;
-                default:
-                    throw new IllegalStateException();
-            }
-        }, options);
+        log.debug("Read: options={}", options);
+
+        final String id = options.getId();
+        final ObjectSchema objectSchema = namespace.requireObjectSchema(options.getSchema());
+
+        return readImpl(objectSchema, id, options.getVersion())
+                .thenCompose(initial -> expandAndRestrict(caller, initial, options.getExpand()));
     }
 
-    public CompletableFuture<Instance> update(final Caller caller, final String schema, final String id, final Function<Map<String, Object>, Map<String, Object>> data, final UpdateOptions options) {
+    // FIXME need to apply nested permissions
+    private Instance restrict(final Caller caller, final Instance instance, final Set<Path> expand) {
 
-        log.debug("Update: id={}, data={}, options={}", id, data, options);
-
-        final ObjectSchema objectSchema = namespace.requireObjectSchema(schema);
-        final Storage.EventStrategy eventStrategy = storage.eventStrategy(objectSchema);
-        final Permission permission = objectSchema.getPermission(Permission.UPDATE);
-
-        final Consistency consistency = Consistency.ATOMIC;
-
-        return expandCaller(caller, permission)
-                .thenCompose(expandedCaller -> {
-
-                    final Set<Path> permissionExpand = readExpand(objectSchema, permission, Collections.emptySet(), Path.of(VAR_BEFORE));
-                    return read(expandedCaller, schema, id, new ReadOptions().setExpand(permissionExpand)).thenCompose(before -> {
-
-                        if (before == null) {
-                            throw new IllegalStateException();
-                        }
-
-                        if(!Instance.getSchema(before).equals(objectSchema.getName())) {
-                            throw new IllegalStateException("Cannot change instance schema");
-                        }
-
-                        final Map<String, Object> initial = new HashMap<>(objectSchema.create(data.apply(before)));
-
-                        final LocalDateTime now = LocalDateTime.now();
-
-                        final Long beforeVersion = Instance.getVersion(before);
-                        assert beforeVersion != null;
-
-                        final Long afterVersion = beforeVersion + 1;
-
-                        Instance.setId(initial, id);
-                        Instance.setVersion(initial, afterVersion);
-                        Instance.setCreated(initial, Instance.getCreated(before));
-                        Instance.setUpdated(initial, now);
-                        Instance.setHash(initial, objectSchema.hash(initial));
-
-                        final Instance evaluated = objectSchema.evaluate(initial, context(expandedCaller, ImmutableMap.of(
-                                VAR_THIS, initial
-                        )));
-
-                        objectSchema.validate(before, evaluated, context(expandedCaller, ImmutableMap.of(
-                                VAR_THIS, evaluated
-                        )));
-
-                        final Set<Path> requestExpand = readExpand(objectSchema, permission, options.getExpand(), Path.of(VAR_AFTER));
-                        return expand(expandedCaller, evaluated, requestExpand).thenCompose(after -> {
-
-                            checkPermission(expandedCaller, objectSchema, permission, ImmutableMap.of(
-                                    VAR_BEFORE, before,
-                                    VAR_AFTER, after
-                            ));
-
-                            final Storage.WriteTransaction writeTransaction = storage.write(consistency);
-
-                            writeTransaction.updateObject(objectSchema, id, before, after);
-
-                            objectHierarchy(objectSchema).forEach(superSchema -> {
-
-                                final Instance superBefore = superSchema.create(before);
-                                final Instance superAfter = superSchema.create(after);
-                                writeTransaction.updateObject(superSchema, id, superBefore, superAfter);
-                            });
-
-                            return writeTransaction.commit()
-                                    .thenCompose(ignored -> emitUpdateObject(eventStrategy, objectSchema, id, beforeVersion, before, after))
-                                    .thenApply(ignored -> after);
-                        });
-                    });
-
-                });
+        final ObjectSchema schema = objectSchema(Instance.getSchema(instance));
+        final Permission read = schema.getPermission(Permission.READ);
+        checkPermission(caller, schema, read, ImmutableMap.of(VAR_THIS, instance));
+        final Instance restricted = schema.expand(instance, Expander.noop(), expand);
+        return restricted;
     }
 
+    // FIXME need to create a deeper permission expand for nested permissions
+    private CompletableFuture<Instance> expandAndRestrict(final Caller caller, final Instance instance, final Set<Path> expand) {
 
-    @Override
-    public CompletableFuture<Boolean> delete(final Caller caller, final String schema, final String id, final DeleteOptions options) {
-
-        log.debug("Delete: id={}, options={}", id, options);
-
-        final ObjectSchema objectSchema = namespace.requireObjectSchema(schema);
-        final Storage.EventStrategy eventStrategy = storage.eventStrategy(objectSchema);
-        final Permission permission = objectSchema.getPermission(Permission.DELETE);
-
-        final Consistency consistency = Consistency.ATOMIC;
-
-        return expandCaller(caller, permission)
-                .thenCompose(expandedCaller -> {
-
-                    final Set<Path> permissionExpand = readExpand(objectSchema, permission, Collections.emptySet(), Path.of());
-                    return read(expandedCaller, schema, id, new ReadOptions().setExpand(permissionExpand)).thenCompose(before -> {
-
-                        if (before == null) {
-                            throw new IllegalStateException();
-                        }
-
-                        if(!Instance.getSchema(before).equals(objectSchema.getName())) {
-                            throw new IllegalStateException("Must delete using actual schema");
-                        }
-
-                        final Long beforeVersion = Instance.getVersion(before);
-                        assert beforeVersion != null;
-
-                        checkPermission(expandedCaller, objectSchema, permission, ImmutableMap.of(
-                                VAR_BEFORE, before
-                        ));
-
-                        final Storage.WriteTransaction writeTransaction = storage.write(consistency);
-
-                        if(TOMBSTONE) {
-
-                            final long afterVersion = beforeVersion + 1;
-
-                            final Map<String, Object> tombstone = new HashMap<>();
-                            final LocalDateTime now = LocalDateTime.now();
-                            Instance.setId(tombstone, id);
-                            Instance.setVersion(tombstone, afterVersion);
-                            Instance.setCreated(tombstone, Instance.getCreated(before));
-                            Instance.setUpdated(tombstone, now);
-                            Instance.setHash(tombstone, objectSchema.hash(tombstone));
-
-                            objectHierarchy(objectSchema).forEach(superSchema -> {
-                                final Instance superBefore = superSchema.create(before);
-                                writeTransaction.updateObject(superSchema, id, superBefore, tombstone);
-                            });
-                        } else {
-                            writeTransaction.deleteObject(objectSchema, id, before);
-
-                            objectHierarchy(objectSchema).forEach(superSchema -> {
-                                final Instance superBefore = superSchema.create(before);
-                                writeTransaction.deleteObject(superSchema, id, superBefore);
-                            });
-                        }
-
-                        return writeTransaction.commit()
-                                .thenCompose(ignored -> emitDeleteObject(eventStrategy, objectSchema, id, beforeVersion, before))
-                                .thenApply(ignored -> true);
-                    });
-
-                });
-    }
-
-    public CompletableFuture<?> emitCreateObject(final Storage.EventStrategy strategy, final ObjectSchema schema, final String id, final Map<String, Object> after) {
-
-        if(strategy == Storage.EventStrategy.EMIT) {
-            return emitter.emit(ObjectCreatedEvent.of(schema.getName(), id, after));
-        } else {
+        if(instance == null) {
             return CompletableFuture.completedFuture(null);
         }
+
+        final ObjectSchema schema = objectSchema(Instance.getSchema(instance));
+        final Permission read = schema.getPermission(Permission.READ);
+        final Set<Path> permissionExpand = permissionExpand(schema, read);
+        final Set<Path> callerExpand = Path.children(permissionExpand, Path.of(VAR_CALLER));
+        final Set<Path> readExpand = Sets.union(Path.children(permissionExpand, Path.of(VAR_THIS)), Nullsafe.of(expand));
+
+        return expandCaller(caller, callerExpand).thenCompose(expandedCaller -> expand(instance, readExpand)
+                .thenApply(v -> restrict(caller, v, expand)));
     }
 
-    public CompletableFuture<?> emitUpdateObject(final Storage.EventStrategy strategy, final ObjectSchema schema, final String id, final long version, final Map<String, Object> before, final Map<String, Object> after) {
+    // FIXME need to create a deeper permission expand for nested permissions
+    private CompletableFuture<PagedList<Instance>> expandAndRestrict(final Caller caller, final PagedList<Instance> instances, final Set<Path> expand) {
 
-        if(strategy == Storage.EventStrategy.EMIT) {
-            return emitter.emit(ObjectUpdatedEvent.of(schema.getName(), id, version, before, after));
-        } else {
-            return CompletableFuture.completedFuture(null);
+        final Set<Path> callerExpand = new HashSet<>();
+        final Set<Path> readExpand = new HashSet<>();
+        for(final Instance instance : instances) {
+            final ObjectSchema schema = objectSchema(Instance.getSchema(instance));
+            final Permission read = schema.getPermission(Permission.READ);
+            final Set<Path> permissionExpand = permissionExpand(schema, read);
+            callerExpand.addAll(Path.children(permissionExpand, Path.of(VAR_CALLER)));
+            readExpand.addAll(Path.children(permissionExpand, Path.of(VAR_THIS)));
         }
-    }
 
-    public CompletableFuture<?> emitDeleteObject(final Storage.EventStrategy strategy, final ObjectSchema schema, final String id, final long version, final Map<String, Object> before) {
-
-        if(strategy == Storage.EventStrategy.EMIT) {
-            return emitter.emit(ObjectDeletedEvent.of(schema.getName(), id, version, before));
-        } else {
-            return CompletableFuture.completedFuture(null);
-        }
+        return expandCaller(caller, callerExpand).thenCompose(expandedCaller -> expand(instances, readExpand)
+                .thenApply(vs -> vs.map(v -> restrict(caller, v, expand))));
     }
 
     @Override
-    public CompletableFuture<PagedList<Instance>> query(final Caller caller, final String schema, final Expression expression, final QueryOptions options) {
+    public CompletableFuture<Instance> create(final Caller caller, final CreateOptions options) {
 
-        log.debug("Query: schema={}, expression={}, options={}", schema, expression, options);
+        log.debug("Create: options={}", options);
 
-        final ObjectSchema objectSchema = namespace.requireObjectSchema(schema);
-        return query(caller, objectSchema, expression, options);
+        return single(caller, new CreateAction(objectSchema(options.getSchema()), options));
     }
 
-    protected CompletableFuture<PagedList<Instance>> query(final Caller caller, final ObjectSchema schema, final Expression expression, final QueryOptions options) {
+    @Override
+    public CompletableFuture<Instance> update(final Caller caller, final UpdateOptions options) {
 
-        final Permission permission = schema.getPermission(Permission.READ);
-        final Set<Path> expand = readExpand(schema, permission, options.getExpand(), Path.of(VAR_THIS));
+        log.debug("Update: options={}", options);
 
-        return expandCaller(caller, permission)
-                .thenCompose(expandedCaller -> {
+        return single(caller, new UpdateAction(objectSchema(options.getSchema()), options));
+    }
 
-                    final Context context = context(expandedCaller, ImmutableMap.of());
+    @Override
+    public CompletableFuture<Instance> delete(final Caller caller, final DeleteOptions options) {
 
-                    final Expression rooted;
-                    if(expression != null) {
-                        rooted = expression.bind(context(), PathTransform.root(Path.of(Reserved.THIS)));
-                    } else {
-                        rooted = new Constant(true);
+        log.debug("Delete: options={}", options);
+
+        return single(caller, new DeleteAction(objectSchema(options.getSchema()), options));
+    }
+
+    @Override
+    public CompletableFuture<PagedList<Instance>> queryLink(final Caller caller, final QueryLinkOptions options) {
+
+        log.debug("Query link: options={}", options);
+
+        final ObjectSchema ownerSchema = namespace.requireObjectSchema(options.getSchema());
+        final Link link = ownerSchema.requireLink(options.getLink(), true);
+        final String ownerId = options.getId();
+
+        return read(caller, ReadOptions.builder().schema(ownerSchema.getName()).id(ownerId).build())
+                .thenCompose(owner -> {
+
+                    if (owner == null) {
+                        throw new ObjectMissingException(ownerSchema.getName(), ownerId);
                     }
 
-                    final Expression merged;
-                    if(permission != null && !expandedCaller.isSuper()) {
-                        merged = new And(permission.getExpression(), rooted);
-                    } else {
-                        merged = rooted;
+                    final int count = MoreObjects.firstNonNull(options.getCount(), QueryLinkOptions.DEFAULT_COUNT);
+                    if(count > QueryLinkOptions.MAX_COUNT) {
+                        throw new IllegalStateException("Count too high");
                     }
-
-                    final Expression bound = merged.bind(context);
-
-                    final List<Sort> sort = MoreObjects.firstNonNull(options.getSort(), Collections.emptyList());
-                    final int count = MoreObjects.firstNonNull(options.getCount(), QueryOptions.DEFAULT_COUNT);
                     final PagingToken paging = options.getPaging();
 
-                    final List<Sort> pageSort = ImmutableList.<Sort>builder()
-                                .addAll(sort)
-                                .add(Sort.asc(Path.of(Reserved.ID)))
-                                .build();
-
-                    final Expression unrooted = bound.bind(context(), PathTransform.unroot(Path.of(Reserved.THIS)));
-
-                    final List<Pager.Source<Instance>> sources = storage.query(schema, unrooted, sort).stream()
-                            .map(source -> (Pager.Source<Instance>) (c, t) -> source.page(c, t)
-                                    .thenCompose(data -> cast(schema, data))
-                                    .thenApply(data -> data
-                                            .filter(instance -> bound.evaluatePredicate(context.with(Reserved.THIS, instance)))))
-                            .collect(Collectors.toList());
-
-                    if(sources.isEmpty()) {
-                        throw new IllegalStateException("Query not supported");
-                    } else {
-
-                        @SuppressWarnings("unchecked")
-                        final Comparator<Instance> comparator = Sort.comparator(pageSort, (t, path) -> (Comparable)path.apply(t));
-                        final Pager<Instance> pager = new Pager<>(comparator, sources, paging);
-                        return pager.page(count)
-                                .thenCompose(results -> expand(caller, results, expand));
-                    }
+                    return queryLinkImpl(link, owner, count, paging)
+                            .thenCompose(results -> expandAndRestrict(caller, results, options.getExpand()));
                 });
     }
 
     @Override
-    public CompletableFuture<PagedList<Instance>> page(final Caller caller, final String schema, final String id, final String rel, final QueryOptions options) {
+    public CompletableFuture<PagedList<Instance>> query(final Caller caller, final QueryOptions options) {
 
-        log.debug("Query link: id={}, options={}", id, options);
+        log.debug("Query: options={}", options);
 
-        final ObjectSchema objectSchema = namespace.requireObjectSchema(schema);
-        final Member member = objectSchema.requireMember(rel, true);
+        final ObjectSchema objectSchema = objectSchema(options.getSchema());
+        final Expression expression = options.getExpression();
 
-        if(member instanceof Link) {
+        final Permission permission = objectSchema.getPermission(Permission.READ);
 
-            final Link link = (Link) member;
-            final ObjectSchema linkSchema = link.getSchema();
-            final Permission permission = linkSchema.getPermission(Permission.READ);
+        final Context context = context(caller, ImmutableMap.of());
 
-            return pageImpl(caller, permission, schema, id, link.getExpression(), link.getSchema(), link.getSort(), options);
-
+        final Expression rooted;
+        if(expression != null) {
+            rooted = expression.bind(Context.init(), PathTransform.root(Path.of(Reserved.THIS)));
         } else {
-            throw new IllegalStateException("Member must be a link");
+            rooted = new Constant(true);
         }
-    }
 
-    private CompletableFuture<PagedList<Instance>> pageImpl(final Caller caller, final Permission permission,
-                                                            final String ownerSchema, final String ownerId,
-                                                            final Expression rawQuery, final ObjectSchema schema,
-                                                            final List<Sort> sort, final QueryOptions options) {
-
-        return expandCaller(caller, permission)
-                .thenCompose(expandedCaller -> {
-
-                    final QueryOptions queryOptions = new QueryOptions()
-                            .setCount(options.getCount())
-                            .setExpand(options.getExpand())
-                            .setPaging(options.getPaging())
-                            .setSort(sort);
-
-                    return read(caller, ownerSchema, ownerId, new ReadOptions())
-                            .thenCompose(owner -> {
-
-                                if (owner == null) {
-                                    throw new ObjectMissingException(ownerSchema, ownerId);
-                                }
-
-                                final Expression query = rawQuery
-                                        .bind(context(caller, ImmutableMap.of(
-                                                VAR_THIS, owner
-                                        )));
-
-                                return query(caller, schema, query, queryOptions);
-                            });
-                });
-    }
-
-    @Override
-    public CompletableFuture<PagingToken> reindex(final Caller caller, final Map<String, ? extends Collection<String>> schemaIndexes, final int count, final PagingToken paging) {
-
-        throw new UnsupportedOperationException();
-        //        // FIXME
-//        return storage.scanObjects(count, paging).thenApply(result -> {
-//
-//            for(final Map<String, Object> data : result) {
-//                final String schema = ObjectSchema.getSchema(data);
-//                final Collection<String> indexes = schemaIndexes.get(schema);
-//                if(indexes != null && !indexes.isEmpty()) {
-//
-//                }
-//            }
-//
-//            return result.getPaging();
-//        });
-    }
-
-    private Set<Path> readExpand(final ObjectSchema schema, final Permission permission, final Set<Path> expand, final Path path) {
-
-        final Set<Path> result = new HashSet<>();
-        if(expand != null) {
-            result.addAll(expand);
+        final Expression merged;
+        if(permission != null && !caller.isSuper()) {
+            merged = new And(permission.getExpression(), rooted);
+        } else {
+            merged = rooted;
         }
-        if(permission != null) {
-//            final Set<Key> keys = Key.children(permission.getExpression().keys(), key);
-//            final Set<Key> required = schema.requiredExpand(keys);
-            result.addAll(Path.children(permission.getExpand(), path));
+
+        final Expression bound = merged.bind(context);
+
+        final List<Sort> sort = MoreObjects.firstNonNull(options.getSort(), Collections.emptyList());
+        final int count = MoreObjects.firstNonNull(options.getCount(), QueryOptions.DEFAULT_COUNT);
+        if(count > QueryOptions.MAX_COUNT) {
+            throw new IllegalStateException("Count too high");
         }
-        return result;
+        final PagingToken paging = options.getPaging();
+
+        final Expression unrooted = bound.bind(Context.init(), PathTransform.unroot(Path.of(Reserved.THIS)));
+
+        return queryImpl(objectSchema, unrooted, sort, count, paging)
+                .thenCompose(results -> expandAndRestrict(caller, results, options.getExpand()));
     }
 
-    private void checkPermission(final Caller caller, final ObjectSchema schema, final Permission permission, final Map<String, Object> scope) {
+    protected void checkPermission(final Caller caller, final ObjectSchema schema, final Permission permission, final Map<String, Object> scope) {
 
+        if(caller.isAnon()) {
+            if(permission == null || !permission.isAnonymous()) {
+                throw new PermissionDeniedException("Anonymous not allowed");
+            }
+        }
         if (!caller.isSuper() && permission != null) {
             final Context context = context(caller, scope);
             try {
@@ -674,462 +555,16 @@ public class DatabaseServer implements Database, Handler<Event> {
         }
     }
 
-    private Context context() {
+    private Context context(final Caller caller) {
 
-        return Context.init(Methods.builder().defaults().build());
-    }
-
-    private Context context(final Map<String, Object> scope) {
-
-        return Context.init(Methods.builder().defaults().build(), scope);
+        return context(caller, ImmutableMap.of());
     }
 
     private Context context(final Caller caller, final Map<String, Object> scope) {
 
         final Map<String, Object> fullScope = new HashMap<>(scope);
         fullScope.put(VAR_CALLER, ExpandedCaller.getObject(caller));
-        return context(fullScope);
-    }
-
-    private CompletableFuture<Map<String, Object>> readImpl(final ObjectSchema objectSchema, final String id, final Long version) {
-
-        if (version == null) {
-            return storage.readObject(objectSchema, id);
-        } else {
-            return storage.readObject(objectSchema, id)
-                    .thenCompose(current -> {
-                        if (current == null) {
-                            return CompletableFuture.completedFuture(null);
-                        } else {
-                            final Long currentVersion = Instance.getVersion(current);
-                            assert currentVersion != null;
-                            if (currentVersion.equals(version)) {
-                                return CompletableFuture.completedFuture(current);
-                            } else if (version > currentVersion) {
-                                return CompletableFuture.completedFuture(null);
-                            } else {
-                                return storage.readObjectVersion(objectSchema, id, version);
-                            }
-                        }
-                    });
-        }
-    }
-
-    private CompletableFuture<Instance> cast(final ObjectSchema baseSchema, final Map<String, Object> data) {
-
-        final String castSchemaName = Instance.getSchema(data);
-        if(baseSchema.getName().equals(castSchemaName)) {
-            return CompletableFuture.completedFuture(baseSchema.create(data));
-        } else {
-            final String id = Instance.getId(data);
-            final Long version = Instance.getVersion(data);
-            final ObjectSchema castSchema = objectSchema(castSchemaName);
-            return readImpl(castSchema, id, version)
-                    .thenApply(castSchema::create);
-        }
-    }
-
-    private CompletableFuture<PagedList<Instance>> cast(final ObjectSchema baseSchema, final PagedList<? extends Map<String, Object>> data) {
-
-        final Multimap<String, Map<String, Object>> needed = ArrayListMultimap.create();
-        data.forEach(v -> {
-            final String actualSchema = Instance.getSchema(v);
-            if(!baseSchema.getName().equals(actualSchema)) {
-                needed.put(actualSchema, v);
-            }
-        });
-        if(needed.isEmpty()) {
-            return CompletableFuture.completedFuture(data.map(v -> {
-                final ObjectSchema schema = objectSchema(Instance.getSchema(v));
-                return schema.create(v);
-            }));
-        } else {
-            final Storage.ReadTransaction readTransaction = storage.read(Consistency.NONE);
-            needed.asMap().forEach((schemaName, items) -> {
-                final ObjectSchema schema = objectSchema(schemaName);
-                items.forEach(item -> {
-                    final String id = Instance.getId(item);
-                    final Long version = Instance.getVersion(item);
-                    assert version != null;
-                    readTransaction.readObjectVersion(schema, id, version);
-                });
-            });
-            return readTransaction.read().thenApply(results -> {
-
-                final Map<RefKey, Map<String, Object>> mapped = new HashMap<>();
-                results.forEach((key, result) -> mapped.put(new RefKey(key.getSchema(), key.getId()), result));
-
-                return data.map(v -> {
-                    final RefKey key = RefKey.from(v);
-                    final Map<String, Object> result = MoreObjects.firstNonNull(mapped.get(key), v);
-                    final ObjectSchema schema = objectSchema(Instance.getSchema(result));
-                    return schema.create(result);
-                });
-            });
-        }
-    }
-
-    private CompletableFuture<Map<ExpandKey<RefKey>, Instance>> cast(final Map<ExpandKey<RefKey>, ? extends Map<String, Object>> data) {
-
-        final Multimap<String, Map<String, Object>> needed = ArrayListMultimap.create();
-        data.forEach((k, v) -> {
-            final String actualSchema = Instance.getSchema(v);
-            if(!k.getKey().getSchema().equals(actualSchema)) {
-                needed.put(actualSchema, v);
-            }
-        });
-        if(needed.isEmpty()) {
-            final Map<ExpandKey<RefKey>, Instance> results = new HashMap<>();
-            data.forEach((k, v) -> {
-                final ObjectSchema schema = objectSchema(Instance.getSchema(v));
-                final Instance instance = schema.create(v);
-                results.put(k, instance);
-            });
-            return CompletableFuture.completedFuture(results);
-        } else {
-            final Storage.ReadTransaction readTransaction = storage.read(Consistency.NONE);
-            needed.asMap().forEach((schemaName, items) -> {
-                final ObjectSchema schema = objectSchema(schemaName);
-                items.forEach(item -> {
-                    final String id = Instance.getId(item);
-                    final Long version = Instance.getVersion(item);
-                    assert version != null;
-                    readTransaction.readObjectVersion(schema, id, version);
-                });
-            });
-            return readTransaction.read().thenApply(results -> {
-
-                final Map<RefKey, Map<String, Object>> mapped = new HashMap<>();
-                results.forEach((key, result) -> mapped.put(new RefKey(key.getSchema(), key.getId()), result));
-
-                final Map<ExpandKey<RefKey>, Instance> remapped = new HashMap<>();
-                data.forEach((k, v) ->  {
-                    final RefKey key = RefKey.from(v);
-                    final Map<String, Object> result = MoreObjects.firstNonNull(mapped.get(key), v);
-                    final ObjectSchema schema = objectSchema(Instance.getSchema(result));
-                    final Instance instance = schema.create(result);
-                    remapped.put(k, instance);
-                });
-                return remapped;
-            });
-        }
-    }
-
-    private CompletableFuture<Caller> expandCaller(final Caller caller, final Permission permission) {
-
-        if(permission == null) {
-            return expandCaller(caller, false, Collections.emptySet());
-        } else {
-            return expandCaller(caller, permission.isAnonymous(), permission.getExpand());
-        }
-    }
-
-    private CompletableFuture<Caller> expandCaller(final Caller caller, final Collection<Permission> permissions) {
-
-        if(permissions.isEmpty()) {
-            return expandCaller(caller, false, Collections.emptySet());
-        } else {
-            final boolean anonymous = permissions.stream().allMatch(Permission::isAnonymous);
-            final Set<Path> expand = permissions.stream().flatMap(v -> v.getExpand().stream())
-                    .collect(Collectors.toSet());
-            return expandCaller(caller, anonymous, expand);
-        }
-    }
-
-
-    private CompletableFuture<Caller> expandCaller(final Caller caller, final boolean anonymous, final Set<Path> permissionExpand) {
-
-        if(caller.isAnon()) {
-            if(!anonymous) {
-                throw new PermissionDeniedException("Anonymous not allowed");
-            }
-        }
-
-        if(caller.getId() == null || caller.isSuper()) {
-
-            return CompletableFuture.completedFuture(caller instanceof ExpandedCaller ? caller : new ExpandedCaller(caller, null));
-
-        } else {
-
-            final ObjectSchema callerSchema = namespace.requireObjectSchema(CALLER_SCHEMA);
-
-            final Set<Path> paths = Path.children(permissionExpand, Path.of(VAR_CALLER));
-            // FIXME?
-            final Set<Path> expand = callerSchema.requiredExpand(paths);
-
-            if(caller instanceof ExpandedCaller) {
-
-                final Instance object = ((ExpandedCaller)caller).getObject();
-                return expand(Caller.SUPER, object, expand)
-                        .thenApply(result -> result == object ? caller : new ExpandedCaller(caller, result));
-
-            } else {
-
-                return read(Caller.SUPER, caller.getSchema(), caller.getId(), new ReadOptions().setExpand(expand))
-                        .thenApply(result -> new ExpandedCaller(caller, result));
-            }
-        }
-    }
-
-    private CompletableFuture<Instance> expand(final Caller caller, final Instance item, final Set<Path> expand) {
-
-        if(item == null) {
-            return CompletableFuture.completedFuture(null);
-        } else if(expand == null || expand.isEmpty()) {
-            return CompletableFuture.completedFuture(item);
-        } else {
-            final ExpandKey<RefKey> expandKey = ExpandKey.from(RefKey.from(item), expand);
-            return expand(caller, Collections.singletonMap(expandKey, item))
-                    .thenApply(results -> results.get(expandKey));
-        }
-    }
-
-    private CompletableFuture<PagedList<Instance>> expand(final Caller caller, final PagedList<Instance> items, final Set<Path> expand) {
-
-        if(items == null) {
-            return CompletableFuture.completedFuture(null);
-        } else if(expand == null || expand.isEmpty() || items.isEmpty()) {
-            return CompletableFuture.completedFuture(items);
-        } else {
-            final Map<ExpandKey<RefKey>, Instance> expandKeys = items.stream()
-                    .collect(Collectors.toMap(
-                            item -> ExpandKey.from(RefKey.from(item), expand),
-                            item -> item
-                    ));
-            return expand(caller, expandKeys)
-                    .thenApply(expanded -> items.withPage(
-                            items.stream()
-                                    .map(v -> expanded.get(ExpandKey.from(RefKey.from(v), expand)))
-                                    .collect(Collectors.toList())
-                    ));
-        }
-    }
-
-    private CompletableFuture<Map<ExpandKey<RefKey>, Instance>> expand(final Caller caller, final Map<ExpandKey<RefKey>, Instance> items) {
-
-        final Set<ExpandKey<RefKey>> refs = new HashSet<>();
-        final Map<ExpandKey<LinkKey>, CompletableFuture<PagedList<Instance>>> links = new HashMap<>();
-
-        final Consistency consistency = Consistency.ATOMIC;
-
-        items.forEach((ref, object) -> {
-            if(!ref.getExpand().isEmpty()) {
-                final ObjectSchema schema = namespace.requireObjectSchema(ref.getKey().getSchema());
-                schema.expand(object, new Expander() {
-                    @Override
-                    public Instance ref(final ObjectSchema schema, final Instance ref, final Set<Path> expand) {
-
-                        if(ref == null) {
-                            return null;
-                        } else {
-                            refs.add(ExpandKey.from(RefKey.from(schema, ref), expand));
-                            return ref;
-                        }
-                    }
-
-                    @Override
-                    public PagedList<Instance> link(final Link link, final PagedList<Instance> value, final Set<Path> expand) {
-
-                        final RefKey refKey = ref.getKey();
-                        final ExpandKey<LinkKey> linkKey = ExpandKey.from(LinkKey.from(refKey, link.getName()), expand);
-                        log.debug("Expanding link: {}", linkKey);
-                        links.put(linkKey, page(caller, refKey.getSchema(), refKey.getId(), link.getName(), new QueryOptions().setExpand(expand)));
-                        return null;
-                    }
-                }, ref.getExpand());
-            }
-        });
-
-        if(refs.isEmpty() && links.isEmpty()) {
-
-            return CompletableFuture.completedFuture(items);
-
-        } else {
-
-            return CompletableFuture.allOf(links.values().toArray(new CompletableFuture<?>[0])).thenCompose(ignored -> {
-
-                if(!refs.isEmpty()) {
-                    log.debug("Expanding refs: {}", refs);
-                }
-
-                final Storage.ReadTransaction readTransaction = storage.read(consistency);
-                refs.forEach(ref -> {
-                    final RefKey refKey = ref.getKey();
-                    final ObjectSchema objectSchema = objectSchema(refKey.getSchema());
-                    readTransaction.readObject(objectSchema, refKey.getId());
-                });
-
-                return readTransaction.read().thenCompose(results -> {
-
-                    final Map<ExpandKey<RefKey>, Instance> resolved = new HashMap<>();
-                    for (final Map<String, Object> initial : results.values()) {
-
-                        final String schemaName = Instance.getSchema(initial);
-                        final String id = Instance.getId(initial);
-                        final ObjectSchema schema = objectSchema(schemaName);
-                        final Permission permission = schema.getPermission(Permission.READ);
-
-                        final Instance object = schema.create(initial);
-
-                        //FIXME: Need to expand for read permissions here (check for infinite recursion needed?)
-
-                        checkPermission(caller, schema, permission, ImmutableMap.of(
-                                VAR_THIS, object
-                        ));
-
-                        refs.forEach(ref -> {
-                            final RefKey refKey = ref.getKey();
-                            if (refKey.getId().equals(id)) {
-                                resolved.put(ExpandKey.from(refKey, ref.getExpand()), object);
-                            }
-                        });
-                    }
-
-                    return cast(resolved).thenCompose(cast -> expand(caller, cast)).thenApply(expanded -> {
-
-                        final Map<ExpandKey<RefKey>, Instance> result = new HashMap<>();
-
-                        items.forEach((ref, object) -> {
-                            final RefKey refKey = ref.getKey();
-                            final ObjectSchema schema = namespace.requireObjectSchema(refKey.getSchema());
-
-                            result.put(ref, schema.expand(object, new Expander() {
-                                @Override
-                                public Instance ref(final ObjectSchema schema, final Instance ref, final Set<Path> expand) {
-
-                                    final ExpandKey<RefKey> expandKey = ExpandKey.from(RefKey.from(schema, ref), expand);
-                                    Instance result = expanded.get(expandKey);
-                                    if (result == null) {
-                                        result = ObjectSchema.ref(Instance.getId(ref));
-                                    }
-                                    return result;
-                                }
-
-                                @Override
-                                public PagedList<Instance> link(final Link link, final PagedList<Instance> value, final Set<Path> expand) {
-
-                                    final ExpandKey<LinkKey> linkKey = ExpandKey.from(LinkKey.from(refKey, link.getName()), expand);
-                                    final CompletableFuture<PagedList<Instance>> future = links.get(linkKey);
-                                    if(future != null) {
-                                        final PagedList<Instance> result = future.getNow(null);
-                                        assert result != null;
-                                        return result;
-                                    } else {
-                                        return null;
-                                    }
-                                }
-                            }, ref.getExpand()));
-
-                        });
-
-                        return result;
-                    });
-
-                });
-            });
-        }
-    }
-
-    @Data
-    private static class RefKey {
-
-        private final String schema;
-
-        private final String id;
-
-        public static RefKey from(final Map<String, Object> item) {
-
-            final String schema = Instance.getSchema(item);
-            final String id = Instance.getId(item);
-            assert schema != null && id != null;
-            return new RefKey(schema, id);
-        }
-
-        public static RefKey from(final ObjectSchema schema, final Map<String, Object> item) {
-
-            final String id = Instance.getId(item);
-            assert id != null;
-            return new RefKey(schema.getName(), id);
-        }
-    }
-
-    @Data
-    private static class LinkKey {
-
-        private final String schema;
-
-        private final String id;
-
-        private final String link;
-
-        public static LinkKey from(final Map<String, Object> item, final String link) {
-
-            return new LinkKey(Instance.getSchema(item), Instance.getId(item), link);
-        }
-
-        public static LinkKey from(final RefKey ref, final String link) {
-
-            return new LinkKey(ref.getSchema(), ref.getId(), link);
-        }
-    }
-
-    @Data
-    private static class ExpandKey<T> {
-
-        private final T key;
-
-        private final Set<Path> expand;
-
-        public static <T> ExpandKey<T> from(final T key, final Set<Path> expand) {
-
-            return new ExpandKey<>(key, expand);
-        }
-    }
-
-    private static class ExpandedCaller extends Caller.Delegating {
-
-        private final Instance object;
-
-        public ExpandedCaller(final Caller caller, final Instance object) {
-
-            super(caller);
-            this.object = object != null ? object : getObject(caller);
-        }
-
-        public static Instance getObject(final Caller caller) {
-
-            if(caller instanceof ExpandedCaller) {
-                return ((ExpandedCaller)caller).getObject();
-            } else {
-                final HashMap<String, Object> object = new HashMap<>();
-                object.put(Reserved.ID, caller.getId());
-                object.put(Reserved.SCHEMA, CALLER_SCHEMA);
-                // FIXME
-                return new Instance(object);
-            }
-        }
-
-        public Instance getObject() {
-
-            return object;
-        }
-    }
-
-//    private CompletableFuture<Collection<Instance>> readAbbreviated(final Caller caller, final ObjectSchema schema, final Collection<Map<String, Object>> object, final boolean abbreviated) {
-//
-//        if(abbreviated) {
-//            final String id = ObjectSchema.getId(object);
-//            final Long version = ObjectSchema.getVersion(object);
-//            assert(id != null && version != null);
-//            return storage.readObjectVersion(schema, id, version);
-//        } else {
-//            return CompletableFuture.completedFuture(schema.create(object));
-//        }
-//    }
-
-    private ObjectSchema objectSchema(final String schema) {
-
-        return namespace.requireObjectSchema(schema);
+        return Context.init(fullScope);
     }
 
     private CompletableFuture<?> onObjectCreated(final ObjectCreatedEvent event) {
@@ -1245,20 +680,4 @@ public class DatabaseServer implements Database, Handler<Event> {
         write.createHistory(schema, event.getId(), event.getVersion(), event.getAfter());
         return write.commit();
     }
-
-//    private CompletableFuture<?> onRefCreated(final RefCreatedEvent e) {
-//
-//        return CompletableFuture.completedFuture(null);
-//    }
-//
-//    private CompletableFuture<?> onRefUpdated(final RefUpdatedEvent e) {
-//
-//        return CompletableFuture.completedFuture(null);
-//    }
-//
-//    private CompletableFuture<?> onRefDeleted(final RefDeletedEvent e) {
-//
-//        return CompletableFuture.completedFuture(null);
-//    }
-
 }

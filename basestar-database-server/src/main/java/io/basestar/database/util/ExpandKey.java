@@ -1,8 +1,8 @@
-package io.basestar.database.options;
+package io.basestar.database.util;
 
 /*-
  * #%L
- * basestar-database
+ * basestar-database-server
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -20,37 +20,24 @@ package io.basestar.database.options;
  * #L%
  */
 
-import io.basestar.expression.Expression;
-import io.basestar.util.PagingToken;
 import io.basestar.util.Path;
-import io.basestar.util.Sort;
-import lombok.Builder;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
-import java.util.List;
 import java.util.Set;
 
 @Data
-@Builder(toBuilder = true, builderClassName = "Builder")
-public class QueryOptions {
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+public class ExpandKey<T> {
 
-    public static final String TYPE = "query";
-
-    public static final int DEFAULT_COUNT = 10;
-
-    public static final int MAX_COUNT = 50;
-
-    private final String schema;
-
-    private final Expression expression;
-
-    private final Integer count;
-
-    private final List<Sort> sort;
+    private final T key;
 
     private final Set<Path> expand;
 
-    private final Set<Path> projection;
+    public static <T> ExpandKey<T> from(final T key, final Set<Path> expand) {
 
-    private final PagingToken paging;
+        assert expand != null;
+        return new ExpandKey<>(key, expand);
+    }
 }

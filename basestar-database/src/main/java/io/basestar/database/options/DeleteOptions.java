@@ -20,12 +20,18 @@ package io.basestar.database.options;
  * #L%
  */
 
+import lombok.Builder;
 import lombok.Data;
-import lombok.experimental.Accessors;
 
 @Data
-@Accessors(chain = true)
-public class DeleteOptions {
+@Builder(toBuilder = true, builderClassName = "Builder")
+public class DeleteOptions implements ActionOptions {
 
-    private Long version;
+    public static final String TYPE = "delete";
+
+    private final String schema;
+
+    private final String id;
+
+    private final Long version;
 }

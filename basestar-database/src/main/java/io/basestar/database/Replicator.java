@@ -59,22 +59,32 @@ public class Replicator implements Handler<Event> {
 
     private CompletableFuture<?> onCreated(final ObjectCreatedEvent event) {
 
-        final CreateOptions options = new CreateOptions();
-        return target.create(caller, event.getSchema(), event.getId(), event.getAfter(), options);
+        final CreateOptions options = CreateOptions.builder()
+                .schema(event.getSchema())
+                .id(event.getId())
+                .build();
+        return target.create(caller, options);
     }
 
     private CompletableFuture<?> onUpdated(final ObjectUpdatedEvent event) {
 
-        final UpdateOptions options = new UpdateOptions()
-                .setVersion(event.getVersion())
-                .setMode(UpdateOptions.Mode.REPLACE);
-        return target.update(caller, event.getSchema(), event.getId(), event.getAfter(), options);
+        final UpdateOptions options = UpdateOptions.builder()
+                .schema(event.getSchema())
+                .id(event.getId())
+                .data(event.getAfter())
+                .version(event.getVersion())
+                .mode(UpdateOptions.Mode.REPLACE)
+                .build();
+        return target.update(caller, options);
     }
 
     private CompletableFuture<?> onDeleted(final ObjectDeletedEvent event) {
 
-        final DeleteOptions options = new DeleteOptions()
-                .setVersion(event.getVersion());
-        return target.delete(caller, event.getSchema(), event.getId(), options);
+        final DeleteOptions options = DeleteOptions.builder()
+                .schema(event.getSchema())
+                .id(event.getId())
+                .version(event.getVersion())
+                .build();
+        return target.delete(caller, options);
     }
 }

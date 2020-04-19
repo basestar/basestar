@@ -21,13 +21,12 @@ package io.basestar.graphql.api;
  */
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import graphql.ExecutionInput;
-import graphql.ExecutionResult;
-import graphql.GraphQL;
-import graphql.GraphQLError;
+import graphql.*;
 import io.basestar.api.API;
 import io.basestar.api.APIRequest;
 import io.basestar.api.APIResponse;
+import io.basestar.auth.Authenticator;
+import io.basestar.auth.Caller;
 import io.basestar.exception.ExceptionMetadata;
 import io.basestar.util.Nullsafe;
 import lombok.Data;
@@ -39,10 +38,13 @@ import java.util.concurrent.CompletableFuture;
 
 public class GraphQLAPI implements API {
 
+    private final Authenticator authenticator;
+
     private final GraphQL graphQL;
 
-    public GraphQLAPI(final GraphQL graphQL) {
+    public GraphQLAPI(final Authenticator authenticator, final GraphQL graphQL) {
 
+        this.authenticator = authenticator;
         this.graphQL = graphQL;
     }
 
@@ -50,6 +52,9 @@ public class GraphQLAPI implements API {
     public CompletableFuture<APIResponse> handle(final APIRequest request) {
 
         try {
+
+            final String authorization = request.getFirstHeader("Authorization");
+            final Caller caller = authenticator.authenticate(authorization);
 
 //            if(request.getPath().isEmpty()) {
                 switch(request.getMethod()) {
@@ -64,7 +69,7 @@ public class GraphQLAPI implements API {
                         try(final InputStream is = request.readBody()) {
                              req = request.getContentType().getMapper().readValue(is, Request.class);
                         }
-                        return query(request, req.toInput());
+                        return query(request, req.toInput(caller));
                     default:
                         return CompletableFuture.completedFuture(APIResponse.error(request, ExceptionMetadata.notFound()));
                 }
@@ -94,12 +99,13 @@ public class GraphQLAPI implements API {
 
         private Map<String, Object> variables;
 
-        public ExecutionInput toInput() {
+        public ExecutionInput toInput(final Caller caller) {
 
             return ExecutionInput.newExecutionInput()
                     .operationName(operationName)
                     .query(query)
                     .variables(Nullsafe.of(variables))
+                    .context(GraphQLContext.newContext().of("caller", caller).build())
                     .build();
         }
     }

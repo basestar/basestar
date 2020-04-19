@@ -26,15 +26,12 @@ import com.google.common.collect.Multimap;
 import io.basestar.auth.Caller;
 import io.basestar.database.options.*;
 import io.basestar.database.transport.Transport;
-import io.basestar.expression.Expression;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Namespace;
 import io.basestar.util.PagedList;
-import io.basestar.util.PagingToken;
 import io.basestar.util.Path;
 import lombok.RequiredArgsConstructor;
 
-import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -52,8 +49,10 @@ public class DatabaseClient implements Database {
     }
 
     @Override
-    public CompletableFuture<Instance> read(final Caller caller, final String schema, final String id, final ReadOptions options) {
+    public CompletableFuture<Instance> read(final Caller caller, final ReadOptions options) {
 
+        final String schema = options.getSchema();
+        final String id = options.getId();
         final Multimap<String, String> query = HashMultimap.create();
         addVersion(query, options.getVersion());
         addExpand(query, options.getExpand());
@@ -63,8 +62,11 @@ public class DatabaseClient implements Database {
     }
 
     @Override
-    public CompletableFuture<Instance> create(final Caller caller, final String schema, final String id, final Map<String, Object> data, final CreateOptions options) {
+    public CompletableFuture<Instance> create(final Caller caller, final CreateOptions options) {
 
+        final String schema = options.getSchema();
+        final String id = options.getId();
+        final Map<String, Object> data = options.getData();
         final Multimap<String, String> query = HashMultimap.create();
         addExpand(query, options.getExpand());
 //        addProjection(query, options.getProjection());
@@ -73,8 +75,11 @@ public class DatabaseClient implements Database {
     }
 
     @Override
-    public CompletableFuture<Instance> update(final Caller caller, final String schema, final String id, final Map<String, Object> data, final UpdateOptions options) {
+    public CompletableFuture<Instance> update(final Caller caller, final UpdateOptions options) {
 
+        final String schema = options.getSchema();
+        final String id = options.getId();
+        final Map<String, Object> data = options.getData();
         final Multimap<String, String> query = HashMultimap.create();
         addVersion(query, options.getVersion());
         addExpand(query, options.getExpand());
@@ -84,28 +89,30 @@ public class DatabaseClient implements Database {
     }
 
     @Override
-    public CompletableFuture<Boolean> delete(final Caller caller, final String schema, final String id, final DeleteOptions options) {
+    public CompletableFuture<Instance> delete(final Caller caller, final DeleteOptions options) {
 
+        final String schema = options.getSchema();
+        final String id = options.getId();
         final Multimap<String, String> query = HashMultimap.create();
         addVersion(query, options.getVersion());
 
-        return transport.delete(objectUrl(schema, id), query, headers(caller), booleanReader());
+        return transport.delete(objectUrl(schema, id), query, headers(caller), instanceReader());
     }
 
     @Override
-    public CompletableFuture<PagedList<Instance>> query(final Caller caller, final String schema, final Expression expression, final QueryOptions options) {
+    public CompletableFuture<PagedList<Instance>> query(final Caller caller, final QueryOptions options) {
 
         return null;
     }
 
     @Override
-    public CompletableFuture<PagedList<Instance>> page(final Caller caller, final String schema, final String id, final String rel, final QueryOptions options) {
+    public CompletableFuture<PagedList<Instance>> queryLink(final Caller caller, final QueryLinkOptions options) {
 
         return null;
     }
 
     @Override
-    public CompletableFuture<PagingToken> reindex(final Caller caller, final Map<String, ? extends Collection<String>> schemaIndexes, final int count, final PagingToken paging) {
+    public CompletableFuture<Map<String, Instance>> transaction(final Caller caller, final TransactionOptions options) {
 
         return null;
     }
@@ -136,11 +143,6 @@ public class DatabaseClient implements Database {
     }
 
     private String objectUrl(final String schema, final String id) {
-        return null;
-    }
-
-    private Transport.BodyReader<Boolean> booleanReader() {
-
         return null;
     }
 

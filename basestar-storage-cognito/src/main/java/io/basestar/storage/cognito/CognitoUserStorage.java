@@ -36,6 +36,8 @@ import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityPr
 import software.amazon.awssdk.services.cognitoidentityprovider.model.*;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
@@ -80,7 +82,7 @@ public class CognitoUserStorage implements Storage {
                 .userPoolId(userPoolId)
                 .username(id)
                 .build())
-                .thenApply(this::fromResponse);
+                .thenApply(v -> fromResponse(schema, v));
     }
 
     @Override
@@ -101,9 +103,8 @@ public class CognitoUserStorage implements Storage {
                             .paginationToken(decodePaging(token))
                             .build()).thenApply(response -> {
                         final List<UserType> users = response.users();
-                        return new PagedList<>(users.stream().map(this::fromUser)
+                        return new PagedList<>(users.stream().map(v -> fromUser(schema, v))
                                 .collect(Collectors.toList()), encodePaging(response.paginationToken()));
-
                     });
                 });
     }
@@ -232,26 +233,35 @@ public class CognitoUserStorage implements Storage {
         return result;
     }
 
-    private Map<String, Object> fromUser(final UserType user) {
+    private Map<String, Object> fromUser(final ObjectSchema schema, final UserType user) {
 
-        return from(user.username(), user.attributes(), user.enabled(), user.userStatus(),
+        return from(schema, user.username(), user.attributes(), user.enabled(), user.userStatus(),
                 user.userCreateDate(), user.userLastModifiedDate());
     }
 
-    private Map<String, Object> fromResponse(final AdminGetUserResponse user) {
+    private Map<String, Object> fromResponse(final ObjectSchema schema, final AdminGetUserResponse user) {
 
-        return from(user.username(), user.userAttributes(), user.enabled(), user.userStatus(),
+        return from(schema, user.username(), user.userAttributes(), user.enabled(), user.userStatus(),
                 user.userCreateDate(), user.userLastModifiedDate());
     }
 
-    private Map<String, Object> from(final String username, final List<AttributeType> attributes,
-                                     final boolean enabled, final UserStatusType userStatus,
-                                     final Instant created, final Instant updated) {
+    private Map<String, Object> from(final ObjectSchema schema, final String username,
+                                     final List<AttributeType> attributes, final boolean enabled,
+                                     final UserStatusType userStatus, final Instant created, final Instant updated) {
 
         final Map<String, Object> result = new HashMap<>();
+        Instance.setSchema(result, schema.getName());
         Instance.setId(result, username);
+        if(created != null) {
+            Instance.setCreated(result, LocalDateTime.ofInstant(created, ZoneOffset.UTC));
+        }
+        if(updated != null) {
+            Instance.setUpdated(result, LocalDateTime.ofInstant(updated, ZoneOffset.UTC));
+        }
         attributes.forEach(attr -> result.put(attr.name(), attr.value()));
-        result.put("status", userStatus.toString());
+        if(userStatus != null) {
+            result.put("status", userStatus.toString());
+        }
         result.put("enabled", enabled);
         return result;
     }

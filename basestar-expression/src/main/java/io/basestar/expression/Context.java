@@ -30,14 +30,12 @@ import java.util.Map;
 
 public interface Context extends Serializable {
 
-//        Context EMPTY = from(Methods.builder().defaults().build(), );
-
     static Context init() {
 
         return init(Collections.emptyMap());
     }
 
-    static Context init(final Map<String, Object> scope) {
+    static Context init(final Map<String, ?> scope) {
 
         return init(Methods.builder().defaults().build(), scope);
     }
@@ -47,7 +45,7 @@ public interface Context extends Serializable {
         return init(methods, Collections.emptyMap());
     }
 
-    static Context init(final Methods methods, final Map<String, Object> scope) {
+    static Context init(final Methods methods, final Map<String, ?> scope) {
 
         final Map<String, Object> scopeCopy = new HashMap<>(scope);
 
@@ -76,7 +74,7 @@ public interface Context extends Serializable {
         };
     }
 
-    static Context delegating(final Context delegate, final Map<String, Object> scope) {
+    static Context delegating(final Context delegate, final Map<String, ?> scope) {
 
         final Map<String, Object> scopeCopy = new HashMap<>(scope);
 
@@ -109,7 +107,7 @@ public interface Context extends Serializable {
 
     boolean has(String name);
 
-    default Context with(final Map<String, Object> scope) {
+    default Context with(final Map<String, ?> scope) {
 
         return Context.delegating(this, scope);
     }
@@ -123,23 +121,8 @@ public interface Context extends Serializable {
 
     default Object member(final Object target, final String member) {
 
-//            if(target instanceof StarMap<?, ?>) {
-//                return ((Map<?, ?>) target).values().stream().map(
-//                        v -> member(v, member)
-//                ).collect(Collectors.toList());
-//            } else if(target instanceof StarCollection<?>) {
-//                return ((Collection<?>)target).stream().map(
-//                        v -> member(v, member)
-//                ).collect(Collectors.toList());
-//            } else
         if(target instanceof Map<?, ?>) {
-//                if ("*".equals(member)) {
-//                    return new StarMap<>((Map<?, ?>)target);
-//                } else {
-                return ((Map<?, ?>) target).get(member);
-//                }
-//            } else if(target instanceof Collection<?> && "*".equals(member)) {
-//                return new StarCollection<>((Collection<?>)target);
+            return ((Map<?, ?>) target).get(member);
         } else {
             try {
                 final String method = "get" + member.substring(0, 1).toUpperCase() + member.substring(1);
@@ -149,36 +132,4 @@ public interface Context extends Serializable {
             }
         }
     }
-
-//        @RequiredArgsConstructor
-//        class StarMap<K, V> extends AbstractMap<K, V> {
-//
-//            private final Map<K, V> delegate;
-//
-//            @Nonnull
-//            @Override
-//            public Set<Entry<K, V>> entrySet() {
-//
-//                return delegate.entrySet();
-//            }
-//        }
-//
-//        @RequiredArgsConstructor
-//        class StarCollection<V> extends AbstractCollection<V> {
-//
-//            private final Collection<V> delegate;
-//
-//            @Nonnull
-//            @Override
-//            public Iterator<V> iterator() {
-//
-//                return delegate.iterator();
-//            }
-//
-//            @Override
-//            public int size() {
-//
-//                return delegate.size();
-//            }
-//        }
 }

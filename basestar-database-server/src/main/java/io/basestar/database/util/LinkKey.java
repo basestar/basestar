@@ -1,8 +1,8 @@
-package io.basestar.database.options;
+package io.basestar.database.util;
 
 /*-
  * #%L
- * basestar-database
+ * basestar-database-server
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -20,25 +20,27 @@ package io.basestar.database.options;
  * #L%
  */
 
-import io.basestar.util.Path;
-import lombok.Builder;
+import io.basestar.schema.Instance;
 import lombok.Data;
 
-import java.util.Set;
+import java.util.Map;
 
 @Data
-@Builder(toBuilder = true, builderClassName = "Builder")
-public class ReadOptions {
-
-    public static final String TYPE = "read";
+public class LinkKey {
 
     private final String schema;
 
     private final String id;
 
-    private final Set<Path> expand;
+    private final String link;
 
-    private final Set<Path> projection;
+    public static LinkKey from(final Map<String, Object> item, final String link) {
 
-    private final Long version;
+        return new LinkKey(Instance.getSchema(item), Instance.getId(item), link);
+    }
+
+    public static LinkKey from(final RefKey ref, final String link) {
+
+        return new LinkKey(ref.getSchema(), ref.getId(), link);
+    }
 }

@@ -151,6 +151,6 @@ public interface BatchResponse extends Map<BatchResponse.Key, Map<String, Object
 
         private static final Comparator<Key> COMPARATOR = Comparator.comparing(Key::getSchema)
                 .thenComparing(Key::getId)
-                .thenComparing(Comparator.nullsFirst(Comparator.comparing(Key::getVersion)).reversed());
+                .thenComparing(Comparator.comparing(Key::getVersion, Comparator.nullsFirst(Comparator.naturalOrder())).reversed());
     }
 }

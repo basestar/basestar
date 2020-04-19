@@ -49,6 +49,8 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+// FIXME: move to new module
+
 public class DatabaseAPI implements API {
 
     private static final Splitter PATH_SPLITTER = Splitter.on("/").omitEmptyStrings();
@@ -96,11 +98,13 @@ public class DatabaseAPI implements API {
                         case 2:
                             return read(caller, path.get(0), path.get(1), request);
                         case 3:
-                            return page(caller, path.get(0), path.get(1), path.get(2), request);
+                            return queryLink(caller, path.get(0), path.get(1), path.get(2), request);
                     }
                     break;
                 case PUT:
                     switch (path.size()) {
+                        case 1:
+                            return create(caller, path.get(0), request);
                         case 2:
                             return create(caller, path.get(0), path.get(1), request);
                     }
@@ -149,74 +153,81 @@ public class DatabaseAPI implements API {
 
     private CompletableFuture<APIResponse> create(final Caller caller, final String schema, final APIRequest request) throws IOException {
 
-        final Map<String, Object> data = parseData(request);
-
-        final CreateOptions options = new CreateOptions()
-                .setExpand(parseExpand(request));
-
-        return respond(request, database.create(caller, schema, data, options));
+        return create(caller, schema, null, request);
     }
 
     private CompletableFuture<APIResponse> create(final Caller caller, final String schema, final String id, final APIRequest request) throws IOException {
 
         final Map<String, Object> data = parseData(request);
 
-        final CreateOptions options = new CreateOptions()
-                .setExpand(parseExpand(request));
+        final CreateOptions options = CreateOptions.builder()
+                .schema(schema).id(id).data(data)
+                .expand(parseExpand(request))
+                .build();
 
-        return respond(request, database.create(caller, schema, id, data, options));
+        return respond(request, database.create(caller, options));
     }
 
     private CompletableFuture<APIResponse> read(final Caller caller, final String schema, final String id, final APIRequest request) {
 
-        final ReadOptions options = new ReadOptions()
-                .setExpand(parseExpand(request))
-                .setVersion(parseVersion(request));
+        final ReadOptions options = ReadOptions.builder()
+                .schema(schema).id(id)
+                .expand(parseExpand(request))
+                .version(parseVersion(request))
+                .build();
 
-        return respond(request, database.read(caller, schema, id, options));
+        return respond(request, database.read(caller, options));
     }
 
     private CompletableFuture<APIResponse> update(final Caller caller, final String schema, final String id, final APIRequest request) throws IOException {
 
         final Map<String, Object> data = parseData(request);
 
-        final UpdateOptions options = new UpdateOptions()
-                .setExpand(parseExpand(request))
-                .setMode(parseUpdateMode(request))
-                .setVersion(parseVersion(request));
+        final UpdateOptions options = UpdateOptions.builder()
+                .schema(schema).id(id).data(data)
+                .expand(parseExpand(request))
+                .mode(parseUpdateMode(request))
+                .version(parseVersion(request))
+                .build();
 
-        return respond(request, database.update(caller, schema, id, data, options));
+        return respond(request, database.update(caller, options));
     }
 
     private CompletableFuture<APIResponse> delete(final Caller caller, final String schema, final String id, final APIRequest request) {
 
-        final DeleteOptions options = new DeleteOptions()
-                .setVersion(parseVersion(request));
+        final DeleteOptions options = DeleteOptions.builder()
+                .schema(schema).id(id)
+                .version(parseVersion(request))
+                .build();
 
-        return respond(request, database.delete(caller, schema, id, options));
+        return respond(request, database.delete(caller, options));
     }
 
     private CompletableFuture<APIResponse> query(final Caller caller, final String schema, final APIRequest request) throws IOException {
 
-        final QueryOptions options = new QueryOptions()
-                .setCount(parseCount(request))
-                .setExpand(parseExpand(request))
-                .setSort(parseSort(request))
-                .setPaging(parsePaging(request));
-
         final Expression query = parseQuery(request);
 
-        return respondPaged(request, database.query(caller, schema, query, options));
+        final QueryOptions options = QueryOptions.builder()
+                .schema(schema).expression(query)
+                .count(parseCount(request))
+                .expand(parseExpand(request))
+                .sort(parseSort(request))
+                .paging(parsePaging(request))
+                .build();
+
+        return respondPaged(request, database.query(caller, options));
     }
 
-    private CompletableFuture<APIResponse> page(final Caller caller, final String schema, final String id, final String rel, final APIRequest request) {
+    private CompletableFuture<APIResponse> queryLink(final Caller caller, final String schema, final String id, final String link, final APIRequest request) {
 
-        final QueryOptions options = new QueryOptions()
-                .setCount(parseCount(request))
-                .setExpand(parseExpand(request))
-                .setPaging(parsePaging(request));
+        final QueryLinkOptions options = QueryLinkOptions.builder()
+                .schema(schema).id(id).link(link)
+                .count(parseCount(request))
+                .expand(parseExpand(request))
+                .paging(parsePaging(request))
+                .build();
 
-        return respondPaged(request, database.page(caller, schema, id, rel, options));
+        return respondPaged(request, database.queryLink(caller, options));
     }
 
     private Set<Path> parseExpand(final APIRequest request) {

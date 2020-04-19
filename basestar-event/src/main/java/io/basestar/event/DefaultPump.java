@@ -38,7 +38,7 @@ public class DefaultPump implements Pump {
 
     private static final int MAX_DELAY_MILLIS = 500;
 
-    private static final int SHUTDOWN_WAIT_SECONDS = 60;
+    private static final int SHUTDOWN_WAIT_SECONDS = 5;
 
     private final Receiver receiver;
 

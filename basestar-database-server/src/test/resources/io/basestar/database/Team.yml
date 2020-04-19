@@ -1,0 +1,97 @@
+Team:
+
+  type: object
+
+  properties:
+    description:
+      type: string
+
+  links:
+    members:
+      schema: TeamMember
+      expression: team.id == this.id && accepted
+    owners:
+      schema: TeamMember
+      expression: team.id == this.id && role == 'owner'
+    invitedMembers:
+      schema: TeamMember
+      expression: team.id == this.id
+
+  permissions:
+    read:
+      expression: caller.id == m.user.id for any m of this.members
+      expand:
+      - this.members
+    create:
+      expression: m.role == 'owner' for any m of after.members
+      expand:
+      - after.members
+    update:
+      expression: m.role == 'owner' for any m of after.members
+      expand:
+      - after.members
+    delete:
+      expression: m.role == 'owner' for any m of before.members
+      expand:
+      - after.members
+
+TeamMember:
+
+  type: object
+
+  properties:
+    team:
+      type: Team
+      immutable: true
+    user:
+      type: User
+      immutable: true
+    role:
+      type: TeamRole
+      required: true
+    accepted:
+      type: boolean
+
+  indexes:
+    team:
+      partition:
+        - team.id
+    user:
+      partition:
+        - user.id
+      sort:
+        - accepted
+        - role
+
+  permissions:
+    read:
+      # Caller must be either target user or a team member
+      expression: caller.id == m.user.id for any m of this.team.invitedMembers
+      expand:
+        - this.team.invitedMembers
+    create:
+      # Caller must be in the team, and creating with accepted state only allowed if the caller is the same user
+      expression: (caller.id == m.user.id for any m of after.team.owners)
+                  && (after.accepted == (caller.id == after.user.id))
+      expand:
+        - after.team.owners
+    update:
+      # Only the invited user can accept/leave, and only a team owner can edit the role
+      expression: ((before.accepted != after.accepted) == (caller.id == before.user.id))
+                  && ((before.role != after.role) == (caller.id == m.user.id for any m of before.team.owners))
+      expand:
+        - before.team.owners
+    delete:
+      # Only a team owner or target user can delete
+      expression: (caller.id == before.user.id) || (caller.id == m.user.id for any m of before.team.owners)
+      expand:
+        - before.team.owners
+
+
+TeamRole:
+
+  type: enum
+
+  values:
+    - owner
+    - member

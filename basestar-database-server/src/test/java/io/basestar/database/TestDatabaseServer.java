@@ -29,9 +29,8 @@ import io.basestar.database.event.ObjectCreatedEvent;
 import io.basestar.database.event.ObjectDeletedEvent;
 import io.basestar.database.event.ObjectUpdatedEvent;
 import io.basestar.database.options.CreateOptions;
-import io.basestar.database.options.DeleteOptions;
 import io.basestar.database.options.ReadOptions;
-import io.basestar.database.options.UpdateOptions;
+import io.basestar.database.options.TransactionOptions;
 import io.basestar.event.Emitter;
 import io.basestar.event.Event;
 import io.basestar.expression.Expression;
@@ -74,6 +73,10 @@ public class TestDatabaseServer {
 
     private static final String ANIMAL = "Animal";
 
+    private static final String TEAM = "Team";
+
+    private static final String TEAM_MEMBER = "TeamMember";
+
     private static final String CAT = "Cat";
 
     private static final String DOG = "Dog";
@@ -91,11 +94,22 @@ public class TestDatabaseServer {
     private Caller caller;
 
     @BeforeEach
+    @SuppressWarnings("unchecked")
     public void setUp() throws Exception {
 
-        final Namespace namespace = Namespace.load(TestDatabaseServer.class.getResource("/io/basestar/database/schema.json"));
+        final Namespace namespace = Namespace.load(
+                TestDatabaseServer.class.getResource("/io/basestar/database/schema.json"),
+                TestDatabaseServer.class.getResource("/io/basestar/database/Team.yml")
+        );
         this.emitter = Mockito.mock(Emitter.class);
         when(emitter.emit(any(Event.class))).thenReturn(CompletableFuture.completedFuture(null));
+        when(emitter.emit(any(Collection.class))).then(inv -> {
+            final Emitter emitter = (Emitter)inv.getMock();
+            inv.getArgumentAt(0, Collection.class).forEach(event -> {
+                emitter.emit((Event)event);
+            });
+            return CompletableFuture.completedFuture(null);
+        });
         this.storage = MemoryStorage.builder().build();
         this.database = new DatabaseServer(namespace, storage, emitter);
         this.caller = Mockito.mock(Caller.class);
@@ -131,7 +145,7 @@ public class TestDatabaseServer {
         final Map<String, Object> read = database.read(caller, SIMPLE, id).get();
         assertEquals(create, read);
 
-        final Map<String, Object> version1 = database.read(caller, SIMPLE, id, new ReadOptions().setVersion(1L)).get();
+        final Map<String, Object> version1 = database.read(caller, SIMPLE, id, 1L).get();
         assertEquals(read, version1);
 
         verify(emitter, times(1))
@@ -161,16 +175,16 @@ public class TestDatabaseServer {
                 "map", ImmutableMap.of("c", "d")
         );
 
-        final Map<String, Object> update = database.update(caller, SIMPLE, id, data2, new UpdateOptions().setVersion(1L)).get();
+        final Map<String, Object> update = database.update(caller, SIMPLE, id, 1L, data2).get();
         assertObject(SIMPLE, id, 2, data2, update);
 
         final Map<String, Object> read = database.read(caller, SIMPLE, id).get();
         assertEquals(update, read);
 
-        final Map<String, Object> version1 = database.read(caller, SIMPLE, id, new ReadOptions().setVersion(1L)).get();
+        final Map<String, Object> version1 = database.read(caller, SIMPLE, id, 1L).get();
         assertEquals(create, version1);
 
-        final Map<String, Object> version2 = database.read(caller, SIMPLE, id, new ReadOptions().setVersion(2L)).get();
+        final Map<String, Object> version2 = database.read(caller, SIMPLE, id, 2L).get();
         assertEquals(read, version2);
 
         verify(emitter, times(1))
@@ -185,13 +199,13 @@ public class TestDatabaseServer {
         final Map<String, Object> data = ImmutableMap.of();
         final Map<String, Object> create = database.create(caller, SIMPLE, id, data).get();
 
-        final boolean delete = database.delete(caller, SIMPLE, id, new DeleteOptions().setVersion(1L)).get();
-        assertTrue(delete);
+        final Instance delete = database.delete(caller, SIMPLE, id, 1L).get();
+        assertNull(delete);
 
         final Map<String, Object> read = database.read(caller, SIMPLE, id).get();
         assertNull(read);
 
-        final Map<String, Object> version1 = database.read(caller, SIMPLE, id, new ReadOptions().setVersion(1L)).get();
+        final Map<String, Object> version1 = database.read(caller, SIMPLE, id, 1L).get();
         assertNull(version1);
 
         verify(emitter, times(1))
@@ -286,14 +300,16 @@ public class TestDatabaseServer {
         final Map<String, Object> createA = database.create(caller, REF_SOURCE, idA, dataA).get();
         assertObject(REF_SOURCE, idA, 1, dataA, createA);
 
-        final Map<String, Object> readA = database.read(caller, REF_SOURCE, idA, new ReadOptions().setExpand(Path.parseSet("target"))).get();
+        final Map<String, Object> readA = database.read(caller, ReadOptions.builder().schema(REF_SOURCE)
+                .id(idA).expand(Path.parseSet("target")).build()).get();
         assertEquals(createRefA, readA.get("target"));
 
-        final PagedList<Instance> linkA = database.page(caller, REF_TARGET, refA, "sources").get();
+        final PagedList<Instance> linkA = database.queryLink(caller, REF_TARGET, refA, "sources").get();
         assertEquals(1, linkA.size());
         assertEquals(createA, linkA.get(0));
 
-        final Map<String, Object> expandLinkA = database.read(caller, REF_TARGET, refA, new ReadOptions().setExpand(Path.parseSet("sources"))).get();
+        final Map<String, Object> expandLinkA = database.read(caller, ReadOptions.builder().schema(REF_TARGET)
+                .id(refA).expand(Path.parseSet("sources")).build()).get();
         final PagedList<?> source = (PagedList<?>)expandLinkA.get("sources");
         assertEquals(1, source.size());
         assertEquals(createA, source.get(0));
@@ -308,12 +324,13 @@ public class TestDatabaseServer {
         )).get();
 
         final String idB = "b";
-        final Map<String, Object> createRefB = database.create(caller, REF_TARGET, idB, ImmutableMap.of(
+        final Map<String, Object> createRefB = database.create(caller, CreateOptions.builder().schema(REF_TARGET)
+                .id(idB).data(ImmutableMap.of(
                 "value", "b",
                 "target", ImmutableMap.of(
                         "id", idA
                 )
-        ), new CreateOptions().setExpand(Path.parseSet("target"))).get();
+        )).expand(Path.parseSet("target")).build()).get();
         // Check reading refs doesn't wipe properties
         assertNotNull(createRefB.get("value"));
         assertEquals(createRefA, createRefB.get("target"));
@@ -321,12 +338,13 @@ public class TestDatabaseServer {
         //System.err.println(Path.parseSet("target.target"));
 
         final String idC = UUID.randomUUID().toString();
-        final Map<String, Object> createRefC = database.create(caller,  REF_TARGET, idC, ImmutableMap.of(
+        final Map<String, Object> createRefC = database.create(caller, CreateOptions.builder().schema(REF_TARGET)
+                .id(idC).data(ImmutableMap.of(
                 "value", "c",
                 "target", ImmutableMap.of(
                         "id", idB
                 )
-        ), new CreateOptions().setExpand(Path.parseSet("target.target"))).get();
+        )).expand(Path.parseSet("target.target")).build()).get();
         assertEquals(createRefB, createRefC.get("target"));
     }
 
@@ -335,12 +353,13 @@ public class TestDatabaseServer {
 
         final String missing = UUID.randomUUID().toString();
         final String refA = UUID.randomUUID().toString();
-        final Map<String, Object> createRefA = database.create(caller, REF_SOURCE, refA, ImmutableMap.of(
+        final Map<String, Object> createRefA = database.create(caller, CreateOptions.builder().schema(REF_SOURCE)
+                .id(refA).data(ImmutableMap.of(
                 "value", "test",
                 "target", ImmutableMap.of(
                         "id", missing
                 )
-        ), new CreateOptions().setExpand(Path.parseSet("target"))).get();
+        )).expand(Path.parseSet("target")).build()).get();
         @SuppressWarnings("unchecked")
         final Map<String, Object> target = (Map<String, Object>)createRefA.get("target");
         assertNotNull(target);
@@ -371,7 +390,6 @@ public class TestDatabaseServer {
                     )
             )).get()));
     }
-
 
     @Test
     public void customId() throws Exception {
@@ -436,24 +454,79 @@ public class TestDatabaseServer {
         )).join();
 
         final Set<Path> expand = ImmutableSet.of(Path.of("residents"));
-        final Instance readC = database.read(caller, KENNEL, idC, new ReadOptions().setExpand(expand)).join();
+        final Instance readC = database.read(caller, ReadOptions.builder().schema(KENNEL)
+                .id(idC).expand(expand).build()).join();
         final Collection<Map<String, Object>> residents = (Collection<Map<String, Object>>)readC.get("residents");
         assertTrue(residents.stream().allMatch(v -> v.get("breed") != null));
     }
 
     @Test
-    public void nestedCreate() throws Exception {
+    public void batch() throws Exception {
 
-        final String refA = UUID.randomUUID().toString();
-        final Map<String, Object> createRefA = database.create(caller, REF_TARGET, refA, ImmutableMap.of(
-                "value", "test",
-                "sources", ImmutableList.of(
-                        ImmutableMap.of(
+        final Map<String, Instance> results = database.transaction(caller, TransactionOptions.builder()
+                .action("a", CreateOptions.builder()
+                        .schema(SIMPLE)
+                        .eval(ImmutableMap.of(
+                                "string", Expression.parse("c.id")
+                        ))
+                        .build())
+                .action("b", CreateOptions.builder()
+                        .schema(SIMPLE)
+                        .data(ImmutableMap.of(
+                                "string", "b"
+                        ))
+                        .eval(ImmutableMap.of(
+                                "array", Expression.parse("[a.id]")
+                        ))
+                        .build())
+                .action("c", CreateOptions.builder()
+                        .schema(SIMPLE)
+                        .data(ImmutableMap.of(
+                                "string", "a"
+                        ))
+                        .build())
+                .build()).join();
 
-                        )
-                )
-        )).get();
+        System.err.println(results);
+    }
 
+    @Test
+    public void advancedPerms() throws Exception {
+
+        when(caller.getSchema()).thenReturn(USER);
+        when(caller.getId()).thenReturn("test");
+
+        final Map<String, Instance> ok = database.transaction(caller, TransactionOptions.builder()
+                .action("team", CreateOptions.builder()
+                        .schema(TEAM)
+                        .id("t1")
+                        .build())
+                .action("member", CreateOptions.builder()
+                        .schema(TEAM_MEMBER)
+                        .data(ImmutableMap.of(
+                                "user", ImmutableMap.of("id", "test"),
+                                "team", ImmutableMap.of("id", "t1"),
+                                "role", "owner",
+                                "accepted", true
+                        )).build())
+                .build()).get();
+        assertEquals(2, ok.size());
+
+        assertThrows(PermissionDeniedException.class, cause(() ->
+                database.transaction(caller, TransactionOptions.builder()
+                        .action("team", CreateOptions.builder()
+                                .schema(TEAM)
+                                .id("t2")
+                                .build())
+                        .action("member", CreateOptions.builder()
+                                .schema(TEAM_MEMBER)
+                                .data(ImmutableMap.of(
+                                        "user", ImmutableMap.of("id", "test"),
+                                        "team", ImmutableMap.of("id", "t2"),
+                                        "role", "owner",
+                                        "accepted", false
+                                )).build())
+                        .build()).get()));
     }
 
     private Executable cause(final Executable target) {

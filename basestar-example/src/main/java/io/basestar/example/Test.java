@@ -28,10 +28,7 @@ import io.basestar.auth.Caller;
 import io.basestar.connector.undertow.UndertowConnector;
 import io.basestar.database.DatabaseServer;
 import io.basestar.database.api.DatabaseAPI;
-import io.basestar.database.options.CreateOptions;
-import io.basestar.database.options.QueryOptions;
 import io.basestar.database.options.ReadOptions;
-import io.basestar.database.options.UpdateOptions;
 import io.basestar.event.Pump;
 import io.basestar.event.sns.SNSEmitter;
 import io.basestar.event.sqs.SQSReceiver;
@@ -187,7 +184,7 @@ public class Test {
                 ),
                 "id", "test",
                 "email", "matt@arcneon.com"
-        ), new CreateOptions()).get();
+        )).get();
         System.err.println(createUser);
 
         final Map<String, Object> createTeam = database.create(caller, "Team", "test", ImmutableMap.of(
@@ -195,10 +192,11 @@ public class Test {
                 "owner", ImmutableMap.of(
                         "id", "test"
                 )
-        ), new CreateOptions()).get();
+        )).get();
         System.err.println(createTeam);
 
-        final Map<String, Object> getTeam = database.read(caller, "Team", "test", new ReadOptions().setExpand(Path.parseSet("owner"))).get();
+        final Map<String, Object> getTeam = database.read(caller, ReadOptions.builder().schema("Team").id("test")
+                .expand(Path.parseSet("owner")).build()).get();
         System.err.println(getTeam);
 
         final Map<String, Object> createTeamInvite = database.create(caller, "TeamInvite", ImmutableMap.of(
@@ -208,10 +206,10 @@ public class Test {
                         "id", "test"
                 ),
                 "permissions", ImmutableSet.of("UPDATE")
-        ), new CreateOptions()).get();
+        )).get();
         System.err.println(createTeamInvite);
 
-        final PagedList<Instance> queryInvites = database.query(caller, "TeamInvite", Expression.parse("user.id == 'test'"), new QueryOptions()).get();
+        final PagedList<Instance> queryInvites = database.query(caller, "TeamInvite", Expression.parse("user.id == 'test'")).get();
         System.err.println(queryInvites);
 
         final Map<String, Object> createTeamMember = database.create(caller, "TeamUser", ImmutableMap.of(
@@ -221,7 +219,7 @@ public class Test {
                         "id", "test"
                 ),
                 "permissions", ImmutableSet.of("UPDATE")
-        ), new CreateOptions()).get();
+        )).get();
         System.err.println(createTeamMember);
 
         final Map<String, Object> createProject = database.create(caller, "Project", "myproject", ImmutableMap.of(
@@ -230,18 +228,19 @@ public class Test {
                 "owner", ImmutableMap.of(
                         "id", "test"
                 )
-        ), new CreateOptions()).get();
+        )).get();
         System.err.println(createProject);
-        final Map<String, Object> updateProject = database.update(caller, "Project", "myproject", createProject, new UpdateOptions()).get();
+        final Map<String, Object> updateProject = database.update(caller, "Project", "myproject", createProject).get();
         System.err.println(updateProject);
 
-        final Map<String, Object> get = database.read(caller, "Project", "myproject", new ReadOptions().setExpand(Path.parseSet("owner"))).get();
+        final Map<String, Object> get = database.read(caller, ReadOptions.builder().schema("Project").id("myproject")
+                .expand(Path.parseSet("owner")).build()).get();
         System.err.println(get);
 
-        final Map<String, Object> getVersion = database.read(caller, "Project", "myproject", new ReadOptions().setVersion(1L)).get();
+        final Map<String, Object> getVersion = database.read(caller, "Project", "myproject", 1L).get();
         System.err.println(getVersion);
 
-        final PagedList<Instance> queryProject = database.query(caller, "Project", Expression.parse("owner.id == 'test'"), new QueryOptions()).get();
+        final PagedList<Instance> queryProject = database.query(caller, "Project", Expression.parse("owner.id == 'test'")).get();
 
         System.err.println(queryProject);
 
@@ -253,9 +252,10 @@ public class Test {
                 "owner", ImmutableMap.of(
                         "id", "test"
                 )
-        ), new CreateOptions()).get();
+        )).get();
 
-        final Map<String, Object> readBig = database.read(caller, "Project", "myproject2", new ReadOptions().setExpand(Path.parseSet("owner"))).get();
+        final Map<String, Object> readBig = database.read(caller, ReadOptions.builder().schema("Project")
+                .id("myproject2").expand(Path.parseSet("owner")).build()).get();
         System.err.println(readBig);
 
         final Authenticator authenticator = new Authenticator() {

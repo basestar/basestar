@@ -1,8 +1,8 @@
-package io.basestar.database.options;
+package io.basestar.database;
 
 /*-
  * #%L
- * basestar-database
+ * basestar-database-server
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -20,25 +20,17 @@ package io.basestar.database.options;
  * #L%
  */
 
-import io.basestar.util.Path;
-import lombok.Builder;
-import lombok.Data;
+import io.basestar.schema.Reserved;
 
-import java.util.Set;
+public interface CommonVars {
 
-@Data
-@Builder(toBuilder = true, builderClassName = "Builder")
-public class ReadOptions {
+    String VAR_CALLER = "caller";
 
-    public static final String TYPE = "read";
+    String VAR_BEFORE = "before";
 
-    private final String schema;
+    String VAR_AFTER = "after";
 
-    private final String id;
+    String VAR_BATCH = "batch";
 
-    private final Set<Path> expand;
-
-    private final Set<Path> projection;
-
-    private final Long version;
+    String VAR_THIS = Reserved.THIS;
 }

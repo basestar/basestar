@@ -20,25 +20,18 @@ package io.basestar.database.options;
  * #L%
  */
 
-import io.basestar.util.Path;
-import lombok.Builder;
-import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-import java.util.Set;
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.WRAPPER_OBJECT)
+@JsonSubTypes({
+        @JsonSubTypes.Type(name = CreateOptions.TYPE, value = CreateOptions.class),
+        @JsonSubTypes.Type(name = UpdateOptions.TYPE, value = UpdateOptions.class),
+        @JsonSubTypes.Type(name = DeleteOptions.TYPE, value = DeleteOptions.class)
+})
+public interface ActionOptions extends Options {
 
-@Data
-@Builder(toBuilder = true, builderClassName = "Builder")
-public class ReadOptions {
+    String getSchema();
 
-    public static final String TYPE = "read";
-
-    private final String schema;
-
-    private final String id;
-
-    private final Set<Path> expand;
-
-    private final Set<Path> projection;
-
-    private final Long version;
+    String getId();
 }

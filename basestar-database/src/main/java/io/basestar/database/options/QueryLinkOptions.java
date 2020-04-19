@@ -32,15 +32,19 @@ import java.util.Set;
 
 @Data
 @Builder(toBuilder = true, builderClassName = "Builder")
-public class QueryOptions {
+public class QueryLinkOptions {
 
-    public static final String TYPE = "query";
+    public static final String TYPE = "queryLink";
 
     public static final int DEFAULT_COUNT = 10;
 
     public static final int MAX_COUNT = 50;
 
     private final String schema;
+
+    private final String id;
+
+    private final String link;
 
     private final Expression expression;
 

@@ -1,4 +1,4 @@
-package io.basestar.graphql.wiring;
+package io.basestar.graphql;
 
 /*-
  * #%L
@@ -31,11 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class TypeDefinitionRegistryFactory {
-
-    public static final String MAP_KEY = Reserved.PREFIX + "key";
-
-    public static final String MAP_VALUE = Reserved.PREFIX + "value";
+public class GraphQLSchemaAdaptor {
 
     public static final String INPUT_PREFIX = "Input";
 
@@ -57,7 +53,7 @@ public class TypeDefinitionRegistryFactory {
 
     private final Namespace namespace;
 
-    public TypeDefinitionRegistryFactory(final Namespace namespace) {
+    public GraphQLSchemaAdaptor(final Namespace namespace) {
 
         this.namespace = namespace;
     }
@@ -85,6 +81,7 @@ public class TypeDefinitionRegistryFactory {
             registry.add(mapTypeDefinition(k, v));
             registry.add(inputMapTypeDefinition(k, v));
         });
+//        registry.add(batchActionDefinition());
         return registry;
     }
 
@@ -92,19 +89,22 @@ public class TypeDefinitionRegistryFactory {
 
         final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
         builder.name("Query");
-        namespace.getSchemas().forEach((k, v) -> {
-            if(v instanceof ObjectSchema) {
-                builder.fieldDefinition(getDefinition(v));
-                builder.fieldDefinition(queryDefinition(v));
+        namespace.getSchemas().forEach((schemaName, schema) -> {
+            if(schema instanceof ObjectSchema) {
+                final ObjectSchema objectSchema = (ObjectSchema)schema;
+                builder.fieldDefinition(readDefinition(objectSchema));
+                builder.fieldDefinition(queryDefinition(objectSchema));
+                objectSchema.getAllLinks()
+                        .forEach((linkName, link) -> builder.fieldDefinition(queryLinkDefinition(objectSchema, link)));
             }
         });
         return builder.build();
     }
 
-    public FieldDefinition getDefinition(final Schema schema) {
+    public FieldDefinition readDefinition(final Schema schema) {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
-        builder.name("get" + schema.getName());
+        builder.name("read" + schema.getName());
         builder.type(new TypeName(schema.getName()));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(Reserved.ID).type(new NonNullType(new TypeName(ID_TYPE))).build());
@@ -123,6 +123,16 @@ public class TypeDefinitionRegistryFactory {
         return builder.build();
     }
 
+    public FieldDefinition queryLinkDefinition(final Schema schema, final Link link) {
+
+        final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
+        builder.name("query" + schema.getName() + GraphQLUtils.ucFirst(link.getName()));
+        builder.type(new ListType(new TypeName(link.getSchema().getName())));
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name(Reserved.ID).type(new NonNullType(new TypeName(ID_TYPE))).build());
+        return builder.build();
+    }
+
     private ObjectTypeDefinition mutationDefinition() {
 
         final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
@@ -131,7 +141,7 @@ public class TypeDefinitionRegistryFactory {
             if(v instanceof ObjectSchema) {
                 builder.fieldDefinition(createDefinition(v));
                 builder.fieldDefinition(updateDefinition(v));
-//                builder.fieldDefinition(deleteDefinition(v));
+                builder.fieldDefinition(deleteDefinition(v));
             }
         });
         return builder.build();
@@ -167,6 +177,7 @@ public class TypeDefinitionRegistryFactory {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
         builder.name("delete" + schema.getName());
+        builder.type(new TypeName(schema.getName()));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(Reserved.ID).type(new NonNullType(new TypeName(ID_TYPE))).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
@@ -319,9 +330,9 @@ public class TypeDefinitionRegistryFactory {
         final InputObjectTypeDefinition.Builder builder = InputObjectTypeDefinition.newInputObjectDefinition();
         builder.name(INPUT_PREFIX + name);
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(MAP_KEY).type(new NonNullType(new TypeName(STRING_TYPE))).build());
+                .name(GraphQLUtils.MAP_KEY).type(new NonNullType(new TypeName(STRING_TYPE))).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(MAP_VALUE).type(inputType(type)).build());
+                .name(GraphQLUtils.MAP_VALUE).type(inputType(type)).build());
         return builder.build();
     }
 
@@ -330,9 +341,9 @@ public class TypeDefinitionRegistryFactory {
         final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
         builder.name(name);
         builder.fieldDefinition(FieldDefinition.newFieldDefinition()
-                .name(MAP_KEY).type(new NonNullType(new TypeName(STRING_TYPE))).build());
+                .name(GraphQLUtils.MAP_KEY).type(new NonNullType(new TypeName(STRING_TYPE))).build());
         builder.fieldDefinition(FieldDefinition.newFieldDefinition()
-                .name(MAP_VALUE).type(type(type)).build());
+                .name(GraphQLUtils.MAP_VALUE).type(type(type)).build());
         return builder.build();
     }
 

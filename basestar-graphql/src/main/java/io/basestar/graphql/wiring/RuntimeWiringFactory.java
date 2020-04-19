@@ -29,11 +29,9 @@ import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.TypeRuntimeWiring;
 import io.basestar.auth.Caller;
 import io.basestar.database.Database;
-import io.basestar.database.options.CreateOptions;
-import io.basestar.database.options.QueryOptions;
-import io.basestar.database.options.ReadOptions;
-import io.basestar.database.options.UpdateOptions;
+import io.basestar.database.options.*;
 import io.basestar.expression.Expression;
+import io.basestar.graphql.GraphQLUtils;
 import io.basestar.schema.*;
 import io.basestar.util.Path;
 
@@ -44,24 +42,18 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+
+@Deprecated
 public class RuntimeWiringFactory {
 
     private final Database database;
 
     private final Namespace namespace;
 
-    private final DataConverter converter;
-
     public RuntimeWiringFactory(final Database database, final Namespace namespace) {
-
-        this(database, namespace, new DataConverter());
-    }
-
-    public RuntimeWiringFactory(final Database database, final Namespace namespace, final DataConverter converter) {
 
         this.database = database;
         this.namespace = namespace;
-        this.converter = converter;
     }
 
     public RuntimeWiring runtimeWiring() {
@@ -85,11 +77,15 @@ public class RuntimeWiringFactory {
     private Map<String, DataFetcher> queryFetchers() {
 
         final Map<String, DataFetcher> results = new HashMap<>();
-        namespace.getSchemas().forEach((k, schema) -> {
+        namespace.getSchemas().forEach((schemaName, schema) -> {
             if(schema instanceof ObjectSchema) {
                 final ObjectSchema objectSchema = (ObjectSchema)schema;
-                results.put("get" + objectSchema.getName(), getFetcher(objectSchema));
+                results.put("read" + objectSchema.getName(), getFetcher(objectSchema));
                 results.put("query" + objectSchema.getName(), queryFetcher(objectSchema));
+                objectSchema.getAllLinks().forEach((linkName, link) -> {
+                    final String name = "query" + schemaName + GraphQLUtils.ucFirst(linkName);
+                    results.put(name, queryLinkFetcher(objectSchema, link));
+                });
             }
         });
         return results;
@@ -98,27 +94,54 @@ public class RuntimeWiringFactory {
     private DataFetcher<CompletableFuture<?>> getFetcher(final ObjectSchema schema) {
 
         return (env) -> {
-            final Caller caller = Caller.SUPER;
+            final Caller caller = GraphQLUtils.caller(env.getContext());
             final Set<Path> paths = paths(env);
             final Set<Path> expand = schema.requiredExpand(paths);
             final String id = env.getArgument(Reserved.ID);
             final Long version = env.getArgumentOrDefault(Reserved.VERSION, null);
-            final ReadOptions options = new ReadOptions().setExpand(expand).setVersion(version);
-            return database.read(caller, schema.getName(), id, options)
-                    .thenApply(object -> converter.toResponse(schema, object));
+            final ReadOptions options = ReadOptions.builder()
+                    .schema(schema.getName()).id(id)
+                    .version(version).expand(expand)
+                    .build();
+            return database.read(caller, options)
+                    .thenApply(object -> GraphQLUtils.toResponse(schema, object));
         };
     }
 
     private DataFetcher<CompletableFuture<?>> queryFetcher(final ObjectSchema schema) {
 
         return (env) -> {
-            final Caller caller = Caller.SUPER;
+            final Caller caller = GraphQLUtils.caller(env.getContext());
             final Set<Path> paths = paths(env);
             final Set<Path> expand = schema.requiredExpand(paths);
             final String query = env.getArgument("query");
-            final QueryOptions options = new QueryOptions().setExpand(expand);
-            return database.query(caller, schema.getName(), Expression.parse(query), options)
-                    .thenApply(objects -> objects.map(object -> converter.toResponse(schema, object)));
+            final QueryOptions options = QueryOptions.builder()
+                    .schema(schema.getName())
+                    .expression(Expression.parse(query))
+                    .expand(expand)
+                    .build();
+            return database.query(caller, options)
+                    .thenApply(objects -> objects.map(object -> GraphQLUtils.toResponse(schema, object)));
+        };
+    }
+
+    private DataFetcher<CompletableFuture<?>> queryLinkFetcher(final ObjectSchema schema, final Link link) {
+
+        return (env) -> {
+
+            final Caller caller = GraphQLUtils.caller(env.getContext());
+            final ObjectSchema linkSchema = link.getSchema();
+            final Set<Path> paths = paths(env);
+            final Set<Path> expand = schema.requiredExpand(paths);
+            final String id = env.getArgument(Reserved.ID);
+            final QueryLinkOptions options = QueryLinkOptions.builder()
+                    .schema(schema.getName())
+                    .link(link.getName())
+                    .id(id)
+                    .expand(expand)
+                    .build();
+            return database.queryLink(caller, options)
+                    .thenApply(objects -> objects.map(object -> GraphQLUtils.toResponse(linkSchema, object)));
         };
     }
 
@@ -138,34 +161,36 @@ public class RuntimeWiringFactory {
     private DataFetcher<CompletableFuture<?>> createFetcher(final ObjectSchema schema) {
 
         return (env) -> {
-            final Caller caller = Caller.SUPER;
+            final Caller caller = GraphQLUtils.caller(env.getContext());
             final Set<Path> paths = paths(env);
             final Set<Path> expand = schema.requiredExpand(paths);
             final String id = env.getArgumentOrDefault(Reserved.ID, null);
-            final Map<String, Object> data = converter.fromRequest(schema, env.getArgument("data"));
-            final CreateOptions options = new CreateOptions().setExpand(expand);
-            if(id != null) {
-                return database.create(caller, schema.getName(), id, data, options)
-                        .thenApply(object -> converter.toResponse(schema, object));
-            } else {
-                return database.create(caller, schema.getName(), data, options)
-                        .thenApply(object -> converter.toResponse(schema, object));
-            }
+            final Map<String, Object> data = GraphQLUtils.fromRequest(schema, env.getArgument("data"));
+            final CreateOptions options = CreateOptions.builder()
+                    .schema(schema.getName()).id(id)
+                    .data(data).expand(expand)
+                    .build();
+            return database.create(caller, options)
+                    .thenApply(object -> GraphQLUtils.toResponse(schema, object));
         };
     }
 
     private DataFetcher<CompletableFuture<?>> updateFetcher(final ObjectSchema schema) {
 
         return (env) -> {
-            final Caller caller = Caller.SUPER;
+            final Caller caller = GraphQLUtils.caller(env.getContext());
             final Set<Path> paths = paths(env);
             final Set<Path> expand = schema.requiredExpand(paths);
             final String id = env.getArgument(Reserved.ID);
             final Long version = env.getArgumentOrDefault(Reserved.VERSION, null);
-            final Map<String, Object> data = converter.fromRequest(schema, env.getArgument("data"));
-            final UpdateOptions options = new UpdateOptions().setExpand(expand).setVersion(version);
-            return database.update(caller, schema.getName(), id, data, options)
-                    .thenApply(object -> converter.toResponse(schema, object));
+            final Map<String, Object> data = GraphQLUtils.fromRequest(schema, env.getArgument("data"));
+            final UpdateOptions options = UpdateOptions.builder()
+                    .schema(schema.getName()).id(id)
+                    .data(data).version(version)
+                    .expand(expand)
+                    .build();
+            return database.update(caller, options)
+                    .thenApply(object -> GraphQLUtils.toResponse(schema, object));
         };
     }
 
@@ -181,7 +206,7 @@ public class RuntimeWiringFactory {
         // FIXME: if we do this properly then we don't need to use the reserved prefix in map key/value
         return Path.of(Arrays.stream(name.split("/"))
                 .map(v -> {
-                    if(v.equals(TypeDefinitionRegistryFactory.MAP_VALUE)) {
+                    if(v.equals(GraphQLUtils.MAP_VALUE)) {
                         return "*";
                     } else {
                         return v;

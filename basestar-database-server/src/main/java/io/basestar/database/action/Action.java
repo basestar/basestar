@@ -1,8 +1,8 @@
-package io.basestar.database.options;
+package io.basestar.database.action;
 
 /*-
  * #%L
- * basestar-database
+ * basestar-database-server
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -20,25 +20,36 @@ package io.basestar.database.options;
  * #L%
  */
 
+import io.basestar.event.Event;
+import io.basestar.expression.Context;
+import io.basestar.schema.Instance;
+import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.Permission;
 import io.basestar.util.Path;
-import lombok.Builder;
-import lombok.Data;
 
 import java.util.Set;
 
-@Data
-@Builder(toBuilder = true, builderClassName = "Builder")
-public class ReadOptions {
+public interface Action {
 
-    public static final String TYPE = "read";
+    ObjectSchema schema();
 
-    private final String schema;
+    String id();
 
-    private final String id;
+    Permission permission();
 
-    private final Set<Path> expand;
+//    RefKey beforeKey();
 
-    private final Set<Path> projection;
+//    Set<Path> beforeCallerExpand();
 
-    private final Long version;
+    Instance after(Context context, Instance before);
+
+    Set<Path> afterExpand();
+
+    Event event(Instance before, Instance after);
+
+    Set<Path> paths();
+
+//    ExpandKey<RefKey> afterKey(Instance after);
+//
+//    Set<Path> afterCallerExpand();
 }

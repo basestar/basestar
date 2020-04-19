@@ -20,17 +20,29 @@ package io.basestar.database.options;
  * #L%
  */
 
+import io.basestar.expression.Expression;
 import io.basestar.util.Path;
+import lombok.Builder;
 import lombok.Data;
-import lombok.experimental.Accessors;
 
+import java.util.Map;
 import java.util.Set;
 
 @Data
-@Accessors(chain = true)
-public class CreateOptions {
+@Builder(toBuilder = true, builderClassName = "Builder")
+public class CreateOptions implements ActionOptions {
 
-    private Set<Path> expand;
+    public static final String TYPE = "create";
 
-    private Set<Path> projection;
+    private final String schema;
+
+    private final String id;
+
+    private final Map<String, Object> data;
+
+    private final Map<String, Expression> eval;
+
+    private final Set<Path> expand;
+
+    private final Set<Path> projection;
 }

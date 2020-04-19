@@ -20,15 +20,19 @@ package io.basestar.database.options;
  * #L%
  */
 
+import io.basestar.expression.Expression;
 import io.basestar.util.Path;
+import lombok.Builder;
 import lombok.Data;
-import lombok.experimental.Accessors;
 
+import java.util.Map;
 import java.util.Set;
 
 @Data
-@Accessors(chain = true)
-public class UpdateOptions {
+@Builder(toBuilder = true, builderClassName = "Builder")
+public class UpdateOptions implements ActionOptions {
+
+    public static final String TYPE = "update";
 
     public enum Mode {
 
@@ -36,11 +40,19 @@ public class UpdateOptions {
         MERGE
     }
 
-    private Set<Path> expand;
+    private final String schema;
 
-    private Set<Path> projection;
+    private final String id;
 
-    private Long version;
+    private final Map<String, Object> data;
 
-    private Mode mode;
+    private final Map<String, Expression> eval;
+
+    private final Set<Path> expand;
+
+    private final Set<Path> projection;
+
+    private final Long version;
+
+    private final Mode mode;
 }

@@ -1,8 +1,8 @@
-package io.basestar.database.options;
+package io.basestar.database.util;
 
 /*-
  * #%L
- * basestar-database
+ * basestar-database-server
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -20,25 +20,33 @@ package io.basestar.database.options;
  * #L%
  */
 
-import io.basestar.util.Path;
-import lombok.Builder;
+import io.basestar.schema.Instance;
+import io.basestar.schema.ObjectSchema;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
-import java.util.Set;
+import java.util.Map;
 
 @Data
-@Builder(toBuilder = true, builderClassName = "Builder")
-public class ReadOptions {
-
-    public static final String TYPE = "read";
+@RequiredArgsConstructor
+public class RefKey {
 
     private final String schema;
 
     private final String id;
 
-    private final Set<Path> expand;
+    public static RefKey from(final Map<String, Object> item) {
 
-    private final Set<Path> projection;
+        final String schema = Instance.getSchema(item);
+        final String id = Instance.getId(item);
+        assert schema != null && id != null;
+        return new RefKey(schema, id);
+    }
 
-    private final Long version;
+    public static RefKey from(final ObjectSchema schema, final Map<String, Object> item) {
+
+        final String id = Instance.getId(item);
+        assert id != null;
+        return new RefKey(schema.getName(), id);
+    }
 }
