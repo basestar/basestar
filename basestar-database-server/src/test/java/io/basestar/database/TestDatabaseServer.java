@@ -85,6 +85,10 @@ public class TestDatabaseServer {
 
     private static final String USER = "User";
 
+    private static final String VISIBILITY = "Visibility";
+
+    private static final String TRANSIENT = "Transient";
+
     private Database database;
 
     private Storage storage;
@@ -466,8 +470,8 @@ public class TestDatabaseServer {
         final Map<String, Instance> results = database.transaction(caller, TransactionOptions.builder()
                 .action("a", CreateOptions.builder()
                         .schema(SIMPLE)
-                        .eval(ImmutableMap.of(
-                                "string", Expression.parse("c.id")
+                        .expressions(ImmutableMap.of(
+                                "string", Expression.parse("batch.c.id")
                         ))
                         .build())
                 .action("b", CreateOptions.builder()
@@ -475,8 +479,8 @@ public class TestDatabaseServer {
                         .data(ImmutableMap.of(
                                 "string", "b"
                         ))
-                        .eval(ImmutableMap.of(
-                                "array", Expression.parse("[a.id]")
+                        .expressions(ImmutableMap.of(
+                                "array", Expression.parse("[batch.a.id]")
                         ))
                         .build())
                 .action("c", CreateOptions.builder()
@@ -527,6 +531,65 @@ public class TestDatabaseServer {
                                         "accepted", false
                                 )).build())
                         .build()).get()));
+    }
+
+    @Test
+    public void visibility() throws Exception {
+
+        final Instance createA = database.create(Caller.SUPER, CreateOptions.builder()
+                .schema(VISIBILITY)
+                .data(ImmutableMap.of(
+                        "x", 2
+                ))
+                .build()).get();
+        assertNull(createA.get("x"));
+
+        final Instance readA = database.read(Caller.SUPER, ReadOptions.builder()
+                .schema(VISIBILITY)
+                .id(createA.getId())
+                .build()).get();
+        assertNull(readA.get("x"));
+
+        final Instance createB = database.create(Caller.SUPER, CreateOptions.builder()
+                .schema(VISIBILITY)
+                .data(ImmutableMap.of(
+                        "x", 20
+                ))
+                .build()).get();
+        assertNotNull(createB.get("x"));
+
+        final Instance readB = database.read(Caller.SUPER, ReadOptions.builder()
+                .schema(VISIBILITY)
+                .id(createB.getId())
+                .build()).get();
+        assertNotNull(readB.get("x"));
+    }
+
+    @Test
+    public void transients() throws Exception {
+
+        final Instance createA = database.create(Caller.SUPER, CreateOptions.builder()
+                .schema(TRANSIENT)
+                .data(ImmutableMap.of(
+                        "name", "test"
+                ))
+                .build()).get();
+
+        final Instance createB = database.create(Caller.SUPER, CreateOptions.builder()
+                .schema(TRANSIENT)
+                .data(ImmutableMap.of(
+                        "refs", ImmutableList.of(createA)
+                ))
+                .expand(ImmutableSet.of(Path.of("names")))
+                .build()).get();
+        assertEquals(ImmutableList.of("test"), createB.get("names"));
+
+        final Instance readB = database.read(Caller.SUPER, ReadOptions.builder()
+                .schema(TRANSIENT)
+                .id(createB.getId())
+                .expand(ImmutableSet.of(Path.of("names")))
+                .build()).get();
+        assertEquals(ImmutableList.of("test"), readB.get("names"));
     }
 
     private Executable cause(final Executable target) {

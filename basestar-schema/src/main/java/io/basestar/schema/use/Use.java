@@ -23,6 +23,7 @@ package io.basestar.schema.use;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.Multimap;
+import io.basestar.expression.Context;
 import io.basestar.schema.Expander;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Schema;
@@ -33,6 +34,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -45,6 +47,22 @@ import java.util.Set;
 
 //@JsonDeserialize(using = TypeUse.Deserializer.class)
 public interface Use<T> extends Serializable {
+
+    enum Code {
+
+        NULL,
+        BOOLEAN,
+        INTEGER,
+        NUMBER,
+        STRING,
+        ENUM,
+        ARRAY,
+        SET,
+        MAP,
+        REF,
+        STRUCT,
+        BINARY
+    }
 
     <R> R visit(Visitor<R> visitor);
 
@@ -66,21 +84,27 @@ public interface Use<T> extends Serializable {
 
     Use<?> typeOf(Path path);
 
-    enum Code {
+    T expand(T value, Expander expander, Set<Path> expand);
 
-        NULL,
-        BOOLEAN,
-        INTEGER,
-        NUMBER,
-        STRING,
-        ENUM,
-        ARRAY,
-        SET,
-        MAP,
-        REF,
-        STRUCT,
-        BINARY
-    }
+    Set<Path> requiredExpand(Set<Path> paths);
+
+    @Deprecated
+    Multimap<Path, Instance> refs(T value);
+
+    @JsonValue
+    Object toJson();
+
+    String toString();
+
+    void serializeValue(T value, DataOutput out) throws IOException;
+
+    T deserializeValue(DataInput in) throws IOException;
+
+    T applyVisibility(Context context, T value);
+
+    T evaluateTransients(Context context, T value, Set<Path> expand);
+
+    Set<Path> transientExpand(Path path, Set<Path> expand);
 
     @JsonCreator
     @SuppressWarnings("unchecked")
@@ -130,10 +154,6 @@ public interface Use<T> extends Serializable {
         }
     }
 
-    void serializeValue(T value, DataOutput out) throws IOException;
-
-    T deserializeValue(DataInput in) throws IOException;
-
     default T deseralize(DataInput in) throws IOException {
 
         final byte ordinal = in.readByte();
@@ -181,27 +201,10 @@ public interface Use<T> extends Serializable {
                 return (T)UseStruct.deserializeAnyValue(in);
             case BINARY:
                 return (T)UseBinary.DEFAULT.deserializeValue(in);
-//            case TUPLE:
-//                return (T)UseTuple.deserializeValue(in);
             default:
                 throw new IllegalStateException();
         }
     }
-
-    T expand(T value, Expander expander, Set<Path> expand);
-
-//    Map<String,Object> openApiType();
-
-
-    Set<Path> requiredExpand(Set<Path> paths);
-
-    @Deprecated
-    Multimap<Path, Instance> refs(T value);
-
-    @JsonValue
-    Object toJson();
-
-    String toString();
 
     interface Visitor<R> {
 
@@ -225,31 +228,87 @@ public interface Use<T> extends Serializable {
 
         R visitStruct(UseStruct type);
 
-//        R visitTuple(UseTuple type);
-
         R visitBinary(UseBinary type);
+
+        interface Defaulting<R> extends Visitor<R> {
+
+            R visitDefault(Use<?> type);
+
+            default R visitScalar(final UseScalar<?> type) {
+
+                return visitDefault(type);
+            }
+
+            default R visitCollection(final Use<? extends Collection<?>> type) {
+
+                return visitDefault(type);
+            }
+
+            @Override
+            default R visitBoolean(final UseBoolean type) {
+
+                return visitScalar(type);
+            }
+
+            @Override
+            default R visitInteger(final UseInteger type) {
+
+                return visitScalar(type);
+            }
+
+            @Override
+            default R visitNumber(final UseNumber type) {
+
+                return visitScalar(type);
+            }
+
+            @Override
+            default R visitString(final UseString type) {
+
+                return visitScalar(type);
+            }
+
+            @Override
+            default R visitEnum(final UseEnum type) {
+
+                return visitScalar(type);
+            }
+
+            @Override
+            default R visitRef(final UseRef type) {
+
+                return visitDefault(type);
+            }
+
+            @Override
+            default <T> R visitArray(final UseArray<T> type) {
+
+                return visitCollection(type);
+            }
+
+            @Override
+            default <T> R visitSet(final UseSet<T> type) {
+
+                return visitCollection(type);
+            }
+
+            @Override
+            default <T> R visitMap(final UseMap<T> type) {
+
+                return visitDefault(type);
+            }
+
+            @Override
+            default R visitStruct(final UseStruct type) {
+
+                return visitDefault(type);
+            }
+
+            @Override
+            default R visitBinary(final UseBinary type) {
+
+                return visitScalar(type);
+            }
+        }
     }
-
-//    class Deserializer extends JsonDeserializer {
-//
-//        @Override
-//        public Object deserialize(final JsonParser jsonParser, final DeserializationContext context) throws IOException, JsonProcessingException {
-//
-//            if(jsonParser.getCurrentToken() == JsonToken.START_OBJECT) {
-//                jsonParser.nextToken();
-//            } else {
-//
-//            }
-//            return context.getParser().getParsingContext().pathAsPointer();
-//        }
-//    }
-
-    //    class Deserializer extends JsonDeserializer {
-//
-//        @Override
-//        public Object deserialize(final JsonParser jsonParser, final DeserializationContext context) throws IOException, JsonProcessingException {
-//
-//            return context.getParser().getParsingContext().pathAsPointer();
-//        }
-//    }
 }

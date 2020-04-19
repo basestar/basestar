@@ -23,6 +23,8 @@ package io.basestar.schema.use;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
+import io.basestar.expression.Context;
 import io.basestar.schema.Expander;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Schema;
@@ -34,6 +36,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 /**
@@ -162,24 +165,104 @@ public class UseMap<T> implements Use<Map<String, T>> {
 //        }
 //    }
 
+//    @Override
+//    public Map<String, T> expand(final Map<String, T> value, final Expander expander, final Set<Path> expand) {
+//
+//        if(value != null) {
+//            final Map<String, T> changed = new HashMap<>();
+//            final Map<String, Set<Path>> branch = Path.branch(expand);
+//            for(final Map.Entry<String, T> entry : value.entrySet()) {
+//                Set<Path> branchExpand = branch.get(entry.getKey());
+//                if(branchExpand == null) {
+//                    branchExpand = branch.get(EXPAND_WILDCARD);
+//                }
+////                if(branchExpand != null) {
+//                final T before = entry.getValue();
+//                final T after = type.expand(before, expander, branchExpand);
+//                if(before != after) {
+//                    changed.put(entry.getKey(), after);
+//                }
+////                }
+//            }
+//            if(changed.isEmpty()) {
+//                return value;
+//            } else {
+//                final Map<String, T> copy = new HashMap<>(value);
+//                copy.putAll(changed);
+//                return copy;
+//            }
+//        } else {
+//            return null;
+//        }
+//    }
+
+    private static Set<Path> branch(final Map<String, Set<Path>> branches, final String key) {
+
+        final Set<Path> branch = branches.get(key);
+        if(branch == null) {
+            return branches.get(EXPAND_WILDCARD);
+        } else {
+            return branch;
+        }
+    }
+
     @Override
     public Map<String, T> expand(final Map<String, T> value, final Expander expander, final Set<Path> expand) {
 
+        final Map<String, Set<Path>> branches = Path.branch(expand);
+        return transform(value, (key, before) -> {
+            final Set<Path> branch = branch(branches, key);
+            if(branch != null) {
+                return type.expand(before, expander, branch);
+            } else {
+                return before;
+            }
+        });
+    }
+
+    @Override
+    public Map<String, T> applyVisibility(final Context context, final Map<String, T> value) {
+
+        return transform(value, (key, before) -> type.applyVisibility(context, before));
+    }
+
+    @Override
+    public Map<String, T> evaluateTransients(final Context context, final Map<String, T> value, final Set<Path> expand) {
+
+        final Map<String, Set<Path>> branches = Path.branch(expand);
+        return transform(value, (key, before) -> {
+            final Set<Path> branch = branch(branches, key);
+            if(branch != null) {
+                return type.evaluateTransients(context, before, branch);
+            } else {
+                return before;
+            }
+        });
+    }
+
+    @Override
+    public Set<Path> transientExpand(final Path path, final Set<Path> expand) {
+
+        final Map<String, Set<Path>> branch = Path.branch(expand);
+        if(!expand.isEmpty()) {
+            final Set<Path> all = branch.values().stream().flatMap(Collection::stream)
+                    .collect(Collectors.toSet());
+            return Sets.union(expand, type.transientExpand(path, all));
+        } else {
+            return expand;
+        }
+    }
+
+    private static <T> Map<String, T> transform(final Map<String, T> value, final BiFunction<String, T, T> fn) {
+
         if(value != null) {
             final Map<String, T> changed = new HashMap<>();
-            final Map<String, Set<Path>> branch = Path.branch(expand);
             for(final Map.Entry<String, T> entry : value.entrySet()) {
-                Set<Path> branchExpand = branch.get(entry.getKey());
-                if(branchExpand == null) {
-                    branchExpand = branch.get(EXPAND_WILDCARD);
-                }
-//                if(branchExpand != null) {
                 final T before = entry.getValue();
-                final T after = type.expand(before, expander, branchExpand);
+                final T after = fn.apply(entry.getKey(), before);
                 if(before != after) {
                     changed.put(entry.getKey(), after);
                 }
-//                }
             }
             if(changed.isEmpty()) {
                 return value;
@@ -192,15 +275,6 @@ public class UseMap<T> implements Use<Map<String, T>> {
             return null;
         }
     }
-
-//    @Override
-//    public Map<String, Object> openApiType() {
-//
-//        return ImmutableMap.of(
-//                "type", "object",
-//                "additionalProperties", type.openApiType()
-//        );
-//    }
 
     @Override
     public Set<Path> requiredExpand(final Set<Path> paths) {

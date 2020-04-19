@@ -231,17 +231,15 @@ public class GraphQLAdaptor {
         return (context, field) -> {
 
             final String id = GraphQLUtils.argValue(context, UseString.DEFAULT, field, Reserved.ID);
-            final Map<String, Object> data = GraphQLUtils.argValue(context, schema, field, "data");
+            final Map<String, Object> data = GraphQLUtils.argInput(context, schema, field, "data");
+            final Map<String, Expression> expressions = GraphQLUtils.argInputExpr(context, schema, field, "expressions");
             final Set<Path> paths = GraphQLUtils.paths(schema, field.getSelectionSet());
 
             final CreateOptions.Builder builder = CreateOptions.builder();
             builder.schema(schema.getName());
-            if(id != null) {
-                builder.id(id);
-            }
-            if(data != null) {
-                builder.data(GraphQLUtils.fromInput(schema, data));
-            }
+            builder.id(id);
+            builder.data(data);
+            builder.expressions(expressions);
             builder.expand(schema.requiredExpand(paths));
             return builder.build();
         };
@@ -253,7 +251,8 @@ public class GraphQLAdaptor {
 
             final String id = GraphQLUtils.argValue(context, UseString.DEFAULT, field, Reserved.ID);
             final Long version = GraphQLUtils.argValue(context, UseInteger.DEFAULT, field, Reserved.VERSION);
-            final Map<String, Object> data = GraphQLUtils.argValue(context, schema, field, "data");
+            final Map<String, Object> data = GraphQLUtils.argInput(context, schema, field, "data");
+            final Map<String, Expression> expressions = GraphQLUtils.argInputExpr(context, schema, field, "expressions");
             final Set<Path> paths = GraphQLUtils.paths(schema, field.getSelectionSet());
 
             assert id != null;
@@ -263,6 +262,7 @@ public class GraphQLAdaptor {
             builder.id(id);
             builder.version(version);
             builder.data(data);
+            builder.expressions(expressions);
             builder.expand(schema.requiredExpand(paths));
             return builder.build();
         };

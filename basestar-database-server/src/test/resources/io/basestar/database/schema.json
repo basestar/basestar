@@ -168,5 +168,33 @@
         "type": "string"
       }
     }
+  },
+  "Visibility": {
+    "properties": {
+      "x": {
+        "type": "number",
+        "visibility": "value > 10"
+      }
+    }
+  },
+  "Transient": {
+    "properties": {
+      "name": {
+        "type": "string"
+      },
+      "refs": {
+        "type": {
+          "array": "Transient"
+        }
+      }
+    },
+    "transients": {
+      "names": {
+        "expression": "[v.name for v of this.refs]",
+        "expand": [
+          "this.refs"
+        ]
+      }
+    }
   }
 }

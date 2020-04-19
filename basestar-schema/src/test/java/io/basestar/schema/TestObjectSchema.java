@@ -70,13 +70,13 @@ public class TestObjectSchema {
 
         final Instance instance = schema.expand(initial, new Expander() {
             @Override
-            public Instance ref(final ObjectSchema schema, final Instance ref, final Set<Path> expand) {
+            public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Path> expand) {
 
                 return Instance.getId(ref).equals(id) ? refValue : null;
             }
 
             @Override
-            public PagedList<Instance> link(final Link link, final PagedList<Instance> value, final Set<Path> expand) {
+            public PagedList<Instance> expandLink(final Link link, final PagedList<Instance> value, final Set<Path> expand) {
 
                 return null;
             }

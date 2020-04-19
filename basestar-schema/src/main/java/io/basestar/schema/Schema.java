@@ -37,6 +37,8 @@ import javax.annotation.Nullable;
 
 public interface Schema<T> extends Named, Described {
 
+    String VAR_THIS = "this";
+
     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = ObjectSchema.Builder.class)
     @JsonSubTypes({
             @JsonSubTypes.Type(name = EnumSchema.Builder.TYPE, value = EnumSchema.Builder.class),

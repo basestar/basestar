@@ -22,6 +22,7 @@ package io.basestar.schema.use;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import io.basestar.expression.Context;
 import io.basestar.schema.Expander;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Schema;
@@ -40,6 +41,18 @@ public interface UseScalar<T> extends Use<T> {
 
     @Override
     default T expand(final T value, final Expander expander, final Set<Path> expand) {
+
+        return value;
+    }
+
+    @Override
+    default T applyVisibility(final Context context, final T value) {
+
+        return value;
+    }
+
+    @Override
+    default T evaluateTransients(final Context context, final T value, final Set<Path> expand) {
 
         return value;
     }
@@ -67,4 +80,11 @@ public interface UseScalar<T> extends Use<T> {
             throw new IllegalStateException();
         }
     }
+
+    @Override
+    default Set<Path> transientExpand(final Path path, final Set<Path> expand) {
+
+        return Collections.emptySet();
+    }
+
 }

@@ -132,7 +132,7 @@ public class RuntimeWiringFactory {
             final Caller caller = GraphQLUtils.caller(env.getContext());
             final ObjectSchema linkSchema = link.getSchema();
             final Set<Path> paths = paths(env);
-            final Set<Path> expand = schema.requiredExpand(paths);
+            final Set<Path> expand = linkSchema.requiredExpand(paths);
             final String id = env.getArgument(Reserved.ID);
             final QueryLinkOptions options = QueryLinkOptions.builder()
                     .schema(schema.getName())

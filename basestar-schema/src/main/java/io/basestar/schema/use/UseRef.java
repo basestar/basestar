@@ -25,6 +25,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+import io.basestar.expression.Context;
 import io.basestar.schema.*;
 import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.util.Path;
@@ -136,6 +137,26 @@ public class UseRef implements Use<Instance> {
         return deserializeAnyValue(in);
     }
 
+    @Override
+    public Instance applyVisibility(final Context context, final Instance value) {
+
+        if(value == null) {
+            return null;
+        } else {
+            return schema.applyVisibility(context, value);
+        }
+    }
+
+    @Override
+    public Instance evaluateTransients(final Context context, final Instance value, final Set<Path> expand) {
+
+        if(value == null) {
+            return null;
+        } else {
+            return schema.evaluateTransients(context, value, expand);
+        }
+    }
+
     public static Instance deserializeAnyValue(final DataInput in) throws IOException {
 
 //        final String schema = UseString.deserializeValue(in);
@@ -167,17 +188,25 @@ public class UseRef implements Use<Instance> {
 
         if(value != null) {
             if(expand == null) {
+                // If non-expanded, strip back to just a ref, this is needed because expand is also used to
+                // reset after expansion for permission evaluation
                 if(value.size() == 1 && value.containsKey(Reserved.ID)) {
                     return value;
                 } else {
                     return ObjectSchema.ref(Instance.getId(value));
                 }
             } else {
-                return expander.ref(schema, value, expand);
+                return expander.expandRef(schema, value, expand);
             }
         } else {
             return null;
         }
+    }
+
+    @Override
+    public Set<Path> transientExpand(final Path path, final Set<Path> expand) {
+
+        return schema.transientExpand(path, expand);
     }
 
     @Override

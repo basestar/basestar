@@ -46,7 +46,7 @@ public class UpdateOptions implements ActionOptions {
 
     private final Map<String, Object> data;
 
-    private final Map<String, Expression> eval;
+    private final Map<String, Expression> expressions;
 
     private final Set<Path> expand;
 

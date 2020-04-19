@@ -76,8 +76,8 @@ public class CreateAction implements Action {
         if(options.getData() != null) {
             data.putAll(options.getData());
         }
-        if(options.getEval() != null) {
-            options.getEval().forEach((k, expr) -> data.put(k, expr.evaluate(context)));
+        if(options.getExpressions() != null) {
+            options.getExpressions().forEach((k, expr) -> data.put(k, expr.evaluate(context)));
         }
 
         final Map<String, Object> initial = new HashMap<>(schema.create(data));
@@ -105,7 +105,7 @@ public class CreateAction implements Action {
         Instance.setUpdated(initial, now);
         Instance.setHash(initial, schema.hash(initial));
 
-        final Instance evaluated = schema.evaluate(initial, context.with(CommonVars.VAR_THIS, initial));
+        final Instance evaluated = schema.evaluateProperties(context.with(CommonVars.VAR_THIS, initial), new Instance(initial));
 
         schema.validate(evaluated, context.with(CommonVars.VAR_THIS, evaluated));
 
@@ -129,8 +129,9 @@ public class CreateAction implements Action {
     @Override
     public Set<Path> paths() {
 
-        return Nullsafe.of(options.getEval()).values().stream()
-                .flatMap(e -> e.paths().stream())
+        // FIXME: shouldn't have to bind here, need to fix multi-part path constants in parser
+        return Nullsafe.of(options.getExpressions()).values().stream()
+                .flatMap(e -> e.bind(Context.init()).paths().stream())
                 .collect(Collectors.toSet());
     }
 }

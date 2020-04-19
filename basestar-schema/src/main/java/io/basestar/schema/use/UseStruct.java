@@ -22,6 +22,7 @@ package io.basestar.schema.use;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import io.basestar.expression.Context;
 import io.basestar.schema.Expander;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Schema;
@@ -120,6 +121,26 @@ public class UseStruct implements Use<Instance> {
         return deserializeAnyValue(in);
     }
 
+    @Override
+    public Instance applyVisibility(final Context context, final Instance value) {
+
+        if(value == null) {
+            return null;
+        } else {
+            return schema.applyVisibility(context, value);
+        }
+    }
+
+    @Override
+    public Instance evaluateTransients(final Context context, final Instance value, final Set<Path> expand) {
+
+        if(value == null) {
+            return null;
+        } else {
+            return schema.evaluateTransients(context, value, expand);
+        }
+    }
+
     public static Instance deserializeAnyValue(final DataInput in) throws IOException {
 
         return StructSchema.deserialize(in);
@@ -133,6 +154,12 @@ public class UseStruct implements Use<Instance> {
         } else {
             return null;
         }
+    }
+
+    @Override
+    public Set<Path> transientExpand(final Path path, final Set<Path> expand) {
+
+        return schema.transientExpand(path, expand);
     }
 
 //    @Override

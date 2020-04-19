@@ -23,7 +23,6 @@ package io.basestar.database;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.basestar.auth.Caller;
 import io.basestar.auth.exception.PermissionDeniedException;
@@ -157,12 +156,15 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         permissionExpand(schema, schema.getPermission(Permission.READ))
                 );
                 beforeCallerExpand.addAll(Path.children(permissionExpand, Path.of(VAR_CALLER)));
-                final Set<Path> expand = Path.children(permissionExpand, Path.of(VAR_BEFORE));
-                beforeKeys.add(ExpandKey.from(key, expand));
+                final Set<Path> readExpand = Path.children(permissionExpand, Path.of(VAR_BEFORE));
+                final Set<Path> transientExpand = schema.transientExpand(Path.of(), readExpand);
+                beforeKeys.add(ExpandKey.from(key, transientExpand));
             }
         });
 
         return expandCaller(caller, beforeCallerExpand).thenCompose(beforeCaller -> {
+
+            final Context beforeContext = context(beforeCaller);
 
             // Read initial values
 
@@ -185,19 +187,13 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                     });
 
                     return expand(beforeUnexpanded)
-                            .thenApply(expanded -> {
-                                final Map<RefKey, Instance> results = new HashMap<>();
-                                expanded.forEach((k, v) -> results.put(k.getKey(), v));
-                                return results;
-                            });
+                            .thenApply(expanded -> processActionResults(beforeContext, expanded));
                 });
             } else {
                 beforeFuture = CompletableFuture.completedFuture(Collections.emptyMap());
             }
 
             return beforeFuture.thenCompose(beforeResults -> {
-
-                final Context context = context(caller);
 
                 final Set<RefKey> afterCheck = new HashSet<>();
                 final Map<ExpandKey<RefKey>, Instance> afterKeys = new HashMap<>();
@@ -221,7 +217,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         beforeKey = null;
                         before = null;
                     }
-                    final Instance after = action.after(context.with(overlay), before);
+                    final Instance after = action.after(beforeContext.with(VAR_BATCH, overlay), before);
                     if (after != null) {
                         final RefKey afterKey = RefKey.from(after);
                         if (!afterCheck.add(afterKey)) {
@@ -232,11 +228,12 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         assert beforeKey == null || beforeKey.equals(afterKey);
                         final Set<Path> permissionExpand = permissionExpand(schema, action.permission());
                         afterCallerExpand.addAll(Path.children(permissionExpand, Path.of(VAR_CALLER)));
-                        final Set<Path> expand = Sets.union(
+                        final Set<Path> readExpand = Sets.union(
                                 Path.children(permissionExpand, Path.of(VAR_AFTER)),
                                 Nullsafe.of(action.afterExpand())
                         );
-                        final ExpandKey<RefKey> expandKey = ExpandKey.from(afterKey, expand);
+                        final Set<Path> transientExpand = schema.transientExpand(Path.of(), readExpand);
+                        final ExpandKey<RefKey> expandKey = ExpandKey.from(afterKey, transientExpand);
                         afterKeys.put(expandKey, after);
                     } else {
                         assert beforeKey != null;
@@ -254,16 +251,14 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
                 return readOverlay.expandCaller(beforeCaller, afterCallerExpand).thenCompose(afterCaller -> {
 
+                    final Context afterContext = context(afterCaller);
+
                     final CompletableFuture<Map<RefKey, Instance>> afterFuture;
                     if (afterKeys.isEmpty()) {
                         afterFuture = CompletableFuture.completedFuture(Collections.emptyMap());
                     } else {
                         afterFuture = readOverlay.expand(afterKeys)
-                                .thenApply(expanded -> {
-                                    final Map<RefKey, Instance> results = new HashMap<>();
-                                    expanded.forEach((k, v) -> results.put(k.getKey(), v));
-                                    return results;
-                                });
+                                .thenApply(expanded -> processActionResults(afterContext, expanded));
                     }
 
                     return afterFuture.thenCompose(afterResults -> {
@@ -314,7 +309,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                             if(after == null) {
                                 restricted = null;
                             } else {
-                                restricted = schema.expand(after, Expander.noop(), Nullsafe.of(action.afterExpand()));
+                                final Instance expanded = schema.expand(after, Expander.noop(), Nullsafe.of(action.afterExpand()));
+                                restricted = schema.applyVisibility(afterContext, expanded);
                             }
                             results.put(name, restricted);
                         });
@@ -330,13 +326,29 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         });
     }
 
+    private Map<RefKey, Instance> processActionResults(final Context context, final Map<ExpandKey<RefKey>, Instance> expanded) {
+
+        final Map<RefKey, Instance> results = new HashMap<>();
+        expanded.forEach((k, v) -> {
+            final ObjectSchema schema = objectSchema(Instance.getSchema(v));
+            final Instance evaluated = schema.evaluateTransients(context, v, k.getExpand());
+            results.put(k.getKey(), evaluated);
+        });
+        return results;
+    }
+
     private List<String> actionOrder(final Map<String, Action> actions) {
 
-        return Lists.newArrayList(actions.keySet());
-//        return TopologicalSort.sort(actions.keySet(),
-//                k -> Path.children(actions.get(k).paths(), Path.of(VAR_BATCH)).stream()
-//                        .map(AbstractPath::first).filter(v -> actions.keySet().contains(v))
-//                        .collect(Collectors.toList()));
+        final LinkedHashMap<String, Set<String>> dependencies = new LinkedHashMap<>();
+        actions.forEach((name, action) -> {
+            final Set<Path> paths = Path.children(action.paths(), Path.of(VAR_BATCH));
+            final Set<String> matches = paths.stream().map(AbstractPath::first)
+                    .filter(v -> actions.keySet().contains(v))
+                    .collect(Collectors.toSet());
+            dependencies.put(name, matches);
+        });
+
+        return TopologicalSort.stableSort(dependencies.keySet(), dependencies::get);
     }
 
     private void writeCreate(final Storage.WriteTransaction write, final ObjectSchema schema, final String id, final Instance after) {
@@ -403,9 +415,10 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         final ObjectSchema schema = objectSchema(Instance.getSchema(instance));
         final Permission read = schema.getPermission(Permission.READ);
-        checkPermission(caller, schema, read, ImmutableMap.of(VAR_THIS, instance));
-        final Instance restricted = schema.expand(instance, Expander.noop(), expand);
-        return restricted;
+        final Instance transients = schema.evaluateTransients(context(caller), instance, expand);
+        checkPermission(caller, schema, read, ImmutableMap.of(VAR_THIS, transients));
+        final Instance visible = schema.applyVisibility(context(caller), transients);
+        return schema.expand(visible, Expander.noop(), expand);
     }
 
     // FIXME need to create a deeper permission expand for nested permissions
@@ -420,8 +433,9 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final Set<Path> permissionExpand = permissionExpand(schema, read);
         final Set<Path> callerExpand = Path.children(permissionExpand, Path.of(VAR_CALLER));
         final Set<Path> readExpand = Sets.union(Path.children(permissionExpand, Path.of(VAR_THIS)), Nullsafe.of(expand));
+        final Set<Path> transientExpand = schema.transientExpand(Path.of(), readExpand);
 
-        return expandCaller(caller, callerExpand).thenCompose(expandedCaller -> expand(instance, readExpand)
+        return expandCaller(caller, callerExpand).thenCompose(expandedCaller -> expand(instance, transientExpand)
                 .thenApply(v -> restrict(caller, v, expand)));
     }
 
@@ -435,7 +449,9 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             final Permission read = schema.getPermission(Permission.READ);
             final Set<Path> permissionExpand = permissionExpand(schema, read);
             callerExpand.addAll(Path.children(permissionExpand, Path.of(VAR_CALLER)));
-            readExpand.addAll(Path.children(permissionExpand, Path.of(VAR_THIS)));
+            final Set<Path> instanceExpand = Path.children(permissionExpand, Path.of(VAR_THIS));
+            final Set<Path> transientExpand = schema.transientExpand(Path.of(), instanceExpand);
+            readExpand.addAll(transientExpand);
         }
 
         return expandCaller(caller, callerExpand).thenCompose(expandedCaller -> expand(instances, readExpand)

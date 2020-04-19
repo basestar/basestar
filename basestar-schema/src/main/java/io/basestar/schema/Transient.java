@@ -21,12 +21,15 @@ package io.basestar.schema;
  */
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.ExpressionDeseriaizer;
+import io.basestar.jackson.serde.PathDeserializer;
 import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
@@ -38,9 +41,7 @@ import lombok.experimental.Accessors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Transient
@@ -59,8 +60,11 @@ public class Transient implements Member {
     @Nonnull
     private final Expression expression;
 
-    @Nonnull
+    @Nullable
     private final Visibility visibility;
+
+    @Nonnull
+    private final SortedSet<Path> expand;
 
     @Data
     @Accessors(chain = true)
@@ -74,6 +78,12 @@ public class Transient implements Member {
         @JsonSerialize(using = ToStringSerializer.class)
         @JsonDeserialize(using = ExpressionDeseriaizer.class)
         private Expression expression;
+
+        @Nullable
+        @JsonSetter(contentNulls = Nulls.FAIL)
+        @JsonSerialize(contentUsing = ToStringSerializer.class)
+        @JsonDeserialize(contentUsing = PathDeserializer.class)
+        private Set<Path> expand;
 
         @Nullable
         private Visibility visibility;
@@ -94,7 +104,8 @@ public class Transient implements Member {
         this.name = name;
         this.description = builder.getDescription();
         this.expression =  Nullsafe.of(builder.getExpression());
-        this.visibility = Nullsafe.of(builder.getVisibility(), Visibility.Constant.TRUE);
+        this.visibility = builder.getVisibility();
+        this.expand = Nullsafe.immutableSortedCopy(builder.getExpand());
         if(Reserved.isReserved(name)) {
             throw new ReservedNameException(name);
         }
@@ -109,11 +120,18 @@ public class Transient implements Member {
     public Object expand(final Object value, final Expander expander, final Set<Path> expand) {
 
         return value;
-//        if(expand == null) {
-//            return null;
-//        } else {
-//            throw new UnsupportedOperationException();
-//        }
+    }
+
+    @Override
+    public Object applyVisibility(final Context context, final Object value) {
+
+        return value;
+    }
+
+    @Override
+    public Object evaluateTransients(final Context context, final Object value, final Set<Path> expand) {
+
+        return expression.evaluate(context);
     }
 
     //FIXME
@@ -121,6 +139,21 @@ public class Transient implements Member {
     public Use<?> typeOf(final Path path) {
 
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Set<Path> transientExpand(final Path path, final Set<Path> expand) {
+
+        final Set<Path> result = new HashSet<>();
+        this.expand.forEach(p -> {
+            if(p.isChild(Path.of(Schema.VAR_THIS))) {
+                // Move expand from this to expand on the parameter path
+                result.add(path.with(p.withoutFirst()));
+            } else {
+                result.add(p);
+            }
+        });
+        return result;
     }
 
     @Override

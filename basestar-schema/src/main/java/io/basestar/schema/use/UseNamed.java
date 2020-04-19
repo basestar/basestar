@@ -22,6 +22,7 @@ package io.basestar.schema.use;
 
 
 import com.google.common.collect.Multimap;
+import io.basestar.expression.Context;
 import io.basestar.schema.*;
 import io.basestar.schema.exception.MissingTypeException;
 import io.basestar.util.Path;
@@ -29,7 +30,6 @@ import lombok.Data;
 
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.IOException;
 import java.util.Set;
 
 @Data
@@ -122,7 +122,19 @@ public class UseNamed implements Use<Object> {
     }
 
     @Override
-    public Object deserializeValue(final DataInput in) throws IOException {
+    public Object deserializeValue(final DataInput in) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Object applyVisibility(final Context context, final Object value) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Object evaluateTransients(final Context context, final Object value, final Set<Path> expand) {
 
         throw new UnsupportedOperationException();
     }
@@ -131,5 +143,11 @@ public class UseNamed implements Use<Object> {
     public String toString() {
 
         return name;
+    }
+
+    @Override
+    public Set<Path> transientExpand(final Path path, final Set<Path> expand) {
+
+        throw new UnsupportedOperationException();
     }
 }

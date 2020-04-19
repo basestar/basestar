@@ -21,6 +21,7 @@ package io.basestar.schema;
  */
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.basestar.expression.Context;
 import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.use.Use;
 import io.basestar.util.Path;
@@ -29,6 +30,12 @@ import java.util.Map;
 import java.util.Set;
 
 public interface Member extends Named, Described {
+
+    String VAR_VALUE = "value";
+
+    String getName();
+
+    Visibility getVisibility();
 
 //    void resolve(String name, Schema schema, Namespace namespace);
 
@@ -39,6 +46,24 @@ public interface Member extends Named, Described {
     Set<Path> requireExpand(Set<Path> paths);
 
     Use<?> typeOf(Path path);
+
+    Set<Path> transientExpand(Path path, Set<Path> expand);
+
+    default boolean isVisible(final Context context, final Object value) {
+
+        final Visibility visibility = getVisibility();
+        if(visibility != null) {
+            return visibility.apply(context.with(VAR_VALUE, value));
+        } else {
+            return true;
+        }
+    }
+
+    Object applyVisibility(Context context, Object value);
+
+    Object evaluateTransients(Context context, Object value, Set<Path> expand);
+
+//    Object evaluateTransients(Context context, Object value, Set<Path> expand);
 
 //    interface Config extends Described {
 //

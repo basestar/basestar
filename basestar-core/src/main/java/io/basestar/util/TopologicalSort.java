@@ -39,6 +39,13 @@ public class TopologicalSort {
         return true;
     }
 
+    // FIXME: must make stable
+    public static <T> List<T> stableSort(final Iterable<? extends T> in, final Function<T, ? extends Iterable<? extends T>> dependency) {
+
+        return sort(in, dependency);
+    }
+
+    // FIXME: fix to use a stack rather than recursion
     public static <T> List<T> sort(final Iterable<? extends T> in, final Function<T, ? extends Iterable<? extends T>> dependency) {
 
         final Set<T> seen = new HashSet<>();

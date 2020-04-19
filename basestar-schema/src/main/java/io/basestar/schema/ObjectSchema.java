@@ -163,6 +163,14 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
 
     private final boolean concrete;
 
+//    public Set<Path> transientExpand(final Path path, final Set<Path> expand) {
+//
+//        final Set<Path> transientExpand = new HashSet<>(expand);
+//        transientExpand.addAll(InstanceSchema.super.transientExpand(path, expand));
+//        final Map<String, Set<Path>> branch = Path.branch(expand);
+//        return transientExpand;
+//    }
+
     @Data
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -478,20 +486,43 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         return new Instance(result);
     }
 
-    public Map<String, Object> evaluateProperties(final Map<String, Object> object, final Context context) {
+    private void copyMeta(final Map<String, Object> source, final Map<String, Object> target) {
 
-        final Map<String, Object> result = new HashMap<>();
-        allProperties.forEach((k, v) -> result.put(k, v.evaluate(object.get(k), context)));
-        return Collections.unmodifiableMap(result);
+        METADATA_SCHEMA.keySet().forEach(k -> {
+            if(source.containsKey(k)) {
+                target.put(k, source.get(k));
+            }
+        });
     }
 
-    public Instance evaluate(final Map<String, Object> object, final Context context) {
+    public Instance evaluateProperties(final Context context, final Instance object) {
 
-        final HashMap<String, Object> result = new HashMap<>(evaluateProperties(object, context));
-        result.putAll(readMeta(object));
+        final Context thisContext = context.with(VAR_THIS, object);
+        final HashMap<String, Object> result = new HashMap<>();
+        allProperties.forEach((k, v) -> result.put(k, v.evaluate(thisContext, object.get(k))));
+        copyMeta(object, result);
         result.put(Reserved.HASH, hash(result));
+        // Links deliberately not copied, this is only used to prepare an instance for write.
         return new Instance(result);
     }
+
+//    @Override
+//    public Instance applyVisibility(final Context context, final Instance object) {
+//
+//        final Map<String, Object> result = new HashMap<>();
+//        Stream.of(allProperties, allTransients, allLinks).forEach(members -> {
+//           members.forEach((name, member) -> {
+//               if (object.containsKey(name)) {
+//                   final Object value = object.get(name);
+//                   if (member.isVisible(context, value)) {
+//                       result.put(name, member.applyVisibility(context, value));
+//                   }
+//               }
+//           });
+//        });
+//        copyMeta(object, result);
+//        return new Instance(result);
+//    }
 
     public void validate(final Map<String, Object> after, final Context context) {
 
@@ -504,7 +535,6 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
     }
 
     public void validate(final Path path, final Map<String, Object> before, final Map<String, Object> after, final Context context) {
-
 
         final Set<Constraint.Violation> violations = new HashSet<>();
 

@@ -184,7 +184,7 @@ public class ReadProcessor {
                 final ObjectSchema schema = objectSchema(ref.getKey().getSchema());
                 schema.expand(object, new Expander() {
                     @Override
-                    public Instance ref(final ObjectSchema schema, final Instance ref, final Set<Path> expand) {
+                    public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Path> expand) {
 
                         if(ref == null) {
                             return null;
@@ -195,7 +195,7 @@ public class ReadProcessor {
                     }
 
                     @Override
-                    public PagedList<Instance> link(final Link link, final PagedList<Instance> value, final Set<Path> expand) {
+                    public PagedList<Instance> expandLink(final Link link, final PagedList<Instance> value, final Set<Path> expand) {
 
                         final RefKey refKey = ref.getKey();
                         final ExpandKey<LinkKey> linkKey = ExpandKey.from(LinkKey.from(refKey, link.getName()), expand);
@@ -255,7 +255,7 @@ public class ReadProcessor {
 
                             result.put(ref, schema.expand(object, new Expander() {
                                 @Override
-                                public Instance ref(final ObjectSchema schema, final Instance ref, final Set<Path> expand) {
+                                public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Path> expand) {
 
                                     final ExpandKey<RefKey> expandKey = ExpandKey.from(RefKey.from(schema, ref), expand);
                                     Instance result = expanded.get(expandKey);
@@ -266,7 +266,7 @@ public class ReadProcessor {
                                 }
 
                                 @Override
-                                public PagedList<Instance> link(final Link link, final PagedList<Instance> value, final Set<Path> expand) {
+                                public PagedList<Instance> expandLink(final Link link, final PagedList<Instance> value, final Set<Path> expand) {
 
                                     final ExpandKey<LinkKey> linkKey = ExpandKey.from(LinkKey.from(refKey, link.getName()), expand);
                                     final CompletableFuture<PagedList<Instance>> future = links.get(linkKey);

@@ -22,6 +22,7 @@ package io.basestar.schema;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.exception.SchemaSyntaxException;
 import lombok.Data;
@@ -46,6 +47,8 @@ public interface Visibility extends Serializable {
     @JsonValue
     Object toJson();
 
+    boolean apply(Context context);
+
     @Data
     class Constant implements Visibility {
 
@@ -59,6 +62,12 @@ public interface Visibility extends Serializable {
         public Object toJson() {
 
             return true;
+        }
+
+        @Override
+        public boolean apply(final Context context) {
+
+            return value;
         }
     }
 
@@ -76,6 +85,12 @@ public interface Visibility extends Serializable {
         public Object toJson() {
 
             return expression.toString();
+        }
+
+        @Override
+        public boolean apply(final Context context) {
+
+            return expression.evaluatePredicate(context);
         }
     }
 }

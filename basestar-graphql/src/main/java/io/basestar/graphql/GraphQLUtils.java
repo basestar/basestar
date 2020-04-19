@@ -26,6 +26,7 @@ import graphql.GraphQLContext;
 import graphql.execution.ExecutionContext;
 import graphql.language.*;
 import io.basestar.auth.Caller;
+import io.basestar.expression.Expression;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import io.basestar.util.Path;
@@ -808,9 +809,32 @@ public class GraphQLUtils {
         return fromInput(context, type, argValue(field, name));
     }
 
-    public static Map<String, Object> argValue(final ExecutionContext context, final ObjectSchema type, final Field field, final String name) {
+    public static Map<String, Object> argInput(final ExecutionContext context, final InstanceSchema schema, final Field field, final String name) {
 
-        return fromInput(context, type, (ObjectValue)argValue(field, name));
+        return fromInput(context, schema, (ObjectValue)argValue(field, name));
+    }
+
+    public static Map<String, Expression> argInputExpr(final ExecutionContext context, final ObjectSchema schema, final Field field, final String name) {
+
+        final ObjectValue object = (ObjectValue)argValue(field, name);
+        if(object == null) {
+            return null;
+        } else {
+            final Map<String, Expression> result = new HashMap<>();
+            schema.getAllProperties().forEach((k, prop) -> {
+                final Value value = get(object, k);
+                if(value instanceof VariableReference) {
+                    final String var = ((VariableReference) value).getName();
+                    final String str = (String)context.getVariables().get(var);
+                    final Expression expr = Expression.parse(str);
+                    result.put(k, expr);
+                } else if(value instanceof StringValue) {
+                    final Expression expr = Expression.parse(((StringValue) value).getValue());
+                    result.put(k, expr);
+                }
+            });
+            return result;
+        }
     }
 
     public static Value argValue(final Field field, final String name) {

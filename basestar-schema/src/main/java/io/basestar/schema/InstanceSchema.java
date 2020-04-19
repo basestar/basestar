@@ -20,6 +20,7 @@ package io.basestar.schema;
  * #L%
  */
 
+import io.basestar.expression.Context;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseString;
 import io.basestar.util.Path;
@@ -28,6 +29,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.*;
+import java.util.function.BiFunction;
 
 public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Property.Resolver {
 
@@ -53,6 +55,19 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
             }
         }
         return Path.simplify(result);
+    }
+
+    default Set<Path> transientExpand(final Path path, final Set<Path> expand) {
+
+        final Set<Path> transientExpand = new HashSet<>(expand);
+        final Map<String, Set<Path>> branch = Path.branch(expand);
+        getAllMembers().forEach((name, member) -> {
+            if(branch.containsKey(name)) {
+                final Set<Path> memberExpand = branch.get(name);
+                transientExpand.addAll(member.transientExpand(path, memberExpand));
+            }
+        });
+        return transientExpand;
     }
 
     boolean isConcrete();
@@ -100,21 +115,84 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         }
     }
 
+//    default Instance expand(final Instance object, final Expander expander, final Set<Path> expand) {
+//
+//        final HashMap<String, Object> changed = new HashMap<>();
+//        final Map<String, Set<Path>> branches = Path.branch(expand);
+//        final Map<String, ? extends Member> members=  getAllMembers();
+//        for (final Map.Entry<String, ? extends Member> entry : members.entrySet()) {
+//            final Member member = entry.getValue();
+//            final Set<Path> branch = branches.get(entry.getKey());
+//            final Object before = object.get(member.getName());
+//            final Object after = member.expand(before, expander, branch);
+//            // Reference equals is correct behaviour
+//            if (before != after) {
+//                changed.put(member.getName(), after);
+//            }
+//        }
+//        if(changed.isEmpty()) {
+//            return object;
+//        } else {
+//            final Map<String, Object> result = new HashMap<>(object);
+//            result.putAll(changed);
+//            return new Instance(result);
+//        }
+//    }
+
     default Instance expand(final Instance object, final Expander expander, final Set<Path> expand) {
 
-        final HashMap<String, Object> changed = new HashMap<>();
         final Map<String, Set<Path>> branches = Path.branch(expand);
-        final Map<String, ? extends Member> members=  getAllMembers();
-        for (final Map.Entry<String, ? extends Member> entry : members.entrySet()) {
-            final Member member = entry.getValue();
-            final Set<Path> branch = branches.get(entry.getKey());
-            final Object before = object.get(member.getName());
-            final Object after = member.expand(before, expander, branch);
+        return transformMembers(object, (member, before) -> {
+            final Set<Path> branch = branches.get(member.getName());
+            return member.expand(before, expander, branch);
+        });
+    }
+
+    default Instance applyVisibility(final Context context, final Instance object) {
+
+        final Context thisContext = context.with(VAR_THIS, object);
+        final Set<String> delete = new HashSet<>();
+        final Instance tmp = transformMembers(object, (member, before) -> {
+            if (member.isVisible(thisContext, before)) {
+                return member.applyVisibility(thisContext, before);
+            } else {
+                delete.add(member.getName());
+                return null;
+            }
+        });
+        if(delete.isEmpty()) {
+            return tmp;
+        } else {
+            final Map<String, Object> result = new HashMap<>(tmp);
+            delete.forEach(result::remove);
+            return new Instance(result);
+        }
+    }
+
+    default Instance evaluateTransients(final Context context, final Instance object, final Set<Path> expand) {
+
+        final Map<String, Set<Path>> branches = Path.branch(expand);
+        final Context thisContext = context.with(VAR_THIS, object);
+        return transformMembers(object, (member, value) -> {
+            if(branches.containsKey(member.getName())) {
+                return member.evaluateTransients(thisContext, value, branches.get(member.getName()));
+            } else {
+                return value;
+            }
+        });
+    }
+
+    /*private*/ default Instance transformMembers(final Instance object, final BiFunction<Member, Object, Object> fn) {
+
+        final HashMap<String, Object> changed = new HashMap<>();
+        getAllMembers().forEach((name, member) -> {
+            final Object before = object.get(name);
+            final Object after = fn.apply(member, before);
             // Reference equals is correct behaviour
             if (before != after) {
                 changed.put(member.getName(), after);
             }
-        }
+        });
         if(changed.isEmpty()) {
             return object;
         } else {

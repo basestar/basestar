@@ -35,12 +35,19 @@ import io.basestar.jackson.serde.ExpressionDeseriaizer;
 import io.basestar.schema.exception.MissingPropertyException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseArray;
+import io.basestar.schema.use.UseMap;
+import io.basestar.schema.use.UseSet;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Path;
 import lombok.Data;
 import lombok.Getter;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.*;
@@ -53,23 +60,27 @@ import java.util.stream.Collectors;
 @Getter
 public class Property implements Member {
 
-    private static final String VAR_VALUE = "value";
-
+    @Nonnull
     @JsonIgnore
     private final String name;
 
+    @Nullable
     private final String description;
 
+    @Nonnull
     private final Use<?> type;
 
     private final boolean required;
 
     private final boolean immutable;
 
+    @Nullable
     private final Expression expression;
 
+    @NonNull
     private final SortedMap<String, Constraint> constraints;
 
+    @Nullable
     private final Visibility visibility;
 
     @Data
@@ -146,6 +157,26 @@ public class Property implements Member {
         return type.typeOf(path);
     }
 
+    @Override
+    public Set<Path> transientExpand(final Path path, final Set<Path> expand) {
+
+        return type.transientExpand(path, expand);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Object applyVisibility(final Context context, final Object value) {
+
+        return ((Use<Object>)type).applyVisibility(context, value);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Object evaluateTransients(final Context context, final Object value, final Set<Path> expand) {
+
+        return ((Use<Object>)type).evaluateTransients(context, value, expand);
+    }
+
     public Object create(final Object value, final boolean expand) {
 
         return type.create(value, expand);
@@ -174,7 +205,7 @@ public class Property implements Member {
 //        return type.openApiType();
 //    }
 
-    public Object evaluate(final Object value, final Context context) {
+    public Object evaluate(final Context context, final Object value) {
 
         if(expression != null) {
 //            final Map<String, Object> newContext = new HashMap<>(context);
@@ -229,6 +260,41 @@ public class Property implements Member {
             } else {
                 return result;
             }
+        }
+    }
+
+    @RequiredArgsConstructor
+    private static class VisibilityVisitor implements Use.Visitor.Defaulting<Object> {
+
+        private final Object value;
+
+        @Override
+        public Object visitDefault(final Use<?> type) {
+
+            return value;
+        }
+
+        @Override
+        public Object visitArray(final UseArray type) {
+
+            if(value != null) {
+                final List<Object> result = new ArrayList<>();
+                return type.getType().visit(this);
+            } else {
+                return null;
+            }
+        }
+
+        @Override
+        public Object visitSet(final UseSet type) {
+
+            return value;
+        }
+
+        @Override
+        public Object visitMap(final UseMap type) {
+
+            return value;
         }
     }
 }

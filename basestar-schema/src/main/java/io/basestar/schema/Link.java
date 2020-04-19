@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.jackson.serde.ExpressionDeseriaizer;
@@ -42,10 +43,8 @@ import lombok.experimental.Accessors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Function;
 
 /**
  * Link
@@ -70,6 +69,9 @@ public class Link implements Member {
     @Nonnull
     private final List<Sort> sort;
 
+    @Nullable
+    private final Visibility visibility;
+
     @Data
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -91,6 +93,9 @@ public class Link implements Member {
         @JsonDeserialize(using = AbbrevListDeserializer.class)
         private List<Sort> sort;
 
+        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+        private Visibility visibility;
+
         public Link build(final Schema.Resolver resolver, final String name) {
 
             return new Link(this, resolver, name);
@@ -109,6 +114,7 @@ public class Link implements Member {
         this.schema = resolver.requireObjectSchema(builder.getSchema());
         this.expression = Nullsafe.of(builder.getExpression());
         this.sort = Nullsafe.immutableCopy(builder.getSort());
+        this.visibility = builder.getVisibility();
         if(Reserved.isReserved(name)) {
             throw new ReservedNameException(name);
         }
@@ -121,7 +127,7 @@ public class Link implements Member {
         if(expand == null) {
             return null;
         } else {
-            return expander.link(this, (PagedList<Instance>)value, expand);
+            return expander.expandLink(this, (PagedList<Instance>)value, expand);
         }
     }
 
@@ -140,6 +146,46 @@ public class Link implements Member {
     public Use<?> typeOf(final Path path) {
 
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Set<Path> transientExpand(final Path path, final Set<Path> expand) {
+
+        return schema.transientExpand(path, expand);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Object applyVisibility(final Context context, final Object value) {
+
+        return transform((PagedList<Instance>)value, before -> schema.applyVisibility(context, before));
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Object evaluateTransients(final Context context, final Object value, final Set<Path> expand) {
+
+        return transform((PagedList<Instance>)value, before -> schema.evaluateTransients(context, before, expand));
+    }
+
+    private PagedList<Instance> transform(final PagedList<Instance> value, final Function<Instance, Instance> fn) {
+
+        if(value == null) {
+            return null;
+        } else {
+            boolean changed = false;
+            final List<Instance> results = new ArrayList<>();
+            for(final Instance before : value) {
+                final Instance after = fn.apply(before);
+                results.add(after);
+                changed = changed || after != before;
+            }
+            if(changed) {
+                return new PagedList<>(results, value.getPaging());
+            } else {
+                return value;
+            }
+        }
     }
 
     public interface Resolver {

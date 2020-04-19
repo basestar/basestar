@@ -35,6 +35,8 @@ public class GraphQLSchemaAdaptor {
 
     public static final String INPUT_PREFIX = "Input";
 
+    public static final String INPUT_EXPR_PREFIX = "InputExpr";
+
     public static final String ENTRY_PREFIX = "Entry";
 
     public static final String ARRAY_PREFIX = "Array";
@@ -68,6 +70,9 @@ public class GraphQLSchemaAdaptor {
                 final InstanceSchema instanceSchema = (InstanceSchema)schema;
                 mapTypes.putAll(mapTypes(instanceSchema));
                 registry.add(inputTypeDefinition(instanceSchema));
+                if(schema instanceof ObjectSchema) {
+                    registry.add(inputExpressionTypeDefinition(instanceSchema));
+                }
             }
         });
         registry.add(queryDefinition());
@@ -156,6 +161,8 @@ public class GraphQLSchemaAdaptor {
                 .name(Reserved.ID).type(new TypeName(ID_TYPE)).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name("data").type(new TypeName(INPUT_PREFIX + schema.getName())).build());
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name("expressions").type(new TypeName(INPUT_EXPR_PREFIX + schema.getName())).build());
         return builder.build();
     }
 
@@ -170,6 +177,8 @@ public class GraphQLSchemaAdaptor {
                 .name(Reserved.VERSION).type(new TypeName(INT_TYPE)).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name("data").type(new TypeName(INPUT_PREFIX + schema.getName())).build());
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name("expressions").type(new TypeName(INPUT_EXPR_PREFIX + schema.getName())).build());
         return builder.build();
     }
 
@@ -188,10 +197,23 @@ public class GraphQLSchemaAdaptor {
     public InputObjectTypeDefinition inputTypeDefinition(final InstanceSchema schema) {
 
         final InputObjectTypeDefinition.Builder builder = InputObjectTypeDefinition.newInputObjectDefinition();
-        builder.name("Input" + schema.getName());
+        builder.name(INPUT_PREFIX + schema.getName());
         builder.description(description(schema.getDescription()));
         schema.getAllProperties()
                 .forEach((k, v) -> builder.inputValueDefinition(inputValueDefinition(v)));
+        return builder.build();
+    }
+
+
+    private SDLDefinition inputExpressionTypeDefinition(final InstanceSchema schema) {
+
+        final InputObjectTypeDefinition.Builder builder = InputObjectTypeDefinition.newInputObjectDefinition();
+        builder.name(INPUT_EXPR_PREFIX + schema.getName());
+        builder.description(description(schema.getDescription()));
+        schema.getAllProperties()
+                .forEach((k, v) -> builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                        .name(k).type(new TypeName(STRING_TYPE))
+                        .build()));
         return builder.build();
     }
 
