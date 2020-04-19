@@ -65,12 +65,13 @@ public class History implements Serializable {
     public static History fromString(final String str) {
 
         final String upper = str.toUpperCase();
-        if(upper.equals(ENABLED_VALUE)) {
-            return ENABLED;
-        } else if(upper.equals(DISABLED_VALUE)) {
-            return DISABLED;
-        } else {
-            return new History(true, Consistency.valueOf(upper));
+        switch (upper) {
+            case ENABLED_VALUE:
+                return ENABLED;
+            case DISABLED_VALUE:
+                return DISABLED;
+            default:
+                return new History(true, Consistency.valueOf(upper));
         }
     }
 }

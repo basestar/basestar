@@ -635,7 +635,7 @@ public class DynamoDBStorage extends PartitionedStorage {
                 if(!oversize.isEmpty()) {
                     final Stash oversizeStash = requireOversizeStash();
                     final List<CompletableFuture<?>> futures = new ArrayList<>();
-                    oversize.forEach(oversizeStash::write);
+                    oversize.forEach((k, v) -> futures.add(oversizeStash.write(k, v)));
                     return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]))
                             .thenCompose(ignored -> write());
                 } else {

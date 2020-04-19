@@ -162,7 +162,7 @@ public class Nullsafe {
     @Nonnull
     public static <V> SortedSet<V> immutableSortedCopy(@Nullable final SortedSet<V> s) {
 
-        return immutableSortedCopy(s);
+        return s == null ? Collections.emptySortedSet() : Collections.unmodifiableSortedSet(s);
     }
 
     @Nonnull

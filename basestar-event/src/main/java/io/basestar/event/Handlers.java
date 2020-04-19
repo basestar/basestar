@@ -83,7 +83,7 @@ public class Handlers<T> {
 
         public Handlers<T> build() {
 
-            return new Handlers<T>(mappings);
+            return new Handlers<>(mappings);
         }
     }
 

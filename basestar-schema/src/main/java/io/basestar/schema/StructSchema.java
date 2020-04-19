@@ -241,7 +241,7 @@ public class StructSchema implements InstanceSchema {
         for (final Map.Entry<String, Set<Path>> branch : Path.branch(paths).entrySet()) {
             final Member member = getMember(branch.getKey(), true);
             if(member != null) {
-                for(final Path tail : member.requireExpand(branch.getValue())) {
+                for(final Path tail : member.requiredExpand(branch.getValue())) {
                     result.add(Path.of(branch.getKey()).with(tail));
                 }
             }

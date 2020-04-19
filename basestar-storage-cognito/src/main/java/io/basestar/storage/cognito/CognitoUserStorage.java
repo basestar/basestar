@@ -130,7 +130,7 @@ public class CognitoUserStorage implements Storage {
 
         return new WriteTransaction() {
 
-            private List<Supplier<CompletableFuture<BatchResponse>>> requests = new ArrayList<>();
+            private final List<Supplier<CompletableFuture<BatchResponse>>> requests = new ArrayList<>();
 
             @Override
             public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {

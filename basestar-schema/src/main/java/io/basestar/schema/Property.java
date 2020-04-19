@@ -35,15 +35,11 @@ import io.basestar.jackson.serde.ExpressionDeseriaizer;
 import io.basestar.schema.exception.MissingPropertyException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
-import io.basestar.schema.use.UseArray;
-import io.basestar.schema.use.UseMap;
-import io.basestar.schema.use.UseSet;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Path;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
 
 import javax.annotation.Nonnull;
@@ -146,7 +142,7 @@ public class Property implements Member {
 
     @Override
     @Deprecated
-    public Set<Path> requireExpand(final Set<Path> paths) {
+    public Set<Path> requiredExpand(final Set<Path> paths) {
 
         return type.requiredExpand(paths);
     }
@@ -260,41 +256,6 @@ public class Property implements Member {
             } else {
                 return result;
             }
-        }
-    }
-
-    @RequiredArgsConstructor
-    private static class VisibilityVisitor implements Use.Visitor.Defaulting<Object> {
-
-        private final Object value;
-
-        @Override
-        public Object visitDefault(final Use<?> type) {
-
-            return value;
-        }
-
-        @Override
-        public Object visitArray(final UseArray type) {
-
-            if(value != null) {
-                final List<Object> result = new ArrayList<>();
-                return type.getType().visit(this);
-            } else {
-                return null;
-            }
-        }
-
-        @Override
-        public Object visitSet(final UseSet type) {
-
-            return value;
-        }
-
-        @Override
-        public Object visitMap(final UseMap type) {
-
-            return value;
         }
     }
 }

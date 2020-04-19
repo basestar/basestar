@@ -61,10 +61,6 @@ import java.util.stream.Stream;
 @Slf4j
 public class DatabaseServer extends ReadProcessor implements Database, Handler<Event>, CommonVars {
 
-    public static final String CALLER_SCHEMA = "User";
-
-    private static final boolean TOMBSTONE = false;
-
     private static final String SINGLE_BATCH_ROOT = "$";
 
     private final Emitter emitter;

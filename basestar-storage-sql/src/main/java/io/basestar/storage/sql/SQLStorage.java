@@ -168,7 +168,7 @@ public class SQLStorage implements Storage {
 
         return new ReadTransaction() {
 
-            private Map<ObjectSchema, Set<String>> byId = new IdentityHashMap<>();
+            private final Map<ObjectSchema, Set<String>> byId = new IdentityHashMap<>();
 
             private Map<ObjectSchema, Set<IdVersion>> byIdVersion = new IdentityHashMap<>();
 

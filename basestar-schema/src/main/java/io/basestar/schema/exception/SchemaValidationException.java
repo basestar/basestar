@@ -22,5 +22,8 @@ package io.basestar.schema.exception;
 
 public class SchemaValidationException extends RuntimeException {
 
+    public SchemaValidationException(final String reason) {
 
+        super(reason);
+    }
 }

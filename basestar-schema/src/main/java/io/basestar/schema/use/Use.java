@@ -239,7 +239,7 @@ public interface Use<T> extends Serializable {
                 return visitDefault(type);
             }
 
-            default R visitCollection(final Use<? extends Collection<?>> type) {
+            default <T> R visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
 
                 return visitDefault(type);
             }

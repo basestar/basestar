@@ -58,7 +58,7 @@ import java.util.SortedMap;
  */
 
 @Getter
-@EqualsAndHashCode(callSuper = false)
+@EqualsAndHashCode
 public class Namespace implements Serializable, Schema.Resolver {
 
    private static final ObjectMapper objectMapper = new ObjectMapper(new BasestarFactory(new YAMLFactory()))

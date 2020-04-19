@@ -102,7 +102,7 @@ public interface Storage {
         @RequiredArgsConstructor
         class Basic implements ReadTransaction {
 
-            private List<Supplier<CompletableFuture<BatchResponse>>> requests = new ArrayList<>();
+            private final List<Supplier<CompletableFuture<BatchResponse>>> requests = new ArrayList<>();
 
             private final Storage delegate;
 

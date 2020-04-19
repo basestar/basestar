@@ -30,7 +30,7 @@ import java.io.InputStream;
 public class TestDynamoDBEvent {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
-    {
+    static {
         objectMapper.registerModule(new JavaTimeModule());
     }
 

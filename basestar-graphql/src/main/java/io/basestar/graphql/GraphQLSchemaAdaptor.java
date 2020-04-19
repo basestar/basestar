@@ -289,16 +289,18 @@ public class GraphQLSchemaAdaptor {
                                     .name("query").type(new TypeName(STRING_TYPE)).build())
                             .build()));
         }
-            // FIXME: requires transient typing
-//        if(schema instanceof Transient.Resolver) {
-//            objectSchema.getDeclaredTransients()
-//                    .forEach((k, v) -> fields.add(FieldDefinition.newFieldDefinition()
-//                            .name(k)
-//                            .type(type(v.getType()))
-//                            .inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-//                                    .name("query").type(new TypeName("String")).build())
-//                            .build()));
-//        }
+        if(schema instanceof Transient.Resolver) {
+            ((Transient.Resolver) schema).getDeclaredTransients()
+                    .forEach((k, v) -> {
+                        // Can only show typed transients
+                        if(v.getType() != null) {
+                            fields.add(FieldDefinition.newFieldDefinition()
+                                    .name(k)
+                                    .type(type(v.getType()))
+                                    .build());
+                        }
+                    });
+        }
         return fields;
     }
 

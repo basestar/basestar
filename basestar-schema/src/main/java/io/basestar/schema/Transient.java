@@ -26,13 +26,18 @@ import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.ExpressionDeseriaizer;
 import io.basestar.jackson.serde.PathDeserializer;
 import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.exception.ReservedNameException;
+import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseCollection;
+import io.basestar.schema.use.UseMap;
+import io.basestar.schema.use.UseRef;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Path;
 import lombok.Data;
@@ -55,6 +60,9 @@ public class Transient implements Member {
     private final String name;
 
     @Nullable
+    private final Use<?> type;
+
+    @Nullable
     private final String description;
 
     @Nonnull
@@ -70,6 +78,8 @@ public class Transient implements Member {
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class Builder implements Described {
+
+        private Use<?> type;
 
         @Nullable
         private String description;
@@ -102,6 +112,7 @@ public class Transient implements Member {
     private Transient(final Builder builder, final String name) {
 
         this.name = name;
+        this.type = builder.getType();
         this.description = builder.getDescription();
         this.expression =  Nullsafe.of(builder.getExpression());
         this.visibility = builder.getVisibility();
@@ -109,11 +120,9 @@ public class Transient implements Member {
         if(Reserved.isReserved(name)) {
             throw new ReservedNameException(name);
         }
-    }
-
-    public Object evaluate(final Context context) {
-
-        return expression.evaluate(context);
+        if(type != null) {
+            type.visit(TypeValidator.INSTANCE);
+        }
     }
 
     @Override
@@ -131,7 +140,12 @@ public class Transient implements Member {
     @Override
     public Object evaluateTransients(final Context context, final Object value, final Set<Path> expand) {
 
-        return expression.evaluate(context);
+        final Object raw = expression.evaluate(context);
+        if(type != null) {
+            return type.create(raw);
+        } else {
+            return raw;
+        }
     }
 
     //FIXME
@@ -157,9 +171,9 @@ public class Transient implements Member {
     }
 
     @Override
-    public Set<Path> requireExpand(final Set<Path> paths) {
+    public Set<Path> requiredExpand(final Set<Path> paths) {
 
-        return Collections.emptySet();
+        return ImmutableSet.of(Path.of());
     }
 
     public interface Resolver {
@@ -185,6 +199,35 @@ public class Transient implements Member {
             } else {
                 return result;
             }
+        }
+    }
+
+    private static class TypeValidator implements Use.Visitor.Defaulting<Void> {
+
+        private static final TypeValidator INSTANCE = new TypeValidator();
+
+        @Override
+        public Void visitDefault(final Use<?> type) {
+
+            return null;
+        }
+
+        @Override
+        public Void visitRef(final UseRef type) {
+
+            throw new SchemaValidationException("Transients cannot use references");
+        }
+
+        @Override
+        public <T> Void visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
+
+            return type.visit(this);
+        }
+
+        @Override
+        public <T> Void visitMap(final UseMap<T> type) {
+
+            return type.visit(this);
         }
     }
 }

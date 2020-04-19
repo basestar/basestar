@@ -43,7 +43,7 @@ public interface Member extends Named, Described {
 
 //    Optional<Object> collapse(Object value, Set<Path> expand);
 
-    Set<Path> requireExpand(Set<Path> paths);
+    Set<Path> requiredExpand(Set<Path> paths);
 
     Use<?> typeOf(Path path);
 
@@ -69,7 +69,7 @@ public interface Member extends Named, Described {
 //
 //    }
 
-    public interface Resolver {
+    interface Resolver {
 
         @JsonIgnore
         Map<String, ? extends Member> getDeclaredMembers();

@@ -20,21 +20,17 @@ package io.basestar.schema.use;
  * #L%
  */
 
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Multimap;
-import io.basestar.expression.Context;
-import io.basestar.schema.Expander;
-import io.basestar.schema.Instance;
 import io.basestar.schema.Schema;
 import io.basestar.schema.exception.InvalidTypeException;
-import io.basestar.util.Path;
 import lombok.Data;
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -51,7 +47,7 @@ import java.util.stream.Collectors;
  */
 
 @Data
-public class UseArray<T> implements Use<List<T>> {
+public class UseArray<T> implements UseCollection<T, List<T>> {
 
     public static final String NAME = "array";
 
@@ -111,25 +107,6 @@ public class UseArray<T> implements Use<List<T>> {
     }
 
     @Override
-    public Use<?> typeOf(final Path path) {
-
-        if(path.isEmpty()) {
-            return this;
-        } else {
-            return type.typeOf(path);
-        }
-    }
-
-    @Override
-    public void serializeValue(final List<T> value, final DataOutput out) throws IOException {
-
-        out.writeInt(value.size());
-        for(final T v : value) {
-            type.serialize(v, out);
-        }
-    }
-
-    @Override
     public List<T> deserializeValue(final DataInput in) throws IOException {
 
         return deserializeAnyValue(in);
@@ -145,42 +122,8 @@ public class UseArray<T> implements Use<List<T>> {
         return result;
     }
 
-//    @Override
-//    public List<T> expand(final List<T> value, final Expander expander, final Set<Path> expand) {
-//
-//        if(value != null) {
-//            boolean changed = false;
-//            final List<T> expanded = new ArrayList<>();
-//            for(final T before : value) {
-//                final T after = type.expand(before, expander, expand);
-//                expanded.add(after);
-//                changed = changed || (before != after);
-//            }
-//            return changed ? expanded : value;
-//        } else {
-//            return null;
-//        }
-//    }
-
     @Override
-    public List<T> expand(final List<T> value, final Expander expander, final Set<Path> expand) {
-
-        return transform(value, before -> type.expand(before, expander, expand));
-    }
-
-    @Override
-    public List<T> applyVisibility(final Context context, final List<T> value) {
-
-        return transform(value, before -> type.applyVisibility(context, before));
-    }
-
-    @Override
-    public List<T> evaluateTransients(final Context context, final List<T> value, final Set<Path> expand) {
-
-        return transform(value, before -> type.evaluateTransients(context, before, expand));
-    }
-
-    private static <T> List<T> transform(final List<T> value, final Function<T, T> fn) {
+    public List<T> transform(final List<T> value, final Function<T, T> fn) {
 
         if(value != null) {
             boolean changed = false;
@@ -194,39 +137,6 @@ public class UseArray<T> implements Use<List<T>> {
         } else {
             return null;
         }
-    }
-
-    @Override
-    public Set<Path> transientExpand(final Path path, final Set<Path> expand) {
-
-        return type.transientExpand(path, expand);
-    }
-
-//    @Override
-//    public Map<String, Object> openApiType() {
-//
-//        return ImmutableMap.of(
-//                "type", "array",
-//                "items", type.openApiType()
-//        );
-//    }
-
-    @Override
-    @Deprecated
-    public Set<Path> requiredExpand(final Set<Path> paths) {
-
-        return type.requiredExpand(paths);
-    }
-
-    @Override
-    @Deprecated
-    public Multimap<Path, Instance> refs(final List<T> value) {
-
-        final Multimap<Path, Instance> result = HashMultimap.create();
-        if(value != null) {
-            value.forEach(v -> type.refs(v).forEach(result::put));
-        }
-        return result;
     }
 
     @Override

@@ -132,8 +132,7 @@ public class Link implements Member {
     }
 
     @Override
-    @Deprecated
-    public Set<Path> requireExpand(final Set<Path> paths) {
+    public Set<Path> requiredExpand(final Set<Path> paths) {
 
         final Set<Path> result = new HashSet<>();
         result.add(Path.empty());

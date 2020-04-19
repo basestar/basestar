@@ -95,8 +95,7 @@ public class Mapper {
         }
 //        final Map<String, >
 
-        with.properties().stream()
-                .forEach(prop -> {
+        with.properties().forEach(prop -> {
 
             try {
 
