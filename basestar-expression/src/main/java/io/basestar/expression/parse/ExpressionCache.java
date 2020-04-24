@@ -43,7 +43,11 @@ public class ExpressionCache {
                     final ExpressionParser parser = new ExpressionParser(tokens);
                     final ParseTree tree = parser.parse();
                     final ParseTreeVisitor<Expression> visitor = new ExpressionParseVisitor();
-                    return visitor.visit(tree);
+                    final Expression result = visitor.visit(tree);
+                    if(result == null) {
+                        throw new IllegalStateException("Failed to parse expression " + expr);
+                    }
+                    return result;
                 }
             });
 

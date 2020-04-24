@@ -54,13 +54,13 @@ public interface ElasticsearchRouting {
         @Override
         public String objectIndex(final ObjectSchema schema) {
 
-            return Nullsafe.of(objectPrefix) + schema.getName().toLowerCase() +  Nullsafe.of(objectSuffix);
+            return Nullsafe.option(objectPrefix) + schema.getName().toLowerCase() +  Nullsafe.option(objectSuffix);
         }
 
         @Override
         public String historyIndex(final ObjectSchema schema) {
 
-            return Nullsafe.of(historyPrefix) + schema.getName().toLowerCase() + Nullsafe.of(historySuffix);
+            return Nullsafe.option(historyPrefix) + schema.getName().toLowerCase() + Nullsafe.option(historySuffix);
         }
 
         @Override

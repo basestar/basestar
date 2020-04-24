@@ -51,6 +51,7 @@ public class TestObjectSchema {
     }
 
     @Test
+    @SuppressWarnings("rawtypes")
     public void testExpandCollapse() throws IOException {
 
         final Namespace namespace = Namespace.load(TestObjectSchema.class.getResource("schema.yml"));

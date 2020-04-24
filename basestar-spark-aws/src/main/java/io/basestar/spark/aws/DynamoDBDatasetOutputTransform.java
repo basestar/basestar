@@ -22,38 +22,35 @@ package io.basestar.spark.aws;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import io.basestar.schema.InstanceSchema;
-import io.basestar.spark.SparkUtils;
+import io.basestar.schema.use.Use;
+import io.basestar.spark.SparkSchemaUtils;
 import io.basestar.spark.Transform;
-import lombok.RequiredArgsConstructor;
+import io.basestar.util.Nullsafe;
 import org.apache.spark.rdd.RDD;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SQLContext;
-import org.apache.spark.sql.types.StructType;
 
 import java.util.Map;
 
-@RequiredArgsConstructor
-public class DynamoDBInputTransform implements Transform<RDD<Map<String, AttributeValue>>, Dataset<Row>> {
+public class DynamoDBDatasetOutputTransform implements Transform<Dataset<Row>, RDD<Map<String, AttributeValue>>> {
 
     private final InstanceSchema schema;
 
-    private final StructType structType;
+    private final Map<String, Use<?>> extraMetadata;
 
-    public DynamoDBInputTransform(final InstanceSchema schema) {
+    @lombok.Builder(builderClassName = "Builder")
+    DynamoDBDatasetOutputTransform(final InstanceSchema schema, final Map<String, Use<?>> extraMetadata) {
 
-        this.schema = schema;
-        this.structType = DynamoDBSparkUtils.structType(schema);
+        this.schema = Nullsafe.require(schema);
+        this.extraMetadata = Nullsafe.option(extraMetadata);
     }
 
     @Override
-    public Dataset<Row> apply(final RDD<Map<String, AttributeValue>> input) {
+    public RDD<Map<String, AttributeValue>> accept(final Dataset<Row> input) {
 
-        final SQLContext sqlContext = new SQLContext(input.sparkContext());
-        return sqlContext.createDataFrame(input.toJavaRDD()
-                .map(values -> {
-                    final Map<String, Object> data = DynamoDBSparkUtils.fromDynamoDB(values);
-                    return SparkUtils.toSpark(schema, structType, data);
-                }), structType);
+        return input.toJavaRDD().map(row -> {
+            final Map<String, Object> data = SparkSchemaUtils.fromSpark(schema, extraMetadata, row);
+            return DynamoDBSparkSchemaUtils.toDynamoDB(data);
+        }).rdd();
     }
 }

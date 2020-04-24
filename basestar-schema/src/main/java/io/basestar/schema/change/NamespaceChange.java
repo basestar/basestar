@@ -32,7 +32,7 @@ public interface NamespaceChange {
     @Data
     class Schemas implements NamespaceChange {
 
-        private Schema add;
+        private Schema<?> add;
 
         private String rename;
 

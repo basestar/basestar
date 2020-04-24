@@ -26,6 +26,8 @@ import io.basestar.schema.exception.MissingTypeException;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.Serializable;
+import java.util.UUID;
 
 /**
  * Schema
@@ -35,7 +37,7 @@ import javax.annotation.Nullable;
  * @param <T>
  */
 
-public interface Schema<T> extends Named, Described {
+public interface Schema<T> extends Named, Described, Serializable {
 
     String VAR_THIS = "this";
 
@@ -47,7 +49,9 @@ public interface Schema<T> extends Named, Described {
     })
     interface Builder<T> extends Described {
 
-        Schema<T> build(Resolver.Cyclic resolver, String name, int slot);
+        Schema<T> build();
+
+        Schema<T> build(Resolver resolver, String name, int slot);
     }
 
     default T create(Object value) {
@@ -59,14 +63,28 @@ public interface Schema<T> extends Named, Described {
 
     int getSlot();
 
+    static String anonymousName() {
+
+        return "Anonymous#" + UUID.randomUUID().toString();
+    }
+
+    static int anonymousSlot() {
+
+        return -1;
+    }
+
+    default boolean isAnonymous() {
+
+        return getSlot() == anonymousSlot();
+    }
+
     interface Resolver {
 
-        // 'Magic' resolver that handles cycles in namespace builder, instance under construction
+        // 'Magic' method to handles cycles in namespace builder, instance under construction
         // must call resolver.constructing(this); as first constructor line.
 
-        interface Cyclic extends Resolver {
+        default void constructing(final Schema<?> schema) {
 
-            void constructing(Schema<?> schema);
         }
 
         @Nullable
@@ -75,7 +93,7 @@ public interface Schema<T> extends Named, Described {
         @Nonnull
         default Schema<?> requireSchema(final String name) {
 
-            final Schema result = getSchema(name);
+            final Schema<?> result = getSchema(name);
             if(result == null) {
                 throw new MissingTypeException(name);
             } else {

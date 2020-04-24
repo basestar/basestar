@@ -61,7 +61,7 @@ public class UseString implements UseScalar<String> {
         } else if(config instanceof String) {
             return new UseString((String)config);
         } else if(config instanceof Map) {
-            return new UseString((String)((Map)config).get("pattern"));
+            return new UseString((String)((Map<?, ?>)config).get("pattern"));
         } else {
             throw new InvalidTypeException();
         }

@@ -23,8 +23,8 @@ package io.basestar.storage.sql;
 import com.google.common.base.MoreObjects;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.schema.*;
 import io.basestar.schema.Index;
+import io.basestar.schema.*;
 import io.basestar.schema.use.Use;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
@@ -170,7 +170,7 @@ public class SQLStorage implements Storage {
 
             private final Map<ObjectSchema, Set<String>> byId = new IdentityHashMap<>();
 
-            private Map<ObjectSchema, Set<IdVersion>> byIdVersion = new IdentityHashMap<>();
+            private final Map<ObjectSchema, Set<IdVersion>> byIdVersion = new IdentityHashMap<>();
 
             @Override
             public ReadTransaction readObject(final ObjectSchema schema, final String id) {

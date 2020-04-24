@@ -23,13 +23,6 @@
         </dependencies>
     </dependencyManagement>
 
-    <!--<repositories>-->
-        <!--<repository>-->
-            <!--<id>github-spark-dynamodb</id>-->
-            <!--<url>https://maven.pkg.github.com/basestar/spark-streaming-dynamodb-asl_2.12</url>-->
-        <!--</repository>-->
-    <!--</repositories>-->
-
     <dependencies>
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -45,66 +38,21 @@
             <groupId>io.basestar</groupId>
             <artifactId>basestar-spark</artifactId>
         </dependency>
-        <dependency>
-            <groupId>io.basestar</groupId>
-            <artifactId>basestar-spark-aws</artifactId>
-        </dependency>
-        <!--<dependency>-->
-            <!--<groupId>io.basestar.spark</groupId>-->
-            <!--<artifactId>spark-streaming-dynamodb-asl_2.12</artifactId>-->
-            <!--<version>2.4</version>-->
-        <!--</dependency>-->
-        <dependency>
+         <dependency>
             <groupId>org.apache.spark</groupId>
-            <artifactId>spark-core_2.12</artifactId>
+            <artifactId>spark-core_2.11</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
-            <artifactId>spark-sql_2.12</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.spark</groupId>
-            <artifactId>spark-streaming_2.12</artifactId>
+            <artifactId>spark-sql_2.11</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-library</artifactId>
+            <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>io.delta</groupId>
-            <artifactId>delta-core_2.12</artifactId>
-            <version>0.5.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-aws</artifactId>
-            <version>3.2.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-common</artifactId>
-            <version>3.2.1</version>
-        </dependency>
-        <!--<dependency>-->
-            <!--<groupId>org.apache.hudi</groupId>-->
-            <!--<artifactId>hudi-spark_2.12</artifactId>-->
-            <!--<version>0.5.2-incubating</version>-->
-        <!--</dependency>-->
-        <!--<dependency>-->
-            <!--<groupId>org.apache.avro</groupId>-->
-            <!--<artifactId>avro</artifactId>-->
-            <!--<version>1.8.2</version>-->
-        <!--</dependency>-->
-        <!--<dependency>-->
-            <!--<groupId>org.apache.avro</groupId>-->
-            <!--<artifactId>avro-mapred</artifactId>-->
-            <!--<version>1.8.2</version>-->
-        <!--</dependency>-->
-        <!--<dependency>-->
-            <!--<groupId>org.apache.parquet</groupId>-->
-            <!--<artifactId>parquet-avro</artifactId>-->
-            <!--<version>1.10.1</version>-->
-        <!--</dependency>-->
         <dependency>
             <groupId>io.basestar</groupId>
             <artifactId>basestar-test</artifactId>

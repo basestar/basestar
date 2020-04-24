@@ -43,7 +43,8 @@
     </developers>
 
     <properties>
-        <lombok.version>1.18.6</lombok.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <lombok.version>1.18.12</lombok.version>
         <junit.version>5.4.0</junit.version>
     </properties>
 

@@ -65,15 +65,7 @@ public class UseMap<T> implements Use<Map<String, T>> {
 
     public static UseMap<?> from(final Object config) {
 
-        final Use<?> type;
-        if(config instanceof String) {
-            type = Use.fromConfig(config);
-        } else if(config instanceof Map) {
-            type = Use.fromConfig(((Map)config).get("type"));
-        } else {
-            throw new InvalidTypeException();
-        }
-        return new UseMap<>(type);
+        return Use.fromNestedConfig(config, (type, nestedConfig) -> new UseMap<>(type));
     }
 
     @Override

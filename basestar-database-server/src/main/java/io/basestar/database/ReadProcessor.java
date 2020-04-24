@@ -108,6 +108,7 @@ public class ReadProcessor {
         return queryImpl(context, linkSchema, expression, link.getSort(), count, paging);
     }
 
+    @SuppressWarnings("rawtypes")
     protected CompletableFuture<PagedList<Instance>> queryImpl(final Context context, final ObjectSchema objectSchema, final Expression expression,
                                                                final List<Sort> sort, final int count, final PagingToken paging) {
 
@@ -183,6 +184,7 @@ public class ReadProcessor {
                 });
     }
 
+    // FIXME: poor performance, need to batch more
     protected CompletableFuture<Map<ExpandKey<RefKey>, Instance>> expandImpl(final Context context, final Map<ExpandKey<RefKey>, Instance> items) {
 
         final Set<ExpandKey<RefKey>> refs = new HashSet<>();
@@ -212,7 +214,8 @@ public class ReadProcessor {
                         final ExpandKey<LinkKey> linkKey = ExpandKey.from(LinkKey.from(refKey, link.getName()), expand);
                         log.debug("Expanding link: {}", linkKey);
                         // FIXME: do we need to pre-expand here? original implementation did
-                        links.put(linkKey, queryLinkImpl(context, link, object, EXPAND_LINK_SIZE, null));
+                        links.put(linkKey, queryLinkImpl(context, link, object, EXPAND_LINK_SIZE, null)
+                                .thenCompose(results -> expand(context, results, expand)));
                         return null;
                     }
                 }, ref.getExpand());

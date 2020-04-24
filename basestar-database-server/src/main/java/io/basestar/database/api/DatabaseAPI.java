@@ -203,7 +203,7 @@ public class DatabaseAPI implements API {
         return respond(request, database.delete(caller, options));
     }
 
-    private CompletableFuture<APIResponse> query(final Caller caller, final String schema, final APIRequest request) throws IOException {
+    private CompletableFuture<APIResponse> query(final Caller caller, final String schema, final APIRequest request) {
 
         final Expression query = parseQuery(request);
 

@@ -68,6 +68,6 @@ public class AbbrevListDeserializer<T> extends JsonDeserializer<List<T>> impleme
     public JsonDeserializer<?> createContextual(final DeserializationContext deserializationContext, final BeanProperty beanProperty) {
 
         final JavaType type = beanProperty.getType();
-        return new AbbrevListDeserializer(type.containedType(0).getRawClass());
+        return new AbbrevListDeserializer<>(type.containedType(0).getRawClass());
     }
 }

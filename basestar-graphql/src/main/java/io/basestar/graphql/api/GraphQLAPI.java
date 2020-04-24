@@ -104,7 +104,7 @@ public class GraphQLAPI implements API {
             return ExecutionInput.newExecutionInput()
                     .operationName(operationName)
                     .query(query)
-                    .variables(Nullsafe.of(variables))
+                    .variables(Nullsafe.option(variables))
                     .context(GraphQLContext.newContext().of("caller", caller).build())
                     .build();
         }

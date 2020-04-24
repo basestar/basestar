@@ -1,4 +1,4 @@
-package io.basestar.storage.spark;
+package io.basestar.spark.expression;
 
 /*-
  * #%L
@@ -35,9 +35,13 @@ import io.basestar.expression.literal.LiteralSet;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
+import io.basestar.util.Path;
 import lombok.RequiredArgsConstructor;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.StringType;
+
+import java.util.function.Function;
 
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
@@ -45,14 +49,19 @@ import static org.apache.spark.sql.functions.lit;
 @RequiredArgsConstructor
 public class SparkExpressionVisitor implements ExpressionVisitor<Column> {
 
-    private final Dataset<?> ds;
+    private final Function<Path, Column> columnResolver;
 
     @Override
     public Column visitAdd(final Add expression) {
 
         final Column lhs = visit(expression.getLhs());
         final Column rhs = visit(expression.getRhs());
-        return lhs.plus(rhs);
+        // FIXME add concat for lists and maps here
+        if(lhs.expr().dataType() instanceof StringType || rhs.expr().dataType() instanceof StringType) {
+            return functions.concat(lhs, rhs);
+        } else {
+            return lhs.plus(rhs);
+        }
     }
 
     @Override
@@ -197,7 +206,7 @@ public class SparkExpressionVisitor implements ExpressionVisitor<Column> {
     @Override
     public Column visitPathConstant(final PathConstant expression) {
 
-        return ds.col(expression.getPath().toString());
+        return columnResolver.apply(expression.getPath());
     }
 
     @Override

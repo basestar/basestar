@@ -228,7 +228,7 @@ public class DynamoDBStorage extends PartitionedStorage {
         if(!satisfy.getSort().isEmpty()) {
 
             final SdkBytes sortValueLo = SdkBytes.fromByteArray(binary(satisfy.getSort()));
-            final SdkBytes sortValueHi = SdkBytes.fromByteArray(binary(satisfy.getSort(), new byte[]{Byte.MAX_VALUE}));
+            final SdkBytes sortValueHi = SdkBytes.fromByteArray(binary(satisfy.getSort(), new byte[]{0}));
 
             keyTerms.add("#__sort BETWEEN :__sortLo AND :__sortHi");
             names.put("#__sort", routing.indexSortName(schema, index));

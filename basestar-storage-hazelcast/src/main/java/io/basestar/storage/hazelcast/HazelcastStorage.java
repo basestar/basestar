@@ -73,9 +73,9 @@ public class HazelcastStorage implements Storage {
 
     private HazelcastStorage(final Builder builder) {
 
-        this.instance = Nullsafe.of(builder.instance);
-        this.routing = Nullsafe.of(builder.routing);
-        this.schemaFactory = Nullsafe.of(builder.schemaFactory);
+        this.instance = Nullsafe.require(builder.instance);
+        this.routing = Nullsafe.require(builder.routing);
+        this.schemaFactory = Nullsafe.require(builder.schemaFactory);
         this.object = CacheBuilder.newBuilder()
                 .build(new CacheLoader<ObjectSchema, IMap<BatchResponse.Key, CustomPortable>>() {
                     @Override
@@ -322,9 +322,7 @@ public class HazelcastStorage implements Storage {
                 final String target = routing.historyMapName(schema);
                 final String schemaName = schema.getName();
                 requests.computeIfAbsent(target, ignored -> new HashMap<>())
-                        .put(new BatchResponse.Key(schemaName, id, version), (key, value) -> {
-                            return toRecord(schema, after);
-                        });
+                        .put(new BatchResponse.Key(schemaName, id, version), (key, value) -> toRecord(schema, after));
                 return this;
             }
 

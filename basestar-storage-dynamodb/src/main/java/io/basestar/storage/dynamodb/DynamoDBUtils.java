@@ -21,8 +21,10 @@ package io.basestar.storage.dynamodb;
  */
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.ObjectSchema;
 import lombok.extern.slf4j.Slf4j;
+import software.amazon.awssdk.core.BytesWrapper;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.dynamodb.model.*;
 
@@ -89,12 +91,7 @@ public class DynamoDBUtils {
         } else if(value.bool() != null) {
             return value.bool();
         } else if(value.n() != null) {
-            if(value.n().contains(".")) {
-                return Double.valueOf(value.n());
-            } else {
-                return Long.valueOf(value.n());
-            }
-//            return value.n().contains(".") ? new BigDecimal(value.n()) : new BigInteger(value.n());
+            return parseNumber(value.n());
         } else if(value.s() != null) {
             return value.s();
         } else if(value.b() != null){
@@ -106,8 +103,23 @@ public class DynamoDBUtils {
             final Map<String, Object> result = new HashMap<>();
             value.m().forEach((k, v) -> result.put(k, fromAttributeValue(v)));
             return result;
+        } else if(value.hasSs()) {
+            return ImmutableSet.copyOf(value.ss());
+        } else if(value.hasNs()) {
+            return value.ns().stream().map(DynamoDBUtils::parseNumber).collect(Collectors.toSet());
+        } else if(value.hasBs()) {
+            return value.bs().stream().map(BytesWrapper::asByteArray).collect(Collectors.toSet());
         } else {
             throw new IllegalStateException("Unknown item type: " + value);
+        }
+    }
+
+    private static Number parseNumber(final String str) {
+
+        if(str.contains(".")) {
+            return Double.valueOf(str);
+        } else {
+            return Long.valueOf(str);
         }
     }
 

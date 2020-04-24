@@ -11,10 +11,6 @@
 
     <artifactId>basestar-example</artifactId>
 
-    <properties>
-        <log4j.version>2.12.1</log4j.version>
-    </properties>
-
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -68,14 +64,9 @@
             <artifactId>jackson-dataformat-xml</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
-            <version>${log4j.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
-            <version>${log4j.version}</version>
+            <groupId>io.basestar</groupId>
+            <artifactId>basestar-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

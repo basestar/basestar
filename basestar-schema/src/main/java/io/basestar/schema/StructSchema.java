@@ -123,6 +123,11 @@ public class StructSchema implements InstanceSchema {
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         private Map<String, Property.Builder> properties;
 
+        public String getType() {
+
+            return TYPE;
+        }
+
         public Builder setProperty(final String name, final Property.Builder v) {
 
             properties = Nullsafe.immutableCopyPut(properties, name, v);
@@ -130,9 +135,15 @@ public class StructSchema implements InstanceSchema {
         }
 
         @Override
-        public StructSchema build(final Resolver.Cyclic resolver, final String name, final int slot) {
+        public StructSchema build(final Resolver resolver, final String name, final int slot) {
 
             return new StructSchema(this, resolver, name, slot);
+        }
+
+        @Override
+        public StructSchema build() {
+
+            return new StructSchema(this, name -> null, Schema.anonymousName(), Schema.anonymousSlot());
         }
     }
 
@@ -141,21 +152,21 @@ public class StructSchema implements InstanceSchema {
         return new Builder();
     }
 
-    private StructSchema(final Builder builder, final Schema.Resolver.Cyclic resolver, final String name, final int slot) {
+    private StructSchema(final Builder builder, final Schema.Resolver resolver, final String name, final int slot) {
 
         resolver.constructing(this);
         this.name = name;
         this.slot = slot;
-        this.version = Nullsafe.of(builder.getVersion(), 1L);
+        this.version = Nullsafe.option(builder.getVersion(), 1L);
         if(builder.getExtend() != null) {
             this.extend = resolver.requireStructSchema(builder.getExtend());
         } else {
             this.extend = null;
         }
         this.description = builder.getDescription();
-        this.declaredProperties = ImmutableSortedMap.copyOf(Nullsafe.of(builder.getProperties()).entrySet().stream()
+        this.declaredProperties = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getProperties()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, e.getKey()))));
-        this.concrete = Nullsafe.of(builder.getConcrete(), Boolean.TRUE);
+        this.concrete = Nullsafe.option(builder.getConcrete(), Boolean.TRUE);
         if(Reserved.isReserved(name)) {
             throw new ReservedNameException(name);
         }

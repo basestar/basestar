@@ -23,11 +23,7 @@ package io.basestar.storage.util;
 import com.google.common.collect.ImmutableList;
 import io.basestar.util.PagedList;
 import io.basestar.util.PagingToken;
-import lombok.AccessLevel;
-import lombok.Data;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.Wither;
+import lombok.*;
 
 import java.io.*;
 import java.util.*;
@@ -71,9 +67,7 @@ public class Pager<T> {
     public CompletableFuture<PagedList<T>> page(final int count) {
 
         return pageInternal(count)
-                .thenApply(page -> {
-                    return new PagedList<>(page, encodeStates(states));
-                });
+                .thenApply(page -> new PagedList<>(page, encodeStates(states)));
     }
 
     private CompletableFuture<List<T>> pageInternal(final int count) {
@@ -148,7 +142,7 @@ public class Pager<T> {
     }
 
     @Data
-    @Wither
+    @With
     private static class OffsetToken {
 
         private final PagingToken paging;
@@ -157,7 +151,7 @@ public class Pager<T> {
     }
 
     @Getter
-    @Wither
+    @With
     @RequiredArgsConstructor
     public static class State<T> {
 

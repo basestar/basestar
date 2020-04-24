@@ -45,6 +45,7 @@ import lombok.experimental.Accessors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -53,7 +54,7 @@ import java.util.stream.Collectors;
  */
 
 @Getter
-public class Index implements Named, Described {
+public class Index implements Named, Described, Serializable {
 
     private static final int DEFAULT_MAX = 100;
 
@@ -98,23 +99,27 @@ public class Index implements Named, Described {
         private String description;
 
         @Nullable
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         @JsonSerialize(contentUsing = ToStringSerializer.class)
         @JsonDeserialize(using = AbbrevListDeserializer.class)
         private List<Path> partition;
 
         @Nullable
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         @JsonSerialize(contentUsing = ToStringSerializer.class)
         @JsonDeserialize(using = AbbrevListDeserializer.class)
         private List<Sort> sort;
 
         @Nullable
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         @JsonDeserialize(using = AbbrevSetDeserializer.class)
         private Set<String> projection;
 
         @Nullable
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonSerialize(contentUsing = ToStringSerializer.class)
         @JsonDeserialize(contentUsing = PathDeserializer.class)
         private Map<String, Path> over;
@@ -141,16 +146,16 @@ public class Index implements Named, Described {
     private Index(final Builder builder, final String name) {
 
         this.name = name;
-        this.version = Nullsafe.of(builder.getVersion(), 1L);
+        this.version = Nullsafe.option(builder.getVersion(), 1L);
         this.description = builder.getDescription();
         this.partition = Nullsafe.immutableCopy(builder.getPartition());
         this.sort = Nullsafe.immutableCopy(builder.getSort());
         this.projection = Nullsafe.immutableSortedCopy(builder.getProjection());
         this.over = Nullsafe.immutableSortedCopy(builder.getOver());
-        this.unique = Nullsafe.of(builder.getUnique(), false);
-        this.sparse = Nullsafe.of(builder.getSparse(), false);
+        this.unique = Nullsafe.option(builder.getUnique(), false);
+        this.sparse = Nullsafe.option(builder.getSparse(), false);
         this.consistency = builder.getConsistency();
-        this.max = Nullsafe.of(builder.getMax(), DEFAULT_MAX);
+        this.max = Nullsafe.option(builder.getMax(), DEFAULT_MAX);
         if (Reserved.isReserved(name)) {
             throw new ReservedNameException(name);
         }

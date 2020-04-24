@@ -27,5 +27,5 @@ public interface SchemaBinder {
 
     String name(WithType<?> type);
 
-    Schema.Builder schemaBuilder(WithType<?> type);
+    Schema.Builder<?> schemaBuilder(WithType<?> type);
 }

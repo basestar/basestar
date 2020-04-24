@@ -160,7 +160,7 @@ public class Mapper {
             }
 
             @Override
-            public Schema.Builder schemaBuilder(final WithType<?> type) {
+            public Schema.Builder<?> schemaBuilder(final WithType<?> type) {
 
                 final Schema.Builder<?> builder = baseBinder.schemaBuilder(type);
 

@@ -128,7 +128,7 @@ public class Property implements Member {
         this.required = builder.isRequired();
         this.immutable = builder.isImmutable();
         this.expression = builder.getExpression();
-        this.constraints = ImmutableSortedMap.copyOf(Nullsafe.of(builder.getConstraints()).entrySet().stream()
+        this.constraints = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getConstraints()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(e.getKey()))));
         this.visibility = builder.getVisibility();
     }

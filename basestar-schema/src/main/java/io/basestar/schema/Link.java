@@ -112,7 +112,7 @@ public class Link implements Member {
         this.name = name;
         this.description = builder.getDescription();
         this.schema = resolver.requireObjectSchema(builder.getSchema());
-        this.expression = Nullsafe.of(builder.getExpression());
+        this.expression = Nullsafe.require(builder.getExpression());
         this.sort = Nullsafe.immutableCopy(builder.getSort());
         this.visibility = builder.getVisibility();
         if(Reserved.isReserved(name)) {

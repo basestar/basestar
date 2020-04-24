@@ -24,15 +24,15 @@ import java.io.Serializable;
 
 public interface Transform<I, O> extends Serializable {
 
-    O apply(I input);
+    O accept(I input);
 
     default <O2> Transform<I, O2> then(final Transform<O, O2> next) {
 
-        return input -> next.apply(apply(input));
+        return input -> next.accept(accept(input));
     }
 
     default Sink<I> then(final Sink<O> next) {
 
-        return input -> next.accept(apply(input));
+        return input -> next.accept(accept(input));
     }
 }

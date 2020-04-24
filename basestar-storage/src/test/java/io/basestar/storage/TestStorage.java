@@ -121,7 +121,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public void testIndexes() throws IOException {
 
         final Storage storage = storage(namespace, loadAddresses());
@@ -451,7 +451,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public void testMultiValueIndex() {
 
         final Storage storage = storage(namespace);
@@ -483,7 +483,6 @@ public abstract class TestStorage {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void testNullBeforeUpdate() {
 
         final Storage storage = storage(namespace);
@@ -504,7 +503,6 @@ public abstract class TestStorage {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void testNullBeforeDelete() {
 
         final Storage storage = storage(namespace);

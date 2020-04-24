@@ -29,6 +29,7 @@ import com.github.dockerjava.api.model.PortBinding;
 import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientBuilder;
 import com.github.dockerjava.core.DockerClientConfig;
+import com.github.dockerjava.netty.NettyDockerCmdExecFactory;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import lombok.extern.slf4j.Slf4j;
@@ -65,7 +66,9 @@ public class TestContainers {
             if(CLIENT == null) {
                 final DockerClientConfig config = DefaultDockerClientConfig.createDefaultConfigBuilder()
                         .build();
-                CLIENT = DockerClientBuilder.getInstance(config).build();
+                CLIENT = DockerClientBuilder.getInstance(config)
+                        .withDockerCmdExecFactory(new NettyDockerCmdExecFactory())
+                        .build();
             }
             return CLIENT;
         }

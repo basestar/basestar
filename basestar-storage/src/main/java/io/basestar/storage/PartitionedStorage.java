@@ -51,7 +51,6 @@ public abstract class PartitionedStorage implements Storage {
     protected abstract CompletableFuture<PagedList<Map<String, Object>>> queryIndex(ObjectSchema schema, Index index, SatisfyResult satisfyResult, Map<Path, Range<Object>> query, List<Sort> sort, int count, PagingToken paging);
 
     @Override
-    @SuppressWarnings("unchecked")
     public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression expression, final List<Sort> sort) {
 
         final Expression bound = expression.bind(Context.init());
@@ -137,7 +136,7 @@ public abstract class PartitionedStorage implements Storage {
         for(final Sort s : index.getSort()) {
             final Path path = s.getPath();
             if(constants.containsKey(path)) {
-                partitionValues.add(constants.get(path));
+                sortValues.add(constants.get(path));
                 matched.add(path);
             } else {
                 break;
@@ -174,12 +173,12 @@ public abstract class PartitionedStorage implements Storage {
 
     public static byte[] binary(final List<?> keys, final byte[] suffix) {
 
-        final byte T_NULL = 0;
-        final byte T_FALSE = 1;
-        final byte T_TRUE = 2;
-        final byte T_INT = 3;
-        final byte T_STRING = 4;
-        final byte T_BYTES = 5;
+        final byte T_NULL = 1;
+        final byte T_FALSE = 2;
+        final byte T_TRUE = 3;
+        final byte T_INT = 4;
+        final byte T_STRING = 5;
+        final byte T_BYTES = 6;
 
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
@@ -196,8 +195,12 @@ public abstract class PartitionedStorage implements Storage {
                     baos.write(T_INT);
                     baos.write(bytes);
                 } else if(v instanceof String) {
+                    final String str = (String) v;
                     baos.write(T_STRING);
-                    baos.write(((String) v).getBytes(Charsets.UTF_8));
+                    if(str.contains("\0")) {
+                        throw new IllegalStateException("String used in index cannot contain NULL byte");
+                    }
+                    baos.write(str.getBytes(Charsets.UTF_8));
                 } else if(v instanceof byte[]) {
                     baos.write(T_BYTES);
                     baos.write(((byte[]) v));

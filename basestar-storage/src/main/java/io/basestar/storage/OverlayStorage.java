@@ -59,7 +59,7 @@ public class OverlayStorage implements Storage {
 
     private Map<String, Object> get(final String schema, final String id) {
 
-        return Nullsafe.of(data.get(schema)).get(id);
+        return Nullsafe.option(data.get(schema)).get(id);
     }
 
     private Map<String, Object> get(final Map<String, Object> instance) {
@@ -90,7 +90,7 @@ public class OverlayStorage implements Storage {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
 
         final List<Pager.Source<Map<String, Object>>> sources = new ArrayList<>();
@@ -100,7 +100,7 @@ public class OverlayStorage implements Storage {
         sources.add((count, token) -> {
             // Don't do any paging, just return all matches
             final List<Map<String, Object>> page = new ArrayList<>();
-            Nullsafe.of(data.get(schema.getName())).forEach((id, item) -> {
+            Nullsafe.option(data.get(schema.getName())).forEach((id, item) -> {
                 if(query.evaluatePredicate(Context.init(item))) {
                     page.add(item);
                 }

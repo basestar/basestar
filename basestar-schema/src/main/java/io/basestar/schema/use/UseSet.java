@@ -29,7 +29,6 @@ import java.io.DataInput;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -55,15 +54,7 @@ public class UseSet<T> implements UseCollection<T, Set<T>> {
 
     public static UseSet<?> from(final Object config) {
 
-        final Use<?> type;
-        if(config instanceof String) {
-            type = Use.fromConfig(config);
-        } else if(config instanceof Map) {
-            type = Use.fromConfig(((Map)config).get("type"));
-        } else {
-            throw new InvalidTypeException();
-        }
-        return new UseSet<>(type);
+        return Use.fromNestedConfig(config, (type, nestedConfig) -> new UseSet<>(type));
     }
 
     @Override

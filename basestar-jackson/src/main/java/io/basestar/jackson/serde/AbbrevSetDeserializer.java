@@ -68,6 +68,6 @@ public class AbbrevSetDeserializer<T> extends JsonDeserializer<Set<T>> implement
     public JsonDeserializer<?> createContextual(final DeserializationContext deserializationContext, final BeanProperty beanProperty) {
 
         final JavaType type = beanProperty.getType();
-        return new AbbrevSetDeserializer(type.containedType(0).getRawClass());
+        return new AbbrevSetDeserializer<>(type.containedType(0).getRawClass());
     }
 }

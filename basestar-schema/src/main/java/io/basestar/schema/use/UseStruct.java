@@ -109,7 +109,6 @@ public class UseStruct implements Use<Instance> {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public void serializeValue(final Instance value, final DataOutput out) throws IOException {
 
         schema.serialize(value, out);

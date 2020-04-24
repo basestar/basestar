@@ -51,12 +51,12 @@ public class HazelcastExpressionVisitor<K, V> implements ExpressionVisitor.Defau
         if (lhs instanceof PathConstant && rhs instanceof Constant) {
             return new EqualPredicate(
                     ((PathConstant) lhs).getPath().toString(),
-                    (Comparable)((Constant) rhs).getValue()
+                    (Comparable<?>)((Constant) rhs).getValue()
             );
         } else if (lhs instanceof Constant && rhs instanceof PathConstant) {
             return new EqualPredicate(
                     ((PathConstant) rhs).getPath().toString(),
-                    (Comparable)((Constant) lhs).getValue()
+                    (Comparable<?>)((Constant) lhs).getValue()
             );
         } else {
             return null;
@@ -72,12 +72,12 @@ public class HazelcastExpressionVisitor<K, V> implements ExpressionVisitor.Defau
         if (lhs instanceof PathConstant && rhs instanceof Constant) {
             return new NotEqualPredicate(
                     ((PathConstant) lhs).getPath().toString(),
-                    (Comparable)((Constant) rhs).getValue()
+                    (Comparable<?>)((Constant) rhs).getValue()
             );
         } else if (lhs instanceof Constant && rhs instanceof PathConstant) {
             return new NotEqualPredicate(
                     ((PathConstant) rhs).getPath().toString(),
-                    (Comparable)((Constant) lhs).getValue()
+                    (Comparable<?>)((Constant) lhs).getValue()
             );
         } else {
             return null;
@@ -114,13 +114,13 @@ public class HazelcastExpressionVisitor<K, V> implements ExpressionVisitor.Defau
         if (lhs instanceof PathConstant && rhs instanceof Constant) {
             return new GreaterLessPredicate(
                     ((PathConstant) lhs).getPath().toString(),
-                    (Comparable)((Constant) rhs).getValue(),
+                    (Comparable<?>)((Constant) rhs).getValue(),
                     equal, less
             );
         } else if (lhs instanceof Constant && rhs instanceof PathConstant) {
             return new GreaterLessPredicate(
                     ((PathConstant) rhs).getPath().toString(),
-                    (Comparable)((Constant) lhs).getValue(),
+                    (Comparable<?>)((Constant) lhs).getValue(),
                     !equal, !less
             );
         } else {

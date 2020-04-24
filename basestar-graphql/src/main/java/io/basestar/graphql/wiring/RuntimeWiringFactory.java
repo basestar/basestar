@@ -74,6 +74,7 @@ public class RuntimeWiringFactory {
         return builder.build();
     }
 
+    @SuppressWarnings("rawtypes")
     private Map<String, DataFetcher> queryFetchers() {
 
         final Map<String, DataFetcher> results = new HashMap<>();
@@ -145,6 +146,7 @@ public class RuntimeWiringFactory {
         };
     }
 
+    @SuppressWarnings("rawtypes")
     private Map<String, DataFetcher> mutationFetchers() {
 
         final Map<String, DataFetcher> results = new HashMap<>();

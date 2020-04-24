@@ -203,7 +203,7 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
     public Object apply(final Map<String, Object> data) {
 
         final Object target = data.get(first());
-        final AbstractPath tail = withoutFirst();
+        final AbstractPath<SELF> tail = withoutFirst();
         if(tail.isEmpty()) {
             return target;
         } else if(target instanceof Map) {

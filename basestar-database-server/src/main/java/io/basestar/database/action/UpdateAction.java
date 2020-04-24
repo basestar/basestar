@@ -79,7 +79,7 @@ public class UpdateAction implements Action {
         }
 
         final Map<String, Object> data = new HashMap<>();
-        final UpdateOptions.Mode mode = Nullsafe.of(options.getMode(), UpdateOptions.Mode.REPLACE);
+        final UpdateOptions.Mode mode = Nullsafe.option(options.getMode(), UpdateOptions.Mode.REPLACE);
         if(mode == UpdateOptions.Mode.MERGE) {
             data.putAll(before);
         } else if(mode != UpdateOptions.Mode.REPLACE) {
@@ -137,7 +137,7 @@ public class UpdateAction implements Action {
     public Set<Path> paths() {
 
         // FIXME: shouldn't have to bind here, need to fix multi-part path constants in parser
-        return Nullsafe.of(options.getExpressions()).values().stream()
+        return Nullsafe.option(options.getExpressions()).values().stream()
                 .flatMap(e -> e.bind(Context.init()).paths().stream())
                 .collect(Collectors.toSet());
     }

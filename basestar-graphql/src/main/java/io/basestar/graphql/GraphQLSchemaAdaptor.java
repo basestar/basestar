@@ -106,7 +106,7 @@ public class GraphQLSchemaAdaptor {
         return builder.build();
     }
 
-    public FieldDefinition readDefinition(final Schema schema) {
+    public FieldDefinition readDefinition(final Schema<?> schema) {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
         builder.name("read" + schema.getName());
@@ -118,7 +118,7 @@ public class GraphQLSchemaAdaptor {
         return builder.build();
     }
 
-    public FieldDefinition queryDefinition(final Schema schema) {
+    public FieldDefinition queryDefinition(final Schema<?> schema) {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
         builder.name("query" + schema.getName());
@@ -128,7 +128,7 @@ public class GraphQLSchemaAdaptor {
         return builder.build();
     }
 
-    public FieldDefinition queryLinkDefinition(final Schema schema, final Link link) {
+    public FieldDefinition queryLinkDefinition(final Schema<?> schema, final Link link) {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
         builder.name("query" + schema.getName() + GraphQLUtils.ucFirst(link.getName()));
@@ -152,7 +152,7 @@ public class GraphQLSchemaAdaptor {
         return builder.build();
     }
 
-    public FieldDefinition createDefinition(final Schema schema) {
+    public FieldDefinition createDefinition(final Schema<?> schema) {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
         builder.name("create" + schema.getName());
@@ -166,7 +166,7 @@ public class GraphQLSchemaAdaptor {
         return builder.build();
     }
 
-    public FieldDefinition updateDefinition(final Schema schema) {
+    public FieldDefinition updateDefinition(final Schema<?> schema) {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
         builder.name("update" + schema.getName());
@@ -182,7 +182,7 @@ public class GraphQLSchemaAdaptor {
         return builder.build();
     }
 
-    public FieldDefinition deleteDefinition(final Schema schema) {
+    public FieldDefinition deleteDefinition(final Schema<?> schema) {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
         builder.name("delete" + schema.getName());
@@ -205,7 +205,7 @@ public class GraphQLSchemaAdaptor {
     }
 
 
-    private SDLDefinition inputExpressionTypeDefinition(final InstanceSchema schema) {
+    private SDLDefinition<?> inputExpressionTypeDefinition(final InstanceSchema schema) {
 
         final InputObjectTypeDefinition.Builder builder = InputObjectTypeDefinition.newInputObjectDefinition();
         builder.name(INPUT_EXPR_PREFIX + schema.getName());
@@ -230,7 +230,7 @@ public class GraphQLSchemaAdaptor {
         return builder.build();
     }
 
-    public TypeDefinition typeDefinition(final Schema schema) {
+    public TypeDefinition<?> typeDefinition(final Schema<?> schema) {
 
         if (schema instanceof InstanceSchema) {
             return typeDefinition((InstanceSchema) schema);
@@ -241,7 +241,7 @@ public class GraphQLSchemaAdaptor {
         }
     }
 
-    public TypeDefinition typeDefinition(final InstanceSchema schema) {
+    public TypeDefinition<?> typeDefinition(final InstanceSchema schema) {
 
         if(schema.isConcrete()) {
             final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
@@ -261,6 +261,7 @@ public class GraphQLSchemaAdaptor {
         }
     }
 
+    @SuppressWarnings("rawtypes")
     private List<Type> implementz(final InstanceSchema schema) {
 
         final InstanceSchema parent = schema.getExtend();
@@ -280,21 +281,29 @@ public class GraphQLSchemaAdaptor {
         schema.metadataSchema()
                 .forEach((k, v) -> fields.add(metadataFieldDefinition(k, v)));
         schema.getAllProperties()
-                .forEach((k, v) -> fields.add(fieldDefinition(v)));
+                .forEach((k, v) -> {
+                    if(!v.isAlwaysHidden()) {
+                        fields.add(fieldDefinition(v));
+                    }
+                });
         if(schema instanceof Link.Resolver) {
             ((Link.Resolver) schema).getAllLinks()
-                    .forEach((k, v) -> fields.add(FieldDefinition.newFieldDefinition()
-                            .name(k)
-                            .type(new ListType(new TypeName(v.getSchema().getName())))
-                            .inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                                    .name("query").type(new TypeName(STRING_TYPE)).build())
-                            .build()));
+                    .forEach((k, v) -> {
+                        if(!v.isAlwaysHidden()) {
+                            fields.add(FieldDefinition.newFieldDefinition()
+                                    .name(k)
+                                    .type(new ListType(new TypeName(v.getSchema().getName())))
+                                    .inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                                            .name("query").type(new TypeName(STRING_TYPE)).build())
+                                    .build());
+                        }
+                    });
         }
         if(schema instanceof Transient.Resolver) {
             ((Transient.Resolver) schema).getDeclaredTransients()
                     .forEach((k, v) -> {
                         // Can only show typed transients
-                        if(v.getType() != null) {
+                        if(!v.isAlwaysHidden() && v.getType() != null) {
                             fields.add(FieldDefinition.newFieldDefinition()
                                     .name(k)
                                     .type(type(v.getType()))
@@ -372,7 +381,7 @@ public class GraphQLSchemaAdaptor {
         return builder.build();
     }
 
-    public Type type(final Use<?> type) {
+    public Type<?> type(final Use<?> type) {
 
         return type.visit(new Use.Visitor<Type<?>>() {
 
@@ -444,7 +453,7 @@ public class GraphQLSchemaAdaptor {
         });
     }
 
-    public Type inputType(final Use<?> type) {
+    public Type<?> inputType(final Use<?> type) {
 
         return type.visit(new Use.Visitor<Type<?>>() {
 

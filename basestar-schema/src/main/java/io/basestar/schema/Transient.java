@@ -114,7 +114,7 @@ public class Transient implements Member {
         this.name = name;
         this.type = builder.getType();
         this.description = builder.getDescription();
-        this.expression =  Nullsafe.of(builder.getExpression());
+        this.expression =  Nullsafe.require(builder.getExpression());
         this.visibility = builder.getVisibility();
         this.expand = Nullsafe.immutableSortedCopy(builder.getExpand());
         if(Reserved.isReserved(name)) {

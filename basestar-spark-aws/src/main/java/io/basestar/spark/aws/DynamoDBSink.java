@@ -22,7 +22,7 @@ package io.basestar.spark.aws;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import io.basestar.spark.Sink;
-import lombok.Data;
+import lombok.Builder;
 import org.apache.hadoop.dynamodb.DynamoDBItemWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
@@ -32,7 +32,7 @@ import scala.Tuple2;
 
 import java.util.Map;
 
-@Data
+@Builder(builderClassName = "Builder")
 public class DynamoDBSink implements Sink<RDD<Map<String, AttributeValue>>> {
 
     private final String tableName;
@@ -47,7 +47,7 @@ public class DynamoDBSink implements Sink<RDD<Map<String, AttributeValue>>> {
 
         jobConf.set("mapred.output.format.class", "org.apache.hadoop.dynamodb.write.DynamoDBOutputFormat");
 
-        input.toJavaRDD().<Text,  DynamoDBItemWritable>mapToPair(values -> {
+        input.toJavaRDD().mapToPair(values -> {
             final DynamoDBItemWritable item = new DynamoDBItemWritable();
             item.setItem(values);
             return Tuple2.apply(new Text(""), item);

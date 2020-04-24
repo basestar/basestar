@@ -1,444 +1,69 @@
 package io.basestar.spark;
 
-/*-
- * #%L
- * basestar-spark
- * %%
- * Copyright (C) 2019 - 2020 Basestar.IO
- * %%
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * 
- *      http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * #L%
- */
+import com.google.common.collect.Sets;
+import org.apache.spark.sql.catalyst.catalog.CatalogStorageFormat;
+import org.apache.spark.sql.catalyst.catalog.CatalogTablePartition;
+import org.apache.spark.sql.catalyst.catalog.ExternalCatalog;
+import scala.Option;
 
-import io.basestar.schema.*;
-import io.basestar.schema.use.*;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
-import org.apache.spark.sql.types.*;
-import scala.Function1;
-import scala.collection.JavaConverters;
-import scala.collection.Seq;
-import scala.runtime.AbstractFunction1;
-
+import java.net.URI;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Stream;
+import java.util.stream.Collectors;
 
 public class SparkUtils {
 
-    public static StructType structType(final InstanceSchema schema) {
+    public static CatalogStorageFormat storageFormat(final Format format, final URI location) {
 
-        final List<StructField> fields = new ArrayList<>();
-        schema.getAllProperties()
-                .forEach((name, property) -> fields.add(field(name, property)));
-        schema.metadataSchema()
-                .forEach((name, type) -> fields.add(field(name, type, true)));
-        fields.sort(Comparator.comparing(StructField::name));
-        return DataTypes.createStructType(fields);
+        return CatalogStorageFormat.apply(
+                Option.apply(location),
+                Option.apply(format.getHadoopInputFormat()),
+                Option.apply(format.getHadoopOutputFormat()),
+                Option.apply(format.getHadoopSerde()),
+                true,
+                ScalaUtils.scalaEmptyMap()
+        );
     }
 
-    public static StructType refType() {
+    public static CatalogTablePartition partition(final Map<String, String> spec, final Format format, final URI location) {
 
-        final List<StructField> fields = new ArrayList<>();
-        ObjectSchema.REF_SCHEMA
-                .forEach((name, type) -> fields.add(field(name, type, true)));
-        fields.sort(Comparator.comparing(StructField::name));
-        return DataTypes.createStructType(fields);
+        final long now = LocalDateTime.now().toEpochSecond(ZoneOffset.UTC);
+        return CatalogTablePartition.apply(ScalaUtils.asScalaMap(spec), storageFormat(format, location), ScalaUtils.scalaEmptyMap(), now, now, Option.empty());
     }
 
-    public static StructField field(final String name, final Property property) {
+    public static void syncTablePartitions(final ExternalCatalog catalog, final String databaseName, final String tableName, final List<CatalogTablePartition> partitions) {
 
-        return field(name, property.getType(), property.isRequired());
-    }
+        final Map<scala.collection.immutable.Map<String, String>, CatalogTablePartition> target = ScalaUtils.asJavaStream(catalog.listPartitions(databaseName, tableName, Option.empty()))
+                .collect(Collectors.toMap(CatalogTablePartition::spec, v -> v));
 
-    public static StructField field(final String name, final Use<?> type, final boolean required) {
+        final Map<scala.collection.immutable.Map<String, String>, CatalogTablePartition> source = partitions.stream()
+                .collect(Collectors.toMap(CatalogTablePartition::spec, v -> v));
 
-        return field(name, type(type), required);
-    }
+        final List<CatalogTablePartition> create = new ArrayList<>();
+        final List<CatalogTablePartition> alter = new ArrayList<>();
+        final Set<scala.collection.immutable.Map<String, String>> drop = new HashSet<>();
 
-    public static StructField field(final String name, final DataType type, final boolean required) {
-
-        return StructField.apply(name, type, !required, Metadata.empty());
-    }
-
-    public static DataType type(final Schema<?> schema) {
-
-        if (schema instanceof ObjectSchema) {
-            return structType((ObjectSchema) schema);
-        } else if(schema instanceof StructSchema) {
-            return structType((StructSchema) schema);
-        } else if (schema instanceof EnumSchema) {
-            return DataTypes.StringType;
-        } else {
-            throw new IllegalStateException();
+        for(final scala.collection.immutable.Map<String, String> spec : Sets.union(target.keySet(), source.keySet())) {
+            final CatalogTablePartition before = target.get(spec);
+            final CatalogTablePartition after = source.get(spec);
+            if(after == null) {
+                drop.add(spec);
+            } else if(before == null) {
+                create.add(after);
+            } else {
+                alter.add(after);
+            }
         }
-    }
 
-    public static DataType type(final Use<?> type) {
-
-        return type.visit(new Use.Visitor<DataType>() {
-
-            @Override
-            public DataType visitBoolean(final UseBoolean type) {
-
-                return DataTypes.BooleanType;
-            }
-
-            @Override
-            public DataType visitInteger(final UseInteger type) {
-
-                return DataTypes.LongType;
-            }
-
-            @Override
-            public DataType visitNumber(final UseNumber type) {
-
-                return DataTypes.DoubleType;
-            }
-
-            @Override
-            public DataType visitString(final UseString type) {
-
-                return DataTypes.StringType;
-            }
-
-            @Override
-            public DataType visitEnum(final UseEnum type) {
-
-                return DataTypes.StringType;
-            }
-
-            @Override
-            public DataType visitRef(final UseRef type) {
-
-                return refType();
-            }
-
-            @Override
-            public <T> DataType visitArray(final UseArray<T> type) {
-
-                return DataTypes.createArrayType(type.getType().visit(this));
-            }
-
-            @Override
-            public <T> DataType visitSet(final UseSet<T> type) {
-
-                return DataTypes.createArrayType(type.getType().visit(this));
-            }
-
-            @Override
-            public <T> DataType visitMap(final UseMap<T> type) {
-
-                return DataTypes.createMapType(DataTypes.StringType, type.getType().visit(this));
-            }
-
-            @Override
-            public DataType visitStruct(final UseStruct type) {
-
-                return structType(type.getSchema());
-            }
-
-            @Override
-            public DataType visitBinary(final UseBinary type) {
-
-                return DataTypes.BinaryType;
-            }
-        });
-    }
-
-    public static Map<String, Object> fromSpark(final InstanceSchema schema, final Row row) {
-
-        final Map<String, Object> object = new HashMap<>();
-        for (final Map.Entry<String, Property> entry : schema.getAllProperties().entrySet()) {
-            final String name = entry.getKey();
-            final Property property = entry.getValue();
-            final Object value = row.getAs(name);
-            object.put(name, fromSpark(property.getType(), value));
+        if(!create.isEmpty()) {
+            catalog.createPartitions(databaseName, tableName, ScalaUtils.asScalaSeq(create), false);
         }
-        ObjectSchema.METADATA_SCHEMA
-                .forEach((name, type) -> object.put(name, fromSpark(type, row.getAs(name))));
-        return schema.create(object);
-    }
-
-    public static Map<String, Object> refFromSpark(final Row row) {
-
-        final Map<String, Object> object = new HashMap<>();
-        ObjectSchema.REF_SCHEMA
-                .forEach((name, type) -> object.put(name, fromSpark(type, row.getAs(name))));
-        return object;
-    }
-
-    public static <T, R> Function1<T, R> f1(final Function<T, R> fn) {
-
-        return new AbstractFunction1<T, R>() {
-            @Override
-            public R apply(final T v1) {
-
-                return fn.apply(v1);
-            }
-        };
-    }
-
-    public static Object fromSpark(final Use<?> type, final Object value) {
-
-        if(value == null) {
-            return null;
+        if(!alter.isEmpty()) {
+            catalog.alterPartitions(databaseName, tableName, ScalaUtils.asScalaSeq(alter));
         }
-        return type.visit(new Use.Visitor<Object>() {
-
-            @Override
-            public Object visitBoolean(final UseBoolean type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public Object visitInteger(final UseInteger type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public Object visitNumber(final UseNumber type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public Object visitString(final UseString type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public Object visitEnum(final UseEnum type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public Object visitRef(final UseRef type) {
-
-                if(value instanceof Row) {
-                    return refFromSpark((Row)value);
-                } else {
-                    throw new IllegalStateException();
-                }
-            }
-
-            @Override
-            @SuppressWarnings("unchecked")
-            public <T> Object visitArray(final UseArray<T> type) {
-
-                if(value instanceof Seq<?>) {
-                    final List<T> result = new ArrayList<>();
-                    ((Seq<?>)value).foreach(f1(v -> {
-                        result.add((T)fromSpark(type.getType(), v));
-                        return null;
-                    }));
-                    return result;
-                } else {
-                    throw new IllegalStateException();
-                }
-            }
-
-            @Override
-            @SuppressWarnings("unchecked")
-            public <T> Object visitSet(final UseSet<T> type) {
-
-                if(value instanceof Seq<?>) {
-                    final Set<T> result = new HashSet<>();
-                    ((Seq<?>)value).foreach(f1(v -> {
-                        result.add((T)fromSpark(type.getType(), v));
-                        return null;
-                    }));
-                    return result;
-                } else {
-                    throw new IllegalStateException();
-                }
-            }
-
-            @Override
-            @SuppressWarnings("unchecked")
-            public <T> Object visitMap(final UseMap<T> type) {
-
-                if(value instanceof scala.collection.Map<?, ?>) {
-                    final Map<String, T> result = new HashMap<>();
-                    ((scala.collection.Map<?, ?>)value).foreach(f1(e -> {
-                        final String k = (String)e._1();
-                        final Object v = e._2();
-                        result.put(k, (T)fromSpark(type.getType(), v));
-                        return null;
-                    }));
-                    return result;
-                } else {
-                    throw new IllegalStateException();
-                }
-            }
-
-            @Override
-            public Object visitStruct(final UseStruct type) {
-
-                if(value instanceof Row) {
-                    return fromSpark(type.getSchema(), (Row)value);
-                } else {
-                    throw new IllegalStateException();
-                }
-            }
-
-            @Override
-            public Object visitBinary(final UseBinary type) {
-
-                return type.create(value);
-            }
-        });
-    }
-
-    // FIXME::
-    public static Row toSpark(final InstanceSchema schema, final StructType structType, final Map<String, Object> object) {
-
-        final StructField[] fields = structType.fields();
-        final Object[] values = new Object[fields.length];
-        schema.metadataSchema().forEach((name, type) -> {
-            final int i = structType.fieldIndex(name);
-            values[i] = toSpark(type, fields[i].dataType(), object.get(name));
-        });
-        schema.getAllProperties().forEach((name, property) -> {
-            final int i = structType.fieldIndex(name);
-            values[i] = toSpark(property.getType(), fields[i].dataType(), object.get(name));
-        });
-        return new GenericRowWithSchema(values, structType);
-    }
-
-    // FIXME::
-    public static Row refToSpark(final StructType structType, final Map<String, Object> object) {
-
-        final StructField[] fields = structType.fields();
-        final Object[] values = new Object[fields.length];
-        ObjectSchema.REF_SCHEMA.forEach((name, type) -> {
-            final int i = structType.fieldIndex(name);
-            values[i] = toSpark(type, fields[i].dataType(), object.get(name));
-        });
-        return new GenericRowWithSchema(values, structType);
-    }
-
-    public static Object toSpark(final Use<?> type, final DataType dataType, final Object value) {
-
-        if(value == null) {
-            return null;
+        if(!drop.isEmpty()) {
+            catalog.dropPartitions(databaseName, tableName, ScalaUtils.asScalaSeq(drop), false, true, false);
         }
-        return type.visit(new Use.Visitor<Object>() {
-
-            @Override
-            public Object visitBoolean(final UseBoolean type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public Object visitInteger(final UseInteger type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public Object visitNumber(final UseNumber type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public Object visitString(final UseString type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public Object visitEnum(final UseEnum type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            @SuppressWarnings("unchecked")
-            public Object visitRef(final UseRef type) {
-
-                if(value instanceof Map<?, ?> && dataType instanceof StructType) {
-                    return refToSpark((StructType)dataType, (Map<String, Object>) value);
-                } else {
-                    throw new IllegalStateException();
-                }
-            }
-
-            @Override
-            @SuppressWarnings("unchecked")
-            public <T> Object visitArray(final UseArray<T> type) {
-
-                if(value instanceof Collection<?> && dataType instanceof ArrayType) {
-                    final DataType valueDataType = ((ArrayType) dataType).elementType();
-                    final Stream<Object> stream = ((Collection<T>)value).stream()
-                        .map(v -> toSpark(type.getType(), valueDataType, v));
-                    return JavaConverters.asScalaIteratorConverter(stream.iterator()).asScala().toSeq();
-                } else {
-                    throw new IllegalStateException();
-                }
-            }
-
-            @Override
-            @SuppressWarnings("unchecked")
-            public <T> Object visitSet(final UseSet<T> type) {
-
-                if(value instanceof Collection<?> && dataType instanceof ArrayType) {
-                    final DataType valueDataType = ((ArrayType) dataType).elementType();
-                    final Stream<Object> stream = ((Collection<T>)value).stream()
-                            .map(v -> toSpark(type.getType(), valueDataType, v));
-                    return JavaConverters.asScalaIteratorConverter(stream.iterator()).asScala().toSeq();
-                } else {
-                    throw new IllegalStateException();
-                }
-            }
-
-            @Override
-            @SuppressWarnings("unchecked")
-            public <T> Object visitMap(final UseMap<T> type) {
-
-                if(value instanceof Map<?, ?> && dataType instanceof MapType) {
-                    final DataType valueDataType = ((MapType) dataType).valueType();
-                    final Map<String, Object> tmp = new HashMap<>();
-                    ((Map<String, T>)value)
-                            .forEach((k, v) -> tmp.put(k, toSpark(type.getType(), valueDataType, v)));
-                    return JavaConverters.mapAsScalaMapConverter(tmp).asScala();
-                } else {
-                    throw new IllegalStateException();
-                }
-            }
-
-            @Override
-            @SuppressWarnings("unchecked")
-            public Object visitStruct(final UseStruct type) {
-
-                if(value instanceof Map<?, ?> && dataType instanceof StructType) {
-                    return toSpark(type.getSchema(), (StructType)dataType, (Map<String, Object>)value);
-                } else {
-                    throw new IllegalStateException();
-                }
-            }
-
-            @Override
-            public Object visitBinary(final UseBinary type) {
-
-                return type.create(value);
-            }
-        });
     }
 }

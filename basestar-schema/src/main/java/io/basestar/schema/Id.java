@@ -36,6 +36,7 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 
+import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -54,7 +55,7 @@ import java.util.stream.Collectors;
  */
 
 @Getter
-public class Id {
+public class Id implements Serializable {
 
     private static final String VAR_VALUE = "value";
 
@@ -82,15 +83,15 @@ public class Id {
         }
     }
 
-    public static Property.Builder builder() {
+    public static Builder builder() {
 
-        return new Property.Builder();
+        return new Builder();
     }
 
-    public Id(final Id.Builder builder) {
+    public Id(final Builder builder) {
 
         this.expression = builder.getExpression();
-        this.constraints = ImmutableSortedMap.copyOf(Nullsafe.of(builder.getConstraints()).entrySet().stream()
+        this.constraints = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getConstraints()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(e.getKey()))));
     }
 

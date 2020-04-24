@@ -21,10 +21,12 @@ package io.basestar.schema;
  */
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 import com.google.common.collect.ImmutableSortedMap;
 import io.basestar.jackson.BasestarFactory;
 import io.basestar.jackson.BasestarModule;
@@ -61,7 +63,10 @@ import java.util.SortedMap;
 @EqualsAndHashCode
 public class Namespace implements Serializable, Schema.Resolver {
 
-   private static final ObjectMapper objectMapper = new ObjectMapper(new BasestarFactory(new YAMLFactory()))
+   private static final ObjectMapper objectMapper = new ObjectMapper(new BasestarFactory(new YAMLFactory()
+           .configure(YAMLGenerator.Feature.USE_NATIVE_TYPE_ID, false)
+           .configure(YAMLGenerator.Feature.WRITE_DOC_START_MARKER, false)
+           .configure(YAMLGenerator.Feature.SPLIT_LINES, false)))
            .registerModule(new BasestarModule())
            .configure(JsonParser.Feature.ALLOW_COMMENTS, true);
 
@@ -78,6 +83,12 @@ public class Namespace implements Serializable, Schema.Resolver {
 
             schemas = Nullsafe.immutableCopyPut(schemas, name, schema);
             return this;
+        }
+
+        @JsonValue
+        public Map<String, Schema.Builder<?>> getSchemas() {
+
+            return schemas;
         }
 
         public Namespace build() {
@@ -109,7 +120,7 @@ public class Namespace implements Serializable, Schema.Resolver {
             return out.get(name);
         } else {
             final int slot = builders.headMap(name).size();
-            return builder.build(new Schema.Resolver.Cyclic() {
+            return builder.build(new Schema.Resolver() {
                @Override
                public void constructing(final Schema<?> schema) {
 
@@ -121,7 +132,7 @@ public class Namespace implements Serializable, Schema.Resolver {
                @Override
                public Schema<?> getSchema(final String name) {
 
-                   final Schema.Builder builder = builders.get(name);
+                   final Schema.Builder<?> builder = builders.get(name);
                    if(builder == null) {
                        return null;
                    } else {
@@ -149,8 +160,19 @@ public class Namespace implements Serializable, Schema.Resolver {
 
         final Map<String, Schema.Builder<?>> builders = new HashMap<>();
         for(final URL url : urls) {
-            final Map<String, Schema.Builder<?>> schemas = objectMapper.readValue(url, new TypeReference<Map<String, Schema.Builder>>(){});
-//            assert !builders.c
+            final Map<String, Schema.Builder<?>> schemas = objectMapper.readValue(url, new TypeReference<Map<String, Schema.Builder<?>>>(){});
+            builders.putAll(schemas);
+        }
+        return new Builder()
+                .setSchemas(builders)
+                .build();
+    }
+
+    public static Namespace load(final InputStream... iss) throws IOException {
+
+        final Map<String, Schema.Builder<?>> builders = new HashMap<>();
+        for(final InputStream is : iss) {
+            final Map<String, Schema.Builder<?>> schemas = objectMapper.readValue(is, new TypeReference<Map<String, Schema.Builder<?>>>(){});
             builders.putAll(schemas);
         }
         return new Builder()

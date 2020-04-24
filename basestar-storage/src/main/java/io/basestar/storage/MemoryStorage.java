@@ -91,17 +91,23 @@ public class MemoryStorage extends PartitionedStorage {
         return CompletableFuture.supplyAsync(() -> {
             synchronized (lock) {
 
-                final byte[] keys = binary(satisfy.getPartition());
+                final byte[] partBinary = binary(satisfy.getPartition());
+                final IndexPartition partKey = new IndexPartition(schema.getName(), index.getName(), partBinary);
 
-                final IndexPartition partKey = new IndexPartition(schema.getName(), index.getName(), keys);
-
-                final Map<IndexSort, Map<String, Object>> partition = state.index.get(partKey);
+                final NavigableMap<IndexSort, Map<String, Object>> partition = state.index.get(partKey);
 
                 final List<Map<String, Object>> results;
                 if(partition == null) {
                     results = Collections.emptyList();
                 } else {
-                    results = Lists.newArrayList(partition.values());
+                    if(!satisfy.getSort().isEmpty()) {
+                        final byte[] sortLo = binary(satisfy.getSort());
+                        final byte[] sortHi = binary(satisfy.getSort(), new byte[]{0});
+                        results = Lists.newArrayList(partition.tailMap(new IndexSort(sortLo, null), true)
+                                .headMap(new IndexSort(sortHi, null)).values());
+                    } else {
+                        results = Lists.newArrayList(partition.values());
+                    }
                 }
 
                 return new PagedList<>(results, null);
@@ -385,7 +391,6 @@ public class MemoryStorage extends PartitionedStorage {
         private final String id;
 
         @Override
-        @SuppressWarnings("unchecked")
         public int compareTo(@Nonnull final IndexSort other) {
 
             // Sort must be compatible
@@ -403,13 +408,16 @@ public class MemoryStorage extends PartitionedStorage {
                     return compare;
                 }
             }
-            if(id == null) {
-                // Should not be possible, id is only null for a unique index
-                assert(other.id == null);
-                return 0;
-            } else {
-                return id.compareTo(other.id);
-            }
+            return Comparator.<String>nullsFirst(Comparator.naturalOrder()).compare(id, other.id);
+//            if(id == null && other.id == null) {
+//                return 0;
+//            } else if(id == null && other.id != null) {
+//                return -1;
+//            } else if(other.id == null) {
+//                return 1;
+//            } else {
+//                return id.compareTo(other.id);
+//            }
         }
     }
 
@@ -419,7 +427,7 @@ public class MemoryStorage extends PartitionedStorage {
 
         private final Map<TypeIdVersion, Map<String, Object>> history = new HashMap<>();
 
-        private final Map<IndexPartition, Map<IndexSort, Map<String, Object>>> index = new HashMap<>();
+        private final Map<IndexPartition, NavigableMap<IndexSort, Map<String, Object>>> index = new HashMap<>();
 
         public State copy() {
 

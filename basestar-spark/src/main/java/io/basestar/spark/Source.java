@@ -24,5 +24,15 @@ import java.io.Serializable;
 
 public interface Source<I> extends Serializable {
 
-    void sink(Sink<I> sink);
+    void then(Sink<I> sink);
+
+    default <O> Source<O> then(final Transform<I, O> next) {
+
+        return sink -> then(next.then(sink));
+    }
+
+    static <I> Source<I> of(final I init) {
+
+        return sink -> sink.accept(init);
+    }
 }

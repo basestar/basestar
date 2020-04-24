@@ -41,6 +41,7 @@
         <dependency>
             <groupId>io.basestar</groupId>
             <artifactId>basestar-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

@@ -76,7 +76,7 @@ public abstract class CollectionMethods<T extends Collection<?>> {
         return collect(target.stream().map(fn::call)
                 .map(vs -> {
                     if(vs instanceof Collection<?>) {
-                        return ((Collection) vs).stream();
+                        return ((Collection<?>) vs).stream();
                     } else {
                         throw new IllegalStateException();
                     }

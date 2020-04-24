@@ -90,13 +90,13 @@ public interface HazelcastRouting {
         @Override
         public String objectMapName(final ObjectSchema schema) {
 
-            return Nullsafe.of(objectPrefix) + schema.getName() + Nullsafe.of(objectSuffix);
+            return Nullsafe.option(objectPrefix) + schema.getName() + Nullsafe.option(objectSuffix);
         }
 
         @Override
         public String historyMapName(final ObjectSchema schema) {
 
-            return Nullsafe.of(historyPrefix) + schema.getName() + Nullsafe.of(historySuffix);
+            return Nullsafe.option(historyPrefix) + schema.getName() + Nullsafe.option(historySuffix);
         }
 
     }

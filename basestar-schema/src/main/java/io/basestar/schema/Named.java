@@ -26,9 +26,8 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
 
 import java.io.IOException;
-import java.io.Serializable;
 
-public interface Named extends Serializable {
+public interface Named {
 
     String getName();
 

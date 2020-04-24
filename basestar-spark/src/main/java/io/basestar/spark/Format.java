@@ -20,7 +20,47 @@ package io.basestar.spark;
  * #L%
  */
 
-public interface Format {
+import java.util.Arrays;
 
-    String PARQUET = "parquet";
+public enum Format {
+
+    PARQUET {
+
+        @Override
+        public String getHadoopInputFormat() {
+
+            return "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat";
+        }
+
+        @Override
+        public String getHadoopOutputFormat() {
+
+            return "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat";
+        }
+
+        @Override
+        public String getHadoopSerde() {
+
+            return "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe";
+        }
+    };
+
+    public static final Format DEFAULT = PARQUET;
+
+    public static Format forHadoopSerde(final String serde) {
+
+        return Arrays.stream(values()).filter(v -> serde.equals(v.getHadoopSerde()))
+                .findFirst().orElseThrow(IllegalStateException::new);
+    }
+
+    public String getSparkFormat() {
+
+        return name().toLowerCase();
+    }
+
+    public abstract String getHadoopInputFormat();
+
+    public abstract String getHadoopOutputFormat();
+
+    public abstract String getHadoopSerde();
 }

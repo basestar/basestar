@@ -53,6 +53,11 @@
             <artifactId>basestar-connector-undertow</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.basestar</groupId>
+            <artifactId>basestar-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
 </project>

@@ -26,10 +26,11 @@ import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.use.Use;
 import io.basestar.util.Path;
 
+import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
 
-public interface Member extends Named, Described {
+public interface Member extends Named, Described, Serializable {
 
     String VAR_VALUE = "value";
 
@@ -62,6 +63,18 @@ public interface Member extends Named, Described {
     Object applyVisibility(Context context, Object value);
 
     Object evaluateTransients(Context context, Object value, Set<Path> expand);
+
+    default boolean isAlwaysVisible() {
+
+        final Visibility visibility = getVisibility();
+        return visibility == null || visibility.isAlwaysVisible();
+    }
+
+    default boolean isAlwaysHidden() {
+
+        final Visibility visibility = getVisibility();
+        return visibility != null && visibility.isAlwaysHidden();
+    }
 
 //    Object evaluateTransients(Context context, Object value, Set<Path> expand);
 

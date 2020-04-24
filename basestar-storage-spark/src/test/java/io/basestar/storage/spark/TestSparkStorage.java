@@ -23,7 +23,7 @@ package io.basestar.storage.spark;
 import com.google.common.collect.Multimap;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.spark.SparkUtils;
+import io.basestar.spark.SparkSchemaUtils;
 import io.basestar.storage.Storage;
 import io.basestar.storage.TestStorage;
 import io.basestar.util.Nullsafe;
@@ -53,10 +53,10 @@ public class TestSparkStorage extends TestStorage {
             @Override
             public Dataset<Row> objectRead(final SparkSession session, final ObjectSchema schema) {
 
-                final StructType structType = SparkUtils.structType(schema);
-                final List<Row> items = Nullsafe.of(data.get(schema.getName())).stream()
+                final StructType structType = SparkSchemaUtils.structType(schema);
+                final List<Row> items = Nullsafe.option(data.get(schema.getName())).stream()
                         .map(schema::create)
-                        .map(v -> SparkUtils.toSpark(schema, structType, v))
+                        .map(v -> SparkSchemaUtils.toSpark(schema, structType, v))
                         .collect(Collectors.toList());
 
                 return session.sqlContext()

@@ -49,13 +49,13 @@ public class GraphQLUtils {
                 .collect(Collectors.toSet());
     }
 
-    public static Set<Path> paths(final InstanceSchema schema, final Selection selection) {
+    public static Set<Path> paths(final InstanceSchema schema, final Selection<?> selection) {
 
         if(selection instanceof Field) {
             final Field field = (Field)selection;
             final String name = field.getName();
 
-            if(schema.metadataSchema().keySet().contains(name)) {
+            if(schema.metadataSchema().containsKey(name)) {
                 return Collections.singleton(Path.of(name));
             }
 
@@ -122,7 +122,6 @@ public class GraphQLUtils {
             }
 
             @Override
-            @SuppressWarnings("unchecked")
             public Set<Path> visitRef(final UseRef type) {
 
                 return paths(type.getSchema(), selections).stream()
@@ -130,25 +129,22 @@ public class GraphQLUtils {
             }
 
             @Override
-            @SuppressWarnings("unchecked")
             public <T> Set<Path> visitArray(final UseArray<T> type) {
 
                 return paths(type.getType(), parent, selections);
             }
 
             @Override
-            @SuppressWarnings("unchecked")
             public <T> Set<Path> visitSet(final UseSet<T> type) {
 
                 return paths(type.getType(), parent, selections);
             }
 
             @Override
-            @SuppressWarnings("unchecked")
             public <T> Set<Path> visitMap(final UseMap<T> type) {
 
                 final Set<Path> paths = new HashSet<>();
-                for(final Selection selection : selections.getSelections()) {
+                for(final Selection<?> selection : selections.getSelections()) {
                     final Field field = (Field)selection;
                     final String name = field.getName();
                     if(MAP_KEY.equals(name)) {
@@ -161,7 +157,6 @@ public class GraphQLUtils {
             }
 
             @Override
-            @SuppressWarnings("unchecked")
             public Set<Path> visitStruct(final UseStruct type) {
 
                 return paths(type.getSchema(), selections).stream()
@@ -176,7 +171,6 @@ public class GraphQLUtils {
         });
     }
 
-    @SuppressWarnings("unchecked")
     public static Map<String, Object> fromRequest(final InstanceSchema schema, final Map<String, Object> input) {
 
         if(input == null) {
@@ -225,14 +219,12 @@ public class GraphQLUtils {
                 }
 
                 @Override
-                @SuppressWarnings("unchecked")
                 public Object visitRef(final UseRef type) {
 
                     return type.create(value);
                 }
 
                 @Override
-                @SuppressWarnings("unchecked")
                 public <T> Object visitArray(final UseArray<T> type) {
 
                     return ((Collection<?>)value).stream()
@@ -241,7 +233,6 @@ public class GraphQLUtils {
                 }
 
                 @Override
-                @SuppressWarnings("unchecked")
                 public <T> Object visitSet(final UseSet<T> type) {
 
                     return ((Collection<?>)value).stream()
@@ -344,7 +335,6 @@ public class GraphQLUtils {
                 }
 
                 @Override
-                @SuppressWarnings("unchecked")
                 public <T> Object visitArray(final UseArray<T> type) {
 
                     return ((Collection<?>)value).stream()
@@ -353,7 +343,6 @@ public class GraphQLUtils {
                 }
 
                 @Override
-                @SuppressWarnings("unchecked")
                 public <T> Object visitSet(final UseSet<T> type) {
 
                     return ((Collection<?>)value).stream()
@@ -403,7 +392,7 @@ public class GraphQLUtils {
     }
 
     @SuppressWarnings("unchecked")
-    public static <T> T fromInput(final ExecutionContext context, final Use<T> type, final Value value) {
+    public static <T> T fromInput(final ExecutionContext context, final Use<T> type, final Value<?> value) {
 
         if(value == null) {
             return null;
@@ -481,7 +470,6 @@ public class GraphQLUtils {
                 }
 
                 @Override
-                @SuppressWarnings("unchecked")
                 public <T2> Object visitArray(final UseArray<T2> type) {
 
                     if(value instanceof ArrayValue) {
@@ -494,7 +482,6 @@ public class GraphQLUtils {
                 }
 
                 @Override
-                @SuppressWarnings("unchecked")
                 public <T2> Object visitSet(final UseSet<T2> type) {
 
                     if(value instanceof ArrayValue) {
@@ -507,14 +494,13 @@ public class GraphQLUtils {
                 }
 
                 @Override
-                @SuppressWarnings("unchecked")
                 public <T2> Object visitMap(final UseMap<T2> type) {
 
                     if(value instanceof ArrayValue) {
                         final Map<String, Object> result = new HashMap<>();
                         ((ArrayValue)value).getValues().forEach(v -> {
                             final ObjectValue entry = (ObjectValue)v;
-                            final Value keyValue = get(entry, GraphQLUtils.MAP_KEY);
+                            final Value<?> keyValue = get(entry, GraphQLUtils.MAP_KEY);
                             final String key = ((StringValue)keyValue).getValue();
                             final Object value = fromInput(context, type.getType(), get(entry, GraphQLUtils.MAP_VALUE));
                             result.put(key, value);
@@ -526,7 +512,6 @@ public class GraphQLUtils {
                 }
 
                 @Override
-                @SuppressWarnings("unchecked")
                 public Object visitStruct(final UseStruct type) {
 
                     if(value instanceof ObjectValue) {
@@ -610,7 +595,6 @@ public class GraphQLUtils {
                 }
 
                 @Override
-                @SuppressWarnings("unchecked")
                 public <T2> Object visitArray(final UseArray<T2> type) {
 
                     if(value instanceof Collection) {
@@ -623,7 +607,6 @@ public class GraphQLUtils {
                 }
 
                 @Override
-                @SuppressWarnings("unchecked")
                 public <T2> Object visitSet(final UseSet<T2> type) {
 
                     if(value instanceof Collection) {
@@ -753,7 +736,6 @@ public class GraphQLUtils {
                 }
 
                 @Override
-                @SuppressWarnings("unchecked")
                 public <T> Object visitArray(final UseArray<T> type) {
 
                     return ((Collection<?>)value).stream()
@@ -762,7 +744,6 @@ public class GraphQLUtils {
                 }
 
                 @Override
-                @SuppressWarnings("unchecked")
                 public <T> Object visitSet(final UseSet<T> type) {
 
                     return ((Collection<?>)value).stream()
@@ -822,7 +803,7 @@ public class GraphQLUtils {
         } else {
             final Map<String, Expression> result = new HashMap<>();
             schema.getAllProperties().forEach((k, prop) -> {
-                final Value value = get(object, k);
+                final Value<?> value = get(object, k);
                 if(value instanceof VariableReference) {
                     final String var = ((VariableReference) value).getName();
                     final String str = (String)context.getVariables().get(var);
@@ -837,7 +818,7 @@ public class GraphQLUtils {
         }
     }
 
-    public static Value argValue(final Field field, final String name) {
+    public static Value<?> argValue(final Field field, final String name) {
 
         final Argument arg = arg(field, name);
         return arg == null ? null : arg.getValue();
@@ -849,7 +830,7 @@ public class GraphQLUtils {
                 .findFirst().orElse(null);
     }
 
-    public static Value get(final ObjectValue input, final String name) {
+    public static Value<?> get(final ObjectValue input, final String name) {
 
         return input.getObjectFields().stream()
                 .filter(v -> v.getName().equals(name))
@@ -859,7 +840,7 @@ public class GraphQLUtils {
 
     private static SelectionSet select(final SelectionSet selections, final String k) {
 
-        for(final Selection v : selections.getSelections()) {
+        for(final Selection<?> v : selections.getSelections()) {
             if(v instanceof Field && ((Field) v).getName().equals(k)) {
                 return ((Field) v).getSelectionSet();
             }

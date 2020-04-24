@@ -36,7 +36,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
     interface Builder extends Schema.Builder<Instance> {
 
         @Override
-        InstanceSchema build(Resolver.Cyclic resolver, String name, int slot);
+        InstanceSchema build(Resolver resolver, String name, int slot);
     }
 
     SortedMap<String, Use<?>> metadataSchema();

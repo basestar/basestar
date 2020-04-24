@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -61,15 +60,7 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
 
     public static UseArray<?> from(final Object config) {
 
-        final Use<?> type;
-        if(config instanceof String) {
-            type = Use.fromConfig(config);
-        } else if(config instanceof Map) {
-            type = Use.fromConfig(((Map)config).get("type"));
-        } else {
-            throw new InvalidTypeException();
-        }
-        return new UseArray<>(type);
+        return Use.fromNestedConfig(config, (type, nestedConfig) -> new UseArray<>(type));
     }
 
     @Override

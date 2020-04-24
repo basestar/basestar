@@ -47,9 +47,9 @@ public class Values {
         } else if(value instanceof String) {
             return ((String)value).length() > 0;
         } else if(value instanceof Collection) {
-            return ((Collection)value).size() > 0;
+            return ((Collection<?>)value).size() > 0;
         } else if(value instanceof Map) {
-            return ((Map)value).size() > 0;
+            return ((Map<?, ?>)value).size() > 0;
         } else {
             throw new IllegalStateException();
         }

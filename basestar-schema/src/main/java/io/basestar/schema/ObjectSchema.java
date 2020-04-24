@@ -219,6 +219,11 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
 
         private Boolean concrete;
 
+        public String getType() {
+
+            return TYPE;
+        }
+
         public Builder setProperty(final String name, final Property.Builder v) {
 
             properties = Nullsafe.immutableCopyPut(properties, name, v);
@@ -250,9 +255,15 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         }
 
         @Override
-        public ObjectSchema build(final Resolver.Cyclic resolver, final String name, final int slot) {
+        public ObjectSchema build(final Resolver resolver, final String name, final int slot) {
 
             return new ObjectSchema(this, resolver, name, slot);
+        }
+
+        @Override
+        public ObjectSchema build() {
+
+            return new ObjectSchema(this, name -> null, Schema.anonymousName(), Schema.anonymousSlot());
         }
     }
 
@@ -274,12 +285,12 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
             .put(Reserved.ID, UseString.DEFAULT)
             .build();
 
-    private ObjectSchema(final Builder builder, final Schema.Resolver.Cyclic resolver, final String name, final int slot) {
+    private ObjectSchema(final Builder builder, final Schema.Resolver resolver, final String name, final int slot) {
 
         resolver.constructing(this);
         this.name = name;
         this.slot = slot;
-        this.version = Nullsafe.of(builder.getVersion(), 1L);
+        this.version = Nullsafe.option(builder.getVersion(), 1L);
         if(builder.getExtend() != null) {
             this.extend = resolver.requireInstanceSchema(builder.getExtend());
         } else {
@@ -287,18 +298,18 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         }
         this.description = builder.getDescription();
         this.id = builder.getId() == null ? null : builder.getId().build();
-        this.history = Nullsafe.of(builder.getHistory(), History.ENABLED);
-        this.declaredProperties = ImmutableSortedMap.copyOf(Nullsafe.of(builder.getProperties()).entrySet().stream()
+        this.history = Nullsafe.option(builder.getHistory(), History.ENABLED);
+        this.declaredProperties = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getProperties()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, e.getKey()))));
-        this.declaredTransients = ImmutableSortedMap.copyOf(Nullsafe.of(builder.getTransients()).entrySet().stream()
+        this.declaredTransients = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getTransients()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(e.getKey()))));
-        this.declaredLinks = ImmutableSortedMap.copyOf(Nullsafe.of(builder.getLinks()).entrySet().stream()
+        this.declaredLinks = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getLinks()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, e.getKey()))));
-        this.declaredIndexes = ImmutableSortedMap.copyOf(Nullsafe.of(builder.getIndexes()).entrySet().stream()
+        this.declaredIndexes = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getIndexes()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(e.getKey()))));
-        this.declaredPermissions = ImmutableSortedMap.copyOf(Nullsafe.of(builder.getPermissions()).entrySet().stream()
+        this.declaredPermissions = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getPermissions()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(e.getKey()))));
-        this.concrete = Nullsafe.of(builder.getConcrete(), Boolean.TRUE);
+        this.concrete = Nullsafe.option(builder.getConcrete(), Boolean.TRUE);
         if(Reserved.isReserved(name)) {
             throw new ReservedNameException(name);
         }
@@ -413,11 +424,7 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         if(link != null) {
             return link;
         }
-        final Transient trans = getTransient(name, inherited);
-        if(trans != null) {
-            return trans;
-        }
-        return null;
+        return getTransient(name, inherited);
     }
 
     public Permission getPermission(final String name) {

@@ -180,7 +180,7 @@ public class S3BlobStorage implements Storage {
                 return writeImpl(bucket, key, object);
             }
 
-            private final byte[] encode(final ObjectSchema schema, final Map<String, Object> object) {
+            private byte[] encode(final ObjectSchema schema, final Map<String, Object> object) {
 
                 try(final ByteArrayOutputStream baos = new ByteArrayOutputStream();
                     final DataOutputStream dos = new DataOutputStream(baos)) {

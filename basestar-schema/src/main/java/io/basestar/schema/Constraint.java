@@ -80,7 +80,7 @@ public class Constraint implements Named, Described, Serializable {
 
         this.name = name;
         this.description = builder.getDescription();
-        this.expression = Nullsafe.of(builder.getExpression());
+        this.expression = Nullsafe.require(builder.getExpression());
     }
 
     @Data

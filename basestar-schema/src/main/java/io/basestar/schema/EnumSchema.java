@@ -81,8 +81,19 @@ public class EnumSchema implements Schema<String> {
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         private List<String> values;
 
+        public String getType() {
+
+            return TYPE;
+        }
+
         @Override
-        public EnumSchema build(final Resolver.Cyclic resolver, final String name, final int slot) {
+        public EnumSchema build() {
+
+            return new EnumSchema(this, name -> null, Schema.anonymousName(), Schema.anonymousSlot());
+        }
+
+        @Override
+        public EnumSchema build(final Resolver resolver, final String name, final int slot) {
 
             return new EnumSchema(this, resolver, name, slot);
         }
@@ -93,7 +104,7 @@ public class EnumSchema implements Schema<String> {
         return new Builder();
     }
 
-    private EnumSchema(final Builder builder, final Resolver.Cyclic resolver, final String name, final int slot) {
+    private EnumSchema(final Builder builder, final Resolver resolver, final String name, final int slot) {
 
         resolver.constructing(this);
         this.name = name;

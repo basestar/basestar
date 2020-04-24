@@ -25,7 +25,8 @@ import io.basestar.expression.Expression;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
-import io.basestar.spark.SparkUtils;
+import io.basestar.spark.SparkSchemaUtils;
+import io.basestar.spark.expression.SparkExpressionVisitor;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
 import io.basestar.storage.util.Pager;
@@ -90,7 +91,7 @@ public class SparkStorage implements Storage {
             Dataset<Row> ds = routing.objectRead(session, schema);
             ds = ds.filter(ds.col(Reserved.ID).equalTo(id));
             final Row row = ds.first();
-            return row == null ? null : SparkUtils.fromSpark(schema, row);
+            return row == null ? null : SparkSchemaUtils.fromSpark(schema, row);
 
         }, executor);
     }
@@ -104,7 +105,7 @@ public class SparkStorage implements Storage {
             ds = ds.filter(ds.col(Reserved.ID).equalTo(id)
                     .and(ds.col(Reserved.VERSION).equalTo(version)));
             final Row row = ds.first();
-            return row == null ? null : SparkUtils.fromSpark(schema, row);
+            return row == null ? null : SparkSchemaUtils.fromSpark(schema, row);
 
         }, executor);
     }
@@ -114,15 +115,15 @@ public class SparkStorage implements Storage {
 
         return ImmutableList.of((count, paging) -> CompletableFuture.supplyAsync(() -> {
 
-            Dataset<Row> ds = routing.historyRead(session, schema);
-            final Column column = query.visit(new SparkExpressionVisitor(ds));
-            ds = ds.filter(column);
+            final Dataset<Row> input = routing.objectRead(session, schema);
+            final Column column = query.visit(new SparkExpressionVisitor(path -> input.col(path.toString())));
+            Dataset<Row> ds = input.filter(column);
             ds = ds.limit(count);
 
             final List<Row> rows = ds.collectAsList();
 
             final List<Map<String, Object>> items = rows.stream()
-                    .map(row -> SparkUtils.fromSpark(schema, row))
+                    .map(row -> SparkSchemaUtils.fromSpark(schema, row))
                     .collect(Collectors.toList());
 
             return new PagedList<>(items, null);

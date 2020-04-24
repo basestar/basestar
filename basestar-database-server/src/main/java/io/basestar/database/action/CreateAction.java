@@ -130,7 +130,7 @@ public class CreateAction implements Action {
     public Set<Path> paths() {
 
         // FIXME: shouldn't have to bind here, need to fix multi-part path constants in parser
-        return Nullsafe.of(options.getExpressions()).values().stream()
+        return Nullsafe.option(options.getExpressions()).values().stream()
                 .flatMap(e -> e.bind(Context.init()).paths().stream())
                 .collect(Collectors.toSet());
     }

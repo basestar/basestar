@@ -32,7 +32,6 @@ import java.io.Serializable;
 public interface Visibility extends Serializable {
 
     @JsonCreator
-    @SuppressWarnings("unchecked")
     static Visibility from(final Object value) {
 
         if(value instanceof Boolean) {
@@ -48,6 +47,10 @@ public interface Visibility extends Serializable {
     Object toJson();
 
     boolean apply(Context context);
+
+    boolean isAlwaysVisible();
+
+    boolean isAlwaysHidden();
 
     @Data
     class Constant implements Visibility {
@@ -68,6 +71,18 @@ public interface Visibility extends Serializable {
         public boolean apply(final Context context) {
 
             return value;
+        }
+
+        @Override
+        public boolean isAlwaysVisible() {
+
+            return value;
+        }
+
+        @Override
+        public boolean isAlwaysHidden() {
+
+            return !value;
         }
     }
 
@@ -91,6 +106,18 @@ public interface Visibility extends Serializable {
         public boolean apply(final Context context) {
 
             return expression.evaluatePredicate(context);
+        }
+
+        @Override
+        public boolean isAlwaysVisible() {
+
+            return false;
+        }
+
+        @Override
+        public boolean isAlwaysHidden() {
+
+            return false;
         }
     }
 }

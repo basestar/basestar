@@ -52,7 +52,6 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
 public class TestDatabaseServer {
@@ -109,9 +108,7 @@ public class TestDatabaseServer {
         when(emitter.emit(any(Event.class))).thenReturn(CompletableFuture.completedFuture(null));
         when(emitter.emit(any(Collection.class))).then(inv -> {
             final Emitter emitter = (Emitter)inv.getMock();
-            inv.getArgumentAt(0, Collection.class).forEach(event -> {
-                emitter.emit((Event)event);
-            });
+            inv.getArgumentAt(0, Collection.class).forEach(event -> emitter.emit((Event)event));
             return CompletableFuture.completedFuture(null);
         });
         this.storage = MemoryStorage.builder().build();
@@ -465,7 +462,7 @@ public class TestDatabaseServer {
     }
 
     @Test
-    public void batch() throws Exception {
+    public void batch() {
 
         final Map<String, Instance> results = database.transaction(caller, TransactionOptions.builder()
                 .action("a", CreateOptions.builder()

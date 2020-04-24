@@ -55,6 +55,11 @@
             <artifactId>aws-lambda-java-core</artifactId>
             <version>${awslambda.version}</version>
         </dependency>
+        <dependency>
+            <groupId>io.basestar</groupId>
+            <artifactId>basestar-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
 </project>

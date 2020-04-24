@@ -22,7 +22,7 @@ package io.basestar.util;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.experimental.Wither;
+import lombok.With;
 
 import java.io.Serializable;
 import java.util.AbstractList;
@@ -33,7 +33,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @Data
-@Wither
+@With
 @EqualsAndHashCode(callSuper = false)
 public class PagedList<T> extends AbstractList<T> implements Serializable {
 

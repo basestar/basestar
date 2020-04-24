@@ -38,6 +38,8 @@ public class Reserved {
 
     public static final String VERSION = "version";
 
+    public static final String DELETED = Reserved.PREFIX + "deleted";
+
     public static final String HASH = "hash";
 
     public static final String THIS = "this";

@@ -391,7 +391,6 @@ public class SQLExpressionVisitor implements ExpressionVisitor<QueryPart> {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private static <T> Field<T> field(final QueryPart part, final Class<T> type) {
 
         if(part == null) {

@@ -12,7 +12,7 @@
         <Logger name="com.github.dockerjava.api" level="debug" additivity="false">
             <AppenderRef ref="Console"/>
         </Logger>
-        <Root level="warn" additivity="false">
+        <Root level="info" additivity="false">
             <AppenderRef ref="Console"/>
         </Root>
     </Loggers>

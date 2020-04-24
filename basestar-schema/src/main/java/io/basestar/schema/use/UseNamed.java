@@ -39,6 +39,11 @@ public class UseNamed implements Use<Object> {
 
     private final Object config;
 
+    public static UseNamed from(final String name) {
+
+        return from(name, null);
+    }
+
     public static UseNamed from(final String name, final Object config) {
 
         return new UseNamed(name, config);
@@ -53,7 +58,7 @@ public class UseNamed implements Use<Object> {
     @Override
     public Use<?> resolve(final Schema.Resolver resolver) {
 
-        final Schema schema = resolver.requireSchema(name);
+        final Schema<?> schema = resolver.requireSchema(name);
         if(schema instanceof EnumSchema) {
             return UseEnum.from((EnumSchema) schema, config);
         } else if(schema instanceof StructSchema) {

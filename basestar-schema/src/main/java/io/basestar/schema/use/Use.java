@@ -38,6 +38,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiFunction;
 
 /**
  * Type Use
@@ -142,6 +143,29 @@ public interface Use<T> extends Serializable {
             default:
                 return UseNamed.from(type, config);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    static <T extends Use<?>, V extends Use<?>> T fromNestedConfig(final Object config, final BiFunction<V, Map<String, Object>, T> apply) {
+
+        final Use<?> nestedType;
+        final Map<String, Object> nestedConfig;
+        if(config instanceof String) {
+            nestedType = Use.fromConfig(config);
+            nestedConfig = null;
+        } else if(config instanceof Map) {
+            final Map<String, Object> map = (Map<String, Object>) config;
+            if(map.containsKey("type")) {
+                nestedType = Use.fromConfig(map.get("type"));
+                nestedConfig = map;
+            } else {
+                nestedType = Use.fromConfig(map);
+                nestedConfig = null;
+            }
+        } else {
+            throw new InvalidTypeException();
+        }
+        return apply.apply((V)nestedType, nestedConfig);
     }
 
     default void serialize(final T value, final DataOutput out) throws IOException {

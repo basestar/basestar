@@ -129,7 +129,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
     private Set<Path> permissionExpand(final ObjectSchema schema, final Permission permission) {
 
-        return permission == null ? Collections.emptySet() : Nullsafe.of(permission.getExpand());
+        return permission == null ? Collections.emptySet() : Nullsafe.option(permission.getExpand());
     }
 
     private CompletableFuture<Map<String, Instance>> batch(final Caller caller, final Map<String, Action> actions) {
@@ -226,7 +226,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         afterCallerExpand.addAll(Path.children(permissionExpand, Path.of(VAR_CALLER)));
                         final Set<Path> readExpand = Sets.union(
                                 Path.children(permissionExpand, Path.of(VAR_AFTER)),
-                                Nullsafe.of(action.afterExpand())
+                                Nullsafe.option(action.afterExpand())
                         );
                         final Set<Path> transientExpand = schema.transientExpand(Path.of(), readExpand);
                         final ExpandKey<RefKey> expandKey = ExpandKey.from(afterKey, transientExpand);
@@ -305,7 +305,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                             if(after == null) {
                                 restricted = null;
                             } else {
-                                final Instance expanded = schema.expand(after, Expander.noop(), Nullsafe.of(action.afterExpand()));
+                                final Instance expanded = schema.expand(after, Expander.noop(), Nullsafe.option(action.afterExpand()));
                                 restricted = schema.applyVisibility(afterContext, expanded);
                             }
                             results.put(name, restricted);
@@ -335,7 +335,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         actions.forEach((name, action) -> {
             final Set<Path> paths = Path.children(action.paths(), Path.of(VAR_BATCH));
             final Set<String> matches = paths.stream().map(AbstractPath::first)
-                    .filter(v -> actions.keySet().contains(v))
+                    .filter(v -> actions.containsKey(v))
                     .collect(Collectors.toSet());
             dependencies.put(name, matches);
         });
@@ -423,7 +423,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final Permission read = schema.getPermission(Permission.READ);
         final Set<Path> permissionExpand = permissionExpand(schema, read);
         final Set<Path> callerExpand = Path.children(permissionExpand, Path.of(VAR_CALLER));
-        final Set<Path> readExpand = Sets.union(Path.children(permissionExpand, Path.of(VAR_THIS)), Nullsafe.of(expand));
+        final Set<Path> readExpand = Sets.union(Path.children(permissionExpand, Path.of(VAR_THIS)), Nullsafe.option(expand));
         final Set<Path> transientExpand = schema.transientExpand(Path.of(), readExpand);
 
         return expandCaller(Context.init(), caller, callerExpand)
