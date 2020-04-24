@@ -2,7 +2,7 @@ package io.basestar.spark.expression;
 
 /*-
  * #%L
- * basestar-storage-spark
+ * basestar-spark
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
