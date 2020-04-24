@@ -50,7 +50,7 @@ public class AbbrevListDeserializer<T> extends JsonDeserializer<List<T>> impleme
     public List<T> deserialize(final JsonParser jsonParser, final DeserializationContext deserializationContext) throws IOException {
 
         assert type != null;
-        JsonToken next = jsonParser.currentToken();
+        JsonToken next = jsonParser.getCurrentToken();
         if (next == JsonToken.START_ARRAY) {
             final List<T> results = new ArrayList<>();
             next = jsonParser.nextToken();

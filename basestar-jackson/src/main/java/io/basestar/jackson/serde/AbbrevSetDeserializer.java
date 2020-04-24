@@ -50,7 +50,7 @@ public class AbbrevSetDeserializer<T> extends JsonDeserializer<Set<T>> implement
     public Set<T> deserialize(final JsonParser jsonParser, final DeserializationContext deserializationContext) throws IOException {
 
         assert type != null;
-        JsonToken next = jsonParser.currentToken();
+        JsonToken next = jsonParser.getCurrentToken();
         if (next == JsonToken.START_ARRAY) {
             final Set<T> results = new HashSet<>();
             next = jsonParser.nextToken();
