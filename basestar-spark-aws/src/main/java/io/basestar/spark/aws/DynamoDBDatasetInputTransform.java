@@ -47,7 +47,7 @@ public class DynamoDBDatasetInputTransform implements Transform<RDD<Map<String, 
 
         this.schema = Nullsafe.require(schema);
         this.extraMetadata = Nullsafe.option(extraMetadata);
-        this.structType = DynamoDBSparkSchemaUtils.structType(schema, extraMetadata);
+        this.structType = SparkSchemaUtils.structType(schema, extraMetadata);
     }
 
     @Override
