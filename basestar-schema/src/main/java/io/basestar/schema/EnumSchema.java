@@ -23,16 +23,21 @@ package io.basestar.schema;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
+import io.basestar.expression.Context;
 import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.util.Nullsafe;
+import io.basestar.util.Path;
 import lombok.Data;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Enum Schema
@@ -68,6 +73,9 @@ public class EnumSchema implements Schema<String> {
     @Nonnull
     private final List<String> values;
 
+    @Nonnull
+    private final Map<String, Object> extensions;
+
     @Data
     @Accessors(chain = true)
     public static class Builder implements Schema.Builder<String> {
@@ -80,6 +88,10 @@ public class EnumSchema implements Schema<String> {
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         private List<String> values;
+
+        @Nullable
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        private Map<String, Object> extensions;
 
         public String getType() {
 
@@ -111,6 +123,7 @@ public class EnumSchema implements Schema<String> {
         this.slot = slot;
         this.description = builder.getDescription();
         this.values = Nullsafe.immutableCopy(builder.getValues());
+        this.extensions = Nullsafe.immutableSortedCopy(builder.getExtensions());
         if(Reserved.isReserved(name)) {
             throw new ReservedNameException(name);
         }
@@ -122,13 +135,21 @@ public class EnumSchema implements Schema<String> {
         if(value == null) {
             return null;
         } else if(value instanceof String) {
-            if(values.contains(value)) {
-                return (String)value;
-            } else {
-                throw new InvalidTypeException();
-            }
+            return (String)value;
         } else {
             throw new InvalidTypeException();
+        }
+    }
+
+    @Override
+    public Set<Constraint.Violation> validate(final Context context, final Path path, final String after) {
+
+        if(after == null) {
+            return Collections.emptySet();
+        } else if(values.contains(after)) {
+            return Collections.emptySet();
+        } else {
+            return Collections.singleton(new Constraint.Violation(path, "enum"));
         }
     }
 }

@@ -28,7 +28,6 @@ import com.google.common.collect.Multimap;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import io.basestar.expression.Context;
-import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
@@ -163,6 +162,9 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
 
     private final boolean concrete;
 
+    @Nonnull
+    private final Map<String, Object> extensions;
+
 //    public Set<Path> transientExpand(final Path path, final Set<Path> expand) {
 //
 //        final Set<Path> transientExpand = new HashSet<>(expand);
@@ -218,6 +220,10 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         private Map<String, Permission.Builder> permissions;
 
         private Boolean concrete;
+
+        @Nullable
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        private Map<String, Object> extensions;
 
         public String getType() {
 
@@ -310,6 +316,7 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         this.declaredPermissions = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getPermissions()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(e.getKey()))));
         this.concrete = Nullsafe.option(builder.getConcrete(), Boolean.TRUE);
+        this.extensions = Nullsafe.immutableSortedCopy(builder.getExtensions());
         if(Reserved.isReserved(name)) {
             throw new ReservedNameException(name);
         }
@@ -531,17 +538,18 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
 //        return new Instance(result);
 //    }
 
-    public void validate(final Map<String, Object> after, final Context context) {
+    @Override
+    public Set<Constraint.Violation> validate(final Context context, final Path path, final Instance after) {
 
-        validate(Path.empty(), after, after, context);
+        return validate(context, path, after, after);
     }
 
-    public void validate(final Map<String, Object> before, final Map<String, Object> after, final Context context) {
+    public Set<Constraint.Violation> validate(final Context context, final Instance before, final Instance after) {
 
-        validate(Path.empty(), before, after, context);
+        return validate(context, Path.empty(), before, after);
     }
 
-    public void validate(final Path path, final Map<String, Object> before, final Map<String, Object> after, final Context context) {
+    public Set<Constraint.Violation> validate(final Context context, final Path path, final Instance before, final Instance after) {
 
         final Set<Constraint.Violation> violations = new HashSet<>();
 
@@ -550,12 +558,10 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         }
 
         violations.addAll(getAllProperties().values().stream()
-                .flatMap(v -> v.validate(path, before.get(v.getName()), after.get(v.getName()), context).stream())
+                .flatMap(v -> v.validate(context, path, before.get(v.getName()), after.get(v.getName())).stream())
                 .collect(Collectors.toSet()));
 
-        if(!violations.isEmpty()) {
-            throw new ConstraintViolationException(violations);
-        }
+        return violations;
     }
 
     public String hash(final Map<String, Object> object) {

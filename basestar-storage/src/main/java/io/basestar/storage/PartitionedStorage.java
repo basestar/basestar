@@ -96,7 +96,7 @@ public abstract class PartitionedStorage implements Storage {
         return queries;
     }
 
-    protected SatisfyResult satisfy(final Index index, final Map<Path, Range<Object>> query, final List<Sort> sort) {
+    public static SatisfyResult satisfy(final Index index, final Map<Path, Range<Object>> query, final List<Sort> sort) {
 
         final Map<Path, Object> constants = new HashMap<>();
         query.forEach((k, v) -> {
@@ -221,7 +221,7 @@ public abstract class PartitionedStorage implements Storage {
     }
 
     @Data
-    protected static class SatisfyResult implements Comparable<SatisfyResult> {
+    public static class SatisfyResult implements Comparable<SatisfyResult> {
 
         private final List<Object> partition;
 

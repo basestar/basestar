@@ -32,127 +32,132 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.util.Set;
 
-@Data
-public class UseNamed implements Use<Object> {
+public interface UseNamed<T> extends Use<T> {
 
-    private final String name;
+    String getName();
 
-    private final Object config;
-
-    public static UseNamed from(final String name) {
+    static Lazy from(final String name) {
 
         return from(name, null);
     }
 
-    public static UseNamed from(final String name, final Object config) {
+    static Lazy from(final String name, final Object config) {
 
-        return new UseNamed(name, config);
+        return new Lazy(name, config);
     }
 
     @Override
-    public <R> R visit(final Visitor<R> visitor) {
+    default Object toJson() {
 
-        throw new UnsupportedOperationException();
+        return getName();
     }
 
-    @Override
-    public Use<?> resolve(final Schema.Resolver resolver) {
+    @Data
+    class Lazy implements UseNamed<Object> {
 
-        final Schema<?> schema = resolver.requireSchema(name);
-        if(schema instanceof EnumSchema) {
-            return UseEnum.from((EnumSchema) schema, config);
-        } else if(schema instanceof StructSchema) {
-            return UseStruct.from((StructSchema) schema, config);
-        } else if(schema instanceof ObjectSchema) {
-            return UseRef.from((ObjectSchema) schema, config);
-        } else {
-            throw new MissingTypeException(name);
+        private final String name;
+
+        private final Object config;
+
+        @Override
+        public <R> R visit(final Visitor<R> visitor) {
+
+            throw new UnsupportedOperationException();
         }
-    }
 
-    @Override
-    public Object create(final Object value, final boolean expand) {
+        @Override
+        public Use<?> resolve(final Schema.Resolver resolver) {
 
-        throw new UnsupportedOperationException();
-    }
+            final Schema<?> schema = resolver.requireSchema(name);
+            if(schema instanceof EnumSchema) {
+                return UseEnum.from((EnumSchema) schema, config);
+            } else if(schema instanceof StructSchema) {
+                return UseStruct.from((StructSchema) schema, config);
+            } else if(schema instanceof ObjectSchema) {
+                return UseRef.from((ObjectSchema) schema, config);
+            } else {
+                throw new MissingTypeException(name);
+            }
+        }
 
-    @Override
-    public Code code() {
+        @Override
+        public Object create(final Object value, final boolean expand) {
 
-        throw new UnsupportedOperationException();
-    }
+            throw new UnsupportedOperationException();
+        }
 
-    @Override
-    public Use<?> typeOf(final Path path) {
+        @Override
+        public Code code() {
 
-        throw new UnsupportedOperationException();
-    }
+            throw new UnsupportedOperationException();
+        }
 
-//    @Override
-//    public Map<String, Object> openApiType() {
-//
-//        throw new UnsupportedOperationException();
-//    }
+        @Override
+        public Use<?> typeOf(final Path path) {
 
-    @Override
-    @Deprecated
-    public Set<Path> requiredExpand(final Set<Path> paths) {
+            throw new UnsupportedOperationException();
+        }
 
-        throw new UnsupportedOperationException();
-    }
+        @Override
+        @Deprecated
+        public Set<Path> requiredExpand(final Set<Path> paths) {
 
-    @Override
-    @Deprecated
-    public Multimap<Path, Instance> refs(final Object value) {
+            throw new UnsupportedOperationException();
+        }
 
-        throw new UnsupportedOperationException();
-    }
+        @Override
+        @Deprecated
+        public Multimap<Path, Instance> refs(final Object value) {
 
-    @Override
-    public Object toJson() {
+            throw new UnsupportedOperationException();
+        }
 
-        return name;
-    }
+        @Override
+        public Object expand(final Object value, final Expander expander, final Set<Path> expand) {
 
-    @Override
-    public Object expand(final Object value, final Expander expander, final Set<Path> expand) {
+            throw new UnsupportedOperationException();
+        }
 
-        throw new UnsupportedOperationException();
-    }
+        @Override
+        public void serializeValue(final Object value, final DataOutput out) {
 
-    @Override
-    public void serializeValue(final Object value, final DataOutput out) {
+            throw new UnsupportedOperationException();
+        }
 
-        throw new UnsupportedOperationException();
-    }
+        @Override
+        public Object deserializeValue(final DataInput in) {
 
-    @Override
-    public Object deserializeValue(final DataInput in) {
+            throw new UnsupportedOperationException();
+        }
 
-        throw new UnsupportedOperationException();
-    }
+        @Override
+        public Object applyVisibility(final Context context, final Object value) {
 
-    @Override
-    public Object applyVisibility(final Context context, final Object value) {
+            throw new UnsupportedOperationException();
+        }
 
-        throw new UnsupportedOperationException();
-    }
+        @Override
+        public Object evaluateTransients(final Context context, final Object value, final Set<Path> expand) {
 
-    @Override
-    public Object evaluateTransients(final Context context, final Object value, final Set<Path> expand) {
+            throw new UnsupportedOperationException();
+        }
 
-        throw new UnsupportedOperationException();
-    }
+        @Override
+        public String toString() {
 
-    @Override
-    public String toString() {
+            return name;
+        }
 
-        return name;
-    }
+        @Override
+        public Set<Path> transientExpand(final Path path, final Set<Path> expand) {
 
-    @Override
-    public Set<Path> transientExpand(final Path path, final Set<Path> expand) {
+            throw new UnsupportedOperationException();
+        }
 
-        throw new UnsupportedOperationException();
+        @Override
+        public Set<Constraint.Violation> validate(final Context context, final Path path, final Object value) {
+
+            throw new UnsupportedOperationException();
+        }
     }
 }

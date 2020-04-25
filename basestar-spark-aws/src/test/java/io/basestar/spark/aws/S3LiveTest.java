@@ -20,7 +20,8 @@ package io.basestar.spark.aws;
  * #L%
  */
 
-import io.basestar.spark.MD5BucketTransform;
+import io.basestar.spark.BucketFunction;
+import io.basestar.spark.BucketTransform;
 import io.basestar.spark.PartitionedUpsertSink;
 import io.basestar.spark.PartitionedUpsertSource;
 import lombok.Data;
@@ -74,7 +75,7 @@ public class S3LiveTest {
             records.add(new TestRecord(id, random));
         }
         final Dataset<Row> init = session.createDataFrame(records, TestRecord.class);
-        MD5BucketTransform.builder().bucketColumnName(MD5_COL).build()
+        BucketTransform.builder().outputColumnName(MD5_COL).bucketFunction(BucketFunction.md5Prefix(2)).build()
                 .accept(init).write().mode(SaveMode.Overwrite).partitionBy(MD5_COL).parquet(initUri);
 
         session.sql("CREATE EXTERNAL TABLE IF NOT EXISTS test.init (id STRING, random ARRAY<STRING>) PARTITIONED BY(__md5 STRING) STORED AS PARQUET LOCATION \"" + initUri + "\" TBLPROPERTIES (\"parquet.compress\"=\"SNAPPY\")").collect();

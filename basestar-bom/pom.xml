@@ -153,11 +153,6 @@
                 <artifactId>basestar-test</artifactId>
                 <version>${project.version}</version>
             </dependency>
-            <!--<dependency>-->
-                <!--<groupId>io.basestar</groupId>-->
-                <!--<artifactId>basestar-type</artifactId>-->
-                <!--<version>${project.version}</version>-->
-            <!--</dependency>-->
             <dependency>
                 <groupId>software.amazon.awssdk</groupId>
                 <artifactId>bom</artifactId>

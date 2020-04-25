@@ -23,6 +23,7 @@ package io.basestar.schema.use;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
+import io.basestar.schema.Constraint;
 import io.basestar.schema.Expander;
 import io.basestar.schema.Instance;
 import io.basestar.util.Path;
@@ -30,14 +31,27 @@ import io.basestar.util.Path;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public interface UseCollection<V, T extends Collection<V>> extends Use<T> {
 
     Use<V> getType();
 
     T transform(T value, Function<V, V> fn);
+
+    @Override
+    default Set<Constraint.Violation> validate(final Context context, final Path path, final T value) {
+
+        if(value == null) {
+            return Collections.emptySet();
+        } else {
+            final Use<V> type = getType();
+            return value.stream().flatMap(v -> type.validate(context, path, v).stream()).collect(Collectors.toSet());
+        }
+    }
 
     @Override
     default void serializeValue(final T value, final DataOutput out) throws IOException {

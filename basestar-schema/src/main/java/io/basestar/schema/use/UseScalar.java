@@ -23,6 +23,7 @@ package io.basestar.schema.use;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
+import io.basestar.schema.Constraint;
 import io.basestar.schema.Expander;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Schema;
@@ -34,7 +35,13 @@ import java.util.Set;
 public interface UseScalar<T> extends Use<T> {
 
     @Override
-    default Use<T> resolve(final Schema.Resolver resolver) {
+    default Set<Constraint.Violation> validate(final Context context, final Path path, final T value) {
+
+        return Collections.emptySet();
+    }
+
+    @Override
+    default UseScalar<T> resolve(final Schema.Resolver resolver) {
 
         return this;
     }

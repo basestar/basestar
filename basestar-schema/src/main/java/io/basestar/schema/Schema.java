@@ -22,11 +22,14 @@ package io.basestar.schema;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.basestar.expression.Context;
 import io.basestar.schema.exception.MissingTypeException;
+import io.basestar.util.Path;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -37,7 +40,7 @@ import java.util.UUID;
  * @param <T>
  */
 
-public interface Schema<T> extends Named, Described, Serializable {
+public interface Schema<T> extends Named, Described, Serializable, Extendable {
 
     String VAR_THIS = "this";
 
@@ -77,6 +80,13 @@ public interface Schema<T> extends Named, Described, Serializable {
 
         return getSlot() == anonymousSlot();
     }
+
+    default Set<Constraint.Violation> validate(final Context context, final T after) {
+
+        return validate(context, Path.empty(), after);
+    }
+
+    Set<Constraint.Violation> validate(Context context, Path path, T after);
 
     interface Resolver {
 

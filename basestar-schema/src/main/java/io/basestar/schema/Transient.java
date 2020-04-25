@@ -74,6 +74,9 @@ public class Transient implements Member {
     @Nonnull
     private final SortedSet<Path> expand;
 
+    @Nonnull
+    private final Map<String, Object> extensions;
+
     @Data
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -97,6 +100,10 @@ public class Transient implements Member {
 
         @Nullable
         private Visibility visibility;
+
+        @Nullable
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        private Map<String, Object> extensions;
 
         public Transient build(final String name) {
 
@@ -123,6 +130,7 @@ public class Transient implements Member {
         if(type != null) {
             type.visit(TypeValidator.INSTANCE);
         }
+        this.extensions = Nullsafe.immutableSortedCopy(builder.getExtensions());
     }
 
     @Override

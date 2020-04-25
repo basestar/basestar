@@ -54,7 +54,7 @@ import java.util.stream.Collectors;
  */
 
 @Getter
-public class Index implements Named, Described, Serializable {
+public class Index implements Named, Described, Serializable, Extendable {
 
     private static final int DEFAULT_MAX = 100;
 
@@ -80,6 +80,9 @@ public class Index implements Named, Described, Serializable {
 
     @Nullable
     private final Consistency consistency;
+
+    @Nonnull
+    private final Map<String, Object> extensions;
 
     private final boolean unique;
 
@@ -124,6 +127,10 @@ public class Index implements Named, Described, Serializable {
         @JsonDeserialize(contentUsing = PathDeserializer.class)
         private Map<String, Path> over;
 
+        @Nullable
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        private Map<String, Object> extensions;
+
         private Consistency consistency;
 
         private Boolean unique;
@@ -156,6 +163,7 @@ public class Index implements Named, Described, Serializable {
         this.sparse = Nullsafe.option(builder.getSparse(), false);
         this.consistency = builder.getConsistency();
         this.max = Nullsafe.option(builder.getMax(), DEFAULT_MAX);
+        this.extensions = Nullsafe.immutableSortedCopy(builder.getExtensions());
         if (Reserved.isReserved(name)) {
             throw new ReservedNameException(name);
         }

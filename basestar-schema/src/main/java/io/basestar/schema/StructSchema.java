@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.*;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Multimap;
+import io.basestar.expression.Context;
 import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
@@ -100,6 +101,9 @@ public class StructSchema implements InstanceSchema {
 
     private final boolean concrete;
 
+    @Nonnull
+    private final Map<String, Object> extensions;
+
     @Data
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -122,6 +126,10 @@ public class StructSchema implements InstanceSchema {
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         private Map<String, Property.Builder> properties;
+
+        @Nullable
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        private Map<String, Object> extensions;
 
         public String getType() {
 
@@ -178,6 +186,7 @@ public class StructSchema implements InstanceSchema {
         } else {
             this.allProperties = declaredProperties;
         }
+        this.extensions = Nullsafe.option(builder.getExtensions());
     }
 
     @Override
@@ -185,12 +194,6 @@ public class StructSchema implements InstanceSchema {
 
         return ImmutableSortedMap.of();
     }
-
-//    @Override
-//    public Property getProperty(final String name) {
-//
-//        return properties.get(name);
-//    }
 
     @Override
     public Map<String, ? extends Member> getDeclaredMembers() {
@@ -210,13 +213,6 @@ public class StructSchema implements InstanceSchema {
         return getProperty(name, inherited);
     }
 
-//    public Map<String, Object> readProperties(final Map<String, Object> object) {
-//
-//        final Map<String, Object> result = new HashMap<>();
-//        getProperties().forEach((k, v) -> result.put(k, v.create(object.get(k))));
-//        return Collections.unmodifiableMap(result);
-//    }
-
     @Override
     @SuppressWarnings("unchecked")
     public Instance create(final Object value, final boolean expand) {
@@ -228,6 +224,14 @@ public class StructSchema implements InstanceSchema {
         } else {
             throw new InvalidTypeException();
         }
+    }
+
+    @Override
+    public Set<Constraint.Violation> validate(final Context context, final Path path, final Instance after) {
+
+        return this.getAllProperties().values().stream()
+                .flatMap(v -> v.validate(context, path, after.get(v.getName())).stream())
+                .collect(Collectors.toSet());
     }
 
     public Instance create(final Map<String, Object> value, final boolean expand) {
@@ -243,21 +247,6 @@ public class StructSchema implements InstanceSchema {
     public static Instance deserialize(final DataInput in) throws IOException {
 
         return new Instance(InstanceSchema.deserializeProperties(in));
-    }
-
-    @Override
-    public Set<Path> requiredExpand(final Set<Path> paths) {
-
-        final Set<Path> result = new HashSet<>();
-        for (final Map.Entry<String, Set<Path>> branch : Path.branch(paths).entrySet()) {
-            final Member member = getMember(branch.getKey(), true);
-            if(member != null) {
-                for(final Path tail : member.requiredExpand(branch.getValue())) {
-                    result.add(Path.of(branch.getKey()).with(tail));
-                }
-            }
-        }
-        return Path.simplify(result);
     }
 
     @Deprecated

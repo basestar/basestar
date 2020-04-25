@@ -20,12 +20,17 @@ package io.basestar.schema.use;
  * #L%
  */
 
+import io.basestar.expression.Context;
+import io.basestar.schema.Constraint;
 import io.basestar.schema.EnumSchema;
+import io.basestar.util.Path;
 import lombok.Data;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Set;
 
 /**
  * Enum Type
@@ -37,9 +42,15 @@ import java.io.IOException;
  */
 
 @Data
-public class UseEnum implements UseScalar<String> {
+public class UseEnum implements UseScalar<String>, UseNamed<String> {
 
-    private final EnumSchema type;
+    private final EnumSchema schema;
+
+    @Override
+    public String getName() {
+
+        return schema.getName();
+    }
 
     @Override
     public <R> R visit(final Visitor<R> visitor) {
@@ -53,15 +64,9 @@ public class UseEnum implements UseScalar<String> {
     }
 
     @Override
-    public Object toJson() {
-
-        return type.getName();
-    }
-
-    @Override
     public String create(final Object value, final boolean expand) {
 
-        return type.create(value, expand);
+        return schema.create(value, expand);
     }
 
     @Override
@@ -90,7 +95,17 @@ public class UseEnum implements UseScalar<String> {
     @Override
     public String toString() {
 
-        return type.getName();
+        return schema.getName();
+    }
+
+    @Override
+    public Set<Constraint.Violation> validate(final Context context, final Path path, final String value) {
+
+        if(value == null) {
+            return Collections.emptySet();
+        } else {
+            return schema.validate(context, path, value);
+        }
     }
 
 //    @Override

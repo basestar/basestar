@@ -30,7 +30,7 @@ import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
 
-public interface Member extends Named, Described, Serializable {
+public interface Member extends Named, Described, Serializable, Extendable {
 
     String VAR_VALUE = "value";
 

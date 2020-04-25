@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
+import io.basestar.schema.Constraint;
 import io.basestar.schema.Expander;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Schema;
@@ -106,6 +107,8 @@ public interface Use<T> extends Serializable {
     T evaluateTransients(Context context, T value, Set<Path> expand);
 
     Set<Path> transientExpand(Path path, Set<Path> expand);
+
+    Set<Constraint.Violation> validate(Context context, Path path, T value);
 
     @JsonCreator
     @SuppressWarnings("unchecked")

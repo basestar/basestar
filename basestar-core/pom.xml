@@ -64,6 +64,7 @@
                         </goals>
                         <configuration>
                             <name>timestamp</name>
+                            <locale>en_GB</locale>
                             <pattern>yyyy-MM-dd'T'HH:mm:ss'Z'</pattern>
                             <timeZone>UTC</timeZone>
                         </configuration>

@@ -102,7 +102,7 @@ public class AvroUtils {
             @Override
             public Schema visitEnum(final UseEnum type) {
 
-                return schema(type.getType());
+                return schema(type.getSchema());
             }
 
             @Override

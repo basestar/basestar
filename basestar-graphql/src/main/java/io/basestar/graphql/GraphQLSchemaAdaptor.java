@@ -412,7 +412,7 @@ public class GraphQLSchemaAdaptor {
             @Override
             public Type<?> visitEnum(final UseEnum type) {
 
-                return new TypeName(type.getType().getName());
+                return new TypeName(type.getSchema().getName());
             }
 
             @Override
@@ -484,7 +484,7 @@ public class GraphQLSchemaAdaptor {
             @Override
             public Type<?> visitEnum(final UseEnum type) {
 
-                return new TypeName(type.getType().getName());
+                return new TypeName(type.getSchema().getName());
             }
 
             @Override
@@ -556,7 +556,7 @@ public class GraphQLSchemaAdaptor {
             @Override
             public String visitEnum(final UseEnum type) {
 
-                return type.getType().getName();
+                return type.getSchema().getName();
             }
 
             @Override

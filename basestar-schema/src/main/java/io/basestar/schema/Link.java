@@ -72,6 +72,9 @@ public class Link implements Member {
     @Nullable
     private final Visibility visibility;
 
+    @Nonnull
+    private final Map<String, Object> extensions;
+
     @Data
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -96,6 +99,10 @@ public class Link implements Member {
         @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         private Visibility visibility;
 
+        @Nullable
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        private Map<String, Object> extensions;
+
         public Link build(final Schema.Resolver resolver, final String name) {
 
             return new Link(this, resolver, name);
@@ -115,6 +122,7 @@ public class Link implements Member {
         this.expression = Nullsafe.require(builder.getExpression());
         this.sort = Nullsafe.immutableCopy(builder.getSort());
         this.visibility = builder.getVisibility();
+        this.extensions = Nullsafe.immutableSortedCopy(builder.getExtensions());
         if(Reserved.isReserved(name)) {
             throw new ReservedNameException(name);
         }

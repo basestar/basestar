@@ -24,6 +24,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
+import io.basestar.schema.Constraint;
 import io.basestar.schema.Expander;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Schema;
@@ -238,6 +239,18 @@ public class UseMap<T> implements Use<Map<String, T>> {
         final Set<Path> result = new HashSet<>(expand);
         branch.forEach((k, v) -> result.addAll(type.transientExpand(path.with(k), v)));
         return result;
+    }
+
+    @Override
+    public Set<Constraint.Violation> validate(final Context context, final Path path, final Map<String, T> value) {
+
+        if(value == null) {
+            return Collections.emptySet();
+        } else {
+            return value.entrySet().stream()
+                    .flatMap(e -> type.validate(context, path.with(e.getKey()), e.getValue()).stream())
+                    .collect(Collectors.toSet());
+        }
     }
 
     private static <T> Map<String, T> transform(final Map<String, T> value, final BiFunction<String, T, T> fn) {

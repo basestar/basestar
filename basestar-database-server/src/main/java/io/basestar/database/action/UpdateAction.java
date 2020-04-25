@@ -25,9 +25,11 @@ import io.basestar.database.event.ObjectUpdatedEvent;
 import io.basestar.database.options.UpdateOptions;
 import io.basestar.event.Event;
 import io.basestar.expression.Context;
+import io.basestar.schema.Constraint;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Permission;
+import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.storage.exception.ObjectMissingException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.util.Nullsafe;
@@ -112,7 +114,10 @@ public class UpdateAction implements Action {
 
         final Instance evaluated = schema.evaluateProperties(context.with(CommonVars.VAR_THIS, initial), new Instance(initial));
 
-        schema.validate(before, evaluated, context.with(CommonVars.VAR_THIS, evaluated));
+        final Set<Constraint.Violation> violations = schema.validate(context.with(CommonVars.VAR_THIS, evaluated), before, evaluated);
+        if(!violations.isEmpty()) {
+            throw new ConstraintViolationException(violations);
+        }
 
         return evaluated;
     }

@@ -77,6 +77,11 @@ public interface Expression extends Serializable {
         return ExpressionCache.getDefault().parse(expr);
     }
 
+    static Expression parseAndBind(final Context context, final String expr) {
+
+        return parse(expr).bind(context);
+    }
+
     //    Set<And> disjunction();
 //
 //    Map<Path, Object> constants();

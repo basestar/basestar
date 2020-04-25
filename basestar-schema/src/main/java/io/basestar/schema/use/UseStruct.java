@@ -23,9 +23,9 @@ package io.basestar.schema.use;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
+import io.basestar.schema.Constraint;
 import io.basestar.schema.Expander;
 import io.basestar.schema.Instance;
-import io.basestar.schema.Schema;
 import io.basestar.schema.StructSchema;
 import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.util.Path;
@@ -34,6 +34,7 @@ import lombok.Data;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
@@ -52,7 +53,7 @@ import java.util.Set;
  */
 
 @Data
-public class UseStruct implements Use<Instance> {
+public class UseStruct implements UseInstance {
 
     private final StructSchema schema;
 
@@ -65,28 +66,6 @@ public class UseStruct implements Use<Instance> {
     public <R> R visit(final Visitor<R> visitor) {
 
         return visitor.visitStruct(this);
-    }
-
-    @Override
-    public Object toJson() {
-
-        return schema.getName();
-    }
-
-    @Override
-    public UseStruct resolve(final Schema.Resolver resolver) {
-
-        return this;
-    }
-
-    @Override
-    public Use<?> typeOf(final Path path) {
-
-        if(path.isEmpty()) {
-            return this;
-        } else {
-            return schema.typeOf(path);
-        }
     }
 
     @Override
@@ -120,26 +99,6 @@ public class UseStruct implements Use<Instance> {
         return deserializeAnyValue(in);
     }
 
-    @Override
-    public Instance applyVisibility(final Context context, final Instance value) {
-
-        if(value == null) {
-            return null;
-        } else {
-            return schema.applyVisibility(context, value);
-        }
-    }
-
-    @Override
-    public Instance evaluateTransients(final Context context, final Instance value, final Set<Path> expand) {
-
-        if(value == null) {
-            return null;
-        } else {
-            return schema.evaluateTransients(context, value, expand);
-        }
-    }
-
     public static Instance deserializeAnyValue(final DataInput in) throws IOException {
 
         return StructSchema.deserialize(in);
@@ -156,9 +115,13 @@ public class UseStruct implements Use<Instance> {
     }
 
     @Override
-    public Set<Path> transientExpand(final Path path, final Set<Path> expand) {
+    public Set<Constraint.Violation> validate(final Context context, final Path path, final Instance value) {
 
-        return schema.transientExpand(path, expand);
+        if(value == null) {
+            return Collections.emptySet();
+        } else {
+            return schema.validate(context, path, value);
+        }
     }
 
 //    @Override

@@ -79,6 +79,9 @@ public class Property implements Member {
     @Nullable
     private final Visibility visibility;
 
+    @Nonnull
+    private final Map<String, Object> extensions;
+
     @Data
     @Accessors(chain = true)
     public static class Builder implements Described {
@@ -106,6 +109,10 @@ public class Property implements Member {
         @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         private Visibility visibility;
 
+        @Nullable
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        private Map<String, Object> extensions;
+
         public Property build(final Schema.Resolver resolver, final String name) {
 
             return new Property(this, resolver, name);
@@ -131,6 +138,7 @@ public class Property implements Member {
         this.constraints = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getConstraints()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(e.getKey()))));
         this.visibility = builder.getVisibility();
+        this.extensions = Nullsafe.immutableSortedCopy(builder.getExtensions());
     }
 
     @Override
@@ -212,7 +220,15 @@ public class Property implements Member {
         }
     }
 
-    public Set<Constraint.Violation> validate(final Path path, final Object before, final Object after, final Context context) {
+    public Set<Constraint.Violation> validate(final Context context, final Path path, final Object after) {
+
+        return validate(context, path, after, after);
+    }
+
+    // FIXME: immutability check should be implemented differently
+
+    @SuppressWarnings("unchecked")
+    public Set<Constraint.Violation> validate(final Context context, final Path path, final Object before, final Object after) {
 
         final Set<Constraint.Violation> violations = new HashSet<>();
         final Path newPath = path.with(name);
@@ -220,13 +236,16 @@ public class Property implements Member {
             violations.add(new Constraint.Violation(newPath, Constraint.REQUIRED));
         } else if(immutable && !Objects.equals(before, after)) {
             violations.add(new Constraint.Violation(newPath, Constraint.IMMUTABLE));
-        } else if(!constraints.isEmpty()) {
-            final Context newContext = context.with(VAR_VALUE, after);
-            for(final Map.Entry<String, Constraint> entry : constraints.entrySet()) {
-                final String name = entry.getKey();
-                final Constraint constraint = entry.getValue();
-                if(!constraint.getExpression().evaluatePredicate(newContext)) {
-                    violations.add(new Constraint.Violation(newPath, name));
+        } else {
+            violations.addAll(((Use<Object>)type).validate(context, newPath, after));
+            if (!constraints.isEmpty()) {
+                final Context newContext = context.with(VAR_VALUE, after);
+                for (final Map.Entry<String, Constraint> entry : constraints.entrySet()) {
+                    final String name = entry.getKey();
+                    final Constraint constraint = entry.getValue();
+                    if (!constraint.getExpression().evaluatePredicate(newContext)) {
+                        violations.add(new Constraint.Violation(newPath, name));
+                    }
                 }
             }
         }
