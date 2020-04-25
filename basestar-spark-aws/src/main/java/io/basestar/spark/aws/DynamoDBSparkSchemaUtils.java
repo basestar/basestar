@@ -41,7 +41,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class DynamoDBSparkSchemaUtils extends SparkSchemaUtils {
+public class DynamoDBSparkSchemaUtils {
 
     public static StructType streamRecordStructType(final ObjectSchema schema) {
 
@@ -60,9 +60,9 @@ public class DynamoDBSparkSchemaUtils extends SparkSchemaUtils {
     public static StructType type(final DynamoDBRouting routing, final ObjectSchema schema, final Index index) {
 
         final List<StructField> fields = new ArrayList<>();
-        index.projectionSchema(schema).forEach((name, type) -> fields.add(field(name, type)));
-        fields.add(field(routing.indexPartitionName(schema, index), DataTypes.BinaryType));
-        fields.add(field(routing.indexSortName(schema, index), DataTypes.BinaryType));
+        index.projectionSchema(schema).forEach((name, type) -> fields.add(SparkSchemaUtils.field(name, type)));
+        fields.add(SparkSchemaUtils.field(routing.indexPartitionName(schema, index), DataTypes.BinaryType));
+        fields.add(SparkSchemaUtils.field(routing.indexSortName(schema, index), DataTypes.BinaryType));
         fields.sort(Comparator.comparing(StructField::name));
         return DataTypes.createStructType(fields);
     }
@@ -79,7 +79,7 @@ public class DynamoDBSparkSchemaUtils extends SparkSchemaUtils {
         values[structType.fieldIndex(routing.indexSortName(schema, index))] = sort;
         index.projectionSchema(schema).forEach((name, type) -> {
             final int i = structType.fieldIndex(name);
-            values[i] = toSpark(type, fields[i].dataType(), projection.get(name));
+            values[i] = SparkSchemaUtils.toSpark(type, fields[i].dataType(), projection.get(name));
         });
         Arrays.sort(fields, Comparator.comparing(StructField::name));
         return new GenericRowWithSchema(values, structType);
