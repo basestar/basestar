@@ -88,7 +88,14 @@ public abstract class PartitionedUpsert {
                 ScalaUtils.scalaEmptyMap()
         );
 
-        catalog.createTable(table, true);
+        if(catalog.tableExists(databaseName, tableName)) {
+
+            catalog.alterTable(table);
+
+        } else {
+
+            catalog.createTable(table, true);
+        }
 
         repairPartitions(session, databaseName, tableName);
     }

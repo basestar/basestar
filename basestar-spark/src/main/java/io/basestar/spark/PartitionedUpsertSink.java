@@ -96,7 +96,8 @@ public class PartitionedUpsertSink extends PartitionedUpsert implements Sink<Map
         return output;
     }
 
-    private static Dataset<Row> prepare(final Dataset<Row> input, final List<String> partitionColumns, final Map<String, String> partitionValues, final String upsertId) {
+    private static Dataset<Row> prepare(final Dataset<Row> input, final List<String> partitionColumns,
+                                        final Map<String, String> partitionValues, final String upsertId) {
 
         Dataset<Row> output = input;
         final List<String> fieldNames = Arrays.asList(input.schema().fieldNames());
@@ -106,6 +107,7 @@ public class PartitionedUpsertSink extends PartitionedUpsert implements Sink<Map
                 output = output.withColumn(entry.getKey(), functions.lit(entry.getValue()));
             }
         }
+
         output = output.coalesce(1);
 
         output = output.repartition(Stream.concat(partitionColumns.stream(), Stream.of(UPSERT_PARTITION))

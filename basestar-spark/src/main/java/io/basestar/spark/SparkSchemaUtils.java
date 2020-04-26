@@ -562,4 +562,23 @@ public class SparkSchemaUtils {
         }
         return null;
     }
+
+    // Presto in default config wants partition columns after all other columns
+    public static StructType orderForPresto(final StructType structType, final List<String> partitionColumns) {
+
+        final SortedMap<String, StructField> data = new TreeMap<>();
+        final SortedMap<Integer, StructField> partition = new TreeMap<>();
+        Arrays.stream(structType.fields()).forEach(field -> {
+            final int indexOf = partitionColumns.indexOf(field.name());
+            if(indexOf < 0) {
+                data.put(field.name(), field);
+            } else {
+                partition.put(0, field);
+            }
+        });
+        final List<StructField> fields = new ArrayList<>();
+        fields.addAll(data.values());
+        fields.addAll(partition.values());
+        return DataTypes.createStructType(fields);
+    }
 }

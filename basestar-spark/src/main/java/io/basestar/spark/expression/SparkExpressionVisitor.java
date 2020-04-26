@@ -39,6 +39,7 @@ import io.basestar.util.Path;
 import lombok.RequiredArgsConstructor;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StringType;
 
 import java.util.function.Function;
@@ -58,7 +59,7 @@ public class SparkExpressionVisitor implements ExpressionVisitor<Column> {
         final Column rhs = visit(expression.getRhs());
         // FIXME add concat for lists and maps here
         if(lhs.expr().dataType() instanceof StringType || rhs.expr().dataType() instanceof StringType) {
-            return functions.concat(lhs, rhs);
+            return functions.concat(lhs.cast(DataTypes.StringType), rhs.cast(DataTypes.StringType));
         } else {
             return lhs.plus(rhs);
         }
