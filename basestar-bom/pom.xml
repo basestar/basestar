@@ -11,7 +11,8 @@
     <packaging>pom</packaging>
 
     <properties>
-        <awssdk.version>2.10.86</awssdk.version>
+        <awssdk2.version>2.10.86</awssdk2.version>
+        <awssdk1.version>1.11.769</awssdk1.version>
         <jackson.version>2.9.10</jackson.version>
         <jackson-databind.version>2.9.10.4</jackson-databind.version>
         <bson4jackson.version>2.9.2</bson4jackson.version>
@@ -154,7 +155,14 @@
             <dependency>
                 <groupId>software.amazon.awssdk</groupId>
                 <artifactId>bom</artifactId>
-                <version>${awssdk.version}</version>
+                <version>${awssdk2.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-bom</artifactId>
+                <version>${awssdk1.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

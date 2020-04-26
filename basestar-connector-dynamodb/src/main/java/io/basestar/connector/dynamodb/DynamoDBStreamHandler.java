@@ -21,8 +21,10 @@ package io.basestar.connector.dynamodb;
  */
 
 
+import com.amazonaws.services.dynamodbv2.model.StreamRecord;
 import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
+import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.amazonaws.services.lambda.runtime.events.DynamodbEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.basestar.database.event.ObjectCreatedEvent;
@@ -33,24 +35,21 @@ import io.basestar.event.EventSerialization;
 import io.basestar.event.sns.SNSEmitter;
 import io.basestar.schema.Instance;
 import io.basestar.storage.Stash;
+import io.basestar.storage.dynamodb.DynamoDBLegacyUtils;
 import io.basestar.storage.dynamodb.DynamoDBStorage;
 import io.basestar.storage.dynamodb.DynamoDBUtils;
 import io.basestar.storage.s3.S3Stash;
 import lombok.extern.slf4j.Slf4j;
-import software.amazon.awssdk.services.dynamodb.model.StreamRecord;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.sns.SnsAsyncClient;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
-public class DynamoDBStreamHandler implements RequestStreamHandler {
+public class DynamoDBStreamHandler implements RequestHandler<DynamodbEvent, Void> {
 
     public static final String TARGET_TYPE = "TARGET_TYPE";
 
@@ -150,24 +149,24 @@ public class DynamoDBStreamHandler implements RequestStreamHandler {
     }
 
     @Override
-    public void handleRequest(final InputStream is, final OutputStream os, final Context context) throws IOException {
+    public Void handleRequest(final DynamodbEvent event, final Context context) {
 
         final List<CompletableFuture<?>> futures = new ArrayList<>();
-        final DynamoDBEvent event = objectMapper.readValue(is, DynamoDBEvent.class);
-        for(final DynamoDBEvent.Record record : event.getRecords()) {
+        for(final DynamodbEvent.DynamodbStreamRecord record : event.getRecords()) {
             futures.add(handleRecord(record));
         }
         CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).join();
+        return null;
     }
 
-    private CompletableFuture<?> handleRecord(final DynamoDBEvent.Record record) {
+    private CompletableFuture<?> handleRecord(final DynamodbEvent.DynamodbStreamRecord record) {
 
         switch (record.getEventName()) {
-            case INSERT:
+            case "INSERT":
                 return handleInsert(record);
-            case MODIFY:
+            case "MODIFY":
                 return handleModify(record);
-            case REMOVE:
+            case "REMOVE":
                 return handleRemove(record);
             default:
                 throw new IllegalStateException();
@@ -189,10 +188,10 @@ public class DynamoDBStreamHandler implements RequestStreamHandler {
         }
     }
 
-    private CompletableFuture<?> handleInsert(final DynamoDBEvent.Record record) {
+    private CompletableFuture<?> handleInsert(final DynamodbEvent.DynamodbStreamRecord record) {
 
         final StreamRecord streamRecord = record.getDynamodb();
-        return checkOversize(DynamoDBUtils.fromItem(streamRecord.newImage()))
+        return checkOversize(DynamoDBLegacyUtils.fromItem(streamRecord.getNewImage()))
                 .thenCompose(after -> {
                     final String schema = Instance.getSchema(after);
                     final String id = Instance.getId(after);
@@ -200,11 +199,11 @@ public class DynamoDBStreamHandler implements RequestStreamHandler {
                 });
     }
 
-    private CompletableFuture<?> handleModify(final DynamoDBEvent.Record record) {
+    private CompletableFuture<?> handleModify(final DynamodbEvent.DynamodbStreamRecord record) {
 
         final StreamRecord streamRecord = record.getDynamodb();
-        return checkOversize(DynamoDBUtils.fromItem(streamRecord.oldImage()))
-                .thenCompose(before -> checkOversize(DynamoDBUtils.fromItem(streamRecord.newImage()))
+        return checkOversize(DynamoDBLegacyUtils.fromItem(streamRecord.getOldImage()))
+                .thenCompose(before -> checkOversize(DynamoDBLegacyUtils.fromItem(streamRecord.getNewImage()))
                         .thenCompose(after -> {
                             final String schema = Instance.getSchema(before);
                             final String id = Instance.getId(before);
@@ -214,10 +213,10 @@ public class DynamoDBStreamHandler implements RequestStreamHandler {
                         }));
     }
 
-    private CompletableFuture<?> handleRemove(final DynamoDBEvent.Record record) {
+    private CompletableFuture<?> handleRemove(final DynamodbEvent.DynamodbStreamRecord record) {
 
         final StreamRecord streamRecord = record.getDynamodb();
-        return checkOversize(DynamoDBUtils.fromItem(streamRecord.oldImage()))
+        return checkOversize(DynamoDBLegacyUtils.fromItem(streamRecord.getOldImage()))
                 .thenCompose(before -> {
                     final String schema = Instance.getSchema(before);
                     final String id = Instance.getId(before);

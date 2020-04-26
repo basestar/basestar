@@ -11,6 +11,7 @@
 
     <properties>
         <awslambda.version>1.1.0</awslambda.version>
+        <awslambda-events.version>2.2.7</awslambda-events.version>
     </properties>
 
     <dependencyManagement>
@@ -52,6 +53,11 @@
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-lambda-java-core</artifactId>
             <version>${awslambda.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-lambda-java-events</artifactId>
+            <version>${awslambda-events.version}</version>
         </dependency>
         <dependency>
             <groupId>io.basestar</groupId>

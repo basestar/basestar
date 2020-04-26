@@ -25,6 +25,7 @@ import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.use.Use;
 import io.basestar.spark.SparkSchemaUtils;
 import io.basestar.spark.Transform;
+import io.basestar.storage.dynamodb.DynamoDBLegacyUtils;
 import io.basestar.util.Nullsafe;
 import org.apache.spark.rdd.RDD;
 import org.apache.spark.sql.Dataset;
@@ -56,7 +57,7 @@ public class DynamoDBDatasetInputTransform implements Transform<RDD<Map<String, 
         final SQLContext sqlContext = SQLContext.getOrCreate(input.sparkContext());
         return sqlContext.createDataFrame(input.toJavaRDD()
                 .map(values -> {
-                    final Map<String, Object> data = DynamoDBSparkSchemaUtils.fromDynamoDB(values);
+                    final Map<String, Object> data = DynamoDBLegacyUtils.fromItem(values);
                     return SparkSchemaUtils.toSpark(schema, extraMetadata, structType, data);
                 }), structType);
     }

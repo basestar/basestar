@@ -23,6 +23,7 @@ package io.basestar.storage.dynamodb;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.Reserved;
 import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.core.BytesWrapper;
 import software.amazon.awssdk.core.SdkBytes;
@@ -114,7 +115,7 @@ public class DynamoDBUtils {
         }
     }
 
-    private static Number parseNumber(final String str) {
+    static Number parseNumber(final String str) {
 
         if(str.contains(".")) {
             return Double.valueOf(str);
@@ -222,5 +223,20 @@ public class DynamoDBUtils {
         } catch (final IOException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    public static String id(final Map<String, AttributeValue> values) {
+
+        return (String)fromAttributeValue(values.get(Reserved.ID));
+    }
+
+    public static Long version(final Map<String, AttributeValue> values) {
+
+        return (Long)fromAttributeValue(values.get(Reserved.VERSION));
+    }
+
+    public static String schema(final Map<String, AttributeValue> values) {
+
+        return (String)fromAttributeValue(values.get(Reserved.SCHEMA));
     }
 }

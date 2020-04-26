@@ -97,14 +97,13 @@ public abstract class PartitionedUpsert {
             catalog.createTable(table, true);
         }
 
-        repairPartitions(session, databaseName, tableName);
+        repairPartitions(session, databaseName, tableName, location);
     }
 
-    public static void repairPartitions(final SparkSession session, final String databaseName, final String tableName) {
+    public static void repairPartitions(final SparkSession session, final String databaseName, final String tableName, final URI tableLocation) {
 
         final ExternalCatalog catalog = session.sharedState().externalCatalog();
         final CatalogTable table = catalog.getTable(databaseName, tableName);
-        final URI tableLocation = table.location();
 
         final List<String> names = ScalaUtils.asJavaList(table.partitionColumnNames());
         try {
