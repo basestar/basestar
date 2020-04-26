@@ -21,8 +21,9 @@ package io.basestar.spark;
  */
 
 import com.google.common.collect.Streams;
-import scala.Function1;
+import lombok.RequiredArgsConstructor;
 import scala.Predef;
+import scala.Serializable;
 import scala.collection.JavaConverters;
 import scala.collection.Seq;
 import scala.collection.Seq$;
@@ -100,14 +101,20 @@ public class ScalaUtils {
         return Streams.stream(JavaConverters.asJavaIteratorConverter(iterator).asJava());
     }
 
-    public static <T, R> Function1<T, R> scalaFunction(final Function<T, R> fn) {
+    public static <T, R> SerializableFunction1<T, R> scalaFunction(final Function<T, R> fn) {
 
-        return new AbstractFunction1<T, R>() {
-            @Override
-            public R apply(final T v1) {
+        return new SerializableFunction1<>(fn);
+    }
 
-                return fn.apply(v1);
-            }
-        };
+    @RequiredArgsConstructor
+    public static class SerializableFunction1<T, R> extends AbstractFunction1<T, R> implements Serializable {
+
+        private final Function<T, R> fn;
+
+        @Override
+        public R apply(final T v) {
+
+            return fn.apply(v);
+        }
     }
 }

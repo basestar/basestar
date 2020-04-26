@@ -33,17 +33,20 @@ import org.apache.spark.sql.functions;
 import java.util.Arrays;
 import java.util.List;
 
-public class LatestVersionTransform implements Transform<Dataset<Row>, Dataset<Row>> {
+public class LatestTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
     private final List<String> idColumns;
 
     private final String versionColumn;
 
+    private final boolean dropVersionColumn;
+
     @lombok.Builder(builderClassName = "Builder")
-    LatestVersionTransform(final List<String> idColumns, final String versionColumn)  {
+    LatestTransform(final List<String> idColumns, final String versionColumn, final Boolean dropVersionColumn)  {
 
         this.idColumns = Nullsafe.option(idColumns, ImmutableList.of(Reserved.ID));
         this.versionColumn = Nullsafe.option(versionColumn, Reserved.VERSION);
+        this.dropVersionColumn = Nullsafe.option(dropVersionColumn, false);
     }
 
     @Override
@@ -56,6 +59,11 @@ public class LatestVersionTransform implements Transform<Dataset<Row>, Dataset<R
                 .map(name -> functions.first(df.col(name)).over(window).as(name))
                 .toArray(Column[]::new);
 
-        return df.select(cols).dropDuplicates(idColumns.toArray(new String[0]));
+        final Dataset<Row> output = df.select(cols).dropDuplicates(idColumns.toArray(new String[0]));
+        if(dropVersionColumn) {
+            return output.drop(versionColumn);
+        } else {
+            return output;
+        }
     }
 }
