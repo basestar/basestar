@@ -1,10 +1,15 @@
 package io.basestar.spark;
 
 import io.basestar.util.Nullsafe;
+import lombok.RequiredArgsConstructor;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
 import org.apache.spark.sql.types.StructType;
+import scala.Function1;
+import scala.runtime.AbstractFunction1;
+
+import java.io.Serializable;
 
 
 /**
@@ -24,6 +29,18 @@ public class ConformTransform implements Transform<Dataset<Row>, Dataset<Row>> {
     @Override
     public Dataset<Row> accept(final Dataset<Row> input) {
 
-        return input.map(ScalaUtils.scalaFunction(row -> SparkSchemaUtils.conform(row, structType)), RowEncoder.apply(structType));
+        return input.map(new ConformFunction(structType), RowEncoder.apply(structType));
+    }
+
+    @RequiredArgsConstructor
+    public static class ConformFunction extends AbstractFunction1<Row, Row> implements Function1<Row, Row>, Serializable {
+
+        private final StructType structType;
+
+        @Override
+        public Row apply(final Row row) {
+
+            return SparkSchemaUtils.conform(row, structType);
+        }
     }
 }
