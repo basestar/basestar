@@ -383,5 +383,8 @@ public class PartitionedUpsertSink extends PartitionedUpsert implements Sink<Dat
                 }
             }
         });
+
+        joined.unpersist(true);
+        changes.unpersist(true);
     }
 }

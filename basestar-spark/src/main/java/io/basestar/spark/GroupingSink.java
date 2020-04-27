@@ -43,6 +43,7 @@ public class GroupingSink<T extends Serializable, G extends Serializable> implem
             final RDD<T> groupRdd = cached.filter(v -> group.equals(groupFunction.apply(v))).rdd();
             sinkFunction.accept(group, groupRdd);
         }
+        cached.unpersist(true);
     }
 
     public interface GroupFunction<T, G> extends Serializable {
