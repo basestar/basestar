@@ -217,17 +217,41 @@ public class PartitionedUpsertSink extends PartitionedUpsert implements Sink<Dat
         ));
     }
 
-    private static Dataset<Row> load(final SQLContext sqlContext, final Format format, final StructType structType,
-                                     final Collection<CatalogTablePartition> partitions) {
+    private static Dataset<Row> load(final SQLContext sqlContext, final URI basePath, final Format format,
+                                     final StructType structType, final Collection<CatalogTablePartition> partitions) {
 
         if(partitions.isEmpty()) {
             return sqlContext.createDataFrame(ImmutableList.of(), structType);
         } else {
             return sqlContext.read().format(format.getSparkFormat())
-                .load(partitions.stream().map(v -> v.location().toString()).toArray(String[]::new))
-                .withColumn(STATE_COLUMN, functions.lit(IGNORE_STATE))
-                .map((MapFunction<Row, Row>) row -> SparkSchemaUtils.conform(row, structType), RowEncoder.apply(structType));
+                    .option("basePath", basePath.toString())
+                    .schema(structType)
+                    .load(partitions.stream().map(v -> v.location().toString()).toArray(String[]::new))
+                    .withColumn(STATE_COLUMN, functions.lit(IGNORE_STATE))
+                    .map((MapFunction<Row, Row>) row -> SparkSchemaUtils.conform(row, structType), RowEncoder.apply(structType));
         }
+    }
+
+    // Remove decimal point that spark sometimes introduces to partition columns during load
+    // FIXME: use input_file_name instead
+    private static Dataset<Row> hack(final List<String> partitionColumns, final Dataset<Row> input) {
+
+        return input.map((MapFunction<Row, Row>) row -> {
+
+            final String[] fieldNames = row.schema().fieldNames();
+            final Object[] values = new Object[row.size()];
+            for(int i = 0; i != row.size(); ++i) {
+                Object value = row.get(i);
+                if(partitionColumns.contains(fieldNames[i]) && value instanceof String) {
+                    final String str = (String)value;
+                    if(str.contains(".")) {
+                        value = str.substring(0, str.indexOf('.'));
+                    }
+                }
+                values[i] = value;
+            }
+            return new GenericRow(values);
+        }, RowEncoder.apply(input.schema()));
     }
 
     private static Dataset<Row> join(final List<String> idColumns, final Dataset<Row> current, final Dataset<Row> changes) {
@@ -302,7 +326,7 @@ public class PartitionedUpsertSink extends PartitionedUpsert implements Sink<Dat
 
         log.info("Upsert on {} refers to existing partitions: {}", tableName, existingPartitions.keySet());
 
-        final Dataset<Row> current = load(sqlContext, format, changes.schema(), existingPartitions.values());
+        final Dataset<Row> current = hack(partitionColumns, load(sqlContext, tableLocation, format, changes.schema(), existingPartitions.values()));
 
         final Dataset<Row> joined = join(idColumns, current, changes).cache();
 
@@ -316,21 +340,26 @@ public class PartitionedUpsertSink extends PartitionedUpsert implements Sink<Dat
                     final Set<String> state = e.getValue();
                     final CatalogTablePartition existing = existingPartitions.get(e.getKey());
                     // If only creates then append to existing partition
-                    if(state.equals(Collections.singleton(CREATE_STATE)) && existing != null) {
-                        return extractUpsertId(existing.location());
-                    } else {
+                    if(existing == null || state.contains(UPDATE_STATE) || state.contains(DELETE_STATE)) {
                         return upsertId;
+                    } else {
+                        return extractUpsertId(existing.location());
                     }
                 }
         ));
 
-        final Dataset<Row> filtered = joined.filter(joined.col(STATE_COLUMN).notEqual(DELETE_STATE)).drop(STATE_COLUMN);
+        final Dataset<Row> upsert = output(partitionColumns, joined, upsertIds);
 
-        final Dataset<Row> upsert = output(partitionColumns, filtered, upsertIds);
+        // If new upsert, remove any items in delete state, otherwise this is an append, only keep items in create state
+
+        final Dataset<Row> filtered = upsert
+                .filter(functions.when(upsert.col(UPSERT_PARTITION).equalTo(upsertId), upsert.col(STATE_COLUMN).notEqual(DELETE_STATE))
+                        .otherwise(upsert.col(STATE_COLUMN).equalTo(CREATE_STATE)))
+                .drop(STATE_COLUMN);
 
         final String[] outputPartitionNames = Stream.concat(partitionColumns.stream(), Stream.of(UPSERT_PARTITION)).toArray(String[]::new);
-        final Column[] outputPartitions = Arrays.stream(outputPartitionNames).map(upsert::col).toArray(Column[]::new);
-        final Dataset<Row> output = upsert.repartition(1, outputPartitions);
+        final Column[] outputPartitions = Arrays.stream(outputPartitionNames).map(filtered::col).toArray(Column[]::new);
+        final Dataset<Row> output = filtered.repartition(1, outputPartitions);
 
         output.write().format(format.getSparkFormat())
                 .mode(SaveMode.Append)
