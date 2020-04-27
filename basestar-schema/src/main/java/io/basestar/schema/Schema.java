@@ -88,6 +88,8 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
 
     Set<Constraint.Violation> validate(Context context, Path path, T after);
 
+    io.swagger.v3.oas.models.media.Schema<?> swagger();
+
     interface Resolver {
 
         // 'Magic' method to handles cycles in namespace builder, instance under construction

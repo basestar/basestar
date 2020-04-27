@@ -22,6 +22,7 @@ package io.basestar.schema.use;
 
 import com.google.common.io.BaseEncoding;
 import io.basestar.schema.exception.InvalidTypeException;
+import io.swagger.v3.oas.models.media.BinarySchema;
 import lombok.Data;
 
 import java.io.DataInput;
@@ -83,6 +84,12 @@ public class UseBinary implements UseScalar<byte[]> {
     public Code code() {
 
         return Code.BINARY;
+    }
+
+    @Override
+    public io.swagger.v3.oas.models.media.Schema<?> swagger() {
+
+        return new BinarySchema();
     }
 
     @Override

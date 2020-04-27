@@ -21,6 +21,7 @@ package io.basestar.schema.use;
  */
 
 import io.basestar.schema.exception.InvalidTypeException;
+import io.swagger.v3.oas.models.media.NumberSchema;
 import lombok.Data;
 
 import java.io.DataInput;
@@ -92,6 +93,12 @@ public class UseNumber implements UseScalar<Double> {
     public Code code() {
 
         return Code.NUMBER;
+    }
+
+    @Override
+    public io.swagger.v3.oas.models.media.Schema<?> swagger() {
+
+        return new NumberSchema();
     }
 
     @Override

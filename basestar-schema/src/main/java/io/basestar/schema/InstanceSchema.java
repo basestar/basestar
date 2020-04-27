@@ -115,6 +115,25 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         }
     }
 
+    @Override
+    @SuppressWarnings("rawtypes")
+    default io.swagger.v3.oas.models.media.Schema<?> swagger() {
+
+        final Map<String, io.swagger.v3.oas.models.media.Schema> properties = new HashMap<>();
+        metadataSchema().forEach((name, type) -> {
+            properties.put(name, type.swagger());
+        });
+        getAllMembers().forEach((name, member) -> {
+            if(!member.isAlwaysHidden()) {
+                properties.put(name, member.swagger());
+            }
+        });
+        return new io.swagger.v3.oas.models.media.ObjectSchema()
+                .properties(properties)
+                .description(getDescription())
+                .name(getName());
+    }
+
 //    default Instance expand(final Instance object, final Expander expander, final Set<Path> expand) {
 //
 //        final HashMap<String, Object> changed = new HashMap<>();

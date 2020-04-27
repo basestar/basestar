@@ -22,6 +22,7 @@ package io.basestar.schema.use;
 
 import com.google.common.base.Charsets;
 import io.basestar.schema.exception.InvalidTypeException;
+import io.swagger.v3.oas.models.media.StringSchema;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
@@ -99,6 +100,12 @@ public class UseString implements UseScalar<String> {
     public Code code() {
 
         return Code.STRING;
+    }
+
+    @Override
+    public io.swagger.v3.oas.models.media.Schema<?> swagger() {
+
+        return new StringSchema();
     }
 
     @Override

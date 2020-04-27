@@ -36,6 +36,8 @@ public interface Member extends Named, Described, Serializable, Extendable {
 
     String getName();
 
+    Use<?> getType();
+
     Visibility getVisibility();
 
 //    void resolve(String name, Schema schema, Namespace namespace);
@@ -50,6 +52,10 @@ public interface Member extends Named, Described, Serializable, Extendable {
 
     Set<Path> transientExpand(Path path, Set<Path> expand);
 
+    Object applyVisibility(Context context, Object value);
+
+    Object evaluateTransients(Context context, Object value, Set<Path> expand);
+
     default boolean isVisible(final Context context, final Object value) {
 
         final Visibility visibility = getVisibility();
@@ -60,27 +66,23 @@ public interface Member extends Named, Described, Serializable, Extendable {
         }
     }
 
-    Object applyVisibility(Context context, Object value);
-
-    Object evaluateTransients(Context context, Object value, Set<Path> expand);
-
     default boolean isAlwaysVisible() {
 
         final Visibility visibility = getVisibility();
         return visibility == null || visibility.isAlwaysVisible();
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     default boolean isAlwaysHidden() {
 
         final Visibility visibility = getVisibility();
         return visibility != null && visibility.isAlwaysHidden();
     }
 
-//    Object evaluateTransients(Context context, Object value, Set<Path> expand);
+    default io.swagger.v3.oas.models.media.Schema<?> swagger() {
 
-//    interface Config extends Described {
-//
-//    }
+        return getType().swagger().description(getDescription());
+    }
 
     interface Resolver {
 

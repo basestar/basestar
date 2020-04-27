@@ -21,6 +21,7 @@ package io.basestar.schema.use;
  */
 
 import io.basestar.schema.exception.InvalidTypeException;
+import io.swagger.v3.oas.models.media.IntegerSchema;
 import lombok.Data;
 
 import java.io.DataInput;
@@ -92,6 +93,12 @@ public class UseInteger implements UseScalar<Long> {
     public Code code() {
 
         return Code.INTEGER;
+    }
+
+    @Override
+    public io.swagger.v3.oas.models.media.Schema<?> swagger() {
+
+        return new IntegerSchema();
     }
 
     @Override

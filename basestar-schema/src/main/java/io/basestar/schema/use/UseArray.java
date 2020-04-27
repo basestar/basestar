@@ -23,6 +23,7 @@ package io.basestar.schema.use;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Schema;
 import io.basestar.schema.exception.InvalidTypeException;
+import io.swagger.v3.oas.models.media.ArraySchema;
 import lombok.Data;
 
 import java.io.DataInput;
@@ -97,6 +98,12 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
     public Code code() {
 
         return Code.ARRAY;
+    }
+
+    @Override
+    public io.swagger.v3.oas.models.media.Schema<?> swagger() {
+
+        return new ArraySchema().items(type.swagger());
     }
 
     @Override

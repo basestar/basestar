@@ -52,6 +52,12 @@ public interface UseNamed<T> extends Use<T> {
         return getName();
     }
 
+    @Override
+    default io.swagger.v3.oas.models.media.Schema<?> swagger() {
+
+        return new io.swagger.v3.oas.models.media.ObjectSchema().$ref(getName());
+    }
+
     @Data
     class Lazy implements UseNamed<Object> {
 
@@ -158,6 +164,12 @@ public interface UseNamed<T> extends Use<T> {
         public Set<Constraint.Violation> validate(final Context context, final Path path, final Object value) {
 
             throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public io.swagger.v3.oas.models.media.Schema<?> swagger() {
+
+            return new io.swagger.v3.oas.models.media.ObjectSchema().$ref(name);
         }
     }
 }

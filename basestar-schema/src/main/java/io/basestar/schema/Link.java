@@ -33,6 +33,8 @@ import io.basestar.jackson.serde.ExpressionDeseriaizer;
 import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseArray;
+import io.basestar.schema.use.UseRef;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.PagedList;
 import io.basestar.util.Path;
@@ -126,6 +128,12 @@ public class Link implements Member {
         if(Reserved.isReserved(name)) {
             throw new ReservedNameException(name);
         }
+    }
+
+    @Override
+    public Use<?> getType() {
+
+        return new UseArray<>(new UseRef(schema));
     }
 
     @Override

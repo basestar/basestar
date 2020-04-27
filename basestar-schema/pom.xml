@@ -37,6 +37,10 @@
             <artifactId>basestar-jackson</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-models</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.basestar</groupId>
             <artifactId>basestar-test</artifactId>
             <scope>test</scope>

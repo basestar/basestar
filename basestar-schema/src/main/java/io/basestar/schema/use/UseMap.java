@@ -30,6 +30,7 @@ import io.basestar.schema.Instance;
 import io.basestar.schema.Schema;
 import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.util.Path;
+import io.swagger.v3.oas.models.media.MapSchema;
 import lombok.Data;
 
 import java.io.DataInput;
@@ -105,6 +106,12 @@ public class UseMap<T> implements Use<Map<String, T>> {
     public Code code() {
 
         return Code.MAP;
+    }
+
+    @Override
+    public io.swagger.v3.oas.models.media.Schema<?> swagger() {
+
+        return new MapSchema().additionalProperties(type.swagger());
     }
 
     @Override

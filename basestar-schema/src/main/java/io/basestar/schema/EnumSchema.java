@@ -28,6 +28,7 @@ import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Path;
+import io.swagger.v3.oas.models.media.StringSchema;
 import lombok.Data;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -147,5 +148,11 @@ public class EnumSchema implements Schema<String> {
     public Set<Constraint.Violation> validate(final Context context, final Path path, final String after) {
 
         return Collections.emptySet();
+    }
+
+    @Override
+    public io.swagger.v3.oas.models.media.Schema<?> swagger() {
+
+        return new StringSchema()._enum(values).description(description).name(name);
     }
 }
