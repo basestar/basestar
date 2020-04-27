@@ -20,34 +20,62 @@ package io.basestar.spark;
  * #L%
  */
 
-import lombok.Builder;
+import io.basestar.util.Nullsafe;
 import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.rdd.RDD;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-@Builder(builderClassName = "Builder")
 public class GroupingSink<T extends Serializable, G extends Serializable> implements Sink<RDD<T>> {
 
     private final GroupFunction<T, G> groupFunction;
 
     private final SinkFunction<T, G> sinkFunction;
 
+    private final int threads;
+
+    @lombok.Builder(builderClassName = "Builder")
+    GroupingSink(final GroupFunction<T, G> groupFunction, final SinkFunction<T, G> sinkFunction, final Integer threads) {
+
+        this.groupFunction = groupFunction;
+        this.sinkFunction = sinkFunction;
+        this.threads = Nullsafe.option(threads, 1);
+    }
+
     @Override
     public void accept(final RDD<T> input) {
 
         final SparkContext context = input.sparkContext();
         final JavaRDD<T> cached = input.toJavaRDD().cache();
-        final List<G> groups = cached.map(groupFunction::apply).distinct().collect();
-        for(final G group : groups) {
-            context.setJobDescription("Group: " + group);
-            final RDD<T> groupRdd = cached.filter(v -> group.equals(groupFunction.apply(v))).rdd();
-            sinkFunction.accept(group, groupRdd);
+        final ExecutorService executor;
+        if(threads <= 1) {
+            executor = Executors.newSingleThreadExecutor();
+        } else {
+            executor = Executors.newFixedThreadPool(threads);
         }
-        context.setJobDescription(null);
-        cached.unpersist(true);
+        try {
+            final List<G> groups = cached.map(groupFunction::apply).distinct().collect();
+            final List<CompletableFuture<?>> futures = new ArrayList<>();
+            for (final G group : groups) {
+                futures.add(CompletableFuture.supplyAsync(() -> {
+                    context.setJobDescription("Group: " + group);
+                    final RDD<T> groupRdd = cached.filter(v -> group.equals(groupFunction.apply(v))).rdd();
+                    sinkFunction.accept(group, groupRdd);
+                    return null;
+                }, executor));
+            }
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+            context.setJobDescription(null);
+        } finally {
+            cached.unpersist(true);
+            executor.shutdownNow();
+        }
     }
 
     public interface GroupFunction<T, G> extends Serializable {
