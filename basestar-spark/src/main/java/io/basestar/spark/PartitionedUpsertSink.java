@@ -24,6 +24,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Reserved;
 import io.basestar.util.Nullsafe;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.*;
@@ -31,20 +34,21 @@ import org.apache.spark.sql.catalyst.catalog.CatalogTable;
 import org.apache.spark.sql.catalyst.catalog.CatalogTablePartition;
 import org.apache.spark.sql.catalyst.catalog.ExternalCatalog;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
+import org.apache.spark.sql.catalyst.expressions.GenericRow;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import scala.Option;
 import scala.Tuple2;
 
+import java.io.Serializable;
 import java.net.URI;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Slf4j
-public class PartitionedUpsertSink extends PartitionedUpsert implements Sink<Map<Map<String, String>, Dataset<Row>>> {
+public class PartitionedUpsertSink extends PartitionedUpsert implements Sink<Dataset<Row>> {
 
     private static final String STATE_COLUMN = Reserved.PREFIX + "state";
 
@@ -85,7 +89,7 @@ public class PartitionedUpsertSink extends PartitionedUpsert implements Sink<Map
         Dataset<Row> output = input;
         final List<String> fieldNames = Arrays.asList(input.schema().fieldNames());
         // Remove upsert partition info in case this is some kind of chain
-        if(fieldNames.contains(UPSERT_PARTITION)) {
+        if(!fieldNames.contains(UPSERT_PARTITION)) {
             output = output.drop(UPSERT_PARTITION);
         }
         if(fieldNames.contains(deletedColumn)) {
@@ -96,139 +100,259 @@ public class PartitionedUpsertSink extends PartitionedUpsert implements Sink<Map
         return output;
     }
 
-    private static Dataset<Row> prepare(final Dataset<Row> input, final List<String> partitionColumns,
-                                        final Map<String, String> partitionValues, final String upsertId) {
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Partition implements Serializable {
 
-        Dataset<Row> output = input;
-        final List<String> fieldNames = Arrays.asList(input.schema().fieldNames());
-        output = output.withColumn(UPSERT_PARTITION, functions.lit(upsertId));
-        for(final Map.Entry<String, String> entry : partitionValues.entrySet()) {
-            if(!fieldNames.contains(entry.getKey())) {
-                output = output.withColumn(entry.getKey(), functions.lit(entry.getValue()));
+        private String[] values;
+
+        public Map<String, String> spec(final List<String> names) {
+
+            final Map<String, String> result = new HashMap<>();
+            for(int i = 0; i != names.size(); ++i) {
+                result.put(names.get(i), values[i]);
+            }
+            return result;
+        }
+
+        @Override
+        public boolean equals(final Object other) {
+
+            if(other instanceof Partition) {
+                return Arrays.deepEquals(values, ((Partition) other).values);
+            } else {
+                return false;
             }
         }
 
-        output = output.coalesce(1);
+        @Override
+        public int hashCode() {
 
-        output = output.repartition(Stream.concat(partitionColumns.stream(), Stream.of(UPSERT_PARTITION))
-                .map(output::col).toArray(Column[]::new));
+            return Arrays.deepHashCode(values);
+        }
 
-        return output;
+        @Override
+        public String toString() {
+
+            return String.join(",", values);
+        }
+
+        /**
+         * Has trailing slash
+         */
+
+        public String buildPath(final List<String> names) {
+
+            final StringBuilder result = new StringBuilder();
+            for(int i = 0; i != names.size(); ++i) {
+                result.append(names.get(i)).append("=").append(values[i]).append("/");
+            }
+            return result.toString();
+        }
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PartitionState implements Serializable {
+
+        private Partition partition;
+
+        private String state;
+
+        @Override
+        public String toString() {
+
+            return partition + "=" + state;
+        }
+    }
+
+    private static Partition partition(final Row row, final int[] partitionIndexes) {
+
+        final String[] values = new String[partitionIndexes.length];
+        for(int i = 0; i != partitionIndexes.length; ++i) {
+            values[i] = row.getString(partitionIndexes[i]);
+        }
+        return new Partition(values);
+    }
+
+    private static Map<Partition, CatalogTablePartition> existing(final ExternalCatalog catalog, final String databaseName, final String tableName,
+                                                                  final List<String> partitionColumns, final Dataset<Row> changes) {
+
+        final StructType dataSchema = changes.schema();
+        final int[] partitionIndexes = partitionColumns.stream().mapToInt(dataSchema::fieldIndex).toArray();
+
+        final List<Partition> partitionValues = changes
+                .map((MapFunction<Row, Partition>) row -> partition(row, partitionIndexes), Encoders.bean(Partition.class))
+                .distinct().collectAsList();
+
+        final Map<Partition, CatalogTablePartition> result = new HashMap<>();
+        partitionValues.forEach(v -> {
+
+            final Map<String, String> spec = v.spec(partitionColumns);
+            final Option<CatalogTablePartition> partition = catalog.getPartitionOption(databaseName, tableName, ScalaUtils.asScalaMap(spec));
+            if(partition.isDefined()) {
+                result.put(v, partition.get());
+            }
+        });
+        return result;
+    }
+
+    private static Map<Partition, Set<String>> states(final List<String> partitionColumns, final Dataset<Row> joined) {
+
+        final StructType dataSchema = joined.schema();
+        final int stateIndex = dataSchema.fieldIndex(STATE_COLUMN);
+        final int[] partitionIndexes = partitionColumns.stream().mapToInt(dataSchema::fieldIndex).toArray();
+
+        final List<PartitionState> states = joined.map((MapFunction<Row, PartitionState>) row -> {
+            final Partition partition = partition(row, partitionIndexes);
+            final String state = row.getString(stateIndex);
+            return new PartitionState(partition, state);
+        }, Encoders.bean(PartitionState.class)).distinct().collectAsList();
+
+        return states.stream().collect(Collectors.groupingBy(
+                PartitionState::getPartition,
+                Collectors.mapping(PartitionState::getState, Collectors.toSet())
+        ));
+    }
+
+    private static Dataset<Row> load(final SQLContext sqlContext, final Format format, final StructType structType,
+                                     final Collection<CatalogTablePartition> partitions) {
+
+        if(partitions.isEmpty()) {
+            return sqlContext.createDataFrame(ImmutableList.of(), structType);
+        } else {
+            return sqlContext.read().format(format.getSparkFormat())
+                .load(partitions.stream().map(v -> v.location().toString()).toArray(String[]::new))
+                .withColumn(STATE_COLUMN, functions.lit(IGNORE_STATE))
+                .map((MapFunction<Row, Row>) row -> SparkSchemaUtils.conform(row, structType), RowEncoder.apply(structType));
+        }
+    }
+
+    private static Dataset<Row> join(final List<String> idColumns, final Dataset<Row> current, final Dataset<Row> changes) {
+
+        final Column condition = idColumns.stream().map(col -> changes.col(col).equalTo(current.col(col)))
+                .reduce(Column::and).orElseThrow(IllegalStateException::new);
+
+        final StructType dataSchema = changes.schema();
+
+        return changes.joinWith(current, condition, "full_outer")
+                .map((MapFunction<Tuple2<Row, Row>, Row>) t -> {
+
+                    if(t._1() != null) {
+                        if(t._2() != null) {
+                            return t._1();
+                        } else {
+                            return SparkSchemaUtils.with(t._1(), ImmutableMap.of(STATE_COLUMN, CREATE_STATE));
+                        }
+                    } else {
+                        return SparkSchemaUtils.conform(t._2(), dataSchema);
+                    }
+
+                }, RowEncoder.apply(changes.schema()));
+    }
+
+    private Dataset<Row> output(final List<String> partitionColumns, final Dataset<Row> input, final Map<Partition, String> upsertIds) {
+
+        final StructType inputSchema = input.schema();
+        final StructField[] inputFields = inputSchema.fields();
+        final StructField[] outputFields = new StructField[inputFields.length + 1];
+        for(int i = 0; i != inputFields.length; ++i) {
+            outputFields[i] = inputFields[i];
+        }
+        outputFields[inputFields.length] = SparkSchemaUtils.field(UPSERT_PARTITION, DataTypes.StringType);
+        final StructType outputSchema = DataTypes.createStructType(outputFields);
+
+        final int[] partitionIndexes = partitionColumns.stream().mapToInt(inputSchema::fieldIndex).toArray();
+        return input.map((MapFunction<Row, Row>) row -> {
+
+            final Partition partition = partition(row, partitionIndexes);
+
+            final Object[] outputValues = new Object[outputFields.length];
+            for(int i = 0; i != inputFields.length; ++i) {
+                outputValues[i] = row.get(i);
+            }
+            outputValues[inputFields.length] = upsertIds.get(partition);
+            return new GenericRow(outputValues);
+
+        }, RowEncoder.apply(outputSchema));
+    }
+
+    private static String joinPaths(final String a, final String b) {
+
+        return a.endsWith("/") ? a + b : a + "/" + b;
     }
 
     @Override
-    public void accept(final Map<Map<String, String>, Dataset<Row>> inputs) {
+    public void accept(final Dataset<Row> input) {
 
-        inputs.forEach((rawPartitionValues, input) -> {
+        final SparkSession session = input.sparkSession();
+        final SQLContext sqlContext = input.sqlContext();
 
-            final SparkSession session = input.sparkSession();
-            final SQLContext sqlContext = input.sqlContext();
+        final ExternalCatalog catalog = session.sharedState().externalCatalog();
+        final CatalogTable table = catalog.getTable(databaseName, tableName);
+        final List<String> partitionColumns = ScalaUtils.asJavaList(table.partitionColumnNames());
 
-            final ExternalCatalog catalog = session.sharedState().externalCatalog();
-            final CatalogTable table = catalog.getTable(databaseName, tableName);
-            final List<String> partitionColumns = ScalaUtils.asJavaList(table.partitionColumnNames());
+        final URI tableLocation = table.location();
 
-            final String[] partitionNames = Stream.concat(partitionColumns.stream(), Stream.of(UPSERT_PARTITION)).toArray(String[]::new);
+        final Dataset<Row> changes = clean(input).cache();
 
-            final URI tableLocation = table.location();
+        final Map<Partition, CatalogTablePartition> existingPartitions = existing(catalog, databaseName, tableName, partitionColumns, changes);
 
-            // Remove upsert partition from spec if it was passed
-            final Map<String, String> partitionValues = rawPartitionValues.entrySet().stream()
-                    .filter(e -> !UPSERT_PARTITION.equals(e.getKey()))
-                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        log.info("Upsert on {} refers to existing partitions: {}", tableName, existingPartitions.keySet());
 
-            // Upsert partition is specified on output path only
-            final String partitionPath = partitionColumns.stream()
-                    .map(k -> k + "=" + partitionValues.get(k)).collect(Collectors.joining("/"))
-                    + "/" + UPSERT_PARTITION + "=" + upsertId + "/";
+        final Dataset<Row> current = load(sqlContext, format, changes.schema(), existingPartitions.values());
 
-            final URI newPartitionLocation = URI.create(joinPaths(tableLocation.toString(), partitionPath));
+        final Dataset<Row> joined = join(idColumns, current, changes).cache();
 
-            final Dataset<Row> changes = clean(input);
-            final StructType structType = changes.schema();
+        final Map<Partition, Set<String>> states = states(partitionColumns, joined);
 
-            final scala.collection.immutable.Map<String, String> partitionSpec = ScalaUtils.asScalaMap(partitionValues);
-            final Option<CatalogTablePartition> partition = catalog.getPartitionOption(databaseName, tableName, partitionSpec);
+        log.info("Upsert on {} has target states: {}", tableName, states);
 
-            final Dataset<Row> current;
-            final boolean create;
-            final String oldUpsertId;
-            if(partition.isDefined()) {
-                final URI partitionLocation = partition.get().location();
-                if (partitionLocation.equals(newPartitionLocation)) {
-                    log.info("Partition for {} seems to already have been written as {}", partitionValues, newPartitionLocation);
-                    return;
+        final Map<Partition, String> upsertIds = states.entrySet().stream().collect(Collectors.toMap(
+                Map.Entry::getKey,
+                e -> {
+                    final Set<String> state = e.getValue();
+                    final CatalogTablePartition existing = existingPartitions.get(e.getKey());
+                    // If only creates then append to existing partition
+                    if(state.equals(Collections.singleton(CREATE_STATE)) && existing != null) {
+                        return extractUpsertId(existing.location());
+                    } else {
+                        return upsertId;
+                    }
                 }
-                final String serde = partition.get().storage().serde().get();
-                current = sqlContext.read().format(Format.forHadoopSerde(serde).getSparkFormat()).load(partitionLocation.toString())
-                        .withColumn(STATE_COLUMN, functions.lit(IGNORE_STATE));
-                create = false;
-                oldUpsertId = extractUpsertId(partitionLocation);
-            } else {
-                current = sqlContext.createDataFrame(ImmutableList.of(), structType);
-                create = true;
-                oldUpsertId = null;
-            }
+        ));
 
-            log.info("Writing partition {} as {}", partitionValues, newPartitionLocation);
+        final Dataset<Row> filtered = joined.filter(joined.col(STATE_COLUMN).notEqual(DELETE_STATE)).drop(STATE_COLUMN);
 
-            final Column condition = idColumns.stream().map(col -> changes.col(col).equalTo(current.col(col)))
-                    .reduce(Column::and).orElseThrow(IllegalStateException::new);
+        final Dataset<Row> upsert = output(partitionColumns, filtered, upsertIds);
 
-            final Dataset<Row> merged = changes.joinWith(current, condition, "full_outer")
-                    .map((MapFunction<Tuple2<Row, Row>, Row>) t -> {
+        final String[] outputPartitionNames = Stream.concat(partitionColumns.stream(), Stream.of(UPSERT_PARTITION)).toArray(String[]::new);
+        final Column[] outputPartitions = Arrays.stream(outputPartitionNames).map(upsert::col).toArray(Column[]::new);
+        final Dataset<Row> output = upsert.repartition(1, outputPartitions);
 
-                        if(t._1() != null) {
-                            if(t._2() != null) {
-                                return t._1();
-                            } else {
-                                return SparkSchemaUtils.with(t._1(), ImmutableMap.of(STATE_COLUMN, CREATE_STATE));
-                            }
-                        } else {
-                            return SparkSchemaUtils.conform(t._2(), structType);
-                        }
+        output.write().format(format.getSparkFormat())
+                .mode(SaveMode.Append)
+                .partitionBy(outputPartitionNames)
+                .save(tableLocation.toString());
 
-                    }, RowEncoder.apply(changes.schema()));
+        upsertIds.forEach((partition, upsertId) -> {
 
-            final Dataset<Row> cached = merged.cache();
-
-            final Set<String> states = cached.select(cached.col(STATE_COLUMN)).distinct().collectAsList()
-                    .stream().map(v -> (String)SparkSchemaUtils.get(v, STATE_COLUMN)).collect(Collectors.toSet());
-
-            if(create || states.contains(UPDATE_STATE) || states.contains(DELETE_STATE)) {
-
-                final Dataset<Row> filtered = cached.filter(cached.col(STATE_COLUMN).notEqual(DELETE_STATE)).drop(STATE_COLUMN);
-
-                final Dataset<Row> upsert = prepare(filtered, partitionColumns, partitionValues, upsertId);
-
-                upsert.write().format(format.getSparkFormat())
-                        .mode(SaveMode.Append)
-                        .partitionBy(partitionNames)
-                        .save(tableLocation.toString());
-
-                final CatalogTablePartition newPartition = SparkUtils.partition(ScalaUtils.asJavaMap(partitionSpec), format, newPartitionLocation);
-                if(create) {
+            if(this.upsertId.equals(upsertId)) {
+                final Map<String, String> spec = partition.spec(partitionColumns);
+                final String partitionPath = partition.buildPath(partitionColumns) + UPSERT_PARTITION + "=" + upsertId + "/";
+                final URI newPartitionLocation = URI.create(joinPaths(tableLocation.toString(), partitionPath));
+                final CatalogTablePartition newPartition = SparkUtils.partition(spec, format, newPartitionLocation);
+                final CatalogTablePartition existing = existingPartitions.get(partition);
+                if(existing == null) {
+                    log.info("Creating partition {} with location {}", partition, newPartitionLocation);
                     catalog.createPartitions(databaseName, tableName, Option.apply(newPartition).toList(), false);
                 } else {
+                    log.info("Updating partition {} with location {}", partition, newPartitionLocation);
                     catalog.alterPartitions(databaseName, tableName, Option.apply(newPartition).toList());
                 }
-
-            } else if(states.contains(CREATE_STATE)) {
-
-                final Dataset<Row> filtered = cached.filter(cached.col(STATE_COLUMN).equalTo(CREATE_STATE)).drop(STATE_COLUMN);
-
-                final Dataset<Row> append = prepare(filtered, partitionColumns, partitionValues, oldUpsertId);
-
-                append.write().format(format.getSparkFormat())
-                        .mode(SaveMode.Append)
-                        .partitionBy(partitionNames)
-                        .save(tableLocation.toString());
             }
         });
-    }
-
-    private String joinPaths(final String a, final String b) {
-
-        return a.endsWith("/") ? a + b : a + "/" + b;
     }
 }

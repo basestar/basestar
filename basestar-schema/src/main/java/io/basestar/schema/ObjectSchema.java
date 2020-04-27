@@ -376,30 +376,6 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         return METADATA_SCHEMA;
     }
 
-//    @Override
-//    public Property getProperty(final String name) {
-//
-//        return properties.get(name);
-//    }
-
-//    @Override
-//    public Map<String, Property> getDeclaredProperties() {
-//
-//        return properties;
-//    }
-
-//    @Override
-//    public Link getLink(final String name) {
-//
-//        return links.get(name);
-//    }
-//
-//    @Override
-//    public Index getIndex(final String name) {
-//
-//        return indexes.get(name);
-//    }
-
     @Override
     public Map<String, ? extends Member> getDeclaredMembers() {
 
@@ -439,18 +415,6 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         return getAllPermissions().get(name);
     }
 
-//    public <T> T getProperty(final Map<String, Object> object, final String name, final Class<T> as) {
-//
-//        final Property property = requireProperty(name);
-//        return property.cast(object.get(name), as);
-//    }
-//
-//    public <T> void setProperty(final Map<String, Object> object, final String name, final T value) {
-//
-//        final Property property = requireProperty(name);
-//        object.put(name, property.create(value));
-//    }
-
     public static Map<String, Object> readMeta(final Map<String, Object> object) {
 
         final HashMap<String, Object> result = new HashMap<>();
@@ -464,12 +428,12 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
 
     @Override
     @SuppressWarnings("unchecked")
-    public Instance create(final Object value, final boolean expand) {
+    public Instance create(final Object value, final boolean expand, final boolean suppress) {
 
         if(value == null) {
             return null;
         } else if(value instanceof Map) {
-            return create((Map<String, Object>)value, expand);
+            return create((Map<String, Object>)value, expand, suppress);
         } else {
             throw new InvalidTypeException();
         }
@@ -484,9 +448,9 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         return results;
     }
 
-    public Instance create(final Map<String, Object> value, final boolean expand) {
+    public Instance create(final Map<String, Object> value, final boolean expand, final boolean suppress) {
 
-        final HashMap<String, Object> result = new HashMap<>(readProperties(value, expand));
+        final HashMap<String, Object> result = new HashMap<>(readProperties(value, expand, suppress));
         Instance.setSchema(result, this.getName());
         result.putAll(readMeta(value));
         if(result.get(Reserved.HASH) == null) {

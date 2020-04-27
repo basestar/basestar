@@ -64,9 +64,9 @@ public class UseEnum implements UseScalar<String>, UseNamed<String> {
     }
 
     @Override
-    public String create(final Object value, final boolean expand) {
+    public String create(final Object value, final boolean expand, final boolean suppress) {
 
-        return schema.create(value, expand);
+        return schema.create(value, expand, suppress);
     }
 
     @Override

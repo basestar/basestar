@@ -215,12 +215,12 @@ public class StructSchema implements InstanceSchema {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Instance create(final Object value, final boolean expand) {
+    public Instance create(final Object value, final boolean expand, final boolean suppress) {
 
         if(value == null) {
             return null;
         } else if(value instanceof Map) {
-            return create((Map<String, Object>)value, expand);
+            return create((Map<String, Object>)value, expand, suppress);
         } else {
             throw new InvalidTypeException();
         }
@@ -234,9 +234,9 @@ public class StructSchema implements InstanceSchema {
                 .collect(Collectors.toSet());
     }
 
-    public Instance create(final Map<String, Object> value, final boolean expand) {
+    public Instance create(final Map<String, Object> value, final boolean expand, final boolean suppress) {
 
-        return new Instance(readProperties(value, expand));
+        return new Instance(readProperties(value, expand, suppress));
     }
 
     public void serialize(final Map<String, Object> object, final DataOutput out) throws IOException {

@@ -181,9 +181,9 @@ public class Property implements Member {
         return ((Use<Object>)type).evaluateTransients(context, value, expand);
     }
 
-    public Object create(final Object value, final boolean expand) {
+    public Object create(final Object value, final boolean expand, final boolean suppress) {
 
-        return type.create(value, expand);
+        return type.create(value, expand, suppress);
     }
 
     public <T> T cast(final Object o, final Class<T> as) {
@@ -214,7 +214,7 @@ public class Property implements Member {
         if(expression != null) {
 //            final Map<String, Object> newContext = new HashMap<>(context);
 //            newContext.put(VAR_VALUE, value);
-            return type.create(expression.evaluate(context.with(VAR_VALUE, value)), true);
+            return type.create(expression.evaluate(context.with(VAR_VALUE, value)), true, false);
         } else {
             return value;
         }

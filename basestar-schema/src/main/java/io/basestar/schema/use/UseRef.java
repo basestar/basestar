@@ -70,7 +70,7 @@ public class UseRef implements UseInstance {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Instance create(final Object value, final boolean expand) {
+    public Instance create(final Object value, final boolean expand, final boolean suppress) {
 
         if(value == null) {
             return null;
@@ -81,7 +81,7 @@ public class UseRef implements UseInstance {
                 return null;
             } else {
                 if(expand) {
-                    return schema.create(map, true);
+                    return schema.create(map, true, suppress);
                 } else {
                     return ObjectSchema.ref(id);
                 }

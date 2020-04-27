@@ -61,7 +61,7 @@ public class UseBoolean implements UseScalar<Boolean> {
     }
 
     @Override
-    public Boolean create(final Object value, final boolean expand) {
+    public Boolean create(final Object value, final boolean expand, final boolean suppress) {
 
         if(value == null) {
             return null;
@@ -71,6 +71,8 @@ public class UseBoolean implements UseScalar<Boolean> {
             return ((Number)value).intValue() != 0;
         } else if(value instanceof String) {
             return !(((String)value).isEmpty() || value.equals("false"));
+        } else if(suppress) {
+            return null;
         } else {
             throw new InvalidTypeException();
         }

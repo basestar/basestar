@@ -63,7 +63,7 @@ public class UseNumber implements UseScalar<Double> {
     }
 
     @Override
-    public Double create(final Object value, final boolean expand) {
+    public Double create(final Object value, final boolean expand, final boolean suppress) {
 
         if(value == null) {
             return null;
@@ -72,7 +72,17 @@ public class UseNumber implements UseScalar<Double> {
         } else if(value instanceof Number) {
             return ((Number)value).doubleValue();
         } else if(value instanceof String) {
-            return Double.parseDouble((String)value);
+            try {
+                return Double.parseDouble((String)value);
+            } catch (final NumberFormatException e) {
+                if(suppress) {
+                    return null;
+                } else {
+                    throw e;
+                }
+            }
+        } else if(suppress) {
+            return null;
         } else {
             throw new InvalidTypeException();
         }

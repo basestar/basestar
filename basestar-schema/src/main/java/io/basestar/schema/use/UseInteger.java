@@ -63,7 +63,7 @@ public class UseInteger implements UseScalar<Long> {
     }
 
     @Override
-    public Long create(final Object value, final boolean expand) {
+    public Long create(final Object value, final boolean expand, final boolean suppress) {
 
         if(value == null) {
             return null;
@@ -72,7 +72,17 @@ public class UseInteger implements UseScalar<Long> {
         } else if(value instanceof Number) {
             return ((Number)value).longValue();
         } else if(value instanceof String) {
-            return Long.parseLong((String)value);
+            try {
+                return Long.parseLong((String) value);
+            } catch (final NumberFormatException e) {
+                if(suppress) {
+                    return null;
+                } else {
+                    throw e;
+                }
+            }
+        } else if(suppress) {
+            return null;
         } else {
             throw new InvalidTypeException();
         }

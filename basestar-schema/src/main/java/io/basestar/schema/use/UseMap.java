@@ -84,16 +84,18 @@ public class UseMap<T> implements Use<Map<String, T>> {
     }
 
     @Override
-    public Map<String, T> create(final Object value, final boolean expand) {
+    public Map<String, T> create(final Object value, final boolean expand, final boolean suppress) {
 
         if(value == null) {
             return null;
         } else if(value instanceof Map) {
-            return ((Map<?, ?>)value).entrySet().stream()
+            return ((Map<?, ?>) value).entrySet().stream()
                     .collect(Collectors.toMap(
                             entry -> entry.getKey().toString(),
-                            entry -> type.create(entry.getValue(), expand)
+                            entry -> type.create(entry.getValue(), expand, suppress)
                     ));
+        } else if(suppress) {
+            return null;
         } else {
             throw new InvalidTypeException();
         }

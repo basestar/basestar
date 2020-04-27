@@ -130,12 +130,14 @@ public class EnumSchema implements Schema<String> {
     }
 
     @Override
-    public String create(final Object value, final boolean expand) {
+    public String create(final Object value, final boolean expand, final boolean suppress) {
 
         if(value == null) {
             return null;
-        } else if(value instanceof String) {
-            return (String)value;
+        } else if(value instanceof String && values.contains(value)) {
+            return (String) value;
+        } else if(suppress) {
+            return null;
         } else {
             throw new InvalidTypeException();
         }
@@ -144,12 +146,6 @@ public class EnumSchema implements Schema<String> {
     @Override
     public Set<Constraint.Violation> validate(final Context context, final Path path, final String after) {
 
-        if(after == null) {
-            return Collections.emptySet();
-        } else if(values.contains(after)) {
-            return Collections.emptySet();
-        } else {
-            return Collections.singleton(new Constraint.Violation(path, "enum"));
-        }
+        return Collections.emptySet();
     }
 }

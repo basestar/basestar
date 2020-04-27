@@ -59,10 +59,10 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
 
     default T create(Object value) {
 
-        return create(value, false);
+        return create(value, false, false);
     }
 
-    T create(Object value, boolean expand);
+    T create(Object value, boolean expand, boolean suppress);
 
     int getSlot();
 

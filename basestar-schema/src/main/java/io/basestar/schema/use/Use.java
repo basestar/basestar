@@ -75,11 +75,11 @@ public interface Use<T> extends Serializable {
 
     Use<?> resolve(Schema.Resolver resolver);
 
-    T create(Object value, boolean expand);
+    T create(Object value, boolean expand, boolean suppress);
 
     default T create(Object value) {
 
-        return create(value, false);
+        return create(value, false, false);
     }
 
     Code code();

@@ -97,10 +97,10 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         }
     }
 
-    default Map<String, Object> readProperties(final Map<String, Object> object, final boolean expand) {
+    default Map<String, Object> readProperties(final Map<String, Object> object, final boolean expand, final boolean suppress) {
 
         final Map<String, Object> result = new HashMap<>();
-        getAllProperties().forEach((k, v) -> result.put(k, v.create(object.get(k), expand)));
+        getAllProperties().forEach((k, v) -> result.put(k, v.create(object.get(k), expand, suppress)));
         return Collections.unmodifiableMap(result);
     }
 

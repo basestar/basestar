@@ -80,14 +80,16 @@ public class UseString implements UseScalar<String> {
     }
 
     @Override
-    public String create(final Object value, final boolean expand) {
+    public String create(final Object value, final boolean expand, final boolean suppress) {
 
         if(value == null) {
             return null;
         } else if(value instanceof Boolean || value instanceof Number) {
             return value.toString();
         } else if(value instanceof String) {
-            return (String)value;
+            return (String) value;
+        } else if(suppress) {
+            return null;
         } else {
             throw new InvalidTypeException();
         }

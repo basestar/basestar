@@ -78,14 +78,16 @@ public class UseSet<T> implements UseCollection<T, Set<T>> {
     }
 
     @Override
-    public Set<T> create(final Object value, final boolean expand) {
+    public Set<T> create(final Object value, final boolean expand, final boolean suppress) {
 
         if(value == null) {
             return null;
         } else if(value instanceof Collection) {
             return ((Collection<?>)value).stream()
-                    .map(v -> type.create(v, expand))
+                    .map(v -> type.create(v, expand, suppress))
                     .collect(Collectors.toSet());
+        } else if(suppress) {
+            return null;
         } else {
             throw new InvalidTypeException();
         }

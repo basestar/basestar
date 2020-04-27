@@ -192,31 +192,31 @@ public class SparkSchemaUtils {
             @Override
             public Object visitBoolean(final UseBoolean type) {
 
-                return type.create(value);
+                return type.create(value, false, true);
             }
 
             @Override
             public Object visitInteger(final UseInteger type) {
 
-                return type.create(value);
+                return type.create(value, false, true);
             }
 
             @Override
             public Object visitNumber(final UseNumber type) {
 
-                return type.create(value);
+                return type.create(value, false, true);
             }
 
             @Override
             public Object visitString(final UseString type) {
 
-                return type.create(value);
+                return type.create(value, false, true);
             }
 
             @Override
             public Object visitEnum(final UseEnum type) {
 
-                return type.create(value);
+                return type.create(value, false, true);
             }
 
             @Override
@@ -292,7 +292,7 @@ public class SparkSchemaUtils {
             @Override
             public Object visitBinary(final UseBinary type) {
 
-                return type.create(value);
+                return type.create(value, false, true);
             }
         });
     }
@@ -345,31 +345,31 @@ public class SparkSchemaUtils {
             @Override
             public Object visitBoolean(final UseBoolean type) {
 
-                return scala.Boolean.box(type.create(value));
+                return scala.Boolean.box(type.create(value, false, true));
             }
 
             @Override
             public Object visitInteger(final UseInteger type) {
 
-                return scala.Long.box(type.create(value));
+                return scala.Long.box(type.create(value, false, true));
             }
 
             @Override
             public Object visitNumber(final UseNumber type) {
 
-                return scala.Double.box(type.create(value));
+                return scala.Double.box(type.create(value, false, true));
             }
 
             @Override
             public Object visitString(final UseString type) {
 
-                return type.create(value);
+                return type.create(value, false, true);
             }
 
             @Override
             public Object visitEnum(final UseEnum type) {
 
-                return type.create(value);
+                return type.create(value, false, true);
             }
 
             @Override
@@ -437,7 +437,7 @@ public class SparkSchemaUtils {
             @Override
             public Object visitBinary(final UseBinary type) {
 
-                return type.create(value);
+                return type.create(value, false, true);
             }
         });
     }
