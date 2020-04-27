@@ -21,6 +21,7 @@ package io.basestar.spark;
  */
 
 import lombok.Builder;
+import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.rdd.RDD;
 
@@ -37,12 +38,15 @@ public class GroupingSink<T extends Serializable, G extends Serializable> implem
     @Override
     public void accept(final RDD<T> input) {
 
+        final SparkContext context = input.sparkContext();
         final JavaRDD<T> cached = input.toJavaRDD().cache();
         final List<G> groups = cached.map(groupFunction::apply).distinct().collect();
         for(final G group : groups) {
+            context.setJobDescription("Group: " + group);
             final RDD<T> groupRdd = cached.filter(v -> group.equals(groupFunction.apply(v))).rdd();
             sinkFunction.accept(group, groupRdd);
         }
+        context.setJobDescription(null);
         cached.unpersist(true);
     }
 

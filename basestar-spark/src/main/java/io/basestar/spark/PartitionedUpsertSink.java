@@ -28,6 +28,10 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.*;
 import org.apache.spark.sql.catalyst.catalog.CatalogTable;
@@ -41,14 +45,18 @@ import org.apache.spark.sql.types.StructType;
 import scala.Option;
 import scala.Tuple2;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.net.URI;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Slf4j
 public class PartitionedUpsertSink extends PartitionedUpsert implements Sink<Dataset<Row>> {
+
+    private static final Integer DEFAULT_MERGE_COUNT = 100;
 
     private static final String STATE_COLUMN = Reserved.PREFIX + "state";
 
@@ -72,9 +80,11 @@ public class PartitionedUpsertSink extends PartitionedUpsert implements Sink<Dat
 
     private final String deletedColumn;
 
+    private final int mergeCount;
+
     @lombok.Builder(builderClassName = "Builder")
     PartitionedUpsertSink(final String databaseName, final String tableName, final List<String> idColumns,
-                          final String upsertId, final Format format, final String deletedColumn) {
+                          final String upsertId, final Format format, final String deletedColumn, final Integer mergeCount) {
 
         this.databaseName = databaseName;
         this.tableName = tableName;
@@ -82,6 +92,7 @@ public class PartitionedUpsertSink extends PartitionedUpsert implements Sink<Dat
         this.upsertId = Nullsafe.option(upsertId, PartitionedUpsertSink::defaultUpsertId);
         this.format = Nullsafe.option(format, Format.PARQUET);
         this.deletedColumn = Nullsafe.option(deletedColumn, Reserved.DELETED);
+        this.mergeCount = Nullsafe.option(mergeCount, DEFAULT_MERGE_COUNT);
     }
 
     private Dataset<Row> clean(final Dataset<Row> input) {
@@ -232,28 +243,6 @@ public class PartitionedUpsertSink extends PartitionedUpsert implements Sink<Dat
         }
     }
 
-    // Remove decimal point that spark sometimes introduces to partition columns during load
-    // FIXME: use input_file_name instead
-    private static Dataset<Row> hack(final List<String> partitionColumns, final Dataset<Row> input) {
-
-        return input.map((MapFunction<Row, Row>) row -> {
-
-            final String[] fieldNames = row.schema().fieldNames();
-            final Object[] values = new Object[row.size()];
-            for(int i = 0; i != row.size(); ++i) {
-                Object value = row.get(i);
-                if(partitionColumns.contains(fieldNames[i]) && value instanceof String) {
-                    final String str = (String)value;
-                    if(str.contains(".")) {
-                        value = str.substring(0, str.indexOf('.'));
-                    }
-                }
-                values[i] = value;
-            }
-            return new GenericRow(values);
-        }, RowEncoder.apply(input.schema()));
-    }
-
     private static Dataset<Row> join(final List<String> idColumns, final Dataset<Row> current, final Dataset<Row> changes) {
 
         final Column condition = idColumns.stream().map(col -> changes.col(col).equalTo(current.col(col)))
@@ -312,7 +301,10 @@ public class PartitionedUpsertSink extends PartitionedUpsert implements Sink<Dat
     public void accept(final Dataset<Row> input) {
 
         final SparkSession session = input.sparkSession();
+        final SparkContext context = session.sparkContext();
         final SQLContext sqlContext = input.sqlContext();
+
+        context.setJobDescription("Upsert to " + tableName);
 
         final ExternalCatalog catalog = session.sharedState().externalCatalog();
         final CatalogTable table = catalog.getTable(databaseName, tableName);
@@ -326,27 +318,50 @@ public class PartitionedUpsertSink extends PartitionedUpsert implements Sink<Dat
 
         log.info("Upsert on {} refers to existing partitions: {}", tableName, existingPartitions.keySet());
 
-        final Dataset<Row> current = hack(partitionColumns, load(sqlContext, tableLocation, format, changes.schema(), existingPartitions.values()));
+        final Dataset<Row> current = load(sqlContext, tableLocation, format, changes.schema(), existingPartitions.values());
 
         final Dataset<Row> joined = join(idColumns, current, changes).cache();
 
         final Map<Partition, Set<String>> states = states(partitionColumns, joined);
 
-        log.info("Upsert on {} has target states: {}", tableName, states);
-
+        final AtomicInteger create = new AtomicInteger(0);
+        final AtomicInteger merge = new AtomicInteger(0);
+        final AtomicInteger append = new AtomicInteger(0);
+        final Configuration hadoopConfiguration = context.hadoopConfiguration();
         final Map<Partition, String> upsertIds = states.entrySet().stream().collect(Collectors.toMap(
                 Map.Entry::getKey,
-                e -> {
-                    final Set<String> state = e.getValue();
-                    final CatalogTablePartition existing = existingPartitions.get(e.getKey());
+                entry -> {
+                    final Set<String> state = entry.getValue();
+                    final CatalogTablePartition existing = existingPartitions.get(entry.getKey());
                     // If only creates then append to existing partition
-                    if(existing == null || state.contains(UPDATE_STATE) || state.contains(DELETE_STATE)) {
+                    if(existing == null) {
+                        create.incrementAndGet();
+                        return upsertId;
+                    } else if(state.contains(UPDATE_STATE) || state.contains(DELETE_STATE)) {
+                        merge.incrementAndGet();
                         return upsertId;
                     } else {
+                        try {
+                            final Path path = new Path(existing.location());
+                            final FileSystem fs = path.getFileSystem(hadoopConfiguration);
+                            final int files = fs.listStatus(path).length;
+                            if(files > mergeCount) {
+                                log.error("Merging {} because it has {} files", entry.getKey(), files);
+                                merge.incrementAndGet();
+                                return upsertId;
+                            }
+                        } catch (final IOException e) {
+                            log.error("Failed to check file count for {}", existing.location(), e);
+                        }
+                        append.incrementAndGet();
                         return extractUpsertId(existing.location());
                     }
                 }
         ));
+
+        log.info("Upsert on {} has target states: {}", tableName, states);
+
+        context.setJobDescription("Upsert to " + tableName + " (create: " + create + ", merge: " + merge + ", append: " + append + ")");
 
         final Dataset<Row> upsert = output(partitionColumns, joined, upsertIds);
 
@@ -386,5 +401,7 @@ public class PartitionedUpsertSink extends PartitionedUpsert implements Sink<Dat
 
         joined.unpersist(true);
         changes.unpersist(true);
+
+        context.setJobDescription(null);
     }
 }
