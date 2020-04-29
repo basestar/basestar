@@ -117,15 +117,15 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
 
     @Override
     @SuppressWarnings("rawtypes")
-    default io.swagger.v3.oas.models.media.Schema<?> swagger() {
+    default io.swagger.v3.oas.models.media.Schema<?> openApi() {
 
         final Map<String, io.swagger.v3.oas.models.media.Schema> properties = new HashMap<>();
         metadataSchema().forEach((name, type) -> {
-            properties.put(name, type.swagger());
+            properties.put(name, type.openApi());
         });
         getAllMembers().forEach((name, member) -> {
             if(!member.isAlwaysHidden()) {
-                properties.put(name, member.swagger());
+                properties.put(name, member.openApi());
             }
         });
         return new io.swagger.v3.oas.models.media.ObjectSchema()

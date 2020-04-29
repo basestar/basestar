@@ -20,9 +20,13 @@ package io.basestar.api;
  * #L%
  */
 
+import io.swagger.v3.oas.models.OpenAPI;
+
 import java.util.concurrent.CompletableFuture;
 
 public interface API {
 
     CompletableFuture<APIResponse> handle(APIRequest request);
+
+    OpenAPI openApi();
 }

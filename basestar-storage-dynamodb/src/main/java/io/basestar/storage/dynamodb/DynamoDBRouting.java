@@ -85,17 +85,8 @@ public interface DynamoDBRouting extends Serializable {
 
         private final String dataPrefix;
 
-        public SingleTable() {
-
-            this("");
-        }
-
-        public SingleTable(final String tablePrefix) {
-
-            this(tablePrefix, "");
-        }
-
-        public SingleTable(final String tablePrefix, final String dataPrefix) {
+        @lombok.Builder(builderClassName = "Builder")
+        SingleTable(final String tablePrefix, final String dataPrefix) {
 
             this.tablePrefix = tablePrefix;
             this.dataPrefix = dataPrefix;
@@ -226,12 +217,8 @@ public interface DynamoDBRouting extends Serializable {
 
         private final String tablePrefix;
 
-        public MultiTable() {
-
-            this("");
-        }
-
-        public MultiTable(final String tablePrefix) {
+        @lombok.Builder(builderClassName = "Builder")
+        MultiTable(final String tablePrefix) {
 
             this.tablePrefix = tablePrefix;
         }

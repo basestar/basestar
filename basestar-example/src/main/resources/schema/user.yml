@@ -10,8 +10,7 @@ User:
         visibility:
           expression: this.id == caller.id
     owner:
-      type:
-        ref: User
+      type: User
       expression: this.owner ?? caller
 
 

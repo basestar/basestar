@@ -22,12 +22,16 @@ package io.basestar.api;
 
 import com.google.common.collect.Multimap;
 import io.basestar.api.exception.UnsupportedContentException;
+import io.basestar.auth.Caller;
+import lombok.RequiredArgsConstructor;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
 
 public interface APIRequest {
+
+    Caller getCaller();
 
     Method getMethod();
 
@@ -38,11 +42,6 @@ public interface APIRequest {
     Multimap<String, String> getHeaders();
 
     InputStream readBody() throws IOException;
-
-    default String getAuthorization() {
-
-        return getFirstHeader("Authorization");
-    }
 
     default String getFirstHeader(final String key) {
 
@@ -87,6 +86,43 @@ public interface APIRequest {
                 throw new UnsupportedContentException(accept);
             }
             return match;
+        }
+    }
+
+    @RequiredArgsConstructor
+    class Delegating implements APIRequest {
+
+        private final APIRequest delegate;
+
+        @Override
+        public Caller getCaller() {
+
+            return delegate.getCaller();
+        }
+
+        public Method getMethod() {
+
+            return delegate.getMethod();
+        }
+
+        public String getPath() {
+
+            return delegate.getPath();
+        }
+
+        public Multimap<String, String> getQuery() {
+
+            return delegate.getQuery();
+        }
+
+        public Multimap<String, String> getHeaders() {
+
+            return delegate.getHeaders();
+        }
+
+        public InputStream readBody() throws IOException {
+
+            return delegate.readBody();
         }
     }
 

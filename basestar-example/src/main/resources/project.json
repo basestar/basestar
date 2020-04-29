@@ -16,9 +16,7 @@
           "required": true
         },
         "creator": {
-          "type": {
-            "ref": "User"
-          },
+          "type": "User"
           "expression": "this ? this.creator : { \"id\": caller.id }"
         },
         "owner": {

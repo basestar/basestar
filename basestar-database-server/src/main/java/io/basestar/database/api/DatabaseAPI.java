@@ -26,26 +26,32 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 import io.basestar.BuildMetadata;
 import io.basestar.api.API;
+import io.basestar.api.APIFormat;
 import io.basestar.api.APIRequest;
 import io.basestar.api.APIResponse;
-import io.basestar.auth.Authenticator;
 import io.basestar.auth.Caller;
 import io.basestar.database.Database;
 import io.basestar.database.options.*;
 import io.basestar.expression.Expression;
+import io.basestar.schema.Link;
+import io.basestar.schema.Namespace;
+import io.basestar.schema.ObjectSchema;
 import io.basestar.util.PagedList;
 import io.basestar.util.PagingToken;
 import io.basestar.util.Path;
 import io.basestar.util.Sort;
+import io.swagger.v3.oas.models.*;
+import io.swagger.v3.oas.models.media.*;
+import io.swagger.v3.oas.models.parameters.Parameter;
+import io.swagger.v3.oas.models.parameters.RequestBody;
+import io.swagger.v3.oas.models.responses.ApiResponse;
+import io.swagger.v3.oas.models.responses.ApiResponses;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -55,13 +61,30 @@ public class DatabaseAPI implements API {
 
     private static final Splitter PATH_SPLITTER = Splitter.on("/").omitEmptyStrings();
 
-    private final Authenticator authenticator;
+    private static final String PARAM_QUERY = "query";
+
+    private static final String PARAM_EXPAND = "expand";
+
+    private static final String PARAM_MODE = "mode";
+
+    private static final String PARAM_COUNT = "count";
+
+    private static final String PARAM_SORT = "sort";
+
+    private static final String PARAM_VERSION = "version";
+
+    private static final String PARAM_PAGING = "paging";
+
+    private static final String PARAM_ID = "id";
+
+    private static final String IN_QUERY = "query";
+
+    private static final String IN_PATH = "path";
 
     private final Database database;
 
-    public DatabaseAPI(final Authenticator authenticator, final Database database) {
+    public DatabaseAPI(final Database database) {
 
-        this.authenticator = authenticator;
         this.database = database;
     }
 
@@ -70,8 +93,7 @@ public class DatabaseAPI implements API {
 
         try {
 
-            final String authorization = request.getFirstHeader("Authorization");
-            final Caller caller = authenticator.authenticate(authorization);
+            final Caller caller = request.getCaller();
 
             final List<String> path;
             if(request.getPath().equals("/")) {
@@ -232,7 +254,7 @@ public class DatabaseAPI implements API {
 
     private Set<Path> parseExpand(final APIRequest request) {
 
-        final String expand = request.getFirstQuery("expand");
+        final String expand = request.getFirstQuery(PARAM_EXPAND);
         if(expand != null) {
             return Path.parseSet(expand);
         } else {
@@ -242,7 +264,7 @@ public class DatabaseAPI implements API {
 
     private UpdateOptions.Mode parseUpdateMode(final APIRequest request) {
 
-        final String mode = request.getFirstQuery("mode");
+        final String mode = request.getFirstQuery(PARAM_MODE);
         if(mode != null) {
             return UpdateOptions.Mode.valueOf(mode.toUpperCase());
         } else {
@@ -252,7 +274,7 @@ public class DatabaseAPI implements API {
 
     private Integer parseCount(final APIRequest request) {
 
-        final String count = request.getFirstQuery("count");
+        final String count = request.getFirstQuery(PARAM_COUNT);
         if(count != null) {
             return Integer.parseInt(count);
         } else {
@@ -262,7 +284,7 @@ public class DatabaseAPI implements API {
 
     private List<Sort> parseSort(final APIRequest request) {
 
-        final String expand = request.getFirstQuery("sort");
+        final String expand = request.getFirstQuery(PARAM_SORT);
         if(expand != null) {
             return Splitter.on(",").omitEmptyStrings().trimResults().splitToList(expand).stream()
                     .map(Sort::parse).collect(Collectors.toList());
@@ -273,7 +295,7 @@ public class DatabaseAPI implements API {
 
     private Long parseVersion(final APIRequest request) {
 
-        final String version = request.getFirstQuery("version");
+        final String version = request.getFirstQuery(PARAM_VERSION);
         if(version != null) {
             return Long.parseLong(version);
         } else {
@@ -283,7 +305,7 @@ public class DatabaseAPI implements API {
 
     private PagingToken parsePaging(final APIRequest request) {
 
-        final String paging = request.getFirstQuery("paging");
+        final String paging = request.getFirstQuery(PARAM_PAGING);
         if(paging != null) {
             return new PagingToken(paging);
         } else {
@@ -301,7 +323,7 @@ public class DatabaseAPI implements API {
 
     private Expression parseQuery(final APIRequest request) {
 
-        final String query = request.getFirstQuery("query");
+        final String query = request.getFirstQuery(PARAM_QUERY);
         if(query != null) {
             return Expression.parse(query);
         } else {
@@ -328,8 +350,8 @@ public class DatabaseAPI implements API {
             final Multimap<String, String> headers = HashMultimap.create();
             final String path = request.getPath();
             final HashMultimap<String, String> query = HashMultimap.create(request.getQuery());
-            query.removeAll("paging");
-            query.put("paging", paged.getPaging().toString());
+            query.removeAll(PARAM_PAGING);
+            query.put(PARAM_PAGING, paged.getPaging().toString());
             final String url = path + "?" + query.entries().stream()
                     .map(e -> {
                         try {
@@ -343,5 +365,137 @@ public class DatabaseAPI implements API {
         } else {
             return null;
         }
+    }
+
+    @Override
+    public OpenAPI openApi() {
+
+        final Namespace namespace = database.namespace();
+
+        final Paths paths = new Paths();
+        final Components components = new Components();
+        namespace.getSchemas().forEach((name, schema) -> {
+            components.addSchemas(name, schema.openApi());
+            if(schema instanceof ObjectSchema) {
+                final ObjectSchema objectSchema = (ObjectSchema)schema;
+                components.addRequestBodies(name, openApiRequestBody(openApiRef(objectSchema)));
+                components.addResponses(name, openApiResponse(openApiRef(objectSchema)));
+                components.addResponses(name + "Page", openApiResponse(new ArraySchema().items(openApiRef(objectSchema))));
+                paths.putAll(openApiPaths(objectSchema));
+            }
+        });
+
+        return new OpenAPI()
+                .paths(paths)
+                .components(components);
+    }
+
+    private Map<String, PathItem> openApiPaths(final ObjectSchema schema) {
+
+        final Map<String, PathItem> paths = new HashMap<>();
+        paths.put("/" + schema.getName(), new PathItem()
+                .get(openApiQuery(schema))
+                .put(openApiCreate(schema)));
+        paths.put("/" + schema.getName() + "/{" + PARAM_ID + "}", new PathItem()
+                .get(openApiGet(schema))
+                .put(openApiUpdate(schema))
+                .delete(openApiDelete(schema)));
+        schema.getAllLinks().forEach((name, link) -> {
+            paths.put("/" + schema.getName() + "/{" + PARAM_ID + "}/" + name, new PathItem()
+                    .get(openApiLinkQuery(schema, link)));
+        });
+        return paths;
+    }
+
+    private Operation openApiGet(final ObjectSchema schema) {
+
+        return new Operation()
+                .operationId("get" + schema.getName())
+                .addParametersItem(new Parameter().name(PARAM_ID).in(IN_PATH).schema(new StringSchema()))
+                .addParametersItem(new Parameter().name(PARAM_EXPAND).in(IN_QUERY).schema(new StringSchema()))
+                .responses(openApiResponses(new ApiResponse().$ref(schema.getName())));
+    }
+
+    private Operation openApiCreate(final ObjectSchema schema) {
+
+        return new Operation()
+                .operationId("create" + schema.getName())
+                .addParametersItem(new Parameter().name(PARAM_EXPAND).in(IN_QUERY).schema(new StringSchema()))
+                .addParametersItem(new Parameter().name(PARAM_VERSION).in(IN_QUERY).schema(new StringSchema()))
+                .requestBody(new RequestBody().$ref(schema.getName()))
+                .responses(openApiResponses(new ApiResponse().$ref(schema.getName())));
+    }
+
+    private Operation openApiUpdate(final ObjectSchema schema) {
+
+        return new Operation()
+                .operationId("update" + schema.getName())
+                .addParametersItem(new Parameter().name(PARAM_ID).in(IN_PATH).schema(new StringSchema()))
+                .addParametersItem(new Parameter().name(PARAM_VERSION).in(IN_QUERY).schema(new StringSchema()))
+                .addParametersItem(new Parameter().name(PARAM_EXPAND).in(IN_QUERY).schema(new StringSchema()))
+                .requestBody(new RequestBody().$ref(schema.getName()))
+                .responses(openApiResponses(new ApiResponse().$ref(schema.getName())));
+    }
+
+    private Operation openApiDelete(final ObjectSchema schema) {
+
+        return new Operation()
+                .operationId("delete" + schema.getName())
+                .addParametersItem(new Parameter().name(PARAM_ID).in(IN_PATH).schema(new StringSchema()))
+                .addParametersItem(new Parameter().name(PARAM_VERSION).in(IN_QUERY).schema(new StringSchema()))
+                .responses(openApiResponses(new ApiResponse().$ref(schema.getName())));
+    }
+
+    private Operation openApiQuery(final ObjectSchema schema) {
+
+        return new Operation()
+                .operationId("query" + schema.getName())
+                .addParametersItem(new Parameter().name(PARAM_QUERY).in(IN_QUERY).schema(new StringSchema()))
+                .addParametersItem(new Parameter().name(PARAM_EXPAND).in(IN_QUERY).schema(new StringSchema()))
+                .addParametersItem(new Parameter().name(PARAM_COUNT).in(IN_QUERY).schema(new IntegerSchema()))
+                .addParametersItem(new Parameter().name(PARAM_PAGING).in(IN_QUERY).schema(new StringSchema()))
+                .responses(openApiResponses(new ApiResponse().$ref(schema.getName() + "Page")));
+    }
+
+    private Operation openApiLinkQuery(final ObjectSchema schema, final Link link) {
+
+        return new Operation()
+                .operationId("queryLink" + schema.getName() + link.getName())
+                .addParametersItem(new Parameter().name(PARAM_ID).in(IN_PATH).schema(new StringSchema()))
+                .addParametersItem(new Parameter().name(PARAM_QUERY).in(IN_QUERY).schema(new StringSchema()))
+                .addParametersItem(new Parameter().name(PARAM_EXPAND).in(IN_QUERY).schema(new StringSchema()))
+                .addParametersItem(new Parameter().name(PARAM_COUNT).in(IN_QUERY).schema(new IntegerSchema()))
+                .addParametersItem(new Parameter().name(PARAM_PAGING).in(IN_QUERY).schema(new StringSchema()))
+                .responses(openApiResponses(new ApiResponse().$ref(schema.getName() + "Page")));
+    }
+
+    private Schema<?> openApiRef(final ObjectSchema schema) {
+
+        return new io.swagger.v3.oas.models.media.ObjectSchema().$ref(schema.getName());
+    }
+
+    private Content openApiContent(final io.swagger.v3.oas.models.media.Schema<?> schema) {
+
+        final Content content = new Content();
+        for(final APIFormat format : APIFormat.values()) {
+            content.addMediaType(format.getContentType(), new MediaType().schema(schema));
+        }
+        return content;
+    }
+
+    private RequestBody openApiRequestBody(final io.swagger.v3.oas.models.media.Schema<?> schema) {
+
+        return new RequestBody().content(openApiContent(schema));
+    }
+
+    private ApiResponse openApiResponse(final io.swagger.v3.oas.models.media.Schema<?> schema) {
+
+        return new ApiResponse().content(openApiContent(schema));
+    }
+
+    private ApiResponses openApiResponses(final ApiResponse response) {
+
+        return new ApiResponses()
+                .addApiResponse("200", response);
     }
 }

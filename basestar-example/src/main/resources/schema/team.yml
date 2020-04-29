@@ -2,8 +2,7 @@ Team:
 
   properties:
     owner:
-      type:
-        ref: User
+      type: User
       expression: this.owner ?? caller
 
   links:
@@ -46,12 +45,10 @@ TeamUser:
 
   properties:
     team:
-      type:
-        ref: Team
+      type: Team
       immutable: true
     user:
-      type:
-        ref: User
+      type: User
       immutable: true
     permissions:
       type:
@@ -95,11 +92,9 @@ TeamInvite:
 
   properties:
     team:
-      type:
-        ref: Team
+      type: Team
     user:
-      type:
-        ref: User
+      type: User
     permissions:
       type:
         array: TeamPermission

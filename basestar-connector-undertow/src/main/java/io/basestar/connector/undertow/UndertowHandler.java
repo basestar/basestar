@@ -25,6 +25,7 @@ import com.google.common.collect.Multimap;
 import io.basestar.api.API;
 import io.basestar.api.APIRequest;
 import io.basestar.api.APIResponse;
+import io.basestar.auth.Caller;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HttpString;
@@ -54,6 +55,12 @@ public class UndertowHandler implements HttpHandler {
 
         try {
             final APIResponse response = api.handle(new APIRequest() {
+
+                @Override
+                public Caller getCaller() {
+
+                    return Caller.ANON;
+                }
 
                 @Override
                 public Method getMethod() {

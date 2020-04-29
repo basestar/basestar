@@ -35,11 +35,13 @@ import com.nimbusds.jwt.proc.DefaultJWTProcessor;
 import io.basestar.auth.Authenticator;
 import io.basestar.auth.Caller;
 import io.basestar.auth.exception.AuthenticationFailedException;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import lombok.Data;
 
 import java.net.URL;
 import java.text.ParseException;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @Data
 public class NimbusAuthenticator implements Authenticator {
@@ -48,14 +50,10 @@ public class NimbusAuthenticator implements Authenticator {
 
     private final URL jwkURL;
 
-    @Override
-    public String getName() {
-
-        return "Bearer";
-    }
+    // FIXME: make async
 
     @Override
-    public Caller authenticate(final String authorization) {
+    public CompletableFuture<Caller> authenticate(final String authorization) {
 
         try {
 
@@ -69,7 +67,7 @@ public class NimbusAuthenticator implements Authenticator {
                 jwtProcessor.setJWSKeySelector(keySelector);
                 final JWTClaimsSet claims = jwtProcessor.process(token, null);
 
-                return new Caller() {
+                return CompletableFuture.completedFuture(new Caller() {
 
                     @Override
                     public boolean isAnon() {
@@ -100,11 +98,11 @@ public class NimbusAuthenticator implements Authenticator {
 
                         return claims.getClaims();
                     }
-                };
+                });
 
             } else {
 
-                return anon();
+                return CompletableFuture.completedFuture(anon());
             }
 
         } catch (final JOSEException | ParseException | BadJOSEException e) {
@@ -114,14 +112,12 @@ public class NimbusAuthenticator implements Authenticator {
     }
 
     @Override
-    public Map<String, Object> openApiScheme() {
+    public Map<String, SecurityScheme> openApi() {
 
-        return ImmutableMap.of(
-                "AccessToken", ImmutableMap.of(
-                        "type", "http",
-                        "scheme", "bearer",
-                        "bearerFormat", "JWT"
-                )
-        );
+        return ImmutableMap.of("Bearer", new SecurityScheme()
+                .type(SecurityScheme.Type.HTTP)
+                .in(SecurityScheme.In.HEADER)
+                .scheme("bearer")
+                .bearerFormat("JWT"));
     }
 }

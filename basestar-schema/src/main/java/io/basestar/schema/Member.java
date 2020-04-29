@@ -79,9 +79,9 @@ public interface Member extends Named, Described, Serializable, Extendable {
         return visibility != null && visibility.isAlwaysHidden();
     }
 
-    default io.swagger.v3.oas.models.media.Schema<?> swagger() {
+    default io.swagger.v3.oas.models.media.Schema<?> openApi() {
 
-        return getType().swagger().description(getDescription());
+        return getType().openApi().description(getDescription());
     }
 
     interface Resolver {

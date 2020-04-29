@@ -14,8 +14,7 @@ Project:
       type: string
       required: true
     owner:
-      type:
-        ref: User
+      type: User
       expression: this.owner ?? caller
 
 #  children:
@@ -71,11 +70,9 @@ ProjectTeam:
 
   properties:
     project:
-      type:
-        ref: Project
+      type: Project
     team:
-      type:
-        ref: Team
+      type: Team
     permissions:
       type:
         set: ProjectPermission
@@ -101,11 +98,9 @@ ProjectUser:
 
   properties:
     project:
-      type:
-        ref: Project
+      type: Project
     user:
-      type:
-        ref: User
+      type: User
     permissions:
       type:
         set: ProjectPermission

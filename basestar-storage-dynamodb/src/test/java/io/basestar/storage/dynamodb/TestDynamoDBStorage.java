@@ -59,7 +59,7 @@ public class TestDynamoDBStorage extends TestStorage {
 
         Runtime.getRuntime().addShutdownHook(new Thread(ddb::close));
 
-        final DynamoDBRouting ddbRouting = new DynamoDBRouting.SingleTable(UUID.randomUUID() + "-");
+        final DynamoDBRouting ddbRouting = DynamoDBRouting.SingleTable.builder().tablePrefix(UUID.randomUUID() + "-").build();
         final Storage storage = DynamoDBStorage.builder().setClient(ddb).setRouting(ddbRouting)
                 .setEventStrategy(Storage.EventStrategy.SUPPRESS)
                 .setOversizeStash(MemoryStash.builder().build())

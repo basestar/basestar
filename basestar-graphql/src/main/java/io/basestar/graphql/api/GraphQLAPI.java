@@ -25,10 +25,10 @@ import graphql.*;
 import io.basestar.api.API;
 import io.basestar.api.APIRequest;
 import io.basestar.api.APIResponse;
-import io.basestar.auth.Authenticator;
 import io.basestar.auth.Caller;
 import io.basestar.exception.ExceptionMetadata;
 import io.basestar.util.Nullsafe;
+import io.swagger.v3.oas.models.OpenAPI;
 import lombok.Data;
 
 import java.io.InputStream;
@@ -38,13 +38,10 @@ import java.util.concurrent.CompletableFuture;
 
 public class GraphQLAPI implements API {
 
-    private final Authenticator authenticator;
-
     private final GraphQL graphQL;
 
-    public GraphQLAPI(final Authenticator authenticator, final GraphQL graphQL) {
+    public GraphQLAPI(final GraphQL graphQL) {
 
-        this.authenticator = authenticator;
         this.graphQL = graphQL;
     }
 
@@ -53,8 +50,7 @@ public class GraphQLAPI implements API {
 
         try {
 
-            final String authorization = request.getFirstHeader("Authorization");
-            final Caller caller = authenticator.authenticate(authorization);
+            final Caller caller = request.getCaller();
 
 //            if(request.getPath().isEmpty()) {
                 switch(request.getMethod()) {
@@ -82,6 +78,12 @@ public class GraphQLAPI implements API {
 
             return CompletableFuture.completedFuture(APIResponse.error(request, e));
         }
+    }
+
+    @Override
+    public OpenAPI openApi() {
+
+        return new OpenAPI();
     }
 
     private CompletableFuture<APIResponse> query(final APIRequest request, final ExecutionInput input) {

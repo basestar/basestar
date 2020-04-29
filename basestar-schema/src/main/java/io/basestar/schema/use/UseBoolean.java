@@ -86,7 +86,7 @@ public class UseBoolean implements UseScalar<Boolean> {
     }
 
     @Override
-    public io.swagger.v3.oas.models.media.Schema<?> swagger() {
+    public io.swagger.v3.oas.models.media.Schema<?> openApi() {
 
         return new BooleanSchema();
     }

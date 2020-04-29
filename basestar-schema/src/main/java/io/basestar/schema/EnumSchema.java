@@ -151,7 +151,7 @@ public class EnumSchema implements Schema<String> {
     }
 
     @Override
-    public io.swagger.v3.oas.models.media.Schema<?> swagger() {
+    public io.swagger.v3.oas.models.media.Schema<?> openApi() {
 
         return new StringSchema()._enum(values).description(description).name(name);
     }

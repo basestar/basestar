@@ -22,22 +22,18 @@ package io.basestar.example;
 
 import io.basestar.auth.Authenticator;
 import io.basestar.auth.Caller;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 public class TestAuthenticator implements Authenticator {
 
     @Override
-    public String getName() {
+    public CompletableFuture<Caller> authenticate(final String authorization) {
 
-        return "test";
-    }
-
-    @Override
-    public Caller authenticate(final String authorization) {
-
-        return new Caller() {
+        return CompletableFuture.completedFuture(new Caller() {
             @Override
             public boolean isAnon() {
 
@@ -67,13 +63,12 @@ public class TestAuthenticator implements Authenticator {
 
                 return Collections.emptyMap();
             }
-        };
+        });
     }
 
     @Override
-    public Map<String, Object> openApiScheme() {
+    public Map<String, SecurityScheme> openApi() {
 
-        return null;
+        return Collections.emptyMap();
     }
-
 }

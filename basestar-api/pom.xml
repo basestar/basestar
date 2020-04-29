@@ -41,6 +41,11 @@
             <artifactId>mimeparse</artifactId>
             <version>0.1.3.3</version>
         </dependency>
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-models</artifactId>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
 

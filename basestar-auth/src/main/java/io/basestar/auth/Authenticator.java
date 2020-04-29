@@ -20,15 +20,16 @@ package io.basestar.auth;
  * #L%
  */
 
+import io.swagger.v3.oas.models.security.SecurityScheme;
+
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 public interface Authenticator {
 
-    String getName();
+    CompletableFuture<Caller> authenticate(String authorization);
 
-    Caller authenticate(String authorization);
-
-    Map<String, Object> openApiScheme();
+    Map<String, SecurityScheme> openApi();
 
     default Caller anon() {
 

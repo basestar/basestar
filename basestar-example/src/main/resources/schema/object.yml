@@ -2,16 +2,13 @@ Object:
 
   properties:
     creator:
-      type:
-        ref: User
+      type: User
       expression: creator ?? ctx.caller
     updator:
-      type:
-        ref: User
+      type: User
       expression: ctx.caller
     owner:
-      type:
-        ref: User
+      type: User
       expression: owner ?? ctx.caller
 
   permissions:

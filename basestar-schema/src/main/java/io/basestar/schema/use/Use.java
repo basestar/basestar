@@ -110,7 +110,7 @@ public interface Use<T> extends Serializable {
 
     Set<Constraint.Violation> validate(Context context, Path path, T value);
 
-    io.swagger.v3.oas.models.media.Schema<?> swagger();
+    io.swagger.v3.oas.models.media.Schema<?> openApi();
 
     @JsonCreator
     @SuppressWarnings("unchecked")

@@ -103,6 +103,11 @@
             </dependency>
             <dependency>
                 <groupId>io.basestar</groupId>
+                <artifactId>basestar-graphql</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.basestar</groupId>
                 <artifactId>basestar-jackson</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -146,6 +151,26 @@
             <dependency>
                 <groupId>io.basestar</groupId>
                 <artifactId>basestar-storage-s3</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.basestar</groupId>
+                <artifactId>basestar-storage-elasticsearch</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.basestar</groupId>
+                <artifactId>basestar-storage-sql</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.basestar</groupId>
+                <artifactId>basestar-storage-hazelcast</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.basestar</groupId>
+                <artifactId>basestar-storage-spark</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -200,6 +225,11 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.dataformat</groupId>
                 <artifactId>jackson-dataformat-cbor</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.dataformat</groupId>
+                <artifactId>jackson-dataformat-properties</artifactId>
                 <version>${jackson.version}</version>
             </dependency>
             <dependency>

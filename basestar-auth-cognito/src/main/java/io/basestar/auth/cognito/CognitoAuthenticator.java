@@ -20,19 +20,19 @@ package io.basestar.auth.cognito;
  * #L%
  */
 
+import com.google.common.collect.ImmutableMap;
 import com.nimbusds.jose.JWSAlgorithm;
 import io.basestar.auth.nimbus.NimbusAuthenticator;
+import io.swagger.v3.oas.models.security.OAuthFlow;
+import io.swagger.v3.oas.models.security.OAuthFlows;
+import io.swagger.v3.oas.models.security.Scopes;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Map;
 
 public class CognitoAuthenticator extends NimbusAuthenticator {
-
-    @Override
-    public String getName() {
-
-        return "Cognito";
-    }
 
     public CognitoAuthenticator(final String region, final String userPoolName) {
 
@@ -48,21 +48,16 @@ public class CognitoAuthenticator extends NimbusAuthenticator {
         }
     }
 
-//    @Override
-//    public Map<String, Object> openApiScheme() {
-//
-//        return ImmutableMap.of(
-//                "type", "oauth2",
-//                "flows", ImmutableMap.of(
-//                        "authorizationCode", ImmutableMap.of(
-//                                "authorizationUrl", domain + "/oauth2/authorize",
-//                                "tokenUrl", domain + "/oauth2/authorize",
-//                                "scopes", ImmutableMap.of(
-//                                        "openid", "openid token"
-//                                )
-//                        )
-//                )
-//        );
-//
-//    }
+    @Override
+    public Map<String, SecurityScheme> openApi() {
+
+        final String domain = "";
+        return ImmutableMap.of("Cognito", new SecurityScheme()
+                .type(SecurityScheme.Type.OAUTH2)
+                .flows(new OAuthFlows()
+                        .authorizationCode(new OAuthFlow()
+                                .authorizationUrl(domain + "/oauth2/authorize")
+                                .tokenUrl(domain + "/oauth2/authorize")
+                                .scopes(new Scopes().addString("openId", "openid token")))));
+    }
 }

@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 import io.basestar.api.API;
 import io.basestar.api.APIResponse;
+import io.basestar.api.AuthenticatingAPI;
 import io.basestar.auth.Authenticator;
 import io.basestar.database.DatabaseServer;
 import io.basestar.database.api.DatabaseAPI;
@@ -148,7 +149,7 @@ public class FullStackTest {
         final S3Stash storageOversize = S3Stash.builder()
                 .setClient(s3).setBucket(storageOversizeBucket).build();
 
-        final DynamoDBRouting ddbRouting = new DynamoDBRouting.SingleTable(UUID.randomUUID() + "-");
+        final DynamoDBRouting ddbRouting = DynamoDBRouting.SingleTable.builder().tablePrefix(UUID.randomUUID() + "-").build();
         final Storage storage = DynamoDBStorage.builder().setClient(ddb).setRouting(ddbRouting)
                 .setOversizeStash(storageOversize).setEventStrategy(Storage.EventStrategy.EMIT)
                 .build();
@@ -171,7 +172,7 @@ public class FullStackTest {
 
         final Authenticator authenticator = new TestAuthenticator();
 
-        final API api = new DatabaseAPI(authenticator, database);
+        final API api = new AuthenticatingAPI(authenticator, new DatabaseAPI(database));
 
         final Multimap<String, String> headers = HashMultimap.create();
         headers.put("Authorization", "user1");

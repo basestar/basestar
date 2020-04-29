@@ -101,9 +101,9 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
     }
 
     @Override
-    public io.swagger.v3.oas.models.media.Schema<?> swagger() {
+    public io.swagger.v3.oas.models.media.Schema<?> openApi() {
 
-        return new ArraySchema().items(type.swagger());
+        return new ArraySchema().items(type.openApi());
     }
 
     @Override

@@ -53,7 +53,7 @@ public interface UseNamed<T> extends Use<T> {
     }
 
     @Override
-    default io.swagger.v3.oas.models.media.Schema<?> swagger() {
+    default io.swagger.v3.oas.models.media.Schema<?> openApi() {
 
         return new io.swagger.v3.oas.models.media.ObjectSchema().$ref(getName());
     }
@@ -167,7 +167,7 @@ public interface UseNamed<T> extends Use<T> {
         }
 
         @Override
-        public io.swagger.v3.oas.models.media.Schema<?> swagger() {
+        public io.swagger.v3.oas.models.media.Schema<?> openApi() {
 
             return new io.swagger.v3.oas.models.media.ObjectSchema().$ref(name);
         }

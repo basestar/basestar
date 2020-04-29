@@ -32,6 +32,10 @@
             <groupId>io.basestar</groupId>
             <artifactId>basestar-core</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-models</artifactId>
+        </dependency>
     </dependencies>
 
 </project>

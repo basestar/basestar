@@ -101,9 +101,9 @@ public class UseSet<T> implements UseCollection<T, Set<T>> {
     }
 
     @Override
-    public io.swagger.v3.oas.models.media.Schema<?> swagger() {
+    public io.swagger.v3.oas.models.media.Schema<?> openApi() {
 
-        return new ArraySchema().items(type.swagger()).uniqueItems(true);
+        return new ArraySchema().items(type.openApi()).uniqueItems(true);
     }
 
     @Override

@@ -109,9 +109,9 @@ public class UseMap<T> implements Use<Map<String, T>> {
     }
 
     @Override
-    public io.swagger.v3.oas.models.media.Schema<?> swagger() {
+    public io.swagger.v3.oas.models.media.Schema<?> openApi() {
 
-        return new MapSchema().additionalProperties(type.swagger());
+        return new MapSchema().additionalProperties(type.openApi());
     }
 
     @Override
