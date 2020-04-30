@@ -57,10 +57,12 @@ import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
 import io.basestar.expression.parse.ExpressionParser.*;
 import io.basestar.expression.type.Values;
+import io.basestar.util.Path;
 import lombok.RequiredArgsConstructor;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.RuleContext;
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
+import org.antlr.v4.runtime.tree.ParseTree;
 
 import java.lang.String;
 import java.util.*;
@@ -300,9 +302,10 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
     }
 
     @Override
-    public Expression visitExprVar(final ExprVarContext ctx) {
+    public Expression visitExprPathConstant(final ExprPathConstantContext ctx) {
 
-        return new PathConstant(ctx.Identifier().getText());
+        final Path path = Path.of(ctx.Identifier().stream().map(ParseTree::getText).toArray(java.lang.String[]::new));
+        return new PathConstant(path);
     }
 
     @Override

@@ -56,7 +56,7 @@ expr
  | LSquare exprs? RSquare #exprArray
  | LBrace exprs? RBrace #exprSet
  | LBrace (pair (Comma pair)*)? RBrace #exprObject
- | Identifier #exprVar
+ | Identifier (Dot Identifier)*? #exprPathConstant
  | String #exprString
  | LParen expr RParen #exprExpr
  | (name | (LParen name (Comma name)* RParen)) Of expr #exprOf
