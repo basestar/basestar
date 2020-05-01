@@ -62,7 +62,7 @@ public interface HazelcastRouting {
 
     static List<IndexConfig> indexes(final ObjectSchema schema) {
 
-        return schema.getAllIndexes().values().stream()
+        return schema.getIndexes().values().stream()
                 .flatMap(index -> {
                     if(!index.isMultiValue()) {
                         final List<String> keys = new ArrayList<>();

@@ -189,12 +189,12 @@ public class Transient implements Member {
 
         Map<String, Transient> getDeclaredTransients();
 
-        Map<String, Transient> getAllTransients();
+        Map<String, Transient> getTransients();
 
         default Transient getTransient(final String name, final boolean inherited) {
 
             if(inherited) {
-                return getAllTransients().get(name);
+                return getTransients().get(name);
             } else {
                 return getDeclaredTransients().get(name);
             }

@@ -99,7 +99,7 @@ public class GraphQLSchemaAdaptor {
                 final ObjectSchema objectSchema = (ObjectSchema)schema;
                 builder.fieldDefinition(readDefinition(objectSchema));
                 builder.fieldDefinition(queryDefinition(objectSchema));
-                objectSchema.getAllLinks()
+                objectSchema.getLinks()
                         .forEach((linkName, link) -> builder.fieldDefinition(queryLinkDefinition(objectSchema, link)));
             }
         });
@@ -199,7 +199,7 @@ public class GraphQLSchemaAdaptor {
         final InputObjectTypeDefinition.Builder builder = InputObjectTypeDefinition.newInputObjectDefinition();
         builder.name(INPUT_PREFIX + schema.getName());
         builder.description(description(schema.getDescription()));
-        schema.getAllProperties()
+        schema.getProperties()
                 .forEach((k, v) -> builder.inputValueDefinition(inputValueDefinition(v)));
         return builder.build();
     }
@@ -210,7 +210,7 @@ public class GraphQLSchemaAdaptor {
         final InputObjectTypeDefinition.Builder builder = InputObjectTypeDefinition.newInputObjectDefinition();
         builder.name(INPUT_EXPR_PREFIX + schema.getName());
         builder.description(description(schema.getDescription()));
-        schema.getAllProperties()
+        schema.getProperties()
                 .forEach((k, v) -> builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                         .name(k).type(new TypeName(STRING_TYPE))
                         .build()));
@@ -280,14 +280,14 @@ public class GraphQLSchemaAdaptor {
         final List<FieldDefinition> fields = new ArrayList<>();
         schema.metadataSchema()
                 .forEach((k, v) -> fields.add(metadataFieldDefinition(k, v)));
-        schema.getAllProperties()
+        schema.getProperties()
                 .forEach((k, v) -> {
                     if(!v.isAlwaysHidden()) {
                         fields.add(fieldDefinition(v));
                     }
                 });
         if(schema instanceof Link.Resolver) {
-            ((Link.Resolver) schema).getAllLinks()
+            ((Link.Resolver) schema).getLinks()
                     .forEach((k, v) -> {
                         if(!v.isAlwaysHidden()) {
                             fields.add(FieldDefinition.newFieldDefinition()

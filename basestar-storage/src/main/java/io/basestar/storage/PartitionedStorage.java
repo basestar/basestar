@@ -70,7 +70,7 @@ public abstract class PartitionedStorage implements Storage {
 
             SatisfyResult bestSatisfy = SatisfyResult.unsatisfied();
             Index bestIndex = null;
-            for (final Index checkIndex : schema.getAllIndexes().values()) {
+            for (final Index checkIndex : schema.getIndexes().values()) {
                 final SatisfyResult checkSatisfy = satisfy(checkIndex, query, sort);
                 if (checkSatisfy.isSatisfied() && checkSatisfy.compareTo(bestSatisfy) > 0) {
                     bestSatisfy = checkSatisfy;
@@ -324,7 +324,7 @@ public abstract class PartitionedStorage implements Storage {
         protected WriteTransaction createIndexes(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
             final StorageTraits traits = storageTraits(schema);
-            schema.getAllIndexes().forEach((indexName, index) -> {
+            schema.getIndexes().forEach((indexName, index) -> {
                 final Consistency best = traits.getIndexConsistency(index.isMultiValue());
                 if(!index.getConsistency(best).isAsync()) {
                     final Map<Index.Key, Map<String, Object>> records = index.readValues(after);
@@ -337,7 +337,7 @@ public abstract class PartitionedStorage implements Storage {
 
         protected WriteTransaction updateIndexes(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
-            final Map<String, Index> indexes = schema.getAllIndexes();
+            final Map<String, Index> indexes = schema.getIndexes();
             if(!indexes.isEmpty()) {
                 final StorageTraits traits = storageTraits(schema);
                 final Long version = Instance.getVersion(before);
@@ -357,7 +357,7 @@ public abstract class PartitionedStorage implements Storage {
 
         protected WriteTransaction deleteIndexes(final ObjectSchema schema, final String id, final Map<String, Object> before) {
 
-            final Map<String, Index> indexes = schema.getAllIndexes();
+            final Map<String, Index> indexes = schema.getIndexes();
             if(!indexes.isEmpty()) {
                 final StorageTraits traits = storageTraits(schema);
                 final Long version = Instance.getVersion(before);

@@ -341,7 +341,7 @@ public interface DynamoDBRouting extends Serializable {
 
                 final List<AttributeDefinition> attributeDefinitions = new ArrayList<>();
                 final List<GlobalSecondaryIndexDescription> gsis = new ArrayList<>();
-                schema.getAllIndexes().forEach((indexName, index) -> {
+                schema.getIndexes().forEach((indexName, index) -> {
                     final String indexTableName = indexTableName(schema, index);
                     final String indexPartition = indexPartitionName(schema, index);
                     final String indexSort = indexSortName(schema, index);

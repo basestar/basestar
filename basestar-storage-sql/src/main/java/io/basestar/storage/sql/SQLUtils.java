@@ -318,7 +318,7 @@ public class SQLUtils {
         return Stream.concat(
                 ObjectSchema.METADATA_SCHEMA.entrySet().stream()
                         .map(e -> DSL.field(DSL.name(e.getKey()), dataType(e.getValue()))),
-                schema.getAllProperties().entrySet().stream()
+                schema.getProperties().entrySet().stream()
                         .map(e -> DSL.field(DSL.name(e.getKey()),
                                 dataType(e.getValue().getType()).nullable(!e.getValue().isRequired())))
         ).collect(Collectors.toList());

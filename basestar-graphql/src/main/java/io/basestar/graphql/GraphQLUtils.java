@@ -177,7 +177,7 @@ public class GraphQLUtils {
             return null;
         } else {
             final Map<String, Object> result = new HashMap<>();
-            schema.getAllProperties().forEach((k, prop) -> result.put(k, fromRequest(prop.getType(), input.get(k))));
+            schema.getProperties().forEach((k, prop) -> result.put(k, fromRequest(prop.getType(), input.get(k))));
             return result;
         }
     }
@@ -277,9 +277,9 @@ public class GraphQLUtils {
         } else {
             final Map<String, Object> result = new HashMap<>();
             schema.metadataSchema().forEach((k, use) -> result.put(k, toResponse(use, input.get(k))));
-            schema.getAllProperties().forEach((k, prop) -> result.put(k, toResponse(prop.getType(), input.get(k))));
+            schema.getProperties().forEach((k, prop) -> result.put(k, toResponse(prop.getType(), input.get(k))));
             if (schema instanceof Link.Resolver) {
-                ((Link.Resolver) schema).getAllLinks().forEach((k, link) -> {
+                ((Link.Resolver) schema).getLinks().forEach((k, link) -> {
                     final List<Map<String, Object>> values = (List<Map<String, Object>>) input.get(k);
                     if (values != null) {
                         result.put(k, values.stream().map(value -> toResponse(link.getSchema(), value))
@@ -386,7 +386,7 @@ public class GraphQLUtils {
             return null;
         } else {
             final Map<String, Object> result = new HashMap<>();
-            schema.getAllProperties().forEach((k, prop) -> result.put(k, fromInput(context, prop.getType(), get(input, k))));
+            schema.getProperties().forEach((k, prop) -> result.put(k, fromInput(context, prop.getType(), get(input, k))));
             return result;
         }
     }
@@ -540,7 +540,7 @@ public class GraphQLUtils {
             return null;
         } else {
             final Map<String, Object> result = new HashMap<>();
-            schema.getAllProperties().forEach((k, prop) -> result.put(k, fromInput(prop.getType(), input.get(k))));
+            schema.getProperties().forEach((k, prop) -> result.put(k, fromInput(prop.getType(), input.get(k))));
             return result;
         }
     }
@@ -672,13 +672,13 @@ public class GraphQLUtils {
                     result.put(k, toResponse(use, select(selections, k), input.get(k)));
                 }
             });
-            schema.getAllProperties().forEach((k, prop) -> {
+            schema.getProperties().forEach((k, prop) -> {
                 if(selected(selections, k)) {
                     result.put(k, toResponse(prop.getType(), select(selections, k), input.get(k)));
                 }
             });
             if (schema instanceof Link.Resolver) {
-                ((Link.Resolver) schema).getAllLinks().forEach((k, link) -> {
+                ((Link.Resolver) schema).getLinks().forEach((k, link) -> {
                     if(selected(selections, k)) {
                         final List<Map<String, Object>> values = (List<Map<String, Object>>) input.get(k);
                         if (values != null) {
@@ -802,7 +802,7 @@ public class GraphQLUtils {
             return null;
         } else {
             final Map<String, Expression> result = new HashMap<>();
-            schema.getAllProperties().forEach((k, prop) -> {
+            schema.getProperties().forEach((k, prop) -> {
                 final Value<?> value = get(object, k);
                 if(value instanceof VariableReference) {
                     final String var = ((VariableReference) value).getName();

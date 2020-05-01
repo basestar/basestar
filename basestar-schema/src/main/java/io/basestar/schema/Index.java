@@ -248,7 +248,7 @@ public class Index implements Named, Described, Serializable, Extendable {
 
         final Map<String, Use<?>> result = new HashMap<>();
         if(projection.isEmpty()) {
-            schema.getAllProperties()
+            schema.getProperties()
                     .forEach((name, property) -> result.put(name, property.getType()));
             result.putAll(ObjectSchema.METADATA_SCHEMA);
         } else {
@@ -393,12 +393,12 @@ public class Index implements Named, Described, Serializable, Extendable {
 
         Map<String, Index> getDeclaredIndexes();
 
-        Map<String, Index> getAllIndexes();
+        Map<String, Index> getIndexes();
 
         default Index getIndex(final String name, final boolean inherited) {
 
             if(inherited) {
-                return getAllIndexes().get(name);
+                return getIndexes().get(name);
             } else {
                 return getDeclaredIndexes().get(name);
             }

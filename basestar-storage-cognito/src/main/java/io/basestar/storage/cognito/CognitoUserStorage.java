@@ -225,7 +225,7 @@ public class CognitoUserStorage implements Storage {
     private List<AttributeType> attributes(final ObjectSchema schema, final Map<String, Object> after) {
 
         final List<AttributeType> result = new ArrayList<>();
-        for(final Map.Entry<String, Property> entry : schema.getAllProperties().entrySet()) {
+        for(final Map.Entry<String, Property> entry : schema.getProperties().entrySet()) {
             final String name = entry.getKey();
             final String value = Objects.toString(after.get(name));
             result.add(AttributeType.builder().name(name).value(value).build());

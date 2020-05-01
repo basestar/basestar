@@ -42,7 +42,7 @@ public class SparkSchemaUtils {
     public static StructType structType(final InstanceSchema schema, final Map<String, Use<?>> extraMetadata) {
 
         final List<StructField> fields = new ArrayList<>();
-        schema.getAllProperties()
+        schema.getProperties()
                 .forEach((name, property) -> fields.add(field(name, property)));
         schema.metadataSchema()
                 .forEach((name, type) -> fields.add(field(name, type)));
@@ -168,7 +168,7 @@ public class SparkSchemaUtils {
     public static Map<String, Object> fromSpark(final InstanceSchema schema, final Map<String, Use<?>> extraMetadata, final Row row) {
 
         final Map<String, Object> object = new HashMap<>();
-        schema.getAllProperties().forEach((name, property) -> object.put(name, fromSpark(property.getType(), row.getAs(name))));
+        schema.getProperties().forEach((name, property) -> object.put(name, fromSpark(property.getType(), row.getAs(name))));
         schema.metadataSchema().forEach((name, type) -> object.put(name, fromSpark(type, row.getAs(name))));
         extraMetadata.forEach((name, type) -> object.put(name, fromSpark(type, row.getAs(name))));
         return schema.create(object);
@@ -312,7 +312,7 @@ public class SparkSchemaUtils {
             final int i = structType.fieldIndex(name);
             values[i] = toSpark(type, fields[i].dataType(), object.get(name));
         });
-        schema.getAllProperties().forEach((name, property) -> {
+        schema.getProperties().forEach((name, property) -> {
             final int i = structType.fieldIndex(name);
             values[i] = toSpark(property.getType(), fields[i].dataType(), object.get(name));
         });

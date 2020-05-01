@@ -59,7 +59,7 @@ public class Mappings {
 
                 final Map<String, FieldType> properties = new HashMap<>();
                 schema.metadataSchema().forEach((k, v) -> properties.put(k, fieldType(schema, k, v)));
-                schema.getAllProperties().forEach((k, v) -> properties.put(k, fieldType(schema, k, v.getType())));
+                schema.getProperties().forEach((k, v) -> properties.put(k, fieldType(schema, k, v.getType())));
                 return new Mappings(properties);
             }
 
@@ -148,7 +148,7 @@ public class Mappings {
 
                         final StructSchema schema = type.getSchema();
                         final Map<String, FieldType> properties = new HashMap<>();
-                        schema.getAllProperties().forEach((k, v) -> properties.put(k, fieldType(schema, k, v.getType())));
+                        schema.getProperties().forEach((k, v) -> properties.put(k, fieldType(schema, k, v.getType())));
                         return new FieldType.NestedType(properties);
                     }
 

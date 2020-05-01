@@ -100,13 +100,13 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
     default Map<String, Object> readProperties(final Map<String, Object> object, final boolean expand, final boolean suppress) {
 
         final Map<String, Object> result = new HashMap<>();
-        getAllProperties().forEach((k, v) -> result.put(k, v.create(object.get(k), expand, suppress)));
+        getProperties().forEach((k, v) -> result.put(k, v.create(object.get(k), expand, suppress)));
         return Collections.unmodifiableMap(result);
     }
 
     default void serializeProperties(final Map<String, Object> object, final DataOutput out) throws IOException {
 
-        final Map<String, Property> properties = getAllProperties();
+        final Map<String, Property> properties = getProperties();
         out.writeInt(properties.size());
         for(final Map.Entry<String, Property> entry : new TreeMap<>(properties).entrySet()) {
             UseString.DEFAULT.serializeValue(entry.getKey(), out);

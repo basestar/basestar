@@ -28,7 +28,7 @@ ${cls.commentText()?keep_after("\n")?replace("^ ", "", "rm")}
 
 - `type` **"object"** | **"struct"** | **"enum"**
 
-  Indicates whether this definition is an [Object](#object), [Struct](#struct) or [Enum](#enum) schema.
+  Indicates whether this definition is an [Object](#object-schema), [Struct](#struct-schema) or [Enum](#enum-schema) schema.
 
 <#list schemaTypes as schemaType>
 <#assign cls=classNamed(schemaType)>
@@ -82,6 +82,8 @@ ${cls.commentText()?keep_after("\n")?replace("^ ", "", "rm")}
 </#if>
 </#list>
 
+<#macro index_type_link type index><#if (type.typeArguments())?? && (type.typeArguments()[index])??><@type_link type=type.typeArguments()[index]/><#else>Unknown</#if></#macro>
+
 <#macro type_link type><#switch type.qualifiedTypeName()>
 <#case "java.lang.Boolean">boolean<#break>
 <#case "java.lang.Integer">int32<#break>
@@ -89,11 +91,11 @@ ${cls.commentText()?keep_after("\n")?replace("^ ", "", "rm")}
 <#case "java.lang.String">string<#break>
 <#case "io.basestar.schema.InstanceSchema">string (name)<#break>
 <#case "io.basestar.schema.Schema">string (name)<#break>
-<#case "java.util.Map">map of <@type_link type=type.typeArguments()[1]/><#break>
-<#case "java.util.SortedMap">map of <@type_link type=type.typeArguments()[1]/><#break>
-<#case "java.util.List">array of <@type_link type=type.typeArguments()[0]/><#break>
-<#case "java.util.Set">set of <@type_link type=type.typeArguments()[0]/><#break>
-<#case "java.util.SortedSet">set of <@type_link type=type.typeArguments()[0]/><#break>
+<#case "java.util.Map">map of <@index_type_link type=type index=1/><#break>
+<#case "java.util.SortedMap">map of <@index_type_link type=type index=1/><#break>
+<#case "java.util.List">array of <@index_type_link type=type index=0/><#break>
+<#case "java.util.Set">set of <@index_type_link type=type index=0/><#break>
+<#case "java.util.SortedSet">set of <@index_type_link type=type index=0/><#break>
 <#case "io.basestar.schema.Property">[Property](#property)<#break>
 <#case "io.basestar.schema.Transient">[Transient](#transient)<#break>
 <#case "io.basestar.schema.Link">[Link](#link)<#break>

@@ -589,7 +589,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             assert historyVersion != null;
             events.add(AsyncHistoryCreatedEvent.of(schema.getName(), id, historyVersion, after));
         }
-        events.addAll(schema.getAllIndexes().values().stream().flatMap(index -> {
+        events.addAll(schema.getIndexes().values().stream().flatMap(index -> {
             final Consistency best = traits.getIndexConsistency(index.isMultiValue());
             if(index.getConsistency(best).isAsync()) {
                 final Map<Index.Key, Map<String, Object>> records = index.readValues(after);
@@ -617,7 +617,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             assert historyVersion != null;
             events.add(AsyncHistoryCreatedEvent.of(schema.getName(), id, historyVersion, after));
         }
-        events.addAll(schema.getAllIndexes().values().stream().flatMap(index -> {
+        events.addAll(schema.getIndexes().values().stream().flatMap(index -> {
             final Consistency best = traits.getIndexConsistency(index.isMultiValue());
             if(index.getConsistency(best).isAsync()) {
                 final IndexRecordDiff diff = IndexRecordDiff.from(index.readValues(before), index.readValues(after));
@@ -643,7 +643,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final String id = event.getId();
         final long version = event.getVersion();
         final Map<String, Object> before = event.getBefore();
-        return emitter.emit(schema.getAllIndexes().values().stream().flatMap(index -> {
+        return emitter.emit(schema.getIndexes().values().stream().flatMap(index -> {
             final Consistency best = traits.getIndexConsistency(index.isMultiValue());
             if(index.getConsistency(best).isAsync()) {
                 final Map<Index.Key, Map<String, Object>> records = index.readValues(before);

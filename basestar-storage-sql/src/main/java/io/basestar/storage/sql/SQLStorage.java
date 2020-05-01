@@ -128,7 +128,7 @@ public class SQLStorage implements Storage {
 
             Index best = null;
             // Only multi-value indexes need to be matched
-            for(final Index index : schema.getAllIndexes().values()) {
+            for(final Index index : schema.getIndexes().values()) {
                 if(index.isMultiValue()) {
                     final Set<Path> paths = index.getMultiValuePaths();
                     if (ranges.keySet().containsAll(paths)) {
@@ -272,7 +272,7 @@ public class SQLStorage implements Storage {
                 });
 
                 final StorageTraits traits = storageTraits(schema);
-                for(final Index index : schema.getAllIndexes().values()) {
+                for(final Index index : schema.getIndexes().values()) {
                     final Consistency best = traits.getMultiValueIndexConsistency();
                     if (index.isMultiValue() && !index.getConsistency(best).isAsync()) {
                         for(final Map.Entry<Index.Key, Map<String, Object>> entry : index.readValues(after).entrySet()) {
@@ -508,7 +508,7 @@ public class SQLStorage implements Storage {
         final Map<String, Object> result = new HashMap<>();
         schema.metadataSchema().forEach((k, v) ->
                 result.put(k, SQLUtils.fromSQLValue(v, data.get(k))));
-        schema.getAllProperties().forEach((k, v) ->
+        schema.getProperties().forEach((k, v) ->
                 result.put(k, SQLUtils.fromSQLValue(v.getType(), data.get(k))));
         return result;
     }
@@ -518,7 +518,7 @@ public class SQLStorage implements Storage {
         final Map<Field<?>, Object> result = new HashMap<>();
         schema.metadataSchema().forEach((k, v) ->
                 result.put(DSL.field(DSL.name(k)), SQLUtils.toSQLValue(v, object.get(k))));
-        schema.getAllProperties().forEach((k, v) ->
+        schema.getProperties().forEach((k, v) ->
             result.put(DSL.field(DSL.name(k)), SQLUtils.toSQLValue(v.getType(), object.get(k))));
         return result;
     }

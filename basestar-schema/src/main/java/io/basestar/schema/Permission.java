@@ -47,6 +47,20 @@ import java.util.TreeSet;
 
 /**
  * Permission
+ *
+ * Permissions describe - using expressions - the rules for reading, creating, updating and deleting objects.
+ *
+ * The variables available in the context of a permission expression depend on the type of the expression, as follows:
+ *
+ * - Read
+ *    - `this` the object as it currently appears
+ * - Create
+ *    - `after` the object as it would appear if it were successfully created
+ * - Update
+ *    - `before` the object as it currently appears
+ *    - `after` the object as it would appear if it were successfully updated
+ * - Delete
+ *    - `before` the object as it currently appears
  */
 
 @Getter

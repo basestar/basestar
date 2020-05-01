@@ -51,7 +51,7 @@ public interface Storage {
                 throw new UnsupportedConsistencyException(schema.getName() + ".history", name(schema), bestHistoryWrite, requested);
             }
         }
-        for(final Map.Entry<String, Index> entry : schema.getAllIndexes().entrySet()) {
+        for(final Map.Entry<String, Index> entry : schema.getIndexes().entrySet()) {
             final Index index = entry.getValue();
             final Consistency requested = index.getConsistency();
             if(requested != null) {

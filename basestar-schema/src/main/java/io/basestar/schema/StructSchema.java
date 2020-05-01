@@ -20,7 +20,9 @@ package io.basestar.schema;
  * #L%
  */
 
-import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Multimap;
@@ -90,13 +92,11 @@ public class StructSchema implements InstanceSchema {
     /** Map of property definitions */
 
     @Nonnull
-    @JsonIgnore
-    private final SortedMap<String, Property> allProperties;
+    private final SortedMap<String, Property> properties;
 
     /** Map of property definitions */
 
     @Nonnull
-    @JsonProperty("properties")
     private final SortedMap<String, Property> declaredProperties;
 
     private final boolean concrete;
@@ -180,11 +180,11 @@ public class StructSchema implements InstanceSchema {
         }
         if(extend != null) {
             final SortedMap<String, Property> merged = new TreeMap<>();
-            merged.putAll(extend.getAllProperties());
+            merged.putAll(extend.getProperties());
             merged.putAll(declaredProperties);
-            this.allProperties = Collections.unmodifiableSortedMap(merged);
+            this.properties = Collections.unmodifiableSortedMap(merged);
         } else {
-            this.allProperties = declaredProperties;
+            this.properties = declaredProperties;
         }
         this.extensions = Nullsafe.option(builder.getExtensions());
     }
@@ -204,7 +204,7 @@ public class StructSchema implements InstanceSchema {
     @Override
     public Map<String, ? extends Member> getAllMembers() {
 
-        return allProperties;
+        return properties;
     }
 
     @Override
@@ -229,7 +229,7 @@ public class StructSchema implements InstanceSchema {
     @Override
     public Set<Constraint.Violation> validate(final Context context, final Path path, final Instance after) {
 
-        return this.getAllProperties().values().stream()
+        return this.getProperties().values().stream()
                 .flatMap(v -> v.validate(context, path, after.get(v.getName())).stream())
                 .collect(Collectors.toSet());
     }
@@ -253,7 +253,7 @@ public class StructSchema implements InstanceSchema {
     public Multimap<Path, Instance> refs(final Map<String, Object> object) {
 
         final Multimap<Path, Instance> results = HashMultimap.create();
-        allProperties.forEach((k, v) -> v.links(object.get(k)).forEach((k2, v2) ->
+        properties.forEach((k, v) -> v.links(object.get(k)).forEach((k2, v2) ->
                 results.put(Path.of(v.getName()).with(k2), v2)));
         return results;
     }

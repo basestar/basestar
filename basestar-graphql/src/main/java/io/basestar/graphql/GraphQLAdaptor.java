@@ -79,7 +79,7 @@ public class GraphQLAdaptor {
                 mutations.put("create" + schemaName, create(objectSchema));
                 mutations.put("update" + schemaName, update(objectSchema));
                 mutations.put("delete" + schemaName, delete(objectSchema));
-                objectSchema.getAllLinks().forEach((linkName, link) -> {
+                objectSchema.getLinks().forEach((linkName, link) -> {
                     final String name = "query" + schemaName + GraphQLUtils.ucFirst(linkName);
                     queryLinks.put(name, queryLink(objectSchema, link));
                 });

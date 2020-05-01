@@ -90,7 +90,7 @@ public interface SQLRouting {
                     create.execute();
                 }
 
-                for(final Index index : schema.getAllIndexes().values()) {
+                for(final Index index : schema.getIndexes().values()) {
                     if(index.isMultiValue()) {
                         final Name indexTableName = indexTableName(schema, index);
                         log.info("Creating multi-value index table {}", indexTableName);

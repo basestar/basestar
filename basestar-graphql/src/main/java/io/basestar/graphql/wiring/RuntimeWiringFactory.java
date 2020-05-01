@@ -83,7 +83,7 @@ public class RuntimeWiringFactory {
                 final ObjectSchema objectSchema = (ObjectSchema)schema;
                 results.put("read" + objectSchema.getName(), getFetcher(objectSchema));
                 results.put("query" + objectSchema.getName(), queryFetcher(objectSchema));
-                objectSchema.getAllLinks().forEach((linkName, link) -> {
+                objectSchema.getLinks().forEach((linkName, link) -> {
                     final String name = "query" + schemaName + GraphQLUtils.ucFirst(linkName);
                     results.put(name, queryLinkFetcher(objectSchema, link));
                 });

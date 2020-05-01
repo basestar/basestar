@@ -207,12 +207,12 @@ public class Link implements Member {
 
         Map<String, Link> getDeclaredLinks();
 
-        Map<String, Link> getAllLinks();
+        Map<String, Link> getLinks();
 
         default Link getLink(final String name, final boolean inherited) {
 
             if(inherited) {
-                return getAllLinks().get(name);
+                return getLinks().get(name);
             } else {
                 return getDeclaredLinks().get(name);
             }

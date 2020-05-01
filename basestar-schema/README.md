@@ -56,6 +56,10 @@ MyObject:
 
   Parent schema, may be another object schema or a struct schema
 
+- `id` **io.basestar.schema.Id**
+
+  Id configuration
+
 - `history` **io.basestar.schema.History**
 
   History configuration
@@ -64,23 +68,31 @@ MyObject:
 
   Description of the schema
 
-- `allProperties` **map of [Property](#property)**
+- `properties` **map of [Property](#property)**
 
   Map of property definitions (shares namespace with transients and links)
 
-- `allTransients` **map of [Transient](#transient)**
+- `transients` **map of [Transient](#transient)**
 
   Map of link definitions (shares namespace with properties and transients)
 
-- `allLinks` **map of [Link](#link)**
+- `links` **map of [Link](#link)**
 
   Map of link definitions (shares namespace with properties and transients)
 
-- `allIndexes` **map of [Index](#index)**
+- `indexes` **map of [Index](#index)**
 
   Map of index definitions
 
-- `allPermissions` **map of [Permission](#permission)**
+- `permissions` **map of [Permission](#permission)**
+
+  
+
+- `concrete` **boolean**
+
+  
+
+- `extensions` **map of java.lang.Object**
 
   
 
@@ -120,9 +132,17 @@ MyStruct:
 
   Description of the schema
 
-- `allProperties` **map of [Property](#property)**
+- `properties` **map of [Property](#property)**
 
   Map of property definitions
+
+- `concrete` **boolean**
+
+  
+
+- `extensions` **map of java.lang.Object**
+
+  
 
 
 ### Enum Schema
@@ -154,6 +174,10 @@ MyEnum:
 
   Valid values for the enumeration (case sensitive)
 
+- `extensions` **map of java.lang.Object**
+
+  
+
 
 
 ## Property
@@ -182,11 +206,15 @@ MyEnum:
 
   
 
-- `constraints` **map of [Constraint](#constraint)**
+- `constraints` **map of Unknown**
 
   
 
 - `visibility` **[Visibility](#visibility)**
+
+  
+
+- `extensions` **map of java.lang.Object**
 
   
 
@@ -197,6 +225,10 @@ MyEnum:
 
 **Fields**
 
+- `type` **[Type Use](#type-use)**
+
+  
+
 - `description` **string**
 
   
@@ -206,6 +238,14 @@ MyEnum:
   
 
 - `visibility` **[Visibility](#visibility)**
+
+  
+
+- `expand` **set of Path**
+
+  
+
+- `extensions` **map of java.lang.Object**
 
   
 
@@ -224,11 +264,19 @@ MyEnum:
 
   
 
-- `query` **Expression**
+- `expression` **Expression**
 
   
 
 - `sort` **array of Sort**
+
+  
+
+- `visibility` **[Visibility](#visibility)**
+
+  
+
+- `extensions` **map of java.lang.Object**
 
   
 
@@ -267,6 +315,10 @@ MyEnum:
 
   
 
+- `extensions` **map of java.lang.Object**
+
+  
+
 - `unique` **boolean**
 
   
@@ -283,6 +335,19 @@ MyEnum:
 ## Permission
 
 
+Permissions describe - using expressions - the rules for reading, creating, updating and deleting objects.
+
+The variables available in the context of a permission expression depend on the type of the expression, as follows:
+
+- Read
+   - `this` the object as it currently appears
+- Create
+   - `after` the object as it would appear if it were successfully created
+- Update
+   - `before` the object as it currently appears
+   - `after` the object as it would appear if it were successfully updated
+- Delete
+   - `before` the object as it currently appears
 
 **Fields**
 
@@ -317,16 +382,6 @@ MyEnum:
 <strong>Example</strong>
 <pre>
 type: string
-</pre>
-
-### Object Type
-
-
-Stores a reference to the object.
-
-<strong>Example</strong>
-<pre>
-type: MyObject
 </pre>
 
 ### Integer Type
@@ -367,6 +422,10 @@ Input/output as a Base64 encoded string
 type: binary
 </pre>
 
+### 
+
+
+
 ### Struct Type
 
 
@@ -395,6 +454,16 @@ type: MyEnum
 <pre>
 type:
   map: string
+</pre>
+
+### Object Type
+
+
+Stores a reference to the object.
+
+<strong>Example</strong>
+<pre>
+type: MyObject
 </pre>
 
 ### Number Type

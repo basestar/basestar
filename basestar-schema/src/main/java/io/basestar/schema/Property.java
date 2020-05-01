@@ -256,12 +256,12 @@ public class Property implements Member {
 
         Map<String, Property> getDeclaredProperties();
 
-        Map<String, Property> getAllProperties();
+        Map<String, Property> getProperties();
 
         default Property getProperty(final String name, final boolean inherited) {
 
             if(inherited) {
-                return getAllProperties().get(name);
+                return getProperties().get(name);
             } else {
                 return getDeclaredProperties().get(name);
             }

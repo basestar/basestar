@@ -52,7 +52,7 @@ public class SchemaTransform implements Transform<Dataset<Row>, Dataset<Row>> {
     public Dataset<Row> accept(final Dataset<Row> input) {
 
         final SortedMap<String, Column> columns = new TreeMap<>();
-        schema.getAllProperties().forEach((name, prop) -> columns.put(name, column(input, name, prop.getType())));
+        schema.getProperties().forEach((name, prop) -> columns.put(name, column(input, name, prop.getType())));
         schema.metadataSchema().forEach((name, type) -> columns.put(name, column(input, name, type)));
         extraMetadata.forEach((name, type) -> columns.put(name, column(input, name, type)));
         return input.select(columns.values().toArray(new Column[0]));

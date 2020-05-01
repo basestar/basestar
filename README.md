@@ -1,6 +1,5 @@
 ![Basestar](https://raw.githubusercontent.com/basestar/basestar/master/etc/header.png)
 
-
 # The modern, declarative data toolkit
 
 Writing CRUD layers is a pain, maintaining generated CRUD layers is a pain, you've definied CRUD APIs a million times, and you want to get on with the interesting parts of your project - you should be able to describe your data, the relationships between your data, and rules for accessing your data succinctly, in one place, and all of the infrastructure and machinery implied by that declaration should just exist.
@@ -9,13 +8,32 @@ You shouldn't have to choose between tools that work for your web-app and tools 
 
 Basestar solves a relatively simple problem, but it solves it comprehensively and gives you simplicity and power without taking away flexibility or control.
 
+## Get started
+
+Pick the parts you need, for example:
+
+```xml
+<dependencies>
+    <dependency>
+        <groupId>io.basestar</groupId>
+        <artifactId>basestar-database-server</artifactId>
+        <version>${basestar.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>io.basestar</groupId>
+        <artifactId>basestar-storage-dynamodb</artifactId>
+        <version>${basestar.version}</version>
+    </dependency>
+</dependencies>
+```
+
 ## Schema first design
 
-Write me
+See: [Basestar schema (basestar-schema)](basestar-schema)
 
 ## Integrated expression language
 
-Write me
+See: [Basestar expressions (basestar-expression)](basestar-expression)
 
 ## Row-level security
 
@@ -27,14 +45,13 @@ Write me
 
 ## Storage engines
 
-- DynamoDB
-- Cognito users/groups
-- Elasticsearch
-- SQL (dialects as per JOOQ)
-- Hazelcast
-- S3
-- Hive
-- Spark
+- [DynamoDB](basestar-storage-dynamodb)
+- [Cognito users/groups](basestar-storage-cognito)
+- [Elasticsearch](basestar-storage-elasticsearch)
+- [SQL (dialects as per JOOQ)](basestar-storage-sql)
+- [Hazelcast](basestar-storage-hazelcast)
+- [S3](basestar-storage-s3)
+- [Spark](basestar-storage-spark)
 
 
 ## Examples

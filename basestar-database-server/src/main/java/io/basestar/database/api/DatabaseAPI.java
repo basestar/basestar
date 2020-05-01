@@ -400,7 +400,7 @@ public class DatabaseAPI implements API {
                 .get(openApiGet(schema))
                 .put(openApiUpdate(schema))
                 .delete(openApiDelete(schema)));
-        schema.getAllLinks().forEach((name, link) -> {
+        schema.getLinks().forEach((name, link) -> {
             paths.put("/" + schema.getName() + "/{" + PARAM_ID + "}/" + name, new PathItem()
                     .get(openApiLinkQuery(schema, link)));
         });

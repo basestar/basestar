@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.basestar</groupId>
@@ -117,7 +118,7 @@
                 <version>1.18.12.0</version>
                 <executions>
                     <execution>
-                        <phase>deploy</phase>
+                        <phase>prepare-package</phase>
                         <goals>
                             <goal>delombok</goal>
                         </goals>
@@ -137,7 +138,7 @@
                 <executions>
                     <execution>
                         <id>attach-sources</id>
-                        <phase>deploy</phase>
+                        <phase>prepare-package</phase>
                         <goals>
                             <goal>jar</goal>
                         </goals>
@@ -154,6 +155,23 @@
                 </configuration>
                 <executions>
                     <execution>
+                        <id>ftl-docs</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>javadoc</goal>
+                        </goals>
+                        <configuration>
+                            <doclet>br.com.diogoko.doclet.FreeMarkerDoclet</doclet>
+                            <additionalOptions>-o "${project.basedir}/README.md" -ft "${project.basedir}/src/doc/README.md.ftl"</additionalOptions>
+                            <useStandardDocletOptions>false</useStandardDocletOptions>
+                            <docletArtifact>
+                                <groupId>io.basestar</groupId>
+                                <artifactId>freemarker-doclet</artifactId>
+                                <version>1.5.0</version>
+                            </docletArtifact>
+                        </configuration>
+                    </execution>
+                    <execution>
                         <id>attach-javadocs</id>
                         <phase>deploy</phase>
                         <goals>
@@ -163,24 +181,6 @@
                             <useStandardDocletOptions>true</useStandardDocletOptions>
                         </configuration>
                     </execution>
-                    <!--<execution>-->
-                    <!--<id>ftl-docs</id>-->
-                    <!--<phase>prepare-package</phase>-->
-                    <!--<goals>-->
-                    <!--<goal>javadoc</goal>-->
-                    <!--</goals>-->
-                    <!--<configuration>-->
-                    <!--<failOnError>false</failOnError>-->
-                    <!--<doclet>br.com.diogoko.doclet.FreeMarkerDoclet</doclet>-->
-                    <!--<additionalOptions>-o "${project.basedir}/README.md" -ft "${project.basedir}/src/doc/README.md.ftl"</additionalOptions>-->
-                    <!--<useStandardDocletOptions>false</useStandardDocletOptions>-->
-                    <!--<docletArtifact>-->
-                    <!--<groupId>io.basestar</groupId>-->
-                    <!--<artifactId>freemarker-doclet</artifactId>-->
-                    <!--<version>1.1.0</version>-->
-                    <!--</docletArtifact>-->
-                    <!--</configuration>-->
-                    <!--</execution>-->
                 </executions>
             </plugin>
             <plugin>
@@ -195,25 +195,25 @@
                     </dependency>
                 </dependencies>
             </plugin>
-<!--            <plugin>-->
-<!--                <groupId>org.jacoco</groupId>-->
-<!--                <artifactId>jacoco-maven-plugin</artifactId>-->
-<!--                <version>0.8.5</version>-->
-<!--                <executions>-->
-<!--                    <execution>-->
-<!--                        <goals>-->
-<!--                            <goal>prepare-agent</goal>-->
-<!--                        </goals>-->
-<!--                    </execution>-->
-<!--                    <execution>-->
-<!--                        <id>report</id>-->
-<!--                        <phase>test</phase>-->
-<!--                        <goals>-->
-<!--                            <goal>report</goal>-->
-<!--                        </goals>-->
-<!--                    </execution>-->
-<!--                </executions>-->
-<!--            </plugin>-->
+            <!--            <plugin>-->
+            <!--                <groupId>org.jacoco</groupId>-->
+            <!--                <artifactId>jacoco-maven-plugin</artifactId>-->
+            <!--                <version>0.8.5</version>-->
+            <!--                <executions>-->
+            <!--                    <execution>-->
+            <!--                        <goals>-->
+            <!--                            <goal>prepare-agent</goal>-->
+            <!--                        </goals>-->
+            <!--                    </execution>-->
+            <!--                    <execution>-->
+            <!--                        <id>report</id>-->
+            <!--                        <phase>test</phase>-->
+            <!--                        <goals>-->
+            <!--                            <goal>report</goal>-->
+            <!--                        </goals>-->
+            <!--                    </execution>-->
+            <!--                </executions>-->
+            <!--            </plugin>-->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>license-maven-plugin</artifactId>
@@ -288,9 +288,9 @@
                 </configuration>
             </plugin>
             <!--<plugin>-->
-                <!--<groupId>org.sonarsource.scanner.maven</groupId>-->
-                <!--<artifactId>sonar-maven-plugin</artifactId>-->
-                <!--<version>3.7.0.1746</version>-->
+            <!--<groupId>org.sonarsource.scanner.maven</groupId>-->
+            <!--<artifactId>sonar-maven-plugin</artifactId>-->
+            <!--<version>3.7.0.1746</version>-->
             <!--</plugin>-->
         </plugins>
     </build>

@@ -88,7 +88,7 @@ public class PortableSchemaFactory implements PortableFactory {
             final AttributeType<?> type = v.visit(AttributeTypeVisitor.INSTANCE);
             attributes.put(k, type);
         });
-        schema.getAllProperties().forEach((k, v) -> {
+        schema.getProperties().forEach((k, v) -> {
             final AttributeType<?> type = v.getType().visit(AttributeTypeVisitor.INSTANCE);
             attributes.put(k, type);
         });

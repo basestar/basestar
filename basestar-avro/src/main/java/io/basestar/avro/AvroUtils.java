@@ -46,7 +46,7 @@ public class AvroUtils {
             final List<Schema.Field> fields = new ArrayList<>();
             instanceSchema.metadataSchema()
                     .forEach((k, v) -> fields.add(new Schema.Field(k, schema(v))));
-            instanceSchema.getAllProperties()
+            instanceSchema.getProperties()
                     .forEach((k, v) -> fields.add(new Schema.Field(k, schema(v))));
             return Schema.createRecord(schema.getName(), schema.getDescription(), null, false, fields);
         } else {
@@ -158,7 +158,7 @@ public class AvroUtils {
             final Schema.Field field = schema.getField(k);
             record.put(k, encode(v, field.schema(), object.get(k)));
         });
-        instanceSchema.getAllProperties().forEach((k, v) -> {
+        instanceSchema.getProperties().forEach((k, v) -> {
             final Schema.Field field = schema.getField(k);
             record.put(k, encode(v.getType(), field.schema(), object.get(k)));
         });
@@ -278,7 +278,7 @@ public class AvroUtils {
             final Schema.Field field = schema.getField(k);
             object.put(k, decode(v, field.schema(), record.get(field.pos())));
         });
-        instanceSchema.getAllProperties().forEach((k, v) -> {
+        instanceSchema.getProperties().forEach((k, v) -> {
             final Schema.Field field = schema.getField(k);
             object.put(k, decode(v.getType(), field.schema(), record.get(field.pos())));
         });

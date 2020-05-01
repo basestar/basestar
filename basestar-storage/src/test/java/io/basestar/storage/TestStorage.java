@@ -532,7 +532,7 @@ public abstract class TestStorage {
         Instance.setSchema(instance, schema.getName());
         final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC);
         write.createObject(schema, id, instance);
-        for(final Index index : schema.getAllIndexes().values()) {
+        for(final Index index : schema.getIndexes().values()) {
             final Consistency best = traits.getIndexConsistency(index.isMultiValue());
             if(index.getConsistency(best).isAsync()) {
                 final Map<Index.Key, Map<String, Object>> records = index.readValues(instance);

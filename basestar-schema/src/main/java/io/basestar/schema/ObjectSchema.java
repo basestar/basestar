@@ -20,7 +20,9 @@ package io.basestar.schema;
  * #L%
  */
 
-import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
@@ -105,60 +107,50 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
     /** Map of property definitions (shares namespace with transients and links) */
 
     @Nonnull
-    @JsonProperty("properties")
     private final SortedMap<String, Property> declaredProperties;
 
     /** Map of property definitions (shares namespace with transients and links) */
 
     @Nonnull
-    @JsonIgnore
-    private final SortedMap<String, Property> allProperties;
+    private final SortedMap<String, Property> properties;
 
     /** Map of transient definitions (shares namespace with properties and links) */
 
     @Nonnull
-    @JsonProperty("transients")
     private final SortedMap<String, Transient> declaredTransients;
 
     /** Map of link definitions (shares namespace with properties and transients) */
 
     @Nonnull
-    @JsonIgnore
-    private final SortedMap<String, Transient> allTransients;
+    private final SortedMap<String, Transient> transients;
 
     /** Map of link definitions (shares namespace with properties and transients) */
 
     @Nonnull
-    @JsonProperty("links")
     private final SortedMap<String, Link> declaredLinks;
 
     /** Map of link definitions (shares namespace with properties and transients) */
 
     @Nonnull
-    @JsonIgnore
-    private final SortedMap<String, Link> allLinks;
+    private final SortedMap<String, Link> links;
 
     /** Map of index definitions */
 
     @Nonnull
-    @JsonProperty("indexes")
     private final SortedMap<String, Index> declaredIndexes;
 
     /** Map of index definitions */
 
     @Nonnull
-    @JsonIgnore
-    private final SortedMap<String, Index> allIndexes;
+    private final SortedMap<String, Index> indexes;
 
     /** Map of permissions */
 
     @Nonnull
-    @JsonProperty("permissions")
     private final SortedMap<String, Permission> declaredPermissions;
 
     @Nonnull
-    @JsonIgnore
-    private final SortedMap<String, Permission> allPermissions;
+    private final SortedMap<String, Permission> permissions;
 
     private final boolean concrete;
 
@@ -327,25 +319,25 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
                     }
         });
         if(extend != null) {
-            this.allProperties = merge(extend.getAllProperties(), declaredProperties);
+            this.properties = merge(extend.getProperties(), declaredProperties);
             if(extend instanceof ObjectSchema) {
                 final ObjectSchema objectExtend = (ObjectSchema) extend;
-                this.allTransients = merge(objectExtend.getAllTransients(), declaredTransients);
-                this.allLinks = merge(objectExtend.getAllLinks(), declaredLinks);
-                this.allIndexes = merge(objectExtend.getAllIndexes(), declaredIndexes);
-                this.allPermissions = mergePermissions(objectExtend.getAllPermissions(), declaredPermissions);
+                this.transients = merge(objectExtend.getTransients(), declaredTransients);
+                this.links = merge(objectExtend.getLinks(), declaredLinks);
+                this.indexes = merge(objectExtend.getIndexes(), declaredIndexes);
+                this.permissions = mergePermissions(objectExtend.getPermissions(), declaredPermissions);
             } else {
-                this.allTransients = declaredTransients;
-                this.allLinks = declaredLinks;
-                this.allIndexes = declaredIndexes;
-                this.allPermissions = declaredPermissions;
+                this.transients = declaredTransients;
+                this.links = declaredLinks;
+                this.indexes = declaredIndexes;
+                this.permissions = declaredPermissions;
             }
         } else {
-            this.allProperties = declaredProperties;
-            this.allTransients = declaredTransients;
-            this.allLinks = declaredLinks;
-            this.allIndexes = declaredIndexes;
-            this.allPermissions = declaredPermissions;
+            this.properties = declaredProperties;
+            this.transients = declaredTransients;
+            this.links = declaredLinks;
+            this.indexes = declaredIndexes;
+            this.permissions = declaredPermissions;
         }
     }
 
@@ -390,9 +382,9 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
     public Map<String, ? extends Member> getAllMembers() {
 
         final Map<String, Member> members = new HashMap<>();
-        members.putAll(allProperties);
-        members.putAll(allTransients);
-        members.putAll(allLinks);
+        members.putAll(properties);
+        members.putAll(transients);
+        members.putAll(links);
         return members;
     }
 
@@ -412,7 +404,7 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
 
     public Permission getPermission(final String name) {
 
-        return getAllPermissions().get(name);
+        return getPermissions().get(name);
     }
 
     public static Map<String, Object> readMeta(final Map<String, Object> object) {
@@ -443,7 +435,7 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
     public Multimap<Path, Instance> refs(final Map<String, Object> object) {
 
         final Multimap<Path, Instance> results = HashMultimap.create();
-        allProperties.forEach((k, v) -> v.links(object.get(k)).forEach((k2, v2) ->
+        properties.forEach((k, v) -> v.links(object.get(k)).forEach((k2, v2) ->
                 results.put(Path.of(v.getName()).with(k2), v2)));
         return results;
     }
@@ -477,7 +469,7 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
 
         final Context thisContext = context.with(VAR_THIS, object);
         final HashMap<String, Object> result = new HashMap<>();
-        allProperties.forEach((k, v) -> result.put(k, v.evaluate(thisContext, object.get(k))));
+        properties.forEach((k, v) -> result.put(k, v.evaluate(thisContext, object.get(k))));
         copyMeta(object, result);
         result.put(Reserved.HASH, hash(result));
         // Links deliberately not copied, this is only used to prepare an instance for write.
@@ -521,7 +513,7 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
             violations.addAll(id.validate(path, Instance.getId(after), context));
         }
 
-        violations.addAll(getAllProperties().values().stream()
+        violations.addAll(this.getProperties().values().stream()
                 .flatMap(v -> v.validate(context, path, before.get(v.getName()), after.get(v.getName())).stream())
                 .collect(Collectors.toSet()));
 

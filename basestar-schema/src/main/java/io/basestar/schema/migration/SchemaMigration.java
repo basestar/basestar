@@ -39,7 +39,7 @@ public class SchemaMigration implements Serializable {
 
         final Context context = Context.init(source);
         final Map<String, Object> result = new HashMap<>();
-        for(final Map.Entry<String, Property> targetEntry : targetSchema.getAllProperties().entrySet()) {
+        for(final Map.Entry<String, Property> targetEntry : targetSchema.getProperties().entrySet()) {
             final String name = targetEntry.getKey();
             //final Property targetProperty = targetEntry.getValue();
             final Property sourceProperty = sourceSchema.getProperty(name, true);
