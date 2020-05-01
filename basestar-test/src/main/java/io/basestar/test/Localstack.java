@@ -49,7 +49,7 @@ public class Localstack {
     public static void start() {
 
         TestContainers.ensure(ContainerSpec.builder()
-                .image("localstack/localstack")
+                .image("localstack/localstack:latest")
                 .env("SERVICES=s3,dynamodb,sqs,sns,kinesis")
                 .port(S3_PORT)
                 .port(DDB_PORT)

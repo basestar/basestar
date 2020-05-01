@@ -27,14 +27,14 @@ import io.basestar.storage.Storage;
 import io.basestar.storage.TestStorage;
 import io.basestar.test.Localstack;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.model.*;
 
 import java.net.URI;
-import java.util.Collections;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletionException;
 
 @Slf4j
@@ -44,20 +44,37 @@ public class TestDynamoDBStorage extends TestStorage {
 
     private static final int WAIT_DELAY_MILLIS = 2000;
 
+    private static DynamoDbAsyncClient ddb;
+
+    private final List<String> tableNames = new ArrayList<>();
+
     @BeforeAll
     public static void startLocalStack() {
 
         Localstack.start();
+        ddb = DynamoDbAsyncClient.builder()
+                .endpointOverride(URI.create(Localstack.DDB_ENDPOINT))
+                .build();
+    }
+
+    @AfterAll
+    public static void close() {
+
+        if(ddb != null) {
+            ddb.close();
+            ddb = null;
+        }
+    }
+
+    @AfterEach
+    public void cleanup() {
+
+        // If we don't do this, localstack eventually falls over
+        tableNames.forEach(tableName -> ddb.deleteTable(DeleteTableRequest.builder().tableName(tableName).build()));
     }
 
     @Override
     protected Storage storage(final Namespace namespace, final Multimap<String, Map<String, Object>> data) {
-
-        final DynamoDbAsyncClient ddb = DynamoDbAsyncClient.builder()
-                .endpointOverride(URI.create(Localstack.DDB_ENDPOINT))
-                .build();
-
-        Runtime.getRuntime().addShutdownHook(new Thread(ddb::close));
 
         final DynamoDBRouting ddbRouting = DynamoDBRouting.SingleTable.builder().tablePrefix(UUID.randomUUID() + "-").build();
         final Storage storage = DynamoDBStorage.builder().setClient(ddb).setRouting(ddbRouting)
@@ -68,6 +85,7 @@ public class TestDynamoDBStorage extends TestStorage {
         for(final TableDescription table : ddbRouting.tables(Collections.emptyList()).values()) {
             ddb.createTable(DynamoDBUtils.createTableRequest(table)).join();
             waitUntilTableReady(ddb, table.tableName());
+            tableNames.add(table.tableName());
         }
 
         writeAll(storage, namespace, data);
