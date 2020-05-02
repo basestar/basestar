@@ -68,8 +68,8 @@
     <modules>
         <module>basestar-api</module>
         <module>basestar-auth</module>
-        <module>basestar-auth-cognito</module>
-        <module>basestar-auth-nimbus</module>
+        <module>basestar-auth/basestar-auth-cognito</module>
+        <module>basestar-auth/basestar-auth-nimbus</module>
         <module>basestar-avro</module>
         <module>basestar-bom</module>
         <module>basestar-connector-dynamodb</module>
@@ -77,11 +77,11 @@
         <module>basestar-connector-undertow</module>
         <module>basestar-core</module>
         <module>basestar-database</module>
-        <module>basestar-database-client</module>
-        <module>basestar-database-server</module>
+        <module>basestar-database/basestar-database-client</module>
+        <module>basestar-database/basestar-database-server</module>
         <module>basestar-event</module>
-        <module>basestar-event-sns</module>
-        <module>basestar-event-sqs</module>
+        <module>basestar-event/basestar-event-sns</module>
+        <module>basestar-event/basestar-event-sqs</module>
         <module>basestar-example</module>
         <module>basestar-expression</module>
         <module>basestar-jackson</module>
@@ -90,14 +90,14 @@
         <module>basestar-spark</module>
         <module>basestar-spark-aws</module>
         <module>basestar-storage</module>
-        <module>basestar-storage-dynamodb</module>
-        <module>basestar-storage-elasticsearch</module>
-        <module>basestar-storage-s3</module>
-        <module>basestar-storage-spark</module>
-        <module>basestar-storage-sql</module>
+        <module>basestar-storage/basestar-storage-dynamodb</module>
+        <module>basestar-storage/basestar-storage-elasticsearch</module>
+        <module>basestar-storage/basestar-storage-s3</module>
+        <module>basestar-storage/basestar-storage-spark</module>
+        <module>basestar-storage/basestar-storage-sql</module>
+        <module>basestar-storage/basestar-storage-cognito</module>
+        <module>basestar-storage/basestar-storage-hazelcast</module>
         <module>basestar-test</module>
-        <module>basestar-storage-cognito</module>
-        <module>basestar-storage-hazelcast</module>
         <module>basestar-graphql</module>
     </modules>
 
@@ -154,23 +154,23 @@
                     <sourcepath>${project.build.directory}/delombok</sourcepath>
                 </configuration>
                 <executions>
-                    <execution>
-                        <id>ftl-docs</id>
-                        <phase>prepare-package</phase>
-                        <goals>
-                            <goal>javadoc</goal>
-                        </goals>
-                        <configuration>
-                            <doclet>br.com.diogoko.doclet.FreeMarkerDoclet</doclet>
-                            <additionalOptions>-o "${project.basedir}/README.md" -ft "${project.basedir}/src/doc/README.md.ftl"</additionalOptions>
-                            <useStandardDocletOptions>false</useStandardDocletOptions>
-                            <docletArtifact>
-                                <groupId>io.basestar</groupId>
-                                <artifactId>freemarker-doclet</artifactId>
-                                <version>1.5.0</version>
-                            </docletArtifact>
-                        </configuration>
-                    </execution>
+<!--                    <execution>-->
+<!--                        <id>ftl-docs</id>-->
+<!--                        <phase>prepare-package</phase>-->
+<!--                        <goals>-->
+<!--                            <goal>javadoc</goal>-->
+<!--                        </goals>-->
+<!--                        <configuration>-->
+<!--                            <doclet>br.com.diogoko.doclet.FreeMarkerDoclet</doclet>-->
+<!--                            <additionalOptions>-o "${project.basedir}/README.md" -ft "${project.basedir}/src/doc/README.md.ftl"</additionalOptions>-->
+<!--                            <useStandardDocletOptions>false</useStandardDocletOptions>-->
+<!--                            <docletArtifact>-->
+<!--                                <groupId>io.basestar</groupId>-->
+<!--                                <artifactId>freemarker-doclet</artifactId>-->
+<!--                                <version>1.5.0</version>-->
+<!--                            </docletArtifact>-->
+<!--                        </configuration>-->
+<!--                    </execution>-->
                     <execution>
                         <id>attach-javadocs</id>
                         <phase>deploy</phase>

@@ -4,10 +4,11 @@
         <artifactId>basestar</artifactId>
         <groupId>io.basestar</groupId>
         <version>1.1.4-SNAPSHOT</version>
+        <relativePath>../../</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>basestar-database-server</artifactId>
+    <artifactId>basestar-storage-dynamodb</artifactId>
 
     <dependencyManagement>
         <dependencies>
@@ -30,19 +31,26 @@
         </dependency>
         <dependency>
             <groupId>io.basestar</groupId>
-            <artifactId>basestar-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.basestar</groupId>
-            <artifactId>basestar-database</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.basestar</groupId>
             <artifactId>basestar-storage</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>dynamodb</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-dynamodb</artifactId>
         </dependency>
         <dependency>
             <groupId>io.basestar</groupId>
             <artifactId>basestar-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.basestar</groupId>
+            <artifactId>basestar-storage</artifactId>
+            <classifier>tests</classifier>
+            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
     </dependencies>

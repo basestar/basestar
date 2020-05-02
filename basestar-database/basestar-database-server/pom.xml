@@ -4,10 +4,11 @@
         <artifactId>basestar</artifactId>
         <groupId>io.basestar</groupId>
         <version>1.1.4-SNAPSHOT</version>
+        <relativePath>../../</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>basestar-storage-spark</artifactId>
+    <artifactId>basestar-database-server</artifactId>
 
     <dependencyManagement>
         <dependencies>
@@ -30,37 +31,19 @@
         </dependency>
         <dependency>
             <groupId>io.basestar</groupId>
-            <artifactId>basestar-storage</artifactId>
+            <artifactId>basestar-api</artifactId>
         </dependency>
         <dependency>
             <groupId>io.basestar</groupId>
-            <artifactId>basestar-spark</artifactId>
-        </dependency>
-         <dependency>
-            <groupId>org.apache.spark</groupId>
-            <artifactId>spark-core_2.11</artifactId>
-            <scope>provided</scope>
+            <artifactId>basestar-database</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.spark</groupId>
-            <artifactId>spark-sql_2.11</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-library</artifactId>
-            <scope>provided</scope>
+            <groupId>io.basestar</groupId>
+            <artifactId>basestar-storage</artifactId>
         </dependency>
         <dependency>
             <groupId>io.basestar</groupId>
             <artifactId>basestar-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.basestar</groupId>
-            <artifactId>basestar-storage</artifactId>
-            <classifier>tests</classifier>
-            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
     </dependencies>

@@ -4,10 +4,11 @@
         <artifactId>basestar</artifactId>
         <groupId>io.basestar</groupId>
         <version>1.1.4-SNAPSHOT</version>
+        <relativePath>../../</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>basestar-auth-cognito</artifactId>
+    <artifactId>basestar-storage-s3</artifactId>
 
     <dependencyManagement>
         <dependencies>
@@ -30,7 +31,34 @@
         </dependency>
         <dependency>
             <groupId>io.basestar</groupId>
-            <artifactId>basestar-auth-nimbus</artifactId>
+            <artifactId>basestar-storage</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.avro</groupId>
+            <artifactId>avro</artifactId>
+            <version>1.9.2</version>
+        </dependency>
+        <dependency>
+            <groupId>io.basestar</groupId>
+            <artifactId>basestar-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.basestar</groupId>
+            <artifactId>basestar-storage</artifactId>
+            <classifier>tests</classifier>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>cloud.localstack</groupId>
+            <artifactId>localstack-utils</artifactId>
+            <version>0.2.1</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

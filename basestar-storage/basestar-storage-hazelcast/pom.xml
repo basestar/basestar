@@ -4,10 +4,11 @@
         <artifactId>basestar</artifactId>
         <groupId>io.basestar</groupId>
         <version>1.1.4-SNAPSHOT</version>
+        <relativePath>../../</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>basestar-storage-dynamodb</artifactId>
+    <artifactId>basestar-storage-hazelcast</artifactId>
 
     <dependencyManagement>
         <dependencies>
@@ -33,12 +34,8 @@
             <artifactId>basestar-storage</artifactId>
         </dependency>
         <dependency>
-            <groupId>software.amazon.awssdk</groupId>
-            <artifactId>dynamodb</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-dynamodb</artifactId>
+            <groupId>com.hazelcast</groupId>
+            <artifactId>hazelcast</artifactId>
         </dependency>
         <dependency>
             <groupId>io.basestar</groupId>
@@ -50,6 +47,12 @@
             <artifactId>basestar-storage</artifactId>
             <classifier>tests</classifier>
             <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>cloud.localstack</groupId>
+            <artifactId>localstack-utils</artifactId>
+            <version>0.2.1</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

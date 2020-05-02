@@ -4,10 +4,11 @@
         <artifactId>basestar</artifactId>
         <groupId>io.basestar</groupId>
         <version>1.1.4-SNAPSHOT</version>
+        <relativePath>../../</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>basestar-storage-hazelcast</artifactId>
+    <artifactId>basestar-event-sqs</artifactId>
 
     <dependencyManagement>
         <dependencies>
@@ -30,30 +31,17 @@
         </dependency>
         <dependency>
             <groupId>io.basestar</groupId>
-            <artifactId>basestar-storage</artifactId>
+            <artifactId>basestar-event</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.hazelcast</groupId>
-            <artifactId>hazelcast</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.basestar</groupId>
-            <artifactId>basestar-test</artifactId>
-            <scope>test</scope>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>sqs</artifactId>
         </dependency>
         <dependency>
             <groupId>io.basestar</groupId>
             <artifactId>basestar-storage</artifactId>
-            <classifier>tests</classifier>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>cloud.localstack</groupId>
-            <artifactId>localstack-utils</artifactId>
-            <version>0.2.1</version>
-            <scope>test</scope>
         </dependency>
     </dependencies>
+
 
 </project>

@@ -22,7 +22,7 @@ Base type for schema definitions
 
 - `type` **"object"** | **"struct"** | **"enum"**
 
-  Indicates whether this definition is an [Object](#object), [Struct](#struct) or [Enum](#enum) schema.
+  Indicates whether this definition is an [Object](#object-schema), [Struct](#struct-schema) or [Enum](#enum-schema) schema.
 
 
 ### Object Schema

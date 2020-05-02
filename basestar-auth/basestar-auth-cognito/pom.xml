@@ -4,10 +4,11 @@
         <artifactId>basestar</artifactId>
         <groupId>io.basestar</groupId>
         <version>1.1.4-SNAPSHOT</version>
+        <relativePath>../../</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>basestar-event-sqs</artifactId>
+    <artifactId>basestar-auth-cognito</artifactId>
 
     <dependencyManagement>
         <dependencies>
@@ -30,17 +31,8 @@
         </dependency>
         <dependency>
             <groupId>io.basestar</groupId>
-            <artifactId>basestar-event</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>software.amazon.awssdk</groupId>
-            <artifactId>sqs</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.basestar</groupId>
-            <artifactId>basestar-storage</artifactId>
+            <artifactId>basestar-auth-nimbus</artifactId>
         </dependency>
     </dependencies>
-
 
 </project>
