@@ -1,8 +1,8 @@
 ![Basestar](https://raw.githubusercontent.com/basestar/basestar/master/etc/header.png)
 
-# The modern, declarative data toolkit
-
 ![master build](https://github.com/basestar/basestar/workflows/master%20build/badge.svg?branch=master) [![maven central](https://maven-badges.herokuapp.com/maven-central/io.basestar/basestar/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.basestar/basestar)
+
+# The modern, declarative data toolkit
 
 Writing CRUD layers is a pain, maintaining generated CRUD layers is a pain, you've definied CRUD APIs a million times, and you want to get on with the interesting parts of your project - you should be able to describe your data, the relationships between your data, and rules for accessing your data succinctly, in one place, and all of the infrastructure and machinery implied by that declaration should just exist.
 
