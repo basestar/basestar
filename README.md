@@ -4,7 +4,7 @@
 
 # The modern, declarative data toolkit
 
-Writing CRUD layers is a pain, maintaining generated CRUD layers is a pain, you've definied CRUD APIs a million times, and you want to get on with the interesting parts of your project - you should be able to describe your data, the relationships between your data, and rules for accessing your data succinctly, in one place, and all of the infrastructure and machinery implied by that declaration should just exist.
+Writing CRUD layers is a pain, maintaining generated CRUD layers is a pain, you've defined CRUD APIs a million times, and you want to get on with the interesting parts of your project - you should be able to describe your data, the relationships between your data, and rules for accessing your data succinctly, in one place, and all of the infrastructure and machinery implied by that declaration should just exist.
 
 You shouldn't have to choose between tools that work for your web-app and tools that work for massive scale - online or offline - data processing and analysis. You shouldn't be constrained to one implementation, or trapped by one cloud provider.
 
