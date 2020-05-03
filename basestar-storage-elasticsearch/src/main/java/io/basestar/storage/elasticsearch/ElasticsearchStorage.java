@@ -133,6 +133,9 @@ public class ElasticsearchStorage implements Storage {
     @Override
     public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
 
+        if(!routing.historyEnabled(schema)) {
+            throw new UnsupportedOperationException("History not enabled");
+        }
         final String index = routing.historyIndex(schema);
         final String key = historyKey(id, version);
         final GetRequest request = new GetRequest(index, key);
@@ -188,6 +191,9 @@ public class ElasticsearchStorage implements Storage {
             @Override
             public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version) {
 
+                if(!routing.historyEnabled(schema)) {
+                    throw new UnsupportedOperationException("History not enabled");
+                }
                 final String index = routing.historyIndex(schema);
                 indexToSchema.put(index, schema);
                 final String key = historyKey(id, version);
@@ -299,14 +305,19 @@ public class ElasticsearchStorage implements Storage {
                     return BatchResponse.single(schema.getName(), after);
                 });
 
+                checkAndCreateHistory(schema, id, after);
+
+                return this;
+            }
+
+            private void checkAndCreateHistory(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+
                 final History history = schema.getHistory();
                 if(history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
                     final Long afterVersion = Instance.getVersion(after);
                     assert afterVersion != null;
                     createHistory(schema, id, afterVersion, after);
                 }
-
-                return this;
             }
 
             @Override
@@ -342,12 +353,8 @@ public class ElasticsearchStorage implements Storage {
                     return BatchResponse.single(schema.getName(), after);
                 });
 
-                final History history = schema.getHistory();
-                if(history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
-                    final Long afterVersion = Instance.getVersion(after);
-                    assert afterVersion != null;
-                    createHistory(schema, id, afterVersion, after);
-                }
+                checkAndCreateHistory(schema, id, after);
+
                 return this;
             }
 
@@ -407,14 +414,15 @@ public class ElasticsearchStorage implements Storage {
             @Override
             public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
 
-                final String index = routing.historyIndex(schema);
-                final String key = historyKey(id, version);
-                indices.put(index, schema);
-                request.add(new IndexRequest()
-                        .index(index).source(toSource(schema, after)).id(key)
-                        .opType(DocWriteRequest.OpType.CREATE));
-                responders.add(response -> BatchResponse.single(schema.getName(), after));
-
+                if(routing.historyEnabled(schema)) {
+                    final String index = routing.historyIndex(schema);
+                    final String key = historyKey(id, version);
+                    indices.put(index, schema);
+                    request.add(new IndexRequest()
+                            .index(index).source(toSource(schema, after)).id(key)
+                            .opType(DocWriteRequest.OpType.CREATE));
+                    responders.add(response -> BatchResponse.single(schema.getName(), after));
+                }
                 return this;
             }
 

@@ -36,6 +36,8 @@ public interface ElasticsearchRouting {
 
     Settings settings(ObjectSchema schema);
 
+    boolean historyEnabled(ObjectSchema schema);
+
     @Builder
     class Simple implements ElasticsearchRouting {
 
@@ -50,6 +52,8 @@ public interface ElasticsearchRouting {
         private final Settings settings;
 
         private final Mappings.Factory mappingsFactory;
+
+        private final boolean historyEnabled;
 
         @Override
         public String objectIndex(final ObjectSchema schema) {
@@ -73,6 +77,12 @@ public interface ElasticsearchRouting {
         public Settings settings(final ObjectSchema schema) {
 
             return settings;
+        }
+
+        @Override
+        public boolean historyEnabled(final ObjectSchema schema) {
+
+            return historyEnabled;
         }
 //
 //        @Override
