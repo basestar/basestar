@@ -47,13 +47,13 @@ Write me
 
 ## Storage engines
 
-- [DynamoDB](basestar-storage/basestar-storage-dynamodb)
-- [Cognito users/groups](basestar-storage/basestar-storage-cognito)
-- [Elasticsearch](basestar-storage/basestar-storage-elasticsearch)
-- [SQL (dialects as per JOOQ)](basestar-storage/basestar-storage-sql)
-- [Hazelcast](basestar-storage/basestar-storage-hazelcast)
-- [S3](basestar-storage/basestar-storage-s3)
-- [Spark](basestar-storage/basestar-storage-spark)
+- [DynamoDB](basestar-storage-dynamodb)
+- [Cognito users/groups](basestar-storage-cognito)
+- [Elasticsearch](basestar-storage-elasticsearch)
+- [SQL (dialects as per JOOQ)](basestar-storage-sql)
+- [Hazelcast](basestar-storage-hazelcast)
+- [S3](basestar-storage-s3)
+- [Spark](basestar-storage-spark)
 
 
 ## Examples
