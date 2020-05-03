@@ -56,10 +56,10 @@
             <id>ossrh</id>
             <url>https://oss.sonatype.org/service/local/staging/deploy/maven2</url>
         </repository>
-        <site>
-            <id>github</id>
-            <url>https://basestar.github.io</url>
-        </site>
+<!--        <site>-->
+<!--            <id>github</id>-->
+<!--            <url>https://basestar.github.io</url>-->
+<!--        </site>-->
     </distributionManagement>
 
     <scm>
@@ -105,19 +105,19 @@
         <module>basestar-graphql</module>
     </modules>
 
-    <reporting>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.2.0</version>
-                <configuration>
-                    <failOnError>false</failOnError>
-                    <sourcepath>${project.build.directory}/delombok</sourcepath>
-                </configuration>
-            </plugin>
-        </plugins>
-    </reporting>
+<!--    <reporting>-->
+<!--        <plugins>-->
+<!--            <plugin>-->
+<!--                <groupId>org.apache.maven.plugins</groupId>-->
+<!--                <artifactId>maven-javadoc-plugin</artifactId>-->
+<!--                <version>3.2.0</version>-->
+<!--                <configuration>-->
+<!--                    <failOnError>false</failOnError>-->
+<!--                    <sourcepath>${project.build.directory}/delombok</sourcepath>-->
+<!--                </configuration>-->
+<!--            </plugin>-->
+<!--        </plugins>-->
+<!--    </reporting>-->
 
     <build>
         <plugins>
