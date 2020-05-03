@@ -253,7 +253,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor<QueryPart> {
     }
 
     @Override
-    public QueryPart visitLambdaCall(final LambdaCall expression) {
+    public QueryPart visitLambdaCall(final Call expression) {
 
         return null;
     }
@@ -265,13 +265,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor<QueryPart> {
     }
 
     @Override
-    public QueryPart visitMemberCall(final MemberCall expression) {
-
-        return null;
-    }
-
-    @Override
-    public QueryPart visitStarMember(final StarMember expression) {
+    public QueryPart visitCall(final Call expression) {
 
         return null;
     }

@@ -243,7 +243,7 @@ public class SparkExpressionVisitor implements ExpressionVisitor<Column> {
     }
 
     @Override
-    public Column visitLambdaCall(final LambdaCall expression) {
+    public Column visitLambdaCall(final Call expression) {
 
         throw new UnsupportedOperationException();
     }
@@ -255,13 +255,7 @@ public class SparkExpressionVisitor implements ExpressionVisitor<Column> {
     }
 
     @Override
-    public Column visitMemberCall(final MemberCall expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Column visitStarMember(final StarMember expression) {
+    public Column visitCall(final Call expression) {
 
         throw new UnsupportedOperationException();
     }

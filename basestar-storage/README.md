@@ -72,7 +72,7 @@ to S3 (except for those properties required for index queries.)
 
 ### Mock/ephemeral primary storage
 
-```
+```java
 final MemoryStorage primaryStorage = MemoryStorage.builder().build();
 
 final DatabaseServer primaryDatabase = new DatabaseServer(namespace, primaryStorage);
@@ -92,7 +92,7 @@ the API server, however the event wiring could equally be achieved using a lambd
 attached to the primary database table(s) rather than an SNS emitter. Replication could also
 be handled in a Lambda listening to the queue instead (using the same codebase).
 
-```
+```java
 final S3AsyncClient s3 = S3AsyncClient.builder().build();
 final SnsAsyncClient sns = SnsAsyncClient.builder().build();
 final SqsAsyncClient sqs = SqsAsyncClient.builder().build();

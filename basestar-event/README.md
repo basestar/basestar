@@ -42,7 +42,7 @@ For tests and simple configurations, a Loopback Emitter + Receiver implementatio
 
 For convenient routing of events by type, the Handlers class is provided, usage is as follows:
 
-```
+```java
 public class MyHandler implements Handler<Event> {
 
     private static final Handlers HANDLERS = Handlers.builder()

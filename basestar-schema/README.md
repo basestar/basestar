@@ -206,7 +206,7 @@ MyEnum:
 
   
 
-- `constraints` **map of Unknown**
+- `constraints` **map of [Constraint](#constraint)**
 
   
 

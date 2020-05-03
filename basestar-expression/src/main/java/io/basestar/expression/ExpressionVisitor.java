@@ -95,13 +95,11 @@ public interface ExpressionVisitor<T> {
 
     T visitLambda(Lambda expression);
 
-    T visitLambdaCall(LambdaCall expression);
+    T visitLambdaCall(Call expression);
 
     T visitMember(Member expression);
 
-    T visitMemberCall(MemberCall expression);
-
-    T visitStarMember(StarMember expression);
+    T visitCall(Call expression);
 
     T visitWith(With expression);
 
@@ -270,7 +268,7 @@ public interface ExpressionVisitor<T> {
             return visitDefault(expression);
         }
 
-        default T visitLambdaCall(final LambdaCall expression){
+        default T visitLambdaCall(final Call expression){
             
             return visitDefault(expression);
         }
@@ -280,12 +278,7 @@ public interface ExpressionVisitor<T> {
             return visitDefault(expression);
         }
 
-        default T visitMemberCall(final MemberCall expression){
-            
-            return visitDefault(expression);
-        }
-
-        default T visitStarMember(final StarMember expression){
+        default T visitCall(final Call expression){
             
             return visitDefault(expression);
         }

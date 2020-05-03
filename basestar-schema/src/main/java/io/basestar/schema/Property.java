@@ -39,7 +39,6 @@ import io.basestar.util.Nullsafe;
 import io.basestar.util.Path;
 import lombok.Data;
 import lombok.Getter;
-import lombok.NonNull;
 import lombok.experimental.Accessors;
 
 import javax.annotation.Nonnull;
@@ -73,7 +72,7 @@ public class Property implements Member {
     @Nullable
     private final Expression expression;
 
-    @NonNull
+    @Nonnull
     private final SortedMap<String, Constraint> constraints;
 
     @Nullable

@@ -23,7 +23,6 @@ package io.basestar.expression.constant;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.*;
 import io.basestar.expression.exception.UndefinedNameException;
-import io.basestar.expression.function.StarMember;
 import io.basestar.util.Path;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -78,29 +77,11 @@ public class PathConstant implements Expression {
 
         final Iterator<String> iter = tail.iterator();
         while(iter.hasNext()) {
-            String part = iter.next();
-            if(part.equals("*")) {
-                if(iter.hasNext()) {
-                    part = iter.next();
-                    target = StarMember.evaluate(context, target, part);
-                } else {
-                    throw new IllegalStateException("* in path cannot be last element");
-                }
-            } else {
-                target = context.member(target, part);
-            }
+            final String part = iter.next();
+            target = context.member(target, part);
         }
-//        for (final String part : tail) {
-//            target = context.member(target, part);
-//        }
         return target;
     }
-
-//    @Override
-//    public Query query() {
-//
-//        return Query.and();
-//    }
 
     @Override
     public Set<Path> paths() {

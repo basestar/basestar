@@ -25,7 +25,7 @@ name
 
 expr
  : expr (Dot Identifier)? LParen exprs ? RParen #exprCall
- | expr Dot Mul Dot Identifier #exprStarMember
+// | expr Dot Mul Dot Identifier #exprStarMember
  | expr Dot Identifier #exprMember
  | expr LSquare expr RSquare #exprIndex
  | op=(Sub | Not | BitNot) expr #exprUnary

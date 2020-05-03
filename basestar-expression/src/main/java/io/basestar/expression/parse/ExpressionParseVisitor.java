@@ -131,13 +131,14 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
         return new Member(with, property);
     }
 
-    @Override
-    public Expression visitExprStarMember(final ExprStarMemberContext ctx) {
-
-        final Expression with = visit(ctx.expr());
-        final String property = ctx.Identifier().getText();
-        return new StarMember(with, property);
-    }
+//    @Override
+//    public Expression visitExprStarMember(final ExprStarMemberContext ctx) {
+//
+//        throw new UnsupportedOperationException();
+////        final Expression with = visit(ctx.expr());
+////        final String property = ctx.Identifier().getText();
+////        return new StarMember(with, property);
+//    }
 
     @Override
     public Expression visitExprCall(final ExprCallContext ctx) {
@@ -146,9 +147,9 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
         final List<Expression> args = ctx.exprs() == null ? Collections.emptyList() : visit(ctx.exprs().expr());
         if (ctx.Identifier() != null) {
             final String method = ctx.Identifier().getText();
-            return new MemberCall(with, method, args);
+            return new Call(with, method, args);
         } else {
-            return new LambdaCall(with, args);
+            return new Call(with, args);
         }
     }
 

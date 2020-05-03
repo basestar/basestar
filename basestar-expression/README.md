@@ -1,7 +1,7 @@
 # Expressions
 
 
-- [](#)
+- [Arithmetic expressions](#arithmetic-expressions)
   - [Modulo](#modulo)
   - [Subtract](#subtract)
   - [Negate](#negate)
@@ -9,14 +9,14 @@
   - [Pow](#pow)
   - [Add](#add)
   - [Multiply](#multiply)
-- [](#)
+- [Bitwise expressions](#bitwise-expressions)
   - [Bitwise Left-Shift](#bitwise-left-shift)
   - [Bitwise Right-Shift](#bitwise-right-shift)
   - [Bitwise And](#bitwise-and)
   - [Bitwise Or](#bitwise-or)
   - [Bitwise Xor](#bitwise-xor)
   - [Bitwise Not](#bitwise-not)
-- [](#)
+- [Comparison expressions](#comparison-expressions)
   - [Less Than](#less-than)
   - [Equals](#equals)
   - [Compare](#compare)
@@ -24,18 +24,16 @@
   - [Greater Than](#greater-than)
   - [Not Equal](#not-equal)
   - [Less Than or Equal](#less-than-or-equal)
-- [](#)
+- [Functional expressions](#functional-expressions)
   - [If-Else](#if-else)
   - [Member](#member)
+  - [Call](#call)
   - [Coalesce](#coalesce)
   - [In](#in)
-  - [](#)
-  - [](#)
   - [Lambda](#lambda)
   - [Index](#index)
   - [With](#with)
-  - [](#)
-- [](#)
+- [Iterator expressions](#iterator-expressions)
   - [Iterate](#iterate)
   - [For All](#for-all)
   - [For Any](#for-any)
@@ -43,16 +41,16 @@
   - [Object Comprehension](#object-comprehension)
   - [Array Comprehension](#array-comprehension)
   - [Where](#where)
-- [](#)
+- [Literal expressions](#literal-expressions)
   - [Literal Array](#literal-array)
   - [Literal Set](#literal-set)
   - [Literal Object](#literal-object)
-- [](#)
+- [Logical expressions](#logical-expressions)
   - [Or](#or)
   - [Not](#not)
   - [And](#and)
 
-## 
+## Arithmetic expressions
 
 ### Modulo
 
@@ -150,7 +148,7 @@ lhs * rhs
 
 
 
-## 
+## Bitwise expressions
 
 ### Bitwise Left-Shift
 
@@ -230,7 +228,7 @@ lhs ^ rhs
 
 
 
-## 
+## Comparison expressions
 
 ### Less Than
 
@@ -324,7 +322,7 @@ lhs <= rhs
 
 
 
-## 
+## Functional expressions
 
 ### If-Else
 
@@ -354,6 +352,28 @@ with.member
 - `member`:`collection` Right hand operand
 
 
+### Call
+
+
+**Syntax:**
+<pre>
+with(args...)
+</pre>
+**Parameters:**
+
+- `with`:`any` Lambda callable
+- `args`:`args` Function arguments
+
+<pre>
+with.member(...args)
+</pre>
+**Parameters:**
+
+- `with`:`any` Object
+- `member`:`member` Member name
+- `args`:`args` Function arguments
+
+
 ### Coalesce
 
  Return the first non-null operand
@@ -380,28 +400,6 @@ lhs in rhs
 
 - `lhs`:`any` Left hand operand
 - `rhs`:`collection` Right hand operand
-
-
-### 
-
-
-**Syntax:**
-<pre>
-
-</pre>
-**Parameters:**
-
-
-
-### 
-
-
-**Syntax:**
-<pre>
-
-</pre>
-**Parameters:**
-
 
 
 ### Lambda
@@ -442,19 +440,8 @@ lhs[rhs]
 
 
 
-### 
 
-
-**Syntax:**
-<pre>
-
-</pre>
-**Parameters:**
-
-
-
-
-## 
+## Iterator expressions
 
 ### Iterate
 
@@ -565,7 +552,7 @@ lhs where rhs
 
 
 
-## 
+## Literal expressions
 
 ### Literal Array
 
@@ -606,7 +593,7 @@ lhs where rhs
 
 
 
-## 
+## Logical expressions
 
 ### Or
 
