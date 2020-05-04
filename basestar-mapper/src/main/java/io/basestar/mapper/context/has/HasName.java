@@ -1,4 +1,4 @@
-package io.basestar.mapper.type;
+package io.basestar.mapper.context.has;
 
 /*-
  * #%L
@@ -20,11 +20,25 @@ package io.basestar.mapper.type;
  * #L%
  */
 
-import java.util.List;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
 
-public interface HasFields<T> {
+public interface HasName {
 
-    List<WithField<T, ?>> declaredFields();
-    
-    List<WithField<? super T, ?>> fields();
+    String name();
+
+    default String simpleName() {
+
+        return name();
+    }
+
+    static Predicate<HasName> match(final String name) {
+
+        return v -> v.name().equals(name);
+    }
+
+    static Predicate<HasName> match(final Pattern pattern) {
+
+        return v -> pattern.matcher(v.name()).matches();
+    }
 }

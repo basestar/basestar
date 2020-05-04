@@ -1,4 +1,4 @@
-package io.basestar.mapper.type;
+package io.basestar.mapper.context;
 
 /*-
  * #%L
@@ -20,6 +20,7 @@ package io.basestar.mapper.type;
  * #L%
  */
 
+import io.basestar.mapper.context.has.HasModifiers;
 import io.leangen.geantyref.GenericTypeReflector;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -31,22 +32,22 @@ import java.util.List;
 
 @Getter
 @Accessors(fluent = true)
-public class WithField<T, V> implements HasModifiers, WithAccessor<T, V> {
+public class FieldContext implements HasModifiers, AccessorContext {
 
-    private final WithType<T> owner;
+    private final TypeContext owner;
 
     private final Field field;
 
     private final AnnotatedType annotatedType;
 
-    private final List<WithAnnotation<?>> annotations;
+    private final List<AnnotationContext<?>> annotations;
 
-    protected WithField(final WithType<T> owner, final Field field) {
+    protected FieldContext(final TypeContext owner, final Field field) {
 
         this.owner = owner;
         this.field = field;
         this.annotatedType = GenericTypeReflector.getFieldType(field, owner.annotatedType());
-        this.annotations = WithAnnotation.from(field);
+        this.annotations = AnnotationContext.from(field);
     }
 
     @Override
@@ -74,20 +75,21 @@ public class WithField<T, V> implements HasModifiers, WithAccessor<T, V> {
     }
 
     @Override
-    public V get(final T parent) throws IllegalAccessException {
+    @SuppressWarnings("unchecked")
+    public <T, V> V get(final T target) throws IllegalAccessException {
 
-        return erasedType().cast(field.get(parent));
+        return (V)field.get(target);
     }
 
     @Override
-    public void set(final T parent, final V value) throws IllegalAccessException {
+    public <T, V> void set(final T target, final V value) throws IllegalAccessException {
 
-        field.set(parent, value);
+        field.set(target, value);
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public Class<V> erasedType() {
+    public <V> Class<V> erasedType() {
 
         return (Class<V>)field.getType();
     }

@@ -20,9 +20,9 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
+import io.basestar.mapper.context.TypeContext;
 import io.basestar.mapper.internal.SchemaBinder;
 import io.basestar.mapper.internal.annotation.SchemaAnnotation;
-import io.basestar.mapper.type.WithType;
 import io.basestar.schema.Schema;
 import lombok.RequiredArgsConstructor;
 
@@ -44,14 +44,14 @@ public @interface ObjectSchema {
         private final ObjectSchema annotation;
 
         @Override
-        public String name(final WithType<?> type) {
+        public String name(final TypeContext type) {
 
             final String name = annotation.name();
             return name.equals(INFER_NAME) ? type.simpleName() : name;
         }
 
         @Override
-        public Schema.Builder<?> schemaBuilder(final WithType<?> type) {
+        public Schema.Builder<?> schemaBuilder(final TypeContext type) {
 
             return io.basestar.schema.ObjectSchema.builder();
         }

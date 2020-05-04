@@ -1,4 +1,4 @@
-package io.basestar.mapper.type;
+package io.basestar.mapper.context;
 
 /*-
  * #%L
@@ -20,6 +20,10 @@ package io.basestar.mapper.type;
  * #L%
  */
 
+import io.basestar.mapper.context.has.HasAnnotations;
+import io.basestar.mapper.context.has.HasModifiers;
+import io.basestar.mapper.context.has.HasName;
+import io.basestar.mapper.context.has.HasType;
 import io.leangen.geantyref.GenericTypeReflector;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -32,19 +36,19 @@ import java.util.List;
 
 @Getter
 @Accessors(fluent = true)
-public class WithParameter<V> implements HasName, HasModifiers, HasAnnotations, HasType<V> {
+public class ParameterContext implements HasName, HasModifiers, HasAnnotations, HasType {
 
     private final Parameter parameter;
 
     private final AnnotatedType annotatedType;
 
-    private final List<WithAnnotation<?>> annotations;
+    private final List<AnnotationContext<?>> annotations;
 
-    protected WithParameter(final Parameter parameter, final AnnotatedType annotatedType) {
+    protected ParameterContext(final Parameter parameter, final AnnotatedType annotatedType) {
 
         this.parameter = parameter;
         this.annotatedType = annotatedType;
-        this.annotations = WithAnnotation.from(parameter);
+        this.annotations = AnnotationContext.from(parameter);
     }
 
     @Override
@@ -61,19 +65,19 @@ public class WithParameter<V> implements HasName, HasModifiers, HasAnnotations, 
 
     @Override
     @SuppressWarnings("unchecked")
-    public Class<V> erasedType() {
+    public <V> Class<V> erasedType() {
 
         return (Class<V>)parameter.getType();
     }
 
-    protected static List<WithParameter<?>> from(final AnnotatedType type, final Executable exe) {
+    protected static List<ParameterContext> from(final AnnotatedType type, final Executable exe) {
 
         final AnnotatedType[] types = GenericTypeReflector.getParameterTypes(exe, type);
         final java.lang.reflect.Parameter[] params = exe.getParameters();
         assert types.length == params.length;
-        final WithParameter<?>[] result = new WithParameter<?>[types.length];
+        final ParameterContext[] result = new ParameterContext[types.length];
         for(int i = 0; i != types.length; ++i) {
-            result[i] = new WithParameter<>(params[i], types[i]);
+            result[i] = new ParameterContext(params[i], types[i]);
         }
         return Arrays.asList(result);
     }

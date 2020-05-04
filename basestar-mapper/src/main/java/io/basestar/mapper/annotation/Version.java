@@ -20,9 +20,10 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
+import io.basestar.mapper.context.PropertyContext;
 import io.basestar.mapper.internal.PropertyBinder;
 import io.basestar.mapper.internal.annotation.PropertyAnnotation;
-import io.basestar.mapper.type.WithProperty;
+import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Reserved;
 import lombok.RequiredArgsConstructor;
 
@@ -40,9 +41,15 @@ public @interface Version {
         private final Version annotation;
 
         @Override
-        public String name(final WithProperty<?, ?> property) {
+        public String name(final PropertyContext property) {
 
             return Reserved.VERSION;
+        }
+
+        @Override
+        public void addToSchema(final InstanceSchema.Builder builder) {
+
+            assert builder instanceof io.basestar.schema.ObjectSchema.Builder;
         }
     }
 }

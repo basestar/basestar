@@ -1,4 +1,4 @@
-package io.basestar.mapper.type;
+package io.basestar.mapper.context;
 
 /*-
  * #%L
@@ -20,6 +20,7 @@ package io.basestar.mapper.type;
  * #L%
  */
 
+import io.basestar.mapper.context.has.*;
 import io.leangen.geantyref.GenericTypeReflector;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -31,25 +32,25 @@ import java.util.List;
 
 @Getter
 @Accessors(fluent = true)
-public class WithMethod<T, V> implements HasName, HasModifiers, HasAnnotations, HasParameters, HasType<V> {
+public class MethodContext implements HasName, HasModifiers, HasAnnotations, HasParameters, HasType {
 
-    private final WithType<T> owner;
+    private final TypeContext owner;
 
     private final Method method;
 
     private final AnnotatedType annotatedType;
 
-    private final List<WithParameter<?>> parameters;
+    private final List<ParameterContext> parameters;
 
-    private final List<WithAnnotation<?>> annotations;
+    private final List<AnnotationContext<?>> annotations;
 
-    protected WithMethod(final WithType<T> owner, final Method method) {
+    protected MethodContext(final TypeContext owner, final Method method) {
 
         this.owner = owner;
         this.method = method;
         this.annotatedType = GenericTypeReflector.getReturnType(method, owner.annotatedType());
-        this.parameters = WithParameter.from(owner.annotatedType(), method);
-        this.annotations = WithAnnotation.from(method);
+        this.parameters = ParameterContext.from(owner.annotatedType(), method);
+        this.annotations = AnnotationContext.from(method);
     }
 
     @Override
@@ -64,14 +65,15 @@ public class WithMethod<T, V> implements HasName, HasModifiers, HasAnnotations, 
         return method.getModifiers();
     }
 
-    public V invoke(final T parent, final Object ... args) throws InvocationTargetException, IllegalAccessException {
+    @SuppressWarnings("unchecked")
+    public <T, V> V invoke(final T target, final Object ... args) throws InvocationTargetException, IllegalAccessException {
 
-        return erasedType().cast(method.invoke(parent, args));
+        return (V)method.invoke(target, args);
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public Class<V> erasedType() {
+    public <V> Class<V> erasedType() {
 
         return (Class<V>)method.getReturnType();
     }

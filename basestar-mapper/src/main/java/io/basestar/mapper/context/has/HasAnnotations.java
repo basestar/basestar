@@ -1,4 +1,4 @@
-package io.basestar.mapper.type;
+package io.basestar.mapper.context.has;
 
 /*-
  * #%L
@@ -20,6 +20,8 @@ package io.basestar.mapper.type;
  * #L%
  */
 
+import io.basestar.mapper.context.AnnotationContext;
+
 import java.lang.annotation.Annotation;
 import java.util.List;
 import java.util.function.Predicate;
@@ -27,21 +29,21 @@ import java.util.stream.Collectors;
 
 public interface HasAnnotations {
 
-    List<WithAnnotation<?>> annotations();
+    List<AnnotationContext<?>> annotations();
 
     @SuppressWarnings("unchecked")
-    default <A extends Annotation> WithAnnotation<A> annotation(final Class<A> of) {
+    default <A extends Annotation> AnnotationContext<A> annotation(final Class<A> of) {
 
-        return (WithAnnotation<A>)annotations().stream().filter(v -> v.erasedType().equals(of))
+        return (AnnotationContext<A>)annotations().stream().filter(v -> v.erasedType().equals(of))
                 .findFirst().orElse(null);
     }
 
     @SuppressWarnings("unchecked")
-    default <A extends Annotation> List<WithAnnotation<A>> annotations(final Class<A> of) {
+    default <A extends Annotation> List<AnnotationContext<A>> annotations(final Class<A> of) {
 
         return annotations().stream()
                 .filter(v -> v.erasedType().equals(of))
-                .map(v -> (WithAnnotation<A>)v)
+                .map(v -> (AnnotationContext<A>)v)
                 .collect(Collectors.toList());
     }
 

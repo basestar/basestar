@@ -27,6 +27,7 @@ import io.basestar.schema.Consistency;
 import io.basestar.schema.Index;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.storage.exception.UnsupportedQueryException;
 import io.basestar.storage.query.DisjunctionVisitor;
 import io.basestar.storage.query.Range;
 import io.basestar.storage.query.RangeVisitor;
@@ -89,7 +90,7 @@ public abstract class PartitionedStorage implements Storage {
                 queries.add((c, p) -> queryIndex(schema, index, satisfy, query, sort, c, p));
 
             } else {
-                throw new IllegalStateException("no index");
+                throw new UnsupportedQueryException(schema.getName(), expression, "no index");
             }
         }
 

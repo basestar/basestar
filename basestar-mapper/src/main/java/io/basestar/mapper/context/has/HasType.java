@@ -1,4 +1,4 @@
-package io.basestar.mapper.type;
+package io.basestar.mapper.context.has;
 
 /*-
  * #%L
@@ -20,19 +20,20 @@ package io.basestar.mapper.type;
  * #L%
  */
 
+import io.basestar.mapper.context.TypeContext;
 import io.leangen.geantyref.GenericTypeReflector;
 
 import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Type;
 import java.util.function.Predicate;
 
-public interface HasType<V> {
+public interface HasType {
 
     AnnotatedType annotatedType();
 
-    default WithType<V> type() {
+    default TypeContext type() {
 
-        return WithType.with(annotatedType());
+        return TypeContext.from(annotatedType());
     }
 
     default Type genericType() {
@@ -41,17 +42,17 @@ public interface HasType<V> {
     }
 
     @SuppressWarnings("unchecked")
-    default Class<V> erasedType() {
+    default <V> Class<V> erasedType() {
 
         return (Class<V>)GenericTypeReflector.erase(genericType());
     }
 
-    static Predicate<HasType<?>> match(final Class<?> raw) {
+    static Predicate<HasType> match(final Class<?> raw) {
 
         return v -> raw.equals(v.erasedType());
     }
 
-    static <V> Predicate<HasType<V>> match(final Predicate<WithType<V>> predicate) {
+    static Predicate<HasType> match(final Predicate<TypeContext> predicate) {
 
         return v -> predicate.test(v.type());
     }

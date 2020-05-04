@@ -1,4 +1,4 @@
-package io.basestar.mapper.type;
+package io.basestar.mapper.context.has;
 
 /*-
  * #%L
@@ -20,25 +20,13 @@ package io.basestar.mapper.type;
  * #L%
  */
 
-import java.util.function.Predicate;
-import java.util.regex.Pattern;
+import io.basestar.mapper.context.MethodContext;
 
-public interface HasName {
+import java.util.List;
 
-    String name();
+public interface HasMethods<T> {
 
-    default String simpleName() {
+    List<MethodContext> declaredMethods();
 
-        return name();
-    }
-
-    static Predicate<HasName> match(final String name) {
-
-        return v -> v.name().equals(name);
-    }
-
-    static Predicate<HasName> match(final Pattern pattern) {
-
-        return v -> pattern.matcher(v.name()).matches();
-    }
+    List<MethodContext> methods();
 }

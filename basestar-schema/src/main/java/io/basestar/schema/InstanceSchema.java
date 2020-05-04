@@ -35,6 +35,10 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
 
     interface Builder extends Schema.Builder<Instance> {
 
+        Builder setProperty(String name, Property.Builder v);
+
+        Builder setProperties(Map<String, Property.Builder> vs);
+
         @Override
         InstanceSchema build(Resolver resolver, String name, int slot);
     }

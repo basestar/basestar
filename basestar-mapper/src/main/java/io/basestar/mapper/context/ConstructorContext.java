@@ -1,4 +1,4 @@
-package io.basestar.mapper.type;
+package io.basestar.mapper.context;
 
 /*-
  * #%L
@@ -20,6 +20,9 @@ package io.basestar.mapper.type;
  * #L%
  */
 
+import io.basestar.mapper.context.has.HasAnnotations;
+import io.basestar.mapper.context.has.HasModifiers;
+import io.basestar.mapper.context.has.HasParameters;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 
@@ -29,27 +32,28 @@ import java.util.List;
 
 @Getter
 @Accessors(fluent = true)
-public class WithConstructor<T> implements HasModifiers, HasAnnotations, HasParameters {
+public class ConstructorContext implements HasModifiers, HasAnnotations, HasParameters {
 
-    private final WithType<T> owner;
+    private final TypeContext owner;
 
-    private final Constructor<T> constructor;
+    private final Constructor<?> constructor;
 
-    private final List<WithParameter<?>> parameters;
+    private final List<ParameterContext> parameters;
 
-    private final List<WithAnnotation<?>> annotations;
+    private final List<AnnotationContext<?>> annotations;
 
-    protected WithConstructor(final WithType<T> owner, final Constructor<T> constructor) {
+    protected ConstructorContext(final TypeContext owner, final Constructor<?> constructor) {
 
         this.owner = owner;
         this.constructor = constructor;
-        this.parameters = WithParameter.from(owner.annotatedType(), constructor);
-        this.annotations = WithAnnotation.from(constructor);
+        this.parameters = ParameterContext.from(owner.annotatedType(), constructor);
+        this.annotations = AnnotationContext.from(constructor);
     }
 
-    public T newInstance(final Object ... args) throws InvocationTargetException, IllegalAccessException, InstantiationException {
+    @SuppressWarnings("unchecked")
+    public <T> T newInstance(final Object ... args) throws InvocationTargetException, IllegalAccessException, InstantiationException {
 
-        return constructor.newInstance(args);
+        return (T)constructor.newInstance(args);
     }
 
     @Override

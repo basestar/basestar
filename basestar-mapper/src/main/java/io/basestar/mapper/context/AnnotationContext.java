@@ -1,4 +1,4 @@
-package io.basestar.mapper.type;
+package io.basestar.mapper.context;
 
 /*-
  * #%L
@@ -20,6 +20,7 @@ package io.basestar.mapper.type;
  * #L%
  */
 
+import io.basestar.mapper.context.has.HasType;
 import io.leangen.geantyref.GenericTypeReflector;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -33,23 +34,23 @@ import java.util.stream.Collectors;
 
 @Getter
 @Accessors(fluent = true)
-public class WithAnnotation<A extends Annotation> implements HasType<A> {
+public class AnnotationContext<A extends Annotation> implements HasType {
 
     private final AnnotatedType annotatedType;
 
     private final A annotation;
 
-    protected WithAnnotation(final A annotation) {
+    protected AnnotationContext(final A annotation) {
 
         final Class<?> rawType = annotation.annotationType();
         this.annotatedType = GenericTypeReflector.annotate(rawType);
         this.annotation = annotation;
     }
 
-    public static List<WithAnnotation<?>> from(final AnnotatedElement element) {
+    public static List<AnnotationContext<?>> from(final AnnotatedElement element) {
 
         return Arrays.stream(element.getAnnotations())
-                .map(WithAnnotation::new)
+                .map(AnnotationContext::new)
                 .collect(Collectors.toList());
     }
 }

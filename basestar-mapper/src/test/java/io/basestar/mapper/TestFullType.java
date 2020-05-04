@@ -20,7 +20,15 @@ package io.basestar.mapper;
  * #L%
  */
 
+import io.basestar.mapper.context.PropertyContext;
+import io.basestar.mapper.context.TypeContext;
+import io.basestar.mapper.context.has.HasType;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestFullType {
 
@@ -58,28 +66,10 @@ public class TestFullType {
     @Test
     public void testSimple() {
 
-//        final WithType<A> a = WithType.with(A.class);
-//        a.methods().iterator().next().type().methods().iterator().next().
-
-
-
-//        final WithMethod<A, ?> method = a.declaredMethods().stream()
-//                .filter(HasAnnotations.match(Test.class))
-//        .findFirst().orElse(null);
-//        System.err.println(method);
-
-
-
-//        reifiedType.typeParameters().get(0).name();
-//
-
-
-//        final Bean.Method<? super A, ?> m = bean.method(Bean.Method.ha("getF", Integer.class));
-
-
-//                .and(Bean.Modified.hasModifier(Modifier.PUBLIC))
-//                .and(Bean.Named.hasName("get")));
-
-//        System.err.println(a);
+        final TypeContext a = TypeContext.from(A.class);
+        final List<PropertyContext> props = a.properties().stream()
+                .filter(HasType.match(Integer.class))
+                .collect(Collectors.toList());
+        assertEquals(3, props.size());
     }
 }

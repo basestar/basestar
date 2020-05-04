@@ -54,6 +54,15 @@ public class UndertowHandler implements HttpHandler {
     private void handleBody(final HttpServerExchange exchange, final byte[] body) {
 
         try {
+
+            final APIRequest.Method method = APIRequest.Method.valueOf(exchange.getRequestMethod().toString());
+            final String path = exchange.getRelativePath();
+            final Multimap<String, String> query = ArrayListMultimap.create();
+            exchange.getQueryParameters().forEach(query::putAll);
+            final Multimap<String, String> headers = ArrayListMultimap.create();
+            exchange.getRequestHeaders()
+                    .forEach(vs -> headers.putAll(vs.getHeaderName().toString(), vs));
+
             final APIResponse response = api.handle(new APIRequest() {
 
                 @Override
@@ -65,30 +74,25 @@ public class UndertowHandler implements HttpHandler {
                 @Override
                 public Method getMethod() {
 
-                    return Method.valueOf(exchange.getRequestMethod().toString());
+                    return method;
                 }
 
                 @Override
                 public String getPath() {
 
-                    return exchange.getRelativePath();
+                    return path;
                 }
 
                 @Override
                 public Multimap<String, String> getQuery() {
 
-                    final Multimap<String, String> result = ArrayListMultimap.create();
-                    exchange.getQueryParameters().forEach(result::putAll);
-                    return result;
+                    return query;
                 }
 
                 @Override
                 public Multimap<String, String> getHeaders() {
 
-                    final Multimap<String, String> result = ArrayListMultimap.create();
-                    exchange.getRequestHeaders()
-                            .forEach(vs -> result.putAll(vs.getHeaderName().toString(), vs));
-                    return result;
+                    return headers;
                 }
 
                 @Override
@@ -98,6 +102,8 @@ public class UndertowHandler implements HttpHandler {
                 }
 
             }).get();
+
+            log.info("Handling HTTP request (method:{} path:{} query:{} headers:{})", method, path, query, headers);
 
             exchange.setStatusCode(response.getStatusCode());
             response.getHeaders()

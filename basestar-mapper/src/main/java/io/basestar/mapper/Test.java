@@ -50,8 +50,6 @@ public class Test {
         @Id
         private String id;
 
-//        @Reference
-        private Test parent;
     }
 
     public static void main(final String[] args) {

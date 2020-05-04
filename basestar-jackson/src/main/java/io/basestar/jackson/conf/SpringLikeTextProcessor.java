@@ -1,5 +1,7 @@
 package io.basestar.jackson.conf;
 
+import io.basestar.util.Nullsafe;
+
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -17,7 +19,7 @@ public class SpringLikeTextProcessor implements Function<String, String> {
             final String key = matcher.group(1);
             final String def = matcher.group(2);
             final String rep = lookup(key, def);
-            matcher.appendReplacement(result, rep);
+            matcher.appendReplacement(result, Nullsafe.option(rep));
         }
         matcher.appendTail(result);
         return result.toString();

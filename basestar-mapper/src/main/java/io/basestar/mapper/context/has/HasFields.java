@@ -1,4 +1,4 @@
-package io.basestar.mapper.type;
+package io.basestar.mapper.context.has;
 
 /*-
  * #%L
@@ -20,26 +20,19 @@ package io.basestar.mapper.type;
  * #L%
  */
 
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
+import io.basestar.mapper.context.FieldContext;
 
-import java.lang.reflect.AnnotatedType;
-import java.lang.reflect.TypeVariable;
+import java.util.List;
+import java.util.function.Predicate;
 
-@Getter
-@Accessors(fluent = true)
-@RequiredArgsConstructor(access = AccessLevel.PROTECTED)
-public class WithTypeVariable<T> implements HasName, HasType<T> {
+public interface HasFields {
 
-    private final TypeVariable<? extends Class<?>> variable;
+    List<FieldContext> declaredFields();
+    
+    List<FieldContext> fields();
 
-    private final AnnotatedType annotatedType;
+    static <T extends HasFields> Predicate<T> match(final Predicate<? super FieldContext> predicate) {
 
-    @Override
-    public String name() {
-
-        return variable.getName();
+        return v -> v.fields().stream().anyMatch(predicate);
     }
 }

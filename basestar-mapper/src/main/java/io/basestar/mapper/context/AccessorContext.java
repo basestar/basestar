@@ -1,4 +1,4 @@
-package io.basestar.mapper.type;
+package io.basestar.mapper.context;
 
 /*-
  * #%L
@@ -20,10 +20,20 @@ package io.basestar.mapper.type;
  * #L%
  */
 
-import java.util.List;
+import io.basestar.mapper.context.has.HasAnnotations;
+import io.basestar.mapper.context.has.HasModifiers;
+import io.basestar.mapper.context.has.HasName;
+import io.basestar.mapper.context.has.HasType;
 
-public interface HasTypeParameters {
+import java.lang.reflect.InvocationTargetException;
 
-    List<WithTypeVariable<?>> typeParameters();
+public interface AccessorContext extends HasName, HasAnnotations, HasModifiers, HasType {
 
+    boolean canGet();
+
+    boolean canSet();
+
+    <T, V> V get(T target) throws IllegalAccessException, InvocationTargetException;
+
+    <T, V> void set(T target, V value) throws IllegalAccessException, InvocationTargetException;
 }

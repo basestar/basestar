@@ -1,4 +1,4 @@
-package io.basestar.mapper.type;
+package io.basestar.mapper.context.has;
 
 /*-
  * #%L
@@ -20,11 +20,19 @@ package io.basestar.mapper.type;
  * #L%
  */
 
-import java.util.List;
+import java.util.function.Predicate;
 
-public interface HasMethods<T> {
+public interface HasModifiers {
 
-    List<WithMethod<T, ?>> declaredMethods();
+    int modifiers();
 
-    List<WithMethod<? super T, ?>> methods();
+    static Predicate<HasModifiers> match(final int modifiers) {
+
+        return v -> (v.modifiers() & modifiers) == modifiers;
+    }
+
+    static Predicate<HasModifiers> matchNot(final int modifiers) {
+
+        return v -> (v.modifiers() & modifiers) == 0;
+    }
 }

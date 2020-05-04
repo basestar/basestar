@@ -1,4 +1,4 @@
-package io.basestar.mapper.type;
+package io.basestar.mapper.context;
 
 /*-
  * #%L
@@ -20,6 +20,7 @@ package io.basestar.mapper.type;
  * #L%
  */
 
+import io.basestar.mapper.context.has.HasAnnotations;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 
@@ -33,24 +34,24 @@ import java.util.stream.Stream;
 
 @Getter
 @Accessors(fluent = true)
-public class WithProperty<T, V> implements WithAccessor<T, V> {
+public class PropertyContext implements AccessorContext {
 
-    private final WithType<T> owner;
+    private final TypeContext owner;
 
     private final String name;
 
     private final AnnotatedType annotatedType;
 
-    private final WithField<? super T, V> field;
+    private final FieldContext field;
 
-    private final WithMethod<? super T, V> getter;
+    private final MethodContext getter;
 
-    private final WithMethod<? super T, ?> setter;
+    private final MethodContext setter;
 
-    private final List<WithAnnotation<?>> annotations;
+    private final List<AnnotationContext<?>> annotations;
 
-    public WithProperty(final WithType<T> owner, final String name, final WithField<? super T, V> field,
-                        final WithMethod<? super T, V> getter, final WithMethod<? super T, ?> setter) {
+    public PropertyContext(final TypeContext owner, final String name, final FieldContext field,
+                           final MethodContext getter, final MethodContext setter) {
 
         this.owner = owner;
         this.name = name;
@@ -64,7 +65,7 @@ public class WithProperty<T, V> implements WithAccessor<T, V> {
         } else {
             annotatedType = field.annotatedType();
         }
-        this.annotations = Stream.of(field, getter, setter)
+        this.annotations = Stream.<HasAnnotations>of(field, getter, setter)
                 .filter(Objects::nonNull)
                 .map(HasAnnotations::annotations)
                 .flatMap(Collection::stream)
@@ -84,24 +85,24 @@ public class WithProperty<T, V> implements WithAccessor<T, V> {
     }
 
     @Override
-    public V get(final T parent) throws IllegalAccessException, InvocationTargetException {
+    public <T, V> V get(final T target) throws IllegalAccessException, InvocationTargetException {
 
         if(getter != null) {
-            return getter.invoke(parent);
+            return getter.invoke(target);
         } else if(field != null) {
-            return field.get(parent);
+            return field.get(target);
         } else {
             throw new IllegalAccessException();
         }
     }
 
     @Override
-    public void set(final T parent, final V value) throws IllegalAccessException, InvocationTargetException {
+    public <T, V> void set(final T target, final V value) throws IllegalAccessException, InvocationTargetException {
 
         if(setter != null) {
-            setter.invoke(parent, value);
+            setter.invoke(target, value);
         } else if(field != null) {
-            field.set(parent, value);
+            field.set(target, value);
         } else {
             throw new IllegalAccessException();
         }

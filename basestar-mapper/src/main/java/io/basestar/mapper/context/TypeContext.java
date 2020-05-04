@@ -1,4 +1,4 @@
-package io.basestar.mapper.type;
+package io.basestar.mapper.context;
 
 /*-
  * #%L
@@ -20,6 +20,7 @@ package io.basestar.mapper.type;
  * #L%
  */
 
+import io.basestar.mapper.context.has.*;
 import io.leangen.geantyref.GenericTypeReflector;
 import lombok.Data;
 import lombok.Getter;
@@ -37,63 +38,62 @@ import java.util.stream.Stream;
 
 @Getter
 @Accessors(fluent = true)
-public class WithType<T> implements HasName, HasModifiers, HasAnnotations,
-        HasTypeParameters, HasType<T>, HasMethods<T>, HasFields<T> {
+public class TypeContext implements HasName, HasModifiers, HasAnnotations,
+        HasTypeParameters, HasType, HasMethods, HasFields {
 
-    private static final ConcurrentMap<AnnotatedType, WithType<?>> CACHE = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<AnnotatedType, TypeContext> CACHE = new ConcurrentHashMap<>();
 
     private final AnnotatedType annotatedType;
 
-    private final Class<T> rawType;
+    private final Class<?> rawType;
 
-    private final WithType<? super T> superclass;
+    private final TypeContext superclass;
 
-    private final List<WithType<? super T>> interfaces;
+    private final List<TypeContext> interfaces;
 
-    private final List<WithConstructor<T>> declaredConstructors;
+    private final List<ConstructorContext> declaredConstructors;
 
-    private final List<WithField<T, ?>> declaredFields;
+    private final List<FieldContext> declaredFields;
 
-    private final List<WithMethod<T, ?>> declaredMethods;
+    private final List<MethodContext> declaredMethods;
 
-    private final List<WithField<? super T, ?>> fields;
+    private final List<FieldContext> fields;
 
-    private final List<WithMethod<? super T, ?>> methods;
+    private final List<MethodContext> methods;
 
-    private final List<WithProperty<T, ?>> properties;
+    private final List<PropertyContext> properties;
 
-    private final List<WithTypeVariable<?>> typeParameters;
+    private final List<TypeVariableContext> typeParameters;
 
-    private final List<WithAnnotation<?>> annotations;
+    private final List<AnnotationContext<?>> annotations;
 
-    @SuppressWarnings("unchecked")
-    private WithType(final AnnotatedType type) {
+    private TypeContext(final AnnotatedType type) {
 
         this.annotatedType = type;
-        this.rawType = (Class<T>)GenericTypeReflector.erase(type.getType());
+        this.rawType = GenericTypeReflector.erase(type.getType());
 
         final Class<?> sc = GenericTypeReflector.erase(type.getType()).getSuperclass();
 
-        this.superclass = sc == null ? null : WithType.with(GenericTypeReflector.getExactSuperType(type, sc));
+        this.superclass = sc == null ? null : TypeContext.from(GenericTypeReflector.getExactSuperType(type, sc));
 
         this.interfaces = Arrays.stream(rawType.getInterfaces())
-                .map(ifc -> WithType.with(GenericTypeReflector.getExactSuperType(type, ifc)))
+                .map(ifc -> TypeContext.from(GenericTypeReflector.getExactSuperType(type, ifc)))
                 .collect(Collectors.toList());
 
         this.declaredConstructors = Arrays.stream(rawType.getDeclaredConstructors())
-                .map(v -> new WithConstructor<>(this, (java.lang.reflect.Constructor<T>)v))
+                .map(v -> new ConstructorContext(this, v))
                 .collect(Collectors.toList());
 
         this.declaredFields = Arrays.stream(rawType.getDeclaredFields())
-                .map(v -> new WithField<>(this, v))
+                .map(v -> new FieldContext(this, v))
                 .collect(Collectors.toList());
 
         this.declaredMethods = Arrays.stream(rawType.getDeclaredMethods())
-                .map(v -> new WithMethod<>(this, v))
+                .map(v -> new MethodContext(this, v))
                 .collect(Collectors.toList());
 
-        final Map<String, WithField<? super T, ?>> allFields = new HashMap<>();
-        final Map<Signature, WithMethod<? super T, ?>> allMethods = new HashMap<>();
+        final Map<String, FieldContext> allFields = new HashMap<>();
+        final Map<Signature, MethodContext> allMethods = new HashMap<>();
 
         if(superclass != null) {
             superclass.fields().forEach(f -> allFields.put(f.name(), f));
@@ -114,64 +114,62 @@ public class WithType<T> implements HasName, HasModifiers, HasAnnotations,
                 .filter(HasModifiers.match(Modifier.PUBLIC))
                 .collect(Collectors.toList());
 
-        final Map<String, WithField<? super T, Object>> matchedFields = allFields.values().stream()
+        final Map<String, FieldContext> matchedFields = allFields.values().stream()
                 .filter(HasModifiers.matchNot(Modifier.STATIC))
-                .map(v -> (WithField<? super T, Object>)v)
-                .collect(Collectors.toMap(WithField::name, v -> v));
+                .collect(Collectors.toMap(FieldContext::name, v -> v));
 
-        final Map<String, WithMethod<? super T, Object>> matchedGetters = allMethods.values().stream()
+        final Map<String, MethodContext> matchedGetters = allMethods.values().stream()
                 .filter(HasName.match(Pattern.compile("get[A-Z].*")))
                 .filter(HasParameters.match(0))
                 .filter(HasType.match(void.class).negate())
                 .filter(HasModifiers.matchNot(Modifier.STATIC))
-                .map(v -> (WithMethod<? super T, Object>)v)
                 .collect(Collectors.toMap(v -> lowerCamel(v.name().substring(3)), v -> v));
 
-        final Map<String, WithMethod<? super T, ?>> matchedSetters = allMethods.values().stream()
+        final Map<String, MethodContext> matchedSetters = allMethods.values().stream()
                 .filter(HasName.match(Pattern.compile("set[A-Z].*")))
                 .filter(HasParameters.match(1))
                 .filter(HasModifiers.matchNot(Modifier.STATIC))
                 .collect(Collectors.toMap(v -> lowerCamel(v.name().substring(3)), v -> v));
 
-        this.properties = Stream.of(matchedFields, matchedGetters, matchedSetters)
+        this.properties = Stream.<Map<String, ? extends HasName>>of(matchedFields, matchedGetters, matchedSetters)
                 .map(Map::keySet).flatMap(Collection::stream)
                 .distinct().map(v -> {
-                    final WithField<? super T, Object> field = matchedFields.get(v);
-                    final WithMethod<? super T, Object> getter = matchedGetters.get(v);
-                    final WithMethod<? super T, ?> setter = matchedSetters.get(v);
-                    return new WithProperty<>(this, v,field, getter, setter);
+                    final FieldContext field = matchedFields.get(v);
+                    final MethodContext getter = matchedGetters.get(v);
+                    final MethodContext setter = matchedSetters.get(v);
+                    return new PropertyContext(this, v,field, getter, setter);
                 })
                 .collect(Collectors.toList());
 
         this.typeParameters = Arrays.stream(rawType.getTypeParameters())
-                    .map(v -> new WithTypeVariable<>(v, GenericTypeReflector.getTypeParameter(type, v)))
+                    .map(v -> new TypeVariableContext(v, GenericTypeReflector.getTypeParameter(type, v)))
                     .collect(Collectors.toList());
 
-        this.annotations = WithAnnotation.from(annotatedType);
+        this.annotations = AnnotationContext.from(annotatedType);
     }
 
-    public static <T> WithType<T> with(final Class<T> type) {
+    public static <T> TypeContext from(final Class<T> type) {
 
-        return with(GenericTypeReflector.annotate(type));
+        return from(GenericTypeReflector.annotate(type));
     }
 
-    public static <T> WithType<T> with(final Type type) {
+    public static TypeContext from(final Type type) {
 
-        return with(GenericTypeReflector.annotate(type));
+        return from(GenericTypeReflector.annotate(type));
     }
 
     @SuppressWarnings("unchecked")
-    public static <T> WithType<T> with(final AnnotatedType type) {
+    public static TypeContext from(final AnnotatedType type) {
 
         synchronized (CACHE) {
-            final WithType<?> result;
+            final TypeContext result;
             if(!CACHE.containsKey(type)) {
-                result = new WithType<>(type);
+                result = new TypeContext(type);
                 CACHE.put(type, result);
             } else {
                 result = CACHE.get(type);
             }
-            return (WithType<T>)result;
+            return result;
         }
     }
 
@@ -194,7 +192,7 @@ public class WithType<T> implements HasName, HasModifiers, HasAnnotations,
     }
 
     @Override
-    public WithType<T> type() {
+    public TypeContext type() {
 
         return this;
     }
@@ -204,9 +202,29 @@ public class WithType<T> implements HasName, HasModifiers, HasAnnotations,
         return rawType.isEnum();
     }
 
-    public T[] enumConstants() {
+    @SuppressWarnings("unchecked")
+    public <T> T[] enumConstants() {
 
-        return rawType.getEnumConstants();
+        return (T[])rawType.getEnumConstants();
+    }
+
+    public TypeContext find(final Class<?> type) {
+
+        if(rawType == type) {
+            return this;
+        } else if(superclass != null) {
+            final TypeContext found = superclass.find(type);
+            if(found != null) {
+                return found;
+            }
+        }
+        for(final TypeContext iface : interfaces) {
+            final TypeContext found = iface.find(type);
+            if(found != null) {
+                return found;
+            }
+        }
+        return null;
     }
 
     @Data
@@ -216,7 +234,7 @@ public class WithType<T> implements HasName, HasModifiers, HasAnnotations,
 
         private final List<Class<?>> args;
 
-        public static <T> Signature of(final WithMethod<T, ?> m) {
+        public static <T> Signature of(final MethodContext m) {
 
             return new Signature(m.name(), m.erasedParameterTypes());
         }
