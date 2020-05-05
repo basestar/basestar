@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import graphql.ExecutionInput;
 import graphql.GraphQL;
+import graphql.schema.idl.SchemaParser;
+import graphql.schema.idl.TypeDefinitionRegistry;
 import io.basestar.auth.Caller;
 import io.basestar.database.DatabaseServer;
 import io.basestar.database.options.CreateOptions;
@@ -38,9 +40,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class GraphQLTest {
 
+    private Namespace namespace() throws Exception {
+
+        return Namespace.load(GraphQLTest.class.getResource("schema.yml"));
+    }
+
     private GraphQL graphQL() throws Exception {
 
-        final Namespace namespace = Namespace.load(GraphQLTest.class.getResource("schema.yml"));
+        final Namespace namespace = namespace();
 
         final MemoryStorage storage = MemoryStorage.builder().build();
         final DatabaseServer databaseServer = new DatabaseServer(namespace, storage);
@@ -69,6 +76,17 @@ public class GraphQLTest {
 
         return new GraphQLAdaptor(databaseServer, namespace)
                 .graphQL();
+    }
+
+    @Test
+    public void testConvert() throws Exception {
+
+        final SchemaParser parser = new SchemaParser();
+        final TypeDefinitionRegistry tdr = parser.parse(GraphQLTest.class.getResourceAsStream("schema.gql"));
+
+        final GraphQLSchemaConverter converter = new GraphQLSchemaConverter();
+        final Namespace.Builder ns = converter.namespace(tdr);
+        ns.print(System.out);
     }
 
     @Test

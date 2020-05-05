@@ -36,6 +36,16 @@ import java.util.stream.Collectors;
 
 public class GraphQLUtils {
 
+    public static final String ID_TYPE = "ID";
+
+    public static final String STRING_TYPE = "String";
+
+    public static final String INT_TYPE = "Int";
+
+    public static final String FLOAT_TYPE = "Float";
+
+    public static final String BOOLEAN_TYPE = "Boolean";
+
     public static final String MAP_KEY = Reserved.PREFIX + "key";
 
     public static final String MAP_VALUE = Reserved.PREFIX + "value";

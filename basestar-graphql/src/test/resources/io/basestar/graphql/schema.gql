@@ -1,0 +1,125 @@
+"Directs the executor to include this field or fragment only when the `if` argument is true"
+directive @include(
+    "Included when true."
+    if: Boolean!
+  ) on FIELD | FRAGMENT_SPREAD | INLINE_FRAGMENT
+
+"Directs the executor to skip this field or fragment when the `if`'argument is true."
+directive @skip(
+    "Skipped when true."
+    if: Boolean!
+  ) on FIELD | FRAGMENT_SPREAD | INLINE_FRAGMENT
+
+"Marks the field or enum value as deprecated"
+directive @deprecated(
+    "The reason for the deprecation"
+    reason: String = "No longer supported"
+  ) on FIELD_DEFINITION | ENUM_VALUE
+
+interface Test3 {
+  created: String!
+  hash: String!
+  id: ID!
+  schema: String!
+  test: Test1
+  updated: String!
+  version: Int!
+}
+
+type EntryTest4 {
+  __key: String!
+  __value: Test4
+}
+
+type Mutation {
+  createTest1(data: InputTest1, expressions: InputExprTest1, id: ID): Test1
+  createTest3(data: InputTest3, expressions: InputExprTest3, id: ID): Test3
+  createTest4(data: InputTest4, expressions: InputExprTest4, id: ID): Test4
+  deleteTest1(id: ID!, version: Int): Test1
+  deleteTest3(id: ID!, version: Int): Test3
+  deleteTest4(id: ID!, version: Int): Test4
+  updateTest1(data: InputTest1, expressions: InputExprTest1, id: ID!, version: Int): Test1
+  updateTest3(data: InputTest3, expressions: InputExprTest3, id: ID!, version: Int): Test3
+  updateTest4(data: InputTest4, expressions: InputExprTest4, id: ID!, version: Int): Test4
+}
+
+type Query {
+  queryTest1(query: String): [Test1]
+  queryTest1A(id: ID!): [Test3]
+  queryTest3(query: String): [Test3]
+  queryTest4(query: String): [Test4]
+  readTest1(id: ID!, version: String): Test1
+  readTest3(id: ID!, version: String): Test3
+  readTest4(id: ID!, version: String): Test4
+}
+
+"Project"
+type Test1 {
+  a(query: String): [Test3]
+  created: String!
+  hash: String!
+  id: ID!
+  schema: String!
+  updated: String!
+  version: Int!
+  x: String
+  y: Int
+  z: [EntryTest4]
+}
+
+type Test2 {
+  x: String
+}
+
+type Test4 implements Test3 {
+  created: String!
+  hash: String!
+  id: ID!
+  schema: String!
+  test: Test1
+  updated: String!
+  version: Int!
+}
+
+input InputEntryTest4 {
+  __key: String!
+  __value: InputRef
+}
+
+"Project"
+input InputExprTest1 {
+  x: String
+  y: String
+  z: String
+}
+
+input InputExprTest3 {
+  test: String
+}
+
+input InputExprTest4 {
+  test: String
+}
+
+input InputRef {
+  id: ID!
+}
+
+"Project"
+input InputTest1 {
+  x: String
+  y: Int
+  z: [InputEntryTest4]
+}
+
+input InputTest2 {
+  x: String
+}
+
+input InputTest3 {
+  test: InputRef
+}
+
+input InputTest4 {
+  test: InputRef
+}

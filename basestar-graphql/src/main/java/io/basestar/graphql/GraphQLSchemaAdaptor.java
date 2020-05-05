@@ -41,16 +41,6 @@ public class GraphQLSchemaAdaptor {
 
     public static final String ARRAY_PREFIX = "Array";
 
-    public static final String ID_TYPE = "ID";
-
-    public static final String STRING_TYPE = "String";
-
-    public static final String INT_TYPE = "Int";
-
-    public static final String FLOAT_TYPE = "Float";
-
-    public static final String BOOLEAN_TYPE = "Boolean";
-
     public static final String INPUT_REF_TYPE = "InputRef";
 
     private final Namespace namespace;
@@ -80,7 +70,7 @@ public class GraphQLSchemaAdaptor {
         registry.add(InputObjectTypeDefinition.newInputObjectDefinition()
                 .name(INPUT_REF_TYPE)
                 .inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                        .name(Reserved.ID).type(new NonNullType(new TypeName(ID_TYPE))).build())
+                        .name(Reserved.ID).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build())
                 .build());
         mapTypes.forEach((k, v) -> {
             registry.add(mapTypeDefinition(k, v));
@@ -112,9 +102,9 @@ public class GraphQLSchemaAdaptor {
         builder.name("read" + schema.getName());
         builder.type(new TypeName(schema.getName()));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(Reserved.ID).type(new NonNullType(new TypeName(ID_TYPE))).build());
+                .name(Reserved.ID).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(Reserved.VERSION).type(new TypeName(STRING_TYPE)).build());
+                .name(Reserved.VERSION).type(new TypeName(GraphQLUtils.STRING_TYPE)).build());
         return builder.build();
     }
 
@@ -124,7 +114,7 @@ public class GraphQLSchemaAdaptor {
         builder.name("query" + schema.getName());
         builder.type(new ListType(new TypeName(schema.getName())));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name("query").type(new TypeName(STRING_TYPE)).build());
+                .name("query").type(new TypeName(GraphQLUtils.STRING_TYPE)).build());
         return builder.build();
     }
 
@@ -134,7 +124,7 @@ public class GraphQLSchemaAdaptor {
         builder.name("query" + schema.getName() + GraphQLUtils.ucFirst(link.getName()));
         builder.type(new ListType(new TypeName(link.getSchema().getName())));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(Reserved.ID).type(new NonNullType(new TypeName(ID_TYPE))).build());
+                .name(Reserved.ID).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build());
         return builder.build();
     }
 
@@ -158,7 +148,7 @@ public class GraphQLSchemaAdaptor {
         builder.name("create" + schema.getName());
         builder.type(new TypeName(schema.getName()));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(Reserved.ID).type(new TypeName(ID_TYPE)).build());
+                .name(Reserved.ID).type(new TypeName(GraphQLUtils.ID_TYPE)).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name("data").type(new TypeName(INPUT_PREFIX + schema.getName())).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
@@ -172,9 +162,9 @@ public class GraphQLSchemaAdaptor {
         builder.name("update" + schema.getName());
         builder.type(new TypeName(schema.getName()));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(Reserved.ID).type(new NonNullType(new TypeName(ID_TYPE))).build());
+                .name(Reserved.ID).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(Reserved.VERSION).type(new TypeName(INT_TYPE)).build());
+                .name(Reserved.VERSION).type(new TypeName(GraphQLUtils.INT_TYPE)).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name("data").type(new TypeName(INPUT_PREFIX + schema.getName())).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
@@ -188,9 +178,9 @@ public class GraphQLSchemaAdaptor {
         builder.name("delete" + schema.getName());
         builder.type(new TypeName(schema.getName()));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(Reserved.ID).type(new NonNullType(new TypeName(ID_TYPE))).build());
+                .name(Reserved.ID).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(Reserved.VERSION).type(new TypeName(INT_TYPE)).build());
+                .name(Reserved.VERSION).type(new TypeName(GraphQLUtils.INT_TYPE)).build());
         return builder.build();
     }
 
@@ -212,7 +202,7 @@ public class GraphQLSchemaAdaptor {
         builder.description(description(schema.getDescription()));
         schema.getProperties()
                 .forEach((k, v) -> builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                        .name(k).type(new TypeName(STRING_TYPE))
+                        .name(k).type(new TypeName(GraphQLUtils.STRING_TYPE))
                         .build()));
         return builder.build();
     }
@@ -294,7 +284,7 @@ public class GraphQLSchemaAdaptor {
                                     .name(k)
                                     .type(new ListType(new TypeName(v.getSchema().getName())))
                                     .inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                                            .name("query").type(new TypeName(STRING_TYPE)).build())
+                                            .name("query").type(new TypeName(GraphQLUtils.STRING_TYPE)).build())
                                     .build());
                         }
                     });
@@ -352,7 +342,7 @@ public class GraphQLSchemaAdaptor {
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
         builder.name(name);
         if(Reserved.ID.equals(name)) {
-            builder.type(new NonNullType(new TypeName(ID_TYPE)));
+            builder.type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE)));
         } else {
             builder.type(new NonNullType(type(type)));
         }
@@ -364,7 +354,7 @@ public class GraphQLSchemaAdaptor {
         final InputObjectTypeDefinition.Builder builder = InputObjectTypeDefinition.newInputObjectDefinition();
         builder.name(INPUT_PREFIX + name);
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(GraphQLUtils.MAP_KEY).type(new NonNullType(new TypeName(STRING_TYPE))).build());
+                .name(GraphQLUtils.MAP_KEY).type(new NonNullType(new TypeName(GraphQLUtils.STRING_TYPE))).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(GraphQLUtils.MAP_VALUE).type(inputType(type)).build());
         return builder.build();
@@ -375,7 +365,7 @@ public class GraphQLSchemaAdaptor {
         final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
         builder.name(name);
         builder.fieldDefinition(FieldDefinition.newFieldDefinition()
-                .name(GraphQLUtils.MAP_KEY).type(new NonNullType(new TypeName(STRING_TYPE))).build());
+                .name(GraphQLUtils.MAP_KEY).type(new NonNullType(new TypeName(GraphQLUtils.STRING_TYPE))).build());
         builder.fieldDefinition(FieldDefinition.newFieldDefinition()
                 .name(GraphQLUtils.MAP_VALUE).type(type(type)).build());
         return builder.build();
@@ -388,25 +378,25 @@ public class GraphQLSchemaAdaptor {
             @Override
             public Type<?> visitBoolean(final UseBoolean type) {
 
-                return new TypeName(BOOLEAN_TYPE);
+                return new TypeName(GraphQLUtils.BOOLEAN_TYPE);
             }
 
             @Override
             public Type<?> visitInteger(final UseInteger type) {
 
-                return new TypeName(INT_TYPE);
+                return new TypeName(GraphQLUtils.INT_TYPE);
             }
 
             @Override
             public Type<?> visitNumber(final UseNumber type) {
 
-                return new TypeName(FLOAT_TYPE);
+                return new TypeName(GraphQLUtils.FLOAT_TYPE);
             }
 
             @Override
             public Type<?> visitString(final UseString type) {
 
-                return new TypeName(STRING_TYPE);
+                return new TypeName(GraphQLUtils.STRING_TYPE);
             }
 
             @Override
@@ -448,7 +438,7 @@ public class GraphQLSchemaAdaptor {
             @Override
             public Type<?> visitBinary(final UseBinary type) {
 
-                return new TypeName(STRING_TYPE);
+                return new TypeName(GraphQLUtils.STRING_TYPE);
             }
         });
     }
@@ -460,25 +450,25 @@ public class GraphQLSchemaAdaptor {
             @Override
             public Type<?> visitBoolean(final UseBoolean type) {
 
-                return new TypeName(BOOLEAN_TYPE);
+                return new TypeName(GraphQLUtils.BOOLEAN_TYPE);
             }
 
             @Override
             public Type<?> visitInteger(final UseInteger type) {
 
-                return new TypeName(INT_TYPE);
+                return new TypeName(GraphQLUtils.INT_TYPE);
             }
 
             @Override
             public Type<?> visitNumber(final UseNumber type) {
 
-                return new TypeName(FLOAT_TYPE);
+                return new TypeName(GraphQLUtils.FLOAT_TYPE);
             }
 
             @Override
             public Type<?> visitString(final UseString type) {
 
-                return new TypeName(STRING_TYPE);
+                return new TypeName(GraphQLUtils.STRING_TYPE);
             }
 
             @Override
@@ -520,7 +510,7 @@ public class GraphQLSchemaAdaptor {
             @Override
             public Type<?> visitBinary(final UseBinary type) {
 
-                return new TypeName(STRING_TYPE);
+                return new TypeName(GraphQLUtils.STRING_TYPE);
             }
         });
     }
@@ -532,25 +522,25 @@ public class GraphQLSchemaAdaptor {
             @Override
             public String visitBoolean(final UseBoolean type) {
 
-                return BOOLEAN_TYPE;
+                return GraphQLUtils.BOOLEAN_TYPE;
             }
 
             @Override
             public String visitInteger(final UseInteger type) {
 
-                return INT_TYPE;
+                return GraphQLUtils.INT_TYPE;
             }
 
             @Override
             public String visitNumber(final UseNumber type) {
 
-                return FLOAT_TYPE;
+                return GraphQLUtils.FLOAT_TYPE;
             }
 
             @Override
             public String visitString(final UseString type) {
 
-                return STRING_TYPE;
+                return GraphQLUtils.STRING_TYPE;
             }
 
             @Override
@@ -592,7 +582,7 @@ public class GraphQLSchemaAdaptor {
             @Override
             public String visitBinary(final UseBinary type) {
 
-                return STRING_TYPE;
+                return GraphQLUtils.STRING_TYPE;
             }
         });
     }
