@@ -29,6 +29,7 @@ import io.basestar.schema.Reserved;
 import io.basestar.schema.use.*;
 import io.basestar.util.Path;
 import io.basestar.util.Sort;
+import org.apache.commons.text.StringEscapeUtils;
 import org.jooq.*;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
@@ -277,8 +278,7 @@ public class SQLUtils {
             // FIXME
             private String unescape(final String data) {
 
-                return data;
-//                return StringEscapeUtils.unescapeJava(data.substring(1, data.length() - 1));
+                return StringEscapeUtils.unescapeJava(data.substring(1, data.length() - 1));
             }
 
             @Override

@@ -1,6 +1,7 @@
 package io.basestar.api;
 
 import com.google.common.collect.*;
+import io.basestar.util.Nullsafe;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.ExternalDocumentation;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -54,16 +55,16 @@ public class OpenAPIUtils {
         final Components components = new Components();
         input.values().forEach(v -> {
             if (v != null) {
-                v.getSchemas().forEach(components::addSchemas);
-                v.getResponses().forEach(components::addResponses);
-                v.getParameters().forEach(components::addParameters);
-                v.getExamples().forEach(components::addExamples);
-                v.getRequestBodies().forEach(components::addRequestBodies);
-                v.getHeaders().forEach(components::addHeaders);
-                v.getSecuritySchemes().forEach(components::addSecuritySchemes);
-                v.getLinks().forEach(components::addLinks);
-                v.getCallbacks().forEach(components::addCallbacks);
-                v.getExtensions().forEach(components::addExtension);
+                Nullsafe.option(v.getSchemas()).forEach(components::addSchemas);
+                Nullsafe.option(v.getResponses()).forEach(components::addResponses);
+                Nullsafe.option(v.getParameters()).forEach(components::addParameters);
+                Nullsafe.option(v.getExamples()).forEach(components::addExamples);
+                Nullsafe.option(v.getRequestBodies()).forEach(components::addRequestBodies);
+                Nullsafe.option(v.getHeaders()).forEach(components::addHeaders);
+                Nullsafe.option(v.getSecuritySchemes()).forEach(components::addSecuritySchemes);
+                Nullsafe.option(v.getLinks()).forEach(components::addLinks);
+                Nullsafe.option(v.getCallbacks()).forEach(components::addCallbacks);
+                Nullsafe.option(v.getExtensions()).forEach(components::addExtension);
             }
         });
         return components;
@@ -75,7 +76,7 @@ public class OpenAPIUtils {
         input.forEach((prefix, v) -> {
             if (v != null) {
                 v.forEach((path, item) -> paths.put(prefix + path, item));
-                v.getExtensions().forEach(paths::addExtension);
+                Nullsafe.option(v.getExtensions()).forEach(paths::addExtension);
             }
         });
         return paths;

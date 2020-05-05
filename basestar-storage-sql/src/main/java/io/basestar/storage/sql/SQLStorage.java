@@ -151,7 +151,7 @@ public class SQLStorage implements Storage {
                     withContext(context -> context.select(DSL.asterisk())
                             .from(index == null ? objectTableName(schema) : indexTableName(schema, index))
                             .where(condition).orderBy(orderFields)
-                            .limit(count).fetchAsync().thenApply(results -> {
+                            .limit(DSL.inline(count)).fetchAsync().thenApply(results -> {
 
                                 final List<Map<String, Object>> objects = all(schema, results);
 

@@ -207,7 +207,8 @@ public class SQLExpressionVisitor implements ExpressionVisitor<QueryPart> {
     @Override
     public QueryPart visitConstant(final Constant expression) {
 
-        return DSL.val(expression.getValue());
+        // Use inline rather than val because some JDBC drivers (Athena) don't support positional params
+        return DSL.inline(expression.getValue());
     }
 
     @Override
