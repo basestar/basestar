@@ -74,7 +74,9 @@ public class BasestarFactory extends JsonFactory {
 
     private JsonNode process(final JsonNode node, final URI uri) throws IOException {
 
-        if(node.isObject()) {
+        if(node == null) {
+            return null;
+        } else if(node.isObject()) {
             return process((ObjectNode)node, uri);
         } else if(node.isArray()) {
             return process((ArrayNode)node, uri);

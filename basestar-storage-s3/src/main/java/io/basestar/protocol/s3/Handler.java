@@ -46,35 +46,38 @@ public class Handler extends URLStreamHandler {
 
             public Map<String, List<String>> getHeaderFields() {
 
+                connect();
                 return Collections.unmodifiableMap(headers);
             }
 
             @Override
             public InputStream getInputStream() {
 
-                assert inputStream != null;
+                connect();
                 return inputStream;
             }
 
             @Override
             public void connect() {
 
-                try {
-                    final String bucket = stripLeadingSlashes(url.getHost());
-                    final String key = stripLeadingSlashes(url.getPath());
+                if(inputStream == null) {
+                    try {
+                        final String bucket = stripLeadingSlashes(url.getHost());
+                        final String key = stripLeadingSlashes(url.getPath());
 
-                    this.inputStream = client.getObject(GetObjectRequest.builder()
-                            .bucket(bucket).key(key).build());
+                        this.inputStream = client.getObject(GetObjectRequest.builder()
+                                .bucket(bucket).key(key).build());
 
-                    final GetObjectResponse response = inputStream.response();
+                        final GetObjectResponse response = inputStream.response();
 
-                    this.headers = new HashMap<>();
-                    headers.put("content-length", ImmutableList.of(Long.toString(response.contentLength())));
-                    headers.put("content-type", ImmutableList.of(response.contentType()));
-                    headers.put("content-encoding", ImmutableList.of(response.contentEncoding()));
-                } catch (final Exception e) {
-                    log.error("Failed to connect to " + url);
-                    throw e;
+                        this.headers = new HashMap<>();
+                        headers.put("content-length", ImmutableList.of(Long.toString(response.contentLength())));
+                        headers.put("content-type", ImmutableList.of(response.contentType()));
+                        headers.put("content-encoding", ImmutableList.of(response.contentEncoding()));
+                    } catch (final Exception e) {
+                        log.error("Failed to connect to {}", url);
+                        throw e;
+                    }
                 }
             }
         };
