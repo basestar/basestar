@@ -63,6 +63,8 @@ public class UndertowHandler implements HttpHandler {
             exchange.getRequestHeaders()
                     .forEach(vs -> headers.putAll(vs.getHeaderName().toString(), vs));
 
+            log.info("Handling HTTP request (method:{} path:{} query:{} headers:{})", method, path, query, headers);
+
             final APIResponse response = api.handle(new APIRequest() {
 
                 @Override
@@ -103,8 +105,6 @@ public class UndertowHandler implements HttpHandler {
 
             }).get();
 
-            log.info("Handling HTTP request (method:{} path:{} query:{} headers:{})", method, path, query, headers);
-
             exchange.setStatusCode(response.getStatusCode());
             response.getHeaders()
                     .forEach((k, v) -> exchange.getResponseHeaders().put(HttpString.tryFromString(k), v));
@@ -120,6 +120,7 @@ public class UndertowHandler implements HttpHandler {
             log.warn("Interrupted during request handling", e);
             Thread.currentThread().interrupt();
         } catch (final IOException | ExecutionException e) {
+            log.warn("Exception caught during request handling", e);
             throw new IllegalStateException(e);
         }
     }

@@ -21,6 +21,7 @@ package io.basestar.schema;
  */
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import io.basestar.expression.Context;
@@ -79,9 +80,13 @@ public class EnumSchema implements Schema<String> {
 
     @Data
     @Accessors(chain = true)
+    @JsonPropertyOrder({"type", "description", "version", "values", "extensions"})
     public static class Builder implements Schema.Builder<String> {
 
         public static final String TYPE = "enum";
+
+        @Nullable
+        private Long version;
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private String description;

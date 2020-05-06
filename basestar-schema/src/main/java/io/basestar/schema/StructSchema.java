@@ -21,6 +21,7 @@ package io.basestar.schema;
  */
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import com.google.common.collect.HashMultimap;
@@ -107,6 +108,7 @@ public class StructSchema implements InstanceSchema {
     @Data
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonPropertyOrder({"type", "description", "version", "extend", "concrete", "properties", "extensions"})
     public static class Builder implements InstanceSchema.Builder {
 
         public static final String TYPE = "struct";

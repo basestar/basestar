@@ -21,6 +21,7 @@ package io.basestar.schema;
  */
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import com.google.common.collect.HashMultimap;
@@ -168,6 +169,7 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
     @Data
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonPropertyOrder({"type", "description", "version", "extend", "concrete", "id", "history", "properties", "transients", "links", "indexes", "permissions", "extensions"})
     public static class Builder implements InstanceSchema.Builder {
 
         public static final String TYPE = "object";
@@ -180,6 +182,9 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
 
         @Nullable
         private Id.Builder id;
+
+        @Nullable
+        private Boolean concrete;
 
         @Nullable
         private History history;
@@ -210,8 +215,6 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         private Map<String, Permission.Builder> permissions;
-
-        private Boolean concrete;
 
         @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)

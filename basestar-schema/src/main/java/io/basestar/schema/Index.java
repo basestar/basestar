@@ -21,6 +21,7 @@ package io.basestar.schema;
  */
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -93,6 +94,7 @@ public class Index implements Named, Described, Serializable, Extendable {
     @Data
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonPropertyOrder({"version", "description", "partition", "sort", "unique", "sparse", "over", "max", "consistency", "projection", "extensions"})
     public static class Builder implements Described {
 
         @Nullable
