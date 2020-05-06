@@ -71,11 +71,17 @@ public class Handler extends URLStreamHandler {
                         final GetObjectResponse response = inputStream.response();
 
                         this.headers = new HashMap<>();
-                        headers.put("content-length", ImmutableList.of(Long.toString(response.contentLength())));
-                        headers.put("content-type", ImmutableList.of(response.contentType()));
-                        headers.put("content-encoding", ImmutableList.of(response.contentEncoding()));
+                        if(response.contentLength() != null) {
+                            headers.put("content-length", ImmutableList.of(Long.toString(response.contentLength())));
+                        }
+                        if(response.contentType() != null) {
+                            headers.put("content-type", ImmutableList.of(response.contentType()));
+                        }
+                        if(response.contentEncoding() != null) {
+                            headers.put("content-encoding", ImmutableList.of(response.contentEncoding()));
+                        }
                     } catch (final Exception e) {
-                        log.error("Failed to connect to {}", url);
+                        log.error("Failed to connect to {}", url, e);
                         throw e;
                     }
                 }

@@ -44,6 +44,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <lombok.version>1.18.12</lombok.version>
         <junit.version>5.4.0</junit.version>
+        <skipDocs>false</skipDocs>
     </properties>
 
     <distributionManagement>
@@ -146,6 +147,7 @@
                     <sourceDirectory>src/main/java</sourceDirectory>
                     <encoding>UTF-8</encoding>
                     <outputDirectory>${project.build.directory}/delombok</outputDirectory>
+                    <skip>${skipDocs}</skip>
                 </configuration>
             </plugin>
             <plugin>
@@ -169,6 +171,7 @@
                 <configuration>
                     <failOnError>false</failOnError>
                     <sourcepath>${project.build.directory}/delombok</sourcepath>
+                    <skip>${skipDocs}</skip>
                 </configuration>
                 <executions>
                     <execution>
