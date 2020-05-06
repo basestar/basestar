@@ -82,7 +82,7 @@ public class GraphQLTest {
     public void testConvert() throws Exception {
 
         final SchemaParser parser = new SchemaParser();
-        final TypeDefinitionRegistry tdr = parser.parse(GraphQLTest.class.getResourceAsStream("schema2.gql"));
+        final TypeDefinitionRegistry tdr = parser.parse(GraphQLTest.class.getResourceAsStream("schema.gql"));
 
         final GraphQLSchemaConverter converter = new GraphQLSchemaConverter();
         final Namespace.Builder ns = converter.namespace(tdr);

@@ -65,7 +65,7 @@ public class UndertowHandler implements HttpHandler {
 
             log.info("Handling HTTP request (method:{} path:{} query:{} headers:{})", method, path, query, headers);
 
-            final APIResponse response = api.handle(new APIRequest() {
+            final APIRequest request = new APIRequest() {
 
                 @Override
                 public Caller getCaller() {
@@ -102,7 +102,11 @@ public class UndertowHandler implements HttpHandler {
 
                     return new ByteArrayInputStream(body);
                 }
+            };
 
+            final APIResponse response = api.handle(request).exceptionally(e -> {
+                log.error("Uncaught", e);
+                return APIResponse.error(request, e);
             }).get();
 
             exchange.setStatusCode(response.getStatusCode());
@@ -122,6 +126,9 @@ public class UndertowHandler implements HttpHandler {
         } catch (final IOException | ExecutionException e) {
             log.warn("Exception caught during request handling", e);
             throw new IllegalStateException(e);
+        } catch (final Throwable e) {
+            log.warn("Runtime exception caught during request handling", e);
+            throw e;
         }
     }
 
