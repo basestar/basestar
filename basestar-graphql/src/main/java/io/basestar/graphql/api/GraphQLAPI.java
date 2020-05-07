@@ -30,12 +30,14 @@ import io.basestar.exception.ExceptionMetadata;
 import io.basestar.util.Nullsafe;
 import io.swagger.v3.oas.models.OpenAPI;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+@Slf4j
 public class GraphQLAPI implements API {
 
     private final GraphQL graphQL;
@@ -76,6 +78,7 @@ public class GraphQLAPI implements API {
 
         } catch (final Exception e) {
 
+            log.error("GraphQL query failed", e);
             return CompletableFuture.completedFuture(APIResponse.error(request, e));
         }
     }
