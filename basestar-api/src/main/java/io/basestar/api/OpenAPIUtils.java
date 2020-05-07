@@ -1,16 +1,60 @@
 package io.basestar.api;
 
-import com.google.common.collect.*;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import io.basestar.util.Nullsafe;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.ExternalDocumentation;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.servers.Server;
+import io.swagger.v3.oas.models.tags.Tag;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 public class OpenAPIUtils {
+
+    public static OpenAPI prefix(final OpenAPI input, final String prefix) {
+
+        final OpenAPI result = new OpenAPI();
+        result.setInfo(input.getInfo());
+        result.setTags(input.getTags());
+        result.setExtensions(input.getExtensions());
+        result.setComponents(input.getComponents());
+        result.setPaths(prefix(input.getPaths(), prefix));
+        result.setSecurity(input.getSecurity());
+        result.setExternalDocs(input.getExternalDocs());
+        result.setServers(input.getServers());
+        return result;
+    }
+
+    public static Paths prefix(final Paths input, final String prefix) {
+
+        if(input == null) {
+            return null;
+        } else {
+            final Paths paths = new Paths();
+            input.forEach((k, v) -> {
+                if (v != null) {
+                    paths.put(joinPaths(prefix, k), v);
+                }
+            });
+            paths.extensions(input.getExtensions());
+            return paths;
+        }
+    }
+
+    private static String joinPaths(final String a, final String b) {
+
+        if(a.endsWith("/") && b.startsWith("/")) {
+            return a + b.substring(1);
+        } else {
+            return a + b;
+        }
+    }
 
     public static OpenAPI merge(final OpenAPI ... input) {
 
@@ -19,41 +63,27 @@ public class OpenAPIUtils {
 
     public static OpenAPI merge(final Collection<? extends OpenAPI> input) {
 
-        final Multimap<String, OpenAPI> map = HashMultimap.create();
-        input.forEach(v -> map.put("", v));
-        return merge(map);
-    }
-
-    public static OpenAPI merge(final Map<String, OpenAPI> input) {
-
-        final Multimap<String, OpenAPI> map = HashMultimap.create();
-        input.forEach(map::put);
-        return merge(map);
-    }
-
-    public static OpenAPI merge(final Multimap<String, OpenAPI> input) {
-
         final OpenAPI result = new OpenAPI();
-        result.setInfo(mergeInfo(Multimaps.transformValues(input, OpenAPI::getInfo)));
-        result.setTags(mergeLists(Multimaps.transformValues(input, OpenAPI::getTags)));
-        result.setExtensions(mergeMaps(Multimaps.transformValues(input, OpenAPI::getExtensions)));
-        result.setComponents(mergeComponents(Multimaps.transformValues(input, OpenAPI::getComponents)));
-        result.setPaths(mergePaths(Multimaps.transformValues(input, OpenAPI::getPaths)));
-        result.setSecurity(mergeLists(Multimaps.transformValues(input, OpenAPI::getSecurity)));
-        result.setExternalDocs(mergeExternalDocs(Multimaps.transformValues(input, OpenAPI::getExternalDocs)));
-        result.setServers(mergeLists(Multimaps.transformValues(input, OpenAPI::getServers)));
-        return null;
+        result.setInfo(mergeInfo(input));
+        result.setTags(mergeTags(input));
+        result.setExtensions(mergeExtensions(input));
+        result.setComponents(mergeComponents(input));
+        result.setPaths(mergePaths(input));
+        result.setSecurity(mergeSecurity(input));
+        result.setExternalDocs(mergeExternalDocs(input));
+        result.setServers(mergeServers(input));
+        return result;
     }
 
-    private static Info mergeInfo(final Multimap<String, Info> input) {
+    private static Info mergeInfo(final Collection<? extends OpenAPI> input) {
 
-        return input.values().stream().filter(Objects::nonNull).findFirst().orElse(null);
+        return input.stream().map(OpenAPI::getInfo).filter(Objects::nonNull).findFirst().orElse(null);
     }
 
-    private static Components mergeComponents(final Multimap<String, Components> input) {
+    private static Components mergeComponents(final Collection<? extends OpenAPI> input) {
 
         final Components components = new Components();
-        input.values().forEach(v -> {
+        input.stream().map(OpenAPI::getComponents).forEach(v -> {
             if (v != null) {
                 Nullsafe.option(v.getSchemas()).forEach(components::addSchemas);
                 Nullsafe.option(v.getResponses()).forEach(components::addResponses);
@@ -70,36 +100,51 @@ public class OpenAPIUtils {
         return components;
     }
 
-    private static Paths mergePaths(final Multimap<String, Paths> input) {
+    private static Paths mergePaths(final Collection<? extends OpenAPI> input) {
 
         final Paths paths = new Paths();
-        input.forEach((prefix, v) -> {
-            if (v != null) {
-                v.forEach((path, item) -> paths.put(prefix + path, item));
+        input.forEach(v -> {
+            if (v.getPaths() != null) {
+                v.getPaths().forEach(paths::put);
                 Nullsafe.option(v.getExtensions()).forEach(paths::addExtension);
             }
         });
         return paths;
     }
 
-    private static ExternalDocumentation mergeExternalDocs(final Multimap<String, ExternalDocumentation> input) {
+    private static ExternalDocumentation mergeExternalDocs(final Collection<? extends OpenAPI> input) {
 
-        return input.values().stream().filter(Objects::nonNull).findFirst().orElse(null);
+        return input.stream().map(OpenAPI::getExternalDocs).filter(Objects::nonNull).findFirst().orElse(null);
     }
 
-    private static <V> List<V> mergeLists(final Multimap<String, List<V>> input) {
+    private static List<Tag> mergeTags(final Collection<? extends OpenAPI> input) {
 
-        return input.values().stream()
-                .filter(Objects::nonNull)
+        return mergeLists(input.stream().map(OpenAPI::getTags));
+    }
+
+    private static List<SecurityRequirement> mergeSecurity(final Collection<? extends OpenAPI> input) {
+
+        return mergeLists(input.stream().map(OpenAPI::getSecurity));
+    }
+
+    private static List<Server> mergeServers(final Collection<? extends OpenAPI> input) {
+
+        return mergeLists(input.stream().map(OpenAPI::getServers));
+    }
+
+    private static <V> List<V> mergeLists(final Stream<List<V>> input) {
+
+        return input.filter(Objects::nonNull)
                 .reduce((a, b) -> ImmutableList.<V>builder().addAll(a).addAll(b).build())
                 .orElse(null);
     }
 
-    private static <K, V> Map<K, V> mergeMaps(final Multimap<String, Map<K, V>> input) {
+    private static Map<String, Object> mergeExtensions(final Collection<? extends OpenAPI> input) {
 
-        return input.values().stream()
+        return input.stream()
+                .map(OpenAPI::getExtensions)
                 .filter(Objects::nonNull)
-                .reduce((a, b) -> ImmutableMap.<K, V>builder().putAll(a).putAll(b).build())
+                .reduce((a, b) -> ImmutableMap.<String, Object>builder().putAll(a).putAll(b).build())
                 .orElse(null);
     }
 }

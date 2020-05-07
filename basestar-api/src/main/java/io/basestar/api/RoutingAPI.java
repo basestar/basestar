@@ -20,7 +20,6 @@ package io.basestar.api;
  * #L%
  */
 
-import com.google.common.collect.Maps;
 import io.swagger.v3.oas.models.OpenAPI;
 
 import java.util.Map;
@@ -38,6 +37,20 @@ public class RoutingAPI implements API {
 
     private String normalize(final String path) {
 
+        return addLeadingSlash(removeTrailingSlash(path));
+    }
+
+    private String removeTrailingSlash(final String path) {
+
+        if(path.endsWith("/")) {
+            return path.substring(0, path.length() - 1);
+        } else {
+            return path;
+        }
+    }
+
+    private String addLeadingSlash(final String path) {
+
         if(!path.startsWith("/")) {
             return "/" + path;
         } else {
@@ -48,17 +61,39 @@ public class RoutingAPI implements API {
     @Override
     public CompletableFuture<APIResponse> handle(final APIRequest request) {
 
+        // FIXME: use longest match
+        final String path = request.getPath();
         for(final Map.Entry<String, API> entry : apis.entrySet()) {
-            if(request.getPath().startsWith(entry.getKey())) {
-                return entry.getValue().handle(new APIRequest.Delegating(request));
+            final String key = entry.getKey();
+            if(path.equals(key)) {
+                return entry.getValue().handle(new APIRequest.Delegating(request) {
+                    @Override
+                    public String getPath() {
+                        return "/";
+                    }
+                });
+            } else if(path.startsWith(key + "/")) {
+                return entry.getValue().handle(new APIRequest.Delegating(request) {
+                    @Override
+                    public String getPath() {
+                        return path.substring(key.length());
+                    }
+                });
             }
         }
-        return CompletableFuture.completedFuture(APIResponse.response(request, 404, null));
+        final API defaultAPI = apis.get("/");
+        if(defaultAPI != null) {
+            return defaultAPI.handle(request);
+        } else {
+            return CompletableFuture.completedFuture(APIResponse.response(request, 404, null));
+        }
     }
 
     @Override
     public OpenAPI openApi() {
 
-        return OpenAPIUtils.merge(Maps.transformValues(apis, API::openApi));
+        return OpenAPIUtils.merge(apis.entrySet().stream()
+                .map(e -> OpenAPIUtils.prefix(e.getValue().openApi(), e.getKey()))
+                .collect(Collectors.toList()));
     }
 }

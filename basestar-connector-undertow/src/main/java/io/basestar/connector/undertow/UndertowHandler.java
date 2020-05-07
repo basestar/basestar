@@ -9,9 +9,9 @@ package io.basestar.connector.undertow;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,6 +28,7 @@ import io.basestar.api.APIResponse;
 import io.basestar.auth.Caller;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -115,15 +116,18 @@ public class UndertowHandler implements HttpHandler {
 
             log.info("Response (method:{} path:{} status: {} headers: {})", method, path, responseCode, responseHeaders);
 
+            final HeaderMap exchangeResponseHeaders = exchange.getResponseHeaders();
             exchange.setStatusCode(responseCode);
-            responseHeaders.forEach((k, v) -> exchange.getResponseHeaders().put(HttpString.tryFromString(k), v));
+            responseHeaders.forEach((k, v) -> exchangeResponseHeaders.put(HttpString.tryFromString(k), v));
+//            final Collection<String> encodings = requestHeaders.get("accept-encoding");
 
+            final ByteBuffer buffer;
             try (final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
                 response.writeTo(baos);
                 baos.flush();
-                exchange.getResponseSender().send(ByteBuffer.wrap(baos.toByteArray()));
+                buffer = ByteBuffer.wrap(baos.toByteArray());
             }
-            exchange.endExchange();
+            exchange.getResponseSender().send(buffer);
 
         } catch (final InterruptedException e) {
             log.warn("Interrupted during request handling", e);
@@ -141,4 +145,17 @@ public class UndertowHandler implements HttpHandler {
 
         e.printStackTrace(System.err);
     }
+
+//    private OutputStream compressedStream(final OutputStream os, final Collection<String> encodings) throws IOException {
+//
+//        if(encodings.contains("*")) {
+//            return new GZIPOutputStream(os);
+//        } else if(encodings.stream().anyMatch("gzip"::equalsIgnoreCase)) {
+//            return new GZIPOutputStream(os);
+//        } else if(encodings.stream().anyMatch("deflate"::equalsIgnoreCase)) {
+//            return new DeflaterOutputStream(os);
+//        } else {
+//            return os;
+//        }
+//    }
 }

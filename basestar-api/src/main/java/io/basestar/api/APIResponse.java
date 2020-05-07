@@ -102,7 +102,7 @@ public interface APIResponse {
         }
         final Collection<String> allowHeaders = requestHeaders.get("access-control-request-headers");
         if(!allowHeaders.isEmpty()) {
-            headers.put("Access-Control-Allow-Methods", String.join(",", allowHeaders));
+            headers.put("Access-Control-Allow-Headers", String.join(",", allowHeaders));
         } else {
             headers.put("Access-Control-Allow-Headers", "*");
         }
