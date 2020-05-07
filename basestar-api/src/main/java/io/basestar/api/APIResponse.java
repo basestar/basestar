@@ -27,6 +27,7 @@ import io.basestar.exception.HasExceptionMetadata;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Collection;
 
 public interface APIResponse {
 
@@ -92,8 +93,19 @@ public interface APIResponse {
         } else {
             headers.put("Access-Control-Allow-Origin", "*");
         }
-        headers.put("Access-Control-Allow-Methods", "*");
-        headers.put("Access-Control-Allow-Headers", "*");
+        final Multimap<String, String> requestHeaders = request.getHeaders();
+        final Collection<String> allowMethods = requestHeaders.get("access-control-request-method");
+        if(!allowMethods.isEmpty()) {
+            headers.put("Access-Control-Allow-Methods", String.join(",", allowMethods));
+        } else {
+            headers.put("Access-Control-Allow-Methods", "*");
+        }
+        final Collection<String> allowHeaders = requestHeaders.get("access-control-request-headers");
+        if(!allowHeaders.isEmpty()) {
+            headers.put("Access-Control-Allow-Methods", String.join(",", allowHeaders));
+        } else {
+            headers.put("Access-Control-Allow-Headers", "*");
+        }
         headers.put("Access-Control-Allow-Credentials", "true");
         if(extraHeaders != null) {
             headers.putAll(extraHeaders);
