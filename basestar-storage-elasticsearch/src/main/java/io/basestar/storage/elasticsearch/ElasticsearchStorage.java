@@ -268,6 +268,11 @@ public class ElasticsearchStorage implements Storage {
             return ElasticsearchStorage.<CreateIndexResponse>future(listener ->
                     client.indices().createAsync(new CreateIndexRequest(name)
                             .source(source), OPTIONS, listener))
+                    .exceptionally(e -> {
+                        // FIXME?
+                        log.error("Error creating search index, ignoring", e);
+                        return null;
+                    })
                     .thenApply(ignored -> createdIndices.add(name));
 
         } catch (final IOException e) {
