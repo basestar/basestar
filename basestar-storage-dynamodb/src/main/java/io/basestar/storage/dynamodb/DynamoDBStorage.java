@@ -149,7 +149,7 @@ public class DynamoDBStorage extends PartitionedStorage {
 
     private String oversizeStashKey(final ObjectSchema schema, final String id, final long version) {
 
-        return schema + "/" + id + "/" + version;
+        return schema.getName() + "/" + id + "/" + version;
     }
 
     private CompletableFuture<Map<String, Object>> fromItem(final Map<String, AttributeValue> item) {

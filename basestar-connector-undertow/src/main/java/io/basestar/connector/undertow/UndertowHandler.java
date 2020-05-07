@@ -59,11 +59,11 @@ public class UndertowHandler implements HttpHandler {
             final String path = exchange.getRelativePath();
             final Multimap<String, String> query = ArrayListMultimap.create();
             exchange.getQueryParameters().forEach(query::putAll);
-            final Multimap<String, String> headers = ArrayListMultimap.create();
+            final Multimap<String, String> requestHeaders = ArrayListMultimap.create();
             exchange.getRequestHeaders()
-                    .forEach(vs -> headers.putAll(vs.getHeaderName().toString(), vs));
+                    .forEach(vs -> requestHeaders.putAll(vs.getHeaderName().toString().toLowerCase(), vs));
 
-            log.info("Handling HTTP request (method:{} path:{} query:{} headers:{})", method, path, query, headers);
+            log.info("Handling HTTP request (method:{} path:{} query:{} headers:{})", method, path, query, requestHeaders);
 
             final APIRequest request = new APIRequest() {
 
@@ -94,7 +94,7 @@ public class UndertowHandler implements HttpHandler {
                 @Override
                 public Multimap<String, String> getHeaders() {
 
-                    return headers;
+                    return requestHeaders;
                 }
 
                 @Override
@@ -109,14 +109,18 @@ public class UndertowHandler implements HttpHandler {
                 return APIResponse.error(request, e);
             }).get();
 
-            exchange.setStatusCode(response.getStatusCode());
-            response.getHeaders()
-                    .forEach((k, v) -> exchange.getResponseHeaders().put(HttpString.tryFromString(k), v));
+
+            final int responseCode = response.getStatusCode();
+            final Multimap<String, String> responseHeaders = response.getHeaders();
+
+            log.info("Response (method:{} path:{} status: {} headers: {})", method, path, responseCode, responseHeaders);
+
+            exchange.setStatusCode(responseCode);
+            responseHeaders.forEach((k, v) -> exchange.getResponseHeaders().put(HttpString.tryFromString(k), v));
 
             try (final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
                 response.writeTo(baos);
                 exchange.getResponseSender().send(ByteBuffer.wrap(baos.toByteArray()));
-
             }
             exchange.endExchange();
 

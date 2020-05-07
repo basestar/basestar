@@ -45,7 +45,7 @@ public interface APIRequest {
 
     default String getFirstHeader(final String key) {
 
-        final Collection<String> result = getHeaders().get(key);
+        final Collection<String> result = getHeaders().get(key.toLowerCase());
         return result.isEmpty() ? null : result.iterator().next();
     }
 
@@ -58,7 +58,7 @@ public interface APIRequest {
     default APIFormat getContentType() {
 
         final String format = getFirstQuery("format");
-        final String contentType = getFirstHeader("Content-Type");
+        final String contentType = getFirstHeader("content-type");
         if(format == null && contentType == null) {
             return APIFormat.JSON;
         } else if(format != null) {
@@ -75,7 +75,7 @@ public interface APIRequest {
     default APIFormat getAccept() {
 
         final String format = getFirstQuery("format");
-        final String accept = getFirstHeader("Accept");
+        final String accept = getFirstHeader("accept");
         if(format == null && accept == null) {
             return getContentType();
         } else if(format != null) {

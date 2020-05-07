@@ -86,7 +86,12 @@ public interface APIResponse {
         final APIFormat format = request.getAccept();
         final Multimap<String, String> headers = HashMultimap.create();
         headers.put("Content-Type", format.getContentType());
-        headers.put("Access-Control-Allow-Origin", "*");
+        final String origin = request.getFirstHeader("Origin");
+        if(origin != null) {
+            headers.put("Access-Control-Allow-Origin", origin);
+        } else {
+            headers.put("Access-Control-Allow-Origin", "*");
+        }
         headers.put("Access-Control-Allow-Methods", "*");
         headers.put("Access-Control-Allow-Headers", "*");
         if(extraHeaders != null) {

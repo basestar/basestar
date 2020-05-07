@@ -91,8 +91,12 @@ public class GraphQLAPI implements API {
 
     private CompletableFuture<APIResponse> query(final APIRequest request, final ExecutionInput input) {
 
+        log.info("GraphQL request {}", input);
         return graphQL.executeAsync(input)
-                .thenApply(response -> APIResponse.success(request, Response.from(response)));
+                .thenApply(response -> {
+                    log.info("GraphQL response {}", response);
+                    return APIResponse.success(request, Response.from(response));
+                });
     }
 
     @Data
