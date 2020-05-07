@@ -21,6 +21,7 @@ package io.basestar.example;
  */
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import io.basestar.api.APIRequest;
 import io.basestar.api.APIResponse;
@@ -62,6 +63,8 @@ public class TestRequests {
 
     public static APIRequest request(final APIRequest.Method method, final String path, final Multimap<String, String> query, final Multimap<String, String> headers, final Object body) {
 
+        final Multimap<String, String> requestHeaders = HashMultimap.create();
+        headers.forEach((k, v) -> requestHeaders.put(k.toLowerCase(), v));
         return new APIRequest() {
             @Override
             public Caller getCaller() {
@@ -90,7 +93,7 @@ public class TestRequests {
             @Override
             public Multimap<String, String> getHeaders() {
 
-                return headers;
+                return requestHeaders;
             }
 
             @Override

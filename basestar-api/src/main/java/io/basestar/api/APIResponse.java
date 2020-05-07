@@ -94,6 +94,7 @@ public interface APIResponse {
         }
         headers.put("Access-Control-Allow-Methods", "*");
         headers.put("Access-Control-Allow-Headers", "*");
+        headers.put("Access-Control-Allow-Credentials", "true");
         if(extraHeaders != null) {
             headers.putAll(extraHeaders);
         }

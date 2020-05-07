@@ -120,6 +120,7 @@ public class UndertowHandler implements HttpHandler {
 
             try (final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
                 response.writeTo(baos);
+                baos.flush();
                 exchange.getResponseSender().send(ByteBuffer.wrap(baos.toByteArray()));
             }
             exchange.endExchange();
