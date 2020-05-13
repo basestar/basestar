@@ -31,14 +31,15 @@ import io.basestar.auth.Caller;
 import io.basestar.database.Database;
 import io.basestar.database.options.*;
 import io.basestar.expression.Expression;
+import io.basestar.expression.constant.Constant;
 import io.basestar.graphql.GraphQLUtils;
 import io.basestar.schema.*;
+import io.basestar.util.PagedList;
+import io.basestar.util.PagingToken;
 import io.basestar.util.Path;
+import io.basestar.util.Sort;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -113,16 +114,24 @@ public class RuntimeWiringFactory {
 
         return (env) -> {
             final Caller caller = GraphQLUtils.caller(env.getContext());
-            final Set<Path> paths = paths(env);
+            final Set<Path> paths = Path.children(paths(env), "items");
             final Set<Path> expand = schema.requiredExpand(paths);
             final String query = env.getArgument("query");
+            final Expression expression = query == null ? Constant.TRUE : Expression.parse(query);
+            final String paging = env.getArgument("paging");
+            final Number count = env.getArgument("count");
+            final List<?> sort = env.getArgument("sort");
             final QueryOptions options = QueryOptions.builder()
                     .schema(schema.getName())
-                    .expression(Expression.parse(query))
+                    .expression(expression)
+                    .paging(paging(paging))
+                    .count(count(count))
+                    .sort(sort(sort))
                     .expand(expand)
                     .build();
             return database.query(caller, options)
-                    .thenApply(objects -> objects.map(object -> GraphQLUtils.toResponse(schema, object)));
+                    .thenApply(objects -> objects.map(object -> GraphQLUtils.toResponse(schema, object)))
+                    .thenApply(RuntimeWiringFactory::toPage);
         };
     }
 
@@ -132,18 +141,33 @@ public class RuntimeWiringFactory {
 
             final Caller caller = GraphQLUtils.caller(env.getContext());
             final ObjectSchema linkSchema = link.getSchema();
-            final Set<Path> paths = paths(env);
+            final Set<Path> paths = Path.children(paths(env), "items");
             final Set<Path> expand = linkSchema.requiredExpand(paths);
             final String id = env.getArgument(Reserved.ID);
+            final String paging = env.getArgument("paging");
+            final Number count = env.getArgument("count");
             final QueryLinkOptions options = QueryLinkOptions.builder()
                     .schema(schema.getName())
                     .link(link.getName())
                     .id(id)
                     .expand(expand)
+                    .paging(paging(paging))
+                    .count(count(count))
                     .build();
             return database.queryLink(caller, options)
-                    .thenApply(objects -> objects.map(object -> GraphQLUtils.toResponse(linkSchema, object)));
+                    .thenApply(objects -> objects.map(object -> GraphQLUtils.toResponse(linkSchema, object)))
+                    .thenApply(RuntimeWiringFactory::toPage);
         };
+    }
+
+    private static Map<String, Object> toPage(final PagedList<?> page) {
+
+        final Map<String, Object> result = new HashMap<>();
+        result.put("items", page.getPage());
+        if(page.hasPaging()) {
+            result.put("paging", page.getPaging().toString());
+        }
+        return result;
     }
 
     @SuppressWarnings("rawtypes")
@@ -226,6 +250,35 @@ public class RuntimeWiringFactory {
 
             final Map<String, Object> object = env.getObject();
             return env.getSchema().getObjectType(Instance.getSchema(object));
+        }
+    }
+
+    private static Integer count(final Number value) {
+
+        if(value == null) {
+            return null;
+        } else {
+            return value.intValue();
+        }
+    }
+
+    private static PagingToken paging(final String value) {
+
+        if(value == null) {
+            return null;
+        } else {
+            return new PagingToken(value);
+        }
+    }
+
+    private static List<Sort> sort(final List<?> value) {
+
+        if(value == null) {
+            return null;
+        } else {
+            return value.stream()
+                    .map(v -> Sort.parse(v.toString()))
+                    .collect(Collectors.toList());
         }
     }
 }

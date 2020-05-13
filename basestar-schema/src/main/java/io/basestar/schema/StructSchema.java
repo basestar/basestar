@@ -105,6 +105,7 @@ public class StructSchema implements InstanceSchema {
     @Nonnull
     private final Map<String, Object> extensions;
 
+
     @Data
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -204,7 +205,7 @@ public class StructSchema implements InstanceSchema {
     }
 
     @Override
-    public Map<String, ? extends Member> getAllMembers() {
+    public Map<String, ? extends Member> getMembers() {
 
         return properties;
     }

@@ -24,10 +24,11 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
-import io.basestar.schema.Constraint;
-import io.basestar.schema.Expander;
-import io.basestar.schema.Instance;
-import io.basestar.schema.Schema;
+import io.basestar.expression.Expression;
+import io.basestar.expression.constant.PathConstant;
+import io.basestar.expression.iterate.ForAny;
+import io.basestar.expression.iterate.Of;
+import io.basestar.schema.*;
 import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.util.Path;
 import io.swagger.v3.oas.models.media.MapSchema;
@@ -140,6 +141,28 @@ public class UseMap<T> implements Use<Map<String, T>> {
             result.put(key, value);
         }
         return result;
+    }
+
+    @Override
+    public Set<Expression> refQueries(final String otherTypeName, final Path path) {
+
+        final int hash = System.identityHashCode(this);
+        final String k = "k" + hash;
+        final String v = "v" + hash;
+        return getType().refQueries(otherTypeName, Path.of(v)).stream().map(
+                q -> new ForAny(q, new Of(k, v, new PathConstant(path)))
+        ).collect(Collectors.toSet());
+    }
+
+    @Override
+    public Map<Ref, Long> refVersions(final Map<String, T> value) {
+
+        if(value == null) {
+            return Collections.emptyMap();
+        }
+        final Map<Ref, Long> versions = new HashMap<>();
+        value.forEach((k, v) -> versions.putAll(getType().refVersions(v)));
+        return versions;
     }
 
     @Override

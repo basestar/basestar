@@ -150,13 +150,12 @@ public abstract class PartitionedStorage implements Storage {
                 if (matchedSort < index.getSort().size()) {
                     final Sort thisSort = index.getSort().get(matchedSort);
                     if (thisSort.getPath().equals(thatSort.getPath())) {
-                        if ((reversed ? thisSort.getOrder().reverse() : thisSort).equals(thatSort.getOrder())) {
+                        final Sort.Order thisOrder = thisSort.getOrder();
+                        if ((reversed ? thisOrder.reverse() : thisOrder).equals(thatSort.getOrder())) {
                             ++matchedSort;
-                            continue;
                         } else if (!reversed) {
                             reversed = true;
                             ++matchedSort;
-                            continue;
                         }
                     }
                 }

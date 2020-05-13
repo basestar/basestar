@@ -82,6 +82,8 @@ public class And implements Expression {
         }
         if(constant) {
             return new Constant(new And(terms).evaluate(context));
+        } else if(terms.size() == 1) {
+            return terms.get(0);
         } else if(changed) {
             return new And(terms);
         } else {

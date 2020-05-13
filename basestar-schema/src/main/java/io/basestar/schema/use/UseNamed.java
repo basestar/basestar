@@ -23,6 +23,7 @@ package io.basestar.schema.use;
 
 import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
+import io.basestar.expression.Expression;
 import io.basestar.schema.*;
 import io.basestar.schema.exception.MissingTypeException;
 import io.basestar.util.Path;
@@ -30,6 +31,7 @@ import lombok.Data;
 
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.util.Map;
 import java.util.Set;
 
 public interface UseNamed<T> extends Use<T> {
@@ -170,6 +172,18 @@ public interface UseNamed<T> extends Use<T> {
         public io.swagger.v3.oas.models.media.Schema<?> openApi() {
 
             return new io.swagger.v3.oas.models.media.ObjectSchema().$ref(name);
+        }
+
+        @Override
+        public Set<Expression> refQueries(final String otherTypeName, final Path path) {
+
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Map<Ref, Long> refVersions(final Object value) {
+
+            throw new UnsupportedOperationException();
         }
     }
 }

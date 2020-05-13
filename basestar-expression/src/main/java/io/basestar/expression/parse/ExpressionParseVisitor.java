@@ -337,7 +337,7 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
     public Expression visitExprNumber(final ExprNumberContext ctx) {
 
         final String text = ctx.Number().getText();
-        return new Constant(Values.parseNumber(text));
+        return Constant.valueOf(Values.parseNumber(text));
     }
 
     @Override
@@ -350,7 +350,7 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
     @Override
     public Expression visitExprNull(final ExprNullContext ctx) {
 
-        return new Constant(null);
+        return Constant.NULL;
     }
 
     @Override
@@ -365,26 +365,26 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
         final String text = ctx.String().getText();
         final String processedText = text.substring(1, text.length() - 1)
                 .replaceAll("\\\\(.)", "$1");
-        return new Constant(processedText);
+        return Constant.valueOf(processedText);
     }
 
     @Override
     public Expression visitExprBool(final ExprBoolContext ctx) {
 
         final String text = ctx.getText();
-        return new Constant(Boolean.valueOf(text));
+        return Constant.valueOf(Boolean.valueOf(text));
     }
 
     @Override
     public Expression visitExprArray(final ExprArrayContext ctx) {
 
-        return ctx.exprs() == null ? new Constant(Collections.emptyList()) : visit(ctx.exprs());
+        return ctx.exprs() == null ? Constant.valueOf(Collections.emptyList()) : visit(ctx.exprs());
     }
 
     @Override
     public Expression visitExprSet(final ExprSetContext ctx) {
 
-        return ctx.exprs() == null ? new Constant(Collections.emptySet()) : new LiteralSet(visit(ctx.exprs().expr()));
+        return ctx.exprs() == null ? Constant.valueOf(Collections.emptySet()) : new LiteralSet(visit(ctx.exprs().expr()));
     }
 
     @Override

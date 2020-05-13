@@ -3,6 +3,8 @@ Team:
   type: object
 
   properties:
+    name:
+      type: string
     description:
       type: string
 
@@ -52,6 +54,10 @@ TeamMember:
     accepted:
       type: boolean
 
+  expand:
+    - team
+    - user
+
   indexes:
     team:
       partition:
@@ -62,6 +68,9 @@ TeamMember:
       sort:
         - accepted
         - role
+    teamName:
+      partition:
+        - team.name
 
   permissions:
     read:

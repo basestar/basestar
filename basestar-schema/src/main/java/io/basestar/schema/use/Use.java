@@ -24,10 +24,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
-import io.basestar.schema.Constraint;
-import io.basestar.schema.Expander;
-import io.basestar.schema.Instance;
-import io.basestar.schema.Schema;
+import io.basestar.expression.Expression;
+import io.basestar.schema.*;
 import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.util.Path;
 
@@ -111,6 +109,10 @@ public interface Use<T> extends Serializable {
     Set<Constraint.Violation> validate(Context context, Path path, T value);
 
     io.swagger.v3.oas.models.media.Schema<?> openApi();
+
+    Set<Expression> refQueries(String otherTypeName, Path path);
+
+    Map<Ref, Long> refVersions(T value);
 
     @JsonCreator
     @SuppressWarnings("unchecked")

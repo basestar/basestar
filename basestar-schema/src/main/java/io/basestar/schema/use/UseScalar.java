@@ -23,13 +23,12 @@ package io.basestar.schema.use;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
-import io.basestar.schema.Constraint;
-import io.basestar.schema.Expander;
-import io.basestar.schema.Instance;
-import io.basestar.schema.Schema;
+import io.basestar.expression.Expression;
+import io.basestar.schema.*;
 import io.basestar.util.Path;
 
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 
 public interface UseScalar<T> extends Use<T> {
@@ -56,6 +55,18 @@ public interface UseScalar<T> extends Use<T> {
     default T applyVisibility(final Context context, final T value) {
 
         return value;
+    }
+
+    @Override
+    default Set<Expression> refQueries(final String otherTypeName, final Path path) {
+
+        return Collections.emptySet();
+    }
+
+    @Override
+    default Map<Ref, Long> refVersions(final T value) {
+
+        return Collections.emptyMap();
     }
 
     @Override

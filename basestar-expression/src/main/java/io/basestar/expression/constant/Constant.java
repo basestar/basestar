@@ -20,6 +20,9 @@ package io.basestar.expression.constant;
  * #L%
  */
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
@@ -29,10 +32,26 @@ import io.basestar.util.Path;
 import lombok.Data;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Data
 public class Constant implements Expression {
+
+    public static final Constant NULL = new Constant(null);
+
+    public static final Constant FALSE = new Constant(false);
+
+    public static final Constant TRUE = new Constant(true);
+
+    public static final Constant EMPTY_STRING = new Constant("");
+
+    public static final Constant EMPTY_LIST = new Constant(ImmutableList.of());
+
+    public static final Constant EMPTY_SET = new Constant(ImmutableSet.of());
+
+    public static final Constant EMPTY_MAP = new Constant(ImmutableMap.of());
 
     private static final String TOKEN = "";
 
@@ -92,5 +111,79 @@ public class Constant implements Expression {
     public String toString() {
 
         return Values.toString(value);
+    }
+
+    public static Expression valueOf(final Boolean value) {
+
+        if(value == null) {
+            return NULL;
+        } else if(value) {
+            return TRUE;
+        } else {
+            return FALSE;
+        }
+    }
+
+    public static Expression valueOf(final String value) {
+
+        if(value == null) {
+            return NULL;
+        } else if(value.isEmpty()) {
+            return EMPTY_STRING;
+        } else {
+            return new Constant(value);
+        }
+    }
+
+    public static Expression valueOf(final List<?> value) {
+
+        if(value == null) {
+            return NULL;
+        } else if(value.isEmpty()) {
+            return EMPTY_LIST;
+        } else {
+            return new Constant(value);
+        }
+    }
+
+    public static Expression valueOf(final Set<?> value) {
+
+        if(value == null) {
+            return NULL;
+        } else if(value.isEmpty()) {
+            return EMPTY_SET;
+        } else {
+            return new Constant(value);
+        }
+    }
+
+    public static Expression valueOf(final Map<?, ?> value) {
+
+        if(value == null) {
+            return NULL;
+        } else if(value.isEmpty()) {
+            return EMPTY_MAP;
+        } else {
+            return new Constant(value);
+        }
+    }
+
+    public static Expression valueOf(final Object value) {
+
+        if(value == null) {
+            return NULL;
+        } else if(value instanceof Boolean) {
+            return valueOf((Boolean)value);
+        } else if(value instanceof String) {
+            return valueOf((String)value);
+        } else if(value instanceof List) {
+            return valueOf((List<?>)value);
+        } else if(value instanceof Set) {
+            return valueOf((Set<?>)value);
+        } else if(value instanceof Map) {
+            return valueOf((Map<?, ?>)value);
+        } else {
+            return new Constant(value);
+        }
     }
 }

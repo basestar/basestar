@@ -36,6 +36,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DynamoDBUtils {
 
+    public static final int MAX_READ_BATCH_SIZE = 100;
+
     public static final int MAX_ITEM_SIZE = 400_000;
 
     public static Map<String, AttributeValue> toItem(final Map<String, Object> values) {

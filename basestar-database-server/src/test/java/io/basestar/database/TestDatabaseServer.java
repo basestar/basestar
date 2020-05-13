@@ -25,24 +25,24 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.auth.Caller;
 import io.basestar.auth.exception.PermissionDeniedException;
-import io.basestar.database.event.ObjectCreatedEvent;
-import io.basestar.database.event.ObjectDeletedEvent;
-import io.basestar.database.event.ObjectUpdatedEvent;
-import io.basestar.database.options.CreateOptions;
-import io.basestar.database.options.ReadOptions;
-import io.basestar.database.options.TransactionOptions;
+import io.basestar.database.event.*;
+import io.basestar.database.options.*;
 import io.basestar.event.Emitter;
 import io.basestar.event.Event;
+import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Namespace;
+import io.basestar.schema.Ref;
 import io.basestar.storage.MemoryStorage;
 import io.basestar.storage.Storage;
 import io.basestar.util.PagedList;
 import io.basestar.util.Path;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.util.Collection;
@@ -54,6 +54,7 @@ import java.util.concurrent.CompletableFuture;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+@Slf4j
 public class TestDatabaseServer {
 
     private static final String SIMPLE = "Simple";
@@ -88,7 +89,7 @@ public class TestDatabaseServer {
 
     private static final String TRANSIENT = "Transient";
 
-    private Database database;
+    private DatabaseServer database;
 
     private Storage storage;
 
@@ -105,7 +106,10 @@ public class TestDatabaseServer {
                 TestDatabaseServer.class.getResource("/io/basestar/database/Team.yml")
         );
         this.emitter = Mockito.mock(Emitter.class);
-        when(emitter.emit(any(Event.class))).thenReturn(CompletableFuture.completedFuture(null));
+        when(emitter.emit(any(Event.class))).then(inv -> {
+            log.info("Emitting {}", inv.getArgumentAt(0, Event.class));
+            return CompletableFuture.completedFuture(null);
+        });
         when(emitter.emit(any(Collection.class))).then(inv -> {
             final Emitter emitter = (Emitter)inv.getMock();
             inv.getArgumentAt(0, Collection.class).forEach(event -> emitter.emit((Event)event));
@@ -314,6 +318,16 @@ public class TestDatabaseServer {
         final PagedList<?> source = (PagedList<?>)expandLinkA.get("sources");
         assertEquals(1, source.size());
         assertEquals(createA, source.get(0));
+
+        final PagedList<Instance> expandQuery = database.query(caller, QueryOptions.builder()
+                .schema(REF_SOURCE)
+                .expression(Expression.parse("target.id == \"" + refA + "\""))
+                .expand(ImmutableSet.of(Path.of("target")))
+                .build()).get();
+        assertEquals(1, expandQuery.size());
+        final Instance queryTarget = expandQuery.get(0).get("target", Instance.class);
+        assertNotNull(queryTarget);
+        assertNotNull(queryTarget.getHash());
     }
 
     @Test
@@ -587,6 +601,90 @@ public class TestDatabaseServer {
                 .expand(ImmutableSet.of(Path.of("names")))
                 .build()).get();
         assertEquals(ImmutableList.of("test"), readB.get("names"));
+    }
+
+    @Test
+    public void expand() throws Exception {
+
+        final Map<String, Instance> ok = database.transaction(Caller.SUPER, TransactionOptions.builder()
+                .action("team", CreateOptions.builder()
+                        .schema(TEAM)
+                        .id("t1")
+                        .build())
+                .action("user", CreateOptions.builder()
+                        .schema(USER)
+                        .id("u1")
+                        .build())
+                .action("member", CreateOptions.builder()
+                        .schema(TEAM_MEMBER)
+                        .data(ImmutableMap.of(
+                                "user", ImmutableMap.of("id", "u1"),
+                                "team", ImmutableMap.of("id", "t1"),
+                                "role", "owner",
+                                "accepted", true
+                        )).build())
+                .build()).get();
+        assertEquals(3, ok.size());
+
+        final Instance member = ok.get("member");
+        assertNotNull(member);
+
+        database.onObjectCreated(ObjectCreatedEvent.of(TEAM, "t1", ok.get("team"))).join();
+
+        final RefQueryEvent queryEvent = RefQueryEvent.of(Ref.of(TEAM, "t1"), TEAM_MEMBER, Expression.parse("team.id == 't1'").bind(Context.init()));
+
+        final ArgumentCaptor<Event> queryCaptor = ArgumentCaptor.forClass(Event.class);
+        verify(emitter, times(4)).emit(queryCaptor.capture());
+        assertTrue(queryCaptor.getAllValues().contains(queryEvent));
+
+        database.onRefQuery(queryEvent).join();
+
+        final RefRefreshEvent refreshEvent = RefRefreshEvent.of(queryEvent.getRef(), TEAM_MEMBER, member.getId());
+
+        final ArgumentCaptor<Event> refreshCaptor = ArgumentCaptor.forClass(Event.class);
+        verify(emitter, times(5)).emit(refreshCaptor.capture());
+        assertTrue(refreshCaptor.getAllValues().contains(refreshEvent));
+    }
+
+    @Test
+    public void refRefresh() throws Exception {
+
+        final Map<String, Instance> init = database.transaction(Caller.SUPER, TransactionOptions.builder()
+                .action("team", CreateOptions.builder()
+                        .schema(TEAM)
+                        .id("t1")
+                        .build())
+                .action("member", CreateOptions.builder()
+                        .schema(TEAM_MEMBER)
+                        .data(ImmutableMap.of(
+                                "user", ImmutableMap.of("id", "u1"),
+                                "team", ImmutableMap.of("id", "t1"),
+                                "role", "owner",
+                                "accepted", true
+                        )).build())
+                .build()).get();
+        assertEquals(2, init.size());
+
+        final Instance member = init.get("member");
+        assertNotNull(member);
+
+        final Map<String, Instance> update = database.transaction(Caller.SUPER, TransactionOptions.builder()
+                .action("team", UpdateOptions.builder()
+                        .schema(TEAM)
+                        .id("t1")
+                        .data(ImmutableMap.of(
+                                "name", "Test"
+                        ))
+                        .build())
+                .build()).get();
+        assertEquals(2, init.size());
+
+        final RefRefreshEvent refreshEvent = RefRefreshEvent.of(Ref.of(TEAM, "t1"), TEAM_MEMBER, member.getId());
+
+        database.onRefRefresh(refreshEvent).join();
+
+        final PagedList<Instance> get = database.query(Caller.SUPER, TEAM_MEMBER, Expression.parse("team.name == 'Test'")).join();
+        assertEquals(1, get.size());
     }
 
     private Executable cause(final Executable target) {

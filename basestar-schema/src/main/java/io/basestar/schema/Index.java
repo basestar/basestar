@@ -83,7 +83,7 @@ public class Index implements Named, Described, Serializable, Extendable {
     private final Consistency consistency;
 
     @Nonnull
-    private final Map<String, Object> extensions;
+    private final SortedMap<String, Object> extensions;
 
     private final boolean unique;
 

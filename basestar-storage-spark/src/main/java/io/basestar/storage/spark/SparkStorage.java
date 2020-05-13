@@ -118,6 +118,9 @@ public class SparkStorage implements Storage {
             final Dataset<Row> input = routing.objectRead(session, schema);
             final Column column = query.visit(new SparkExpressionVisitor(path -> input.col(path.toString())));
             Dataset<Row> ds = input.filter(column);
+            if(paging != null) {
+                // FIXME:
+            }
             ds = ds.limit(count);
 
             final List<Row> rows = ds.collectAsList();
@@ -125,6 +128,13 @@ public class SparkStorage implements Storage {
             final List<Map<String, Object>> items = rows.stream()
                     .map(row -> SparkSchemaUtils.fromSpark(schema, row))
                     .collect(Collectors.toList());
+
+//            final PagingToken nextToken;
+//            if(items.isEmpty()) {
+//                nextToken = null;
+//            } else {
+//                nextToken = KeysetPagingUtils.keysetPagingToken(schema, sort, items.get(items.size() - 1));
+//            }
 
             return new PagedList<>(items, null);
 

@@ -21,6 +21,7 @@ package io.basestar.schema;
  */
 
 import io.basestar.expression.Context;
+import io.basestar.expression.Expression;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseString;
 import io.basestar.util.Path;
@@ -30,6 +31,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.*;
 import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 
 public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Property.Resolver {
 
@@ -65,7 +67,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
 
         final Set<Path> transientExpand = new HashSet<>(expand);
         final Map<String, Set<Path>> branch = Path.branch(expand);
-        getAllMembers().forEach((name, member) -> {
+        getMembers().forEach((name, member) -> {
             if(branch.containsKey(name)) {
                 final Set<Path> memberExpand = branch.get(name);
                 transientExpand.addAll(member.transientExpand(path.with(name), memberExpand));
@@ -76,14 +78,20 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
 
     boolean isConcrete();
 
-    default Use<?> typeOf(final Path path) {
+    @SuppressWarnings("unchecked")
+    default <T> Use<T> typeOf(final Path path) {
 
         if(path.isEmpty()) {
             throw new IllegalStateException();
         } else {
             final String first = path.first();
-            final Member member = requireMember(first, true);
-            return member.typeOf(path.withoutFirst());
+            final Map<String, Use<?>> metadataSchema = metadataSchema();
+            if(metadataSchema.containsKey(first)) {
+                return (Use<T>)metadataSchema.get(first).typeOf(path.withoutFirst());
+            } else {
+                final Member member = requireMember(first, true);
+                return member.typeOf(path.withoutFirst());
+            }
         }
     }
 
@@ -127,7 +135,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         metadataSchema().forEach((name, type) -> {
             properties.put(name, type.openApi());
         });
-        getAllMembers().forEach((name, member) -> {
+        getMembers().forEach((name, member) -> {
             if(!member.isAlwaysHidden()) {
                 properties.put(name, member.openApi());
             }
@@ -208,7 +216,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
     /*private*/ default Instance transformMembers(final Instance object, final BiFunction<Member, Object, Object> fn) {
 
         final HashMap<String, Object> changed = new HashMap<>();
-        getAllMembers().forEach((name, member) -> {
+        getMembers().forEach((name, member) -> {
             final Object before = object.get(name);
             final Object after = fn.apply(member, before);
             // Reference equals is correct behaviour
@@ -235,5 +243,24 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
             data.put(key, value);
         }
         return data;
+    }
+
+    default Set<Expression> refQueries(final String otherTypeName) {
+
+        return refQueries(otherTypeName, Path.empty());
+    }
+
+    default Set<Expression> refQueries(final String otherTypeName, final Path path) {
+
+        return getMembers().entrySet().stream()
+                .flatMap(e -> e.getValue().refQueries(otherTypeName, path.with(e.getKey())).stream())
+                .collect(Collectors.toSet());
+    }
+
+    default Map<Ref, Long> refVersions(final Instance value) {
+
+        final Map<Ref, Long> versions = new HashMap<>();
+        getProperties().forEach((k, v) -> versions.putAll(v.refVersions(value.get(k))));
+        return versions;
     }
 }

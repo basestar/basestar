@@ -24,13 +24,12 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Multimap;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.google.common.collect.*;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import io.basestar.expression.Context;
+import io.basestar.jackson.serde.PathDeserializer;
 import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
@@ -153,10 +152,16 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
     @Nonnull
     private final SortedMap<String, Permission> permissions;
 
+    @Nonnull
+    private final SortedSet<Path> declaredExpand;
+
+    @Nonnull
+    private final SortedSet<Path> expand;
+
     private final boolean concrete;
 
     @Nonnull
-    private final Map<String, Object> extensions;
+    private final SortedMap<String, Object> extensions;
 
 //    public Set<Path> transientExpand(final Path path, final Set<Path> expand) {
 //
@@ -215,6 +220,11 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         private Map<String, Permission.Builder> permissions;
+
+        @Nullable
+        @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
+        @JsonDeserialize(contentUsing = PathDeserializer.class)
+        private Set<Path> expand;
 
         @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
@@ -310,6 +320,7 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(e.getKey()))));
         this.declaredPermissions = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getPermissions()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(e.getKey()))));
+        this.declaredExpand = ImmutableSortedSet.copyOf(Nullsafe.option(builder.getExpand()));
         this.concrete = Nullsafe.option(builder.getConcrete(), Boolean.TRUE);
         this.extensions = Nullsafe.immutableSortedCopy(builder.getExtensions());
         if(Reserved.isReserved(name)) {
@@ -329,11 +340,13 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
                 this.links = merge(objectExtend.getLinks(), declaredLinks);
                 this.indexes = merge(objectExtend.getIndexes(), declaredIndexes);
                 this.permissions = mergePermissions(objectExtend.getPermissions(), declaredPermissions);
+                this.expand = merge(objectExtend.getExpand(), declaredExpand);
             } else {
                 this.transients = declaredTransients;
                 this.links = declaredLinks;
                 this.indexes = declaredIndexes;
                 this.permissions = declaredPermissions;
+                this.expand = declaredExpand;
             }
         } else {
             this.properties = declaredProperties;
@@ -341,6 +354,7 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
             this.links = declaredLinks;
             this.indexes = declaredIndexes;
             this.permissions = declaredPermissions;
+            this.expand = declaredExpand;
         }
     }
 
@@ -350,6 +364,14 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         merged.putAll(a);
         merged.putAll(b);
         return Collections.unmodifiableSortedMap(merged);
+    }
+
+    private static <T extends Comparable<T>> SortedSet<T> merge(final Set<T> a, final Set<T> b) {
+
+        final SortedSet<T> merged = new TreeSet<>();
+        merged.addAll(a);
+        merged.addAll(b);
+        return Collections.unmodifiableSortedSet(merged);
     }
 
     private static SortedMap<String, Permission> mergePermissions(final Map<String, Permission> a, final Map<String, Permission> b) {
@@ -382,7 +404,7 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
     }
 
     @Override
-    public Map<String, ? extends Member> getAllMembers() {
+    public Map<String, ? extends Member> getMembers() {
 
         final Map<String, Member> members = new HashMap<>();
         members.putAll(properties);
@@ -445,6 +467,9 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
 
     public Instance create(final Map<String, Object> value, final boolean expand, final boolean suppress) {
 
+        if(value == null) {
+            return null;
+        }
         final HashMap<String, Object> result = new HashMap<>(readProperties(value, expand, suppress));
         Instance.setSchema(result, this.getName());
         result.putAll(readMeta(value));

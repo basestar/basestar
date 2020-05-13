@@ -29,6 +29,7 @@ import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.PagedList;
+import io.basestar.util.PagingToken;
 import io.basestar.util.Path;
 import io.basestar.util.Sort;
 import org.apache.commons.csv.CSVFormat;
@@ -140,6 +141,64 @@ public abstract class TestStorage {
         final Comparator<Map<String, Object>> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
         final PagedList<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
         assertEquals(8, results.size());
+    }
+
+    // FIXME: needs to cover non-trivial case(s)
+
+    @Test
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public void testSortAndPaging() {
+
+        final LocalDateTime now = LocalDateTime.now();
+
+        // Horrible index usage, but high storage support
+        final String country = UUID.randomUUID().toString();
+        final Multimap<String, Map<String, Object>> init = HashMultimap.create();
+        for(int i = 0; i != 100; ++i) {
+
+            final String id = UUID.randomUUID().toString();
+
+            final Map<String, Object> data = new HashMap<>();
+            data.put("country", country);
+            data.put("city", UUID.randomUUID().toString());
+            data.put("zip", UUID.randomUUID().toString());
+            Instance.setId(data, id);
+            Instance.setVersion(data, 1L);
+            Instance.setCreated(data, now);
+            Instance.setUpdated(data, now);
+
+            init.put(ADDRESS, data);
+        }
+
+        final Storage storage = storage(namespace, init);
+
+        final ObjectSchema schema = namespace.requireObjectSchema(ADDRESS);
+
+        assumeConcurrentObjectWrite(storage, schema);
+
+        final List<Sort> sort = ImmutableList.of(
+                Sort.asc(Path.of("city")),
+                Sort.asc(Path.of("zip"))
+        );
+
+        final Expression expr = Expression.parse("country == '" + country + "'");
+        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, sort);
+        final Comparator<Map<String, Object>> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
+
+        final List<Map<String, Object>> results = new ArrayList<>();
+        PagingToken paging = null;
+        for(int i = 0; i != 10; ++i) {
+            final Pager<Map<String, Object>> pager = new Pager<>(comparator, sources, paging);
+            final PagedList<Map<String, Object>> page = pager.page(10).join();
+            results.addAll(page);
+            paging = page.getPaging();
+            assertNotNull(paging);
+        }
+        assertEquals(100, results.size());
+        final PagedList<Map<String, Object>> empty = new Pager<>(comparator, sources, paging).page(10).join();
+        assertEquals(0, empty.size());
+        assertNull(empty.getPaging());
+        assertTrue(Ordering.from(comparator).isOrdered(results));
     }
 
     @Test

@@ -43,7 +43,7 @@ public class IndexRecordDiff {
         return new IndexRecordDiff(
                 Sets.difference(after.keySet(), before.keySet()).stream()
                         .collect(Collectors.toMap(k -> k, after::get)),
-                Sets.union(after.keySet(), before.keySet()).stream()
+                Sets.intersection(after.keySet(), before.keySet()).stream()
                         .collect(Collectors.toMap(k -> k, after::get)),
                 Sets.difference(before.keySet(), after.keySet())
         );

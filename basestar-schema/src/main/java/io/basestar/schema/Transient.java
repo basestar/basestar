@@ -156,11 +156,22 @@ public class Transient implements Member {
         }
     }
 
+    @Override
+    public Set<Expression> refQueries(final String otherTypeName, final Path path) {
+
+        return Collections.emptySet();
+    }
+
     //FIXME
     @Override
-    public Use<?> typeOf(final Path path) {
+    @SuppressWarnings("unchecked")
+    public <T> Use<T> typeOf(final Path path) {
 
-        throw new UnsupportedOperationException();
+        if(type != null) {
+            return (Use<T>)type.typeOf(path);
+        } else {
+            throw new UnsupportedOperationException();
+        }
     }
 
     @Override

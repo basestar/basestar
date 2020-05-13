@@ -153,9 +153,10 @@ public class Property implements Member {
     }
 
     @Override
-    public Use<?> typeOf(final Path path) {
+    @SuppressWarnings("unchecked")
+    public <T> Use<T> typeOf(final Path path) {
 
-        return type.typeOf(path);
+        return (Use<T>)type.typeOf(path);
     }
 
     @Override
@@ -176,6 +177,18 @@ public class Property implements Member {
     public Object evaluateTransients(final Context context, final Object value, final Set<Path> expand) {
 
         return ((Use<Object>)type).evaluateTransients(context, value, expand);
+    }
+
+    @Override
+    public Set<Expression> refQueries(final String otherTypeName, final Path path) {
+
+        return type.refQueries(otherTypeName, path);
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<Ref, Long> refVersions(final Object value) {
+
+        return ((Use<Object>)type).refVersions(value);
     }
 
     public Object create(final Object value, final boolean expand, final boolean suppress) {

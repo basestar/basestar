@@ -37,6 +37,7 @@ import java.util.Collections;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class GraphQLTest {
 
@@ -86,6 +87,7 @@ public class GraphQLTest {
 
         final GraphQLSchemaConverter converter = new GraphQLSchemaConverter();
         final Namespace.Builder ns = converter.namespace(tdr);
+        assertNotNull(ns);
         ns.print(System.out);
     }
 

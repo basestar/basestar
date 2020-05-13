@@ -23,10 +23,8 @@ package io.basestar.schema.use;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
-import io.basestar.schema.Constraint;
-import io.basestar.schema.Expander;
-import io.basestar.schema.Instance;
-import io.basestar.schema.StructSchema;
+import io.basestar.expression.Expression;
+import io.basestar.schema.*;
 import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.util.Path;
 import lombok.Data;
@@ -124,6 +122,21 @@ public class UseStruct implements UseInstance {
         } else {
             return schema.validate(context, path, value);
         }
+    }
+
+    @Override
+    public Set<Expression> refQueries(final String otherTypeName, final Path path) {
+
+        return schema.refQueries(otherTypeName, path);
+    }
+
+    @Override
+    public Map<Ref, Long> refVersions(final Instance value) {
+
+        if(value == null) {
+            return Collections.emptyMap();
+        }
+        return schema.refVersions(value);
     }
 
 //    @Override

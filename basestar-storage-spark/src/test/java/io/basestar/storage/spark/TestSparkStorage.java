@@ -95,4 +95,10 @@ public class TestSparkStorage extends TestStorage {
     public void testDelete() {
 
     }
+
+    // FIXME
+    @Override
+    public void testSortAndPaging() {
+
+    }
 }

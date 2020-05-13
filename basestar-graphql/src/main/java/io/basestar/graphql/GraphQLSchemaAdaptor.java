@@ -41,6 +41,8 @@ public class GraphQLSchemaAdaptor {
 
     public static final String ARRAY_PREFIX = "Array";
 
+    public static final String PAGE_SUFFIX = "Page";
+
     public static final String INPUT_REF_TYPE = "InputRef";
 
     private final Namespace namespace;
@@ -62,6 +64,7 @@ public class GraphQLSchemaAdaptor {
                 registry.add(inputTypeDefinition(instanceSchema));
                 if(schema instanceof ObjectSchema) {
                     registry.add(inputExpressionTypeDefinition(instanceSchema));
+                    registry.add(pageTypeDefinition(instanceSchema));
                 }
             }
         });
@@ -78,6 +81,21 @@ public class GraphQLSchemaAdaptor {
         });
 //        registry.add(batchActionDefinition());
         return registry;
+    }
+
+    private ObjectTypeDefinition pageTypeDefinition(final InstanceSchema instanceSchema) {
+
+        final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
+        builder.name(instanceSchema.getName() + PAGE_SUFFIX);
+        builder.fieldDefinition(FieldDefinition.newFieldDefinition()
+                .name("items")
+                .type(new ListType(new TypeName(instanceSchema.getName())))
+                .build());
+        builder.fieldDefinition(FieldDefinition.newFieldDefinition()
+                .name("paging")
+                .type(new TypeName(GraphQLUtils.STRING_TYPE))
+                .build());
+        return builder.build();
     }
 
     private ObjectTypeDefinition queryDefinition() {
@@ -112,9 +130,15 @@ public class GraphQLSchemaAdaptor {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
         builder.name("query" + schema.getName());
-        builder.type(new ListType(new TypeName(schema.getName())));
+        builder.type(new TypeName(schema.getName() + PAGE_SUFFIX));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name("query").type(new TypeName(GraphQLUtils.STRING_TYPE)).build());
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name("sort").type(new ListType(new TypeName(GraphQLUtils.STRING_TYPE))).build());
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name("count").type(new TypeName(GraphQLUtils.INT_TYPE)).build());
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name("paging").type(new TypeName(GraphQLUtils.STRING_TYPE)).build());
         return builder.build();
     }
 
@@ -122,9 +146,13 @@ public class GraphQLSchemaAdaptor {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
         builder.name("query" + schema.getName() + GraphQLUtils.ucFirst(link.getName()));
-        builder.type(new ListType(new TypeName(link.getSchema().getName())));
+        builder.type(new TypeName(link.getSchema().getName() + PAGE_SUFFIX));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(Reserved.ID).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build());
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name("count").type(new TypeName(GraphQLUtils.INT_TYPE)).build());
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name("paging").type(new TypeName(GraphQLUtils.STRING_TYPE)).build());
         return builder.build();
     }
 

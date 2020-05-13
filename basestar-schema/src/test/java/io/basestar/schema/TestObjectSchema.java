@@ -22,6 +22,9 @@ package io.basestar.schema;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.basestar.expression.Expression;
+import io.basestar.expression.compare.Eq;
+import io.basestar.expression.constant.PathConstant;
 import io.basestar.util.PagedList;
 import io.basestar.util.Path;
 import org.junit.jupiter.api.Test;
@@ -92,6 +95,17 @@ public class TestObjectSchema {
         final Map collapsedRef = (Map)collapsed.get("ref");
         assertNull(collapsedRef.get(Reserved.SCHEMA));
         assertNotNull(collapsedRef.get(Reserved.ID));
+    }
 
+    @Test
+    public void testRefQueries() throws IOException {
+
+        final Namespace namespace = Namespace.load(TestObjectSchema.class.getResource("schema.yml"));
+
+        final ObjectSchema schema = namespace.requireObjectSchema("Post");
+
+        final Set<Expression> queries = schema.refQueries("Post");
+
+        assertEquals(ImmutableSet.of(new Eq(new PathConstant(Path.of("ref", "id")), new PathConstant(Path.of(Reserved.THIS, Reserved.ID)))), queries);
     }
 }

@@ -29,7 +29,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @EqualsAndHashCode(callSuper = true)
-public class Path extends AbstractPath<Path> {
+public class Path extends AbstractPath<Path> implements Comparable<Path> {
 
     public static final Path EMPTY = Path.of();
 
@@ -95,5 +95,10 @@ public class Path extends AbstractPath<Path> {
     public static Path empty() {
 
         return new Path(Collections.emptyList());
+    }
+
+    public boolean equalsSingle(final String path) {
+
+        return size() == 1 && path.equals(get(0));
     }
 }

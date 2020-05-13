@@ -25,6 +25,9 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import io.basestar.expression.Context;
+import io.basestar.expression.Expression;
+import io.basestar.expression.compare.Eq;
+import io.basestar.expression.constant.PathConstant;
 import io.basestar.schema.*;
 import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.util.Path;
@@ -176,5 +179,31 @@ public class UseRef implements UseInstance {
     public String toString() {
 
         return schema.getName();
+    }
+
+    @Override
+    public Set<Expression> refQueries(final String otherTypeName, final Path path) {
+
+        if(schema.getName().equals(otherTypeName)) {
+            return Collections.singleton(new Eq(new PathConstant(path.with(Reserved.ID)), new PathConstant(Path.of(Reserved.THIS, Reserved.ID))));
+        } else {
+            return Collections.emptySet();
+        }
+    }
+
+    @Override
+    public Map<Ref, Long> refVersions(final Instance value) {
+
+        if(value == null) {
+            return Collections.emptyMap();
+        } else {
+            final String id = value.getId();
+            final Long version = value.getVersion();
+            if(id == null || version == null) {
+                return Collections.emptyMap();
+            } else {
+                return Collections.singletonMap(Ref.of(schema.getName(), id), version);
+            }
+        }
     }
 }

@@ -22,6 +22,7 @@ package io.basestar.schema;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.basestar.expression.Context;
+import io.basestar.expression.Expression;
 import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.use.Use;
 import io.basestar.util.Path;
@@ -48,13 +49,15 @@ public interface Member extends Named, Described, Serializable, Extendable {
 
     Set<Path> requiredExpand(Set<Path> paths);
 
-    Use<?> typeOf(Path path);
+    <T> Use<T> typeOf(Path path);
 
     Set<Path> transientExpand(Path path, Set<Path> expand);
 
     Object applyVisibility(Context context, Object value);
 
     Object evaluateTransients(Context context, Object value, Set<Path> expand);
+
+    Set<Expression> refQueries(String otherTypeName, Path path);
 
     default boolean isVisible(final Context context, final Object value) {
 
@@ -90,7 +93,7 @@ public interface Member extends Named, Described, Serializable, Extendable {
         Map<String, ? extends Member> getDeclaredMembers();
 
         @JsonIgnore
-        Map<String, ? extends Member> getAllMembers();
+        Map<String, ? extends Member> getMembers();
 
         Member getMember(String name, boolean inherited);
 

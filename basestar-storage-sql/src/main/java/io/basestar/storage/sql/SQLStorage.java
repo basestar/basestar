@@ -34,8 +34,10 @@ import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.DisjunctionVisitor;
 import io.basestar.storage.query.Range;
 import io.basestar.storage.query.RangeVisitor;
+import io.basestar.storage.util.KeysetPagingUtils;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.PagedList;
+import io.basestar.util.PagingToken;
 import io.basestar.util.Path;
 import io.basestar.util.Sort;
 import lombok.Data;
@@ -146,18 +148,39 @@ public class SQLStorage implements Storage {
                     })
                     .collect(Collectors.toList());
 
+
             final Index index = best;
             sources.add((count, token) ->
-                    withContext(context -> context.select(DSL.asterisk())
-                            .from(index == null ? objectTableName(schema) : indexTableName(schema, index))
-                            .where(condition).orderBy(orderFields)
-                            .limit(DSL.inline(count)).fetchAsync().thenApply(results -> {
+                    withContext(context -> {
 
-                                final List<Map<String, Object>> objects = all(schema, results);
+                        final SelectSeekStepN<Record> select = context.select(DSL.asterisk())
+                                .from(index == null ? objectTableName(schema) : indexTableName(schema, index))
+                                .where(condition).orderBy(orderFields);
 
-                                return new PagedList<>(objects, null);
+                        final SelectForUpdateStep<Record> seek;
+                        if(token == null) {
+                            seek = select.limit(DSL.inline(count));
+                        } else {
+                            final List<Object> values = KeysetPagingUtils.keysetValues(schema, sort, token);
+                            seek = select.seek(values.toArray(new Object[0])).limit(DSL.inline(count));
+                        }
 
-                            })));
+                        return seek.fetchAsync().thenApply(results -> {
+
+                                    final List<Map<String, Object>> objects = all(schema, results);
+
+                                    final PagingToken nextToken;
+                                    if(objects.size() < count) {
+                                        nextToken = null;
+                                    } else {
+                                        final Map<String, Object> last = objects.get(objects.size() - 1);
+                                        nextToken = KeysetPagingUtils.keysetPagingToken(schema, sort, last);
+                                    }
+
+                                    return new PagedList<>(objects, nextToken);
+                                });
+
+                    }));
         }
 
         return sources;

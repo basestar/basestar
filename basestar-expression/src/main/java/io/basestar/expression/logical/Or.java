@@ -81,6 +81,8 @@ public class Or implements Expression {
         }
         if(constant) {
             return new Constant(new Or(terms).evaluate(context));
+        } else if(terms.size() == 1) {
+            return terms.get(0);
         } else if(changed) {
             return new Or(terms);
         } else {

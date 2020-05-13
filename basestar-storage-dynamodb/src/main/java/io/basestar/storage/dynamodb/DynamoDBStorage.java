@@ -54,8 +54,6 @@ import java.util.stream.Stream;
 @Slf4j
 public class DynamoDBStorage extends PartitionedStorage {
 
-    private static final int READ_BATCH = 100;
-
     private static final int WRITE_BATCH = 25;
 
     private static final String OVERSIZE_KEY = Reserved.PREFIX + "oversize";

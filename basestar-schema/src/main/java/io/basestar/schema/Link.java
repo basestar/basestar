@@ -158,7 +158,7 @@ public class Link implements Member {
 
     //FIXME
     @Override
-    public Use<?> typeOf(final Path path) {
+    public <T> Use<T> typeOf(final Path path) {
 
         throw new UnsupportedOperationException();
     }
@@ -181,6 +181,13 @@ public class Link implements Member {
     public Object evaluateTransients(final Context context, final Object value, final Set<Path> expand) {
 
         return transform((PagedList<Instance>)value, before -> schema.evaluateTransients(context, before, expand));
+    }
+
+    @Override
+    public Set<Expression> refQueries(final String otherTypeName, final Path path) {
+
+        // FIXME
+        return Collections.emptySet();
     }
 
     private PagedList<Instance> transform(final PagedList<Instance> value, final Function<Instance, Instance> fn) {

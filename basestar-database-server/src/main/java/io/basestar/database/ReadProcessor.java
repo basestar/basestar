@@ -333,7 +333,7 @@ public class ReadProcessor {
         if(needed.isEmpty()) {
             return CompletableFuture.completedFuture(data.map(v -> {
                 final ObjectSchema schema = objectSchema(Instance.getSchema(v));
-                return schema.create(v);
+                return schema.create(v, true, true);
             }));
         } else {
             final Storage.ReadTransaction readTransaction = storage.read(Consistency.NONE);
@@ -355,7 +355,7 @@ public class ReadProcessor {
                     final RefKey key = RefKey.from(v);
                     final Map<String, Object> result = MoreObjects.firstNonNull(mapped.get(key), v);
                     final ObjectSchema schema = objectSchema(Instance.getSchema(result));
-                    return schema.create(result);
+                    return schema.create(result, true, true);
                 });
             });
         }

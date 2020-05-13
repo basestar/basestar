@@ -42,6 +42,7 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedMap;
+import java.util.function.BiConsumer;
 
 //import io.basestar.util.Key;
 
@@ -202,6 +203,42 @@ public class Namespace implements Serializable, Schema.Resolver {
         try(final ObjectInputStream ois = new ObjectInputStream(is)) {
             return (Namespace)ois.readObject();
         }
+    }
+
+    public void forEachEnumSchema(final BiConsumer<? super String, ? super EnumSchema> fn) {
+
+        schemas.forEach((k, v) -> {
+            if(v instanceof EnumSchema) {
+                fn.accept(k, (EnumSchema)v);
+            }
+        });
+    }
+
+    public void forEachInstanceSchema(final BiConsumer<? super String, ? super InstanceSchema> fn) {
+
+        schemas.forEach((k, v) -> {
+            if(v instanceof InstanceSchema) {
+                fn.accept(k, (InstanceSchema)v);
+            }
+        });
+    }
+
+    public void forEachStructSchema(final BiConsumer<? super String, ? super StructSchema> fn) {
+
+        schemas.forEach((k, v) -> {
+            if(v instanceof StructSchema) {
+                fn.accept(k, (StructSchema)v);
+            }
+        });
+    }
+
+    public void forEachObjectSchema(final BiConsumer<? super String, ? super ObjectSchema> fn) {
+
+        schemas.forEach((k, v) -> {
+            if(v instanceof ObjectSchema) {
+                fn.accept(k, (ObjectSchema)v);
+            }
+        });
     }
 
 //    public ObjectSchema schemaOf(final Key key) {

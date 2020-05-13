@@ -23,16 +23,19 @@ package io.basestar.schema.use;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
+import io.basestar.expression.Expression;
+import io.basestar.expression.constant.PathConstant;
+import io.basestar.expression.iterate.ForAny;
+import io.basestar.expression.iterate.Of;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.Expander;
 import io.basestar.schema.Instance;
+import io.basestar.schema.Ref;
 import io.basestar.util.Path;
 
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -61,6 +64,27 @@ public interface UseCollection<V, T extends Collection<V>> extends Use<T> {
         for(final V v : value) {
             type.serialize(v, out);
         }
+    }
+
+    @Override
+    default Set<Expression> refQueries(final String otherTypeName, final Path path) {
+
+        final int hash = System.identityHashCode(this);
+        final String v = "v" + hash;
+        return getType().refQueries(otherTypeName, Path.of(v)).stream().map(
+                q -> new ForAny(q, new Of(v, new PathConstant(path)))
+        ).collect(Collectors.toSet());
+    }
+
+    @Override
+    default Map<Ref, Long> refVersions(final T value) {
+
+        if(value == null) {
+            return Collections.emptyMap();
+        }
+        final Map<Ref, Long> versions = new HashMap<>();
+        value.forEach(v -> versions.putAll(getType().refVersions(v)));
+        return versions;
     }
 
     @Override

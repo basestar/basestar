@@ -25,6 +25,7 @@ import io.basestar.schema.Consistency;
 import io.basestar.schema.Index;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
+import io.basestar.util.Nullsafe;
 import lombok.Data;
 import software.amazon.awssdk.services.dynamodb.model.*;
 
@@ -88,8 +89,8 @@ public interface DynamoDBRouting extends Serializable {
         @lombok.Builder(builderClassName = "Builder")
         SingleTable(final String tablePrefix, final String dataPrefix) {
 
-            this.tablePrefix = tablePrefix;
-            this.dataPrefix = dataPrefix;
+            this.tablePrefix = Nullsafe.option(tablePrefix);
+            this.dataPrefix = Nullsafe.option(dataPrefix);
         }
 
         @Override
