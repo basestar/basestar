@@ -75,7 +75,12 @@ public class ElasticsearchExpressionVisitor implements ExpressionVisitor.Default
         if(path.size() == 1) {
             return QueryBuilders.termQuery(path.toString(), value);
         } else {
-            return QueryBuilders.nestedQuery(path.withoutLast().toString(), QueryBuilders.termQuery(path.toString(), value), ScoreMode.Avg);
+            QueryBuilder query = QueryBuilders.termQuery(path.toString(), value);
+            for(int i = 0; i != path.size() - 1; ++i) {
+                final Path nestedPath = path.subPath(0, path.size() - (i + 1));
+                query = QueryBuilders.nestedQuery(nestedPath.toString(), query, ScoreMode.Avg);
+            }
+            return query;
         }
     }
 

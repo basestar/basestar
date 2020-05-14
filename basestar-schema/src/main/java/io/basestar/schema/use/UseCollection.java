@@ -67,13 +67,19 @@ public interface UseCollection<V, T extends Collection<V>> extends Use<T> {
     }
 
     @Override
-    default Set<Expression> refQueries(final String otherTypeName, final Path path) {
+    default Set<Expression> refQueries(final String otherTypeName, final Set<Path> expand, final Path path) {
 
         final int hash = System.identityHashCode(this);
         final String v = "v" + hash;
-        return getType().refQueries(otherTypeName, Path.of(v)).stream().map(
+        return getType().refQueries(otherTypeName, expand, Path.of(v)).stream().map(
                 q -> new ForAny(q, new Of(v, new PathConstant(path)))
         ).collect(Collectors.toSet());
+    }
+
+    @Override
+    default Set<Path> refExpand(final String otherTypeName, final Set<Path> expand) {
+
+        return getType().refExpand(otherTypeName, expand);
     }
 
     @Override

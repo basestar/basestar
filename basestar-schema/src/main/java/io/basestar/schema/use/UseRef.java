@@ -36,10 +36,7 @@ import lombok.Data;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Object Type
@@ -182,10 +179,23 @@ public class UseRef implements UseInstance {
     }
 
     @Override
-    public Set<Expression> refQueries(final String otherTypeName, final Path path) {
+    public Set<Expression> refQueries(final String otherTypeName, final Set<Path> expand, final Path path) {
+
+        final Set<Expression> queries = new HashSet<>();
+        if(schema.getName().equals(otherTypeName)) {
+            queries.add(new Eq(new PathConstant(path.with(Reserved.ID)), new PathConstant(Path.of(Reserved.THIS, Reserved.ID))));
+        }
+        if(expand != null && !expand.isEmpty()) {
+            queries.addAll(schema.refQueries(otherTypeName, expand, path));
+        }
+        return queries;
+    }
+
+    @Override
+    public Set<Path> refExpand(final String otherTypeName, final Set<Path> expand) {
 
         if(schema.getName().equals(otherTypeName)) {
-            return Collections.singleton(new Eq(new PathConstant(path.with(Reserved.ID)), new PathConstant(Path.of(Reserved.THIS, Reserved.ID))));
+            return expand;
         } else {
             return Collections.emptySet();
         }

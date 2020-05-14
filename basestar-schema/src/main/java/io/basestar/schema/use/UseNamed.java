@@ -175,7 +175,13 @@ public interface UseNamed<T> extends Use<T> {
         }
 
         @Override
-        public Set<Expression> refQueries(final String otherTypeName, final Path path) {
+        public Set<Expression> refQueries(final String otherTypeName, final Set<Path> expand, final Path path) {
+
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Set<Path> refExpand(final String otherTypeName, final Set<Path> expand) {
 
             throw new UnsupportedOperationException();
         }

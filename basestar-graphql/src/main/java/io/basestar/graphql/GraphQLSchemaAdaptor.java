@@ -348,7 +348,7 @@ public class GraphQLSchemaAdaptor {
             builder.description(new Description(property.getDescription(), null, true));
         }
         final Type<?> type = type(property.getType());
-        builder.type(property.isRequired() ? new NonNullType(type) : type);
+        builder.type(type);
         return builder.build();
     }
 
@@ -357,9 +357,9 @@ public class GraphQLSchemaAdaptor {
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
         builder.name(name);
         if(Reserved.ID.equals(name)) {
-            builder.type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE)));
+            builder.type(new TypeName(GraphQLUtils.ID_TYPE));
         } else {
-            builder.type(new NonNullType(type(type)));
+            builder.type(type(type));
         }
         return builder.build();
     }

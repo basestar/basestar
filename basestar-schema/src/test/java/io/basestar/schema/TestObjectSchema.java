@@ -104,8 +104,10 @@ public class TestObjectSchema {
 
         final ObjectSchema schema = namespace.requireObjectSchema("Post");
 
-        final Set<Expression> queries = schema.refQueries("Post");
-
+        final Set<Expression> queries = schema.refQueries("Post", ImmutableSet.of(Path.of("ref")));
         assertEquals(ImmutableSet.of(new Eq(new PathConstant(Path.of("ref", "id")), new PathConstant(Path.of(Reserved.THIS, Reserved.ID)))), queries);
+
+        final Set<Expression> nonQueries = schema.refQueries("Post", ImmutableSet.of());
+        assertEquals(ImmutableSet.of(), nonQueries);
     }
 }

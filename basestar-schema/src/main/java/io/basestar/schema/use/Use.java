@@ -110,7 +110,9 @@ public interface Use<T> extends Serializable {
 
     io.swagger.v3.oas.models.media.Schema<?> openApi();
 
-    Set<Expression> refQueries(String otherTypeName, Path path);
+    Set<Expression> refQueries(String otherTypeName, Set<Path> expand, Path path);
+
+    Set<Path> refExpand(String otherTypeName, Set<Path> expand);
 
     Map<Ref, Long> refVersions(T value);
 

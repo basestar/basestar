@@ -184,7 +184,14 @@ public class Link implements Member {
     }
 
     @Override
-    public Set<Expression> refQueries(final String otherTypeName, final Path path) {
+    public Set<Expression> refQueries(final String otherTypeName, final Set<Path> expand, final Path path) {
+
+        // FIXME
+        return Collections.emptySet();
+    }
+
+    @Override
+    public Set<Path> refExpand(final String otherTypeName, final Set<Path> expand) {
 
         // FIXME
         return Collections.emptySet();

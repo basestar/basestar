@@ -710,36 +710,44 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         read.readObject(refSchema, refId);
         return read.read().thenCompose(readResponse -> {
             final Instance before = schema.create(readResponse.getObject(schema, id), true, true);
-            final Instance refAfter = refSchema.create(readResponse.getObject(refSchema, refId), true, true);
             if(before != null) {
-                final Long version = Instance.getVersion(before);
-                assert version != null;
-                final Instance after = schema.expand(before, new Expander() {
-                    @Override
-                    public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Path> expand) {
+                final Set<Path> refExpand = schema.refExpand(refSchema.getName(), schema.getExpand());
+                final Instance refAfter = refSchema.create(readResponse.getObject(refSchema, refId), true, true);
+                return expand(context(Caller.SUPER), refAfter, refExpand).thenCompose(expandedRefAfter -> {
 
-                        if(schema.getName().equals(refSchema.getName())) {
-                            if(refId.equals(Instance.getId(ref))) {
-                                if(refAfter == null) {
-                                    return ObjectSchema.ref(refId);
-                                } else {
-                                    return refAfter;
+                    final Long version = Instance.getVersion(before);
+                    assert version != null;
+                    final Instance after = schema.expand(before, new Expander() {
+                        @Override
+                        public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Path> expand) {
+
+                            if (ref == null) {
+                                return null;
+                            }
+                            if (schema.getName().equals(refSchema.getName())) {
+                                if (refId.equals(Instance.getId(ref))) {
+                                    if (refAfter == null) {
+                                        return ObjectSchema.ref(refId);
+                                    } else {
+                                        return schema.expand(refAfter, Expander.noop(), expand);
+                                    }
                                 }
                             }
+                            return schema.expand(ref, this, expand);
                         }
-                        return ref;
-                    }
 
-                    @Override
-                    public PagedList<Instance> expandLink(final Link link, final PagedList<Instance> value, final Set<Path> expand) {
+                        @Override
+                        public PagedList<Instance> expandLink(final Link link, final PagedList<Instance> value, final Set<Path> expand) {
 
-                        return value;
-                    }
-                }, schema.getExpand());
-                final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC);
-                write.updateObject(schema, id, before, after);
-                return write.commit()
-                        .thenCompose(ignored -> emitter.emit(ObjectRefreshedEvent.of(schema.getName(), id, version, before, after)));
+                            return value;
+                        }
+                    }, schema.getExpand());
+                    final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC);
+                    write.updateObject(schema, id, before, after);
+                    return write.commit()
+                            .thenCompose(ignored -> emitter.emit(ObjectRefreshedEvent.of(schema.getName(), id, version, before, after)));
+
+                });
             } else {
                 return CompletableFuture.completedFuture(null);
             }
@@ -750,7 +758,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         final Set<Event> events = new HashSet<>();
         namespace.forEachObjectSchema((k, v) -> {
-            final Set<Expression> queries = v.refQueries(schema.getName());
+            final Set<Expression> queries = v.refQueries(schema.getName(), v.getExpand());
             if(!queries.isEmpty()) {
                 final Or merged = new Or(queries.toArray(new Expression[0]));
                 final Expression bound = merged.bind(context(Caller.ANON, ImmutableMap.of(Reserved.THIS, ObjectSchema.ref(id))));

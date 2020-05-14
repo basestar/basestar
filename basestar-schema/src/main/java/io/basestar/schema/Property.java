@@ -180,9 +180,15 @@ public class Property implements Member {
     }
 
     @Override
-    public Set<Expression> refQueries(final String otherTypeName, final Path path) {
+    public Set<Expression> refQueries(final String otherTypeName, final Set<Path> expand, final Path path) {
 
-        return type.refQueries(otherTypeName, path);
+        return type.refQueries(otherTypeName, expand, path);
+    }
+
+    @Override
+    public Set<Path> refExpand(final String otherTypeName, final Set<Path> expand) {
+
+        return type.refExpand(otherTypeName, expand);
     }
 
     @SuppressWarnings("unchecked")

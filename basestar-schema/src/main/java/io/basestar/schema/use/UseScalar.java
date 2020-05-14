@@ -58,7 +58,13 @@ public interface UseScalar<T> extends Use<T> {
     }
 
     @Override
-    default Set<Expression> refQueries(final String otherTypeName, final Path path) {
+    default Set<Expression> refQueries(final String otherTypeName, final Set<Path> expand, final Path path) {
+
+        return Collections.emptySet();
+    }
+
+    @Override
+    default Set<Path> refExpand(final String otherTypeName, final Set<Path> expand) {
 
         return Collections.emptySet();
     }

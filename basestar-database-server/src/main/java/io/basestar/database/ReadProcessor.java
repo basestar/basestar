@@ -132,7 +132,15 @@ public class ReadProcessor {
             return pager.page(count)
                     .thenApply(results -> {
                         // Expressions that could not be pushed down are applied after auto-paging.
-                        return results.filter(instance -> expression.evaluatePredicate(context.with(instance)));
+                        return results.filter(instance -> {
+                            try {
+                                return expression.evaluatePredicate(context.with(instance));
+                            } catch (final Exception e) {
+                                // FIXME:
+                                log.info("Failed to evaluate predicate", e);
+                                return false;
+                            }
+                        });
                     });
         }
     }

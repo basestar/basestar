@@ -144,14 +144,22 @@ public class UseMap<T> implements Use<Map<String, T>> {
     }
 
     @Override
-    public Set<Expression> refQueries(final String otherTypeName, final Path path) {
+    public Set<Expression> refQueries(final String otherTypeName, final Set<Path> expand, final Path path) {
 
         final int hash = System.identityHashCode(this);
         final String k = "k" + hash;
         final String v = "v" + hash;
-        return getType().refQueries(otherTypeName, Path.of(v)).stream().map(
+        // FIXME: expand
+        return getType().refQueries(otherTypeName, expand, Path.of(v)).stream().map(
                 q -> new ForAny(q, new Of(k, v, new PathConstant(path)))
         ).collect(Collectors.toSet());
+    }
+
+    @Override
+    public Set<Path> refExpand(final String otherTypeName, final Set<Path> expand) {
+
+        // FIXME: expand
+        return getType().refExpand(otherTypeName, expand);
     }
 
     @Override

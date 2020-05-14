@@ -57,7 +57,9 @@ public interface Member extends Named, Described, Serializable, Extendable {
 
     Object evaluateTransients(Context context, Object value, Set<Path> expand);
 
-    Set<Expression> refQueries(String otherTypeName, Path path);
+    Set<Expression> refQueries(String otherTypeName, Set<Path> expand, Path path);
+
+    Set<Path> refExpand(String otherTypeName, Set<Path> expand);
 
     default boolean isVisible(final Context context, final Object value) {
 

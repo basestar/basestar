@@ -245,15 +245,26 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         return data;
     }
 
-    default Set<Expression> refQueries(final String otherTypeName) {
+    default Set<Expression> refQueries(final String otherTypeName, final Set<Path> expand) {
 
-        return refQueries(otherTypeName, Path.empty());
+        return refQueries(otherTypeName, expand, Path.empty());
     }
 
-    default Set<Expression> refQueries(final String otherTypeName, final Path path) {
+    default Set<Expression> refQueries(final String otherTypeName, final Set<Path> expand, final Path path) {
 
+        final Map<String, Set<Path>> branches = Path.branch(expand);
         return getMembers().entrySet().stream()
-                .flatMap(e -> e.getValue().refQueries(otherTypeName, path.with(e.getKey())).stream())
+                .filter(e -> branches.containsKey(e.getKey()))
+                .flatMap(e -> e.getValue().refQueries(otherTypeName, branches.get(e.getKey()), path.with(e.getKey())).stream())
+                .collect(Collectors.toSet());
+    }
+
+    default Set<Path> refExpand(final String otherTypeName, final Set<Path> expand) {
+
+        final Map<String, Set<Path>> branches = Path.branch(expand);
+        return getMembers().entrySet().stream()
+                .filter(e -> branches.containsKey(e.getKey()))
+                .flatMap(e -> e.getValue().refExpand(otherTypeName, branches.get(e.getKey())).stream())
                 .collect(Collectors.toSet());
     }
 

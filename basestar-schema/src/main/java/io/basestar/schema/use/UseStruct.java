@@ -125,9 +125,15 @@ public class UseStruct implements UseInstance {
     }
 
     @Override
-    public Set<Expression> refQueries(final String otherTypeName, final Path path) {
+    public Set<Expression> refQueries(final String otherTypeName, final Set<Path> expand, final Path path) {
 
-        return schema.refQueries(otherTypeName, path);
+        return schema.refQueries(otherTypeName, expand, path);
+    }
+
+    @Override
+    public Set<Path> refExpand(final String otherTypeName, final Set<Path> expand) {
+
+        return schema.refExpand(otherTypeName, expand);
     }
 
     @Override
