@@ -56,7 +56,7 @@ public class Text {
                     }
                 }
             }
-            if(lower.endsWith("on")) {
+            if(lower.length() > 2 && lower.endsWith("on") && !lower.endsWith("ion")) {
                 return caseConcat(str.substring(0, str.length() - 2), "a");
             }
             return caseConcat(str, "s");

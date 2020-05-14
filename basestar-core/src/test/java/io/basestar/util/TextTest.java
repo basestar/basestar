@@ -48,5 +48,6 @@ public class TextTest {
         assertEquals("potatoes", Text.plural("potato"));
         assertEquals("analyses", Text.plural("analysis"));
         assertEquals("phenomena", Text.plural("phenomenon"));
+        assertEquals("organizations", Text.plural("organization"));
     }
 }

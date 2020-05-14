@@ -1,7 +1,11 @@
 package io.basestar.database.event;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.basestar.event.Event;
 import io.basestar.expression.Expression;
+import io.basestar.jackson.serde.ExpressionDeseriaizer;
 import io.basestar.schema.Ref;
 import io.basestar.util.PagingToken;
 import lombok.Data;
@@ -16,6 +20,8 @@ public class RefQueryEvent implements RefEvent {
 
     private String schema;
 
+    @JsonSerialize(using = ToStringSerializer.class)
+    @JsonDeserialize(using = ExpressionDeseriaizer.class)
     private Expression expression;
 
     private PagingToken paging;

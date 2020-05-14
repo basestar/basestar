@@ -1,5 +1,7 @@
 package io.basestar.schema;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 @Data
@@ -9,7 +11,8 @@ public class Ref {
 
     private final String id;
 
-    public static Ref of(final String schema, final String id) {
+    @JsonCreator
+    public static Ref of(@JsonProperty("schema") final String schema, @JsonProperty("id") final String id) {
 
         return new Ref(schema, id);
     }

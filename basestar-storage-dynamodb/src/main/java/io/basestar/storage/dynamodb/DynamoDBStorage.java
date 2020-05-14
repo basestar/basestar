@@ -167,7 +167,7 @@ public class DynamoDBStorage extends PartitionedStorage {
                 .thenApply(bytes -> bytes == null ? null : DynamoDBUtils.fromOversizeBytes(bytes));
     }
 
-    private CompletableFuture<BatchResponse> fromItems(final Map<String, ObjectSchema> tableToSchema, final Map<String, List<Map<String, AttributeValue>>> items) {
+    private CompletableFuture<BatchResponse> fromItems(final Map<Map<String, AttributeValue>, ObjectSchema> keyToSchema, final Map<String, List<Map<String, AttributeValue>>> items) {
 
         // could implement read-batching here, but probably not worth it since
         // probable oversize storage engine (S3) doesn't support it meaningfully
@@ -175,9 +175,9 @@ public class DynamoDBStorage extends PartitionedStorage {
         final Map<BatchResponse.Key, CompletableFuture<Map<String, Object>>> oversize = new HashMap<>();
         final Map<BatchResponse.Key, Map<String, Object>> ok = new HashMap<>();
         for(final Map.Entry<String, List<Map<String, AttributeValue>>> entry : items.entrySet()) {
-            final ObjectSchema schema = tableToSchema.get(entry.getKey());
             for (final Map<String, AttributeValue> item : entry.getValue()) {
                 final Map<String, Object> object = DynamoDBUtils.fromItem(item);
+                final ObjectSchema schema = matchKeyToSchema(keyToSchema, item);
                 final BatchResponse.Key key = BatchResponse.Key.from(schema.getName(), object);
                 final String oversizeKey = checkOversize(object);
                 if (oversizeKey != null) {
@@ -198,6 +198,26 @@ public class DynamoDBStorage extends PartitionedStorage {
                         return new BatchResponse.Basic(all);
                     });
         }
+    }
+
+    private ObjectSchema matchKeyToSchema(final Map<Map<String, AttributeValue>, ObjectSchema> keyToSchema, final Map<String, AttributeValue> item) {
+
+        for(final Map.Entry<Map<String, AttributeValue>, ObjectSchema> entry : keyToSchema.entrySet()) {
+            if(keyMatches(entry.getKey(), item)) {
+                return entry.getValue();
+            }
+        }
+        throw new IllegalStateException("Schema not found for key");
+    }
+
+    private boolean keyMatches(final Map<String, AttributeValue> key, final Map<String, AttributeValue> item) {
+
+        for(final Map.Entry<String, AttributeValue> entry : key.entrySet()) {
+            if(!Objects.equals(entry.getValue(), item.get(entry.getKey()))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public static String checkOversize(final Map<String, Object> item) {
@@ -290,15 +310,15 @@ public class DynamoDBStorage extends PartitionedStorage {
 
             private final Map<String, List<Map<String, AttributeValue>>> items = new HashMap<>();
 
-            private final Map<String, ObjectSchema> tableToSchema = new HashMap<>();
+            private final Map<Map<String, AttributeValue>, ObjectSchema> keyToSchema = new HashMap<>();
 
             @Override
             public ReadTransaction readObject(final ObjectSchema schema, final String id) {
 
                 final String tableName = routing.objectTableName(schema);
-                tableToSchema.put(tableName, schema);
-                items.computeIfAbsent(tableName, ignored -> new ArrayList<>())
-                        .add(objectKey(routing, schema, id));
+                final Map<String, AttributeValue> key = objectKey(routing, schema, id);
+                keyToSchema.put(key, schema);
+                items.computeIfAbsent(tableName, ignored -> new ArrayList<>()).add(key);
                 return this;
             }
 
@@ -306,9 +326,9 @@ public class DynamoDBStorage extends PartitionedStorage {
             public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version) {
 
                 final String tableName = routing.historyTableName(schema);
-                tableToSchema.put(tableName, schema);
-                items.computeIfAbsent(tableName, ignored -> new ArrayList<>())
-                        .add(historyKey(routing, schema, id, version));
+                final Map<String, AttributeValue> key = historyKey(routing, schema, id, version);
+                keyToSchema.put(key, schema);
+                items.computeIfAbsent(tableName, ignored -> new ArrayList<>()).add(key);
                 return this;
             }
 
@@ -333,7 +353,7 @@ public class DynamoDBStorage extends PartitionedStorage {
 
                 return client.batchGetItem(request)
                         .thenCompose(result -> read(result.unprocessedKeys())
-                                .thenCompose(rest -> fromItems(tableToSchema, result.responses())
+                                .thenCompose(rest -> fromItems(keyToSchema, result.responses())
                                         .thenApply(from -> BatchResponse.merge(Stream.of(rest, from)))));
             }
         };

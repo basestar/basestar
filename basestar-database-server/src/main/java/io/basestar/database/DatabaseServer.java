@@ -603,7 +603,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                 return Stream.empty();
             }
         }).collect(Collectors.toSet()));
-        events.addAll(refQueryEvents(schema, id, after));
+        events.addAll(refQueryEvents(schema, id));
         return emitter.emit(events);
     }
 
@@ -615,7 +615,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final Map<String, Object> after = event.getAfter();
         final Set<Event> events = new HashSet<>();
         events.addAll(refreshObjectEvents(schema, id, before, after));
-        events.addAll(refQueryEvents(schema, id, after));
+        events.addAll(refQueryEvents(schema, id));
         return emitter.emit(events);
     }
 
@@ -626,16 +626,17 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final String id = event.getId();
         final long version = event.getVersion();
         final Map<String, Object> before = event.getBefore();
-        return emitter.emit(schema.getIndexes().values().stream().flatMap(index -> {
+        final Set<Event> events = new HashSet<>();
+        schema.getIndexes().values().forEach(index -> {
             final Consistency best = traits.getIndexConsistency(index.isMultiValue());
             if(index.getConsistency(best).isAsync()) {
                 final Map<Index.Key, Map<String, Object>> records = index.readValues(before);
-                return records.keySet().stream()
-                        .map(key -> AsyncIndexDeletedEvent.of(schema.getName(), index.getName(), id, version, key));
-            } else {
-                return Stream.empty();
+                records.keySet()
+                        .forEach(key -> events.add(AsyncIndexDeletedEvent.of(schema.getName(), index.getName(), id, version, key)));
             }
-        }).collect(Collectors.toSet()));
+        });
+        events.addAll(refQueryEvents(schema, id));
+        return emitter.emit(events);
     }
 
     protected CompletableFuture<?> onObjectRefreshed(final ObjectRefreshedEvent event) {
@@ -710,7 +711,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         return read.read().thenCompose(readResponse -> {
             final Instance before = schema.create(readResponse.getObject(schema, id), true, true);
             final Instance refAfter = refSchema.create(readResponse.getObject(refSchema, refId), true, true);
-            if(before != null && refAfter != null) {
+            if(before != null) {
                 final Long version = Instance.getVersion(before);
                 assert version != null;
                 final Instance after = schema.expand(before, new Expander() {
@@ -719,7 +720,11 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
                         if(schema.getName().equals(refSchema.getName())) {
                             if(refId.equals(Instance.getId(ref))) {
-                                return refAfter;
+                                if(refAfter == null) {
+                                    return ObjectSchema.ref(refId);
+                                } else {
+                                    return refAfter;
+                                }
                             }
                         }
                         return ref;
@@ -741,14 +746,14 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         });
     }
 
-    private Set<Event> refQueryEvents(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+    private Set<Event> refQueryEvents(final ObjectSchema schema, final String id) {
 
         final Set<Event> events = new HashSet<>();
         namespace.forEachObjectSchema((k, v) -> {
             final Set<Expression> queries = v.refQueries(schema.getName());
             if(!queries.isEmpty()) {
                 final Or merged = new Or(queries.toArray(new Expression[0]));
-                final Expression bound = merged.bind(context(Caller.ANON, ImmutableMap.of(Reserved.THIS, after)));
+                final Expression bound = merged.bind(context(Caller.ANON, ImmutableMap.of(Reserved.THIS, ObjectSchema.ref(id))));
                 events.add(RefQueryEvent.of(Ref.of(schema.getName(), id), k, bound));
             }
         });

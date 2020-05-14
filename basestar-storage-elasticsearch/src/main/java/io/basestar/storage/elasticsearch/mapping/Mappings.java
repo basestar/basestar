@@ -20,16 +20,18 @@ package io.basestar.storage.elasticsearch.mapping;
  * #L%
  */
 
+import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
-import io.basestar.schema.StructSchema;
 import io.basestar.schema.use.*;
+import io.basestar.util.Path;
 import lombok.Data;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 @Data
 public class Mappings {
@@ -57,32 +59,37 @@ public class Mappings {
             @Override
             public Mappings mappings(final ObjectSchema schema) {
 
-                final Map<String, FieldType> properties = new HashMap<>();
-                schema.metadataSchema().forEach((k, v) -> properties.put(k, fieldType(schema, k, v)));
-                schema.getProperties().forEach((k, v) -> properties.put(k, fieldType(schema, k, v.getType())));
-                return new Mappings(properties);
+                return new Mappings(properties(schema, schema.getExpand()));
             }
 
-            protected FieldType fieldType(final ObjectSchema schema, final String name, final Use<?> use) {
+            protected Map<String, FieldType> properties(final InstanceSchema schema, final Set<Path> expand) {
 
-                switch (name) {
-                    case Reserved.ID:
-                    case Reserved.SCHEMA:
-                        return FieldType.KEYWORD;
-                    case Reserved.CREATED:
-                    case Reserved.UPDATED:
-                        return FieldType.DATE;
-                    default:
-                        return fieldType(use);
+                final Map<String, FieldType> properties = new HashMap<>();
+                final Map<String, Set<Path>> branches = Path.branch(expand);
+                schema.metadataSchema().forEach((k, v) -> properties.put(k, fieldType(schema, k, v, branches.get(k))));
+                schema.getProperties().forEach((k, v) -> properties.put(k, fieldType(schema, k, v.getType(), branches.get(k))));
+                return properties;
+            }
+
+            protected FieldType fieldType(final InstanceSchema schema, final String name, final Use<?> use, final Set<Path> expand) {
+
+                if(schema instanceof ObjectSchema) {
+                    switch (name) {
+                        case Reserved.ID:
+                        case Reserved.SCHEMA:
+                            return FieldType.KEYWORD;
+                        case Reserved.CREATED:
+                        case Reserved.UPDATED:
+                            return FieldType.DATE;
+                        default:
+                            return fieldType(use, expand);
+                    }
+                } else {
+                    return fieldType(use, expand);
                 }
             }
 
-            protected FieldType fieldType(final StructSchema schema, final String name, final Use<?> use) {
-
-                return fieldType(use);
-            }
-
-            protected FieldType fieldType(final Use<?> use) {
+            protected FieldType fieldType(final Use<?> use, final Set<Path> expand) {
 
                 return use.visit(new Use.Visitor<FieldType>() {
 
@@ -120,9 +127,13 @@ public class Mappings {
                     @Override
                     public FieldType visitRef(final UseRef type) {
 
-                        final Map<String, FieldType> properties = new HashMap<>();
-                        ObjectSchema.REF_SCHEMA.forEach((k, v) -> properties.put(k, v.visit(this)));
-                        return new FieldType.NestedType(properties);
+                        if(expand == null) {
+                            final Map<String, FieldType> properties = new HashMap<>();
+                            ObjectSchema.REF_SCHEMA.forEach((k, v) -> properties.put(k, v.visit(this)));
+                            return new FieldType.NestedType(properties);
+                        } else {
+                            return new FieldType.NestedType(properties(type.getSchema(), expand));
+                        }
                     }
 
                     @Override
@@ -140,16 +151,17 @@ public class Mappings {
                     @Override
                     public <T> FieldType visitMap(final UseMap<T> type) {
 
+                        if(expand != null) {
+                            // FIXME:
+                            throw new UnsupportedOperationException();
+                        }
                         return new FieldType.MapType(type.getType().visit(this));
                     }
 
                     @Override
                     public FieldType visitStruct(final UseStruct type) {
 
-                        final StructSchema schema = type.getSchema();
-                        final Map<String, FieldType> properties = new HashMap<>();
-                        schema.getProperties().forEach((k, v) -> properties.put(k, fieldType(schema, k, v.getType())));
-                        return new FieldType.NestedType(properties);
+                        return new FieldType.NestedType(properties(type.getSchema(), expand));
                     }
 
                     @Override

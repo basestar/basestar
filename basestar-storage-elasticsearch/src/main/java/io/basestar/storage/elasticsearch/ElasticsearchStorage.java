@@ -338,7 +338,7 @@ public class ElasticsearchStorage implements Storage {
                             .source(source), OPTIONS, listener))
                     .exceptionally(e -> {
                         // FIXME?
-                        log.error("Error creating search index, ignoring", e);
+                        log.error("Error creating search index, ignoring {}", e.getClass().getName());
                         return null;
                     })
                     .thenApply(ignored -> createdIndices.add(name));
@@ -408,9 +408,11 @@ public class ElasticsearchStorage implements Storage {
                     if (version != null) {
                         final Long primaryTerm = getPrimaryTerm(before);
                         final Long seqNo = getSeqNo(before);
-                        assert primaryTerm != null && seqNo != null;
-                        req.setIfSeqNo(seqNo);
-                        req.setIfPrimaryTerm(primaryTerm);
+                        // FIXME: should be required
+                        if(primaryTerm != null && seqNo != null) {
+                            req.setIfSeqNo(seqNo);
+                            req.setIfPrimaryTerm(primaryTerm);
+                        }
                     }
                 } else {
                     version = null;
@@ -446,9 +448,11 @@ public class ElasticsearchStorage implements Storage {
                     if (version != null) {
                         final Long primaryTerm = getPrimaryTerm(before);
                         final Long seqNo = getSeqNo(before);
-                        assert primaryTerm != null && seqNo != null;
-                        req.setIfSeqNo(seqNo);
-                        req.setIfPrimaryTerm(primaryTerm);
+                        // FIXME: should be required
+                        if(primaryTerm != null && seqNo != null) {
+                            req.setIfSeqNo(seqNo);
+                            req.setIfPrimaryTerm(primaryTerm);
+                        }
                     }
                 } else {
                     version = null;

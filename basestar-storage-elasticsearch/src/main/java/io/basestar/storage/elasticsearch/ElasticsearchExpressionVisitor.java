@@ -61,17 +61,21 @@ public class ElasticsearchExpressionVisitor implements ExpressionVisitor.Default
     private QueryBuilder visitEqImpl(final Expression lhs, final Expression rhs) {
 
         if (lhs instanceof PathConstant && rhs instanceof Constant) {
-            return QueryBuilders.termQuery(
-                    ((PathConstant) lhs).getPath().toString(),
-                    ((Constant) rhs).getValue()
-            );
+            return eqImpl(((PathConstant) lhs).getPath(), ((Constant) rhs).getValue());
         } else if (lhs instanceof Constant && rhs instanceof PathConstant) {
-            return QueryBuilders.termQuery(
-                    ((PathConstant) rhs).getPath().toString(),
-                    ((Constant) lhs).getValue()
-            );
+            return eqImpl(((PathConstant) rhs).getPath(), ((Constant) lhs).getValue());
+
         } else {
             return null;
+        }
+    }
+
+    private QueryBuilder eqImpl(final Path path, final Object value) {
+
+        if(path.size() == 1) {
+            return QueryBuilders.termQuery(path.toString(), value);
+        } else {
+            return QueryBuilders.nestedQuery(path.withoutLast().toString(), QueryBuilders.termQuery(path.toString(), value), ScoreMode.Avg);
         }
     }
 
