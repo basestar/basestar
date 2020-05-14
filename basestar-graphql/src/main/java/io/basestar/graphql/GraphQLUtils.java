@@ -46,9 +46,13 @@ public class GraphQLUtils {
 
     public static final String BOOLEAN_TYPE = "Boolean";
 
-    public static final String MAP_KEY = Reserved.PREFIX + "key";
+    public static final String MAP_KEY = "key";
 
-    public static final String MAP_VALUE = Reserved.PREFIX + "value";
+    public static final String MAP_VALUE = "value";
+
+    public static final String QUERY_TYPE = "Query";
+
+    public static final String MUTATION_TYPE = "Mutation";
 
     private static final SelectionSet EMPTY_SELECTION = SelectionSet.newSelectionSet().build();
 
@@ -82,20 +86,6 @@ public class GraphQLUtils {
         } else{
             throw new IllegalStateException();
         }
-    }
-
-    public static Path path(final String name) {
-
-        // FIXME: if we do this properly then we don't need to use the reserved prefix in map key/value
-        return Path.of(Arrays.stream(name.split("/"))
-                .map(v -> {
-                    if(v.equals(GraphQLUtils.MAP_VALUE)) {
-                        return "*";
-                    } else {
-                        return v;
-                    }
-                }).filter(v -> !v.startsWith(Reserved.PREFIX))
-                .toArray(String[]::new));
     }
 
     protected static Set<Path> paths(final Use<?> type, final Path parent, final SelectionSet selections) {
@@ -871,11 +861,6 @@ public class GraphQLUtils {
                 }
             });
         }
-    }
-
-    public static String ucFirst(final String name) {
-
-        return name.isEmpty() ? name : name.substring(0, 1).toUpperCase() + name.substring(1);
     }
 
     public static Caller caller(final GraphQLContext context) {

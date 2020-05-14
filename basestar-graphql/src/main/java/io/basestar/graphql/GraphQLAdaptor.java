@@ -55,35 +55,39 @@ public class GraphQLAdaptor {
 
     private final Namespace namespace;
 
+    private final GraphQLNamingStrategy namingStrategy;
+
     public GraphQLAdaptor(final Database database, final Namespace namespace) {
+
+        this(database, namespace, GraphQLNamingStrategy.DEFAULT);
+    }
+
+    public GraphQLAdaptor(final Database database, final Namespace namespace, final GraphQLNamingStrategy namingStrategy) {
 
         this.database = database;
         this.namespace = namespace;
+        this.namingStrategy = namingStrategy;
     }
 
     public GraphQL graphQL() {
 
-        final TypeDefinitionRegistry registry = new GraphQLSchemaAdaptor(namespace).typeDefinitionRegistry();
-        final RuntimeWiring wiring = new RuntimeWiringFactory(database, namespace).runtimeWiring();
+        final TypeDefinitionRegistry registry = new GraphQLSchemaAdaptor(namespace, namingStrategy).typeDefinitionRegistry();
+        final RuntimeWiring wiring = new RuntimeWiringFactory(database, namespace, namingStrategy).runtimeWiring();
 //        final RuntimeWiring wiring = runtimeWiring();
 
         final Map<String, Fetcher<ReadOptions>> reads = new HashMap<>();
         final Map<String, Fetcher<QueryOptions>> queries = new HashMap<>();
         final Map<String, Fetcher<QueryLinkOptions>> queryLinks = new HashMap<>();
         final Map<String, Fetcher<ActionOptions>> mutations = new HashMap<>();
-        namespace.getSchemas().forEach((schemaName, schema) -> {
-            if(schema instanceof ObjectSchema) {
-                final ObjectSchema objectSchema = (ObjectSchema)schema;
-                reads.put("read" + schemaName, read(objectSchema));
-                queries.put("query" + schemaName, query(objectSchema));
-                mutations.put("create" + schemaName, create(objectSchema));
-                mutations.put("update" + schemaName, update(objectSchema));
-                mutations.put("delete" + schemaName, delete(objectSchema));
-                objectSchema.getLinks().forEach((linkName, link) -> {
-                    final String name = "query" + schemaName + GraphQLUtils.ucFirst(linkName);
-                    queryLinks.put(name, queryLink(objectSchema, link));
-                });
-            }
+        namespace.forEachObjectSchema((schemaName, schema) -> {
+            reads.put(namingStrategy.readMethodName(schema), read(schema));
+            queries.put(namingStrategy.queryMethodName(schema), query(schema));
+            mutations.put(namingStrategy.createMethodName(schema), create(schema));
+            mutations.put(namingStrategy.updateMethodName(schema), update(schema));
+            mutations.put(namingStrategy.deleteMethodName(schema), delete(schema));
+            schema.getLinks().forEach((linkName, link) -> {
+                queryLinks.put(namingStrategy.queryLinkMethodName(schema, link), queryLink(schema, link));
+            });
         });
 
         final SchemaGenerator generator = new SchemaGenerator();
@@ -205,9 +209,9 @@ public class GraphQLAdaptor {
 
         return (context, field) -> {
 
-            final String expression = GraphQLUtils.argValue(context, UseString.DEFAULT, field, "query");
-            final Long count = GraphQLUtils.argValue(context, UseInteger.DEFAULT, field, "count");
-            final String paging = GraphQLUtils.argValue(context, UseString.DEFAULT, field, "paging");
+            final String expression = GraphQLUtils.argValue(context, UseString.DEFAULT, field, namingStrategy.queryArgumentName());
+            final Long count = GraphQLUtils.argValue(context, UseInteger.DEFAULT, field, namingStrategy.countArgumentName());
+            final String paging = GraphQLUtils.argValue(context, UseString.DEFAULT, field, namingStrategy.pagingArgumentName());
             final Set<Path> paths = GraphQLUtils.paths(schema, field.getSelectionSet());
 
             assert expression != null;
@@ -231,8 +235,8 @@ public class GraphQLAdaptor {
         return (context, field) -> {
 
             final String id = GraphQLUtils.argValue(context, UseString.DEFAULT, field, Reserved.ID);
-            final Map<String, Object> data = GraphQLUtils.argInput(context, schema, field, "data");
-            final Map<String, Expression> expressions = GraphQLUtils.argInputExpr(context, schema, field, "expressions");
+            final Map<String, Object> data = GraphQLUtils.argInput(context, schema, field, namingStrategy.dataArgumentName());
+            final Map<String, Expression> expressions = GraphQLUtils.argInputExpr(context, schema, field, namingStrategy.expressionsArgumentName());
             final Set<Path> paths = GraphQLUtils.paths(schema, field.getSelectionSet());
 
             final CreateOptions.Builder builder = CreateOptions.builder();
@@ -251,8 +255,8 @@ public class GraphQLAdaptor {
 
             final String id = GraphQLUtils.argValue(context, UseString.DEFAULT, field, Reserved.ID);
             final Long version = GraphQLUtils.argValue(context, UseInteger.DEFAULT, field, Reserved.VERSION);
-            final Map<String, Object> data = GraphQLUtils.argInput(context, schema, field, "data");
-            final Map<String, Expression> expressions = GraphQLUtils.argInputExpr(context, schema, field, "expressions");
+            final Map<String, Object> data = GraphQLUtils.argInput(context, schema, field, namingStrategy.dataArgumentName());
+            final Map<String, Expression> expressions = GraphQLUtils.argInputExpr(context, schema, field, namingStrategy.expressionsArgumentName());
             final Set<Path> paths = GraphQLUtils.paths(schema, field.getSelectionSet());
 
             assert id != null;

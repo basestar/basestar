@@ -101,8 +101,8 @@ public class GraphQLTest {
                         "  readTest1(id:\"test1\") {\n" +
                         "    id\n" +
                         "    z {\n" +
-                        "      __key\n" +
-                        "      __value {\n" +
+                        "      key\n" +
+                        "      value {\n" +
                         "        test {\n" +
                         "          id\n" +
                         "        }\n" +
@@ -115,8 +115,8 @@ public class GraphQLTest {
                 "readTest1", ImmutableMap.of(
                         "id", "test1",
                         "z", ImmutableList.of(ImmutableMap.of(
-                                "__key", "test",
-                                "__value", ImmutableMap.of("test", ImmutableMap.of(
+                                "key", "test",
+                                "value", ImmutableMap.of("test", ImmutableMap.of(
                                         "id", "test1"
                                 )))
                         )
@@ -166,8 +166,6 @@ public class GraphQLTest {
                         "}")
                 .build()).getData();
         assertEquals(ImmutableMap.of("readTest1", ImmutableMap.of("id", "x")), get);
-
-        System.err.println(get);
     }
 
     @Test

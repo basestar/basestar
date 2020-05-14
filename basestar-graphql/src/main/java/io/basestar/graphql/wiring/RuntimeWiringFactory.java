@@ -32,6 +32,7 @@ import io.basestar.database.Database;
 import io.basestar.database.options.*;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.Constant;
+import io.basestar.graphql.GraphQLNamingStrategy;
 import io.basestar.graphql.GraphQLUtils;
 import io.basestar.schema.*;
 import io.basestar.util.PagedList;
@@ -51,18 +52,21 @@ public class RuntimeWiringFactory {
 
     private final Namespace namespace;
 
-    public RuntimeWiringFactory(final Database database, final Namespace namespace) {
+    private final GraphQLNamingStrategy namingStrategy;
+
+    public RuntimeWiringFactory(final Database database, final Namespace namespace, final GraphQLNamingStrategy namingStrategy) {
 
         this.database = database;
         this.namespace = namespace;
+        this.namingStrategy = namingStrategy;
     }
 
     public RuntimeWiring runtimeWiring() {
 
         final RuntimeWiring.Builder builder = RuntimeWiring.newRuntimeWiring();
-        builder.type(TypeRuntimeWiring.newTypeWiring("Query")
+        builder.type(TypeRuntimeWiring.newTypeWiring(GraphQLUtils.QUERY_TYPE)
                 .dataFetchers(queryFetchers()));
-        builder.type(TypeRuntimeWiring.newTypeWiring("Mutation")
+        builder.type(TypeRuntimeWiring.newTypeWiring(GraphQLUtils.MUTATION_TYPE)
                 .dataFetchers(mutationFetchers()));
         namespace.getSchemas().forEach((k, schema) -> {
             if(schema instanceof InstanceSchema) {
@@ -79,16 +83,12 @@ public class RuntimeWiringFactory {
     private Map<String, DataFetcher> queryFetchers() {
 
         final Map<String, DataFetcher> results = new HashMap<>();
-        namespace.getSchemas().forEach((schemaName, schema) -> {
-            if(schema instanceof ObjectSchema) {
-                final ObjectSchema objectSchema = (ObjectSchema)schema;
-                results.put("read" + objectSchema.getName(), getFetcher(objectSchema));
-                results.put("query" + objectSchema.getName(), queryFetcher(objectSchema));
-                objectSchema.getLinks().forEach((linkName, link) -> {
-                    final String name = "query" + schemaName + GraphQLUtils.ucFirst(linkName);
-                    results.put(name, queryLinkFetcher(objectSchema, link));
-                });
-            }
+        namespace.forEachObjectSchema((schemaName, schema) -> {
+            results.put(namingStrategy.readMethodName(schema), getFetcher(schema));
+            results.put(namingStrategy.queryMethodName(schema), queryFetcher(schema));
+            schema.getLinks().forEach((linkName, link) -> {
+                results.put(namingStrategy.queryLinkMethodName(schema, link), queryLinkFetcher(schema, link));
+            });
         });
         return results;
     }
@@ -114,13 +114,13 @@ public class RuntimeWiringFactory {
 
         return (env) -> {
             final Caller caller = GraphQLUtils.caller(env.getContext());
-            final Set<Path> paths = Path.children(paths(env), "items");
+            final Set<Path> paths = Path.children(paths(env), namingStrategy.pageItemsFieldName());
             final Set<Path> expand = schema.requiredExpand(paths);
-            final String query = env.getArgument("query");
+            final String query = env.getArgument(namingStrategy.queryArgumentName());
             final Expression expression = query == null ? Constant.TRUE : Expression.parse(query);
-            final String paging = env.getArgument("paging");
-            final Number count = env.getArgument("count");
-            final List<?> sort = env.getArgument("sort");
+            final String paging = env.getArgument(namingStrategy.pagingArgumentName());
+            final Number count = env.getArgument(namingStrategy.countArgumentName());
+            final List<?> sort = env.getArgument(namingStrategy.sortArgumentName());
             final QueryOptions options = QueryOptions.builder()
                     .schema(schema.getName())
                     .expression(expression)
@@ -131,7 +131,7 @@ public class RuntimeWiringFactory {
                     .build();
             return database.query(caller, options)
                     .thenApply(objects -> objects.map(object -> GraphQLUtils.toResponse(schema, object)))
-                    .thenApply(RuntimeWiringFactory::toPage);
+                    .thenApply(this::toPage);
         };
     }
 
@@ -141,11 +141,11 @@ public class RuntimeWiringFactory {
 
             final Caller caller = GraphQLUtils.caller(env.getContext());
             final ObjectSchema linkSchema = link.getSchema();
-            final Set<Path> paths = Path.children(paths(env), "items");
+            final Set<Path> paths = Path.children(paths(env), namingStrategy.pageItemsFieldName());
             final Set<Path> expand = linkSchema.requiredExpand(paths);
             final String id = env.getArgument(Reserved.ID);
-            final String paging = env.getArgument("paging");
-            final Number count = env.getArgument("count");
+            final String paging = env.getArgument(namingStrategy.pagingArgumentName());
+            final Number count = env.getArgument(namingStrategy.countArgumentName());
             final QueryLinkOptions options = QueryLinkOptions.builder()
                     .schema(schema.getName())
                     .link(link.getName())
@@ -156,16 +156,16 @@ public class RuntimeWiringFactory {
                     .build();
             return database.queryLink(caller, options)
                     .thenApply(objects -> objects.map(object -> GraphQLUtils.toResponse(linkSchema, object)))
-                    .thenApply(RuntimeWiringFactory::toPage);
+                    .thenApply(this::toPage);
         };
     }
 
-    private static Map<String, Object> toPage(final PagedList<?> page) {
+    private Map<String, Object> toPage(final PagedList<?> page) {
 
         final Map<String, Object> result = new HashMap<>();
-        result.put("items", page.getPage());
+        result.put(namingStrategy.pageItemsFieldName(), page.getPage());
         if(page.hasPaging()) {
-            result.put("paging", page.getPaging().toString());
+            result.put(namingStrategy.pagePagingFieldName(), page.getPaging().toString());
         }
         return result;
     }
@@ -177,8 +177,8 @@ public class RuntimeWiringFactory {
         namespace.getSchemas().forEach((k, schema) -> {
             if(schema instanceof ObjectSchema) {
                 final ObjectSchema objectSchema = (ObjectSchema)schema;
-                results.put("create" + objectSchema.getName(), createFetcher(objectSchema));
-                results.put("update" + objectSchema.getName(), updateFetcher(objectSchema));
+                results.put(namingStrategy.createMethodName(objectSchema), createFetcher(objectSchema));
+                results.put(namingStrategy.updateMethodName(objectSchema), updateFetcher(objectSchema));
             }
         });
         return results;
@@ -191,7 +191,7 @@ public class RuntimeWiringFactory {
             final Set<Path> paths = paths(env);
             final Set<Path> expand = schema.requiredExpand(paths);
             final String id = env.getArgumentOrDefault(Reserved.ID, null);
-            final Map<String, Object> data = GraphQLUtils.fromRequest(schema, env.getArgument("data"));
+            final Map<String, Object> data = GraphQLUtils.fromRequest(schema, env.getArgument(namingStrategy.dataArgumentName()));
             final CreateOptions options = CreateOptions.builder()
                     .schema(schema.getName()).id(id)
                     .data(data).expand(expand)
@@ -209,7 +209,7 @@ public class RuntimeWiringFactory {
             final Set<Path> expand = schema.requiredExpand(paths);
             final String id = env.getArgument(Reserved.ID);
             final Long version = env.getArgumentOrDefault(Reserved.VERSION, null);
-            final Map<String, Object> data = GraphQLUtils.fromRequest(schema, env.getArgument("data"));
+            final Map<String, Object> data = GraphQLUtils.fromRequest(schema, env.getArgument(namingStrategy.dataArgumentName()));
             final UpdateOptions options = UpdateOptions.builder()
                     .schema(schema.getName()).id(id)
                     .data(data).version(version)
