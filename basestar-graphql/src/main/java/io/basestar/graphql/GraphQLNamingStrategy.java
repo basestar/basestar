@@ -52,6 +52,8 @@ public interface GraphQLNamingStrategy {
 
     String expressionsArgumentName();
 
+    String transactionMethodName();
+
     class Default implements GraphQLNamingStrategy {
 
         @Override
@@ -198,6 +200,12 @@ public interface GraphQLNamingStrategy {
         public String expressionsArgumentName() {
 
             return "expressions";
+        }
+
+        @Override
+        public String transactionMethodName() {
+
+            return "transaction";
         }
 
         protected final Use.Visitor<String> TYPE_NAME_VISITOR = new Use.Visitor<String>() {

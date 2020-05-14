@@ -20,11 +20,8 @@ package io.basestar.graphql.wiring;
  * #L%
  */
 
-import graphql.TypeResolutionEnvironment;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
-import graphql.schema.GraphQLObjectType;
-import graphql.schema.TypeResolver;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.TypeRuntimeWiring;
 import io.basestar.auth.Caller;
@@ -45,7 +42,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 
-@Deprecated
 public class RuntimeWiringFactory {
 
     private final Database database;
@@ -179,10 +175,70 @@ public class RuntimeWiringFactory {
                 final ObjectSchema objectSchema = (ObjectSchema)schema;
                 results.put(namingStrategy.createMethodName(objectSchema), createFetcher(objectSchema));
                 results.put(namingStrategy.updateMethodName(objectSchema), updateFetcher(objectSchema));
+                results.put(namingStrategy.deleteMethodName(objectSchema), deleteFetcher(objectSchema));
+
             }
         });
         return results;
     }
+
+    //    private Fetcher<ActionOptions> create(final ObjectSchema schema) {
+//
+//        return (context, field) -> {
+//
+//            final String id = GraphQLUtils.argValue(context, UseString.DEFAULT, field, Reserved.ID);
+//            final Map<String, Object> data = GraphQLUtils.argInput(context, schema, field, namingStrategy.dataArgumentName());
+//            final Map<String, Expression> expressions = GraphQLUtils.argInputExpr(context, schema, field, namingStrategy.expressionsArgumentName());
+//            final Set<Path> paths = GraphQLUtils.paths(schema, field.getSelectionSet());
+//
+//            final CreateOptions.Builder builder = CreateOptions.builder();
+//            builder.schema(schema.getName());
+//            builder.id(id);
+//            builder.data(data);
+//            builder.expressions(expressions);
+//            builder.expand(schema.requiredExpand(paths));
+//            return builder.build();
+//        };
+//    }
+//
+//    private Fetcher<ActionOptions> update(final ObjectSchema schema) {
+//
+//        return (context, field) -> {
+//
+//            final String id = GraphQLUtils.argValue(context, UseString.DEFAULT, field, Reserved.ID);
+//            final Long version = GraphQLUtils.argValue(context, UseInteger.DEFAULT, field, Reserved.VERSION);
+//            final Map<String, Object> data = GraphQLUtils.argInput(context, schema, field, namingStrategy.dataArgumentName());
+//            final Map<String, Expression> expressions = GraphQLUtils.argInputExpr(context, schema, field, namingStrategy.expressionsArgumentName());
+//            final Set<Path> paths = GraphQLUtils.paths(schema, field.getSelectionSet());
+//
+//            assert id != null;
+//
+//            final UpdateOptions.Builder builder = UpdateOptions.builder();
+//            builder.schema(schema.getName());
+//            builder.id(id);
+//            builder.version(version);
+//            builder.data(data);
+//            builder.expressions(expressions);
+//            builder.expand(schema.requiredExpand(paths));
+//            return builder.build();
+//        };
+//    }
+//
+//    private Fetcher<ActionOptions> delete(final ObjectSchema schema) {
+//
+//        return (context, field) -> {
+//
+//            final String id = GraphQLUtils.argValue(context, UseString.DEFAULT, field, Reserved.ID);
+//            final Long version = GraphQLUtils.argValue(context, UseInteger.DEFAULT, field, Reserved.VERSION);
+//            assert id != null;
+//
+//            final DeleteOptions.Builder builder = DeleteOptions.builder();
+//            builder.schema(schema.getName());
+//            builder.id(id);
+//            builder.version(version);
+//            return builder.build();
+//        };
+//    }
 
     private DataFetcher<CompletableFuture<?>> createFetcher(final ObjectSchema schema) {
 
@@ -192,9 +248,11 @@ public class RuntimeWiringFactory {
             final Set<Path> expand = schema.requiredExpand(paths);
             final String id = env.getArgumentOrDefault(Reserved.ID, null);
             final Map<String, Object> data = GraphQLUtils.fromRequest(schema, env.getArgument(namingStrategy.dataArgumentName()));
+            final Map<String, Expression> expressions = parseExpressions(env.getArgument(namingStrategy.expressionsArgumentName()));
             final CreateOptions options = CreateOptions.builder()
                     .schema(schema.getName()).id(id)
                     .data(data).expand(expand)
+                    .expressions(expressions)
                     .build();
             return database.create(caller, options)
                     .thenApply(object -> GraphQLUtils.toResponse(schema, object));
@@ -210,14 +268,43 @@ public class RuntimeWiringFactory {
             final String id = env.getArgument(Reserved.ID);
             final Long version = env.getArgumentOrDefault(Reserved.VERSION, null);
             final Map<String, Object> data = GraphQLUtils.fromRequest(schema, env.getArgument(namingStrategy.dataArgumentName()));
+            final Map<String, Expression> expressions = parseExpressions(env.getArgument(namingStrategy.expressionsArgumentName()));
             final UpdateOptions options = UpdateOptions.builder()
                     .schema(schema.getName()).id(id)
                     .data(data).version(version)
+                    .expressions(expressions)
                     .expand(expand)
                     .build();
             return database.update(caller, options)
                     .thenApply(object -> GraphQLUtils.toResponse(schema, object));
         };
+    }
+
+    private DataFetcher<CompletableFuture<?>> deleteFetcher(final ObjectSchema schema) {
+
+        return (env) -> {
+            final Caller caller = GraphQLUtils.caller(env.getContext());
+            final String id = env.getArgument(Reserved.ID);
+            final Long version = env.getArgumentOrDefault(Reserved.VERSION, null);
+            final DeleteOptions options = DeleteOptions.builder()
+                    .schema(schema.getName()).id(id)
+                    .version(version)
+                    .build();
+            return database.delete(caller, options)
+                    .thenApply(object -> GraphQLUtils.toResponse(schema, object));
+        };
+    }
+
+    private static Map<String, Expression> parseExpressions(final Map<String, String> exprs) {
+
+        if(exprs == null) {
+            return null;
+        } else {
+            return exprs.entrySet().stream().collect(Collectors.toMap(
+                    Map.Entry::getKey,
+                    e -> Expression.parse(e.getValue())
+            ));
+        }
     }
 
     private static Set<Path> paths(final DataFetchingEnvironment env) {
@@ -239,18 +326,6 @@ public class RuntimeWiringFactory {
                     }
                 }).filter(v -> !v.startsWith(Reserved.PREFIX))
                 .toArray(String[]::new));
-    }
-
-    private static class InterfaceResolver implements TypeResolver {
-
-        public static final InterfaceResolver INSTANCE = new InterfaceResolver();
-
-        @Override
-        public GraphQLObjectType getType(final TypeResolutionEnvironment env) {
-
-            final Map<String, Object> object = env.getObject();
-            return env.getSchema().getObjectType(Instance.getSchema(object));
-        }
     }
 
     private static Integer count(final Number value) {

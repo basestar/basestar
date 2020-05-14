@@ -1,8 +1,9 @@
-package io.basestar.graphql;
+package io.basestar.graphql.schema;
 
 import com.google.common.collect.ImmutableSet;
 import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
+import io.basestar.graphql.GraphQLUtils;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import lombok.extern.slf4j.Slf4j;
@@ -10,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.*;
 
 @Slf4j
-public class GraphQLSchemaConverter {
+public class SchemaConverter {
 
     private static final Set<String> SKIP_TYPE_NAMES = ImmutableSet.of("Query", "Mutation", "Subscription");
 

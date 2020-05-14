@@ -29,6 +29,7 @@ import graphql.schema.idl.TypeDefinitionRegistry;
 import io.basestar.auth.Caller;
 import io.basestar.database.DatabaseServer;
 import io.basestar.database.options.CreateOptions;
+import io.basestar.graphql.schema.SchemaConverter;
 import io.basestar.schema.Namespace;
 import io.basestar.storage.MemoryStorage;
 import org.junit.jupiter.api.Test;
@@ -85,7 +86,7 @@ public class GraphQLTest {
         final SchemaParser parser = new SchemaParser();
         final TypeDefinitionRegistry tdr = parser.parse(GraphQLTest.class.getResourceAsStream("schema.gql"));
 
-        final GraphQLSchemaConverter converter = new GraphQLSchemaConverter();
+        final SchemaConverter converter = new SchemaConverter();
         final Namespace.Builder ns = converter.namespace(tdr);
         assertNotNull(ns);
         ns.print(System.out);

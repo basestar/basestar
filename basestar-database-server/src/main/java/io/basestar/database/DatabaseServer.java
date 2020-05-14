@@ -500,7 +500,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
                     final int count = MoreObjects.firstNonNull(options.getCount(), QueryLinkOptions.DEFAULT_COUNT);
                     if(count > QueryLinkOptions.MAX_COUNT) {
-                        throw new IllegalStateException("Count too high");
+                        throw new IllegalStateException("Count too high (max " +  QueryLinkOptions.MAX_COUNT + ")");
                     }
                     final PagingToken paging = options.getPaging();
 
@@ -540,7 +540,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final List<Sort> sort = MoreObjects.firstNonNull(options.getSort(), Collections.emptyList());
         final int count = MoreObjects.firstNonNull(options.getCount(), QueryOptions.DEFAULT_COUNT);
         if(count > QueryOptions.MAX_COUNT) {
-            throw new IllegalStateException("Count too high");
+            throw new IllegalStateException("Count too high (max " +  QueryLinkOptions.MAX_COUNT + ")");
         }
         final PagingToken paging = options.getPaging();
 
