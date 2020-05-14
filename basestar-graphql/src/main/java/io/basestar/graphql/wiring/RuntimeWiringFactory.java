@@ -176,7 +176,7 @@ public class RuntimeWiringFactory {
                 results.put(namingStrategy.createMethodName(objectSchema), createFetcher(objectSchema));
                 results.put(namingStrategy.updateMethodName(objectSchema), updateFetcher(objectSchema));
                 results.put(namingStrategy.deleteMethodName(objectSchema), deleteFetcher(objectSchema));
-
+                results.put(namingStrategy.transactionMethodName(), transactionFetcher());
             }
         });
         return results;
@@ -292,6 +292,13 @@ public class RuntimeWiringFactory {
                     .build();
             return database.delete(caller, options)
                     .thenApply(object -> GraphQLUtils.toResponse(schema, object));
+        };
+    }
+
+    private DataFetcher<CompletableFuture<?>> transactionFetcher() {
+
+        return (env) -> {
+            return null;
         };
     }
 

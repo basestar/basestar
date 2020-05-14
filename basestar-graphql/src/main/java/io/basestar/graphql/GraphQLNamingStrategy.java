@@ -54,6 +54,8 @@ public interface GraphQLNamingStrategy {
 
     String transactionMethodName();
 
+    String transactionTypeName();
+
     class Default implements GraphQLNamingStrategy {
 
         @Override
@@ -206,6 +208,12 @@ public interface GraphQLNamingStrategy {
         public String transactionMethodName() {
 
             return "transaction";
+        }
+
+        @Override
+        public String transactionTypeName() {
+
+            return "Transaction";
         }
 
         protected final Use.Visitor<String> TYPE_NAME_VISITOR = new Use.Visitor<String>() {

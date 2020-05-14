@@ -64,7 +64,7 @@ public class SchemaAdaptor {
         });
         registry.add(queryDefinition());
         registry.add(mutationDefinition());
-//        registry.add(transactionTypeDefinition());
+        registry.add(transactionTypeDefinition());
         registry.add(InputObjectTypeDefinition.newInputObjectDefinition()
                 .name(namingStrategy.inputRefTypeName())
                 .inputValueDefinition(InputValueDefinition.newInputValueDefinition()
@@ -156,17 +156,29 @@ public class SchemaAdaptor {
             builder.fieldDefinition(updateDefinition(v));
             builder.fieldDefinition(deleteDefinition(v));
         });
-//        builder.fieldDefinition(transactionDefinition());
+        builder.fieldDefinition(transactionDefinition());
         return builder.build();
     }
 
-//    private FieldDefinition transactionDefinition() {
-//
-//        final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
-//        builder.name(namingStrategy.transactionMethodName());
-//        builder.type(new TypeName(namingStrategy.transactionTypeName()));
-//        return builder.build();
-//    }
+    private FieldDefinition transactionDefinition() {
+
+        final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
+        builder.name(namingStrategy.transactionMethodName());
+        builder.type(new TypeName(namingStrategy.transactionTypeName()));
+        return builder.build();
+    }
+
+    private ObjectTypeDefinition transactionTypeDefinition() {
+
+        final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
+        builder.name(namingStrategy.transactionTypeName());
+        namespace.forEachObjectSchema((k, v) -> {
+            builder.fieldDefinition(createDefinition(v));
+            builder.fieldDefinition(updateDefinition(v));
+            builder.fieldDefinition(deleteDefinition(v));
+        });
+        return builder.build();
+    }
 
     public FieldDefinition createDefinition(final ObjectSchema schema) {
 
