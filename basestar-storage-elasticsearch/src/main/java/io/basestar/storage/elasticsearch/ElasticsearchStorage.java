@@ -132,9 +132,11 @@ public class ElasticsearchStorage implements Storage {
     public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
 
         final String index = routing.objectIndex(schema);
-        final GetRequest request = new GetRequest(index, id);
-        return ElasticsearchStorage.<GetResponse>future(listener -> client.getAsync(request, OPTIONS, listener))
-                .thenApply(v -> fromResponse(schema, v));
+        return getIndex(index, schema).thenCompose(ignored -> {
+            final GetRequest request = new GetRequest(index, id);
+            return ElasticsearchStorage.<GetResponse>future(listener -> client.getAsync(request, OPTIONS, listener))
+                    .thenApply(v -> fromResponse(schema, v));
+        });
     }
 
     @Override
@@ -144,10 +146,12 @@ public class ElasticsearchStorage implements Storage {
             throw new UnsupportedOperationException("History not enabled");
         }
         final String index = routing.historyIndex(schema);
-        final String key = historyKey(id, version);
-        final GetRequest request = new GetRequest(index, key);
-        return ElasticsearchStorage.<GetResponse>future(listener -> client.getAsync(request, OPTIONS, listener))
-                .thenApply(v -> fromResponse(schema, v));
+        return getIndex(index, schema).thenCompose(ignored -> {
+            final String key = historyKey(id, version);
+            final GetRequest request = new GetRequest(index, key);
+            return ElasticsearchStorage.<GetResponse>future(listener -> client.getAsync(request, OPTIONS, listener))
+                    .thenApply(v -> fromResponse(schema, v));
+        });
     }
 
     @Override
@@ -159,13 +163,14 @@ public class ElasticsearchStorage implements Storage {
         final List<Sort> normalizedSort = KeysetPagingUtils.normalizeSort(sort);
 
         return ImmutableList.of(
-                (count, token) -> {
+                (count, token) -> getIndex(index, schema).thenCompose(ignored -> {
+
                     final QueryBuilder queryBuilder = bound.visit(new ElasticsearchExpressionVisitor());
 
                     final QueryBuilder pagedQueryBuilder;
-                    if(token == null) {
+                    if (token == null) {
                         pagedQueryBuilder = queryBuilder;
-                    } else if(queryBuilder == null) {
+                    } else if (queryBuilder == null) {
                         pagedQueryBuilder = pagingQueryBuilder(schema, normalizedSort, token);
                     } else {
                         pagedQueryBuilder = QueryBuilders.boolQuery()
@@ -189,14 +194,14 @@ public class ElasticsearchStorage implements Storage {
                                 }
                                 final long total = searchResponse.getHits().getTotalHits().value;
                                 final PagingToken newPaging;
-                                if(total > results.size() && last != null) {
+                                if (total > results.size() && last != null) {
                                     newPaging = KeysetPagingUtils.keysetPagingToken(schema, normalizedSort, last);
                                 } else {
                                     newPaging = null;
                                 }
                                 return new PagedList<>(results, newPaging);
                             });
-                }
+                })
         );
     }
 
@@ -272,7 +277,7 @@ public class ElasticsearchStorage implements Storage {
             @Override
             public CompletableFuture<BatchResponse> read() {
 
-                return ElasticsearchStorage.<MultiGetResponse>future(listener -> client.mgetAsync(request, OPTIONS, listener))
+                return getIndices(indexToSchema).thenCompose(ignored -> ElasticsearchStorage.<MultiGetResponse>future(listener -> client.mgetAsync(request, OPTIONS, listener))
                         .thenApply(response -> {
                             final SortedMap<BatchResponse.Key, Map<String, Object>> results = new TreeMap<>();
                             for (final MultiGetItemResponse item : response) {
@@ -284,7 +289,7 @@ public class ElasticsearchStorage implements Storage {
                                 }
                             }
                             return new BatchResponse.Basic(results);
-                        });
+                        }));
             }
         };
     }
@@ -314,6 +319,26 @@ public class ElasticsearchStorage implements Storage {
     private Long getSeqNo(final Map<String, Object> object) {
 
         return (Long) object.get(SEQ_NO_KEY);
+    }
+
+    private CompletableFuture<?> getIndex(final String name, final ObjectSchema schema) {
+
+        if (!createdIndices.contains(name)) {
+            return createIndex(name, schema);
+        } else {
+            return CompletableFuture.completedFuture(null);
+        }
+    }
+
+    private CompletableFuture<?> getIndices(final Map<String, ObjectSchema> indices) {
+
+        final List<CompletableFuture<?>> createIndexFutures = new ArrayList<>();
+        for (final Map.Entry<String, ObjectSchema> entry : indices.entrySet()) {
+            if (!createdIndices.contains(entry.getKey())) {
+                createIndexFutures.add(ElasticsearchStorage.this.createIndex(entry.getKey(), entry.getValue()));
+            }
+        }
+        return CompletableFuture.allOf(createIndexFutures.toArray(new CompletableFuture<?>[0]));
     }
 
     private CompletableFuture<?> createIndex(final String name, final ObjectSchema schema) {
@@ -506,13 +531,7 @@ public class ElasticsearchStorage implements Storage {
             @Override
             public CompletableFuture<BatchResponse> commit() {
 
-                final List<CompletableFuture<?>> createIndexFutures = new ArrayList<>();
-                for (final Map.Entry<String, ObjectSchema> entry : indices.entrySet()) {
-                    if (!createdIndices.contains(entry.getKey())) {
-                        createIndexFutures.add(ElasticsearchStorage.this.createIndex(entry.getKey(), entry.getValue()));
-                    }
-                }
-                return CompletableFuture.allOf(createIndexFutures.toArray(new CompletableFuture<?>[0]))
+                return getIndices(indices)
                         .thenCompose(ignored -> ElasticsearchStorage
                                 .<BulkResponse>future(listener -> client.bulkAsync(request, OPTIONS, listener))
                                 .thenApply(response -> {

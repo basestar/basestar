@@ -33,14 +33,22 @@ public interface Expander {
             @Override
             public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Path> expand) {
 
-                return schema.expand(ref, this, expand);
+                if(ref == null) {
+                    return null;
+                } else {
+                    return schema.expand(ref, this, expand);
+                }
             }
 
             @Override
             public PagedList<Instance> expandLink(final Link link, final PagedList<Instance> value, final Set<Path> expand) {
 
-                final ObjectSchema schema = link.getSchema();
-                return value.map(v -> schema.expand(v, this, expand));
+                if(value == null) {
+                    return null;
+                } else {
+                    final ObjectSchema schema = link.getSchema();
+                    return value.map(v -> v == null ? null : schema.expand(v, this, expand));
+                }
             }
         };
     }

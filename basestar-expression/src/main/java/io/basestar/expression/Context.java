@@ -121,7 +121,9 @@ public interface Context extends Serializable {
 
     default Object member(final Object target, final String member) {
 
-        if(target instanceof Map<?, ?>) {
+        if(target == null) {
+            return null;
+        } else if(target instanceof Map<?, ?>) {
             return ((Map<?, ?>) target).get(member);
         } else {
             try {

@@ -61,21 +61,19 @@ public class ElasticsearchExpressionVisitor implements ExpressionVisitor.Default
     private QueryBuilder visitEqImpl(final Expression lhs, final Expression rhs) {
 
         if (lhs instanceof PathConstant && rhs instanceof Constant) {
-            return eqImpl(((PathConstant) lhs).getPath(), ((Constant) rhs).getValue());
+            return eq(((PathConstant) lhs).getPath(), ((Constant) rhs).getValue());
         } else if (lhs instanceof Constant && rhs instanceof PathConstant) {
-            return eqImpl(((PathConstant) rhs).getPath(), ((Constant) lhs).getValue());
-
+            return eq(((PathConstant) rhs).getPath(), ((Constant) lhs).getValue());
         } else {
             return null;
         }
     }
 
-    private QueryBuilder eqImpl(final Path path, final Object value) {
+    private QueryBuilder nest(final Path path, QueryBuilder query) {
 
         if(path.size() == 1) {
-            return QueryBuilders.termQuery(path.toString(), value);
+            return query;
         } else {
-            QueryBuilder query = QueryBuilders.termQuery(path.toString(), value);
             for(int i = 0; i != path.size() - 1; ++i) {
                 final Path nestedPath = path.subPath(0, path.size() - (i + 1));
                 query = QueryBuilders.nestedQuery(nestedPath.toString(), query, ScoreMode.Avg);
@@ -84,17 +82,40 @@ public class ElasticsearchExpressionVisitor implements ExpressionVisitor.Default
         }
     }
 
+    private QueryBuilder eq(final Path path, final Object value) {
+
+        return nest(path, QueryBuilders.termQuery(path.toString(), value));
+    }
+
+    private QueryBuilder lt(final Path path, final Object value) {
+
+        return nest(path,QueryBuilders.rangeQuery(path.toString()).lt(value));
+    }
+
+    private QueryBuilder gt(final Path path, final Object value) {
+
+        return nest(path,QueryBuilders.rangeQuery(path.toString()).gt(value));
+    }
+
+    private QueryBuilder lte(final Path path, final Object value) {
+
+        return nest(path,QueryBuilders.rangeQuery(path.toString()).lte(value));
+    }
+
+    private QueryBuilder gte(final Path path, final Object value) {
+
+        return nest(path,QueryBuilders.rangeQuery(path.toString()).gte(value));
+    }
+
     @Override
     public QueryBuilder visitGt(final Gt expression) {
 
         final Expression lhs = expression.getLhs();
         final Expression rhs = expression.getRhs();
         if (lhs instanceof PathConstant && rhs instanceof Constant) {
-            return QueryBuilders.rangeQuery(((PathConstant) lhs).getPath().toString())
-                    .gt(((Constant) rhs).getValue());
+            return gt(((PathConstant) lhs).getPath(), ((Constant) rhs).getValue());
         } else if (lhs instanceof Constant && rhs instanceof PathConstant) {
-            return QueryBuilders.rangeQuery(((PathConstant) rhs).getPath().toString())
-                    .lte(((Constant) lhs).getValue());
+            return lte(((PathConstant) rhs).getPath(), ((Constant) lhs).getValue());
         } else {
             return null;
         }
@@ -106,11 +127,9 @@ public class ElasticsearchExpressionVisitor implements ExpressionVisitor.Default
         final Expression lhs = expression.getLhs();
         final Expression rhs = expression.getRhs();
         if (lhs instanceof PathConstant && rhs instanceof Constant) {
-            return QueryBuilders.rangeQuery(((PathConstant) lhs).getPath().toString())
-                    .gte(((Constant) rhs).getValue());
+            return gte(((PathConstant) lhs).getPath(), ((Constant) rhs).getValue());
         } else if (lhs instanceof Constant && rhs instanceof PathConstant) {
-            return QueryBuilders.rangeQuery(((PathConstant) rhs).getPath().toString())
-                    .lt(((Constant) lhs).getValue());
+            return lt(((PathConstant) rhs).getPath(), ((Constant) lhs).getValue());
         } else {
             return null;
         }
@@ -122,11 +141,9 @@ public class ElasticsearchExpressionVisitor implements ExpressionVisitor.Default
         final Expression lhs = expression.getLhs();
         final Expression rhs = expression.getRhs();
         if (lhs instanceof PathConstant && rhs instanceof Constant) {
-            return QueryBuilders.rangeQuery(((PathConstant) lhs).getPath().toString())
-                    .lt(((Constant) rhs).getValue());
+            return lt(((PathConstant) lhs).getPath(), ((Constant) rhs).getValue());
         } else if (lhs instanceof Constant && rhs instanceof PathConstant) {
-            return QueryBuilders.rangeQuery(((PathConstant) rhs).getPath().toString())
-                    .gte(((Constant) lhs).getValue());
+            return gte(((PathConstant) rhs).getPath(), ((Constant) lhs).getValue());
         } else {
             return null;
         }
@@ -138,11 +155,9 @@ public class ElasticsearchExpressionVisitor implements ExpressionVisitor.Default
         final Expression lhs = expression.getLhs();
         final Expression rhs = expression.getRhs();
         if (lhs instanceof PathConstant && rhs instanceof Constant) {
-            return QueryBuilders.rangeQuery(((PathConstant) lhs).getPath().toString())
-                    .lte(((Constant) rhs).getValue());
+            return lte(((PathConstant) lhs).getPath(), ((Constant) rhs).getValue());
         } else if (lhs instanceof Constant && rhs instanceof PathConstant) {
-            return QueryBuilders.rangeQuery(((PathConstant) rhs).getPath().toString())
-                    .gt(((Constant) lhs).getValue());
+            return gt(((PathConstant) rhs).getPath(), ((Constant) lhs).getValue());
         } else {
             return null;
         }
