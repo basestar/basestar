@@ -20,34 +20,28 @@ package io.basestar.storage.elasticsearch.mapping;
  * #L%
  */
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.schema.use.*;
 import io.basestar.util.Path;
 import lombok.Data;
-import org.elasticsearch.common.xcontent.XContentBuilder;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Data
 public class Mappings {
 
     private final Map<String, FieldType> properties;
 
-    public XContentBuilder build(XContentBuilder builder) throws IOException {
+    public Map<String, ?> source() {
 
-        builder = builder.startObject("properties");
-        for(final Map.Entry<String, FieldType> entry : properties.entrySet()) {
-            builder = builder.startObject(entry.getKey());
-            builder = entry.getValue().build(builder);
-            builder = builder.endObject();
-        }
-        builder = builder.endObject();
-        return builder;
+        return ImmutableMap.of("properties", properties.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().source())));
     }
 
     public interface Factory {

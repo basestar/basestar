@@ -32,7 +32,7 @@ import java.util.Set;
 
 @Data
 @Builder(toBuilder = true, builderClassName = "Builder")
-public class QueryOptions {
+public class QueryOptions implements Options {
 
     public static final String TYPE = "query";
 

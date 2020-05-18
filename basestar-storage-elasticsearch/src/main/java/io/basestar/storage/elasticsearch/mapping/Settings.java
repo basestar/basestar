@@ -20,24 +20,48 @@ package io.basestar.storage.elasticsearch.mapping;
  * #L%
  */
 
-import lombok.Builder;
+import com.google.common.collect.ImmutableMap;
+import io.basestar.util.Nullsafe;
 import lombok.Data;
-import org.elasticsearch.common.xcontent.XContentBuilder;
 
-import java.io.IOException;
+import java.util.Map;
 
 @Data
-@Builder
 public class Settings {
+
+    private static final int DEFAULT_SHARDS = 6;
+
+    private static final int DEFAULT_REPLICAS = 0;
+
+    private static final String DEFAULT_REFRESH_INTERVAL = "1s";
 
     private final int shards;
 
     private final int replicas;
 
-    public XContentBuilder build(XContentBuilder builder) throws IOException {
+    private final String refreshInterval;
 
-        builder = builder.field("number_of_shards", shards);
-        builder = builder.field("number_of_replicas", replicas);
-        return builder;
+    @lombok.Builder(builderClassName = "Builder", toBuilder = true)
+    Settings(final Integer shards, final Integer replicas, final String refreshInterval) {
+
+        this.shards = Nullsafe.option(shards, DEFAULT_SHARDS);
+        this.replicas = Nullsafe.option(replicas, DEFAULT_REPLICAS);
+        this.refreshInterval = Nullsafe.option(refreshInterval, DEFAULT_REFRESH_INTERVAL);
+    }
+
+    public Map<String, ?> dynamic() {
+
+        return ImmutableMap.<String, Object>builder()
+                .put("refresh_interval", refreshInterval)
+                .build();
+    }
+
+    public Map<String, ?> all() {
+
+        return ImmutableMap.<String, Object>builder()
+                .putAll(dynamic())
+                .put("number_of_shards", shards)
+                .put("number_of_replicas", replicas)
+                .build();
     }
 }

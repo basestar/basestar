@@ -103,6 +103,7 @@
         <module>basestar-storage-hazelcast</module>
         <module>basestar-test</module>
         <module>basestar-graphql</module>
+        <module>basestar-spark-elasticsearch</module>
     </modules>
 
 <!--    <reporting>-->

@@ -171,7 +171,7 @@ public class SparkSchemaUtils {
         schema.getProperties().forEach((name, property) -> object.put(name, fromSpark(property.getType(), row.getAs(name))));
         schema.metadataSchema().forEach((name, type) -> object.put(name, fromSpark(type, row.getAs(name))));
         extraMetadata.forEach((name, type) -> object.put(name, fromSpark(type, row.getAs(name))));
-        return schema.create(object);
+        return schema.create(object, true, true);
     }
 
     public static Map<String, Object> refFromSpark(final Row row) {

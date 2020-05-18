@@ -28,7 +28,7 @@ import java.util.Set;
 
 @Data
 @Builder(toBuilder = true, builderClassName = "Builder")
-public class ReadOptions {
+public class ReadOptions implements Options {
 
     public static final String TYPE = "read";
 

@@ -55,10 +55,6 @@ import org.elasticsearch.action.support.WriteRequest;
 import org.elasticsearch.client.HttpAsyncResponseConsumerFactory;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.client.indices.CreateIndexRequest;
-import org.elasticsearch.client.indices.CreateIndexResponse;
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -134,7 +130,7 @@ public class ElasticsearchStorage implements Storage {
         final String index = routing.objectIndex(schema);
         return getIndex(index, schema).thenCompose(ignored -> {
             final GetRequest request = new GetRequest(index, id);
-            return ElasticsearchStorage.<GetResponse>future(listener -> client.getAsync(request, OPTIONS, listener))
+            return ElasticsearchUtils.<GetResponse>future(listener -> client.getAsync(request, OPTIONS, listener))
                     .thenApply(v -> fromResponse(schema, v));
         });
     }
@@ -149,7 +145,7 @@ public class ElasticsearchStorage implements Storage {
         return getIndex(index, schema).thenCompose(ignored -> {
             final String key = historyKey(id, version);
             final GetRequest request = new GetRequest(index, key);
-            return ElasticsearchStorage.<GetResponse>future(listener -> client.getAsync(request, OPTIONS, listener))
+            return ElasticsearchUtils.<GetResponse>future(listener -> client.getAsync(request, OPTIONS, listener))
                     .thenApply(v -> fromResponse(schema, v));
         });
     }
@@ -183,7 +179,7 @@ public class ElasticsearchStorage implements Storage {
                                     .query(pagedQueryBuilder), normalizedSort)
                                     .trackTotalHits(true));
 
-                    return ElasticsearchStorage.<SearchResponse>future(listener -> client.searchAsync(request, OPTIONS, listener))
+                    return ElasticsearchUtils.<SearchResponse>future(listener -> client.searchAsync(request, OPTIONS, listener))
                             .thenApply(searchResponse -> {
 
                                 final List<Map<String, Object>> results = new ArrayList<>();
@@ -277,7 +273,7 @@ public class ElasticsearchStorage implements Storage {
             @Override
             public CompletableFuture<BatchResponse> read() {
 
-                return getIndices(indexToSchema).thenCompose(ignored -> ElasticsearchStorage.<MultiGetResponse>future(listener -> client.mgetAsync(request, OPTIONS, listener))
+                return getIndices(indexToSchema).thenCompose(ignored -> ElasticsearchUtils.<MultiGetResponse>future(listener -> client.mgetAsync(request, OPTIONS, listener))
                         .thenApply(response -> {
                             final SortedMap<BatchResponse.Key, Map<String, Object>> results = new TreeMap<>();
                             for (final MultiGetItemResponse item : response) {
@@ -324,7 +320,7 @@ public class ElasticsearchStorage implements Storage {
     private CompletableFuture<?> getIndex(final String name, final ObjectSchema schema) {
 
         if (!createdIndices.contains(name)) {
-            return createIndex(name, schema);
+            return syncIndex(name, schema);
         } else {
             return CompletableFuture.completedFuture(null);
         }
@@ -335,42 +331,17 @@ public class ElasticsearchStorage implements Storage {
         final List<CompletableFuture<?>> createIndexFutures = new ArrayList<>();
         for (final Map.Entry<String, ObjectSchema> entry : indices.entrySet()) {
             if (!createdIndices.contains(entry.getKey())) {
-                createIndexFutures.add(ElasticsearchStorage.this.createIndex(entry.getKey(), entry.getValue()));
+                createIndexFutures.add(ElasticsearchStorage.this.syncIndex(entry.getKey(), entry.getValue()));
             }
         }
         return CompletableFuture.allOf(createIndexFutures.toArray(new CompletableFuture<?>[0]));
     }
 
-    private CompletableFuture<?> createIndex(final String name, final ObjectSchema schema) {
+    private CompletableFuture<?> syncIndex(final String name, final ObjectSchema schema) {
 
         final Mappings mappings = routing.mappings(schema);
         final Settings settings = routing.settings(schema);
-        try {
-            XContentBuilder builder = XContentFactory.jsonBuilder()
-                    .prettyPrint().startObject();
-//            builder.field("include_type_name", false);
-            builder = builder.startObject("settings");
-            builder = settings.build(builder);
-            builder = builder.endObject();
-            builder = builder.startObject("mappings");
-            builder = mappings.build(builder);
-            builder = builder.endObject();
-            builder = builder.endObject();
-
-            final XContentBuilder source = builder;
-            return ElasticsearchStorage.<CreateIndexResponse>future(listener ->
-                    client.indices().createAsync(new CreateIndexRequest(name)
-                            .source(source), OPTIONS, listener))
-                    .exceptionally(e -> {
-                        // FIXME?
-                        log.error("Error creating search index, ignoring {}", e.getClass().getName());
-                        return null;
-                    })
-                    .thenApply(ignored -> createdIndices.add(name));
-
-        } catch (final IOException e) {
-            throw new IllegalStateException(e);
-        }
+        return ElasticsearchUtils.syncIndex(client, name, mappings, settings);
     }
 
     @Override
@@ -532,7 +503,7 @@ public class ElasticsearchStorage implements Storage {
             public CompletableFuture<BatchResponse> commit() {
 
                 return getIndices(indices)
-                        .thenCompose(ignored -> ElasticsearchStorage
+                        .thenCompose(ignored -> ElasticsearchUtils
                                 .<BulkResponse>future(listener -> client.bulkAsync(request, OPTIONS, listener))
                                 .thenApply(response -> {
                                     final SortedMap<BatchResponse.Key, Map<String, Object>> results = new TreeMap<>();
@@ -584,27 +555,6 @@ public class ElasticsearchStorage implements Storage {
     private static String historyKey(final String id, final long version) {
 
         return id + Reserved.DELIMITER + version;
-    }
-
-    private static <T> CompletableFuture<T> future(final ListenerConsumer<T> with) {
-
-        final CompletableFuture<T> future = new CompletableFuture<>();
-        try {
-            with.accept(new ActionListener<T>() {
-                @Override
-                public void onResponse(final T t) {
-                    future.complete(t);
-                }
-
-                @Override
-                public void onFailure(final Exception e) {
-                    future.completeExceptionally(e);
-                }
-            });
-        } catch (final IOException e) {
-            future.completeExceptionally(e);
-        }
-        return future;
     }
 
     private interface ListenerConsumer<T> {

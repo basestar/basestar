@@ -25,9 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.BaseEncoding;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.elasticsearch.common.xcontent.XContentBuilder;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -47,7 +45,7 @@ public interface FieldType {
 
     KeywordType KEYWORD = new KeywordType();
 
-    XContentBuilder build(XContentBuilder builder) throws IOException;
+    Object source();
 
     Object toSource(Object value);
 
@@ -56,9 +54,9 @@ public interface FieldType {
     class BinaryType implements FieldType {
 
         @Override
-        public XContentBuilder build(final XContentBuilder builder) throws IOException {
+        public Object source() {
 
-            return builder.field("type", "binary");
+            return ImmutableMap.of("type", "binary");
         }
 
         @Override
@@ -89,9 +87,9 @@ public interface FieldType {
     class BooleanType implements FieldType {
 
         @Override
-        public XContentBuilder build(final XContentBuilder builder) throws IOException {
+        public Object source() {
 
-            return builder.field("type", "boolean");
+            return ImmutableMap.of("type", "boolean");
         }
 
         @Override
@@ -110,9 +108,9 @@ public interface FieldType {
     class DateType implements FieldType {
 
         @Override
-        public XContentBuilder build(final XContentBuilder builder) throws IOException {
+        public Object source() {
 
-            return builder.field("type", "date");
+            return ImmutableMap.of("type", "date");
         }
 
         @Override
@@ -131,9 +129,9 @@ public interface FieldType {
     class KeywordType implements FieldType {
 
         @Override
-        public XContentBuilder build(final XContentBuilder builder) throws IOException {
+        public Object source() {
 
-            return builder.field("type", "keyword");
+            return ImmutableMap.of("type", "keyword");
         }
 
         @Override
@@ -170,9 +168,9 @@ public interface FieldType {
         private final Type type;
 
         @Override
-        public XContentBuilder build(final XContentBuilder builder) throws IOException {
+        public Object source() {
 
-            return builder.field("type", type.getType());
+            return ImmutableMap.of("type", type.getType());
         }
 
         @Override
@@ -194,16 +192,10 @@ public interface FieldType {
         private final Map<String, FieldType> properties;
 
         @Override
-        public XContentBuilder build(XContentBuilder builder) throws IOException {
+        public Object source() {
 
-            builder = builder.field("type", "nested")
-                    .startObject("properties");
-            for(final Map.Entry<String, FieldType> entry : properties.entrySet()) {
-                builder = builder.startObject(entry.getKey());
-                builder = entry.getValue().build(builder);
-                builder = builder.endObject();
-            }
-            return builder.endObject();
+            return ImmutableMap.of("type", "nested", "properties", properties.entrySet().stream()
+                    .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().source())));
         }
 
         @Override
@@ -245,9 +237,9 @@ public interface FieldType {
         private final FieldType valueType;
 
         @Override
-        public XContentBuilder build(XContentBuilder builder) throws IOException {
+        public Object source() {
 
-            return valueType.build(builder);
+            return valueType.source();
         }
 
         @Override
@@ -291,20 +283,12 @@ public interface FieldType {
         private final FieldType valueType;
 
         @Override
-        public XContentBuilder build(XContentBuilder builder) throws IOException {
+        public Object source() {
 
-            builder = builder.field("type", "nested")
-                    .startObject("properties");
-
-            builder = builder.startObject(KEY);
-            builder = KEYWORD.build(builder);
-            builder = builder.endObject();
-
-            builder = builder.startObject(VALUE);
-            builder = valueType.build(builder);
-            builder = builder.endObject();
-
-            return builder.endObject();
+            return ImmutableMap.of("type", "nested", "properties", ImmutableMap.of(
+                    KEY, KEYWORD.source(),
+                    VALUE, valueType.source()
+            ));
         }
 
         @Override
@@ -345,9 +329,9 @@ public interface FieldType {
     class TextType implements FieldType {
 
         @Override
-        public XContentBuilder build(final XContentBuilder builder) throws IOException {
+        public Object source() {
 
-            return builder.field("type", "text");
+            return ImmutableMap.of("type", "text");
         }
 
         @Override
