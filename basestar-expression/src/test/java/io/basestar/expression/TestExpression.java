@@ -23,9 +23,9 @@ package io.basestar.expression;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.basestar.expression.call.LambdaCall;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.PathConstant;
-import io.basestar.expression.function.Call;
 import io.basestar.expression.function.With;
 import io.basestar.expression.iterate.ForAll;
 import io.basestar.expression.iterate.ForAny;
@@ -321,7 +321,7 @@ public class TestExpression {
     public void testLambdaBind() {
 
         final Expression unbound = Expression.parse("[1].map(v -> a)").bind(context());
-        assertTrue(unbound instanceof Call);
+        assertTrue(unbound instanceof LambdaCall);
         final Expression bound = Expression.parse("[1].map(v -> v)").bind(context());
         assertTrue(bound instanceof Constant);
         final Expression chained = Expression.parse("x.map(v -> v.y.map(v2 -> v2))").bind(context(ImmutableMap.of(

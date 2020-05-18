@@ -43,6 +43,7 @@ expr
  | expr And expr #exprAnd
  | expr Or expr #exprOr
  | <assoc=right> expr QQMark expr #exprCoalesce
+// | expr name expr #exprOperator
  | expr QMark expr Colon expr #exprIfElse
  | LBrace expr Colon expr For expr RBrace #exprForObject
  | LBrace expr For expr RBrace #exprForSet

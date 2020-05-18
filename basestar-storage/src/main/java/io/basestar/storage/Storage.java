@@ -25,6 +25,7 @@ import io.basestar.schema.Consistency;
 import io.basestar.schema.History;
 import io.basestar.schema.Index;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.aggregate.Aggregate;
 import io.basestar.schema.exception.UnsupportedConsistencyException;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.Path;
@@ -74,7 +75,7 @@ public interface Storage {
 
     List<Pager.Source<Map<String, Object>>> query(ObjectSchema schema, Expression query, List<Sort> sort);
 
-//    CompletableFuture<Map<String, Object>> aggregate(ObjectSchema schema, Aggregate aggregate);
+    List<Pager.Source<Map<String, Object>>> aggregate(ObjectSchema schema, Expression query, Map<String, Expression> group, Map<String, Aggregate> aggregates);
 
     default Set<Path> canHandleExpand(final ObjectSchema schema, final Set<Path> expand) {
 

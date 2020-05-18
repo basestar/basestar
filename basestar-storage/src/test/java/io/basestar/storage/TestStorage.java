@@ -25,6 +25,8 @@ import com.google.common.collect.*;
 import io.basestar.expression.Expression;
 import io.basestar.expression.type.Values;
 import io.basestar.schema.*;
+import io.basestar.schema.aggregate.Aggregate;
+import io.basestar.schema.aggregate.Count;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.util.Pager;
@@ -579,6 +581,27 @@ public abstract class TestStorage {
         storage.write(Consistency.ATOMIC)
                 .deleteObject(schema, id, null)
                 .commit().join();
+    }
+
+    @Test
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public void testAggregation() throws IOException {
+
+        final Storage storage = storage(namespace, loadAddresses());
+
+        final ObjectSchema schema = namespace.requireObjectSchema(ADDRESS);
+
+        assumeTrue(storage.storageTraits(schema).supportsAggregation(),
+                "Aggregation must be enabled for this test");
+
+        final List<Sort> sort = ImmutableList.of(Sort.asc(Path.of("country")), Sort.asc(Path.of(Reserved.ID)));
+        final List<Pager.Source<Map<String, Object>>> sources = storage.aggregate(schema, Expression.parse("true"),
+                ImmutableMap.of("country", Expression.parse("country")),
+                ImmutableMap.<String, Aggregate>of("count", Count.builder().build()));
+        final Comparator<Map<String, Object>> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
+
+        final PagedList<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
+        //assertEquals(?, results.size());
     }
 
     private void createComplete(final Storage storage, final ObjectSchema schema, final Map<String, Object> data) {

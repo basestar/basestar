@@ -21,10 +21,13 @@ package io.basestar.storage;
  */
 
 import com.google.common.collect.Lists;
+import io.basestar.expression.Expression;
 import io.basestar.schema.*;
+import io.basestar.schema.aggregate.Aggregate;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;
+import io.basestar.storage.util.Pager;
 import io.basestar.util.PagedList;
 import io.basestar.util.PagingToken;
 import io.basestar.util.Path;
@@ -83,6 +86,12 @@ public class MemoryStorage extends PartitionedStorage {
                 return state.history.get(new TypeIdVersion(schema.getName(), id, version));
             }
         });
+    }
+
+    @Override
+    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
+
+        throw new UnsupportedOperationException();
     }
 
     @Override

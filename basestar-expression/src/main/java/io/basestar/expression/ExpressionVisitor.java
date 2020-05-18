@@ -22,6 +22,8 @@ package io.basestar.expression;
 
 import io.basestar.expression.arithmetic.*;
 import io.basestar.expression.bitwise.*;
+import io.basestar.expression.call.LambdaCall;
+import io.basestar.expression.call.MemberCall;
 import io.basestar.expression.compare.*;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.PathConstant;
@@ -95,11 +97,11 @@ public interface ExpressionVisitor<T> {
 
     T visitLambda(Lambda expression);
 
-    T visitLambdaCall(Call expression);
+    T visitLambdaCall(LambdaCall expression);
+
+    T visitMemberCall(MemberCall expression);
 
     T visitMember(Member expression);
-
-    T visitCall(Call expression);
 
     T visitWith(With expression);
 
@@ -129,227 +131,279 @@ public interface ExpressionVisitor<T> {
 
     T visitOr(Or expression);
 
+    T visitOperator(Operator operator);
+
     interface Defaulting<T> extends ExpressionVisitor<T> {
 
         T visitDefault(Expression expression);
 
+        @Override
         default T visitAdd(final Add expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitDiv(final Div expression){
+        @Override
+        default T visitDiv(final Div expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitMod(final Mod expression){
+        @Override
+        default T visitMod(final Mod expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitMul(final Mul expression){
+        @Override
+        default T visitMul(final Mul expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitNegate(final Negate expression){
+        @Override
+        default T visitNegate(final Negate expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitPow(final Pow expression){
+        @Override
+        default T visitPow(final Pow expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitSub(final Sub expression){
+        @Override
+        default T visitSub(final Sub expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitBitAnd(final BitAnd expression){
+        @Override
+        default T visitBitAnd(final BitAnd expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitBitFlip(final BitNot expression){
+        @Override
+        default T visitBitFlip(final BitNot expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitBitLsh(final BitLsh expression){
+        @Override
+        default T visitBitLsh(final BitLsh expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitBitOr(final BitOr expression){
+        @Override
+        default T visitBitOr(final BitOr expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitBitRsh(final BitRsh expression){
+        @Override
+        default T visitBitRsh(final BitRsh expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitBitXor(final BitXor expression){
+        @Override
+        default T visitBitXor(final BitXor expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitCmp(final Cmp expression){
+        @Override
+        default T visitCmp(final Cmp expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitEq(final Eq expression){
+        @Override
+        default T visitEq(final Eq expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitGt(final Gt expression){
+        @Override
+        default T visitGt(final Gt expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitGte(final Gte expression){
+        @Override
+        default T visitGte(final Gte expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitLt(final Lt expression){
+        @Override
+        default T visitLt(final Lt expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitLte(final Lte expression){
+        @Override
+        default T visitLte(final Lte expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitNe(final Ne expression){
+        @Override
+        default T visitNe(final Ne expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitConstant(final Constant expression){
+        @Override
+        default T visitConstant(final Constant expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitPathConstant(final PathConstant expression){
+        @Override
+        default T visitPathConstant(final PathConstant expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitCoalesce(final Coalesce expression){
+        @Override
+        default T visitCoalesce(final Coalesce expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitIfElse(final IfElse expression){
+        @Override
+        default T visitIfElse(final IfElse expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitIn(final In expression){
+        @Override
+        default T visitIn(final In expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitIndex(final Index expression){
+        @Override
+        default T visitIndex(final Index expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitLambda(final Lambda expression){
+        @Override
+        default T visitLambda(final Lambda expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitLambdaCall(final Call expression){
+        @Override
+        default T visitLambdaCall(final LambdaCall expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitMember(final Member expression){
+        @Override
+        default T visitMemberCall(final MemberCall expression) {
+
+            return visitDefault(expression);
+        }
+
+        @Override
+        default T visitMember(final Member expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitCall(final Call expression){
+        @Override
+        default T visitWith(final With expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitWith(final With expression){
+        @Override
+        default T visitForAll(final ForAll expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitForAll(final ForAll expression){
+        @Override
+        default T visitForAny(final ForAny expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitForAny(final ForAny expression){
+        @Override
+        default T visitForArray(final ForArray expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitForArray(final ForArray expression){
+        @Override
+        default T visitForObject(final ForObject expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitForObject(final ForObject expression){
+        @Override
+        default T visitForSet(final ForSet expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitForSet(final ForSet expression){
+        @Override
+        default T visitOf(final Of expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitOf(final Of expression){
+        @Override
+        default T visitWhere(final Where expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitWhere(final Where expression){
+        @Override
+        default T visitLiteralArray(final LiteralArray expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitLiteralArray(final LiteralArray expression){
+        @Override
+        default T visitLiteralObject(final LiteralObject expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitLiteralObject(final LiteralObject expression){
+        @Override
+        default T visitLiteralSet(final LiteralSet expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitLiteralSet(final LiteralSet expression){
+        @Override
+        default T visitAnd(final And expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitAnd(final And expression){
+        @Override
+        default T visitNot(final Not expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitNot(final Not expression){
+        @Override
+        default T visitOr(final Or expression) {
             
             return visitDefault(expression);
         }
 
-        default T visitOr(final Or expression){
-            
+        @Override
+        default T visitOperator(final Operator expression) {
+
             return visitDefault(expression);
         }
     }

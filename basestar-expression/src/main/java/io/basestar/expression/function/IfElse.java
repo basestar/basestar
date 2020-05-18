@@ -44,7 +44,7 @@ public class IfElse implements Expression {
 
     public static final String TOKEN = "?:";
 
-    public static final int PRECEDENCE = Coalesce.PRECEDENCE + 1;
+    public static final int PRECEDENCE = Operator.PRECEDENCE + 1;
 
     private final Expression predicate;
 

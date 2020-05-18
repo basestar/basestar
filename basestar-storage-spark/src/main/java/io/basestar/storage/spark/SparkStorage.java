@@ -25,6 +25,7 @@ import io.basestar.expression.Expression;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
+import io.basestar.schema.aggregate.Aggregate;
 import io.basestar.spark.SparkSchemaUtils;
 import io.basestar.spark.expression.SparkExpressionVisitor;
 import io.basestar.storage.Storage;
@@ -139,6 +140,12 @@ public class SparkStorage implements Storage {
             return new PagedList<>(items, null);
 
         }, executor));
+    }
+
+    @Override
+    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
+
+        throw new UnsupportedOperationException();
     }
 
     // FIXME: can request more than one at a time here

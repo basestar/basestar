@@ -3,6 +3,7 @@
 <#assign packageNames=[
     "io.basestar.expression.arithmetic",
     "io.basestar.expression.bitwise",
+    "io.basestar.expression.call",
     "io.basestar.expression.compare",
     "io.basestar.expression.function",
     "io.basestar.expression.iterate",

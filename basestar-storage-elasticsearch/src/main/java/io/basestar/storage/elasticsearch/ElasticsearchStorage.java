@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
+import io.basestar.schema.aggregate.Aggregate;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
@@ -41,7 +42,6 @@ import io.basestar.util.Sort;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
-import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.DocWriteRequest;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkRequest;
@@ -63,7 +63,6 @@ import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -199,6 +198,12 @@ public class ElasticsearchStorage implements Storage {
                             });
                 })
         );
+    }
+
+    @Override
+    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
+
+        throw new UnsupportedOperationException();
     }
 
     private QueryBuilder pagingQueryBuilder(final ObjectSchema schema, final List<Sort> sort, final PagingToken token) {
@@ -555,10 +560,5 @@ public class ElasticsearchStorage implements Storage {
     private static String historyKey(final String id, final long version) {
 
         return id + Reserved.DELIMITER + version;
-    }
-
-    private interface ListenerConsumer<T> {
-
-        void accept(ActionListener<T> listener) throws IOException;
     }
 }

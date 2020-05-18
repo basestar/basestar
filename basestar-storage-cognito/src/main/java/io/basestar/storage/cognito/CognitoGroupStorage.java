@@ -27,6 +27,7 @@ import io.basestar.schema.Consistency;
 import io.basestar.schema.Index;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
+import io.basestar.schema.aggregate.Aggregate;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
@@ -113,6 +114,12 @@ public class CognitoGroupStorage implements Storage {
 
                     });
                 });
+    }
+
+    @Override
+    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
+
+        throw new UnsupportedOperationException();
     }
 
     private String decodePaging(final PagingToken token) {

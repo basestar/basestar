@@ -1,4 +1,4 @@
-package io.basestar.expression.function;
+package io.basestar.expression.call;
 
 /*-
  * #%L
@@ -26,6 +26,8 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.PathTransform;
 import io.basestar.expression.constant.Constant;
+import io.basestar.expression.function.IfElse;
+import io.basestar.expression.function.Member;
 import io.basestar.util.Path;
 import lombok.Data;
 
@@ -40,7 +42,7 @@ import java.util.stream.Stream;
  */
 
 @Data
-public class Call implements Expression {
+public class MemberCall implements Expression {
 
     public static final String TOKEN = "()";
 
@@ -53,20 +55,6 @@ public class Call implements Expression {
     private final List<Expression> args;
 
     /**
-     * with(args...)
-     *
-     * @param with any Lambda callable
-     * @param args args Function arguments
-     */
-
-    public Call(final Expression with, final List<Expression> args) {
-
-        this.with = with;
-        this.member = null;
-        this.args = args;
-    }
-
-    /**
      * with.member(...args)
      *
      * @param with any Object
@@ -74,7 +62,7 @@ public class Call implements Expression {
      * @param args args Function arguments
      */
 
-    public Call(final Expression with, final String member, final List<Expression> args) {
+    public MemberCall(final Expression with, final String member, final List<Expression> args) {
 
         this.with = with;
         this.member = member;
@@ -95,11 +83,11 @@ public class Call implements Expression {
             changed = changed || (before != after);
         }
         if(constant) {
-            return new Constant(new Call(with, member, args).evaluate(context));
+            return new Constant(new MemberCall(with, member, args).evaluate(context));
         } else if(with == this.with) {
             return this;
         } else {
-            return new Call(with, member, args);
+            return new MemberCall(with, member, args);
         }
     }
 
@@ -108,13 +96,7 @@ public class Call implements Expression {
 
         final Object with = this.with.evaluate(context);
         final Object[] args = this.args.stream().map(v -> v.evaluate(context)).toArray();
-        if(member != null) {
-            return context.call(with, member, args);
-        } else if (with instanceof Lambda.Callable) {
-            return ((Lambda.Callable) with).call(args);
-        } else {
-            throw new IllegalStateException();
-        }
+        return context.call(with, member, args);
     }
 
     @Override
@@ -124,12 +106,6 @@ public class Call implements Expression {
                 .flatMap(v -> v.paths().stream())
                 .collect(Collectors.toSet());
     }
-
-//    @Override
-//    public Query query() {
-//
-//        return Query.and();
-//    }
 
     @Override
     public String token() {
@@ -152,7 +128,7 @@ public class Call implements Expression {
     @Override
     public <T> T visit(final ExpressionVisitor<T> visitor) {
 
-        return visitor.visitLambdaCall(this);
+        return visitor.visitMemberCall(this);
     }
 
     @Override
@@ -160,10 +136,6 @@ public class Call implements Expression {
 
         final String with = this.with.precedence() > precedence() ? "(" + this.with + ")" : this.with.toString();
         final String args = "(" + Joiner.on(", ").join(this.args) + ")";
-        if(member != null) {
-            return with + Member.TOKEN + member + args;
-        } else {
-            return with + args;
-        }
+        return with + Member.TOKEN + member + args;
     }
 }

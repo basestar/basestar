@@ -25,6 +25,7 @@ import io.basestar.expression.Expression;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.aggregate.Aggregate;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.PagedList;
@@ -119,6 +120,12 @@ public class OverlayStorage implements Storage {
                             .thenApply(page -> page.filter(instance -> get(instance) == null))));
 
         return sources;
+    }
+
+    @Override
+    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
+
+        throw new UnsupportedOperationException();
     }
 
     @Override

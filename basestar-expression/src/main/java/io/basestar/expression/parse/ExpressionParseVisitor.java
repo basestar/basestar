@@ -34,6 +34,8 @@ import io.basestar.expression.bitwise.BitNot;
 import io.basestar.expression.bitwise.BitOr;
 import io.basestar.expression.bitwise.BitRsh;
 import io.basestar.expression.bitwise.BitXor;
+import io.basestar.expression.call.LambdaCall;
+import io.basestar.expression.call.MemberCall;
 import io.basestar.expression.compare.Cmp;
 import io.basestar.expression.compare.Eq;
 import io.basestar.expression.compare.Gt;
@@ -147,9 +149,9 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
         final List<Expression> args = ctx.exprs() == null ? Collections.emptyList() : visit(ctx.exprs().expr());
         if (ctx.Identifier() != null) {
             final String method = ctx.Identifier().getText();
-            return new Call(with, method, args);
+            return new MemberCall(with, method, args);
         } else {
-            return new Call(with, args);
+            return new LambdaCall(with, args);
         }
     }
 
@@ -352,6 +354,12 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
 
         return Constant.NULL;
     }
+
+//    @Override
+//    public Expression visitExprOperator(final ExprOperatorContext ctx) {
+//
+//        return new Operator(ctx.name().getText(), visit(ctx.expr(0)), visit(ctx.expr(1)));
+//    }
 
     @Override
     public Expression visitExprOr(final ExprOrContext ctx) {

@@ -25,6 +25,7 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Index;
 import io.basestar.schema.*;
+import io.basestar.schema.aggregate.Aggregate;
 import io.basestar.schema.use.Use;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
@@ -184,6 +185,12 @@ public class SQLStorage implements Storage {
         }
 
         return sources;
+    }
+
+    @Override
+    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
+
+        throw new UnsupportedOperationException();
     }
 
     @Override

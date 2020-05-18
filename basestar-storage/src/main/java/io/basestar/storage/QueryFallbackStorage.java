@@ -22,6 +22,7 @@ package io.basestar.storage;
 
 import io.basestar.expression.Expression;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.aggregate.Aggregate;
 import io.basestar.storage.exception.UnsupportedQueryException;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.Nullsafe;
@@ -52,6 +53,12 @@ public class QueryFallbackStorage implements DelegatingStorage {
     public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
 
         return tryQuery(storage, schema, query, sort);
+    }
+
+    @Override
+    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
+
+        throw new UnsupportedOperationException();
     }
 
     public List<Pager.Source<Map<String, Object>>> tryQuery(final List<Storage> storage, final ObjectSchema schema, final Expression query, final List<Sort> sort) {

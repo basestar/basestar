@@ -35,39 +35,15 @@ public interface StorageTraits {
 
     boolean supportsMultiObject();
 
+    default boolean supportsAggregation() {
+
+        return false;
+    }
+
     Concurrency getObjectConcurrency();
 
     default Consistency getIndexConsistency(boolean multi) {
 
         return multi ? getMultiValueIndexConsistency() : getSingleValueIndexConsistency();
     }
-
-
-//    Consistency getObjectReadConsistency();
-//
-//    Consistency getObjectWriteConsistency();
-//
-//    Consistency getHistoryReadConsistency();
-//
-//    Consistency getHistoryWriteConsistency();
-//
-//    Consistency getPolymorphicReadConsistency();
-//
-//    Consistency getPolymorphicWriteConsistency();
-//
-//    Consistency getSingleIndexReadConsistency();
-//
-//    Consistency getSingleIndexWriteConsistency();
-//
-//    Consistency getMultiValueIndexReadConsistency();
-//
-//    Consistency getMultiValueIndexWriteConsistency();
-//
-//    Consistency getRefIndexReadConsistency();
-//
-//    Consistency getRefIndexWriteConsistency();
-//
-//    Consistency getMultiObjectReadConsistency();
-//
-//    Consistency getMultiObjectWriteConsistency();
 }

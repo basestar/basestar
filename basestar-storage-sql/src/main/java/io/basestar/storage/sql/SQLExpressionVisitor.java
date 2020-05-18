@@ -28,11 +28,11 @@ import io.basestar.expression.bitwise.*;
 import io.basestar.expression.compare.*;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.PathConstant;
-import io.basestar.expression.function.*;
-import io.basestar.expression.iterate.*;
-import io.basestar.expression.literal.LiteralArray;
-import io.basestar.expression.literal.LiteralObject;
-import io.basestar.expression.literal.LiteralSet;
+import io.basestar.expression.function.Coalesce;
+import io.basestar.expression.function.IfElse;
+import io.basestar.expression.function.In;
+import io.basestar.expression.iterate.ForAny;
+import io.basestar.expression.iterate.Of;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
@@ -46,7 +46,13 @@ import org.jooq.impl.DSL;
 import java.util.Arrays;
 import java.util.Objects;
 
-public class SQLExpressionVisitor implements ExpressionVisitor<QueryPart> {
+public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryPart> {
+
+    @Override
+    public QueryPart visitDefault(final Expression expression) {
+
+        return null;
+    }
 
     @Override
     public QueryPart visitAdd(final Add expression) {
@@ -242,48 +248,6 @@ public class SQLExpressionVisitor implements ExpressionVisitor<QueryPart> {
     }
 
     @Override
-    public QueryPart visitIndex(final Index expression) {
-
-        return null;
-    }
-
-    @Override
-    public QueryPart visitLambda(final Lambda expression) {
-
-        return null;
-    }
-
-    @Override
-    public QueryPart visitLambdaCall(final Call expression) {
-
-        return null;
-    }
-
-    @Override
-    public QueryPart visitMember(final Member expression) {
-
-        return null;
-    }
-
-    @Override
-    public QueryPart visitCall(final Call expression) {
-
-        return null;
-    }
-
-    @Override
-    public QueryPart visitWith(final With expression) {
-
-        return null;
-    }
-
-    @Override
-    public QueryPart visitForAll(final ForAll expression) {
-
-        return null;
-    }
-
-    @Override
     public QueryPart visitForAny(final ForAny expression) {
 
         final Expression lhs = expression.getLhs();
@@ -306,54 +270,6 @@ public class SQLExpressionVisitor implements ExpressionVisitor<QueryPart> {
                 }
             }
         }
-        return null;
-    }
-
-    @Override
-    public QueryPart visitForArray(final ForArray expression) {
-
-        return null;
-    }
-
-    @Override
-    public QueryPart visitForObject(final ForObject expression) {
-
-        return null;
-    }
-
-    @Override
-    public QueryPart visitForSet(final ForSet expression) {
-
-        return null;
-    }
-
-    @Override
-    public QueryPart visitOf(final Of expression) {
-
-        return null;
-    }
-
-    @Override
-    public QueryPart visitWhere(final Where expression) {
-
-        return null;
-    }
-
-    @Override
-    public QueryPart visitLiteralArray(final LiteralArray expression) {
-
-        return null;
-    }
-
-    @Override
-    public QueryPart visitLiteralObject(final LiteralObject expression) {
-
-        return null;
-    }
-
-    @Override
-    public QueryPart visitLiteralSet(final LiteralSet expression) {
-
         return null;
     }
 

@@ -27,6 +27,7 @@ import io.basestar.schema.Consistency;
 import io.basestar.schema.Index;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.aggregate.Aggregate;
 import io.basestar.storage.exception.UnsupportedQueryException;
 import io.basestar.storage.query.DisjunctionVisitor;
 import io.basestar.storage.query.Range;
@@ -50,6 +51,12 @@ import java.util.stream.Collectors;
 public abstract class PartitionedStorage implements Storage {
 
     protected abstract CompletableFuture<PagedList<Map<String, Object>>> queryIndex(ObjectSchema schema, Index index, SatisfyResult satisfyResult, Map<Path, Range<Object>> query, List<Sort> sort, int count, PagingToken paging);
+
+    @Override
+    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
+
+        throw new UnsupportedOperationException();
+    }
 
     @Override
     public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression expression, final List<Sort> sort) {

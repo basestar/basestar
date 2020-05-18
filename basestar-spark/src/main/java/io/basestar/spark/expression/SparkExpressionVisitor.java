@@ -23,15 +23,10 @@ package io.basestar.spark.expression;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.arithmetic.*;
-import io.basestar.expression.bitwise.*;
 import io.basestar.expression.compare.*;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.PathConstant;
-import io.basestar.expression.function.*;
-import io.basestar.expression.iterate.*;
-import io.basestar.expression.literal.LiteralArray;
-import io.basestar.expression.literal.LiteralObject;
-import io.basestar.expression.literal.LiteralSet;
+import io.basestar.expression.function.Coalesce;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
@@ -48,9 +43,15 @@ import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
 
 @RequiredArgsConstructor
-public class SparkExpressionVisitor implements ExpressionVisitor<Column> {
+public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Column> {
 
     private final Function<Path, Column> columnResolver;
+
+    @Override
+    public Column visitDefault(final Expression expression) {
+
+        throw new UnsupportedOperationException();
+    }
 
     @Override
     public Column visitAdd(final Add expression) {
@@ -74,12 +75,6 @@ public class SparkExpressionVisitor implements ExpressionVisitor<Column> {
     }
 
     @Override
-    public Column visitMod(final Mod expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public Column visitMul(final Mul expression) {
 
         final Column lhs = visit(expression.getLhs());
@@ -95,59 +90,11 @@ public class SparkExpressionVisitor implements ExpressionVisitor<Column> {
     }
 
     @Override
-    public Column visitPow(final Pow expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public Column visitSub(final Sub expression) {
 
         final Column lhs = visit(expression.getLhs());
         final Column rhs = visit(expression.getRhs());
         return lhs.minus(rhs);
-    }
-
-    @Override
-    public Column visitBitAnd(final BitAnd expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Column visitBitFlip(final BitNot expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Column visitBitLsh(final BitLsh expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Column visitBitOr(final BitOr expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Column visitBitRsh(final BitRsh expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Column visitBitXor(final BitXor expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Column visitCmp(final Cmp expression) {
-
-        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -216,114 +163,6 @@ public class SparkExpressionVisitor implements ExpressionVisitor<Column> {
         final Column lhs = visit(expression.getLhs());
         final Column rhs = visit(expression.getRhs());
         return coalesce(lhs, rhs);
-    }
-
-    @Override
-    public Column visitIfElse(final IfElse expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Column visitIn(final In expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Column visitIndex(final Index expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Column visitLambda(final Lambda expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Column visitLambdaCall(final Call expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Column visitMember(final Member expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Column visitCall(final Call expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Column visitWith(final With expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Column visitForAll(final ForAll expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Column visitForAny(final ForAny expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Column visitForArray(final ForArray expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Column visitForObject(final ForObject expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Column visitForSet(final ForSet expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Column visitOf(final Of expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Column visitWhere(final Where expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Column visitLiteralArray(final LiteralArray expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Column visitLiteralObject(final LiteralObject expression) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Column visitLiteralSet(final LiteralSet expression) {
-
-        throw new UnsupportedOperationException();
     }
 
     @Override

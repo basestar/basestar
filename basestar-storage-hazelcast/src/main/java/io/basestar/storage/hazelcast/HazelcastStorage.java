@@ -32,6 +32,7 @@ import com.hazelcast.transaction.TransactionOptions;
 import com.hazelcast.transaction.TransactionalMap;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
+import io.basestar.schema.aggregate.Aggregate;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
@@ -178,6 +179,12 @@ public class HazelcastStorage implements Storage {
             }
 
         }));
+    }
+
+    @Override
+    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
+
+        throw new UnsupportedOperationException();
     }
 
     @Override
