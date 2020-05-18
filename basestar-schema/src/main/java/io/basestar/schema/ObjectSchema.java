@@ -471,6 +471,7 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
             return null;
         }
         final HashMap<String, Object> result = new HashMap<>(readProperties(value, expand, suppress));
+        // May be overwritten by readMeta
         Instance.setSchema(result, this.getName());
         result.putAll(readMeta(value));
         if(result.get(Reserved.HASH) == null) {

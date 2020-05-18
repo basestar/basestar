@@ -168,9 +168,9 @@ public class SparkSchemaUtils {
     public static Map<String, Object> fromSpark(final InstanceSchema schema, final Map<String, Use<?>> extraMetadata, final Row row) {
 
         final Map<String, Object> object = new HashMap<>();
-        schema.getProperties().forEach((name, property) -> object.put(name, fromSpark(property.getType(), row.getAs(name))));
-        schema.metadataSchema().forEach((name, type) -> object.put(name, fromSpark(type, row.getAs(name))));
-        extraMetadata.forEach((name, type) -> object.put(name, fromSpark(type, row.getAs(name))));
+        schema.getProperties().forEach((name, property) -> object.put(name, fromSpark(property.getType(), get(row, name))));
+        schema.metadataSchema().forEach((name, type) -> object.put(name, fromSpark(type, get(row, name))));
+        extraMetadata.forEach((name, type) -> object.put(name, fromSpark(type, get(row, name))));
         return schema.create(object, true, true);
     }
 
@@ -178,7 +178,7 @@ public class SparkSchemaUtils {
 
         final Map<String, Object> object = new HashMap<>();
         ObjectSchema.REF_SCHEMA
-                .forEach((name, type) -> object.put(name, fromSpark(type, row.getAs(name))));
+                .forEach((name, type) -> object.put(name, fromSpark(type, get(row, name))));
         return object;
     }
 
