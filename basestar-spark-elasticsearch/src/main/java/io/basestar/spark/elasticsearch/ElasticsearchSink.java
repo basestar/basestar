@@ -87,7 +87,7 @@ public class ElasticsearchSink implements Sink<RDD<Map<String, Object>>> {
             final Map<String, String> cfg = new HashMap<>();
             cfg.put("es.nodes", hostName);
             cfg.put("es.port", Integer.toString(port));
-            cfg.put("es.ssl", ssl ? "true" : "false");
+            cfg.put("es.net.ssl", ssl ? "true" : "false");
             cfg.put("es.nodes.wan.only", "true");
             cfg.put("es.mapping.id", id);
             cfg.put("es.batch.size.bytes", batchBytes);
