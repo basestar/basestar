@@ -3,7 +3,7 @@ package io.basestar.schema.aggregate;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.WRAPPER_OBJECT)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "function")
 @JsonSubTypes({
         @JsonSubTypes.Type(name = Sum.TYPE, value = Sum.class),
         @JsonSubTypes.Type(name = Min.TYPE, value = Min.class),
@@ -14,4 +14,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 public interface Aggregate {
 
     <T> T visit(AggregateVisitor<T> visitor);
+
+//    Aggregate withOutput(Expression expression);
+//
+//    Expression getOutput();
 }

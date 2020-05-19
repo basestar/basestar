@@ -20,10 +20,12 @@ package io.basestar.expression;
  * #L%
  */
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.constant.Constant;
 import io.basestar.util.Path;
 
+import java.util.List;
 import java.util.Set;
 
 public interface Binary extends Expression {
@@ -100,5 +102,18 @@ public interface Binary extends Expression {
     default boolean isConstant(final Set<String> closure) {
 
         return getLhs().isConstant(closure) && getRhs().isConstant(closure);
+    }
+
+    @Override
+    default List<Expression> expressions() {
+
+        return ImmutableList.of(getLhs(), getRhs());
+    }
+
+    @Override
+    default Expression create(final List<Expression> expressions) {
+
+        assert expressions.size() == 2;
+        return create(expressions.get(0), expressions.get(1));
     }
 }

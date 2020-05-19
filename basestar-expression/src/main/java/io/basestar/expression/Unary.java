@@ -20,9 +20,11 @@ package io.basestar.expression;
  * #L%
  */
 
+import com.google.common.collect.ImmutableList;
 import io.basestar.expression.constant.Constant;
 import io.basestar.util.Path;
 
+import java.util.List;
 import java.util.Set;
 
 public interface Unary extends Expression {
@@ -69,5 +71,18 @@ public interface Unary extends Expression {
     default boolean isConstant(final Set<String> closure) {
 
         return getOperand().isConstant(closure);
+    }
+
+    @Override
+    default List<Expression> expressions() {
+
+        return ImmutableList.of(getOperand());
+    }
+
+    @Override
+    default Expression create(final List<Expression> expressions) {
+
+        assert expressions.size() == 1;
+        return create(expressions.get(0));
     }
 }

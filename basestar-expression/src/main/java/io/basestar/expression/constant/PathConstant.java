@@ -27,7 +27,9 @@ import io.basestar.util.Path;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -111,6 +113,19 @@ public class PathConstant implements Expression {
     public <T> T visit(final ExpressionVisitor<T> visitor) {
 
         return visitor.visitPathConstant(this);
+    }
+
+    @Override
+    public List<Expression> expressions() {
+
+        return Collections.emptyList();
+    }
+
+    @Override
+    public Expression create(final List<Expression> expressions) {
+
+        assert expressions.size() == 0;
+        return this;
     }
 
     @Override

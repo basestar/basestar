@@ -132,6 +132,18 @@ public class Or implements Expression {
     }
 
     @Override
+    public List<Expression> expressions() {
+
+        return terms;
+    }
+
+    @Override
+    public Expression create(final List<Expression> expressions) {
+
+        return terms == expressions ? this : new Or(expressions);
+    }
+
+    @Override
     public String toString() {
 
         return terms.stream().map(v -> {

@@ -31,6 +31,7 @@ import io.basestar.util.Path;
 import lombok.Data;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -126,6 +127,25 @@ public class With implements Expression {
     public <T> T visit(final ExpressionVisitor<T> visitor) {
 
         return visitor.visitWith(this);
+    }
+
+    @Override
+    public List<Expression> expressions() {
+
+        return Stream.concat(with.values().stream(), Stream.of(yield))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Expression create(final List<Expression> expressions) {
+
+        final Map<String, Expression> result = new HashMap<>();
+        int offset = 0;
+        for(final Map.Entry<String, Expression> entry : with.entrySet()) {
+            result.put(entry.getKey(), expressions.get(offset));
+            ++offset;
+        }
+        return new With(result, expressions.get(offset));
     }
 
     @Override

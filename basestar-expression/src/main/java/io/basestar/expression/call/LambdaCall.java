@@ -21,13 +21,13 @@ package io.basestar.expression.call;
  */
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.PathTransform;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.function.IfElse;
-import io.basestar.expression.function.Lambda;
 import io.basestar.util.Path;
 import lombok.Data;
 
@@ -92,8 +92,8 @@ public class LambdaCall implements Expression {
 
         final Object with = this.with.evaluate(context);
         final Object[] args = this.args.stream().map(v -> v.evaluate(context)).toArray();
-        if (with instanceof Lambda.Callable) {
-            return ((Lambda.Callable) with).call(args);
+        if (with instanceof Callable) {
+            return ((Callable) with).call(args);
         } else {
             throw new IllegalStateException();
         }
@@ -129,6 +129,22 @@ public class LambdaCall implements Expression {
     public <T> T visit(final ExpressionVisitor<T> visitor) {
 
         return visitor.visitLambdaCall(this);
+    }
+
+    @Override
+    public List<Expression> expressions() {
+
+        return ImmutableList.<Expression>builder()
+                .add(with)
+                .addAll(args)
+                .build();
+    }
+
+    @Override
+    public Expression create(final List<Expression> expressions) {
+
+        assert expressions.size() > 0;
+        return new LambdaCall(expressions.get(0), expressions.subList(1, expressions.size()));
     }
 
     @Override

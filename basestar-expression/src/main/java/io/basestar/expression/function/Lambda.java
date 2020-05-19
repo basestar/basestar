@@ -21,10 +21,12 @@ package io.basestar.expression.function;
  */
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.PathTransform;
+import io.basestar.expression.call.Callable;
 import io.basestar.expression.iterate.Of;
 import io.basestar.util.Path;
 import lombok.Data;
@@ -105,11 +107,6 @@ public class Lambda implements Expression {
 //        return Query.and();
 //    }
 
-    public interface Callable {
-
-        Object call(final Object ... args);
-    }
-
     @Override
     public String token() {
 
@@ -132,6 +129,19 @@ public class Lambda implements Expression {
     public <T> T visit(final ExpressionVisitor<T> visitor) {
 
         return visitor.visitLambda(this);
+    }
+
+    @Override
+    public List<Expression> expressions() {
+
+        return ImmutableList.of(yield);
+    }
+
+    @Override
+    public Expression create(final List<Expression> expressions) {
+
+        assert expressions.size() == 1;
+        return new Lambda(args, expressions.get(0));
     }
 
     @Override

@@ -20,6 +20,7 @@ package io.basestar.expression.iterate;
  * #L%
  */
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
@@ -31,10 +32,7 @@ import io.basestar.expression.constant.Constant;
 import io.basestar.util.Path;
 import lombok.Data;
 
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Set Comprehension
@@ -141,6 +139,19 @@ public class ForSet implements Expression {
     public <T> T visit(final ExpressionVisitor<T> visitor) {
 
         return visitor.visitForSet(this);
+    }
+
+    @Override
+    public List<Expression> expressions() {
+
+        return ImmutableList.of(yield, iter);
+    }
+
+    @Override
+    public Expression create(final List<Expression> expressions) {
+
+        assert expressions.size() == 2;
+        return new ForSet(expressions.get(0), expressions.get(1));
     }
 
     @Override

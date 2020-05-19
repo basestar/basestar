@@ -178,6 +178,19 @@ public class Of implements Expression {
     }
 
     @Override
+    public List<Expression> expressions() {
+
+        return ImmutableList.of(expr);
+    }
+
+    @Override
+    public Expression create(final List<Expression> expressions) {
+
+        assert expressions.size() == 1;
+        return new Of(key, value, expressions.get(0));
+    }
+
+    @Override
     public String toString() {
 
         final String as = key == null ? value : "(" + key + "," + value + ")";

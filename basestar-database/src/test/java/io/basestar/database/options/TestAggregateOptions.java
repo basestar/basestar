@@ -42,7 +42,7 @@ public class TestAggregateOptions {
 
         assertEquals(
                 AggregateOptions.builder().setAggregate(ImmutableMap.of("test", Sum.builder().setInput(expr("x")).build())).build(),
-                objectMapper.readValue(json("{'aggregate': { 'test': { 'sum': { 'input': 'x' } } } }"), AggregateOptions.class)
+                objectMapper.readValue(json("{'aggregate': { 'test': { 'function': 'sum', 'input': 'x' } } }"), AggregateOptions.class)
         );
     }
 

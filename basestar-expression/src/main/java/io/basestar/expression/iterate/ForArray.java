@@ -20,6 +20,7 @@ package io.basestar.expression.iterate;
  * #L%
  */
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
@@ -145,6 +146,19 @@ public class ForArray implements Expression {
     public <T> T visit(final ExpressionVisitor<T> visitor) {
 
         return visitor.visitForArray(this);
+    }
+
+    @Override
+    public List<Expression> expressions() {
+
+        return ImmutableList.of(yield, iter);
+    }
+
+    @Override
+    public Expression create(final List<Expression> expressions) {
+
+        assert expressions.size() == 2;
+        return new ForArray(expressions.get(0), expressions.get(1));
     }
 
     @Override

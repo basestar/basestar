@@ -133,6 +133,18 @@ public class And implements Expression {
     }
 
     @Override
+    public List<Expression> expressions() {
+
+        return terms;
+    }
+
+    @Override
+    public Expression create(final List<Expression> expressions) {
+
+        return terms == expressions ? this : new And(expressions);
+    }
+
+    @Override
     public String toString() {
 
         return terms.stream().map(v -> {

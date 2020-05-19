@@ -26,6 +26,7 @@ import io.basestar.util.Path;
 
 import java.io.Serializable;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 public interface Expression extends Serializable {
@@ -81,6 +82,10 @@ public interface Expression extends Serializable {
 
         return parse(expr).bind(context);
     }
+
+    List<Expression> expressions();
+
+    Expression create(List<Expression> expressions);
 
     //    Set<And> disjunction();
 //

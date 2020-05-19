@@ -20,6 +20,7 @@ package io.basestar.expression.function;
  * #L%
  */
 
+import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
@@ -29,6 +30,7 @@ import io.basestar.expression.constant.PathConstant;
 import io.basestar.util.Path;
 import lombok.Data;
 
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -121,6 +123,19 @@ public class Member implements Expression {
     public <T> T visit(final ExpressionVisitor<T> visitor) {
 
         return visitor.visitMember(this);
+    }
+
+    @Override
+    public List<Expression> expressions() {
+
+        return ImmutableList.of(with);
+    }
+
+    @Override
+    public Expression create(final List<Expression> expressions) {
+
+        assert expressions.size() == 1;
+        return new Member(with, member);
     }
 
     @Override

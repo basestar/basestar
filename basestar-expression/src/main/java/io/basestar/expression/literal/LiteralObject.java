@@ -29,6 +29,7 @@ import io.basestar.util.Path;
 import lombok.Data;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -114,6 +115,23 @@ public class LiteralObject implements Expression {
     public <T> T visit(final ExpressionVisitor<T> visitor) {
 
         return visitor.visitLiteralObject(this);
+    }
+
+    @Override
+    public List<Expression> expressions() {
+
+        return args.entrySet().stream().flatMap(e -> Stream.of(e.getKey(), e.getValue())).collect(Collectors.toList());
+    }
+
+    @Override
+    public Expression create(final List<Expression> expressions) {
+
+        assert expressions.size() % 2 == 0;
+        final Map<Expression, Expression> results = new HashMap<>();
+        for(int i = 0; i != expressions.size() / 2; ++i) {
+            results.put(expressions.get(i * 2), expressions.get((i * 2) + 1));
+        }
+        return new LiteralObject(results);
     }
 
     @Override

@@ -11,21 +11,6 @@ import lombok.Data;
 
 import java.util.Map;
 
-/*
-SOCIETY
-{
-    "group": ["ipsociety", "nameofrecipient"],
-    "aggregate": {
-        "royalties": {
-            "sum": {
-                "input": "ipRemittedRoyaltyAmount",
-                "output": "round(value, 2)
-            }
-        }
-    }
-}
- */
-
 @Data
 @JsonDeserialize(builder = AggregateOptions.Builder.class)
 @Builder(toBuilder = true, builderClassName = "Builder", setterPrefix = "set")

@@ -21,7 +21,7 @@ package io.basestar.expression.methods;
  */
 
 import com.google.common.collect.Lists;
-import io.basestar.expression.function.Lambda;
+import io.basestar.expression.call.Callable;
 import io.basestar.expression.type.Values;
 
 import java.util.Collection;
@@ -56,22 +56,22 @@ public abstract class CollectionMethods<T extends Collection<?>> {
         return os.stream().anyMatch(o -> target.stream().anyMatch(v -> Values.equals(v, o)));
     }
 
-    public boolean anyMatch(final T target, final Lambda.Callable fn) {
+    public boolean anyMatch(final T target, final Callable fn) {
 
         return target.stream().anyMatch(v -> Values.isTruthy(fn.call(v)));
     }
 
-    public boolean allMatch(final T target, final Lambda.Callable fn) {
+    public boolean allMatch(final T target, final Callable fn) {
 
         return target.stream().anyMatch(v -> Values.isTruthy(fn.call(v)));
     }
 
-    public T map(final T target, final Lambda.Callable fn) {
+    public T map(final T target, final Callable fn) {
 
         return collect(target.stream().map(fn::call));
     }
 
-    public T flatMap(final T target, final Lambda.Callable fn) {
+    public T flatMap(final T target, final Callable fn) {
 
         return collect(target.stream().map(fn::call)
                 .map(vs -> {
@@ -84,12 +84,12 @@ public abstract class CollectionMethods<T extends Collection<?>> {
     }
 
     @SuppressWarnings("unchecked")
-    public Object reduce(final T target, final Lambda.Callable fn) {
+    public Object reduce(final T target, final Callable fn) {
 
         return ((Collection<Object>)target).stream().reduce(fn::call).orElse(null);
     }
 
-    public Object reduce(final T target, final Object initial, final Lambda.Callable fn) {
+    public Object reduce(final T target, final Object initial, final Callable fn) {
 
         return Stream.concat(Stream.of(initial), target.stream())
                 .reduce(fn::call).orElseThrow(IllegalStateException::new);
@@ -107,7 +107,7 @@ public abstract class CollectionMethods<T extends Collection<?>> {
     }
 
     @SuppressWarnings("unchecked")
-    public List<?> sort(final T target, final Lambda.Callable fn) {
+    public List<?> sort(final T target, final Callable fn) {
 
         final List<Comparable<Object>> copy = Lists.newArrayList((Collection<Comparable<Object>>)target);
         copy.sort((Comparator<Object>) (o1, o2) -> ((Number)fn.call(o1, o2)).intValue());

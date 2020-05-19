@@ -21,6 +21,7 @@ package io.basestar.expression.call;
  */
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
@@ -129,6 +130,22 @@ public class MemberCall implements Expression {
     public <T> T visit(final ExpressionVisitor<T> visitor) {
 
         return visitor.visitMemberCall(this);
+    }
+
+    @Override
+    public List<Expression> expressions() {
+
+        return ImmutableList.<Expression>builder()
+                .add(with)
+                .addAll(args)
+                .build();
+    }
+
+    @Override
+    public Expression create(final List<Expression> expressions) {
+
+        assert expressions.size() > 0;
+        return new MemberCall(expressions.get(0), member, expressions.subList(1, expressions.size()));
     }
 
     @Override

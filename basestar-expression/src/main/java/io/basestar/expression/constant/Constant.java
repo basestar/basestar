@@ -108,6 +108,19 @@ public class Constant implements Expression {
     }
 
     @Override
+    public List<Expression> expressions() {
+
+        return Collections.emptyList();
+    }
+
+    @Override
+    public Expression create(final List<Expression> expressions) {
+
+        assert expressions.size() == 0;
+        return this;
+    }
+
+    @Override
     public String toString() {
 
         return Values.toString(value);

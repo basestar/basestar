@@ -130,6 +130,18 @@ public class LiteralSet implements Expression {
     }
 
     @Override
+    public List<Expression> expressions() {
+
+        return args;
+    }
+
+    @Override
+    public Expression create(final List<Expression> expressions) {
+
+        return args == expressions ? this : new LiteralSet(expressions);
+    }
+
+    @Override
     public String toString() {
 
         return "{" + args.stream().map(Expression::toString).collect(Collectors.joining(", ")) + "}";
