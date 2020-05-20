@@ -444,7 +444,7 @@ public class SparkSchemaUtils {
 
     public static Optional<StructField> findField(final StructType type, final String name) {
 
-        return Arrays.stream(type.fields()).filter(f -> name.equals(f.name())).findFirst();
+        return Arrays.stream(type.fields()).filter(f -> name.equalsIgnoreCase(f.name())).findFirst();
     }
 
     public static StructSchema structSchema(final DataType dataType) {
@@ -524,7 +524,7 @@ public class SparkSchemaUtils {
             for (int i = 0; i != targetFields.length; ++i) {
                 final StructField targetField = targetFields[i];
                 for (int j = 0; j != sourceFields.length; ++j) {
-                    if (sourceFields[j].name().equals(targetField.name())) {
+                    if (sourceFields[j].name().equalsIgnoreCase(targetField.name())) {
                         targetValues[i] = conform(sourceValues.apply(j), targetField.dataType());
                         break;
                     }
