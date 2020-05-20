@@ -550,13 +550,14 @@ public class SparkSchemaUtils {
         return new GenericRowWithSchema(sourceValues, sourceType);
     }
 
+    // Case insensitive
     public static Object get(final Row source, final String name) {
 
         final StructType sourceType = source.schema();
         final StructField[] sourceFields = sourceType.fields();
         for (int i = 0; i != sourceFields.length; ++i) {
             final StructField sourceField = sourceFields[i];
-            if(name.equals(sourceField.name())) {
+            if(name.equalsIgnoreCase(sourceField.name())) {
                 return source.get(i);
             }
         }
