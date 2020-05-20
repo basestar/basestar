@@ -471,11 +471,12 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
             return null;
         }
         final HashMap<String, Object> result = new HashMap<>(readProperties(value, expand, suppress));
-        // May be overwritten by readMeta
-        Instance.setSchema(result, this.getName());
         result.putAll(readMeta(value));
-        if(result.get(Reserved.HASH) == null) {
-            result.put(Reserved.HASH, hash(result));
+        if(Instance.getSchema(result) == null) {
+            Instance.setSchema(result, this.getName());
+        }
+        if(Instance.getHash(result) == null) {
+           Instance.setHash(result, hash(result));
         }
         for(final Map.Entry<String, Object> entry : value.entrySet()) {
             if(entry.getKey().startsWith(Reserved.META_PREFIX)) {
