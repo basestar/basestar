@@ -1,8 +1,8 @@
-package io.basestar.auth;
+package io.basestar.storage;
 
 /*-
  * #%L
- * basestar-auth
+ * basestar-storage
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -20,30 +20,44 @@ package io.basestar.auth;
  * #L%
  */
 
-import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.basestar.schema.Concurrency;
+import io.basestar.schema.Consistency;
 
-import java.util.Collections;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
+public class URLStorageTraits implements StorageTraits {
 
-public class StaticAuthenticator implements Authenticator {
+    @Override
+    public Consistency getHistoryConsistency() {
 
-    private final Caller caller;
-
-    public StaticAuthenticator(final Caller caller) {
-
-        this.caller = caller;
+        return null;
     }
 
     @Override
-    public CompletableFuture<Caller> authenticate(final String authorization) {
+    public Consistency getSingleValueIndexConsistency() {
 
-        return CompletableFuture.completedFuture(caller);
+        return null;
     }
 
     @Override
-    public Map<String, SecurityScheme> openApi() {
+    public Consistency getMultiValueIndexConsistency() {
 
-        return Collections.emptyMap();
+        return null;
+    }
+
+    @Override
+    public boolean supportsPolymorphism() {
+
+        return false;
+    }
+
+    @Override
+    public boolean supportsMultiObject() {
+
+        return false;
+    }
+
+    @Override
+    public Concurrency getObjectConcurrency() {
+
+        return null;
     }
 }

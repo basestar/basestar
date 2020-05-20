@@ -39,7 +39,7 @@ public class ExpressionTransform implements Transform<Dataset<Row>, Dataset<Row>
     private final ObjectSchema schema;
 
     @lombok.Builder(builderClassName = "Builder")
-    public ExpressionTransform(final ObjectSchema schema) {
+    ExpressionTransform(final ObjectSchema schema) {
 
         this.schema = Nullsafe.require(schema);
     }

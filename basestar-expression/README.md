@@ -16,6 +16,9 @@
   - [Bitwise Or](#bitwise-or)
   - [Bitwise Xor](#bitwise-xor)
   - [Bitwise Not](#bitwise-not)
+- [](#)
+  - [Call](#call)
+  - [Call](#call)
 - [Comparison expressions](#comparison-expressions)
   - [Less Than](#less-than)
   - [Equals](#equals)
@@ -27,9 +30,9 @@
 - [Functional expressions](#functional-expressions)
   - [If-Else](#if-else)
   - [Member](#member)
-  - [Call](#call)
   - [Coalesce](#coalesce)
   - [In](#in)
+  - [](#)
   - [Lambda](#lambda)
   - [Index](#index)
   - [With](#with)
@@ -228,6 +231,36 @@ lhs ^ rhs
 
 
 
+## 
+
+### Call
+
+
+**Syntax:**
+<pre>
+with(args...)
+</pre>
+**Parameters:**
+
+- `with`:`any` Lambda callable
+- `args`:`args` Function arguments
+
+
+### Call
+
+
+**Syntax:**
+<pre>
+with.member(...args)
+</pre>
+**Parameters:**
+
+- `with`:`any` Object
+- `member`:`member` Member name
+- `args`:`args` Function arguments
+
+
+
 ## Comparison expressions
 
 ### Less Than
@@ -352,28 +385,6 @@ with.member
 - `member`:`collection` Right hand operand
 
 
-### Call
-
-
-**Syntax:**
-<pre>
-with(args...)
-</pre>
-**Parameters:**
-
-- `with`:`any` Lambda callable
-- `args`:`args` Function arguments
-
-<pre>
-with.member(...args)
-</pre>
-**Parameters:**
-
-- `with`:`any` Object
-- `member`:`member` Member name
-- `args`:`args` Function arguments
-
-
 ### Coalesce
 
  Return the first non-null operand
@@ -400,6 +411,17 @@ lhs in rhs
 
 - `lhs`:`any` Left hand operand
 - `rhs`:`collection` Right hand operand
+
+
+### 
+
+
+**Syntax:**
+<pre>
+
+</pre>
+**Parameters:**
+
 
 
 ### Lambda

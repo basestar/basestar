@@ -88,6 +88,10 @@ MyObject:
 
   
 
+- `expand` **set of Path**
+
+  
+
 - `concrete` **boolean**
 
   

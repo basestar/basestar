@@ -1,8 +1,8 @@
-package io.basestar.mapper.internal;
+package io.basestar.storage;
 
 /*-
  * #%L
- * basestar-mapper
+ * basestar-storage
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -20,12 +20,5 @@ package io.basestar.mapper.internal;
  * #L%
  */
 
-import io.basestar.mapper.context.TypeContext;
-import io.basestar.schema.Schema;
-
-public interface SchemaBinder {
-
-    String name(TypeContext type);
-
-    Schema.Builder<?> schemaBuilder(TypeContext type);
+public class URLStorageRouting {
 }
