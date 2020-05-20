@@ -42,7 +42,7 @@ public interface StorageTraits {
 
     Concurrency getObjectConcurrency();
 
-    default Consistency getIndexConsistency(boolean multi) {
+    default Consistency getIndexConsistency(final boolean multi) {
 
         return multi ? getMultiValueIndexConsistency() : getSingleValueIndexConsistency();
     }

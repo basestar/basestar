@@ -94,7 +94,7 @@ public class DefaultPump implements Pump {
         another(delay());
     }
 
-    private void another(long delay) {
+    private void another(final long delay) {
 
         synchronized (lock) {
             if (count < maxThreads) {

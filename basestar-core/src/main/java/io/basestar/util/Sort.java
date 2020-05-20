@@ -84,7 +84,7 @@ public class Sort implements Serializable {
         };
     }
 
-    public static <T, V extends Comparable<V>> Comparator<T> comparator(final Collection<Sort> sort, BiFunction<T, Path, V> getter) {
+    public static <T, V extends Comparable<V>> Comparator<T> comparator(final Collection<Sort> sort, final BiFunction<T, Path, V> getter) {
 
         Comparator<T> result = null;
         for(final Sort s : sort) {

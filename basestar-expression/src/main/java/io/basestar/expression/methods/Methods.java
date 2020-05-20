@@ -105,7 +105,7 @@ public class Methods {
 
         private boolean whitelist = true;
 
-        public Builder whitelist(boolean whitelist) {
+        public Builder whitelist(final boolean whitelist) {
 
             this.whitelist = whitelist;
             return this;

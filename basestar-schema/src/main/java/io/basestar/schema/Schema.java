@@ -57,7 +57,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         Schema<T> build(Resolver resolver, String name, int slot);
     }
 
-    default T create(Object value) {
+    default T create(final Object value) {
 
         return create(value, false, false);
     }

@@ -33,7 +33,7 @@ public interface Expression extends Serializable {
 
     Expression bind(Context context, PathTransform root);
 
-    default Expression bind(Context context) {
+    default Expression bind(final Context context) {
 
         return bind(context, PathTransform.noop());
     }

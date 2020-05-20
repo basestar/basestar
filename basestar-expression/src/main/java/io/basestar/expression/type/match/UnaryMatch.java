@@ -28,7 +28,7 @@ import java.util.Map;
 
 public interface UnaryMatch<T> {
 
-    default T defaultApply(Object value) {
+    default T defaultApply(final Object value) {
 
         throw new BadOperandsException(this + " cannot be applied to " + Values.className(value));
     }

@@ -107,7 +107,7 @@ public interface AttributeType<T> {
 
     void defValue(PortableSchemaFactory factory, ClassDefinitionBuilder builder, String name);
 
-    default void def(PortableSchemaFactory factory, ClassDefinitionBuilder builder, String name) {
+    default void def(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
 
         builder.addBooleanField(existsAttribute(name));
         defValue(factory, builder, name);

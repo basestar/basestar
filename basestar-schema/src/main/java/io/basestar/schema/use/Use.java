@@ -75,7 +75,7 @@ public interface Use<T> extends Serializable {
 
     T create(Object value, boolean expand, boolean suppress);
 
-    default T create(Object value) {
+    default T create(final Object value) {
 
         return create(value, false, false);
     }
@@ -187,7 +187,7 @@ public interface Use<T> extends Serializable {
         }
     }
 
-    default T deseralize(DataInput in) throws IOException {
+    default T deseralize(final DataInput in) throws IOException {
 
         final byte ordinal = in.readByte();
         final Code code = Code.values()[ordinal];

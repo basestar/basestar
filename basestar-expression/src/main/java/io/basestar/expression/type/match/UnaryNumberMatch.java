@@ -25,7 +25,7 @@ import io.basestar.expression.type.exception.BadOperandsException;
 
 public interface UnaryNumberMatch<T> {
 
-    default T defaultApply(Object value) {
+    default T defaultApply(final Object value) {
 
         throw new BadOperandsException(this + " cannot be applied to " + value.getClass());
     }

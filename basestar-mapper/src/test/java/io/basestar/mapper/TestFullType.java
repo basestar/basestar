@@ -34,7 +34,7 @@ public class TestFullType {
 
     interface B<F> {
 
-        default F getF(F a) {
+        default F getF(final F a) {
 
             return a;
         }
