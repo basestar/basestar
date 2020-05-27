@@ -34,14 +34,19 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
+import java.util.Set;
+
 public class ExpressionTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
     private final ObjectSchema schema;
 
+    private final Set<Path> expand;
+
     @lombok.Builder(builderClassName = "Builder")
-    ExpressionTransform(final ObjectSchema schema) {
+    ExpressionTransform(final ObjectSchema schema, final Set<Path> expand) {
 
         this.schema = Nullsafe.require(schema);
+        this.expand = Nullsafe.option(expand);
     }
 
     @Override
@@ -63,7 +68,7 @@ public class ExpressionTransform implements Transform<Dataset<Row>, Dataset<Row>
 
     private Column apply(final Dataset<Row> ds, final Expression expression, final Use<?> type) {
 
-        return visitor(ds).visit(expression).cast(SparkSchemaUtils.type(type));
+        return visitor(ds).visit(expression).cast(SparkSchemaUtils.type(type, expand));
     }
 
     private SparkExpressionVisitor visitor(final Dataset<Row> ds) {

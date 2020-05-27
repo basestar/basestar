@@ -104,3 +104,24 @@ TeamRole:
   values:
     - owner
     - member
+
+
+TeamMemberStats:
+
+  type: view
+
+  from: TeamMember
+  select:
+    count:
+      type: integer
+      expression: sum() / count()
+  group:
+    team:
+      type: string
+      expression: team.id
+
+  filter: caller.
+
+  permissions:
+    read:
+      expression: this.team in caller.teams

@@ -184,7 +184,7 @@ public class Of implements Expression {
     }
 
     @Override
-    public Expression create(final List<Expression> expressions) {
+    public Expression copy(final List<Expression> expressions) {
 
         assert expressions.size() == 1;
         return new Of(key, value, expressions.get(0));

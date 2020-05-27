@@ -25,7 +25,7 @@ import com.google.common.collect.*;
 import io.basestar.expression.Expression;
 import io.basestar.expression.type.Values;
 import io.basestar.schema.*;
-import io.basestar.schema.aggregate.Count;
+import io.basestar.storage.aggregate.Count;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.util.Pager;
@@ -596,7 +596,7 @@ public abstract class TestStorage {
         final List<Sort> sort = ImmutableList.of(Sort.asc(Path.of("country")), Sort.asc(Path.of(Reserved.ID)));
         final List<Pager.Source<Map<String, Object>>> sources = storage.aggregate(schema, Expression.parse("true"),
                 ImmutableMap.of("country", Expression.parse("country")),
-                ImmutableMap.of("count", Count.builder().build()));
+                ImmutableMap.of("count", new Count()));
         final Comparator<Map<String, Object>> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
 
         final PagedList<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();

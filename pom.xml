@@ -104,6 +104,7 @@
         <module>basestar-test</module>
         <module>basestar-graphql</module>
         <module>basestar-spark-elasticsearch</module>
+        <module>basestar-stream</module>
     </modules>
 
 <!--    <reporting>-->

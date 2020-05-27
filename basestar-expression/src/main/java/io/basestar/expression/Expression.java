@@ -28,6 +28,8 @@ import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public interface Expression extends Serializable {
 
@@ -85,7 +87,13 @@ public interface Expression extends Serializable {
 
     List<Expression> expressions();
 
-    Expression create(List<Expression> expressions);
+    Expression copy(List<Expression> expressions);
+
+    // FIXME: drop expressions/copy and just use this method
+    default Expression copy(final Function<Expression, Expression> fn) {
+
+        return copy(expressions().stream().map(fn).collect(Collectors.toList()));
+    }
 
     //    Set<And> disjunction();
 //

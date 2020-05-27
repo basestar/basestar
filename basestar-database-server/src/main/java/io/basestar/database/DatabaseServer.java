@@ -49,8 +49,11 @@ import io.basestar.schema.*;
 import io.basestar.storage.OverlayStorage;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
+import io.basestar.storage.aggregate.Aggregate;
 import io.basestar.storage.exception.ObjectMissingException;
+import io.basestar.storage.query.AggregatesVisitor;
 import io.basestar.storage.util.IndexRecordDiff;
+import io.basestar.storage.util.Pager;
 import io.basestar.util.*;
 import lombok.extern.slf4j.Slf4j;
 
@@ -514,40 +517,109 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         log.debug("Query: options={}", options);
 
-        final ObjectSchema objectSchema = objectSchema(options.getSchema());
-        final Expression expression = options.getExpression();
+        final InstanceSchema schema = namespace.requireInstanceSchema(options.getSchema());
 
-        final Permission permission = objectSchema.getPermission(Permission.READ);
-
-        final Context context = context(caller, ImmutableMap.of());
-
-        final Expression rooted;
-        if(expression != null) {
-            rooted = expression.bind(Context.init(), PathTransform.root(Path.of(Reserved.THIS)));
-        } else {
-            rooted = new Constant(true);
-        }
-
-        final Expression merged;
-        if(permission != null && !caller.isSuper()) {
-            merged = new And(permission.getExpression(), rooted);
-        } else {
-            merged = rooted;
-        }
-
-        final Expression bound = merged.bind(context);
-
-        final List<Sort> sort = MoreObjects.firstNonNull(options.getSort(), Collections.emptyList());
         final int count = MoreObjects.firstNonNull(options.getCount(), QueryOptions.DEFAULT_COUNT);
-        if(count > QueryOptions.MAX_COUNT) {
-            throw new IllegalStateException("Count too high (max " +  QueryLinkOptions.MAX_COUNT + ")");
+        if (count > QueryOptions.MAX_COUNT) {
+            throw new IllegalStateException("Count too high (max " + QueryLinkOptions.MAX_COUNT + ")");
         }
         final PagingToken paging = options.getPaging();
 
-        final Expression unrooted = bound.bind(Context.init(), PathTransform.unroot(Path.of(Reserved.THIS)));
+        if(schema instanceof ViewSchema) {
 
-        return queryImpl(context, objectSchema, unrooted, sort, count, paging)
-                .thenCompose(results -> expandAndRestrict(caller, results, options.getExpand()));
+            final ViewSchema viewSchema = (ViewSchema)schema;
+            final Expression expression = options.getExpression();
+
+            final Permission permission = viewSchema.getPermission(Permission.READ);
+
+            final Context context = context(caller, ImmutableMap.of());
+
+            final Expression bound;
+            if(expression != null) {
+                bound = expression.bind(context);
+            } else {
+                bound = new Constant(true);
+            }
+
+            final AggregatesVisitor visitor = new AggregatesVisitor();
+            final Map<String, Expression> columns = new HashMap<>();
+            viewSchema.getSelect().forEach((name, prop) -> {
+                final Expression expr = Nullsafe.require(prop.getExpression()).bind(context);
+                columns.put(name, visitor.visit(expr));
+            });
+            final Map<String, Aggregate> aggregates = visitor.getAggregates();
+
+            // FIXME: should we support nested aggregates?
+            final ObjectSchema objectSchema = (ObjectSchema) viewSchema.getFrom();
+
+            final Map<String, Expression> group = new HashMap<>();
+            viewSchema.getGroup().forEach((name, prop) -> {
+                final Expression expr = Nullsafe.require(prop.getExpression()).bind(context);
+                group.put(name, expr);
+            });
+
+            if(aggregates.isEmpty() && group.isEmpty()) {
+
+                // FIXME: need to reconcile with Object query behaviour
+                throw new UnsupportedOperationException();
+
+            } else {
+
+                //FIXME: should de-duplicate sort keys, also need to deal with empty case
+                final List<Sort> sort = ImmutableList.<Sort>builder()
+                        .addAll(MoreObjects.firstNonNull(options.getSort(), viewSchema.getSort()))
+                        .addAll(group.keySet().stream().map(k -> Sort.asc(Path.of(k))).collect(Collectors.toList()))
+                        .build();
+
+                final List<Pager.Source<Instance>> sources = storage.aggregate(objectSchema, bound, group, aggregates).stream()
+                        .map(source -> (Pager.Source<Instance>) (c, t) -> source.page(c, t)
+                                .thenApply(data -> data.map(row -> {
+                                    final Map<String, Object> values = new HashMap<>();
+                                    columns.forEach((name, column) -> {
+                                        values.put(name, column.evaluate(context.with(row)));
+                                    });
+                                    group.keySet().forEach(name -> values.put(name, row.get(name)));
+                                    return viewSchema.create(values);
+                                })))
+                        .collect(Collectors.toList());
+
+                return pageImpl(context, sources, new Constant(true), sort, count, paging);
+            }
+
+        } else if(schema instanceof ObjectSchema) {
+
+            final ObjectSchema objectSchema = (ObjectSchema)schema;
+            final Expression expression = options.getExpression();
+
+            final Permission permission = objectSchema.getPermission(Permission.READ);
+
+            final Context context = context(caller, ImmutableMap.of());
+
+            final Expression rooted;
+            if (expression != null) {
+                rooted = expression.bind(Context.init(), PathTransform.root(Path.of(Reserved.THIS)));
+            } else {
+                rooted = new Constant(true);
+            }
+
+            final Expression merged;
+            if (permission != null && !caller.isSuper()) {
+                merged = new And(permission.getExpression(), rooted);
+            } else {
+                merged = rooted;
+            }
+
+            final Expression bound = merged.bind(context);
+
+            final List<Sort> sort = MoreObjects.firstNonNull(options.getSort(), Collections.emptyList());
+            final Expression unrooted = bound.bind(Context.init(), PathTransform.unroot(Path.of(Reserved.THIS)));
+
+            return queryImpl(context, objectSchema, unrooted, sort, count, paging)
+                    .thenCompose(results -> expandAndRestrict(caller, results, options.getExpand()));
+
+        } else {
+            throw new IllegalStateException(options.getSchema() + " is not an object or view schema");
+        }
     }
 
     protected void checkPermission(final Caller caller, final ObjectSchema schema, final Permission permission, final Map<String, Object> scope) {

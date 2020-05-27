@@ -687,6 +687,27 @@ public class TestDatabaseServer {
         assertEquals(1, get.size());
     }
 
+    @Test
+    public void aggregate() throws Exception {
+
+        database.transaction(Caller.SUPER, TransactionOptions.builder()
+                .action("a", CreateOptions.builder()
+                        .schema(TEAM_MEMBER)
+                        .data(ImmutableMap.of(
+                                "user", ImmutableMap.of("id", "u1"),
+                                "team", ImmutableMap.of("id", "t1"),
+                                "role", "owner",
+                                "accepted", true
+                        )).build())
+                .build()).get();
+
+        final PagedList<Instance> results = database.query(Caller.SUPER, QueryOptions.builder()
+                .schema("TeamMemberStats")
+                .build()).get();
+
+        System.err.println(results);
+    }
+
     private Executable cause(final Executable target) {
 
         return () -> {

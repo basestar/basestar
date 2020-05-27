@@ -32,6 +32,15 @@
             <groupId>io.basestar</groupId>
             <artifactId>basestar-auth-nimbus</artifactId>
         </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>cognitoidentityprovider</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.basestar</groupId>
+            <artifactId>basestar-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
 </project>

@@ -108,7 +108,6 @@ public class ReadProcessor {
         return queryImpl(context, linkSchema, expression, link.getSort(), count, paging);
     }
 
-    @SuppressWarnings("rawtypes")
     protected CompletableFuture<PagedList<Instance>> queryImpl(final Context context, final ObjectSchema objectSchema, final Expression expression,
                                                                final List<Sort> sort, final int count, final PagingToken paging) {
 
@@ -122,12 +121,19 @@ public class ReadProcessor {
                         .thenCompose(data -> cast(objectSchema, data)))
                 .collect(Collectors.toList());
 
+        return pageImpl(context, sources, expression, pageSort, count, paging);
+    }
+
+    @SuppressWarnings("rawtypes")
+    protected CompletableFuture<PagedList<Instance>> pageImpl(final Context context, final List<Pager.Source<Instance>> sources, final Expression expression,
+                                                              final List<Sort> sort, final int count, final PagingToken paging) {
+
         if(sources.isEmpty()) {
             throw new IllegalStateException("Query not supported");
         } else {
 
             @SuppressWarnings("unchecked")
-            final Comparator<Instance> comparator = Sort.comparator(pageSort, (t, path) -> (Comparable)path.apply(t));
+            final Comparator<Instance> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
             final Pager<Instance> pager = new Pager<>(comparator, sources, paging);
             return pager.page(count)
                     .thenApply(results -> {

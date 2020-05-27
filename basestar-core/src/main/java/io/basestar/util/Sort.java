@@ -94,7 +94,12 @@ public class Sort implements Serializable {
                 result = result.thenComparing(s.comparator(getter));
             }
         }
-        return result;
+        if(result == null) {
+            // Need to return something
+            return Comparator.comparing(System::identityHashCode);
+        } else {
+            return result;
+        }
     }
 
     @Override

@@ -43,6 +43,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 
 //import io.basestar.util.Key;
 
@@ -121,6 +122,15 @@ public class Namespace implements Serializable, Schema.Resolver {
             resolveCyclic(entry.getKey(), entry.getValue(), builders, schemas);
         }
         this.schemas = ImmutableSortedMap.copyOf(schemas);
+    }
+
+    public Builder toBuilder() {
+
+        return builder()
+                .setSchemas(schemas.entrySet().stream().collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        e -> e.getValue().toBuilder()
+                )));
     }
 
     private static Schema<?> resolveCyclic(final String name, final Schema.Builder<?> builder,

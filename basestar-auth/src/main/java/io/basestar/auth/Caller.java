@@ -20,7 +20,9 @@ package io.basestar.auth;
  * #L%
  */
 
+import io.basestar.util.Nullsafe;
 import lombok.Data;
+import lombok.Setter;
 
 import java.util.Collections;
 import java.util.Map;
@@ -40,6 +42,70 @@ public interface Caller {
     String getId();
 
     Map<String, Object> getClaims();
+
+    static Builder builder() {
+
+        return new Builder();
+    }
+
+    @Setter
+    class Builder {
+
+        private String schema;
+
+        private String id;
+
+        private Map<String, Object> claims;
+
+        private boolean anon;
+
+        private boolean _super;
+
+        public void setSuper(final boolean value) {
+
+            this._super = value;
+        }
+
+        public Caller build() {
+
+            final String schema = this.schema;
+            final String id = this.id;
+            final Map<String, Object> claims = Nullsafe.immutableCopy(this.claims);
+            final boolean anon = this.anon;
+            final boolean _super = this._super;
+            return new Caller() {
+                @Override
+                public boolean isAnon() {
+
+                    return anon;
+                }
+
+                @Override
+                public boolean isSuper() {
+
+                    return _super;
+                }
+
+                @Override
+                public String getSchema() {
+
+                    return schema;
+                }
+
+                @Override
+                public String getId() {
+
+                    return id;
+                }
+
+                @Override
+                public Map<String, Object> getClaims() {
+
+                    return claims;
+                }
+            };
+        }
+    }
 
     @Data
     class Delegating implements Caller {

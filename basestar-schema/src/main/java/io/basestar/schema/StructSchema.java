@@ -28,7 +28,6 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
-import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
 import io.basestar.util.Nullsafe;
@@ -217,19 +216,6 @@ public class StructSchema implements InstanceSchema {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public Instance create(final Object value, final boolean expand, final boolean suppress) {
-
-        if(value == null) {
-            return null;
-        } else if(value instanceof Map) {
-            return create((Map<String, Object>)value, expand, suppress);
-        } else {
-            throw new InvalidTypeException();
-        }
-    }
-
-    @Override
     public Set<Constraint.Violation> validate(final Context context, final Path path, final Instance after) {
 
         return this.getProperties().values().stream()
@@ -237,6 +223,7 @@ public class StructSchema implements InstanceSchema {
                 .collect(Collectors.toSet());
     }
 
+    @Override
     public Instance create(final Map<String, Object> value, final boolean expand, final boolean suppress) {
 
         return new Instance(readProperties(value, expand, suppress));

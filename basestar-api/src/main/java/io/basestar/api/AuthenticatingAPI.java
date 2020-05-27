@@ -21,6 +21,7 @@ package io.basestar.api;
  */
 
 import io.basestar.auth.Authenticator;
+import io.basestar.auth.Authorization;
 import io.basestar.auth.Caller;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -46,20 +47,25 @@ public class AuthenticatingAPI implements API {
     @Override
     public CompletableFuture<APIResponse> handle(final APIRequest request) {
 
-        final String authorization = request.getFirstHeader("Authorization");
-        return authenticator.authenticate(authorization).thenCompose(caller -> {
+        final Authorization authorization = Authorization.from(request.getFirstHeader("Authorization"));
+        if(authenticator.canAuthenticate(authorization)) {
+            return authenticator.authenticate(authorization).thenCompose(caller -> {
 
-            log.info("Authenticated as {} (anon: {}, super: {})", caller.getId(), caller.isAnon(), caller.isSuper());
+                log.info("Authenticated as {} (anon: {}, super: {})", caller.getId(), caller.isAnon(), caller.isSuper());
 
-            return api.handle(new APIRequest.Delegating(request) {
+                return api.handle(new APIRequest.Delegating(request) {
 
-                @Override
-                public Caller getCaller() {
+                    @Override
+                    public Caller getCaller() {
 
-                    return caller;
-                }
+                        return caller;
+                    }
+                });
             });
-        });
+        } else {
+            // Leave as anonymous
+            return api.handle(request);
+        }
     }
 
     @Override

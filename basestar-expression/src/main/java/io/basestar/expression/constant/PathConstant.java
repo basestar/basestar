@@ -122,7 +122,7 @@ public class PathConstant implements Expression {
     }
 
     @Override
-    public Expression create(final List<Expression> expressions) {
+    public Expression copy(final List<Expression> expressions) {
 
         assert expressions.size() == 0;
         return this;

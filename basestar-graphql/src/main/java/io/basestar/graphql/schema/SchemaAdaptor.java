@@ -113,7 +113,7 @@ public class SchemaAdaptor {
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(Reserved.ID).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(Reserved.VERSION).type(new TypeName(GraphQLUtils.STRING_TYPE)).build());
+                .name(Reserved.VERSION).type(new TypeName(GraphQLUtils.INT_TYPE)).build());
         return builder.build();
     }
 

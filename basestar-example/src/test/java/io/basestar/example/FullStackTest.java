@@ -175,7 +175,7 @@ public class FullStackTest {
         final API api = new AuthenticatingAPI(authenticator, new DatabaseAPI(database));
 
         final Multimap<String, String> headers = HashMultimap.create();
-        headers.put("Authorization", "user1");
+        headers.put("Authorization", "Explicit user1");
 
         final APIResponse createUser1 = api.handle(TestRequests.put("User/user1", HashMultimap.create(), headers, ImmutableMap.of(
         ))).join();

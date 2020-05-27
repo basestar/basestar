@@ -21,13 +21,11 @@ package io.basestar.storage;
  */
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.schema.Consistency;
-import io.basestar.schema.Index;
-import io.basestar.schema.Instance;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.aggregate.Aggregate;
+import io.basestar.schema.*;
+import io.basestar.storage.aggregate.Aggregate;
 import io.basestar.storage.exception.UnsupportedQueryException;
 import io.basestar.storage.query.DisjunctionVisitor;
 import io.basestar.storage.query.Range;
@@ -76,35 +74,73 @@ public abstract class PartitionedStorage implements Storage {
 //                }
             }
 
-            SatisfyResult bestSatisfy = SatisfyResult.unsatisfied();
-            Index bestIndex = null;
-            for (final Index checkIndex : schema.getIndexes().values()) {
-                final SatisfyResult checkSatisfy = satisfy(checkIndex, query, sort);
-                if (checkSatisfy.isSatisfied() && checkSatisfy.compareTo(bestSatisfy) > 0) {
-                    bestSatisfy = checkSatisfy;
-                    bestIndex = checkIndex;
-                }
-            }
-            if (bestIndex != null) {
+            final Optional<String> optId = constantId(query);
+            if(optId.isPresent()) {
 
-                // FIXME
-                if(indexSort == null) {
-                    indexSort = bestIndex.getSort();
-                }
-
-                final Index index = bestIndex;
-                final SatisfyResult satisfy = bestSatisfy;
-                queries.add((c, p) -> queryIndex(schema, index, satisfy, query, sort, c, p));
+                queries.add((c, p) -> readObject(schema, optId.get()).thenApply(object -> {
+                    if(object != null) {
+                        return new PagedList<>(ImmutableList.of(object), null);
+                    } else {
+                        return PagedList.<Map<String, Object>>empty();
+                    }
+                }));
 
             } else {
-                throw new UnsupportedQueryException(schema.getName(), expression, "no index");
+                final Optional<SatisfyResult> optSatisfy = satisfy(schema.getIndexes().values(), query, sort);
+                if (optSatisfy.isPresent()) {
+
+                    final SatisfyResult satisfy = optSatisfy.get();
+                    final Index index = satisfy.getIndex();
+
+                    // FIXME
+                    if (indexSort == null) {
+                        indexSort = index.getSort();
+                    }
+
+                    queries.add((c, p) -> queryIndex(schema, index, satisfy, query, sort, c, p));
+
+                } else {
+                    throw new UnsupportedQueryException(schema.getName(), expression, "no index");
+                }
             }
         }
 
         return queries;
     }
 
-    public static SatisfyResult satisfy(final Index index, final Map<Path, Range<Object>> query, final List<Sort> sort) {
+    public static Optional<SatisfyResult> satisfy(final Iterable<Index> indexes, final Map<Path, Range<Object>> query, final List<Sort> sort) {
+
+        Optional<SatisfyResult> best = Optional.empty();
+        for (final Index index : indexes) {
+            final Optional<SatisfyResult> next = satisfy(index, query, sort);
+            if(next.isPresent()) {
+                final SatisfyResult a = next.get();
+                if(best.isPresent()) {
+                    final SatisfyResult b = best.get();
+                    if(a.compareTo(b) > 0) {
+                        best = next;
+                    }
+                } else {
+                    best = next;
+                }
+            }
+        }
+        return best;
+    }
+
+    public static Optional<String> constantId(final Map<Path, Range<Object>> query) {
+
+        final Range<Object> range = query.get(Path.of(Reserved.ID));
+        if(range instanceof Range.Eq) {
+            final Object eq = ((Range.Eq<?>) range).getEq();
+            if(eq instanceof String) {
+                return Optional.of((String)eq);
+            }
+        }
+        return Optional.empty();
+    }
+
+    public static Optional<SatisfyResult> satisfy(final Index index, final Map<Path, Range<Object>> query, final List<Sort> sort) {
 
         final Map<Path, Object> constants = new HashMap<>();
         query.forEach((k, v) -> {
@@ -137,7 +173,7 @@ public abstract class PartitionedStorage implements Storage {
                 partitionValues.add(constants.get(path));
                 matched.add(path);
             } else {
-                return SatisfyResult.unsatisfied();
+                return Optional.empty();
             }
         }
         final List<Object> sortValues = new ArrayList<>();
@@ -170,7 +206,7 @@ public abstract class PartitionedStorage implements Storage {
             // FIXME
             //return SatisfyResult.unsatisfied();
         }
-        return new SatisfyResult(partitionValues, sortValues, reversed, matched);
+        return Optional.of(new SatisfyResult(index, partitionValues, sortValues, reversed, matched));
     }
 
     public static byte[] binary(final List<?> keys) {
@@ -230,6 +266,8 @@ public abstract class PartitionedStorage implements Storage {
     @Data
     public static class SatisfyResult implements Comparable<SatisfyResult> {
 
+        private final Index index;
+
         private final List<Object> partition;
 
         private final List<Object> sort;
@@ -237,17 +275,6 @@ public abstract class PartitionedStorage implements Storage {
         private final boolean reversed;
 
         private final Set<Path> matched;
-
-        public static SatisfyResult unsatisfied() {
-
-            return new SatisfyResult(Collections.emptyList(), Collections.emptyList(),
-                    false, Collections.emptySet());
-        }
-
-        public boolean isSatisfied() {
-
-            return partition != null;
-        }
 
         public boolean isMatched(final Path path) {
 

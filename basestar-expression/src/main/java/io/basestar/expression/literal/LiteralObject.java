@@ -124,7 +124,7 @@ public class LiteralObject implements Expression {
     }
 
     @Override
-    public Expression create(final List<Expression> expressions) {
+    public Expression copy(final List<Expression> expressions) {
 
         assert expressions.size() % 2 == 0;
         final Map<Expression, Expression> results = new HashMap<>();

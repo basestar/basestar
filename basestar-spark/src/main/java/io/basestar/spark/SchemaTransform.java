@@ -23,6 +23,7 @@ package io.basestar.spark;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.use.Use;
 import io.basestar.util.Nullsafe;
+import io.basestar.util.Path;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -32,24 +33,28 @@ import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.StructType;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-public class SchemaTransform implements Transform<Dataset<Row>, Dataset<Row>> {
+public class SchemaTransform implements Transform<Dataset<?>, Dataset<Row>> {
 
     private final InstanceSchema schema;
+
+    private final Set<Path> expand;
 
     private final Map<String, Use<?>> extraMetadata;
 
     @lombok.Builder(builderClassName = "Builder")
-    public SchemaTransform(final InstanceSchema schema, final Map<String, Use<?>> extraMetadata) {
+    SchemaTransform(final InstanceSchema schema, final Set<Path> expand, final Map<String, Use<?>> extraMetadata) {
 
         this.schema = Nullsafe.require(schema);
+        this.expand = Nullsafe.option(expand);
         this.extraMetadata = Nullsafe.option(extraMetadata);
     }
 
     @Override
-    public Dataset<Row> accept(final Dataset<Row> input) {
+    public Dataset<Row> accept(final Dataset<?> input) {
 
         final SortedMap<String, Column> columns = new TreeMap<>();
         schema.getProperties().forEach((name, prop) -> columns.put(name, column(input, name, prop.getType())));
@@ -58,7 +63,7 @@ public class SchemaTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         return input.select(columns.values().toArray(new Column[0]));
     }
 
-    private Column column(final Dataset<Row> input, final String name, final Use<?> type) {
+    private Column column(final Dataset<?> input, final String name, final Use<?> type) {
 
         final StructType schema = input.schema();
 
@@ -69,12 +74,12 @@ public class SchemaTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
     private Column nullColumn(final Use<?> type) {
 
-        return functions.lit(null).cast(SparkSchemaUtils.type(type));
+        return functions.lit(null).cast(SparkSchemaUtils.type(type, null));
     }
 
     private Column column(final Column source, final DataType sourceDataType, final Use<?> type) {
 
-        final DataType targetDataType = SparkSchemaUtils.type(type);
+        final DataType targetDataType = SparkSchemaUtils.type(type, expand);
         if(targetDataType.equals(sourceDataType)) {
             return source;
         } else {

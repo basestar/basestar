@@ -40,10 +40,7 @@ import lombok.experimental.Accessors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
-import java.util.Collections;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.*;
 
 /**
  * Permission
@@ -164,5 +161,26 @@ public class Permission implements Serializable {
     public Permission merge(final Permission b) {
 
         return new Permission(this, b);
+    }
+
+    public interface Resolver {
+
+        Map<String, Permission> getDeclaredPermissions();
+
+        Map<String, Permission> getPermissions();
+
+        default Permission getPermission(final String name) {
+
+            return getPermission(name, true);
+        }
+
+        default Permission getPermission(final String name, final boolean inherited) {
+
+            if(inherited) {
+                return getPermissions().get(name);
+            } else {
+                return getDeclaredPermissions().get(name);
+            }
+        }
     }
 }

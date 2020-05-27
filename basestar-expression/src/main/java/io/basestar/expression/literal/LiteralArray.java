@@ -137,7 +137,7 @@ public class LiteralArray implements Expression {
     }
 
     @Override
-    public Expression create(final List<Expression> expressions) {
+    public Expression copy(final List<Expression> expressions) {
 
         return args == expressions ? this : new LiteralArray(expressions);
     }

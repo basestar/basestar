@@ -138,7 +138,7 @@ public class Or implements Expression {
     }
 
     @Override
-    public Expression create(final List<Expression> expressions) {
+    public Expression copy(final List<Expression> expressions) {
 
         return terms == expressions ? this : new Or(expressions);
     }
