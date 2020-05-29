@@ -40,6 +40,7 @@ import io.basestar.util.PagedList;
 import io.basestar.util.Path;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.mockito.ArgumentCaptor;
@@ -103,6 +104,7 @@ public class TestDatabaseServer {
 
         final Namespace namespace = Namespace.load(
                 TestDatabaseServer.class.getResource("/io/basestar/database/schema.json"),
+                TestDatabaseServer.class.getResource("/io/basestar/database/schema2.json"),
                 TestDatabaseServer.class.getResource("/io/basestar/database/Team.yml")
         );
         this.emitter = Mockito.mock(Emitter.class);
@@ -688,6 +690,7 @@ public class TestDatabaseServer {
     }
 
     @Test
+    @Disabled
     public void aggregate() throws Exception {
 
         database.transaction(Caller.SUPER, TransactionOptions.builder()

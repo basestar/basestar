@@ -10,6 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.Test;
 
@@ -54,9 +55,9 @@ public class TestExpandTransform {
 
         final ObjectSchema a = namespace.requireObjectSchema("A");
 
-        final Source<Dataset<?>> sourceA = (Source<Dataset<?>>) sink -> sink.accept(session.createDataset(ImmutableList.of(
+        final Source<Dataset<Row>> sourceA = (Source<Dataset<Row>>) sink -> sink.accept(session.createDataset(ImmutableList.of(
                 new A("a:1", new B("b:1"))
-        ), Encoders.bean(A.class)));
+        ), Encoders.bean(A.class)).toDF());
 
         final ExpandTransform expand = ExpandTransform.builder()
                 .schema(a)

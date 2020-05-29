@@ -37,7 +37,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-public class SchemaTransform implements Transform<Dataset<?>, Dataset<Row>> {
+public class SchemaTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
     private final InstanceSchema schema;
 
@@ -54,7 +54,7 @@ public class SchemaTransform implements Transform<Dataset<?>, Dataset<Row>> {
     }
 
     @Override
-    public Dataset<Row> accept(final Dataset<?> input) {
+    public Dataset<Row> accept(final Dataset<Row> input) {
 
         final SortedMap<String, Column> columns = new TreeMap<>();
         schema.getProperties().forEach((name, prop) -> columns.put(name, column(input, name, prop.getType())));
