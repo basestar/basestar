@@ -13,9 +13,9 @@ import net.minidev.json.parser.ParseException;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderAsyncClient;
-import software.amazon.awssdk.services.cognitoidentityprovider.model.AdminInitiateAuthRequest;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.AuthFlowType;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.CognitoIdentityProviderException;
+import software.amazon.awssdk.services.cognitoidentityprovider.model.InitiateAuthRequest;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -26,32 +26,28 @@ public class CognitoBasicAuthenticator extends BasicAuthenticator {
 
     private final CognitoIdentityProviderAsyncClient client;
 
-    private final String userPoolId;
-
     private final String clientId;
 
     @lombok.Builder(builderClassName = "Builder")
-    CognitoBasicAuthenticator(final CognitoIdentityProviderAsyncClient client, final String userPoolId, final String clientId) {
+    CognitoBasicAuthenticator(final CognitoIdentityProviderAsyncClient client, final String clientId) {
 
         this.client = client;
-        this.userPoolId = userPoolId;
         this.clientId = clientId;
     }
 
     @Override
     protected CompletableFuture<Caller> verify(final String username, final String password) {
 
-        final AdminInitiateAuthRequest request = AdminInitiateAuthRequest.builder()
-                .userPoolId(userPoolId)
+        final InitiateAuthRequest request = InitiateAuthRequest.builder()
                 .clientId(clientId)
-                .authFlow(AuthFlowType.ADMIN_USER_PASSWORD_AUTH)
+                .authFlow(AuthFlowType.USER_PASSWORD_AUTH)
                 .authParameters(ImmutableMap.of(
                         "USERNAME", username,
                         "PASSWORD", password
                 ))
                 .build();
 
-        return client.adminInitiateAuth(request).exceptionally(e -> {
+        return client.initiateAuth(request).exceptionally(e -> {
 
             final String reason = Throwables.find(e, CognitoIdentityProviderException.class)
                     .map(AwsServiceException::awsErrorDetails).map(AwsErrorDetails::errorMessage)
