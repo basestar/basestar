@@ -437,10 +437,15 @@ public class ReadProcessor {
 
             } else {
 
-                final ObjectSchema schema = objectSchema(caller.getSchema());
-                return readImpl(schema, caller.getId(), null)
-                        .thenCompose(unexpanded -> expand(context, unexpanded, expand))
-                        .thenApply(result -> new ExpandedCaller(caller, result));
+                if(caller.getSchema() != null) {
+                    final Schema<?> schema = namespace.getSchema(caller.getSchema());
+                    if(schema instanceof ObjectSchema) {
+                        return readImpl((ObjectSchema)schema, caller.getId(), null)
+                                .thenCompose(unexpanded -> expand(context, unexpanded, expand))
+                                .thenApply(result -> new ExpandedCaller(caller, result));
+                    }
+                }
+                return CompletableFuture.completedFuture(new ExpandedCaller(caller, null));
             }
         }
     }
@@ -458,13 +463,15 @@ public class ReadProcessor {
         public static Instance getObject(final Caller caller) {
 
             if(caller instanceof ExpandedCaller) {
-                return ((ExpandedCaller)caller).getObject();
-            } else {
-                final HashMap<String, Object> object = new HashMap<>();
-                object.put(Reserved.ID, caller.getId());
-                object.put(Reserved.SCHEMA, caller.getSchema());
-                return new Instance(object);
+                final Map<String, Object> object = ((ExpandedCaller)caller).getObject();
+                if(object != null) {
+                    return new Instance(object);
+                }
             }
+            final HashMap<String, Object> object = new HashMap<>();
+            object.put(Reserved.ID, caller.getId());
+            object.put(Reserved.SCHEMA, caller.getSchema());
+            return new Instance(object);
         }
 
         public Instance getObject() {
