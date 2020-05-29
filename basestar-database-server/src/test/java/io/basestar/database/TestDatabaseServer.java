@@ -104,7 +104,6 @@ public class TestDatabaseServer {
 
         final Namespace namespace = Namespace.load(
                 TestDatabaseServer.class.getResource("/io/basestar/database/schema.json"),
-                TestDatabaseServer.class.getResource("/io/basestar/database/schema2.json"),
                 TestDatabaseServer.class.getResource("/io/basestar/database/Team.yml")
         );
         this.emitter = Mockito.mock(Emitter.class);
