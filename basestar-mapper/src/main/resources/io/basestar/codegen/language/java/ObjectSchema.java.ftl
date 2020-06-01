@@ -23,6 +23,7 @@ public class ${className} {
     }
 
 </#list>
+    @Override
     public boolean equals(final Object o) {
 
         if (this == o) return true;
@@ -32,7 +33,8 @@ public class ${className} {
             && </#list>;
     }
 
-    public boolean hashCode(final Object o) {
+    @Override
+    public int hashCode() {
 
         return java.util.Objects.hash(<#list members as member>${member.fieldName}<#sep>, </#list>);
     }

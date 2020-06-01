@@ -1,4 +1,6 @@
-package io.basestar.codegen;
+package io.basestar.codegen.model;
+
+import io.basestar.codegen.CodegenSettings;
 
 public class Model {
 

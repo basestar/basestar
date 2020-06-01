@@ -1,6 +1,7 @@
-package io.basestar.codegen;
+package io.basestar.codegen.model;
 
 import com.google.common.collect.ImmutableMap;
+import io.basestar.codegen.CodegenSettings;
 import io.basestar.schema.Reserved;
 import io.basestar.schema.use.Use;
 

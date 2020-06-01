@@ -2,6 +2,10 @@ package io.basestar.codegen;
 
 import freemarker.template.Version;
 import freemarker.template.*;
+import io.basestar.codegen.model.EnumSchemaModel;
+import io.basestar.codegen.model.ObjectSchemaModel;
+import io.basestar.codegen.model.StructSchemaModel;
+import io.basestar.codegen.model.ViewSchemaModel;
 import io.basestar.schema.*;
 
 import java.io.IOException;
@@ -18,7 +22,7 @@ public class Codegen {
 
         final Configuration cfg = new Configuration(Configuration.VERSION_2_3_30);
 
-        cfg.setClassForTemplateLoading(Model.class, "language/" + language);
+        cfg.setClassForTemplateLoading(Codegen.class, "language/" + language);
         cfg.setIncompatibleImprovements(new Version(2, 3, 20));
         cfg.setDefaultEncoding("UTF-8");
         cfg.setLocale(Locale.US);

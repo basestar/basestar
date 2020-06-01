@@ -105,6 +105,7 @@
         <module>basestar-graphql</module>
         <module>basestar-spark-elasticsearch</module>
         <module>basestar-stream</module>
+        <module>basestar-maven-plugin</module>
     </modules>
 
 <!--    <reporting>-->

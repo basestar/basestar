@@ -1,5 +1,6 @@
-package io.basestar.codegen;
+package io.basestar.codegen.model;
 
+import io.basestar.codegen.CodegenSettings;
 import io.basestar.schema.use.*;
 
 public interface TypeModel {
