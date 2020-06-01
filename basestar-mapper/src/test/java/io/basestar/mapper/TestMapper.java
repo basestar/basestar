@@ -21,43 +21,47 @@ package io.basestar.mapper;
  */
 
 import io.basestar.mapper.annotation.*;
+import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-@ObjectSchema
-public class Test {
-
-    @Id
-    private String id;
-
-    @Link(expression = "target.id == this.id", sort = "blah:desc")
-    private List<Test> comments;
-
-    @Created
-    private LocalDateTime created;
-
-    @Updated
-    private LocalDateTime updated;
-
-    @Hash
-    private String hash;
-
-    @Property
-    private String test;
+public class TestMapper {
 
     @ObjectSchema
-    @Index(name = "parent", partition = "parent.id")
-    public static class Comment {
+    public static class Post {
 
         @Id
         private String id;
 
+        @Link(expression = "target.id == this.id", sort = "blah:desc")
+        private List<TestMapper> comments;
+
+        @Created
+        private LocalDateTime created;
+
+        @Updated
+        private LocalDateTime updated;
+
+        @Hash
+        private String hash;
+
+        @Property
+        private String test;
+
+        @ObjectSchema
+        @Index(name = "parent", partition = "parent.id")
+        public static class Comment {
+
+            @Id
+            private String id;
+        }
     }
 
-    public static void main(final String[] args) {
+    @Test
+    public void testCreateSchema() {
 
         final Mapper mapper = new Mapper();
-        System.err.println(mapper.schema(Test.class).toString());
+        System.err.println(mapper.schema(Post.class).toString());
     }
 }
