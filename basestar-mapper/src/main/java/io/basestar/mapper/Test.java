@@ -31,7 +31,7 @@ public class Test {
     @Id
     private String id;
 
-    @Link(query = "target.id == this.id", sort = "blah:desc")
+    @Link(expression = "target.id == this.id", sort = "blah:desc")
     private List<Test> comments;
 
     @Created
@@ -42,6 +42,9 @@ public class Test {
 
     @Hash
     private String hash;
+
+    @Property
+    private String test;
 
     @ObjectSchema
     @Index(name = "parent", partition = "parent.id")
@@ -55,6 +58,6 @@ public class Test {
     public static void main(final String[] args) {
 
         final Mapper mapper = new Mapper();
-        System.err.println(mapper.schema(Test.class));
+        System.err.println(mapper.schema(Test.class).toString());
     }
 }

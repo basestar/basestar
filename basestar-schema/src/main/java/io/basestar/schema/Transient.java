@@ -82,7 +82,7 @@ public class Transient implements Member {
     @Data
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public static class Builder implements Described {
+    public static class Builder implements Member.Builder {
 
         private Use<?> type;
 

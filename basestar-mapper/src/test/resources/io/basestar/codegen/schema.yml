@@ -1,0 +1,21 @@
+MyEnum:
+  type: enum
+  values:
+    - VALUE_1
+    - VALUE_2
+
+MyObject:
+  type: object
+  properties:
+    test1:
+      type: string
+    test2:
+      type:
+        array: MyEnum
+    test3:
+      type: MyObject
+      required: true
+  links:
+    test4:
+      expression: id==this.id
+      schema: MyObject

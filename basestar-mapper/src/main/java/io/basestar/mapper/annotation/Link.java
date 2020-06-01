@@ -20,9 +20,9 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
+import io.basestar.expression.Expression;
 import io.basestar.mapper.context.PropertyContext;
-import io.basestar.mapper.internal.PropertyBinder;
-import io.basestar.mapper.internal.annotation.PropertyAnnotation;
+import io.basestar.mapper.internal.annotation.BindSchema;
 import io.basestar.schema.InstanceSchema;
 import lombok.RequiredArgsConstructor;
 
@@ -31,20 +31,20 @@ import java.lang.annotation.*;
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.METHOD})
-@PropertyAnnotation(Link.Binder.class)
+@BindSchema(Link.Binder.class)
 public @interface Link {
 
     String INFER_NAME = "";
 
     String name() default INFER_NAME;
 
-    String query();
+    String expression();
 
     String[] sort() default {};
 
 
     @RequiredArgsConstructor
-    class Binder implements PropertyBinder {
+    class Binder implements BindSchema.Handler {
 
         private final Link annotation;
 
@@ -54,10 +54,16 @@ public @interface Link {
             return property.name();
         }
 
-        @Override
-        public void addToSchema(final InstanceSchema.Builder builder) {
+        public void addToSchema(final InstanceSchema.Builder parent, final PropertyContext prop) {
 
-            assert builder instanceof io.basestar.schema.ObjectSchema.Builder;
+            if(parent instanceof io.basestar.schema.ObjectSchema.Builder) {
+                final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
+                final io.basestar.schema.Link.Builder builder = new io.basestar.schema.Link.Builder()
+                        .setExpression(Expression.parse(annotation.expression()));
+                ((io.basestar.schema.ObjectSchema.Builder)parent).setLink(name, builder);
+            } else {
+                throw new IllegalStateException("links only allowed on object schemas");
+            }
         }
     }
 }

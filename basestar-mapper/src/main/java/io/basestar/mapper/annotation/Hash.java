@@ -21,8 +21,7 @@ package io.basestar.mapper.annotation;
  */
 
 import io.basestar.mapper.context.PropertyContext;
-import io.basestar.mapper.internal.PropertyBinder;
-import io.basestar.mapper.internal.annotation.PropertyAnnotation;
+import io.basestar.mapper.internal.annotation.BindSchema;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Reserved;
 import lombok.RequiredArgsConstructor;
@@ -32,11 +31,11 @@ import java.lang.annotation.*;
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.METHOD})
-@PropertyAnnotation(Hash.Binder.class)
+@BindSchema(Hash.Binder.class)
 public @interface Hash {
 
     @RequiredArgsConstructor
-    class Binder implements PropertyBinder {
+    class Binder implements BindSchema.Handler {
 
         private final Hash annotation;
 
@@ -47,9 +46,9 @@ public @interface Hash {
         }
 
         @Override
-        public void addToSchema(final InstanceSchema.Builder builder) {
+        public void addToSchema(final InstanceSchema.Builder parent, final PropertyContext prop) {
 
-            assert builder instanceof io.basestar.schema.ObjectSchema.Builder;
+            assert parent instanceof io.basestar.schema.ObjectSchema.Builder;
         }
     }
 }

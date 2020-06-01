@@ -21,8 +21,7 @@ package io.basestar.mapper.annotation;
  */
 
 import io.basestar.mapper.context.PropertyContext;
-import io.basestar.mapper.internal.PropertyBinder;
-import io.basestar.mapper.internal.annotation.PropertyAnnotation;
+import io.basestar.mapper.internal.annotation.BindSchema;
 import io.basestar.schema.InstanceSchema;
 import lombok.RequiredArgsConstructor;
 
@@ -31,15 +30,19 @@ import java.lang.annotation.*;
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.METHOD})
-@PropertyAnnotation(Transient.Binder.class)
+@BindSchema(Transient.Binder.class)
 public @interface Transient {
+
+    String INFER_NAME = "";
+
+    String name() default INFER_NAME;
 
     String expression() default "";
 
     String[] expand() default {};
 
     @RequiredArgsConstructor
-    class Binder implements PropertyBinder {
+    class Binder implements BindSchema.Handler {
 
         private final Transient annotation;
 
@@ -50,9 +53,15 @@ public @interface Transient {
         }
 
         @Override
-        public void addToSchema(final InstanceSchema.Builder builder) {
+        public void addToSchema(final InstanceSchema.Builder parent, final PropertyContext prop) {
 
-            assert builder instanceof io.basestar.schema.ObjectSchema.Builder;
+            if(parent instanceof io.basestar.schema.ObjectSchema.Builder) {
+                final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
+                final io.basestar.schema.Transient.Builder builder = new io.basestar.schema.Transient.Builder();
+                ((io.basestar.schema.ObjectSchema.Builder)parent).setTransient(name, builder);
+            } else {
+                throw new IllegalStateException("transients only allowed on object schemas");
+            }
         }
     }
 }

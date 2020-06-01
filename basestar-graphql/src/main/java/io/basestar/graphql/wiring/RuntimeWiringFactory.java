@@ -96,7 +96,7 @@ public class RuntimeWiringFactory {
             final Set<Path> paths = paths(env);
             final Set<Path> expand = schema.requiredExpand(paths);
             final String id = env.getArgument(Reserved.ID);
-            final Long version = env.getArgumentOrDefault(Reserved.VERSION, null);
+            final Long version = version(env);
             final ReadOptions options = ReadOptions.builder()
                     .schema(schema.getName()).id(id)
                     .version(version).expand(expand)
@@ -114,15 +114,15 @@ public class RuntimeWiringFactory {
             final Set<Path> expand = schema.requiredExpand(paths);
             final String query = env.getArgument(namingStrategy.queryArgumentName());
             final Expression expression = query == null ? Constant.TRUE : Expression.parse(query);
-            final String paging = env.getArgument(namingStrategy.pagingArgumentName());
-            final Number count = env.getArgument(namingStrategy.countArgumentName());
-            final List<?> sort = env.getArgument(namingStrategy.sortArgumentName());
+            final PagingToken paging = paging(env);
+            final Integer count = count(env);
+            final List<Sort> sort = sort(env);
             final QueryOptions options = QueryOptions.builder()
                     .schema(schema.getName())
                     .expression(expression)
-                    .paging(paging(paging))
-                    .count(count(count))
-                    .sort(sort(sort))
+                    .paging(paging)
+                    .count(count)
+                    .sort(sort)
                     .expand(expand)
                     .build();
             return database.query(caller, options)
@@ -140,15 +140,15 @@ public class RuntimeWiringFactory {
             final Set<Path> paths = Path.children(paths(env), namingStrategy.pageItemsFieldName());
             final Set<Path> expand = linkSchema.requiredExpand(paths);
             final String id = env.getArgument(Reserved.ID);
-            final String paging = env.getArgument(namingStrategy.pagingArgumentName());
-            final Number count = env.getArgument(namingStrategy.countArgumentName());
+            final PagingToken paging = paging(env);
+            final Integer count = count(env);
             final QueryLinkOptions options = QueryLinkOptions.builder()
                     .schema(schema.getName())
                     .link(link.getName())
                     .id(id)
                     .expand(expand)
-                    .paging(paging(paging))
-                    .count(count(count))
+                    .paging(paging)
+                    .count(count)
                     .build();
             return database.queryLink(caller, options)
                     .thenApply(objects -> objects.map(object -> GraphQLUtils.toResponse(linkSchema, object)))
@@ -182,64 +182,6 @@ public class RuntimeWiringFactory {
         return results;
     }
 
-    //    private Fetcher<ActionOptions> create(final ObjectSchema schema) {
-//
-//        return (context, field) -> {
-//
-//            final String id = GraphQLUtils.argValue(context, UseString.DEFAULT, field, Reserved.ID);
-//            final Map<String, Object> data = GraphQLUtils.argInput(context, schema, field, namingStrategy.dataArgumentName());
-//            final Map<String, Expression> expressions = GraphQLUtils.argInputExpr(context, schema, field, namingStrategy.expressionsArgumentName());
-//            final Set<Path> paths = GraphQLUtils.paths(schema, field.getSelectionSet());
-//
-//            final CreateOptions.Builder builder = CreateOptions.builder();
-//            builder.schema(schema.getName());
-//            builder.id(id);
-//            builder.data(data);
-//            builder.expressions(expressions);
-//            builder.expand(schema.requiredExpand(paths));
-//            return builder.build();
-//        };
-//    }
-//
-//    private Fetcher<ActionOptions> update(final ObjectSchema schema) {
-//
-//        return (context, field) -> {
-//
-//            final String id = GraphQLUtils.argValue(context, UseString.DEFAULT, field, Reserved.ID);
-//            final Long version = GraphQLUtils.argValue(context, UseInteger.DEFAULT, field, Reserved.VERSION);
-//            final Map<String, Object> data = GraphQLUtils.argInput(context, schema, field, namingStrategy.dataArgumentName());
-//            final Map<String, Expression> expressions = GraphQLUtils.argInputExpr(context, schema, field, namingStrategy.expressionsArgumentName());
-//            final Set<Path> paths = GraphQLUtils.paths(schema, field.getSelectionSet());
-//
-//            assert id != null;
-//
-//            final UpdateOptions.Builder builder = UpdateOptions.builder();
-//            builder.schema(schema.getName());
-//            builder.id(id);
-//            builder.version(version);
-//            builder.data(data);
-//            builder.expressions(expressions);
-//            builder.expand(schema.requiredExpand(paths));
-//            return builder.build();
-//        };
-//    }
-//
-//    private Fetcher<ActionOptions> delete(final ObjectSchema schema) {
-//
-//        return (context, field) -> {
-//
-//            final String id = GraphQLUtils.argValue(context, UseString.DEFAULT, field, Reserved.ID);
-//            final Long version = GraphQLUtils.argValue(context, UseInteger.DEFAULT, field, Reserved.VERSION);
-//            assert id != null;
-//
-//            final DeleteOptions.Builder builder = DeleteOptions.builder();
-//            builder.schema(schema.getName());
-//            builder.id(id);
-//            builder.version(version);
-//            return builder.build();
-//        };
-//    }
-
     private DataFetcher<CompletableFuture<?>> createFetcher(final ObjectSchema schema) {
 
         return (env) -> {
@@ -266,7 +208,7 @@ public class RuntimeWiringFactory {
             final Set<Path> paths = paths(env);
             final Set<Path> expand = schema.requiredExpand(paths);
             final String id = env.getArgument(Reserved.ID);
-            final Long version = env.getArgumentOrDefault(Reserved.VERSION, null);
+            final Long version = version(env);
             final Map<String, Object> data = GraphQLUtils.fromRequest(schema, env.getArgument(namingStrategy.dataArgumentName()));
             final Map<String, Expression> expressions = parseExpressions(env.getArgument(namingStrategy.expressionsArgumentName()));
             final UpdateOptions options = UpdateOptions.builder()
@@ -285,7 +227,7 @@ public class RuntimeWiringFactory {
         return (env) -> {
             final Caller caller = GraphQLUtils.caller(env.getContext());
             final String id = env.getArgument(Reserved.ID);
-            final Long version = env.getArgumentOrDefault(Reserved.VERSION, null);
+            final Long version = version(env);
             final DeleteOptions options = DeleteOptions.builder()
                     .schema(schema.getName()).id(id)
                     .version(version)
@@ -335,8 +277,19 @@ public class RuntimeWiringFactory {
                 .toArray(String[]::new));
     }
 
-    private static Integer count(final Number value) {
+    private Long version(final DataFetchingEnvironment env) {
 
+        final Number value = env.getArgument(Reserved.VERSION);
+        if(value == null) {
+            return null;
+        } else {
+            return value.longValue();
+        }
+    }
+
+    private Integer count(final DataFetchingEnvironment env) {
+
+        final Number value = env.getArgument(namingStrategy.countArgumentName());
         if(value == null) {
             return null;
         } else {
@@ -344,8 +297,9 @@ public class RuntimeWiringFactory {
         }
     }
 
-    private static PagingToken paging(final String value) {
+    private PagingToken paging(final DataFetchingEnvironment env) {
 
+        final String value = env.getArgument(namingStrategy.pagingArgumentName());
         if(value == null) {
             return null;
         } else {
@@ -353,8 +307,9 @@ public class RuntimeWiringFactory {
         }
     }
 
-    private static List<Sort> sort(final List<?> value) {
+    private List<Sort> sort(final DataFetchingEnvironment env) {
 
+        final List<?> value = env.getArgument(namingStrategy.sortArgumentName());
         if(value == null) {
             return null;
         } else {

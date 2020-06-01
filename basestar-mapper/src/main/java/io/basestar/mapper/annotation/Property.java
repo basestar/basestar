@@ -21,8 +21,8 @@ package io.basestar.mapper.annotation;
  */
 
 import io.basestar.mapper.context.PropertyContext;
-import io.basestar.mapper.internal.PropertyBinder;
-import io.basestar.mapper.internal.annotation.PropertyAnnotation;
+import io.basestar.mapper.internal.UseBinder;
+import io.basestar.mapper.internal.annotation.BindSchema;
 import io.basestar.schema.InstanceSchema;
 import lombok.RequiredArgsConstructor;
 
@@ -31,7 +31,7 @@ import java.lang.annotation.*;
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.METHOD})
-@PropertyAnnotation(Property.Binder.class)
+@BindSchema(Property.Binder.class)
 public @interface Property {
 
     String INFER_NAME = "";
@@ -41,7 +41,7 @@ public @interface Property {
     boolean secret() default false;
 
     @RequiredArgsConstructor
-    class Binder implements PropertyBinder {
+    class Binder implements BindSchema.Handler {
 
         private final Property annotation;
 
@@ -53,9 +53,13 @@ public @interface Property {
         }
 
         @Override
-        public void addToSchema(final InstanceSchema.Builder builder) {
+        public void addToSchema(final InstanceSchema.Builder parent, final PropertyContext prop) {
 
-//            builder.setProperty(name(), )
+            final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
+            final UseBinder use = UseBinder.from(prop.type());
+            final io.basestar.schema.Property.Builder builder = new io.basestar.schema.Property.Builder()
+                    .setType(use.use());
+            parent.setProperty(name, builder);
         }
     }
 }

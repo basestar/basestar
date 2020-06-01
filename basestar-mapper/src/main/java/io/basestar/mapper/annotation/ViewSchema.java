@@ -20,35 +20,39 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
-import io.basestar.mapper.context.PropertyContext;
-import io.basestar.mapper.internal.annotation.BindSchema;
-import io.basestar.schema.InstanceSchema;
-import io.basestar.schema.Reserved;
+import io.basestar.mapper.context.TypeContext;
+import io.basestar.mapper.internal.annotation.BindNamespace;
+import io.basestar.schema.Schema;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.annotation.*;
 
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.FIELD, ElementType.METHOD})
-@BindSchema(Created.Binder.class)
-public @interface Created {
+@Target(ElementType.TYPE)
+@BindNamespace(ViewSchema.Binder.class)
+public @interface ViewSchema {
+
+    String INFER_NAME = "";
+
+    String name() default INFER_NAME;
 
     @RequiredArgsConstructor
-    class Binder implements BindSchema.Handler {
+    class Binder implements BindNamespace.Handler {
 
-        private final Created annotation;
+        private final ViewSchema annotation;
 
         @Override
-        public String name(final PropertyContext property) {
+        public String name(final TypeContext type) {
 
-            return Reserved.CREATED;
+            final String name = annotation.name();
+            return name.equals(INFER_NAME) ? type.simpleName() : name;
         }
 
         @Override
-        public void addToSchema(final InstanceSchema.Builder parent, final PropertyContext prop) {
+        public Schema.Builder<?> schemaBuilder(final TypeContext type) {
 
-            assert parent instanceof io.basestar.schema.ObjectSchema.Builder;
+            return io.basestar.schema.ViewSchema.builder();
         }
     }
 }

@@ -20,14 +20,22 @@ package io.basestar.mapper.internal.annotation;
  * #L%
  */
 
-import io.basestar.mapper.internal.PropertyBinder;
+import io.basestar.mapper.context.TypeContext;
+import io.basestar.schema.Schema;
 
 import java.lang.annotation.*;
 
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.ANNOTATION_TYPE)
-public @interface PropertyAnnotation {
+public @interface BindNamespace {
 
-    Class<? extends PropertyBinder> value();
+    Class<? extends Handler> value();
+
+    interface Handler {
+
+        String name(TypeContext type);
+
+        Schema.Builder<?> schemaBuilder(TypeContext type);
+    }
 }

@@ -89,6 +89,10 @@ public interface Member extends Named, Described, Serializable, Extendable {
         return getType().openApi().description(getDescription());
     }
 
+    interface Builder extends Described {
+
+    }
+
     interface Resolver {
 
         @JsonIgnore

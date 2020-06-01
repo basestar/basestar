@@ -24,7 +24,7 @@ import io.basestar.mapper.context.MethodContext;
 
 import java.util.List;
 
-public interface HasMethods<T> {
+public interface HasMethods {
 
     List<MethodContext> declaredMethods();
 

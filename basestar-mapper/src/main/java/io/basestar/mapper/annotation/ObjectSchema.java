@@ -21,8 +21,7 @@ package io.basestar.mapper.annotation;
  */
 
 import io.basestar.mapper.context.TypeContext;
-import io.basestar.mapper.internal.SchemaBinder;
-import io.basestar.mapper.internal.annotation.SchemaAnnotation;
+import io.basestar.mapper.internal.annotation.BindNamespace;
 import io.basestar.schema.Schema;
 import lombok.RequiredArgsConstructor;
 
@@ -31,7 +30,7 @@ import java.lang.annotation.*;
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-@SchemaAnnotation(ObjectSchema.Binder.class)
+@BindNamespace(ObjectSchema.Binder.class)
 public @interface ObjectSchema {
 
     String INFER_NAME = "";
@@ -39,7 +38,7 @@ public @interface ObjectSchema {
     String name() default INFER_NAME;
 
     @RequiredArgsConstructor
-    class Binder implements SchemaBinder {
+    class Binder implements BindNamespace.Handler {
 
         private final ObjectSchema annotation;
 

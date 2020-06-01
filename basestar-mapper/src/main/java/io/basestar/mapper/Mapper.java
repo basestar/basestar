@@ -23,10 +23,8 @@ package io.basestar.mapper;
 import io.basestar.mapper.context.AnnotationContext;
 import io.basestar.mapper.context.TypeContext;
 import io.basestar.mapper.context.has.HasType;
-import io.basestar.mapper.internal.PropertyBinder;
-import io.basestar.mapper.internal.SchemaBinder;
-import io.basestar.mapper.internal.annotation.PropertyAnnotation;
-import io.basestar.mapper.internal.annotation.SchemaAnnotation;
+import io.basestar.mapper.internal.annotation.BindNamespace;
+import io.basestar.mapper.internal.annotation.BindSchema;
 import io.basestar.schema.EnumSchema;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Schema;
@@ -43,7 +41,7 @@ public class Mapper {
 
 //    private final Map<Class<?>, Schema<?>> schemas = new IdentityHashMap<>();
 
-    private static SchemaBinder schemaBinder(final TypeContext binderType, final Annotation annotation) {
+    private static BindNamespace.Handler schemaBinder(final TypeContext binderType, final Annotation annotation) {
 
         try {
             // FIXME:
@@ -53,7 +51,7 @@ public class Mapper {
         }
     }
 
-    private static PropertyBinder propertyBinder(final TypeContext binderType, final Annotation annotation) {
+    private static BindSchema.Handler memberBinder(final TypeContext binderType, final Annotation annotation) {
 
         try {
             // FIXME:
@@ -63,28 +61,29 @@ public class Mapper {
         }
     }
 
-    public <T extends Schema<?>> T schema(final Class<?> cls) {
+    @SuppressWarnings("unchecked")
+    public <T extends Schema.Builder<?>> T schema(final Class<?> cls) {
 
-        final TypeContext with = TypeContext.from(cls);
+        final TypeContext type = TypeContext.from(cls);
 
-        final List<AnnotationContext<?>> schemaAnnotations = with.annotations().stream()
+        final List<AnnotationContext<?>> schemaAnnotations = type.annotations().stream()
                 .filter(a -> a.type().annotations().stream()
-                        .anyMatch(HasType.match(SchemaAnnotation.class)))
+                        .anyMatch(HasType.match(BindNamespace.class)))
                 .collect(Collectors.toList());
 
         final Schema.Builder<?> builder;
         if (schemaAnnotations.size() == 0) {
-            if(with.isEnum()) {
+            if(type.isEnum()) {
                 builder = EnumSchema.builder();
             } else {
                 builder = null;
             }
         } else if (schemaAnnotations.size() == 1) {
             final AnnotationContext<?> annotation = schemaAnnotations.get(0);
-            final SchemaAnnotation schemaAnnotation = annotation.type().annotation(SchemaAnnotation.class).annotation();
-            final TypeContext binderType = TypeContext.from(schemaAnnotation.value());
-            final SchemaBinder binder = schemaBinder(binderType, annotation.annotation());
-            builder = binder.schemaBuilder(with);
+            final BindNamespace bindNamespace = annotation.type().annotation(BindNamespace.class).annotation();
+            final TypeContext binderType = TypeContext.from(bindNamespace.value());
+            final BindNamespace.Handler binder = schemaBinder(binderType, annotation.annotation());
+            builder = binder.schemaBuilder(type);
         } else {
             final String names = schemaAnnotations.stream().map(v -> v.type().simpleName())
                     .collect(Collectors.joining(", "));
@@ -93,23 +92,25 @@ public class Mapper {
 
         if(builder instanceof InstanceSchema.Builder) {
 
-            with.properties().forEach(prop -> {
+            final InstanceSchema.Builder instanceBuilder = (InstanceSchema.Builder)builder;
+
+            type.properties().forEach(prop -> {
 
                 try {
 
                     final List<AnnotationContext<?>> propAnnotations = prop.annotations().stream()
                             .filter(a -> a.type().annotations().stream()
-                                    .anyMatch(HasType.match(PropertyAnnotation.class)))
+                                    .anyMatch(HasType.match(BindSchema.class)))
                             .collect(Collectors.toList());
 
                     if (propAnnotations.size() == 0) {
 
                     } else if (propAnnotations.size() == 1) {
                         final AnnotationContext<?> annotation = propAnnotations.get(0);
-                        final PropertyAnnotation propertyAnnotation = annotation.type().annotation(PropertyAnnotation.class).annotation();
-                        final TypeContext binderType = TypeContext.from(propertyAnnotation.value());
-                        final PropertyBinder binder = propertyBinder(binderType, annotation.annotation());
-
+                        final BindSchema bindSchema = annotation.type().annotation(BindSchema.class).annotation();
+                        final TypeContext binderType = TypeContext.from(bindSchema.value());
+                        final BindSchema.Handler binder = memberBinder(binderType, annotation.annotation());
+                        binder.addToSchema(instanceBuilder, prop);
 //
 //                    final Class<? extends PropertyBinder> binderType = propertyAnnotation.value();
 //                    binderType.getConstructor().newInstance();
@@ -136,7 +137,7 @@ public class Mapper {
 
         }
 
-        return null;
+        return (T)builder;
 
     }
 

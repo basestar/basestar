@@ -21,6 +21,7 @@ package io.basestar.mapper.internal;
  */
 
 import io.basestar.mapper.context.TypeContext;
+import io.basestar.schema.use.*;
 import lombok.RequiredArgsConstructor;
 
 import java.util.Collection;
@@ -28,6 +29,8 @@ import java.util.Map;
 import java.util.Set;
 
 public interface UseBinder {
+
+    Use<?> use();
 
     static UseBinder from(final TypeContext context) {
 
@@ -66,24 +69,48 @@ public interface UseBinder {
     class OfBoolean implements UseBinder {
 
         private final TypeContext context;
+
+        @Override
+        public Use<?> use() {
+
+            return UseBoolean.DEFAULT;
+        }
     }
 
     @RequiredArgsConstructor
     class OfInteger implements UseBinder {
 
         private final TypeContext context;
+
+        @Override
+        public Use<?> use() {
+
+            return UseInteger.DEFAULT;
+        }
     }
 
     @RequiredArgsConstructor
     class OfNumber implements UseBinder {
 
         private final TypeContext context;
+
+        @Override
+        public Use<?> use() {
+
+            return UseNumber.DEFAULT;
+        }
     }
 
     @RequiredArgsConstructor
     class OfString implements UseBinder {
 
         private final TypeContext context;
+
+        @Override
+        public Use<?> use() {
+
+            return UseString.DEFAULT;
+        }
     }
 
     @RequiredArgsConstructor
@@ -92,6 +119,12 @@ public interface UseBinder {
         private final TypeContext context;
 
         final UseBinder value;
+
+        @Override
+        public Use<?> use() {
+
+            return new UseArray<>(value.use());
+        }
     }
 
     @RequiredArgsConstructor
@@ -100,6 +133,12 @@ public interface UseBinder {
         private final TypeContext context;
 
         final UseBinder value;
+
+        @Override
+        public Use<?> use() {
+
+            return new UseSet<>(value.use());
+        }
     }
 
     @RequiredArgsConstructor
@@ -108,5 +147,11 @@ public interface UseBinder {
         private final TypeContext context;
 
         final UseBinder value;
+
+        @Override
+        public Use<?> use() {
+
+            return new UseMap<>(value.use());
+        }
     }
 }
