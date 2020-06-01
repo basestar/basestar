@@ -5,7 +5,7 @@
     <groupId>io.basestar</groupId>
     <artifactId>basestar</artifactId>
     <packaging>pom</packaging>
-    <version>1.1.8</version>
+    <version>1.1.9-SNAPSHOT</version>
 
     <inceptionYear>2019</inceptionYear>
     <organization>
@@ -66,7 +66,7 @@
         <connection>scm:git:git://github.com/basestar/basestar.git</connection>
         <developerConnection>scm:git:git@github.com:basestar/basestar.git</developerConnection>
         <url>https://github.com/basestar/basestar</url>
-        <tag>v1.1.8</tag>
+        <tag>v1.1.6</tag>
     </scm>
 
     <modules>
