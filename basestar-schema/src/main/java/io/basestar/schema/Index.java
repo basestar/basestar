@@ -335,7 +335,7 @@ public class Index implements Named, Described, Serializable, Extendable {
                 if (value instanceof Collection<?>) {
                     values.put(entry.getKey(), (Collection<?>) value);
                 } else if(value instanceof Map<?, ?>) {
-                    values.put(entry.getKey(), ((Map<?, ?>)value).entrySet());
+                    values.put(entry.getKey(), ((Map<?, ?>)value).values());
                 } else {
                     throw new IllegalStateException("Multi-value index path " + path + " must evaluate to a collection, a map, or null");
                 }

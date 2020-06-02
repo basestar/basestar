@@ -42,7 +42,7 @@ public class MemoryStorageTraits implements StorageTraits {
     @Override
     public Consistency getMultiValueIndexConsistency() {
 
-        return Consistency.ASYNC;
+        return Consistency.ATOMIC;
     }
 
     @Override

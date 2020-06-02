@@ -64,6 +64,8 @@ public class TestDatabaseServer {
 
     private static final String MULTI_INDEXED = "MultiIndexed";
 
+    private static final String MAP_MULTI_INDEXED = "MapMultiIndexed";
+
     private static final String REF_SOURCE = "RefSource";
 
     private static final String REF_TARGET = "RefTarget";
@@ -265,27 +267,35 @@ public class TestDatabaseServer {
         final Map<String, Object> createA = database.create(caller, MULTI_INDEXED, idA, dataA).get();
         assertObject(MULTI_INDEXED, idA, 1, dataA, createA);
 
-//        final Map<String, Object> readA = database.read(caller, INDEXED, idA).get();
-//        assertEquals(createA, readA);
-//
-//        final String idB = UUID.randomUUID().toString();
-//        final Map<String, Object> dataB = ImmutableMap.of(
-//                "value", "b"
-//        );
-//
-//        final Map<String, Object> createB = database.create(caller, INDEXED, idB, dataB).get();
-//        assertObject(INDEXED, idB, 1, dataB, createB);
-//
-//        final Map<String, Object> readB = database.read(caller, INDEXED, idB).get();
-//        assertEquals(createB, readB);
-//
-//        final PagedList<Instance> queryA = database.query(caller, INDEXED, Expression.parse("value == 'a'")).get();
-//        assertEquals(1, queryA.size());
-//        assertEquals(readA, queryA.get(0));
-//
-//        final PagedList<Instance> queryB = database.query(caller, INDEXED, Expression.parse("value == 'b'")).get();
-//        assertEquals(1, queryB.size());
-//        assertEquals(readB, queryB.get(0));
+        final Map<String, Object> readA = database.read(caller, MULTI_INDEXED, idA).get();
+        assertEquals(createA, readA);
+
+        final PagedList<Instance> queryA = database.query(caller, MULTI_INDEXED, Expression.parse("v == 'a' for any v of value")).get();
+        assertEquals(1, queryA.size());
+        assertEquals(readA, queryA.get(0));
+    }
+
+    @Test
+    public void createMapMultiIndexed() throws Exception {
+
+        final String idA = UUID.randomUUID().toString();
+        final Map<String, Object> dataA = ImmutableMap.of(
+                "value", ImmutableMap.of(
+                        "x", ImmutableMap.of("key", "a"),
+                        "y", ImmutableMap.of("key", "b"),
+                        "z", ImmutableMap.of("key", "c")
+                )
+        );
+
+        final Map<String, Object> createA = database.create(caller, MAP_MULTI_INDEXED, idA, dataA).get();
+        assertObject(MAP_MULTI_INDEXED, idA, 1, dataA, createA);
+
+        final Map<String, Object> readA = database.read(caller, MAP_MULTI_INDEXED, idA).get();
+        assertEquals(createA, readA);
+
+        final PagedList<Instance> queryA = database.query(caller, MAP_MULTI_INDEXED, Expression.parse("v.key == 'a' for any v of value")).get();
+        assertEquals(1, queryA.size());
+        assertEquals(readA, queryA.get(0));
     }
 
     @Test

@@ -132,8 +132,8 @@ public class Of implements Expression {
                         })
                         .iterator();
             } else {
-                return ((Map<?, ?>)with).entrySet().stream()
-                        .map(v -> Collections.singletonMap(value, ImmutableList.of(v.getKey(), v.getValue())))
+                return ((Map<?, ?>)with).values().stream()
+                        .map(o -> Collections.singletonMap(value, o))
                         .iterator();
             }
         } else {
