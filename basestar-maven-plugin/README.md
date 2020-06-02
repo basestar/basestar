@@ -17,7 +17,7 @@ Default phase ```generate-sources```
 |```language```| String | java | Output language (supported: java) |
 |```packageName```| String | N/A | Java package name |
 |```schemaUrls```| List<String> | N/A | URLs to schema files |
-|```outputDirectory```| String | ${r"${project.build.directory}"}/generated-sources/basestar | Output directory |
+|```outputDirectory```| String | ${project.build.directory}/generated-sources/basestar | Output directory |
 |```addSources```| Boolean | false | Should output directory be attached as a source directory? |
 
 
@@ -27,11 +27,11 @@ Default phase ```generate-sources```
 <plugin>
     <groupId>io.basestar</groupId>
     <artifactId>basestar-maven-plugin</artifactId>
-    <version>${r"${basestar.version}"}</version>
+    <version>${basestar.version}</version>
     <configuration>
         <packageName>io.basestar.example</packageName>
         <schemaUrls>
-            <schemaUrl>file://${r"${project.basedir}"}/src/main/resources/schema.yml</schemaUrl>
+            <schemaUrl>file://${project.basedir}/src/main/resources/schema.yml</schemaUrl>
         </schemaUrls>
         <addSources>true</addSources>
     </configuration>
