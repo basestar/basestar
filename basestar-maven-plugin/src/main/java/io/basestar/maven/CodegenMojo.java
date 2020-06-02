@@ -82,6 +82,7 @@ public class CodegenMojo extends AbstractMojo {
             }
 
         } catch (final IOException e) {
+            error("Codegen execution failed", e);
             throw new MojoExecutionException("Codegen execution failed", e);
         }
     }
@@ -97,6 +98,14 @@ public class CodegenMojo extends AbstractMojo {
         final Log log = getLog();
         if(log != null) {
             log.info(msg);
+        }
+    }
+
+    private void error(final String msg, final Throwable err) {
+
+        final Log log = getLog();
+        if(log != null) {
+            log.error(msg, err);
         }
     }
 }
