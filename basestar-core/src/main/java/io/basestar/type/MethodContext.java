@@ -20,6 +20,7 @@ package io.basestar.type;
  * #L%
  */
 
+import com.google.common.base.Suppliers;
 import io.basestar.type.has.*;
 import io.leangen.geantyref.GenericTypeReflector;
 import lombok.Getter;
@@ -29,28 +30,28 @@ import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.function.Supplier;
 
 @Getter
 @Accessors(fluent = true)
 public class MethodContext implements HasName, HasModifiers, HasAnnotations, HasParameters, HasType {
 
+    @Getter
     private final TypeContext owner;
 
+    @Getter
     private final Method method;
 
-    private final AnnotatedType annotatedType;
+    private final Supplier<List<AnnotationContext<?>>> annotations;
 
-    private final List<ParameterContext> parameters;
-
-    private final List<AnnotationContext<?>> annotations;
+    private final Supplier<List<ParameterContext>> parameters;
 
     protected MethodContext(final TypeContext owner, final Method method) {
 
         this.owner = owner;
         this.method = method;
-        this.annotatedType = GenericTypeReflector.getReturnType(method, owner.annotatedType());
-        this.parameters = ParameterContext.from(owner.annotatedType(), method);
-        this.annotations = AnnotationContext.from(method);
+        this.annotations = Suppliers.memoize(() -> AnnotationContext.from(method));
+        this.parameters = Suppliers.memoize(() -> ParameterContext.from(owner.annotatedType(), method));
     }
 
     @Override
@@ -68,7 +69,14 @@ public class MethodContext implements HasName, HasModifiers, HasAnnotations, Has
     @SuppressWarnings("unchecked")
     public <T, V> V invoke(final T target, final Object ... args) throws InvocationTargetException, IllegalAccessException {
 
+        method.setAccessible(true);
         return (V)method.invoke(target, args);
+    }
+
+    @Override
+    public AnnotatedType annotatedType() {
+
+        return GenericTypeReflector.getReturnType(method, owner.annotatedType());
     }
 
     @Override
@@ -76,5 +84,17 @@ public class MethodContext implements HasName, HasModifiers, HasAnnotations, Has
     public <V> Class<V> erasedType() {
 
         return (Class<V>)method.getReturnType();
+    }
+
+    @Override
+    public List<AnnotationContext<?>> annotations() {
+
+        return annotations.get();
+    }
+
+    @Override
+    public List<ParameterContext> parameters() {
+
+        return parameters.get();
     }
 }

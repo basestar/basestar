@@ -22,9 +22,8 @@ package io.basestar.type;
 
 import io.basestar.type.has.HasName;
 import io.basestar.type.has.HasType;
-import lombok.AccessLevel;
+import io.leangen.geantyref.GenericTypeReflector;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
 
 import java.lang.reflect.AnnotatedType;
@@ -32,12 +31,21 @@ import java.lang.reflect.TypeVariable;
 
 @Getter
 @Accessors(fluent = true)
-@RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 public class TypeVariableContext implements HasName, HasType {
 
     private final TypeVariable<? extends Class<?>> variable;
 
     private final AnnotatedType annotatedType;
+
+    protected TypeVariableContext(final TypeVariable<? extends Class<?>> variable, final AnnotatedType annotatedType) {
+
+        this.variable = variable;
+        if(annotatedType == null) {
+            this.annotatedType = GenericTypeReflector.annotate(Object.class);
+        } else {
+            this.annotatedType = annotatedType;
+        }
+    }
 
     @Override
     public String name() {

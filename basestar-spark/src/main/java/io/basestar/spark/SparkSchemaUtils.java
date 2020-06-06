@@ -200,6 +200,18 @@ public class SparkSchemaUtils {
 
                 return DataTypes.BinaryType;
             }
+
+            @Override
+            public DataType visitDate(final UseDate type) {
+
+                return DataTypes.DateType;
+            }
+
+            @Override
+            public DataType visitDateTime(final UseDateTime type) {
+
+                return DataTypes.DateType;
+            }
         });
     }
 
@@ -334,6 +346,18 @@ public class SparkSchemaUtils {
 
             @Override
             public Object visitBinary(final UseBinary type) {
+
+                return type.create(value, false, true);
+            }
+
+            @Override
+            public Object visitDate(final UseDate type) {
+
+                return type.create(value, false, true);
+            }
+
+            @Override
+            public Object visitDateTime(final UseDateTime type) {
 
                 return type.create(value, false, true);
             }
@@ -479,6 +503,18 @@ public class SparkSchemaUtils {
 
             @Override
             public Object visitBinary(final UseBinary type) {
+
+                return type.create(value, false, true);
+            }
+
+            @Override
+            public Object visitDate(final UseDate type) {
+
+                return type.create(value, false, true);
+            }
+
+            @Override
+            public Object visitDateTime(final UseDateTime type) {
 
                 return type.create(value, false, true);
             }

@@ -478,6 +478,18 @@ public class SchemaAdaptor {
 
                 return new TypeName(GraphQLUtils.STRING_TYPE);
             }
+
+            @Override
+            public Type<?> visitDate(final UseDate type) {
+
+                return new TypeName(GraphQLUtils.STRING_TYPE);
+            }
+
+            @Override
+            public Type<?> visitDateTime(final UseDateTime type) {
+
+                return new TypeName(GraphQLUtils.STRING_TYPE);
+            }
         });
     }
 
@@ -547,6 +559,18 @@ public class SchemaAdaptor {
 
             @Override
             public Type<?> visitBinary(final UseBinary type) {
+
+                return new TypeName(GraphQLUtils.STRING_TYPE);
+            }
+
+            @Override
+            public Type<?> visitDate(final UseDate type) {
+
+                return new TypeName(GraphQLUtils.STRING_TYPE);
+            }
+
+            @Override
+            public Type<?> visitDateTime(final UseDateTime type) {
 
                 return new TypeName(GraphQLUtils.STRING_TYPE);
             }
@@ -625,6 +649,18 @@ public class SchemaAdaptor {
 
                 @Override
                 public Void visitBinary(final UseBinary type) {
+
+                    return null;
+                }
+
+                @Override
+                public Void visitDate(final UseDate type) {
+
+                    return null;
+                }
+
+                @Override
+                public Void visitDateTime(final UseDateTime type) {
 
                     return null;
                 }

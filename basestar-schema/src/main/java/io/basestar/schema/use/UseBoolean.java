@@ -52,7 +52,7 @@ public class UseBoolean implements UseScalar<Boolean> {
 
     public static UseBoolean from(final Object config) {
 
-        return new UseBoolean();
+        return DEFAULT;
     }
 
     @Override

@@ -36,15 +36,24 @@ import java.util.stream.Collectors;
 @Accessors(fluent = true)
 public class AnnotationContext<A extends Annotation> implements HasType {
 
-    private final AnnotatedType annotatedType;
-
     private final A annotation;
 
     protected AnnotationContext(final A annotation) {
 
-        final Class<?> rawType = annotation.annotationType();
-        this.annotatedType = GenericTypeReflector.annotate(rawType);
         this.annotation = annotation;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <V> Class<V> erasedType() {
+
+        return (Class<V>)annotation.annotationType();
+    }
+
+    @Override
+    public AnnotatedType annotatedType() {
+
+        return GenericTypeReflector.annotate(erasedType());
     }
 
     public static List<AnnotationContext<?>> from(final AnnotatedElement element) {

@@ -20,6 +20,7 @@ package io.basestar.mapper;
  * #L%
  */
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.annotation.*;
 import io.basestar.mapper.internal.SchemaMapper;
@@ -29,6 +30,7 @@ import io.basestar.schema.Schema;
 import lombok.Data;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -42,7 +44,7 @@ public class TestMapper {
         private String id;
 
         @Link(expression = "target.id == this.id", sort = "blah:desc")
-        private List<TestMapper> comments;
+        private List<Comment> comments;
 
         @Created
         private LocalDateTime created;
@@ -58,6 +60,8 @@ public class TestMapper {
 
         @Property
         private String test;
+
+        private LocalDate date;
 
         private Comment comment;
 
@@ -81,6 +85,10 @@ public class TestMapper {
         final Post post = schemaMapper.marshall(new Instance(ImmutableMap.of(
                 Reserved.ID, "test",
                 Reserved.VERSION, 1L,
+                "date", "2020-01-01",
+                "comments", ImmutableList.of(ImmutableMap.of(
+                        Reserved.ID, "c1"
+                )),
                 "comment", ImmutableMap.of(
                         Reserved.ID, "c1"
                 )

@@ -20,6 +20,7 @@ package io.basestar.type;
  * #L%
  */
 
+import com.google.common.base.Suppliers;
 import io.basestar.type.has.HasAnnotations;
 import io.basestar.type.has.HasModifiers;
 import io.basestar.type.has.HasName;
@@ -33,6 +34,7 @@ import java.lang.reflect.Executable;
 import java.lang.reflect.Parameter;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Supplier;
 
 @Getter
 @Accessors(fluent = true)
@@ -42,13 +44,13 @@ public class ParameterContext implements HasName, HasModifiers, HasAnnotations, 
 
     private final AnnotatedType annotatedType;
 
-    private final List<AnnotationContext<?>> annotations;
+    private final Supplier<List<AnnotationContext<?>>> annotations;
 
     protected ParameterContext(final Parameter parameter, final AnnotatedType annotatedType) {
 
         this.parameter = parameter;
         this.annotatedType = annotatedType;
-        this.annotations = AnnotationContext.from(parameter);
+        this.annotations = Suppliers.memoize(() -> AnnotationContext.from(parameter));
     }
 
     @Override
@@ -90,5 +92,11 @@ public class ParameterContext implements HasName, HasModifiers, HasAnnotations, 
         } catch (final RuntimeException e) {
             return exe.getAnnotatedParameterTypes();
         }
+    }
+
+    @Override
+    public List<AnnotationContext<?>> annotations() {
+
+        return annotations.get();
     }
 }

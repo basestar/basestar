@@ -20,6 +20,7 @@ package io.basestar.type;
  * #L%
  */
 
+import com.google.common.base.Suppliers;
 import io.basestar.type.has.HasModifiers;
 import io.leangen.geantyref.GenericTypeReflector;
 import lombok.Getter;
@@ -29,6 +30,7 @@ import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.List;
+import java.util.function.Supplier;
 
 @Getter
 @Accessors(fluent = true)
@@ -38,16 +40,13 @@ public class FieldContext implements HasModifiers, AccessorContext {
 
     private final Field field;
 
-    private final AnnotatedType annotatedType;
-
-    private final List<AnnotationContext<?>> annotations;
+    private final Supplier<List<AnnotationContext<?>>> annotations;
 
     protected FieldContext(final TypeContext owner, final Field field) {
 
         this.owner = owner;
         this.field = field;
-        this.annotatedType = GenericTypeReflector.getFieldType(field, owner.annotatedType());
-        this.annotations = AnnotationContext.from(field);
+        this.annotations = Suppliers.memoize(() -> AnnotationContext.from(field));
     }
 
     @Override
@@ -84,7 +83,14 @@ public class FieldContext implements HasModifiers, AccessorContext {
     @Override
     public <T, V> void set(final T target, final V value) throws IllegalAccessException {
 
+        field.setAccessible(true);
         field.set(target, value);
+    }
+
+    @Override
+    public AnnotatedType annotatedType() {
+
+        return GenericTypeReflector.getFieldType(field, owner.annotatedType());
     }
 
     @Override
@@ -92,5 +98,11 @@ public class FieldContext implements HasModifiers, AccessorContext {
     public <V> Class<V> erasedType() {
 
         return (Class<V>)field.getType();
+    }
+
+    @Override
+    public List<AnnotationContext<?>> annotations() {
+
+        return annotations.get();
     }
 }

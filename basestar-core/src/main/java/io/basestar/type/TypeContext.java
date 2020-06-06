@@ -20,8 +20,11 @@ package io.basestar.type;
  * #L%
  */
 
+import com.google.common.base.Suppliers;
 import io.basestar.type.has.*;
+import io.basestar.util.Text;
 import io.leangen.geantyref.GenericTypeReflector;
+import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -30,8 +33,7 @@ import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -39,33 +41,39 @@ import java.util.stream.Stream;
 @Getter
 @Accessors(fluent = true)
 public class TypeContext implements HasName, HasModifiers, HasAnnotations,
-        HasTypeParameters, HasType, HasMethods, HasFields {
+        HasTypeParameters, HasType, HasConstructors, HasMethods, HasFields {
 
-    private static final ConcurrentMap<AnnotatedType, TypeContext> CACHE = new ConcurrentHashMap<>();
+//    private static final ConcurrentMap<AnnotatedType, TypeContext> CACHE = new ConcurrentHashMap<>();
 
     private final AnnotatedType annotatedType;
 
     private final Class<?> rawType;
 
-    private final TypeContext superclass;
+    private final Supplier<TypeContext> superclass;
 
-    private final List<TypeContext> interfaces;
+    private final Supplier<List<TypeContext>> interfaces;
 
-    private final List<ConstructorContext> declaredConstructors;
+    private final Supplier<List<ConstructorContext>> declaredConstructors;
 
-    private final List<FieldContext> declaredFields;
+    private final Supplier<List<FieldContext>> declaredFields;
 
-    private final List<MethodContext> declaredMethods;
+    private final Supplier<List<MethodContext>> declaredMethods;
 
-    private final List<FieldContext> fields;
+    @Getter(AccessLevel.NONE)
+    private final Supplier<Map<String, FieldContext>> allFields;
 
-    private final List<MethodContext> methods;
+    @Getter(AccessLevel.NONE)
+    private final Supplier<Map<Signature, MethodContext>> allMethods;
 
-    private final List<PropertyContext> properties;
+    private final Supplier<List<FieldContext>> fields;
 
-    private final List<TypeVariableContext> typeParameters;
+    private final Supplier<List<MethodContext>> methods;
 
-    private final List<AnnotationContext<?>> annotations;
+    private final Supplier<List<PropertyContext>> properties;
+
+    private final Supplier<List<TypeVariableContext>> typeParameters;
+
+    private final Supplier<List<AnnotationContext<?>>> annotations;
 
     private TypeContext(final AnnotatedType type) {
 
@@ -73,81 +81,108 @@ public class TypeContext implements HasName, HasModifiers, HasAnnotations,
             this.annotatedType = type;
             this.rawType = GenericTypeReflector.erase(type.getType());
 
-            final Class<?> sc = GenericTypeReflector.erase(type.getType()).getSuperclass();
+            this.superclass = Suppliers.memoize(() -> {
 
-            this.superclass = sc == null ? null : TypeContext.from(GenericTypeReflector.getExactSuperType(type, sc));
-
-            this.interfaces = Arrays.stream(rawType.getInterfaces())
-                    .map(ifc -> TypeContext.from(GenericTypeReflector.getExactSuperType(type, ifc)))
-                    .collect(Collectors.toList());
-
-            this.declaredConstructors = Arrays.stream(rawType.getDeclaredConstructors())
-                    .map(v -> new ConstructorContext(this, v))
-                    .collect(Collectors.toList());
-
-            this.declaredFields = Arrays.stream(rawType.getDeclaredFields())
-                    .map(v -> new FieldContext(this, v))
-                    .collect(Collectors.toList());
-
-            this.declaredMethods = Arrays.stream(rawType.getDeclaredMethods())
-                    .map(v -> new MethodContext(this, v))
-                    .collect(Collectors.toList());
-
-            final Map<String, FieldContext> allFields = new HashMap<>();
-            final Map<Signature, MethodContext> allMethods = new HashMap<>();
-
-            if (superclass != null) {
-                superclass.fields().forEach(f -> allFields.put(f.name(), f));
-                superclass.methods().forEach(m -> allMethods.put(Signature.of(m), m));
-            }
-            interfaces.forEach(ifc -> {
-                ifc.fields().forEach(f -> allFields.put(f.name(), f));
-                ifc.methods().forEach(m -> allMethods.put(Signature.of(m), m));
+                final Class<?> sc = rawType.getSuperclass();
+                return sc == null ? null : TypeContext.from(GenericTypeReflector.getExactSuperType(type, sc));
             });
-            declaredFields.forEach(f -> allFields.put(f.name(), f));
-            declaredMethods.forEach(m -> allMethods.put(Signature.of(m), m));
 
-            this.fields = allFields.values().stream()
+            this.interfaces = Suppliers.memoize(() -> Arrays.stream(rawType.getInterfaces())
+                    .map(ifc -> TypeContext.from(GenericTypeReflector.getExactSuperType(type, ifc)))
+                    .collect(Collectors.toList()));
+
+            this.declaredConstructors = Suppliers.memoize(() -> Arrays.stream(rawType.getDeclaredConstructors())
+                    .map(v -> new ConstructorContext(this, v))
+                    .collect(Collectors.toList()));
+
+            this.declaredFields = Suppliers.memoize(() -> Arrays.stream(rawType.getDeclaredFields())
+                    .map(v -> new FieldContext(this, v))
+                    .collect(Collectors.toList()));
+
+            this.declaredMethods = Suppliers.memoize(() -> Arrays.stream(rawType.getDeclaredMethods())
+                    .map(v -> new MethodContext(this, v))
+                    .collect(Collectors.toList()));
+
+            this.allFields = Suppliers.memoize(() -> {
+
+                final Map<String, FieldContext> allFields = new HashMap<>();
+
+                final TypeContext sc = superclass();
+                if (sc != null) {
+                    sc.fields().forEach(f -> allFields.put(f.name(), f));
+                }
+                interfaces().forEach(ifc -> {
+                    ifc.fields().forEach(f -> allFields.put(f.name(), f));
+                });
+                declaredFields().forEach(f -> allFields.put(f.name(), f));
+
+                return allFields;
+            });
+
+            this.fields = Suppliers.memoize(() -> allFields.get().values().stream()
                     .filter(HasModifiers.match(Modifier.PUBLIC))
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toList()));
 
-            this.methods = allMethods.values().stream()
+            this.allMethods = Suppliers.memoize(() -> {
+
+                final Map<Signature, MethodContext> allMethods = new HashMap<>();
+
+                final TypeContext sc = superclass();
+                if (sc != null) {
+                    sc.methods().forEach(m -> allMethods.put(Signature.of(m), m));
+                }
+                interfaces().forEach(ifc -> {
+                    ifc.methods().forEach(m -> allMethods.put(Signature.of(m), m));
+                });
+                declaredMethods().forEach(m -> allMethods.put(Signature.of(m), m));
+
+                return allMethods;
+            });
+
+            this.methods = Suppliers.memoize(() -> allMethods.get().values().stream()
                     .filter(HasModifiers.match(Modifier.PUBLIC))
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toList()));
 
-            final Map<String, FieldContext> matchedFields = allFields.values().stream()
-                    .filter(HasModifiers.matchNot(Modifier.STATIC))
-                    .collect(Collectors.toMap(FieldContext::name, v -> v));
+            this.properties = Suppliers.memoize(() -> {
 
-            final Map<String, MethodContext> matchedGetters = allMethods.values().stream()
-                    .filter(HasName.match("getClass").negate())
-                    .filter(HasName.match(Pattern.compile("get[A-Z].*")))
-                    .filter(HasParameters.match(0))
-                    .filter(HasType.match(void.class).negate())
-                    .filter(HasModifiers.matchNot(Modifier.STATIC))
-                    .collect(Collectors.toMap(v -> lowerCamel(v.name().substring(3)), v -> v));
+                final Map<String, FieldContext> allFields = this.allFields.get();
+                final Map<Signature, MethodContext> allMethods = this.allMethods.get();
 
-            final Map<String, MethodContext> matchedSetters = allMethods.values().stream()
-                    .filter(HasName.match(Pattern.compile("set[A-Z].*")))
-                    .filter(HasParameters.match(1))
-                    .filter(HasModifiers.matchNot(Modifier.STATIC))
-                    .collect(Collectors.toMap(v -> lowerCamel(v.name().substring(3)), v -> v));
+                final Map<String, FieldContext> matchedFields = allFields.values().stream()
+                        .filter(HasModifiers.matchNot(Modifier.STATIC))
+                        .collect(Collectors.toMap(FieldContext::name, v -> v));
 
-            this.properties = Stream.<Map<String, ? extends HasName>>of(matchedFields, matchedGetters, matchedSetters)
-                    .map(Map::keySet).flatMap(Collection::stream)
-                    .distinct().map(v -> {
-                        final FieldContext field = matchedFields.get(v);
-                        final MethodContext getter = matchedGetters.get(v);
-                        final MethodContext setter = matchedSetters.get(v);
-                        return new PropertyContext(this, v, field, getter, setter);
-                    })
-                    .collect(Collectors.toList());
+                final Map<String, MethodContext> matchedGetters = allMethods.values().stream()
+                        .filter(HasName.match("getClass").negate())
+                        .filter(HasName.match(Pattern.compile("get[A-Z].*")))
+                        .filter(HasParameters.match(0))
+                        .filter(HasType.match(void.class).negate())
+                        .filter(HasModifiers.matchNot(Modifier.STATIC))
+                        .collect(Collectors.toMap(v -> Text.lowerCamel(v.name().substring(3)), v -> v));
 
-            this.typeParameters = Arrays.stream(rawType.getTypeParameters())
+                final Map<String, MethodContext> matchedSetters = allMethods.values().stream()
+                        .filter(HasName.match(Pattern.compile("set[A-Z].*")))
+                        .filter(HasParameters.match(1))
+                        .filter(HasModifiers.matchNot(Modifier.STATIC))
+                        .collect(Collectors.toMap(v -> Text.lowerCamel(v.name().substring(3)), v -> v));
+
+                return Stream.<Map<String, ? extends HasName>>of(matchedFields, matchedGetters, matchedSetters)
+                        .map(Map::keySet).flatMap(Collection::stream)
+                        .distinct().map(v -> {
+                            final FieldContext field = matchedFields.get(v);
+                            final MethodContext getter = matchedGetters.get(v);
+                            final MethodContext setter = matchedSetters.get(v);
+                            return new PropertyContext(this, v, field, getter, setter);
+                        })
+                        .collect(Collectors.toList());
+            });
+
+            this.typeParameters = Suppliers.memoize(() -> Arrays.stream(rawType.getTypeParameters())
                     .map(v -> new TypeVariableContext(v, GenericTypeReflector.getTypeParameter(type, v)))
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toList()));
 
-            this.annotations = AnnotationContext.from(annotatedType);
+            this.annotations = Suppliers.memoize(() -> AnnotationContext.from(annotatedType));
+
         } catch (final Exception e) {
             throw e;
         }
@@ -163,19 +198,76 @@ public class TypeContext implements HasName, HasModifiers, HasAnnotations,
         return from(GenericTypeReflector.annotate(type));
     }
 
-    @SuppressWarnings("unchecked")
     public static TypeContext from(final AnnotatedType type) {
 
-        synchronized (CACHE) {
-            final TypeContext result;
-            if(!CACHE.containsKey(type)) {
-                result = new TypeContext(type);
-                CACHE.put(type, result);
-            } else {
-                result = CACHE.get(type);
-            }
-            return result;
-        }
+        return new TypeContext(type);
+//        synchronized (CACHE) {
+//            final TypeContext result;
+//            if(!CACHE.containsKey(type)) {
+//                result = new TypeContext(type);
+//                CACHE.put(type, result);
+//            } else {
+//                result = CACHE.get(type);
+//            }
+//            return result;
+//        }
+    }
+
+    public TypeContext superclass() {
+
+        return superclass.get();
+    }
+
+    public List<TypeContext> interfaces() {
+
+        return interfaces.get();
+    }
+
+    @Override
+    public List<ConstructorContext> declaredConstructors() {
+
+        return declaredConstructors.get();
+    }
+
+    @Override
+    public List<FieldContext> declaredFields() {
+
+        return declaredFields.get();
+    }
+
+    @Override
+    public List<MethodContext> declaredMethods() {
+
+        return declaredMethods.get();
+    }
+
+    @Override
+    public List<FieldContext> fields() {
+
+        return fields.get();
+    }
+
+    @Override
+    public List<MethodContext> methods() {
+
+        return methods.get();
+    }
+
+    public List<PropertyContext> properties() {
+
+        return properties.get();
+    }
+
+    @Override
+    public List<TypeVariableContext> typeParameters() {
+
+        return typeParameters.get();
+    }
+
+    @Override
+    public List<AnnotationContext<?>> annotations() {
+
+        return annotations.get();
     }
 
     @Override
@@ -215,6 +307,9 @@ public class TypeContext implements HasName, HasModifiers, HasAnnotations,
 
     public TypeContext find(final Class<?> type) {
 
+        final TypeContext superclass = this.superclass();
+        final List<TypeContext> interfaces = this.interfaces();
+
         if(rawType == type) {
             return this;
         } else if(superclass != null) {
@@ -245,14 +340,14 @@ public class TypeContext implements HasName, HasModifiers, HasAnnotations,
         }
     }
 
-    private static String lowerCamel(final String v) {
-
-        if(v.length() < 2) {
-            return v.toLowerCase();
-        } else if(Character.isUpperCase(v.charAt(1))) {
-            return v;
-        } else {
-            return Character.toString(v.charAt(0)).toLowerCase() + v.substring(1);
-        }
-    }
+//    private static String lowerCamel(final String v) {
+//
+//        if(v.length() < 2) {
+//            return v.toLowerCase();
+//        } else if(Character.isUpperCase(v.charAt(1))) {
+//            return v;
+//        } else {
+//            return Character.toString(v.charAt(0)).toLowerCase() + v.substring(1);
+//        }
+//    }
 }

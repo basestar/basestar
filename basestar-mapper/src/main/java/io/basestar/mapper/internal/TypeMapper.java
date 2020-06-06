@@ -26,6 +26,8 @@ import io.basestar.schema.use.*;
 import io.basestar.type.TypeContext;
 import lombok.RequiredArgsConstructor;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -33,6 +35,16 @@ import java.util.Set;
 public interface TypeMapper {
 
     Use<?> use();
+
+    Object unmarshall(Object value);
+
+    Object marshall(Object value);
+
+    default <T> T unmarshall(Object value, Class<T> to) {
+
+        // FIXME:
+        return to.cast(unmarshall(value));
+    }
 
     static TypeMapper from(final TypeContext context) {
 
@@ -62,19 +74,17 @@ public interface TypeMapper {
             final TypeContext mapContext = context.find(Map.class);
             final TypeContext valueType = mapContext.typeParameters().get(1).type();
             return new OfMap(context, from(valueType));
+        } else if(LocalDate.class.isAssignableFrom(erased)){
+            return new OfDate(context);
+        } else if(LocalDateTime.class.isAssignableFrom(erased)){
+            return new OfDateTime(context);
+        } else if(Map.class.isAssignableFrom(erased)){
+            final TypeContext mapContext = context.find(Map.class);
+            final TypeContext valueType = mapContext.typeParameters().get(1).type();
+            return new OfMap(context, from(valueType));
         } else {
             return new OfCustom(context);
         }
-    }
-
-    default <T> T unmarshall(Object value, Class<T> to) {
-
-        return to.cast(value);
-    }
-
-    default Object marshall(Object value) {
-
-        return value;
     }
 
     @RequiredArgsConstructor
@@ -86,6 +96,18 @@ public interface TypeMapper {
         public Use<?> use() {
 
             return UseBoolean.DEFAULT;
+        }
+
+        @Override
+        public Object unmarshall(final Object value) {
+
+            return UseBoolean.DEFAULT.create(value);
+        }
+
+        @Override
+        public Object marshall(final Object value) {
+
+            return UseBoolean.DEFAULT.create(value);
         }
     }
 
@@ -99,6 +121,18 @@ public interface TypeMapper {
 
             return UseInteger.DEFAULT;
         }
+
+        @Override
+        public Object unmarshall(final Object value) {
+
+            return UseInteger.DEFAULT.create(value);
+        }
+
+        @Override
+        public Object marshall(final Object value) {
+
+            return UseInteger.DEFAULT.create(value);
+        }
     }
 
     @RequiredArgsConstructor
@@ -111,6 +145,18 @@ public interface TypeMapper {
 
             return UseNumber.DEFAULT;
         }
+
+        @Override
+        public Object unmarshall(final Object value) {
+
+            return UseNumber.DEFAULT.create(value);
+        }
+
+        @Override
+        public Object marshall(final Object value) {
+
+            return UseNumber.DEFAULT.create(value);
+        }
     }
 
     @RequiredArgsConstructor
@@ -122,6 +168,18 @@ public interface TypeMapper {
         public Use<?> use() {
 
             return UseString.DEFAULT;
+        }
+
+        @Override
+        public Object unmarshall(final Object value) {
+
+            return UseString.DEFAULT.create(value);
+        }
+
+        @Override
+        public Object marshall(final Object value) {
+
+            return UseString.DEFAULT.create(value);
         }
     }
 
@@ -137,6 +195,18 @@ public interface TypeMapper {
 
             return new UseArray<>(value.use());
         }
+
+        @Override
+        public Object unmarshall(final Object value) {
+
+            return UseArray.create(value, false, this.value::marshall);
+        }
+
+        @Override
+        public Object marshall(final Object value) {
+
+            return UseArray.create(value, false, this.value::marshall);
+        }
     }
 
     @RequiredArgsConstructor
@@ -151,6 +221,18 @@ public interface TypeMapper {
 
             return new UseSet<>(value.use());
         }
+
+        @Override
+        public Object unmarshall(final Object value) {
+
+            return UseSet.create(value, false, this.value::marshall);
+        }
+
+        @Override
+        public Object marshall(final Object value) {
+
+            return UseSet.create(value, false, this.value::marshall);
+        }
     }
 
     @RequiredArgsConstructor
@@ -164,6 +246,18 @@ public interface TypeMapper {
         public Use<?> use() {
 
             return new UseMap<>(value.use());
+        }
+
+        @Override
+        public Object unmarshall(final Object value) {
+
+            return UseMap.create(value, false, this.value::marshall);
+        }
+
+        @Override
+        public Object marshall(final Object value) {
+
+            return UseMap.create(value, false, this.value::marshall);
         }
     }
 
@@ -187,9 +281,64 @@ public interface TypeMapper {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
+        public Object unmarshall(final Object value) {
+
+            return ((SchemaMapper<Object, ?>)mapper.get()).unmarshall(value);
+        }
+
+        @Override
         public Object marshall(final Object value) {
 
             return mapper.get().marshall(value);
+        }
+    }
+
+    @RequiredArgsConstructor
+    class OfDate implements TypeMapper {
+
+        private final TypeContext context;
+
+        @Override
+        public Use<?> use() {
+
+            return UseDate.DEFAULT;
+        }
+
+        @Override
+        public Object unmarshall(final Object value) {
+
+            return UseDate.DEFAULT.create(value);
+        }
+
+        @Override
+        public Object marshall(final Object value) {
+
+            return UseDate.DEFAULT.create(value);
+        }
+    }
+
+    @RequiredArgsConstructor
+    class OfDateTime implements TypeMapper {
+
+        private final TypeContext context;
+
+        @Override
+        public Use<?> use() {
+
+            return UseDateTime.DEFAULT;
+        }
+
+        @Override
+        public Object unmarshall(final Object value) {
+
+            return UseDateTime.DEFAULT.create(value);
+        }
+
+        @Override
+        public Object marshall(final Object value) {
+
+            return UseDateTime.DEFAULT.create(value);
         }
     }
 }

@@ -55,7 +55,7 @@ public class UseBinary implements UseScalar<byte[]> {
 
     public static UseBinary from(final Object config) {
 
-        return new UseBinary();
+        return DEFAULT;
     }
 
     @Override

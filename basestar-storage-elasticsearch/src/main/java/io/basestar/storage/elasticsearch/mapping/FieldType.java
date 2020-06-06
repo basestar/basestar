@@ -37,6 +37,8 @@ public interface FieldType {
 
     DateType DATE = new DateType();
 
+    DateTimeType DATETIME = new DateTimeType();
+
     NumericType LONG = new NumericType(NumericType.Type.LONG);
 
     NumericType DOUBLE = new NumericType(NumericType.Type.DOUBLE);
@@ -106,6 +108,27 @@ public interface FieldType {
     }
 
     class DateType implements FieldType {
+
+        @Override
+        public Object source() {
+
+            return ImmutableMap.of("type", "date");
+        }
+
+        @Override
+        public Object toSource(final Object value) {
+
+            return value;
+        }
+
+        @Override
+        public Object fromSource(final Object value) {
+
+            return value;
+        }
+    }
+
+    class DateTimeType implements FieldType {
 
         @Override
         public Object source() {

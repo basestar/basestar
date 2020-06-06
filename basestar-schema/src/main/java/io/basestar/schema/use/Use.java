@@ -61,7 +61,9 @@ public interface Use<T> extends Serializable {
         MAP,
         REF,
         STRUCT,
-        BINARY
+        BINARY,
+        DATE,
+        DATETIME
     }
 
     <R> R visit(Visitor<R> visitor);
@@ -149,6 +151,10 @@ public interface Use<T> extends Serializable {
                 return UseMap.from(config);
             case UseBinary.NAME:
                 return UseBinary.from(config);
+            case UseDate.NAME:
+                return UseDate.from(config);
+            case UseDateTime.NAME:
+                return UseDateTime.from(config);
             default:
                 return UseNamed.from(type, config);
         }
@@ -234,6 +240,10 @@ public interface Use<T> extends Serializable {
                 return (T)UseStruct.deserializeAnyValue(in);
             case BINARY:
                 return (T)UseBinary.DEFAULT.deserializeValue(in);
+            case DATE:
+                return (T)UseDate.DEFAULT.deserializeValue(in);
+            case DATETIME:
+                return (T)UseDateTime.DEFAULT.deserializeValue(in);
             default:
                 throw new IllegalStateException();
         }
@@ -262,6 +272,10 @@ public interface Use<T> extends Serializable {
         R visitStruct(UseStruct type);
 
         R visitBinary(UseBinary type);
+
+        R visitDate(UseDate type);
+
+        R visitDateTime(UseDateTime type);
 
         interface Defaulting<R> extends Visitor<R> {
 
@@ -339,6 +353,18 @@ public interface Use<T> extends Serializable {
 
             @Override
             default R visitBinary(final UseBinary type) {
+
+                return visitScalar(type);
+            }
+
+            @Override
+            default R visitDate(final UseDate type) {
+
+                return visitScalar(type);
+            }
+
+            @Override
+            default R visitDateTime(final UseDateTime type) {
 
                 return visitScalar(type);
             }

@@ -20,6 +20,7 @@ package io.basestar.type;
  * #L%
  */
 
+import com.google.common.base.Suppliers;
 import io.basestar.type.has.HasAnnotations;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -29,6 +30,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -48,10 +50,10 @@ public class PropertyContext implements AccessorContext {
 
     private final MethodContext setter;
 
-    private final List<AnnotationContext<?>> annotations;
+    private final Supplier<List<AnnotationContext<?>>> annotations;
 
-    public PropertyContext(final TypeContext owner, final String name, final FieldContext field,
-                           final MethodContext getter, final MethodContext setter) {
+    protected PropertyContext(final TypeContext owner, final String name, final FieldContext field,
+                              final MethodContext getter, final MethodContext setter) {
 
         this.owner = owner;
         this.name = name;
@@ -65,11 +67,11 @@ public class PropertyContext implements AccessorContext {
         } else {
             annotatedType = field.annotatedType();
         }
-        this.annotations = Stream.<HasAnnotations>of(field, getter, setter)
+        this.annotations = Suppliers.memoize(() -> Stream.<HasAnnotations>of(field, getter, setter)
                 .filter(Objects::nonNull)
                 .map(HasAnnotations::annotations)
                 .flatMap(Collection::stream)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
     }
 
     @Override
@@ -113,5 +115,11 @@ public class PropertyContext implements AccessorContext {
 
         //FIXME
         return 0;
+    }
+
+    @Override
+    public List<AnnotationContext<?>> annotations() {
+
+        return annotations.get();
     }
 }

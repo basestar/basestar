@@ -30,6 +30,8 @@ import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.IndexedRecord;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -142,6 +144,18 @@ public class AvroUtils {
             public Schema visitBinary(final UseBinary type) {
 
                 return Schema.create(Schema.Type.BYTES);
+            }
+
+            @Override
+            public Schema visitDate(final UseDate type) {
+
+                return Schema.create(Schema.Type.STRING);
+            }
+
+            @Override
+            public Schema visitDateTime(final UseDateTime type) {
+
+                return Schema.create(Schema.Type.STRING);
             }
         });
     }
@@ -268,6 +282,18 @@ public class AvroUtils {
 
                 return type.create(value);
             }
+
+            @Override
+            public String visitDate(final UseDate type) {
+
+                return value == null ? null : value.toString();
+            }
+
+            @Override
+            public String visitDateTime(final UseDateTime type) {
+
+                return value == null ? null : value.toString();
+            }
         });
     }
 
@@ -384,6 +410,18 @@ public class AvroUtils {
 
             @Override
             public byte[] visitBinary(final UseBinary type) {
+
+                return type.create(value);
+            }
+
+            @Override
+            public LocalDate visitDate(final UseDate type) {
+
+                return type.create(value);
+            }
+
+            @Override
+            public LocalDateTime visitDateTime(final UseDateTime type) {
 
                 return type.create(value);
             }

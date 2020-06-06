@@ -167,6 +167,18 @@ public class GraphQLUtils {
 
                 return ImmutableSet.of(parent);
             }
+
+            @Override
+            public Set<Path> visitDate(final UseDate type) {
+
+                return ImmutableSet.of(parent);
+            }
+
+            @Override
+            public Set<Path> visitDateTime(final UseDateTime type) {
+
+                return ImmutableSet.of(parent);
+            }
         });
     }
 
@@ -263,6 +275,18 @@ public class GraphQLUtils {
                 public Object visitBinary(final UseBinary type) {
 
                     return type.create(BaseEncoding.base64().decode(value.toString()));
+                }
+
+                @Override
+                public Object visitDate(final UseDate type) {
+
+                    return type.create(value);
+                }
+
+                @Override
+                public Object visitDateTime(final UseDateTime type) {
+
+                    return type.create(value);
                 }
             });
         }
@@ -374,6 +398,18 @@ public class GraphQLUtils {
                 public Object visitBinary(final UseBinary type) {
 
                     return BaseEncoding.base64().encode(type.create(value));
+                }
+
+                @Override
+                public Object visitDate(final UseDate type) {
+
+                    return type.create(value).toString();
+                }
+
+                @Override
+                public Object visitDateTime(final UseDateTime type) {
+
+                    return type.create(value).toString();
                 }
             });
         }
@@ -529,6 +565,26 @@ public class GraphQLUtils {
                         throw new IllegalStateException();
                     }
                 }
+
+                @Override
+                public Object visitDate(final UseDate type) {
+
+                    if(value instanceof StringValue) {
+                        return type.create(((StringValue) value).getValue());
+                    } else {
+                        throw new IllegalStateException();
+                    }
+                }
+
+                @Override
+                public Object visitDateTime(final UseDateTime type) {
+
+                    if(value instanceof StringValue) {
+                        return type.create(((StringValue) value).getValue());
+                    } else {
+                        throw new IllegalStateException();
+                    }
+                }
             });
         }
     }
@@ -653,6 +709,18 @@ public class GraphQLUtils {
                     } else {
                         throw new IllegalStateException();
                     }
+                }
+
+                @Override
+                public Object visitDate(final UseDate type) {
+
+                    return type.create(value);
+                }
+
+                @Override
+                public Object visitDateTime(final UseDateTime type) {
+
+                    return type.create(value);
                 }
             });
         }
@@ -779,6 +847,18 @@ public class GraphQLUtils {
                 public Object visitBinary(final UseBinary type) {
 
                     return BaseEncoding.base64().encode(type.create(value));
+                }
+
+                @Override
+                public Object visitDate(final UseDate type) {
+
+                    return type.create(value).toString();
+                }
+
+                @Override
+                public Object visitDateTime(final UseDateTime type) {
+
+                    return type.create(value).toString();
                 }
             });
         }

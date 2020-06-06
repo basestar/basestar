@@ -35,6 +35,8 @@ import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -114,6 +116,18 @@ public class SQLUtils {
             public DataType<?> visitBinary(final UseBinary type) {
 
                 return SQLDataType.LONGVARBINARY;
+            }
+
+            @Override
+            public DataType<?> visitDate(final UseDate type) {
+
+                return SQLDataType.LOCALDATE;
+            }
+
+            @Override
+            public DataType<?> visitDateTime(final UseDateTime type) {
+
+                return SQLDataType.LOCALDATETIME;
             }
         });
     }
@@ -202,6 +216,18 @@ public class SQLUtils {
 
             @Override
             public byte[] visitBinary(final UseBinary type) {
+
+                return type.create(value);
+            }
+
+            @Override
+            public Object visitDate(final UseDate type) {
+
+                return type.create(value);
+            }
+
+            @Override
+            public Object visitDateTime(final UseDateTime type) {
 
                 return type.create(value);
             }
@@ -307,6 +333,18 @@ public class SQLUtils {
 
             @Override
             public byte[] visitBinary(final UseBinary type) {
+
+                return type.create(value);
+            }
+
+            @Override
+            public LocalDate visitDate(final UseDate type) {
+
+                return type.create(value);
+            }
+
+            @Override
+            public LocalDateTime visitDateTime(final UseDateTime type) {
 
                 return type.create(value);
             }

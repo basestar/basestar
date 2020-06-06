@@ -166,6 +166,18 @@ public interface TypeModel {
 
                 return () -> "Binary";
             }
+
+            @Override
+            public TypeModel visitDate(final UseDate type) {
+
+                return () -> "Date";
+            }
+
+            @Override
+            public TypeModel visitDateTime(final UseDateTime type) {
+
+                return () -> "DateTime";
+            }
         });
     }
 }
