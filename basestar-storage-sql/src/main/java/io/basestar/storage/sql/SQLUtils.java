@@ -338,7 +338,7 @@ public class SQLUtils {
 //        ).collect(Collectors.toList());
 //    }
 
-    public static List<OrderField<?>> orderFields(final Index index) {
+    public static List<OrderField<?>> indexKeys(final Index index) {
 
         return Stream.concat(
                 index.getPartition().stream().map(v -> DSL.field(DSL.name(v.toString()))),

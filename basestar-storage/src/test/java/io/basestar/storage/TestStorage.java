@@ -522,15 +522,15 @@ public abstract class TestStorage {
 
         createComplete(storage, schema, ImmutableMap.of(
                 "points", ImmutableList.of(
-                        ImmutableMap.of("x", 10, "y", 100),
-                        ImmutableMap.of("x", 5, "y", 10)
+                        new Instance(ImmutableMap.of("x", 10L, "y", 100L)),
+                        new Instance(ImmutableMap.of("x", 5L, "y", 10L))
                 )
         ));
 
         createComplete(storage, schema, ImmutableMap.of(
                 "points", ImmutableList.of(
-                        ImmutableMap.of("x", 10, "y", 10),
-                        ImmutableMap.of("x", 1, "y", 10)
+                        new Instance(ImmutableMap.of("x", 10L, "y", 10L)),
+                        new Instance(ImmutableMap.of("x", 1L, "y", 10L))
                 )
         ));
 

@@ -106,6 +106,7 @@
         <module>basestar-spark-elasticsearch</module>
         <module>basestar-stream</module>
         <module>basestar-maven-plugin</module>
+        <module>basestar-storage-leveldb</module>
     </modules>
 
 <!--    <reporting>-->

@@ -20,9 +20,10 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
-import io.basestar.mapper.context.PropertyContext;
-import io.basestar.mapper.internal.annotation.BindSchema;
-import io.basestar.schema.InstanceSchema;
+import io.basestar.mapper.internal.MemberMapper;
+import io.basestar.mapper.internal.PropertyMapper;
+import io.basestar.mapper.internal.annotation.MemberDeclaration;
+import io.basestar.type.PropertyContext;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.annotation.*;
@@ -30,7 +31,7 @@ import java.lang.annotation.*;
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.METHOD})
-@BindSchema(Transient.Binder.class)
+@MemberDeclaration(Transient.Declaration.class)
 public @interface Transient {
 
     String INFER_NAME = "";
@@ -42,26 +43,16 @@ public @interface Transient {
     String[] expand() default {};
 
     @RequiredArgsConstructor
-    class Binder implements BindSchema.Handler {
+    class Declaration implements MemberDeclaration.Declaration {
 
         private final Transient annotation;
 
         @Override
-        public String name(final PropertyContext property) {
+        public MemberMapper<?> mapper(final PropertyContext prop) {
 
-            return property.name();
-        }
-
-        @Override
-        public void addToSchema(final InstanceSchema.Builder parent, final PropertyContext prop) {
-
-            if(parent instanceof io.basestar.schema.ObjectSchema.Builder) {
-                final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
-                final io.basestar.schema.Transient.Builder builder = new io.basestar.schema.Transient.Builder();
-                ((io.basestar.schema.ObjectSchema.Builder)parent).setTransient(name, builder);
-            } else {
-                throw new IllegalStateException("transients only allowed on object schemas");
-            }
+            //FIXME
+            final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
+            return new PropertyMapper(name, prop);
         }
     }
 }

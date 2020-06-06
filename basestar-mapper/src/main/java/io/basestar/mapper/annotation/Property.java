@@ -20,10 +20,10 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
-import io.basestar.mapper.context.PropertyContext;
-import io.basestar.mapper.internal.UseBinder;
-import io.basestar.mapper.internal.annotation.BindSchema;
-import io.basestar.schema.InstanceSchema;
+import io.basestar.mapper.internal.MemberMapper;
+import io.basestar.mapper.internal.PropertyMapper;
+import io.basestar.mapper.internal.annotation.MemberDeclaration;
+import io.basestar.type.PropertyContext;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.annotation.*;
@@ -31,35 +31,23 @@ import java.lang.annotation.*;
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.METHOD})
-@BindSchema(Property.Binder.class)
+@MemberDeclaration(Property.Declaration.class)
 public @interface Property {
 
     String INFER_NAME = "";
 
     String name() default INFER_NAME;
 
-    boolean secret() default false;
-
     @RequiredArgsConstructor
-    class Binder implements BindSchema.Handler {
+    class Declaration implements MemberDeclaration.Declaration {
 
         private final Property annotation;
 
         @Override
-        public String name(final PropertyContext property) {
-
-            final String name = annotation.name();
-            return name.equals(INFER_NAME) ? property.simpleName() : name;
-        }
-
-        @Override
-        public void addToSchema(final InstanceSchema.Builder parent, final PropertyContext prop) {
+        public MemberMapper<?> mapper(final PropertyContext prop) {
 
             final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
-            final UseBinder use = UseBinder.from(prop.type());
-            final io.basestar.schema.Property.Builder builder = new io.basestar.schema.Property.Builder()
-                    .setType(use.use());
-            parent.setProperty(name, builder);
+            return new PropertyMapper(name, prop);
         }
     }
 }

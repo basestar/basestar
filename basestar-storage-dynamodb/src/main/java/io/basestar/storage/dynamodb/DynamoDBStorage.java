@@ -432,10 +432,13 @@ public class DynamoDBStorage extends PartitionedStorage {
     public static byte[] sort(final ObjectSchema schema, final Index index, final String id, final List<Object> sort) {
 
         final List<Object> fullSort = new ArrayList<>(sort);
-        if(index.isUnique() && sort.isEmpty()) {
-            // Must add something to the sort key to save
-            fullSort.add(null);
+        if(index.isUnique()) {
+            if(sort.isEmpty()) {
+                // Must add something to the sort key to save
+                fullSort.add(null);
+            }
         } else {
+            // Ensure non-unique indexes have a unique id
             fullSort.add(id);
         }
         return binary(fullSort);

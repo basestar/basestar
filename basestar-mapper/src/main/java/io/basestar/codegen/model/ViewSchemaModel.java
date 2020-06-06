@@ -18,4 +18,10 @@ public class ViewSchemaModel extends InstanceSchemaModel {
 
         return io.basestar.mapper.annotation.ViewSchema.class;
     }
+
+    @Override
+    public InstanceSchemaModel getExtend() {
+
+        return null;
+    }
 }

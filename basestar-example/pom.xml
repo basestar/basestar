@@ -74,6 +74,17 @@
             <artifactId>basestar-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.iq80.leveldb</groupId>
+            <artifactId>leveldb-api</artifactId>
+            <version>0.12</version>
+        </dependency>
+        <dependency>
+            <groupId>org.fusesource.leveldbjni</groupId>
+            <artifactId>leveldbjni-all</artifactId>
+            <version>1.8</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
 </project>

@@ -21,17 +21,22 @@ package io.basestar.mapper.annotation;
  */
 
 import io.basestar.expression.Expression;
-import io.basestar.mapper.context.PropertyContext;
-import io.basestar.mapper.internal.annotation.BindSchema;
-import io.basestar.schema.InstanceSchema;
+import io.basestar.mapper.internal.LinkMapper;
+import io.basestar.mapper.internal.MemberMapper;
+import io.basestar.mapper.internal.annotation.MemberDeclaration;
+import io.basestar.type.PropertyContext;
+import io.basestar.util.Sort;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.annotation.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.METHOD})
-@BindSchema(Link.Binder.class)
+@MemberDeclaration(Link.Declaration.class)
 public @interface Link {
 
     String INFER_NAME = "";
@@ -44,26 +49,17 @@ public @interface Link {
 
 
     @RequiredArgsConstructor
-    class Binder implements BindSchema.Handler {
+    class Declaration implements MemberDeclaration.Declaration {
 
         private final Link annotation;
 
         @Override
-        public String name(final PropertyContext property) {
+        public MemberMapper<?> mapper(final PropertyContext prop) {
 
-            return property.name();
-        }
-
-        public void addToSchema(final InstanceSchema.Builder parent, final PropertyContext prop) {
-
-            if(parent instanceof io.basestar.schema.ObjectSchema.Builder) {
-                final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
-                final io.basestar.schema.Link.Builder builder = new io.basestar.schema.Link.Builder()
-                        .setExpression(Expression.parse(annotation.expression()));
-                ((io.basestar.schema.ObjectSchema.Builder)parent).setLink(name, builder);
-            } else {
-                throw new IllegalStateException("links only allowed on object schemas");
-            }
+            final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
+            final Expression expression = Expression.parse(annotation.expression());
+            final List<Sort> sort = Arrays.stream(annotation.sort()).map(Sort::parse).collect(Collectors.toList());
+            return new LinkMapper(name, prop, expression, sort);
         }
     }
 }

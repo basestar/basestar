@@ -20,9 +20,10 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
-import io.basestar.mapper.context.TypeContext;
-import io.basestar.mapper.internal.annotation.BindNamespace;
-import io.basestar.schema.Schema;
+import io.basestar.mapper.internal.EnumSchemaMapper;
+import io.basestar.mapper.internal.SchemaMapper;
+import io.basestar.mapper.internal.annotation.SchemaDeclaration;
+import io.basestar.type.TypeContext;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.annotation.*;
@@ -30,7 +31,7 @@ import java.lang.annotation.*;
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-@BindNamespace(EnumSchema.Binder.class)
+@SchemaDeclaration(EnumSchema.Declaration.class)
 public @interface EnumSchema {
 
     String INFER_NAME = "";
@@ -38,21 +39,15 @@ public @interface EnumSchema {
     String name() default INFER_NAME;
 
     @RequiredArgsConstructor
-    class Binder implements BindNamespace.Handler {
+    class Declaration implements SchemaDeclaration.Declaration {
 
         private final EnumSchema annotation;
 
         @Override
-        public String name(final TypeContext type) {
+        public SchemaMapper<?, ?> mapper(final TypeContext type) {
 
-            final String name = annotation.name();
-            return name.equals(INFER_NAME) ? type.simpleName() : name;
-        }
-
-        @Override
-        public Schema.Builder<?> schemaBuilder(final TypeContext type) {
-
-            return io.basestar.schema.EnumSchema.builder();
+            final String name = annotation.name().equals(INFER_NAME) ? type.simpleName() : annotation.name();
+            return new EnumSchemaMapper<>(name, type);
         }
     }
 }

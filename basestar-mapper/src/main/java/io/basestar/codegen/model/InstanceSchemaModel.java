@@ -22,11 +22,13 @@ public abstract class InstanceSchemaModel extends SchemaModel {
     public List<MemberModel> getMembers() {
 
         return Stream.concat(
-                schema.metadataSchema().entrySet().stream()
+                schema.getExtend() != null ? Stream.<MemberModel>empty() : schema.metadataSchema().entrySet().stream()
                         .filter(entry -> !Reserved.SCHEMA.equals(entry.getKey()))
                         .map(entry -> new MetadataModel(getSettings(), entry.getKey(), entry.getValue())),
-                schema.getProperties().values().stream()
+                schema.getDeclaredProperties().values().stream()
                         .map(v -> new PropertyModel(getSettings(), v))
         ).collect(Collectors.toList());
     }
+
+    public abstract InstanceSchemaModel getExtend();
 }

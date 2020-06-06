@@ -18,4 +18,15 @@ public class StructSchemaModel extends InstanceSchemaModel {
 
         return io.basestar.mapper.annotation.StructSchema.class;
     }
+
+    @Override
+    public StructSchemaModel getExtend() {
+
+        final StructSchema extend = schema.getExtend();
+        if(extend != null) {
+            return new StructSchemaModel(getSettings(), extend);
+        } else {
+            return null;
+        }
+    }
 }

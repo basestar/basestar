@@ -20,9 +20,10 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
-import io.basestar.mapper.context.TypeContext;
-import io.basestar.mapper.internal.annotation.BindNamespace;
-import io.basestar.schema.Schema;
+import io.basestar.mapper.internal.ObjectSchemaMapper;
+import io.basestar.mapper.internal.SchemaMapper;
+import io.basestar.mapper.internal.annotation.SchemaDeclaration;
+import io.basestar.type.TypeContext;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.annotation.*;
@@ -30,7 +31,7 @@ import java.lang.annotation.*;
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-@BindNamespace(ObjectSchema.Binder.class)
+@SchemaDeclaration(ObjectSchema.Declaration.class)
 public @interface ObjectSchema {
 
     String INFER_NAME = "";
@@ -38,21 +39,15 @@ public @interface ObjectSchema {
     String name() default INFER_NAME;
 
     @RequiredArgsConstructor
-    class Binder implements BindNamespace.Handler {
+    class Declaration implements SchemaDeclaration.Declaration {
 
         private final ObjectSchema annotation;
 
         @Override
-        public String name(final TypeContext type) {
+        public SchemaMapper<?, ?> mapper(final TypeContext type) {
 
-            final String name = annotation.name();
-            return name.equals(INFER_NAME) ? type.simpleName() : name;
-        }
-
-        @Override
-        public Schema.Builder<?> schemaBuilder(final TypeContext type) {
-
-            return io.basestar.schema.ObjectSchema.builder();
+            final String name = annotation.name().equals(INFER_NAME) ? type.simpleName() : annotation.name();
+            return new ObjectSchemaMapper<>(name, type);
         }
     }
 }

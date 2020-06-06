@@ -1,7 +1,9 @@
 package io.basestar.codegen.model;
 
 import io.basestar.codegen.CodegenSettings;
+import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.StructSchema;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -24,11 +26,24 @@ public class ObjectSchemaModel extends InstanceSchemaModel {
     }
 
     @Override
+    public InstanceSchemaModel getExtend() {
+
+        final InstanceSchema extend = schema.getExtend();
+        if(extend instanceof ObjectSchema) {
+            return new ObjectSchemaModel(getSettings(), (ObjectSchema) extend);
+        } else if(extend instanceof StructSchema) {
+            return new StructSchemaModel(getSettings(), (StructSchema) extend);
+        } else {
+            return null;
+        }
+    }
+
+    @Override
     public List<MemberModel> getMembers() {
 
         return Stream.concat(
                 super.getMembers().stream(),
-                schema.getLinks().values().stream()
+                schema.getDeclaredLinks().values().stream()
                         .map(v -> new LinkModel(getSettings(), v))
         ).collect(Collectors.toList());
     }

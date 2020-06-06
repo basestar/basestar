@@ -42,11 +42,13 @@ public class Codegen {
                 final Template template = cfg.getTemplate("ObjectSchema.java.ftl");
                 template.process(new ObjectSchemaModel(settings, (ObjectSchema) schema), writer);
             } else if(schema instanceof StructSchema) {
-                final Template template = cfg.getTemplate("ObjectSchema.java.ftl");
+                final Template template = cfg.getTemplate("StructSchema.java.ftl");
                 template.process(new StructSchemaModel(settings, (StructSchema) schema), writer);
             } else if(schema instanceof ViewSchema) {
-                final Template template = cfg.getTemplate("ObjectSchema.java.ftl");
+                final Template template = cfg.getTemplate("ViewSchema.java.ftl");
                 template.process(new ViewSchemaModel(settings, (ViewSchema) schema), writer);
+            } else {
+                throw new IllegalStateException("Cannot process schema " + schema.getClass());
             }
         } catch (final TemplateException e) {
             throw new IOException(e);

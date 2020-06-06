@@ -20,7 +20,13 @@ package io.basestar.mapper;
  * #L%
  */
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.annotation.*;
+import io.basestar.mapper.internal.SchemaMapper;
+import io.basestar.schema.Instance;
+import io.basestar.schema.Reserved;
+import io.basestar.schema.Schema;
+import lombok.Data;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
@@ -28,6 +34,7 @@ import java.util.List;
 
 public class TestMapper {
 
+    @Data
     @ObjectSchema
     public static class Post {
 
@@ -46,8 +53,13 @@ public class TestMapper {
         @Hash
         private String hash;
 
+        @Version
+        private Long version;
+
         @Property
         private String test;
+
+        private Comment comment;
 
         @ObjectSchema
         @Index(name = "parent", partition = "parent.id")
@@ -62,6 +74,19 @@ public class TestMapper {
     public void testCreateSchema() {
 
         final Mapper mapper = new Mapper();
-        System.err.println(mapper.schema(Post.class).toString());
+
+        final SchemaMapper<Post, Instance> schemaMapper = mapper.schema(Post.class);
+        final Schema.Builder<?> schema = schemaMapper.schema();
+
+        final Post post = schemaMapper.marshall(new Instance(ImmutableMap.of(
+                Reserved.ID, "test",
+                Reserved.VERSION, 1L,
+                "comment", ImmutableMap.of(
+                        Reserved.ID, "c1"
+                )
+        )));
+
+        System.err.println(schema);
+        System.err.println(post);
     }
 }

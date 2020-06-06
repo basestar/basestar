@@ -4,8 +4,15 @@ MyEnum:
     - VALUE_1
     - VALUE_2
 
+MyBase:
+  type: object
+  properties:
+    test0:
+      type: MyBase
+
 MyObject:
   type: object
+  extend: MyBase
   id:
     expression: test1 + "_" + test2
   properties:

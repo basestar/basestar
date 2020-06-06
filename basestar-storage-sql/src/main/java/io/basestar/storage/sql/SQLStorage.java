@@ -149,7 +149,6 @@ public class SQLStorage implements Storage {
                     })
                     .collect(Collectors.toList());
 
-
             final Index index = best;
             sources.add((count, token) ->
                     withContext(context -> {

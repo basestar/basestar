@@ -49,6 +49,7 @@ import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Index
@@ -386,6 +387,11 @@ public class Index implements Named, Described, Serializable, Extendable {
         private final List<Object> partition;
 
         private final List<Object> sort;
+
+        public List<Object> keys() {
+
+            return Stream.of(partition, sort).flatMap(List::stream).collect(Collectors.toList());
+        }
 
         public static Key of(final List<Object> partition, final List<Object> sort) {
 
