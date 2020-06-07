@@ -1,11 +1,12 @@
 package io.basestar.codegen.model;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.codegen.CodegenSettings;
 import io.basestar.schema.Reserved;
 import io.basestar.schema.use.Use;
 
-import java.util.Map;
+import java.util.List;
 
 public class MetadataModel extends MemberModel {
 
@@ -26,7 +27,6 @@ public class MetadataModel extends MemberModel {
         return name;
     }
 
-    @Override
     protected Class<?> getAnnotationClass() {
 
         switch (name) {
@@ -45,10 +45,13 @@ public class MetadataModel extends MemberModel {
         }
     }
 
-    @Override
-    public Map<String, Object> getAnnotationValues() {
 
-        return ImmutableMap.of();
+    @Override
+    public List<AnnotationModel> getAnnotations() {
+
+        return ImmutableList.of(
+                new AnnotationModel(getSettings(), getAnnotationClass(), ImmutableMap.of())
+        );
     }
 
     @Override

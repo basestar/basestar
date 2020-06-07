@@ -28,8 +28,12 @@ import lombok.experimental.Accessors;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.AnnotatedType;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Getter
@@ -38,9 +42,29 @@ public class AnnotationContext<A extends Annotation> implements HasType {
 
     private final A annotation;
 
-    protected AnnotationContext(final A annotation) {
+    private final Supplier<Map<String, Object>> values;
+
+    // FIXME: should be private
+    public AnnotationContext(final A annotation) {
 
         this.annotation = annotation;
+        this.values = () -> {
+            final Map<String, Object> values = new HashMap<>();
+            final TypeContext context = type();
+            context.methods().forEach(m -> {
+                try {
+                    values.put(m.name(), m.invoke(annotation));
+                } catch (final InvocationTargetException | IllegalAccessException e) {
+                    throw new IllegalStateException(e);
+                }
+            });
+            return values;
+        };
+    }
+
+    public Map<String, Object> values() {
+
+        return values.get();
     }
 
     @Override

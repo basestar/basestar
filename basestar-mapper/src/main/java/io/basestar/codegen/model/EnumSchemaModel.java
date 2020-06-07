@@ -1,5 +1,7 @@
 package io.basestar.codegen.model;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import io.basestar.codegen.CodegenSettings;
 import io.basestar.schema.EnumSchema;
 
@@ -21,8 +23,10 @@ public class EnumSchemaModel extends SchemaModel {
     }
 
     @Override
-    protected Class<?> getAnnotationClass() {
+    public List<AnnotationModel> getAnnotations() {
 
-        return io.basestar.mapper.annotation.EnumSchema.class;
+        return ImmutableList.of(
+                new AnnotationModel(getSettings(), io.basestar.mapper.annotation.EnumSchema.class, ImmutableMap.of("name", schema.getName()))
+        );
     }
 }

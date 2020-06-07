@@ -20,6 +20,7 @@ package io.basestar.mapper.internal.annotation;
  * #L%
  */
 
+import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.MemberMapper;
 import io.basestar.type.PropertyContext;
 
@@ -34,6 +35,6 @@ public @interface MemberDeclaration {
 
     interface Declaration {
 
-        MemberMapper<?> mapper(PropertyContext prop);
+        MemberMapper<?> mapper(MappingContext context, PropertyContext prop);
     }
 }

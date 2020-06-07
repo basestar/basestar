@@ -21,8 +21,11 @@ package io.basestar.mapper.internal;
  */
 
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.type.Coercion;
 import io.basestar.expression.type.Numbers;
+import io.basestar.mapper.MappingContext;
+import io.basestar.mapper.SchemaMapper;
 import io.basestar.schema.use.*;
 import io.basestar.type.TypeContext;
 import lombok.Getter;
@@ -30,10 +33,7 @@ import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Supplier;
 
 public interface TypeMapper {
@@ -44,47 +44,49 @@ public interface TypeMapper {
 
     Object marshall(Object value);
 
-    static TypeMapper from(final TypeContext context) {
+    static TypeMapper from(final MappingContext context, final TypeContext type) {
 
-        final Class<?> erased = context.erasedType();
+        final Class<?> erased = type.erasedType();
         if(boolean.class.isAssignableFrom(erased) || Boolean.class.isAssignableFrom(erased)) {
-            return new OfBoolean(context);
+            return new OfBoolean(type);
         } else if(Numbers.isIntegerType(erased)) {
-            return new OfInteger(context);
+            return new OfInteger(type);
         } else if(Numbers.isRealType(erased)) {
-            return new OfNumber(context);
+            return new OfNumber(type);
         } else if(String.class.isAssignableFrom(erased)) {
-            return new OfString(context);
+            return new OfString(type);
         } else if(Set.class.isAssignableFrom(erased)) {
-            final TypeContext setContext = context.find(Set.class);
+            final TypeContext setContext = type.find(Set.class);
             final TypeContext valueType = setContext.typeParameters().get(0).type();
-            return new OfSet(context, from(valueType));
+            return new OfSet(type, from(context, valueType));
         } else if(Collection.class.isAssignableFrom(erased)) {
-            final TypeContext collectionContext = context.find(Collection.class);
+            final TypeContext collectionContext = type.find(Collection.class);
             final TypeContext valueType = collectionContext.typeParameters().get(0).type();
-            return new OfArray(context, from(valueType));
+            return new OfArray(type, from(context, valueType));
         } else if(erased.isArray()) {
             if(byte[].class.isAssignableFrom(erased)) {
-                return new OfBinary(context);
+                return new OfBinary(type);
             } else {
                 throw new UnsupportedOperationException();
             }
         } else if(Map.class.isAssignableFrom(erased)){
-            final TypeContext mapContext = context.find(Map.class);
+            final TypeContext mapContext = type.find(Map.class);
             final TypeContext valueType = mapContext.typeParameters().get(1).type();
-            return new OfMap(context, from(valueType));
+            return new OfMap(type, from(context, valueType));
         } else if(LocalDate.class.isAssignableFrom(erased)){
-            return new OfDate(context);
+            return new OfDate(type);
         } else if(LocalDateTime.class.isAssignableFrom(erased)){
-            return new OfDateTime(context);
+            return new OfDateTime(type);
         } else if(Map.class.isAssignableFrom(erased)){
-            final TypeContext mapContext = context.find(Map.class);
+            final TypeContext mapContext = type.find(Map.class);
             final TypeContext valueType = mapContext.typeParameters().get(1).type();
-            return new OfMap(context, from(valueType));
+            return new OfMap(type, from(context, valueType));
         } else {
-            return new OfCustom(context);
+            return new OfCustom(context, type);
         }
     }
+
+    Set<Class<?>> dependencies();
 
     @RequiredArgsConstructor
     class OfBoolean implements TypeMapper {
@@ -107,6 +109,12 @@ public interface TypeMapper {
         public Object marshall(final Object value) {
 
             return Coercion.toBoolean(value);
+        }
+
+        @Override
+        public Set<Class<?>> dependencies() {
+
+            return Collections.emptySet();
         }
     }
 
@@ -133,6 +141,12 @@ public interface TypeMapper {
             final Long v = Coercion.toLong(value);
             return Numbers.coerce(v, context.erasedType());
         }
+
+        @Override
+        public Set<Class<?>> dependencies() {
+
+            return Collections.emptySet();
+        }
     }
 
     @RequiredArgsConstructor
@@ -158,6 +172,12 @@ public interface TypeMapper {
             final Double v = Coercion.toDouble(value);
             return Numbers.coerce(v, context.erasedType());
         }
+
+        @Override
+        public Set<Class<?>> dependencies() {
+
+            return Collections.emptySet();
+        }
     }
 
     @RequiredArgsConstructor
@@ -181,6 +201,12 @@ public interface TypeMapper {
         public Object marshall(final Object value) {
 
             return Coercion.toString(value);
+        }
+
+        @Override
+        public Set<Class<?>> dependencies() {
+
+            return Collections.emptySet();
         }
     }
 
@@ -209,6 +235,12 @@ public interface TypeMapper {
 
             return Coercion.toList(value, context.erasedType(), this.value::marshall);
         }
+
+        @Override
+        public Set<Class<?>> dependencies() {
+
+            return value.dependencies();
+        }
     }
 
     @RequiredArgsConstructor
@@ -235,6 +267,12 @@ public interface TypeMapper {
         public Object marshall(final Object value) {
 
             return Coercion.toSet(value, context.erasedType(), this.value::marshall);
+        }
+
+        @Override
+        public Set<Class<?>> dependencies() {
+
+            return value.dependencies();
         }
     }
 
@@ -263,6 +301,12 @@ public interface TypeMapper {
 
             return Coercion.toMap(value, context.erasedType(), Objects::toString, this.value::marshall);
         }
+
+        @Override
+        public Set<Class<?>> dependencies() {
+
+            return value.dependencies();
+        }
     }
 
     @RequiredArgsConstructor
@@ -272,10 +316,10 @@ public interface TypeMapper {
 
         private final Supplier<SchemaMapper<?, ?>> mapper;
 
-        public OfCustom(final TypeContext context) {
+        public OfCustom(final MappingContext mappingContext, final TypeContext context) {
 
             this.context = context;
-            this.mapper =  Suppliers.memoize(() -> SchemaMapper.mapper(context));
+            this.mapper =  Suppliers.memoize(() -> mappingContext.schemaMapper(context.erasedType()));
         }
 
         public SchemaMapper<?, ?> getMapper() {
@@ -301,6 +345,12 @@ public interface TypeMapper {
 
             return mapper.get().marshall(value);
         }
+
+        @Override
+        public Set<Class<?>> dependencies() {
+
+            return ImmutableSet.of(context.erasedType());
+        }
     }
 
     @RequiredArgsConstructor
@@ -324,6 +374,12 @@ public interface TypeMapper {
         public Object marshall(final Object value) {
 
             return Coercion.toDate(value);
+        }
+
+        @Override
+        public Set<Class<?>> dependencies() {
+
+            return Collections.emptySet();
         }
     }
 
@@ -349,6 +405,12 @@ public interface TypeMapper {
 
             return Coercion.toDateTime(value);
         }
+
+        @Override
+        public Set<Class<?>> dependencies() {
+
+            return Collections.emptySet();
+        }
     }
 
     @RequiredArgsConstructor
@@ -372,6 +434,12 @@ public interface TypeMapper {
         public Object marshall(final Object value) {
 
             return Coercion.toBinary(value);
+        }
+
+        @Override
+        public Set<Class<?>> dependencies() {
+
+            return Collections.emptySet();
         }
     }
 }

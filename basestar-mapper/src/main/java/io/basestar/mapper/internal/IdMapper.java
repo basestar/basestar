@@ -2,13 +2,16 @@ package io.basestar.mapper.internal;
 
 import io.basestar.expression.Expression;
 import io.basestar.expression.type.Coercion;
+import io.basestar.mapper.MappingContext;
 import io.basestar.schema.Id;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.type.PropertyContext;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 
 public class IdMapper implements MemberMapper<ObjectSchema.Builder> {
 
@@ -18,11 +21,11 @@ public class IdMapper implements MemberMapper<ObjectSchema.Builder> {
 
     private final TypeMapper type;
 
-    public IdMapper(final PropertyContext property, final Expression expression) {
+    public IdMapper(final MappingContext context, final PropertyContext property, final Expression expression) {
 
         this.property = property;
         this.expression = expression;
-        this.type = TypeMapper.from(property.type());
+        this.type = TypeMapper.from(context, property.type());
     }
 
     @Override
@@ -56,5 +59,11 @@ public class IdMapper implements MemberMapper<ObjectSchema.Builder> {
             final String id = Instance.getId(source);
             property.set(target, type.marshall(id));
         }
+    }
+
+    @Override
+    public Set<Class<?>> dependencies() {
+
+        return Collections.emptySet();
     }
 }

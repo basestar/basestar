@@ -1,5 +1,6 @@
 package io.basestar.mapper.internal;
 
+import io.basestar.mapper.MappingContext;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Property;
 import io.basestar.type.PropertyContext;
@@ -15,11 +16,11 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
 
     private final TypeMapper type;
 
-    public PropertyMapper(final String name, final PropertyContext property) {
+    public PropertyMapper(final MappingContext context, final String name, final PropertyContext property) {
 
         this.name = name;
         this.property = property;
-        this.type = TypeMapper.from(property.type());
+        this.type = TypeMapper.from(context, property.type());
     }
 
     @Override

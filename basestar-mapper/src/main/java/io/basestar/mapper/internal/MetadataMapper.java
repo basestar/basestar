@@ -1,6 +1,7 @@
 package io.basestar.mapper.internal;
 
 import io.basestar.expression.type.Coercion;
+import io.basestar.mapper.MappingContext;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.type.PropertyContext;
@@ -16,11 +17,11 @@ public class MetadataMapper implements MemberMapper<ObjectSchema.Builder> {
 
     private final TypeMapper type;
 
-    public MetadataMapper(final Name name, final PropertyContext property) {
+    public MetadataMapper(final MappingContext context, final Name name, final PropertyContext property) {
 
         this.name = name;
         this.property = property;
-        this.type = TypeMapper.from(property.type());
+        this.type = TypeMapper.from(context, property.type());
     }
 
     @Override

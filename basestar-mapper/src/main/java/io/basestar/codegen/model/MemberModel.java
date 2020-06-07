@@ -2,7 +2,7 @@ package io.basestar.codegen.model;
 
 import io.basestar.codegen.CodegenSettings;
 
-import java.util.Map;
+import java.util.List;
 
 public abstract class MemberModel extends Model {
 
@@ -18,14 +18,7 @@ public abstract class MemberModel extends Model {
         return getName();
     }
 
-    public String getAnnotationClassName() {
-
-        return getAnnotationClass().getName();
-    }
-
-    protected abstract Class<?> getAnnotationClass();
-
-    public abstract Map<String, Object> getAnnotationValues();
+    public abstract List<AnnotationModel> getAnnotations();
 
     public abstract TypeModel getType();
 

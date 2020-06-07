@@ -1,11 +1,10 @@
 package io.basestar.codegen.model;
 
-import com.google.common.collect.ImmutableMap;
 import io.basestar.codegen.CodegenSettings;
 import io.basestar.schema.Schema;
 import io.basestar.util.Text;
 
-import java.util.Map;
+import java.util.List;
 
 public abstract class SchemaModel extends Model {
 
@@ -32,15 +31,17 @@ public abstract class SchemaModel extends Model {
         return schema.getDescription();
     }
 
-    public String getAnnotationClassName() {
+//    public String getAnnotationClassName() {
+//
+//        return getAnnotationClass().getName();
+//    }
+//
+//    protected abstract Class<?> getAnnotationClass();
+//
+//    public Map<String, Object> getAnnotationValues() {
+//
+//        return ImmutableMap.of("name", schema.getName());
+//    }
 
-        return getAnnotationClass().getName();
-    }
-
-    protected abstract Class<?> getAnnotationClass();
-
-    public Map<String, Object> getAnnotationValues() {
-
-        return ImmutableMap.of("name", schema.getName());
-    }
+    public abstract List<AnnotationModel> getAnnotations();
 }

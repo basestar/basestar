@@ -21,6 +21,7 @@ package io.basestar.mapper.annotation;
  */
 
 import io.basestar.expression.Expression;
+import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.IdMapper;
 import io.basestar.mapper.internal.MemberMapper;
 import io.basestar.mapper.internal.annotation.MemberDeclaration;
@@ -43,7 +44,7 @@ public @interface Id {
         private final Id annotation;
 
         @Override
-        public MemberMapper<?> mapper(final PropertyContext prop) {
+        public MemberMapper<?> mapper(final MappingContext context, final PropertyContext prop) {
 
             final Expression expression;
             if(annotation.expression().isEmpty()) {
@@ -51,7 +52,7 @@ public @interface Id {
             } else {
                 expression = Expression.parse(annotation.expression());
             }
-            return new IdMapper(prop, expression);
+            return new IdMapper(context, prop, expression);
         }
     }
 }

@@ -20,6 +20,7 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
+import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.MemberMapper;
 import io.basestar.mapper.internal.PropertyMapper;
 import io.basestar.mapper.internal.annotation.MemberDeclaration;
@@ -48,11 +49,11 @@ public @interface Transient {
         private final Transient annotation;
 
         @Override
-        public MemberMapper<?> mapper(final PropertyContext prop) {
+        public MemberMapper<?> mapper(final MappingContext context, final PropertyContext prop) {
 
             //FIXME
             final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
-            return new PropertyMapper(name, prop);
+            return new PropertyMapper(context, name, prop);
         }
     }
 }

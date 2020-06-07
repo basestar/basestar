@@ -98,12 +98,12 @@ public class Namespace implements Serializable, Schema.Resolver {
             return new Namespace(this);
         }
 
-        public void print(final OutputStream os) throws IOException {
+        public void yaml(final OutputStream os) throws IOException {
 
             objectMapper.writeValue(os, this);
         }
 
-        public void print(final Writer os) throws IOException {
+        public void yaml(final Writer os) throws IOException {
 
             objectMapper.writeValue(os, this);
         }

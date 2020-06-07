@@ -20,7 +20,8 @@ package io.basestar.mapper.internal.annotation;
  * #L%
  */
 
-import io.basestar.mapper.internal.SchemaMapper;
+import io.basestar.mapper.MappingContext;
+import io.basestar.mapper.SchemaMapper;
 import io.basestar.type.TypeContext;
 
 import java.lang.annotation.*;
@@ -34,6 +35,6 @@ public @interface SchemaDeclaration {
 
     interface Declaration {
 
-        SchemaMapper<?, ?> mapper(TypeContext type);
+        SchemaMapper<?, ?> mapper(MappingContext context, TypeContext type);
     }
 }

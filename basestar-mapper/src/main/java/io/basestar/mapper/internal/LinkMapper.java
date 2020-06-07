@@ -1,6 +1,8 @@
 package io.basestar.mapper.internal;
 
 import io.basestar.expression.Expression;
+import io.basestar.mapper.MappingContext;
+import io.basestar.mapper.SchemaMapper;
 import io.basestar.schema.Link;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.type.PropertyContext;
@@ -22,20 +24,19 @@ public class LinkMapper implements MemberMapper<ObjectSchema.Builder> {
 
     private final TypeMapper type;
 
-    private final SchemaMapper<?, ?> schema;
+    private final TypeMapper.OfCustom itemType;
 
-    public LinkMapper(final String name, final PropertyContext property, final Expression expression, final List<Sort> sort) {
+    public LinkMapper(final MappingContext context, final String name, final PropertyContext property, final Expression expression, final List<Sort> sort) {
 
         this.name = name;
         this.property = property;
         this.expression = expression;
         this.sort = sort;
-        this.type = TypeMapper.from(property.type());
+        this.type = TypeMapper.from(context, property.type());
         if(type instanceof TypeMapper.OfArray) {
             final TypeMapper.OfArray array = (TypeMapper.OfArray)type;
             if(array.getValue() instanceof TypeMapper.OfCustom) {
-                final TypeMapper.OfCustom custom = (TypeMapper.OfCustom)array.getValue();
-                this.schema = custom.getMapper();
+                itemType = (TypeMapper.OfCustom)array.getValue();
             } else {
                 throw new IllegalStateException("Cannot create link item mapper for " + array.getValue());
             }
@@ -53,6 +54,7 @@ public class LinkMapper implements MemberMapper<ObjectSchema.Builder> {
     @Override
     public void addToSchema(final ObjectSchema.Builder builder) {
 
+        final SchemaMapper<?, ?> schema = itemType.getMapper();
         builder.setLink(name, Link.builder()
                 .setSchema(schema.name())
                 .setExpression(expression)

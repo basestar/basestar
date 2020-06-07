@@ -23,9 +23,14 @@ package io.basestar.type.has;
 import io.basestar.type.AnnotationContext;
 
 import java.lang.annotation.Annotation;
+import java.lang.annotation.Repeatable;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public interface HasAnnotations {
 
@@ -41,9 +46,25 @@ public interface HasAnnotations {
     @SuppressWarnings("unchecked")
     default <A extends Annotation> List<AnnotationContext<A>> annotations(final Class<A> of) {
 
+        final Repeatable rep = of.getAnnotation(Repeatable.class);
+        final Class<? extends Annotation> repType = rep == null ? null : rep.value();
         return annotations().stream()
-                .filter(v -> v.erasedType().equals(of))
-                .map(v -> (AnnotationContext<A>)v)
+                .flatMap(v -> {
+                    final Class<?> erased = v.erasedType();
+                    if(erased.equals(of)) {
+                        return Stream.of((AnnotationContext<A>)v);
+                    } else if(erased.equals(repType)) {
+                        try {
+                            final Method value = repType.getMethod("value");
+                            final A[] as = (A[])value.invoke(v.annotation());
+                            return Arrays.stream(as).map(AnnotationContext::new);
+                        } catch (final NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+                            throw new IllegalStateException(e);
+                        }
+                    } else {
+                        return Stream.empty();
+                    }
+                })
                 .collect(Collectors.toList());
     }
 

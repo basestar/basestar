@@ -20,8 +20,9 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
+import io.basestar.mapper.MappingContext;
+import io.basestar.mapper.SchemaMapper;
 import io.basestar.mapper.internal.EnumSchemaMapper;
-import io.basestar.mapper.internal.SchemaMapper;
 import io.basestar.mapper.internal.annotation.SchemaDeclaration;
 import io.basestar.type.TypeContext;
 import lombok.RequiredArgsConstructor;
@@ -44,10 +45,10 @@ public @interface EnumSchema {
         private final EnumSchema annotation;
 
         @Override
-        public SchemaMapper<?, ?> mapper(final TypeContext type) {
+        public SchemaMapper<?, ?> mapper(final MappingContext context, final TypeContext type) {
 
             final String name = annotation.name().equals(INFER_NAME) ? type.simpleName() : annotation.name();
-            return new EnumSchemaMapper<>(name, type);
+            return new EnumSchemaMapper<>(context, name, type);
         }
     }
 }

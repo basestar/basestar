@@ -34,6 +34,8 @@ import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -44,7 +46,7 @@ import java.util.stream.Stream;
 public class TypeContext implements HasName, HasModifiers, HasAnnotations,
         HasTypeParameters, HasType, HasConstructors, HasMethods, HasFields {
 
-//    private static final ConcurrentMap<AnnotatedType, TypeContext> CACHE = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<AnnotatedType, TypeContext> CACHE = new ConcurrentHashMap<>();
 
     private final AnnotatedType annotatedType;
 
@@ -190,7 +192,7 @@ public class TypeContext implements HasName, HasModifiers, HasAnnotations,
         this.annotations = Suppliers.memoize(() -> AnnotationContext.from(annotatedType));
     }
 
-    public static <T> TypeContext from(final Type type, final Type ... args) {
+    public static TypeContext from(final Type type, final Type ... args) {
 
         return from(
                 (AnnotatedParameterizedType)GenericTypeReflector.annotate(type),
@@ -198,7 +200,7 @@ public class TypeContext implements HasName, HasModifiers, HasAnnotations,
         );
     }
 
-    public static <T> TypeContext from(final AnnotatedParameterizedType type, final AnnotatedType ... args) {
+    public static TypeContext from(final AnnotatedParameterizedType type, final AnnotatedType ... args) {
 
         return from(GenericTypeReflector.replaceParameters(
                 type,
@@ -218,17 +220,7 @@ public class TypeContext implements HasName, HasModifiers, HasAnnotations,
 
     public static TypeContext from(final AnnotatedType type) {
 
-        return new TypeContext(type);
-//        synchronized (CACHE) {
-//            final TypeContext result;
-//            if(!CACHE.containsKey(type)) {
-//                result = new TypeContext(type);
-//                CACHE.put(type, result);
-//            } else {
-//                result = CACHE.get(type);
-//            }
-//            return result;
-//        }
+        return CACHE.computeIfAbsent(type, TypeContext::new);
     }
 
     public TypeContext superclass() {
@@ -336,6 +328,26 @@ public class TypeContext implements HasName, HasModifiers, HasAnnotations,
     public TypeContext box() {
 
         return TypeContext.from(GenericTypeReflector.box(erasedType));
+    }
+
+    public boolean isAssignableFrom(final TypeContext other) {
+
+        return erasedType.isAssignableFrom(other.erasedType);
+    }
+
+    public boolean isAssignableFrom(final Class<?> other) {
+
+        return erasedType.isAssignableFrom(other);
+    }
+
+    public boolean isAssignableTo(final TypeContext other) {
+
+        return other.erasedType.isAssignableFrom(erasedType);
+    }
+
+    public boolean isAssignableTo(final Class<?> other) {
+
+        return other.isAssignableFrom(erasedType);
     }
 
     @SuppressWarnings("unchecked")

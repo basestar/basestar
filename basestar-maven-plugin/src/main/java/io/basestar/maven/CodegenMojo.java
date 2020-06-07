@@ -8,7 +8,6 @@ import io.basestar.schema.Schema;
 import lombok.Setter;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -16,7 +15,6 @@ import org.apache.maven.project.MavenProject;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -71,18 +69,18 @@ public class CodegenMojo extends AbstractMojo {
                 final File file = new File(output, schema.getName() + ".java");
                 try(final FileOutputStream fos = new FileOutputStream(file);
                     final OutputStreamWriter writer = new OutputStreamWriter(fos, Charsets.UTF_8)) {
-                    log("Writing schema " + schema.getName() + " to " + file.getAbsolutePath());
+                    getLog().info("Writing schema " + schema.getName() + " to " + file.getAbsolutePath());
                     codegen.generate(schema, writer);
                 }
             }
 
             if(addSources && project != null) {
-                log("Adding source directory " + output.getAbsolutePath());
+                getLog().info("Adding source directory " + output.getAbsolutePath());
                 project.addCompileSourceRoot(output.getAbsolutePath());
             }
 
-        } catch (final IOException e) {
-            error("Codegen execution failed", e);
+        } catch (final Exception e) {
+            getLog().error("Codegen execution failed", e);
             throw new MojoExecutionException("Codegen execution failed", e);
         }
     }
@@ -91,21 +89,5 @@ public class CodegenMojo extends AbstractMojo {
 
         final File base = new File(outputDirectory);
         return new File(base, packageName.replaceAll("\\.", File.separator));
-    }
-
-    private void log(final String msg) {
-
-        final Log log = getLog();
-        if(log != null) {
-            log.info(msg);
-        }
-    }
-
-    private void error(final String msg, final Throwable err) {
-
-        final Log log = getLog();
-        if(log != null) {
-            log.error(msg, err);
-        }
     }
 }

@@ -23,8 +23,8 @@ package io.basestar.mapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.annotation.*;
-import io.basestar.mapper.internal.SchemaMapper;
 import io.basestar.schema.Instance;
+import io.basestar.schema.Namespace;
 import io.basestar.schema.Reserved;
 import io.basestar.schema.Schema;
 import lombok.Data;
@@ -35,7 +35,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
-public class TestMapper {
+public class TestMappingContext {
 
     @Data
     @ObjectSchema
@@ -70,19 +70,26 @@ public class TestMapper {
 
         @ObjectSchema
         @Index(name = "parent", partition = "parent.id")
+        @Index(name = "parent", partition = "parent.id")
+        @Index(name = "parent", partition = "parent.id")
         public static class Comment {
 
             @Id
             private String id;
+
+            private Comment comment;
+
+            @Link(expression = "target.id == this.id")
+            private List<Comment> comments;
         }
     }
 
     @Test
     public void testCreateSchema() {
 
-        final Mapper mapper = new Mapper();
+        final MappingContext mappingContext = new MappingContext();
 
-        final SchemaMapper<Post, Instance> schemaMapper = mapper.schema(Post.class);
+        final SchemaMapper<Post, Instance> schemaMapper = mappingContext.schemaMapper(Post.class);
         final Schema.Builder<?> schema = schemaMapper.schema();
 
         final Post post = schemaMapper.marshall(new Instance(ImmutableMap.of(
@@ -104,5 +111,9 @@ public class TestMapper {
         final Map<String, ?> unmarshalled = schemaMapper.unmarshall(post);
 
         System.err.println(unmarshalled);
+
+        final Namespace.Builder ns = mappingContext.namespace(Post.class);
+
+        System.err.println(ns);
     }
 }

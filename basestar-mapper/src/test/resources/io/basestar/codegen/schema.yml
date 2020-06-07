@@ -28,3 +28,9 @@ MyObject:
     test4:
       expression: id==this.id && "test"==test1
       schema: MyObject
+  indexes:
+    blah:
+      partition:
+        - test1
+      sort:
+        - test2

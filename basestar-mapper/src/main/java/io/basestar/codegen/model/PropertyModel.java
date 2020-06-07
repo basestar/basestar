@@ -4,7 +4,8 @@ import com.google.common.collect.ImmutableMap;
 import io.basestar.codegen.CodegenSettings;
 import io.basestar.schema.Property;
 
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 public class PropertyModel extends MemberModel {
 
@@ -24,15 +25,12 @@ public class PropertyModel extends MemberModel {
     }
 
     @Override
-    protected Class<?> getAnnotationClass() {
+    public List<AnnotationModel> getAnnotations() {
 
-        return io.basestar.mapper.annotation.Property.class;
-    }
-
-    @Override
-    public Map<String, Object> getAnnotationValues() {
-
-        return ImmutableMap.of("name", property.getName());
+        final List<AnnotationModel> annotations = new ArrayList<>();
+        annotations.add(new AnnotationModel(getSettings(), io.basestar.mapper.annotation.Property.class, ImmutableMap.of("name", property.getName())));
+        annotations.add(new AnnotationModel(getSettings(), javax.validation.constraints.NotNull.class, ImmutableMap.of()));
+        return annotations;
     }
 
     @Override

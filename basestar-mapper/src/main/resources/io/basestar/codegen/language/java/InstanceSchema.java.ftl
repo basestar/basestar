@@ -1,12 +1,15 @@
 <#import "_macros.ftl" as macros>
 package ${packageName};
 
-<@macros.annotation name=annotationClassName values=annotationValues/><#nt>
+<#list annotations as annot>
+<@macros.annotation name=annot.className values=annot.values/><#nt>
+</#list>
 public class ${className} <#if extend??>extends ${extend.className}</#if> {
 
 <#list members as member>
-    <@macros.annotation name=member.annotationClassName values=member.annotationValues/><#nt><#if member.required>
-    @javax.validation.constraints.NotNull</#if>
+    <#list member.annotations as annot>
+    <@macros.annotation name=annot.className values=annot.values/><#nt>
+    </#list>
     private <@macros.type of=member.type/> ${member.fieldName};
 
 </#list>
@@ -23,6 +26,13 @@ public class ${className} <#if extend??>extends ${extend.className}</#if> {
     }
 
 </#list>
+    @Override
+    public String toString() {
+        return "${className}{<#list members as member>${member.name}=" + ${member.name}<#sep>
+            + ", </#list>
+            + "}";
+    }
+
     protected boolean canEqual(final Object other) {
 
         return other instanceof ${className};

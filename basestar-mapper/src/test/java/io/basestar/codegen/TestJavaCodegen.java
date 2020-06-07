@@ -23,6 +23,7 @@ public class TestJavaCodegen {
 
         final StringWriter stringWriter = new StringWriter();
         codegen.generate(namespace.requireSchema("MyEnum"), stringWriter);
+        codegen.generate(namespace.requireSchema("MyBase"), stringWriter);
         codegen.generate(namespace.requireSchema("MyObject"), stringWriter);
         System.err.println(stringWriter);
     }

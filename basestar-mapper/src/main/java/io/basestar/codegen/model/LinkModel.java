@@ -1,10 +1,11 @@
 package io.basestar.codegen.model;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.codegen.CodegenSettings;
 import io.basestar.schema.Link;
 
-import java.util.Map;
+import java.util.List;
 
 public class LinkModel extends MemberModel {
 
@@ -24,17 +25,13 @@ public class LinkModel extends MemberModel {
     }
 
     @Override
-    protected Class<?> getAnnotationClass() {
+    public List<AnnotationModel> getAnnotations() {
 
-        return io.basestar.mapper.annotation.Link.class;
-    }
-
-    @Override
-    public Map<String, Object> getAnnotationValues() {
-
-        return ImmutableMap.of(
-                "name", link.getName(),
-                "expression", link.getExpression()
+        return ImmutableList.of(
+                new AnnotationModel(getSettings(), io.basestar.mapper.annotation.Link.class, ImmutableMap.of(
+                        "name", link.getName(),
+                        "expression", link.getExpression()
+                ))
         );
     }
 

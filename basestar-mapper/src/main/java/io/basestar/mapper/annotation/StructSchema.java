@@ -20,7 +20,8 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
-import io.basestar.mapper.internal.SchemaMapper;
+import io.basestar.mapper.MappingContext;
+import io.basestar.mapper.SchemaMapper;
 import io.basestar.mapper.internal.StructSchemaMapper;
 import io.basestar.mapper.internal.annotation.SchemaDeclaration;
 import io.basestar.type.TypeContext;
@@ -44,10 +45,10 @@ public @interface StructSchema {
         private final StructSchema annotation;
 
         @Override
-        public SchemaMapper<?, ?> mapper(final TypeContext type) {
+        public SchemaMapper<?, ?> mapper(final MappingContext context, final TypeContext type) {
 
             final String name = annotation.name().equals(INFER_NAME) ? type.simpleName() : annotation.name();
-            return new StructSchemaMapper<>(name, type);
+            return new StructSchemaMapper<>(context, name, type);
         }
     }
 }

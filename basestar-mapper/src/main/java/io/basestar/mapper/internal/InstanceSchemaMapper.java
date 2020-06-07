@@ -1,5 +1,7 @@
 package io.basestar.mapper.internal;
 
+import io.basestar.mapper.MappingContext;
+import io.basestar.mapper.SchemaMapper;
 import io.basestar.mapper.internal.annotation.MemberDeclaration;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.type.AnnotationContext;
@@ -8,11 +10,10 @@ import io.basestar.type.has.HasType;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
+
+// FIXME: inheritance not implemented
 
 public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> implements SchemaMapper<T, Map<String, Object>> {
 
@@ -23,10 +24,16 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
     private final List<MemberMapper<B>> members;
 
     @SuppressWarnings("unchecked")
-    public InstanceSchemaMapper(final String name, final TypeContext type, final Class<B> builderType) {
+    public InstanceSchemaMapper(final MappingContext context, final String name, final TypeContext type, final Class<B> builderType) {
 
         this.name = name;
         this.type = type;
+
+//        TypeContext superclass = type.superclass();
+//        while(!superclass.erasedType().equals(Object.class)) {
+//            if()
+//            superclass = superclass.superclass();
+//        }
 
         final List<MemberMapper<B>> members = new ArrayList<>();
         type.properties().forEach(prop -> {
@@ -39,13 +46,13 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
 
                 if (propAnnotations.size() == 0) {
                     // FIXME
-                    members.add((MemberMapper<B>)new PropertyMapper(prop.name(), prop));
+                    members.add((MemberMapper<B>)new PropertyMapper(context, prop.name(), prop));
                 } else if (propAnnotations.size() == 1) {
                     final AnnotationContext<?> annotation = propAnnotations.get(0);
                     final MemberDeclaration memberDeclaration = annotation.type().annotation(MemberDeclaration.class).annotation();
                     final TypeContext declType = TypeContext.from(memberDeclaration.value());
                     final MemberDeclaration.Declaration decl = member(declType, annotation.annotation());
-                    final MemberMapper<?> member = decl.mapper(prop);
+                    final MemberMapper<?> member = decl.mapper(context, prop);
                     final TypeContext mapperType = TypeContext.from(member.getClass());
                     final Class<?> memberBuilderType = mapperType.find(MemberMapper.class).typeParameters().get(0).type().erasedType();
                     if(memberBuilderType.isAssignableFrom(builderType)) {
@@ -123,9 +130,11 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
     }
 
     @Override
-    public TypeContext unmarshalledType() {
+    public Set<Class<?>> dependencies() {
 
-        return TypeContext.from(Map.class, String.class, Object.class);
+        final Set<Class<?>> all = new HashSet<>();
+        members.forEach(m -> all.addAll(m.dependencies()));
+        return all;
     }
 
     private static MemberDeclaration.Declaration member(final TypeContext declType, final Annotation annotation) {

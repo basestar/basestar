@@ -20,6 +20,7 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
+import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.MemberMapper;
 import io.basestar.mapper.internal.MetadataMapper;
 import io.basestar.mapper.internal.annotation.MemberDeclaration;
@@ -40,9 +41,9 @@ public @interface Version {
         private final Version annotation;
 
         @Override
-        public MemberMapper<?> mapper(final PropertyContext prop) {
+        public MemberMapper<?> mapper(final MappingContext context, final PropertyContext prop) {
 
-            return new MetadataMapper(MetadataMapper.Name.VERSION, prop);
+            return new MetadataMapper(context, MetadataMapper.Name.VERSION, prop);
         }
     }
 }

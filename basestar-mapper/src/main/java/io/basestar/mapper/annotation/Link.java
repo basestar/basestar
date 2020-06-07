@@ -21,6 +21,7 @@ package io.basestar.mapper.annotation;
  */
 
 import io.basestar.expression.Expression;
+import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.LinkMapper;
 import io.basestar.mapper.internal.MemberMapper;
 import io.basestar.mapper.internal.annotation.MemberDeclaration;
@@ -54,12 +55,12 @@ public @interface Link {
         private final Link annotation;
 
         @Override
-        public MemberMapper<?> mapper(final PropertyContext prop) {
+        public MemberMapper<?> mapper(final MappingContext context, final PropertyContext prop) {
 
             final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
             final Expression expression = Expression.parse(annotation.expression());
             final List<Sort> sort = Arrays.stream(annotation.sort()).map(Sort::parse).collect(Collectors.toList());
-            return new LinkMapper(name, prop, expression, sort);
+            return new LinkMapper(context, name, prop, expression, sort);
         }
     }
 }

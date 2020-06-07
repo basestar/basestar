@@ -20,6 +20,7 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
+import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.MemberMapper;
 import io.basestar.mapper.internal.PropertyMapper;
 import io.basestar.mapper.internal.annotation.MemberDeclaration;
@@ -44,10 +45,10 @@ public @interface Property {
         private final Property annotation;
 
         @Override
-        public MemberMapper<?> mapper(final PropertyContext prop) {
+        public MemberMapper<?> mapper(final MappingContext context, final PropertyContext prop) {
 
             final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
-            return new PropertyMapper(name, prop);
+            return new PropertyMapper(context, name, prop);
         }
     }
 }
