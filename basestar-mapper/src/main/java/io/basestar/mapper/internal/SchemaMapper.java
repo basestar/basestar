@@ -56,4 +56,6 @@ public interface SchemaMapper<T, O> {
             throw new IllegalStateException("Annotations " + names + " are not allowed on the same type");
         }
     }
+
+    TypeContext unmarshalledType();
 }

@@ -1,11 +1,11 @@
 package io.basestar.mapper.internal;
 
+import io.basestar.expression.type.Coercion;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.type.PropertyContext;
 
 import java.lang.reflect.InvocationTargetException;
-import java.time.LocalDateTime;
 import java.util.Map;
 
 public class MetadataMapper implements MemberMapper<ObjectSchema.Builder> {
@@ -21,6 +21,12 @@ public class MetadataMapper implements MemberMapper<ObjectSchema.Builder> {
         this.name = name;
         this.property = property;
         this.type = TypeMapper.from(property.type());
+    }
+
+    @Override
+    public TypeMapper getType() {
+
+        return type;
     }
 
     @Override
@@ -59,7 +65,7 @@ public class MetadataMapper implements MemberMapper<ObjectSchema.Builder> {
             @Override
             public void unmarshall(final TypeMapper type, final Map<String, Object> target, final Object value) {
 
-                Instance.setCreated(target, type.unmarshall(value, LocalDateTime.class));
+                Instance.setCreated(target, Coercion.toDateTime(type.unmarshall(value)));
             }
         },
         UPDATED {
@@ -72,7 +78,7 @@ public class MetadataMapper implements MemberMapper<ObjectSchema.Builder> {
             @Override
             public void unmarshall(final TypeMapper type, final Map<String, Object> target, final Object value) {
 
-                Instance.setUpdated(target, type.unmarshall(value, LocalDateTime.class));
+                Instance.setUpdated(target, Coercion.toDateTime(type.unmarshall(value)));
             }
         },
         HASH {
@@ -85,7 +91,7 @@ public class MetadataMapper implements MemberMapper<ObjectSchema.Builder> {
             @Override
             public void unmarshall(final TypeMapper type, final Map<String, Object> target, final Object value) {
 
-                Instance.setHash(target, type.unmarshall(value, String.class));
+                Instance.setHash(target, Coercion.toString(type.unmarshall(value)));
             }
         },
         VERSION {
@@ -98,7 +104,7 @@ public class MetadataMapper implements MemberMapper<ObjectSchema.Builder> {
             @Override
             public void unmarshall(final TypeMapper type, final Map<String, Object> target, final Object value) {
 
-                Instance.setVersion(target, type.unmarshall(value, Long.class));
+                Instance.setVersion(target, Coercion.toLong(type.unmarshall(value)));
             }
         };
 

@@ -20,17 +20,21 @@ package io.basestar.mapper.internal;
  * #L%
  */
 
-import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import io.basestar.expression.type.Coercion;
+import io.basestar.expression.type.Numbers;
 import io.basestar.schema.use.*;
 import io.basestar.type.TypeContext;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Supplier;
 
 public interface TypeMapper {
 
@@ -40,22 +44,14 @@ public interface TypeMapper {
 
     Object marshall(Object value);
 
-    default <T> T unmarshall(Object value, Class<T> to) {
-
-        // FIXME:
-        return to.cast(unmarshall(value));
-    }
-
     static TypeMapper from(final TypeContext context) {
 
         final Class<?> erased = context.erasedType();
         if(boolean.class.isAssignableFrom(erased) || Boolean.class.isAssignableFrom(erased)) {
             return new OfBoolean(context);
-        } else if(short.class.isAssignableFrom(erased) || int.class.isAssignableFrom(erased) || long.class.isAssignableFrom(erased)
-            || Short.class.isAssignableFrom(erased) || Integer.class.isAssignableFrom(erased) || Long.class.isAssignableFrom(erased)) {
+        } else if(Numbers.isIntegerType(erased)) {
             return new OfInteger(context);
-        } else if(float.class.isAssignableFrom(erased) || double.class.isAssignableFrom(erased)
-                || Float.class.isAssignableFrom(erased) || Double.class.isAssignableFrom(erased)) {
+        } else if(Numbers.isRealType(erased)) {
             return new OfNumber(context);
         } else if(String.class.isAssignableFrom(erased)) {
             return new OfString(context);
@@ -68,8 +64,11 @@ public interface TypeMapper {
             final TypeContext valueType = collectionContext.typeParameters().get(0).type();
             return new OfArray(context, from(valueType));
         } else if(erased.isArray()) {
-            // FIXME
-            throw new UnsupportedOperationException();
+            if(byte[].class.isAssignableFrom(erased)) {
+                return new OfBinary(context);
+            } else {
+                throw new UnsupportedOperationException();
+            }
         } else if(Map.class.isAssignableFrom(erased)){
             final TypeContext mapContext = context.find(Map.class);
             final TypeContext valueType = mapContext.typeParameters().get(1).type();
@@ -107,7 +106,7 @@ public interface TypeMapper {
         @Override
         public Object marshall(final Object value) {
 
-            return UseBoolean.DEFAULT.create(value);
+            return Coercion.toBoolean(value);
         }
     }
 
@@ -131,7 +130,8 @@ public interface TypeMapper {
         @Override
         public Object marshall(final Object value) {
 
-            return UseInteger.DEFAULT.create(value);
+            final Long v = Coercion.toLong(value);
+            return Numbers.coerce(v, context.erasedType());
         }
     }
 
@@ -155,7 +155,8 @@ public interface TypeMapper {
         @Override
         public Object marshall(final Object value) {
 
-            return UseNumber.DEFAULT.create(value);
+            final Double v = Coercion.toDouble(value);
+            return Numbers.coerce(v, context.erasedType());
         }
     }
 
@@ -179,7 +180,7 @@ public interface TypeMapper {
         @Override
         public Object marshall(final Object value) {
 
-            return UseString.DEFAULT.create(value);
+            return Coercion.toString(value);
         }
     }
 
@@ -188,7 +189,8 @@ public interface TypeMapper {
 
         private final TypeContext context;
 
-        final TypeMapper value;
+        @Getter
+        private final TypeMapper value;
 
         @Override
         public Use<?> use() {
@@ -199,13 +201,13 @@ public interface TypeMapper {
         @Override
         public Object unmarshall(final Object value) {
 
-            return UseArray.create(value, false, this.value::marshall);
+            return UseArray.create(value, false, this.value::unmarshall);
         }
 
         @Override
         public Object marshall(final Object value) {
 
-            return UseArray.create(value, false, this.value::marshall);
+            return Coercion.toList(value, context.erasedType(), this.value::marshall);
         }
     }
 
@@ -214,7 +216,8 @@ public interface TypeMapper {
 
         private final TypeContext context;
 
-        final TypeMapper value;
+        @Getter
+        private final TypeMapper value;
 
         @Override
         public Use<?> use() {
@@ -225,13 +228,13 @@ public interface TypeMapper {
         @Override
         public Object unmarshall(final Object value) {
 
-            return UseSet.create(value, false, this.value::marshall);
+            return UseSet.create(value, false, this.value::unmarshall);
         }
 
         @Override
         public Object marshall(final Object value) {
 
-            return UseSet.create(value, false, this.value::marshall);
+            return Coercion.toSet(value, context.erasedType(), this.value::marshall);
         }
     }
 
@@ -240,7 +243,8 @@ public interface TypeMapper {
 
         private final TypeContext context;
 
-        final TypeMapper value;
+        @Getter
+        private final TypeMapper value;
 
         @Override
         public Use<?> use() {
@@ -251,13 +255,13 @@ public interface TypeMapper {
         @Override
         public Object unmarshall(final Object value) {
 
-            return UseMap.create(value, false, this.value::marshall);
+            return UseMap.create(value, false, this.value::unmarshall);
         }
 
         @Override
         public Object marshall(final Object value) {
 
-            return UseMap.create(value, false, this.value::marshall);
+            return Coercion.toMap(value, context.erasedType(), Objects::toString, this.value::marshall);
         }
     }
 
@@ -272,6 +276,11 @@ public interface TypeMapper {
 
             this.context = context;
             this.mapper =  Suppliers.memoize(() -> SchemaMapper.mapper(context));
+        }
+
+        public SchemaMapper<?, ?> getMapper() {
+
+            return mapper.get();
         }
 
         @Override
@@ -314,7 +323,7 @@ public interface TypeMapper {
         @Override
         public Object marshall(final Object value) {
 
-            return UseDate.DEFAULT.create(value);
+            return Coercion.toDate(value);
         }
     }
 
@@ -338,7 +347,31 @@ public interface TypeMapper {
         @Override
         public Object marshall(final Object value) {
 
-            return UseDateTime.DEFAULT.create(value);
+            return Coercion.toDateTime(value);
+        }
+    }
+
+    @RequiredArgsConstructor
+    class OfBinary implements TypeMapper {
+
+        private final TypeContext context;
+
+        @Override
+        public Use<?> use() {
+
+            return UseBinary.DEFAULT;
+        }
+
+        @Override
+        public Object unmarshall(final Object value) {
+
+            return UseBinary.DEFAULT.create(value);
+        }
+
+        @Override
+        public Object marshall(final Object value) {
+
+            return Coercion.toBinary(value);
         }
     }
 }

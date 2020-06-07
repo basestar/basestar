@@ -20,11 +20,42 @@ package io.basestar.type.has;
  * #L%
  */
 
+import java.lang.reflect.Modifier;
 import java.util.function.Predicate;
 
 public interface HasModifiers {
 
     int modifiers();
+
+    default boolean isAbstract() {
+
+        return Modifier.isAbstract(modifiers());
+    }
+
+    default boolean isPublic() {
+
+        return Modifier.isPublic(modifiers());
+    }
+
+    default boolean isPrivate() {
+
+        return Modifier.isPrivate(modifiers());
+    }
+
+    default boolean isProtected() {
+
+        return Modifier.isProtected(modifiers());
+    }
+
+    default boolean isStatic() {
+
+        return Modifier.isStatic(modifiers());
+    }
+
+    default boolean isFinal() {
+
+        return Modifier.isFinal(modifiers());
+    }
 
     static Predicate<HasModifiers> match(final int modifiers) {
 

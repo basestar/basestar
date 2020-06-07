@@ -1,6 +1,7 @@
 package io.basestar.mapper.internal;
 
 import io.basestar.expression.Expression;
+import io.basestar.expression.type.Coercion;
 import io.basestar.schema.Id;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
@@ -25,6 +26,12 @@ public class IdMapper implements MemberMapper<ObjectSchema.Builder> {
     }
 
     @Override
+    public TypeMapper getType() {
+
+        return type;
+    }
+
+    @Override
     public void addToSchema(final ObjectSchema.Builder builder) {
 
         if(expression != null) {
@@ -37,7 +44,7 @@ public class IdMapper implements MemberMapper<ObjectSchema.Builder> {
     public void unmarshall(final Object source, final Map<String, Object> target) throws InvocationTargetException, IllegalAccessException {
 
         if(property.canGet()) {
-            final String id = type.unmarshall(property.get(source), String.class);
+            final String id = Coercion.toString(type.unmarshall(property.get(source)));
             Instance.setId(target, id);
         }
     }

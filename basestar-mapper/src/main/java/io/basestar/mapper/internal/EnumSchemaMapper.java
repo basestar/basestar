@@ -53,4 +53,10 @@ public class EnumSchemaMapper<T extends Enum<?>> implements SchemaMapper<T, Stri
 
         return value == null ? null : value.name();
     }
+
+    @Override
+    public TypeContext unmarshalledType() {
+
+        return TypeContext.from(String.class);
+    }
 }

@@ -33,6 +33,7 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 public class TestMapper {
 
@@ -54,6 +55,8 @@ public class TestMapper {
 
         @Hash
         private String hash;
+
+        private double value;
 
         @Version
         private Long version;
@@ -84,17 +87,22 @@ public class TestMapper {
 
         final Post post = schemaMapper.marshall(new Instance(ImmutableMap.of(
                 Reserved.ID, "test",
-                Reserved.VERSION, 1L,
+//                Reserved.VERSION, 1L,
                 "date", "2020-01-01",
                 "comments", ImmutableList.of(ImmutableMap.of(
                         Reserved.ID, "c1"
                 )),
                 "comment", ImmutableMap.of(
                         Reserved.ID, "c1"
-                )
+                ),
+                "value", (byte) 12
         )));
 
         System.err.println(schema);
         System.err.println(post);
+
+        final Map<String, ?> unmarshalled = schemaMapper.unmarshall(post);
+
+        System.err.println(unmarshalled);
     }
 }

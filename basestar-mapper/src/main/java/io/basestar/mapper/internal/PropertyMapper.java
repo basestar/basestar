@@ -23,6 +23,12 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
     }
 
     @Override
+    public TypeMapper getType() {
+
+        return type;
+    }
+
+    @Override
     public void addToSchema(final InstanceSchema.Builder builder) {
 
         builder.setProperty(name, Property.builder()
@@ -34,7 +40,7 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
 
         if(property.canGet()) {
             final Object value = property.get(source);
-            target.put(name, type.unmarshall(value, Object.class));
+            target.put(name, type.unmarshall(value));
         }
     }
 

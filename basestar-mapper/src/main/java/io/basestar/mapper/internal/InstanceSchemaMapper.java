@@ -47,7 +47,7 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
                     final MemberDeclaration.Declaration decl = member(declType, annotation.annotation());
                     final MemberMapper<?> member = decl.mapper(prop);
                     final TypeContext mapperType = TypeContext.from(member.getClass());
-                    final Class<?> memberBuilderType = mapperType.find(MemberMapper.class).typeParameters().get(0).type().rawType();
+                    final Class<?> memberBuilderType = mapperType.find(MemberMapper.class).typeParameters().get(0).type().erasedType();
                     if(memberBuilderType.isAssignableFrom(builderType)) {
                         members.add((MemberMapper<B>)member);
                     } else {
@@ -91,7 +91,7 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
         } else if(source instanceof Map<?, ?>) {
             final Map<String, Object> value = (Map<String, Object>)source;
             try {
-                final T target = (T) type.rawType().newInstance();
+                final T target = (T) type.erasedType().newInstance();
                 for (final MemberMapper<B> member : members) {
                     member.marshall(value, target);
                 }
@@ -120,6 +120,12 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
                 throw new IllegalStateException(e);
             }
         }
+    }
+
+    @Override
+    public TypeContext unmarshalledType() {
+
+        return TypeContext.from(Map.class, String.class, Object.class);
     }
 
     private static MemberDeclaration.Declaration member(final TypeContext declType, final Annotation annotation) {

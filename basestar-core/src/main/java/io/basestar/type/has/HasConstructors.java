@@ -8,5 +8,5 @@ public interface HasConstructors {
 
     List<ConstructorContext> declaredConstructors();
 
-//    List<ConstructorContext> constructors();
+    List<ConstructorContext> constructors();
 }
