@@ -52,7 +52,7 @@ public class TestCognitoStorage {
 
         final Map<String, Object> data = new HashMap<>();
         Instance.setId(data, id);
-        Instance.setVersion(data, 0L);
+        Instance.setVersion(data, 1L);
         data.put("test", "value1");
         data.put("organization", ImmutableMap.of(
                 "id", "org1"
@@ -67,6 +67,7 @@ public class TestCognitoStorage {
         assertValid(before, storage.readObject(schema, id).join());
 
         data.put("test", "value2");
+        Instance.setVersion(data, 2L);
         data.put("organization", ImmutableMap.of(
                 "id", "org2"
         ));
@@ -85,8 +86,6 @@ public class TestCognitoStorage {
         assertEquals("User", Instance.getSchema(actual));
         assertNotNull(Instance.getCreated(actual));
         assertNotNull(Instance.getUpdated(actual));
-//        assertNotNull(Instance.getHash(actual));
-        assertEquals(0, Instance.getVersion(actual));
         expected.forEach((k, v) -> {
             final Object v2 = actual.get(k);
             // Database layer will add this

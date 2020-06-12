@@ -22,6 +22,7 @@ package io.basestar.storage.cognito;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
@@ -42,10 +43,7 @@ import software.amazon.awssdk.services.cognitoidentityprovider.model.*;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -53,6 +51,12 @@ import java.util.stream.Collectors;
 public class CognitoUserStorage implements Storage {
 
     private static final String CUSTOM_ATTR_PREFIX = "custom:";
+
+    private static final Set<String> REQUIRED_ATTRS = ImmutableSet.of(
+            "address", "birthdate", "email", "family_name", "gender", "given_name", "locale", "middle_name",
+            "name", "nickname", "phone_number", "picture", "preferred_username", "profile", "updated_at",
+            "website", "zoneinfo"
+    );
 
     private final CognitoIdentityProviderAsyncClient client;
 
@@ -240,10 +244,19 @@ public class CognitoUserStorage implements Storage {
     private List<AttributeType> attributes(final ObjectSchema schema, final Map<String, Object> after) {
 
         final List<AttributeType> result = new ArrayList<>();
+        final Long version = Instance.getVersion(after);
+        if(version != null) {
+            result.add(AttributeType.builder().name(CUSTOM_ATTR_PREFIX + Reserved.VERSION).value(Long.toString(version)).build());
+        }
         for(final Map.Entry<String, Property> entry : schema.getProperties().entrySet()) {
             final String name = entry.getKey();
             attributes(Path.of(name), entry.getValue().getType(), after.get(name)).forEach((k, v) -> {
-                result.add(AttributeType.builder().name(CUSTOM_ATTR_PREFIX + k).value(v).build());
+                final String attrName = k.toString();
+                if(REQUIRED_ATTRS.contains(attrName)) {
+                    result.add(AttributeType.builder().name(attrName).value(v).build());
+                } else {
+                    result.add(AttributeType.builder().name(CUSTOM_ATTR_PREFIX + attrName).value(v).build());
+                }
             });
         }
         return result;
@@ -324,7 +337,6 @@ public class CognitoUserStorage implements Storage {
         final Map<String, Object> result = new HashMap<>();
         Instance.setSchema(result, schema.getName());
         Instance.setId(result, username);
-        Instance.setVersion(result, 0L);
         if(created != null) {
             Instance.setCreated(result, LocalDateTime.ofInstant(created, ZoneOffset.UTC));
         }
@@ -333,10 +345,20 @@ public class CognitoUserStorage implements Storage {
         }
         final Map<Path, String> attrs = new HashMap<>();
         attributes.forEach(attr -> {
+            final String name;
             if(attr.name().startsWith(CUSTOM_ATTR_PREFIX)) {
-                attrs.put(Path.parse(attr.name().substring(CUSTOM_ATTR_PREFIX.length())), attr.value());
+                name = attr.name().substring(CUSTOM_ATTR_PREFIX.length());
+            } else {
+                name = attr.name();
             }
+            attrs.put(Path.parse(name), attr.value());
         });
+        final String version = attrs.get(Path.of(Reserved.VERSION));
+        if(version == null) {
+            Instance.setVersion(result, 1L);
+        } else {
+            Instance.setVersion(result, Long.valueOf(version));
+        }
         schema.getProperties().forEach((name, prop) -> {
             result.put(name, from(Path.of(name), prop.getType(), attrs));
         });
