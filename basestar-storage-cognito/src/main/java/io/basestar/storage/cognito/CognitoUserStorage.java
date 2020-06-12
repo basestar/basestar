@@ -21,8 +21,10 @@ package io.basestar.storage.cognito;
  */
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
+import io.basestar.schema.use.*;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
@@ -30,6 +32,7 @@ import io.basestar.storage.aggregate.Aggregate;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.PagedList;
 import io.basestar.util.PagingToken;
+import io.basestar.util.Path;
 import io.basestar.util.Sort;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -39,12 +42,17 @@ import software.amazon.awssdk.services.cognitoidentityprovider.model.*;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class CognitoUserStorage implements Storage {
+
+    private static final String CUSTOM_ATTR_PREFIX = "custom:";
 
     private final CognitoIdentityProviderAsyncClient client;
 
@@ -234,10 +242,67 @@ public class CognitoUserStorage implements Storage {
         final List<AttributeType> result = new ArrayList<>();
         for(final Map.Entry<String, Property> entry : schema.getProperties().entrySet()) {
             final String name = entry.getKey();
-            final String value = Objects.toString(after.get(name));
-            result.add(AttributeType.builder().name(name).value(value).build());
+            attributes(Path.of(name), entry.getValue().getType(), after.get(name)).forEach((k, v) -> {
+                result.add(AttributeType.builder().name(CUSTOM_ATTR_PREFIX + k).value(v).build());
+            });
         }
         return result;
+    }
+
+    public Map<Path, String> attributes(final Path path, final Use<?> use, final Object value) {
+
+        return use.visit(new Use.Visitor.Defaulting<Map<Path, String>>() {
+
+            @Override
+            public Map<Path, String> visitDefault(final Use<?> type) {
+
+                throw new UnsupportedOperationException("Type " + type.code() + " not supported");
+            }
+
+            @Override
+            public Map<Path, String> visitBoolean(final UseBoolean type) {
+
+                return value == null ? ImmutableMap.of() : ImmutableMap.of(path, Boolean.toString(type.create(value)));
+            }
+
+            @Override
+            public Map<Path, String> visitInteger(final UseInteger type) {
+
+                return value == null ? ImmutableMap.of() : ImmutableMap.of(path, Long.toString(type.create(value)));
+            }
+
+            @Override
+            public Map<Path, String> visitString(final UseString type) {
+
+                return value == null ? ImmutableMap.of() : ImmutableMap.of(path, type.create(value));
+            }
+
+            @Override
+            public Map<Path, String> visitStruct(final UseStruct type) {
+
+                final Map<String, Object> instance = type.create(value);
+                if(instance != null) {
+                    final Map<Path, String> result = new HashMap<>();
+                    type.getSchema().getProperties().forEach((name, prop) -> {
+                        result.putAll(attributes(path.with(name), prop.getType(), instance.get(name)));
+                    });
+                    return result;
+                } else {
+                    return ImmutableMap.of();
+                }
+            }
+
+            @Override
+            public Map<Path, String> visitRef(final UseRef type) {
+
+                final Instance instance = type.create(value);
+                if(instance != null) {
+                    return ImmutableMap.of(path.with(Reserved.ID), Instance.getId(instance));
+                } else {
+                    return ImmutableMap.of();
+                }
+            }
+        });
     }
 
     private Map<String, Object> fromUser(final ObjectSchema schema, final UserType user) {
@@ -259,17 +324,66 @@ public class CognitoUserStorage implements Storage {
         final Map<String, Object> result = new HashMap<>();
         Instance.setSchema(result, schema.getName());
         Instance.setId(result, username);
+        Instance.setVersion(result, 0L);
         if(created != null) {
             Instance.setCreated(result, LocalDateTime.ofInstant(created, ZoneOffset.UTC));
         }
         if(updated != null) {
             Instance.setUpdated(result, LocalDateTime.ofInstant(updated, ZoneOffset.UTC));
         }
-        attributes.forEach(attr -> result.put(attr.name(), attr.value()));
+        final Map<Path, String> attrs = new HashMap<>();
+        attributes.forEach(attr -> {
+            if(attr.name().startsWith(CUSTOM_ATTR_PREFIX)) {
+                attrs.put(Path.parse(attr.name().substring(CUSTOM_ATTR_PREFIX.length())), attr.value());
+            }
+        });
+        schema.getProperties().forEach((name, prop) -> {
+            result.put(name, from(Path.of(name), prop.getType(), attrs));
+        });
+
         if(userStatus != null) {
             result.put("status", userStatus.toString());
         }
         result.put("enabled", enabled);
         return result;
+    }
+
+    public Object from(final Path path, final Use<?> use, final Map<Path, String> attrs) {
+
+        return use.visit(new Use.Visitor.Defaulting<Object>() {
+
+            @Override
+            public Object visitDefault(final Use<?> type) {
+
+                throw new UnsupportedOperationException("Type " + type.code() + " not supported");
+            }
+
+            @Override
+            public Object visitScalar(final UseScalar<?> type) {
+
+                return type.create(attrs.get(path));
+            }
+
+            @Override
+            public Map<String, Object> visitStruct(final UseStruct type) {
+
+                final Map<String, Object> result = new HashMap<>();
+                type.getSchema().getProperties().forEach((name, prop) -> {
+                    result.put(name, from(path.with(name), prop.getType(), attrs));
+                });
+                if(result.isEmpty()) {
+                    return null;
+                } else {
+                    return result;
+                }
+            }
+
+            @Override
+            public Map<String, Object> visitRef(final UseRef type) {
+
+                final String id = attrs.get(path.with(Reserved.ID));
+                return id == null ? null : ObjectSchema.ref(id);
+            }
+        });
     }
 }
