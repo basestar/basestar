@@ -21,8 +21,10 @@ package io.basestar.auth;
  */
 
 import io.basestar.util.Nullsafe;
+import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 
 import java.util.Collections;
 import java.util.Map;
@@ -49,6 +51,7 @@ public interface Caller {
     }
 
     @Setter
+    @Accessors(chain = true)
     class Builder {
 
         private String schema;
@@ -59,6 +62,7 @@ public interface Caller {
 
         private boolean anon;
 
+        @Setter(AccessLevel.NONE)
         private boolean _super;
 
         public void setSuper(final boolean value) {
