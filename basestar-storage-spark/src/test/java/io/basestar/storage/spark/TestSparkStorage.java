@@ -53,7 +53,7 @@ public class TestSparkStorage extends TestStorage {
             @Override
             public Dataset<Row> objectRead(final SparkSession session, final ObjectSchema schema) {
 
-                final StructType structType = SparkSchemaUtils.structType(schema);
+                final StructType structType = SparkSchemaUtils.structType(schema, null);
                 final List<Row> items = Nullsafe.option(data.get(schema.getName())).stream()
                         .map(schema::create)
                         .map(v -> SparkSchemaUtils.toSpark(schema, structType, v))

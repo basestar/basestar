@@ -23,7 +23,7 @@ package io.basestar.storage.elasticsearch;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.storage.elasticsearch.mapping.Mappings;
 import io.basestar.storage.elasticsearch.mapping.Settings;
-import io.basestar.util.CompletableFutures;
+import io.basestar.util.Throwables;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.ElasticsearchStatusException;
 import org.elasticsearch.action.ActionListener;
@@ -38,7 +38,9 @@ import org.elasticsearch.client.indices.PutMappingRequest;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 @Slf4j
 public class ElasticsearchUtils {
@@ -77,21 +79,22 @@ public class ElasticsearchUtils {
     public static CompletableFuture<?> syncIndex(final RestHighLevelClient client, final String name, final Mappings mappings, final Settings settings) {
 
         return ElasticsearchUtils.<CreateIndexResponse>future(listener ->
-                client.indices().createAsync(new CreateIndexRequest(name)
-                        .source(createIndexSource(mappings, settings)), OPTIONS, listener))
-                .handle((result, error) -> {
-                    if(error != null) {
-                        //FIXME:
-                        if(error instanceof ElasticsearchStatusException && ((ElasticsearchStatusException) error).getDetailedMessage().contains("resource_already_exists_exception")) {
-                            return CompletableFuture.allOf(
-                                    putMappings(client, name, mappings),
-                                    putDynamicSettings(client, name, settings)
-                            );
-                        } else {
-                            return CompletableFutures.completedExceptionally(error);
-                        }
+                client.indices().createAsync(new CreateIndexRequest(name).source(createIndexSource(mappings, settings)), OPTIONS, listener))
+                .exceptionally(e -> {
+                    final Optional<ElasticsearchStatusException> statusException = Throwables.find(e, ElasticsearchStatusException.class);
+                    if(statusException.map(s -> s.getDetailedMessage().contains("resource_already_exists_exception")).orElse(false)) {
+                        return null;
                     } else {
-                        return result;
+                        throw Throwables.runtimeCause(e).orElseGet(() -> new CompletionException(e));
+                    }
+                }).thenCompose(v -> {
+                    if(v == null) {
+                        return CompletableFuture.allOf(
+                                putMappings(client, name, mappings),
+                                putDynamicSettings(client, name, settings)
+                        );
+                    } else {
+                        return CompletableFuture.completedFuture(null);
                     }
                 });
     }

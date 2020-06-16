@@ -92,6 +92,20 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
         return AttributeType.BINARY;
     }
 
+    @Override
+    public AttributeType<?> visitDate(final UseDate type) {
+
+        //FIXME
+        return AttributeType.encoded(type);
+    }
+
+    @Override
+    public AttributeType<?> visitDateTime(final UseDateTime type) {
+
+        //FIXME
+        return AttributeType.encoded(type);
+    }
+
     public static class ForArray implements Use.Visitor<AttributeType<?>> {
 
         public static final ForArray INSTANCE = new ForArray();
@@ -159,6 +173,20 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
         @Override
         public AttributeType<?> visitBinary(final UseBinary type) {
 
+            return AttributeType.encodedArray(type);
+        }
+
+        @Override
+        public AttributeType<?> visitDate(final UseDate type) {
+
+            //FIXME
+            return AttributeType.encodedArray(type);
+        }
+
+        @Override
+        public AttributeType<?> visitDateTime(final UseDateTime type) {
+
+            //FIXME
             return AttributeType.encodedArray(type);
         }
     }

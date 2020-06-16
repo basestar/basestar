@@ -29,6 +29,8 @@ import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
+// FIXME: some of these methods should be superseded by methods in Coercion/Numbers
+
 public class Values {
 
     public static boolean isTruthy(final Object value) {

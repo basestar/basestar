@@ -155,7 +155,7 @@ public class ForArray implements Expression {
     }
 
     @Override
-    public Expression create(final List<Expression> expressions) {
+    public Expression copy(final List<Expression> expressions) {
 
         assert expressions.size() == 2;
         return new ForArray(expressions.get(0), expressions.get(1));

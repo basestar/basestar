@@ -54,7 +54,7 @@ public class UseInteger implements UseScalar<Long> {
 
     public static UseInteger from(final Object config) {
 
-        return new UseInteger();
+        return DEFAULT;
     }
 
     @Override

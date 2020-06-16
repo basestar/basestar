@@ -27,7 +27,9 @@ import java.util.concurrent.CompletableFuture;
 
 public interface Authenticator {
 
-    CompletableFuture<Caller> authenticate(String authorization);
+    boolean canAuthenticate(Authorization auth);
+
+    CompletableFuture<Caller> authenticate(Authorization auth);
 
     Map<String, SecurityScheme> openApi();
 

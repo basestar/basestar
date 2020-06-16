@@ -25,11 +25,11 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Index;
 import io.basestar.schema.*;
-import io.basestar.schema.aggregate.Aggregate;
 import io.basestar.schema.use.Use;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
+import io.basestar.storage.aggregate.Aggregate;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.DisjunctionVisitor;
@@ -148,7 +148,6 @@ public class SQLStorage implements Storage {
                         return v.getOrder() == Sort.Order.ASC ? field.asc() : field.desc();
                     })
                     .collect(Collectors.toList());
-
 
             final Index index = best;
             sources.add((count, token) ->

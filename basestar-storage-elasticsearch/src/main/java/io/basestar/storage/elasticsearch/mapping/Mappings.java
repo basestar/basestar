@@ -163,6 +163,18 @@ public class Mappings {
 
                         return FieldType.BINARY;
                     }
+
+                    @Override
+                    public FieldType visitDate(final UseDate type) {
+
+                        return FieldType.DATE;
+                    }
+
+                    @Override
+                    public FieldType visitDateTime(final UseDateTime type) {
+
+                        return FieldType.DATETIME;
+                    }
                 });
             }
         }

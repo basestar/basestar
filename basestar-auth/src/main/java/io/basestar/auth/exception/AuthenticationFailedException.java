@@ -29,6 +29,11 @@ public class AuthenticationFailedException extends RuntimeException implements H
 
     public static final String CODE = "AuthenticationFailed";
 
+    public AuthenticationFailedException(final String message) {
+
+        super(message);
+    }
+
     public AuthenticationFailedException(final String message, final Throwable cause) {
 
         super(message, cause);

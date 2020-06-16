@@ -20,10 +20,14 @@ package io.basestar.storage;
  * #L%
  */
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
+import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
-import io.basestar.schema.aggregate.Aggregate;
+import io.basestar.storage.aggregate.Aggregate;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;
@@ -40,6 +44,7 @@ import javax.annotation.Nonnull;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 // TODO optimize, this is currently used only as a mock so not important but should be a viable implementation
 
@@ -91,7 +96,38 @@ public class MemoryStorage extends PartitionedStorage {
     @Override
     public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
 
-        throw new UnsupportedOperationException();
+        // FIXME: only implemented for testing, this is equivalent to an all-objects-scan
+        synchronized (lock) {
+
+            final Multimap<Map<String, Object>, Map<String, Object>> groups = HashMultimap.create();
+
+            state.objects.forEach((typeId, object) -> {
+                if(typeId.getType().equals(schema.getName())) {
+                    final Map<String, Object> g = group.entrySet().stream().collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            e -> e.getValue().evaluate(Context.init(object))
+                    ));
+                    groups.put(g, object);
+                }
+            });
+
+            final List<Map<String, Object>> page = new ArrayList<>();
+            groups.asMap().forEach((key, values) -> {
+                final Map<String, Object> row = new HashMap<>();
+                key.forEach(row::put);
+                aggregates.forEach((name, agg) -> {
+                    values.forEach(value -> {
+                        final Object col = agg.evaluate(Context.init(), values.stream());
+                        row.put(name, col);
+                    });
+                });
+                page.add(row);
+            });
+
+            return ImmutableList.of(
+                    (count, token) -> CompletableFuture.completedFuture(new PagedList<>(page, null))
+            );
+        }
     }
 
     @Override

@@ -40,6 +40,7 @@ import io.basestar.util.PagedList;
 import io.basestar.util.Path;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.mockito.ArgumentCaptor;
@@ -62,6 +63,8 @@ public class TestDatabaseServer {
     private static final String INDEXED = "Indexed";
 
     private static final String MULTI_INDEXED = "MultiIndexed";
+
+    private static final String MAP_MULTI_INDEXED = "MapMultiIndexed";
 
     private static final String REF_SOURCE = "RefSource";
 
@@ -264,27 +267,35 @@ public class TestDatabaseServer {
         final Map<String, Object> createA = database.create(caller, MULTI_INDEXED, idA, dataA).get();
         assertObject(MULTI_INDEXED, idA, 1, dataA, createA);
 
-//        final Map<String, Object> readA = database.read(caller, INDEXED, idA).get();
-//        assertEquals(createA, readA);
-//
-//        final String idB = UUID.randomUUID().toString();
-//        final Map<String, Object> dataB = ImmutableMap.of(
-//                "value", "b"
-//        );
-//
-//        final Map<String, Object> createB = database.create(caller, INDEXED, idB, dataB).get();
-//        assertObject(INDEXED, idB, 1, dataB, createB);
-//
-//        final Map<String, Object> readB = database.read(caller, INDEXED, idB).get();
-//        assertEquals(createB, readB);
-//
-//        final PagedList<Instance> queryA = database.query(caller, INDEXED, Expression.parse("value == 'a'")).get();
-//        assertEquals(1, queryA.size());
-//        assertEquals(readA, queryA.get(0));
-//
-//        final PagedList<Instance> queryB = database.query(caller, INDEXED, Expression.parse("value == 'b'")).get();
-//        assertEquals(1, queryB.size());
-//        assertEquals(readB, queryB.get(0));
+        final Map<String, Object> readA = database.read(caller, MULTI_INDEXED, idA).get();
+        assertEquals(createA, readA);
+
+        final PagedList<Instance> queryA = database.query(caller, MULTI_INDEXED, Expression.parse("v == 'a' for any v of value")).get();
+        assertEquals(1, queryA.size());
+        assertEquals(readA, queryA.get(0));
+    }
+
+    @Test
+    public void createMapMultiIndexed() throws Exception {
+
+        final String idA = UUID.randomUUID().toString();
+        final Map<String, Object> dataA = ImmutableMap.of(
+                "value", ImmutableMap.of(
+                        "x", ImmutableMap.of("key", "a"),
+                        "y", ImmutableMap.of("key", "b"),
+                        "z", ImmutableMap.of("key", "c")
+                )
+        );
+
+        final Map<String, Object> createA = database.create(caller, MAP_MULTI_INDEXED, idA, dataA).get();
+        assertObject(MAP_MULTI_INDEXED, idA, 1, dataA, createA);
+
+        final Map<String, Object> readA = database.read(caller, MAP_MULTI_INDEXED, idA).get();
+        assertEquals(createA, readA);
+
+        final PagedList<Instance> queryA = database.query(caller, MAP_MULTI_INDEXED, Expression.parse("v.key == 'a' for any v of value")).get();
+        assertEquals(1, queryA.size());
+        assertEquals(readA, queryA.get(0));
     }
 
     @Test
@@ -685,6 +696,28 @@ public class TestDatabaseServer {
 
         final PagedList<Instance> get = database.query(Caller.SUPER, TEAM_MEMBER, Expression.parse("team.name == 'Test'")).join();
         assertEquals(1, get.size());
+    }
+
+    @Test
+    @Disabled
+    public void aggregate() throws Exception {
+
+        database.transaction(Caller.SUPER, TransactionOptions.builder()
+                .action("a", CreateOptions.builder()
+                        .schema(TEAM_MEMBER)
+                        .data(ImmutableMap.of(
+                                "user", ImmutableMap.of("id", "u1"),
+                                "team", ImmutableMap.of("id", "t1"),
+                                "role", "owner",
+                                "accepted", true
+                        )).build())
+                .build()).get();
+
+        final PagedList<Instance> results = database.query(Caller.SUPER, QueryOptions.builder()
+                .schema("TeamMemberStats")
+                .build()).get();
+
+        System.err.println(results);
     }
 
     private Executable cause(final Executable target) {

@@ -30,7 +30,6 @@ import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import io.basestar.expression.Context;
 import io.basestar.jackson.serde.PathDeserializer;
-import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseInteger;
@@ -71,7 +70,7 @@ import java.util.stream.Stream;
 
 @Getter
 @Accessors(chain = true)
-public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolver, Transient.Resolver {
+public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolver, Transient.Resolver, Permission.Resolver {
 
     @Nonnull
     private final String name;
@@ -427,11 +426,6 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         return getTransient(name, inherited);
     }
 
-    public Permission getPermission(final String name) {
-
-        return getPermissions().get(name);
-    }
-
     public static Map<String, Object> readMeta(final Map<String, Object> object) {
 
         final HashMap<String, Object> result = new HashMap<>();
@@ -443,19 +437,6 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         return Collections.unmodifiableMap(result);
     }
 
-    @Override
-    @SuppressWarnings("unchecked")
-    public Instance create(final Object value, final boolean expand, final boolean suppress) {
-
-        if(value == null) {
-            return null;
-        } else if(value instanceof Map) {
-            return create((Map<String, Object>)value, expand, suppress);
-        } else {
-            throw new InvalidTypeException();
-        }
-    }
-
     @Deprecated
     public Multimap<Path, Instance> refs(final Map<String, Object> object) {
 
@@ -465,6 +446,7 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         return results;
     }
 
+    @Override
     public Instance create(final Map<String, Object> value, final boolean expand, final boolean suppress) {
 
         if(value == null) {

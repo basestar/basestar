@@ -49,6 +49,7 @@ import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Index
@@ -334,8 +335,10 @@ public class Index implements Named, Described, Serializable, Extendable {
                 final Object value = path.apply(data);
                 if (value instanceof Collection<?>) {
                     values.put(entry.getKey(), (Collection<?>) value);
+                } else if(value instanceof Map<?, ?>) {
+                    values.put(entry.getKey(), ((Map<?, ?>)value).values());
                 } else {
-                    throw new IllegalStateException("Multi-value index path " + path + " must evaluate to a collection (or null)");
+                    throw new IllegalStateException("Multi-value index path " + path + " must evaluate to a collection, a map, or null");
                 }
             }
             final Map<Key, Map<String, Object>> records = new HashMap<>();
@@ -384,6 +387,11 @@ public class Index implements Named, Described, Serializable, Extendable {
         private final List<Object> partition;
 
         private final List<Object> sort;
+
+        public List<Object> keys() {
+
+            return Stream.of(partition, sort).flatMap(List::stream).collect(Collectors.toList());
+        }
 
         public static Key of(final List<Object> partition, final List<Object> sort) {
 

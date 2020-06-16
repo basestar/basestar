@@ -20,10 +20,12 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
-import io.basestar.mapper.context.PropertyContext;
-import io.basestar.mapper.internal.PropertyBinder;
-import io.basestar.mapper.internal.annotation.PropertyAnnotation;
-import io.basestar.schema.InstanceSchema;
+import io.basestar.expression.Expression;
+import io.basestar.mapper.MappingContext;
+import io.basestar.mapper.internal.MemberMapper;
+import io.basestar.mapper.internal.PropertyMapper;
+import io.basestar.mapper.internal.annotation.MemberDeclaration;
+import io.basestar.type.PropertyContext;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.annotation.*;
@@ -31,31 +33,26 @@ import java.lang.annotation.*;
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.METHOD})
-@PropertyAnnotation(Property.Binder.class)
+@MemberDeclaration(Property.Declaration.class)
 public @interface Property {
 
     String INFER_NAME = "";
 
     String name() default INFER_NAME;
 
-    boolean secret() default false;
+    String expression() default "";
 
     @RequiredArgsConstructor
-    class Binder implements PropertyBinder {
+    class Declaration implements MemberDeclaration.Declaration {
 
         private final Property annotation;
 
         @Override
-        public String name(final PropertyContext property) {
+        public MemberMapper<?> mapper(final MappingContext context, final PropertyContext prop) {
 
-            final String name = annotation.name();
-            return name.equals(INFER_NAME) ? property.simpleName() : name;
-        }
-
-        @Override
-        public void addToSchema(final InstanceSchema.Builder builder) {
-
-//            builder.setProperty(name(), )
+            final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
+            final Expression expression = annotation.expression().isEmpty() ? null : Expression.parse(annotation.expression());
+            return new PropertyMapper(context, name, prop, expression);
         }
     }
 }

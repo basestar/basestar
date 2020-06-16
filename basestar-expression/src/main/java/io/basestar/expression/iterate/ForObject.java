@@ -158,7 +158,7 @@ public class ForObject implements Expression {
     }
 
     @Override
-    public Expression create(final List<Expression> expressions) {
+    public Expression copy(final List<Expression> expressions) {
 
         assert expressions.size() == 3;
         return new ForObject(expressions.get(0), expressions.get(1), expressions.get(2));

@@ -36,7 +36,13 @@ public class StaticAuthenticator implements Authenticator {
     }
 
     @Override
-    public CompletableFuture<Caller> authenticate(final String authorization) {
+    public boolean canAuthenticate(final Authorization authorization) {
+
+        return true;
+    }
+
+    @Override
+    public CompletableFuture<Caller> authenticate(final Authorization authorization) {
 
         return CompletableFuture.completedFuture(caller);
     }

@@ -108,7 +108,6 @@ public class ReadProcessor {
         return queryImpl(context, linkSchema, expression, link.getSort(), count, paging);
     }
 
-    @SuppressWarnings("rawtypes")
     protected CompletableFuture<PagedList<Instance>> queryImpl(final Context context, final ObjectSchema objectSchema, final Expression expression,
                                                                final List<Sort> sort, final int count, final PagingToken paging) {
 
@@ -122,12 +121,19 @@ public class ReadProcessor {
                         .thenCompose(data -> cast(objectSchema, data)))
                 .collect(Collectors.toList());
 
+        return pageImpl(context, sources, expression, pageSort, count, paging);
+    }
+
+    @SuppressWarnings("rawtypes")
+    protected CompletableFuture<PagedList<Instance>> pageImpl(final Context context, final List<Pager.Source<Instance>> sources, final Expression expression,
+                                                              final List<Sort> sort, final int count, final PagingToken paging) {
+
         if(sources.isEmpty()) {
             throw new IllegalStateException("Query not supported");
         } else {
 
             @SuppressWarnings("unchecked")
-            final Comparator<Instance> comparator = Sort.comparator(pageSort, (t, path) -> (Comparable)path.apply(t));
+            final Comparator<Instance> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
             final Pager<Instance> pager = new Pager<>(comparator, sources, paging);
             return pager.page(count)
                     .thenApply(results -> {
@@ -431,10 +437,15 @@ public class ReadProcessor {
 
             } else {
 
-                final ObjectSchema schema = objectSchema(caller.getSchema());
-                return readImpl(schema, caller.getId(), null)
-                        .thenCompose(unexpanded -> expand(context, unexpanded, expand))
-                        .thenApply(result -> new ExpandedCaller(caller, result));
+                if(caller.getSchema() != null) {
+                    final Schema<?> schema = namespace.getSchema(caller.getSchema());
+                    if(schema instanceof ObjectSchema) {
+                        return readImpl((ObjectSchema)schema, caller.getId(), null)
+                                .thenCompose(unexpanded -> expand(context, unexpanded, expand))
+                                .thenApply(result -> new ExpandedCaller(caller, result));
+                    }
+                }
+                return CompletableFuture.completedFuture(new ExpandedCaller(caller, null));
             }
         }
     }
@@ -452,13 +463,15 @@ public class ReadProcessor {
         public static Instance getObject(final Caller caller) {
 
             if(caller instanceof ExpandedCaller) {
-                return ((ExpandedCaller)caller).getObject();
-            } else {
-                final HashMap<String, Object> object = new HashMap<>();
-                object.put(Reserved.ID, caller.getId());
-                object.put(Reserved.SCHEMA, caller.getSchema());
-                return new Instance(object);
+                final Map<String, Object> object = ((ExpandedCaller)caller).getObject();
+                if(object != null) {
+                    return new Instance(object);
+                }
             }
+            final HashMap<String, Object> object = new HashMap<>();
+            object.put(Reserved.ID, caller.getId());
+            object.put(Reserved.SCHEMA, caller.getSchema());
+            return new Instance(object);
         }
 
         public Instance getObject() {

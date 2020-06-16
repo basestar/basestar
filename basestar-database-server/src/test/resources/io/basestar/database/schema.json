@@ -99,9 +99,36 @@
         "over": {
           "v": "value"
         },
-        "consistency": "ASYNC",
         "partition": [
           "v"
+        ]
+      }
+    }
+  },
+  "MapMultiIndexedRecord": {
+    "type": "struct",
+    "properties": {
+      "key": {
+        "type": "string"
+      }
+    }
+  },
+  "MapMultiIndexed": {
+    "properties": {
+      "value": {
+        "type": {
+          "map": "MapMultiIndexedRecord"
+        },
+        "required": true
+      }
+    },
+    "indexes": {
+      "index": {
+        "over": {
+          "v": "value"
+        },
+        "partition": [
+          "v.key"
         ]
       }
     }

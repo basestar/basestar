@@ -136,7 +136,7 @@ public class LiteralSet implements Expression {
     }
 
     @Override
-    public Expression create(final List<Expression> expressions) {
+    public Expression copy(final List<Expression> expressions) {
 
         return args == expressions ? this : new LiteralSet(expressions);
     }

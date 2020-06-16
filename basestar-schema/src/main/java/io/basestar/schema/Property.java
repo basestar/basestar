@@ -81,7 +81,7 @@ public class Property implements Member {
     @Data
     @Accessors(chain = true)
     @JsonPropertyOrder({"type", "description", "required", "immutable", "expression", "constraints", "visibility", "extensions"})
-    public static class Builder implements Described {
+    public static class Builder implements Member.Builder {
 
         private Use<?> type;
 

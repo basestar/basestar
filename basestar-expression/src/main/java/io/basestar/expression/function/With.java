@@ -137,7 +137,7 @@ public class With implements Expression {
     }
 
     @Override
-    public Expression create(final List<Expression> expressions) {
+    public Expression copy(final List<Expression> expressions) {
 
         final Map<String, Expression> result = new HashMap<>();
         int offset = 0;

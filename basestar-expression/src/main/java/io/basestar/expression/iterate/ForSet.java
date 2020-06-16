@@ -148,7 +148,7 @@ public class ForSet implements Expression {
     }
 
     @Override
-    public Expression create(final List<Expression> expressions) {
+    public Expression copy(final List<Expression> expressions) {
 
         assert expressions.size() == 2;
         return new ForSet(expressions.get(0), expressions.get(1));

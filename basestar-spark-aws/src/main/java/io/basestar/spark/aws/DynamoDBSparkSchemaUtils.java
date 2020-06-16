@@ -43,7 +43,7 @@ public class DynamoDBSparkSchemaUtils {
 
     public static StructType streamRecordStructType(final ObjectSchema schema) {
 
-        final StructType type = SparkSchemaUtils.structType(schema);
+        final StructType type = SparkSchemaUtils.structType(schema, null);
         final List<StructField> fields = new ArrayList<>();
         fields.add(SparkSchemaUtils.field(Reserved.SCHEMA, DataTypes.StringType));
         fields.add(SparkSchemaUtils.field(Reserved.ID, DataTypes.StringType));
@@ -58,7 +58,7 @@ public class DynamoDBSparkSchemaUtils {
     public static StructType type(final DynamoDBRouting routing, final ObjectSchema schema, final Index index) {
 
         final List<StructField> fields = new ArrayList<>();
-        index.projectionSchema(schema).forEach((name, type) -> fields.add(SparkSchemaUtils.field(name, type)));
+        index.projectionSchema(schema).forEach((name, type) -> fields.add(SparkSchemaUtils.field(name, type, null)));
         fields.add(SparkSchemaUtils.field(routing.indexPartitionName(schema, index), DataTypes.BinaryType));
         fields.add(SparkSchemaUtils.field(routing.indexSortName(schema, index), DataTypes.BinaryType));
         fields.sort(Comparator.comparing(StructField::name));

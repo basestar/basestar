@@ -21,6 +21,7 @@ package io.basestar.storage.util;
  */
 
 import com.google.common.collect.ImmutableList;
+import io.basestar.util.Nullsafe;
 import io.basestar.util.PagedList;
 import io.basestar.util.PagingToken;
 import lombok.*;
@@ -55,7 +56,7 @@ public class Pager<T> {
 
     public Pager(final Comparator<T> comparator, final List<Source<T>> sources, final PagingToken paging) {
 
-        this.comparator = comparator;
+        this.comparator = Nullsafe.require(comparator);
         this.states = decodeStates(sources, paging);
     }
 

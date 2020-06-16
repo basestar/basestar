@@ -141,7 +141,7 @@ public class LambdaCall implements Expression {
     }
 
     @Override
-    public Expression create(final List<Expression> expressions) {
+    public Expression copy(final List<Expression> expressions) {
 
         assert expressions.size() > 0;
         return new LambdaCall(expressions.get(0), expressions.subList(1, expressions.size()));

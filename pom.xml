@@ -5,7 +5,7 @@
     <groupId>io.basestar</groupId>
     <artifactId>basestar</artifactId>
     <packaging>pom</packaging>
-    <version>1.1.7-SNAPSHOT</version>
+    <version>1.1.10-SNAPSHOT</version>
 
     <inceptionYear>2019</inceptionYear>
     <organization>
@@ -104,6 +104,9 @@
         <module>basestar-test</module>
         <module>basestar-graphql</module>
         <module>basestar-spark-elasticsearch</module>
+        <module>basestar-stream</module>
+        <module>basestar-maven-plugin</module>
+        <module>basestar-storage-leveldb</module>
     </modules>
 
 <!--    <reporting>-->

@@ -1,0 +1,11 @@
+A:
+  type: object
+  properties:
+    ref:
+      type: B
+
+B:
+  type: object
+
+C:
+  type: object

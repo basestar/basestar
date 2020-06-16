@@ -80,7 +80,7 @@ public interface Unary extends Expression {
     }
 
     @Override
-    default Expression create(final List<Expression> expressions) {
+    default Expression copy(final List<Expression> expressions) {
 
         assert expressions.size() == 1;
         return create(expressions.get(0));

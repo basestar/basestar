@@ -20,9 +20,9 @@ package io.basestar.mapper;
  * #L%
  */
 
-import io.basestar.mapper.context.PropertyContext;
-import io.basestar.mapper.context.TypeContext;
-import io.basestar.mapper.context.has.HasType;
+import io.basestar.type.PropertyContext;
+import io.basestar.type.TypeContext;
+import io.basestar.type.has.HasType;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

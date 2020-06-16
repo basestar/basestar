@@ -20,44 +20,47 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
-import io.basestar.mapper.context.PropertyContext;
-import io.basestar.mapper.internal.PropertyBinder;
-import io.basestar.mapper.internal.annotation.PropertyAnnotation;
-import io.basestar.schema.InstanceSchema;
+import io.basestar.expression.Expression;
+import io.basestar.mapper.MappingContext;
+import io.basestar.mapper.internal.LinkMapper;
+import io.basestar.mapper.internal.MemberMapper;
+import io.basestar.mapper.internal.annotation.MemberDeclaration;
+import io.basestar.type.PropertyContext;
+import io.basestar.util.Sort;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.annotation.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.METHOD})
-@PropertyAnnotation(Link.Binder.class)
+@MemberDeclaration(Link.Declaration.class)
 public @interface Link {
 
     String INFER_NAME = "";
 
     String name() default INFER_NAME;
 
-    String query();
+    String expression();
 
     String[] sort() default {};
 
 
     @RequiredArgsConstructor
-    class Binder implements PropertyBinder {
+    class Declaration implements MemberDeclaration.Declaration {
 
         private final Link annotation;
 
         @Override
-        public String name(final PropertyContext property) {
+        public MemberMapper<?> mapper(final MappingContext context, final PropertyContext prop) {
 
-            return property.name();
-        }
-
-        @Override
-        public void addToSchema(final InstanceSchema.Builder builder) {
-
-            assert builder instanceof io.basestar.schema.ObjectSchema.Builder;
+            final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
+            final Expression expression = Expression.parse(annotation.expression());
+            final List<Sort> sort = Arrays.stream(annotation.sort()).map(Sort::parse).collect(Collectors.toList());
+            return new LinkMapper(context, name, prop, expression, sort);
         }
     }
 }

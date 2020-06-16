@@ -21,6 +21,7 @@ package io.basestar.example;
  */
 
 import io.basestar.auth.Authenticator;
+import io.basestar.auth.Authorization;
 import io.basestar.auth.Caller;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 
@@ -31,7 +32,7 @@ import java.util.concurrent.CompletableFuture;
 public class TestAuthenticator implements Authenticator {
 
     @Override
-    public CompletableFuture<Caller> authenticate(final String authorization) {
+    public CompletableFuture<Caller> authenticate(final Authorization auth) {
 
         return CompletableFuture.completedFuture(new Caller() {
             @Override
@@ -55,7 +56,7 @@ public class TestAuthenticator implements Authenticator {
             @Override
             public String getId() {
 
-                return authorization;
+                return auth.getCredentials();
             }
 
             @Override
@@ -64,6 +65,12 @@ public class TestAuthenticator implements Authenticator {
                 return Collections.emptyMap();
             }
         });
+    }
+
+    @Override
+    public boolean canAuthenticate(final Authorization auth) {
+
+        return true;
     }
 
     @Override

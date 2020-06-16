@@ -303,6 +303,18 @@ public interface GraphQLNamingStrategy {
 
                 return GraphQLUtils.STRING_TYPE;
             }
+
+            @Override
+            public String visitDate(final UseDate type) {
+
+                return GraphQLUtils.STRING_TYPE;
+            }
+
+            @Override
+            public String visitDateTime(final UseDateTime type) {
+
+                return GraphQLUtils.STRING_TYPE;
+            }
         };
     }
 }

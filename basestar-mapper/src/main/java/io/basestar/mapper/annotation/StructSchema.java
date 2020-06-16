@@ -20,10 +20,11 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
-import io.basestar.mapper.context.TypeContext;
-import io.basestar.mapper.internal.SchemaBinder;
-import io.basestar.mapper.internal.annotation.SchemaAnnotation;
-import io.basestar.schema.Schema;
+import io.basestar.mapper.MappingContext;
+import io.basestar.mapper.SchemaMapper;
+import io.basestar.mapper.internal.StructSchemaMapper;
+import io.basestar.mapper.internal.annotation.SchemaDeclaration;
+import io.basestar.type.TypeContext;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.annotation.*;
@@ -31,7 +32,7 @@ import java.lang.annotation.*;
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-@SchemaAnnotation(StructSchema.Binder.class)
+@SchemaDeclaration(StructSchema.Declaration.class)
 public @interface StructSchema {
 
     String INFER_NAME = "";
@@ -39,21 +40,15 @@ public @interface StructSchema {
     String name() default INFER_NAME;
 
     @RequiredArgsConstructor
-    class Binder implements SchemaBinder {
+    class Declaration implements SchemaDeclaration.Declaration {
 
         private final StructSchema annotation;
 
         @Override
-        public String name(final TypeContext type) {
+        public SchemaMapper<?, ?> mapper(final MappingContext context, final TypeContext type) {
 
-            final String name = annotation.name();
-            return name.equals(INFER_NAME) ? type.simpleName() : name;
-        }
-
-        @Override
-        public Schema.Builder<?> schemaBuilder(final TypeContext type) {
-
-            return io.basestar.schema.ObjectSchema.builder();
+            final String name = annotation.name().equals(INFER_NAME) ? type.simpleName() : annotation.name();
+            return new StructSchemaMapper<>(context, name, type);
         }
     }
 }

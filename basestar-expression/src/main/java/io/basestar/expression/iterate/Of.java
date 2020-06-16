@@ -132,8 +132,8 @@ public class Of implements Expression {
                         })
                         .iterator();
             } else {
-                return ((Map<?, ?>)with).entrySet().stream()
-                        .map(v -> Collections.singletonMap(value, ImmutableList.of(v.getKey(), v.getValue())))
+                return ((Map<?, ?>)with).values().stream()
+                        .map(o -> Collections.singletonMap(value, o))
                         .iterator();
             }
         } else {
@@ -184,7 +184,7 @@ public class Of implements Expression {
     }
 
     @Override
-    public Expression create(final List<Expression> expressions) {
+    public Expression copy(final List<Expression> expressions) {
 
         assert expressions.size() == 1;
         return new Of(key, value, expressions.get(0));

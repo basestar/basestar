@@ -20,11 +20,11 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
-import io.basestar.mapper.context.PropertyContext;
-import io.basestar.mapper.internal.PropertyBinder;
-import io.basestar.mapper.internal.annotation.PropertyAnnotation;
-import io.basestar.schema.InstanceSchema;
-import io.basestar.schema.Reserved;
+import io.basestar.mapper.MappingContext;
+import io.basestar.mapper.internal.MemberMapper;
+import io.basestar.mapper.internal.MetadataMapper;
+import io.basestar.mapper.internal.annotation.MemberDeclaration;
+import io.basestar.type.PropertyContext;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.annotation.*;
@@ -32,24 +32,18 @@ import java.lang.annotation.*;
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.METHOD})
-@PropertyAnnotation(Created.Binder.class)
+@MemberDeclaration(Created.Binder.class)
 public @interface Created {
 
     @RequiredArgsConstructor
-    class Binder implements PropertyBinder {
+    class Binder implements MemberDeclaration.Declaration {
 
         private final Created annotation;
 
         @Override
-        public String name(final PropertyContext property) {
+        public MemberMapper<?> mapper(final MappingContext context, final PropertyContext prop) {
 
-            return Reserved.CREATED;
-        }
-
-        @Override
-        public void addToSchema(final InstanceSchema.Builder builder) {
-
-            assert builder instanceof io.basestar.schema.ObjectSchema.Builder;
+            return new MetadataMapper(context, MetadataMapper.Name.CREATED, prop);
         }
     }
 }

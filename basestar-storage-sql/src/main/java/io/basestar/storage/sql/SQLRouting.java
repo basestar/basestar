@@ -102,13 +102,13 @@ public interface SQLRouting {
                     } else if(index.isUnique()) {
                         log.info("Creating unique index {}:{}", objectTableName, index.getName());
                         try(final CreateIndexFinalStep create = context.createUniqueIndexIfNotExists(index.getName())
-                                .on(DSL.table(objectTableName), SQLUtils.orderFields(index))) {
+                                .on(DSL.table(objectTableName), SQLUtils.indexKeys(index))) {
                             create.execute();
                         }
                     } else {
                         log.info("Creating index {}:{}", objectTableName, index.getName());
                         try(final CreateIndexFinalStep create = context.createIndexIfNotExists(index.getName())
-                                .on(DSL.table(objectTableName), SQLUtils.orderFields(index))) {
+                                .on(DSL.table(objectTableName), SQLUtils.indexKeys(index))) {
                             create.execute();
                         }
                     }

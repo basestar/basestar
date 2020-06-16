@@ -81,12 +81,16 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
     @Override
     public List<T> create(final Object value, final boolean expand, final boolean suppress) {
 
+        return create(value, suppress, v -> type.create(v, expand, suppress));
+    }
+
+    public static <T> List<T> create(final Object value, final boolean suppress, final Function<Object, T> fn) {
+
         if(value == null) {
             return null;
         } else if(value instanceof Collection) {
             return ((Collection<?>) value).stream()
-                    .map(v -> type.create(v, expand, suppress))
-                    .collect(Collectors.toList());
+                    .map(fn).collect(Collectors.toList());
         } else if (suppress) {
             return null;
         } else {

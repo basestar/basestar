@@ -1,0 +1,36 @@
+MyEnum:
+  type: enum
+  values:
+    - VALUE_1
+    - VALUE_2
+
+MyBase:
+  type: object
+  properties:
+    test0:
+      type: MyBase
+
+MyObject:
+  type: object
+  extend: MyBase
+  id:
+    expression: test1 + "_" + test2
+  properties:
+    test1:
+      type: string
+    test2:
+      type:
+        array: MyEnum
+    test3:
+      type: MyObject
+      required: true
+  links:
+    test4:
+      expression: id==this.id && "test"==test1
+      schema: MyObject
+  indexes:
+    blah:
+      partition:
+        - test1
+      sort:
+        - test2

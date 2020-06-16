@@ -1,0 +1,22 @@
+Subscription:
+  properties:
+    schema:
+      type: string
+    sub:
+      type: string
+    channel:
+      type: string
+    key:
+      type: binary
+    expand:
+      type:
+        set: string
+  indexes:
+    sub:
+      partition: sub
+      sort: channel
+    key:
+      partition: key
+      sort:
+        - sub
+        - channel

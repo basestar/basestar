@@ -20,11 +20,12 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
-import io.basestar.mapper.context.PropertyContext;
-import io.basestar.mapper.internal.PropertyBinder;
-import io.basestar.mapper.internal.annotation.PropertyAnnotation;
-import io.basestar.schema.InstanceSchema;
-import io.basestar.schema.Reserved;
+import io.basestar.expression.Expression;
+import io.basestar.mapper.MappingContext;
+import io.basestar.mapper.internal.IdMapper;
+import io.basestar.mapper.internal.MemberMapper;
+import io.basestar.mapper.internal.annotation.MemberDeclaration;
+import io.basestar.type.PropertyContext;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.annotation.*;
@@ -32,26 +33,26 @@ import java.lang.annotation.*;
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.METHOD})
-@PropertyAnnotation(Id.Binder.class)
+@MemberDeclaration(Id.Declaration.class)
 public @interface Id {
 
     String expression() default "";
 
     @RequiredArgsConstructor
-    class Binder implements PropertyBinder {
+    class Declaration implements MemberDeclaration.Declaration {
 
         private final Id annotation;
 
         @Override
-        public String name(final PropertyContext property) {
+        public MemberMapper<?> mapper(final MappingContext context, final PropertyContext prop) {
 
-            return Reserved.ID;
-        }
-
-        @Override
-        public void addToSchema(final InstanceSchema.Builder builder) {
-
-            assert builder instanceof io.basestar.schema.ObjectSchema.Builder;
+            final Expression expression;
+            if(annotation.expression().isEmpty()) {
+                expression = null;
+            } else {
+                expression = Expression.parse(annotation.expression());
+            }
+            return new IdMapper(context, prop, expression);
         }
     }
 }

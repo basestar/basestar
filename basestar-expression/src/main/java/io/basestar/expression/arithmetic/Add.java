@@ -67,18 +67,6 @@ public class Add implements Binary {
     }
 
     /**
-     * lhs + rhs
-     *
-     * @param lhs Left hand operand
-     * @param rhs Right hand operand
-     */
-
-    public static String evaluate(final String lhs, final String rhs) {
-
-        return lhs + rhs;
-    }
-
-    /**
      * @return number|string
      */
 
@@ -110,6 +98,11 @@ public class Add implements Binary {
     public String toString() {
 
         return Binary.super.toString(lhs, rhs);
+    }
+
+    public static Object apply(final Object lhs, final Object rhs) {
+
+        return VISITOR.apply(lhs, rhs);
     }
 
     private static final BinaryNumberMatch<Number> NUMBER_VISITOR = new BinaryNumberMatch.Promoting<Number>() {

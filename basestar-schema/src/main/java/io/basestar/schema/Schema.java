@@ -48,7 +48,8 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
     @JsonSubTypes({
             @JsonSubTypes.Type(name = EnumSchema.Builder.TYPE, value = EnumSchema.Builder.class),
             @JsonSubTypes.Type(name = StructSchema.Builder.TYPE, value = StructSchema.Builder.class),
-            @JsonSubTypes.Type(name = ObjectSchema.Builder.TYPE, value = ObjectSchema.Builder.class)
+            @JsonSubTypes.Type(name = ObjectSchema.Builder.TYPE, value = ObjectSchema.Builder.class),
+            @JsonSubTypes.Type(name = ViewSchema.Builder.TYPE, value = ViewSchema.Builder.class)
     })
     interface Builder<T> extends Described {
 
@@ -60,6 +61,11 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
     default T create(final Object value) {
 
         return create(value, false, false);
+    }
+
+    default Builder<T> toBuilder() {
+
+        throw new UnsupportedOperationException();
     }
 
     T create(Object value, boolean expand, boolean suppress);

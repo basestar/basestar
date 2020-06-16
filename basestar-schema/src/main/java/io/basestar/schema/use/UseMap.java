@@ -39,6 +39,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.*;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -88,13 +89,18 @@ public class UseMap<T> implements Use<Map<String, T>> {
     @Override
     public Map<String, T> create(final Object value, final boolean expand, final boolean suppress) {
 
+        return create(value, suppress, v -> type.create(v, expand, suppress));
+    }
+
+    public static <T> Map<String, T> create(final Object value, final boolean suppress, final Function<Object, T> fn) {
+
         if(value == null) {
             return null;
         } else if(value instanceof Map) {
             return ((Map<?, ?>) value).entrySet().stream()
                     .collect(Collectors.toMap(
                             entry -> entry.getKey().toString(),
-                            entry -> type.create(entry.getValue(), expand, suppress)
+                            entry -> fn.apply(entry.getValue())
                     ));
         } else if(suppress) {
             return null;

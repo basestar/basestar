@@ -132,7 +132,7 @@ public class Member implements Expression {
     }
 
     @Override
-    public Expression create(final List<Expression> expressions) {
+    public Expression copy(final List<Expression> expressions) {
 
         assert expressions.size() == 1;
         return new Member(with, member);

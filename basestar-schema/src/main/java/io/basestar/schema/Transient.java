@@ -71,6 +71,8 @@ public class Transient implements Member {
     @Nullable
     private final Visibility visibility;
 
+    // FIXME: what does this do?
+
     @Nonnull
     private final SortedSet<Path> expand;
 
@@ -80,7 +82,7 @@ public class Transient implements Member {
     @Data
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public static class Builder implements Described {
+    public static class Builder implements Member.Builder {
 
         private Use<?> type;
 
@@ -131,6 +133,11 @@ public class Transient implements Member {
             type.visit(TypeValidator.INSTANCE);
         }
         this.extensions = Nullsafe.immutableSortedCopy(builder.getExtensions());
+    }
+
+    public boolean isTyped() {
+
+        return type != null;
     }
 
     @Override

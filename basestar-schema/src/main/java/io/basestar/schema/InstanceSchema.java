@@ -22,6 +22,7 @@ package io.basestar.schema;
 
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseString;
 import io.basestar.util.Path;
@@ -34,6 +35,8 @@ import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Property.Resolver {
+
+    Instance create(Map<String, Object> value, boolean expand, boolean suppress);
 
     interface Builder extends Schema.Builder<Instance> {
 
@@ -48,6 +51,19 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
     SortedMap<String, Use<?>> metadataSchema();
 
     InstanceSchema getExtend();
+
+    @Override
+    @SuppressWarnings("unchecked")
+    default Instance create(final Object value, final boolean expand, final boolean suppress) {
+
+        if(value == null) {
+            return null;
+        } else if(value instanceof Map) {
+            return create((Map<String, Object>)value, expand, suppress);
+        } else {
+            throw new InvalidTypeException();
+        }
+    }
 
     default Set<Path> requiredExpand(final Set<Path> paths) {
 
@@ -145,30 +161,6 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
                 .description(getDescription())
                 .name(getName());
     }
-
-//    default Instance expand(final Instance object, final Expander expander, final Set<Path> expand) {
-//
-//        final HashMap<String, Object> changed = new HashMap<>();
-//        final Map<String, Set<Path>> branches = Path.branch(expand);
-//        final Map<String, ? extends Member> members=  getAllMembers();
-//        for (final Map.Entry<String, ? extends Member> entry : members.entrySet()) {
-//            final Member member = entry.getValue();
-//            final Set<Path> branch = branches.get(entry.getKey());
-//            final Object before = object.get(member.getName());
-//            final Object after = member.expand(before, expander, branch);
-//            // Reference equals is correct behaviour
-//            if (before != after) {
-//                changed.put(member.getName(), after);
-//            }
-//        }
-//        if(changed.isEmpty()) {
-//            return object;
-//        } else {
-//            final Map<String, Object> result = new HashMap<>(object);
-//            result.putAll(changed);
-//            return new Instance(result);
-//        }
-//    }
 
     default Instance expand(final Instance object, final Expander expander, final Set<Path> expand) {
 

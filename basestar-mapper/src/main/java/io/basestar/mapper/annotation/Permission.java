@@ -26,4 +26,12 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.METHOD})
 public @interface Permission {
+
+    String on();
+
+    boolean anon() default false;
+
+    String expression() default "";
+
+    String[] expand() default {};
 }

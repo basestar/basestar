@@ -48,7 +48,7 @@ public class UseNumber implements UseScalar<Double> {
 
     public static UseNumber from(final Object config) {
 
-        return new UseNumber();
+        return DEFAULT;
     }
 
     @Override

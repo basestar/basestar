@@ -142,7 +142,7 @@ public class MemberCall implements Expression {
     }
 
     @Override
-    public Expression create(final List<Expression> expressions) {
+    public Expression copy(final List<Expression> expressions) {
 
         assert expressions.size() > 0;
         return new MemberCall(expressions.get(0), member, expressions.subList(1, expressions.size()));

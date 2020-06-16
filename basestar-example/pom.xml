@@ -3,7 +3,7 @@
     <parent>
         <artifactId>basestar</artifactId>
         <groupId>io.basestar</groupId>
-        <version>1.1.7-SNAPSHOT</version>
+        <version>1.1.10-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -32,6 +32,10 @@
             <groupId>io.basestar</groupId>
             <artifactId>basestar-database-server</artifactId>
         </dependency>
+<!--        <dependency>-->
+<!--            <groupId>io.basestar</groupId>-->
+<!--            <artifactId>basestar-database-client</artifactId>-->
+<!--        </dependency>-->
         <dependency>
             <groupId>io.basestar</groupId>
             <artifactId>basestar-storage-dynamodb</artifactId>
@@ -42,8 +46,12 @@
         </dependency>
         <dependency>
             <groupId>io.basestar</groupId>
+            <artifactId>basestar-storage-sql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.basestar</groupId>
             <artifactId>basestar-event-sqs</artifactId>
-            <version>1.1.7-SNAPSHOT</version>
+            <version>1.1.10-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>io.basestar</groupId>
@@ -64,6 +72,17 @@
         <dependency>
             <groupId>io.basestar</groupId>
             <artifactId>basestar-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.iq80.leveldb</groupId>
+            <artifactId>leveldb-api</artifactId>
+            <version>0.12</version>
+        </dependency>
+        <dependency>
+            <groupId>org.fusesource.leveldbjni</groupId>
+            <artifactId>leveldbjni-all</artifactId>
+            <version>1.8</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

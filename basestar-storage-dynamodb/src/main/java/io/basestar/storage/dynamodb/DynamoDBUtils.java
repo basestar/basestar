@@ -30,6 +30,7 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.dynamodb.model.*;
 
 import java.io.*;
+import java.time.temporal.TemporalAccessor;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -59,7 +60,7 @@ public class DynamoDBUtils {
             if(str.isEmpty()) {
                 return AttributeValue.builder().nul(true).build();
             } else {
-                return AttributeValue.builder().s(value.toString()).build();
+                return AttributeValue.builder().s(str).build();
             }
         } else if(value instanceof byte[]) {
             return AttributeValue.builder().b(SdkBytes.fromByteArray((byte[])value)).build();
@@ -68,6 +69,8 @@ public class DynamoDBUtils {
                     .l(((Collection<?>)value).stream().map(DynamoDBUtils::toAttributeValue)
                             .collect(Collectors.toList()))
                     .build();
+        } else if(value instanceof TemporalAccessor) {
+            return AttributeValue.builder().s(value.toString()).build();
         } else if(value instanceof Map) {
             return AttributeValue.builder()
                     .m(((Map<?, ?>)value).entrySet().stream()
