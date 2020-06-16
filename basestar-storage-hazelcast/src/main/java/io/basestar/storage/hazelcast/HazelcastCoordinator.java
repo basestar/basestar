@@ -17,7 +17,7 @@ public class HazelcastCoordinator implements Coordinator {
     private final HazelcastInstance instance;
 
     @lombok.Builder(builderClassName = "Builder")
-    public HazelcastCoordinator(@Nonnull final HazelcastInstance instance) {
+    HazelcastCoordinator(@Nonnull final HazelcastInstance instance) {
 
         this.instance = Nullsafe.require(instance);
     }

@@ -1,5 +1,6 @@
 package io.basestar.mapper.internal;
 
+import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Property;
@@ -14,12 +15,15 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
 
     private final PropertyContext property;
 
+    private final Expression expression;
+
     private final TypeMapper type;
 
-    public PropertyMapper(final MappingContext context, final String name, final PropertyContext property) {
+    public PropertyMapper(final MappingContext context, final String name, final PropertyContext property, final Expression expression) {
 
         this.name = name;
         this.property = property;
+        this.expression = expression;
         this.type = TypeMapper.from(context, property.type());
     }
 
@@ -33,7 +37,8 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
     public void addToSchema(final InstanceSchema.Builder builder) {
 
         builder.setProperty(name, Property.builder()
-                .setType(type.use()));
+                .setType(type.use())
+                .setExpression(expression));
     }
 
     @Override

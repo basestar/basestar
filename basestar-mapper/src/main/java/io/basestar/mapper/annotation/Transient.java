@@ -20,6 +20,7 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
+import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.MemberMapper;
 import io.basestar.mapper.internal.PropertyMapper;
@@ -53,7 +54,8 @@ public @interface Transient {
 
             //FIXME
             final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
-            return new PropertyMapper(context, name, prop);
+            final Expression expression = annotation.expression().isEmpty() ? null : Expression.parse(annotation.expression());
+            return new PropertyMapper(context, name, prop, expression);
         }
     }
 }

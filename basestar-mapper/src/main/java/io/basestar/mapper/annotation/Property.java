@@ -20,6 +20,7 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
+import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.MemberMapper;
 import io.basestar.mapper.internal.PropertyMapper;
@@ -39,6 +40,8 @@ public @interface Property {
 
     String name() default INFER_NAME;
 
+    String expression() default "";
+
     @RequiredArgsConstructor
     class Declaration implements MemberDeclaration.Declaration {
 
@@ -48,7 +51,8 @@ public @interface Property {
         public MemberMapper<?> mapper(final MappingContext context, final PropertyContext prop) {
 
             final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
-            return new PropertyMapper(context, name, prop);
+            final Expression expression = annotation.expression().isEmpty() ? null : Expression.parse(annotation.expression());
+            return new PropertyMapper(context, name, prop, expression);
         }
     }
 }
