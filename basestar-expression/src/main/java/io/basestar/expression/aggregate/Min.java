@@ -1,8 +1,8 @@
-package io.basestar.storage.aggregate;
+package io.basestar.expression.aggregate;
 
 /*-
  * #%L
- * basestar-storage
+ * basestar-expression
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -24,7 +24,7 @@ import com.google.common.collect.Ordering;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.type.Values;
-import io.basestar.storage.exception.InvalidAggregateException;
+import io.basestar.expression.exception.InvalidAggregateException;
 import lombok.Data;
 
 import java.util.List;
@@ -32,16 +32,16 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 @Data
-public class Max implements Aggregate {
+public class Min implements Aggregate {
 
-    public static final String NAME = "max";
+    public static final String NAME = "min";
 
     private final Expression input;
 
     public static Aggregate create(final List<Expression> args) {
 
         if(args.size() == 1) {
-            return new Max(args.get(0));
+            return new Min(args.get(0));
         } else {
             throw new InvalidAggregateException(NAME);
         }
@@ -50,12 +50,12 @@ public class Max implements Aggregate {
     @Override
     public <T> T visit(final AggregateVisitor<T> visitor) {
 
-        return visitor.visitMax(this);
+        return visitor.visitMin(this);
     }
 
     @Override
     public Object evaluate(final Context context, final Stream<? extends Map<String, Object>> values) {
 
-        return Ordering.from(Values::compare).max(values.map(v -> input.evaluate(context.with(v))).iterator());
+        return Ordering.from(Values::compare).min(values.map(v -> input.evaluate(context.with(v))).iterator());
     }
 }

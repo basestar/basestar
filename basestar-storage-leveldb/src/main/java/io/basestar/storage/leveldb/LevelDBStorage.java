@@ -24,7 +24,7 @@ import com.google.common.io.BaseEncoding;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
 import io.basestar.storage.*;
-import io.basestar.storage.aggregate.Aggregate;
+import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;

@@ -29,7 +29,7 @@ import io.basestar.schema.use.*;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
-import io.basestar.storage.aggregate.Aggregate;
+import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.PagedList;
 import io.basestar.util.PagingToken;

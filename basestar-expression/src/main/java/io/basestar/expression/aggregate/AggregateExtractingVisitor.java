@@ -1,8 +1,8 @@
-package io.basestar.storage.query;
+package io.basestar.expression.aggregate;
 
 /*-
  * #%L
- * basestar-storage
+ * basestar-expression
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -24,7 +24,6 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.call.LambdaCall;
 import io.basestar.expression.constant.PathConstant;
-import io.basestar.storage.aggregate.Aggregate;
 import io.basestar.util.Path;
 import lombok.Getter;
 
@@ -33,7 +32,7 @@ import java.util.List;
 import java.util.Map;
 
 @Getter
-public class AggregatesVisitor implements ExpressionVisitor.Defaulting<Expression> {
+public class AggregateExtractingVisitor implements ExpressionVisitor.Defaulting<Expression> {
 
     private final Map<String, Aggregate> aggregates = new HashMap<>();
 

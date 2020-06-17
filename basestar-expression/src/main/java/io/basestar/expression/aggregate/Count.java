@@ -1,8 +1,8 @@
-package io.basestar.storage.aggregate;
+package io.basestar.expression.aggregate;
 
 /*-
  * #%L
- * basestar-storage
+ * basestar-expression
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -22,7 +22,9 @@ package io.basestar.storage.aggregate;
 
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.storage.exception.InvalidAggregateException;
+import io.basestar.expression.constant.Constant;
+import io.basestar.expression.exception.InvalidAggregateException;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.List;
@@ -30,16 +32,24 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 @Data
-public class Avg implements Aggregate {
+@AllArgsConstructor
+public class Count implements Aggregate {
 
-    public static final String NAME = "avg";
+    public static final String NAME = "count";
 
-    private final Expression input;
+    private final Expression predicate;
+
+    public Count() {
+
+        this.predicate = new Constant(true);
+    }
 
     public static Aggregate create(final List<Expression> args) {
 
-        if(args.size() == 1) {
-            return new Avg(args.get(0));
+        if(args.size() == 0) {
+            return new Count();
+        } else if(args.size() == 1) {
+            return new Count(args.get(0));
         } else {
             throw new InvalidAggregateException(NAME);
         }
@@ -48,37 +58,12 @@ public class Avg implements Aggregate {
     @Override
     public <T> T visit(final AggregateVisitor<T> visitor) {
 
-        return visitor.visitAvg(this);
+        return visitor.visitCount(this);
     }
 
     @Override
     public Object evaluate(final Context context, final Stream<? extends Map<String, Object>> values) {
 
-        return values.map(v -> input.evaluate(context.with(v)))
-                .map(Entry::from).reduce(Entry::sum).map(Entry::avg)
-                .orElse(null);
-    }
-
-    @Data
-    private static class Entry {
-
-        private final double value;
-
-        private final int count;
-
-        public static Entry from(final Object value) {
-
-            return new Entry(((Number)value).doubleValue(), 1);
-        }
-
-        public static Entry sum(final Entry a, final Entry b) {
-
-            return new Entry(a.value + b.value, a.count + b.count);
-        }
-
-        public double avg() {
-
-            return value / count;
-        }
+        return values.count();
     }
 }

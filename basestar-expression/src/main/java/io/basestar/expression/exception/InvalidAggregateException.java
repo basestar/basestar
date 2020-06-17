@@ -1,8 +1,8 @@
-package io.basestar.storage.exception;
+package io.basestar.expression.exception;
 
 /*-
  * #%L
- * basestar-storage
+ * basestar-expression
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%

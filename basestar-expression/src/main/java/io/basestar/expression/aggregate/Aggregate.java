@@ -1,8 +1,8 @@
-package io.basestar.storage.aggregate;
+package io.basestar.expression.aggregate;
 
 /*-
  * #%L
- * basestar-storage
+ * basestar-expression
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%

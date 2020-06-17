@@ -42,6 +42,8 @@ import io.basestar.event.Handlers;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.PathTransform;
+import io.basestar.expression.aggregate.Aggregate;
+import io.basestar.expression.aggregate.AggregateExtractingVisitor;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Or;
@@ -49,9 +51,7 @@ import io.basestar.schema.*;
 import io.basestar.storage.OverlayStorage;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
-import io.basestar.storage.aggregate.Aggregate;
 import io.basestar.storage.exception.ObjectMissingException;
-import io.basestar.storage.query.AggregatesVisitor;
 import io.basestar.storage.util.IndexRecordDiff;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.*;
@@ -545,7 +545,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                 bound = new And(bound, viewSchema.getWhere());
             }
 
-            final AggregatesVisitor visitor = new AggregatesVisitor();
+            final AggregateExtractingVisitor visitor = new AggregateExtractingVisitor();
             final Map<String, Expression> columns = new HashMap<>();
             viewSchema.getSelect().forEach((name, prop) -> {
                 final Expression expr = Nullsafe.require(prop.getExpression()).bind(context);

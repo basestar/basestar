@@ -26,7 +26,7 @@ import io.basestar.schema.History;
 import io.basestar.schema.Index;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.exception.UnsupportedConsistencyException;
-import io.basestar.storage.aggregate.Aggregate;
+import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.Path;
 import io.basestar.util.Sort;

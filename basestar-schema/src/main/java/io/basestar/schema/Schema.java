@@ -162,5 +162,16 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
                 throw new IllegalStateException(name + " is not an enum schema");
             }
         }
+
+        @Nonnull
+        default ViewSchema requireViewSchema(final String name) {
+
+            final Schema<?> schema = requireSchema(name);
+            if (schema instanceof ViewSchema) {
+                return (ViewSchema) schema;
+            } else {
+                throw new IllegalStateException(name + " is not a view schema");
+            }
+        }
     }
 }

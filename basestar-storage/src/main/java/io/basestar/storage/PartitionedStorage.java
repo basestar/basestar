@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
-import io.basestar.storage.aggregate.Aggregate;
+import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.storage.exception.UnsupportedQueryException;
 import io.basestar.storage.query.DisjunctionVisitor;
 import io.basestar.storage.query.Range;

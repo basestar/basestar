@@ -25,7 +25,7 @@ import com.google.common.collect.*;
 import io.basestar.expression.Expression;
 import io.basestar.expression.type.Values;
 import io.basestar.schema.*;
-import io.basestar.storage.aggregate.Count;
+import io.basestar.expression.aggregate.Count;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.util.Pager;
