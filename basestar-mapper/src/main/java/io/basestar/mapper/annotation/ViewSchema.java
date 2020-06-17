@@ -20,6 +20,7 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
+import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.SchemaMapper;
 import io.basestar.mapper.internal.ViewSchemaMapper;
@@ -39,6 +40,10 @@ public @interface ViewSchema {
 
     String name() default INFER_NAME;
 
+    String from();
+
+    String where() default "";
+
     @RequiredArgsConstructor
     class Declaration implements SchemaDeclaration.Declaration {
 
@@ -48,7 +53,9 @@ public @interface ViewSchema {
         public SchemaMapper<?, ?> mapper(final MappingContext context, final TypeContext type) {
 
             final String name = annotation.name().equals(INFER_NAME) ? type.simpleName() : annotation.name();
-            return new ViewSchemaMapper<>(context, name, type);
+            final String from = annotation.from();
+            final Expression where = annotation.where().isEmpty() ? null : Expression.parse(annotation.where());
+            return new ViewSchemaMapper<>(context, name, type, from, where);
         }
     }
 }

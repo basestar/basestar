@@ -34,3 +34,8 @@ MyObject:
         - test1
       sort:
         - test2
+
+MyView:
+  type: view
+  from: MyObject
+  where: a + "_" + b
