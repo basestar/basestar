@@ -534,11 +534,15 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
             final Context context = context(caller, ImmutableMap.of());
 
-            final Expression bound;
+            Expression bound;
             if(expression != null) {
                 bound = expression.bind(context);
             } else {
                 bound = new Constant(true);
+            }
+
+            if(viewSchema.getWhere() != null) {
+                bound = new And(bound, viewSchema.getWhere());
             }
 
             final AggregatesVisitor visitor = new AggregatesVisitor();
