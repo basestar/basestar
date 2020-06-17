@@ -2,7 +2,7 @@ package io.basestar.schema.serde;
 
 /*-
  * #%L
- * basestar-database
+ * basestar-schema
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%

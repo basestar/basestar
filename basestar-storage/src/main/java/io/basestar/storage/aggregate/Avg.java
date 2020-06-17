@@ -2,7 +2,7 @@ package io.basestar.storage.aggregate;
 
 /*-
  * #%L
- * basestar-schema
+ * basestar-storage
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
