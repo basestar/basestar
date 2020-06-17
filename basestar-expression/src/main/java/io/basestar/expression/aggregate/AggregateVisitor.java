@@ -2,7 +2,7 @@ package io.basestar.expression.aggregate;
 
 /*-
  * #%L
- * basestar-expression
+ * basestar-storage
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -19,8 +19,6 @@ package io.basestar.expression.aggregate;
  * limitations under the License.
  * #L%
  */
-
-import io.basestar.expression.Expression;
 
 public interface AggregateVisitor<T> {
 
