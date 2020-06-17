@@ -37,6 +37,7 @@ import io.basestar.util.Path;
 import io.basestar.util.Sort;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderAsyncClient;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.*;
 
@@ -48,6 +49,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+@Slf4j
 public class CognitoUserStorage implements Storage {
 
     private static final String CUSTOM_ATTR_PREFIX = "custom:";
@@ -95,7 +97,18 @@ public class CognitoUserStorage implements Storage {
                 .userPoolId(userPoolId)
                 .username(id)
                 .build())
-                .thenApply(v -> fromResponse(schema, v));
+                .thenApply(v -> fromResponse(schema, v))
+                .exceptionally(e -> {
+                    final Throwable cause = e.getCause();
+                    if(cause instanceof UserNotFoundException) {
+                        log.warn("User {} not found", id);
+                        return null;
+                    } else if(cause instanceof RuntimeException) {
+                        throw (RuntimeException)e.getCause();
+                    } else {
+                        throw new IllegalStateException(cause);
+                    }
+                });
     }
 
     @Override

@@ -22,6 +22,7 @@ package io.basestar.auth.cognito;
 
 import com.google.common.collect.ImmutableMap;
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jwt.JWTClaimsSet;
 import io.basestar.auth.nimbus.NimbusAuthenticator;
 import io.basestar.util.Nullsafe;
 import io.swagger.v3.oas.models.security.OAuthFlow;
@@ -50,6 +51,18 @@ public class CognitoBearerAuthenticator extends NimbusAuthenticator {
             return new URL("https://cognito-idp." + region + ".amazonaws.com/" + userPoolId + "/.well-known/jwks.json");
         } catch (final MalformedURLException e) {
             throw new IllegalStateException(e);
+        }
+    }
+
+    @Override
+    protected String userId(final JWTClaimsSet claims) {
+
+        // For federated login, claims.subject is not the cognito id
+        final Object username = claims.getClaim("cognito:username");
+        if(username instanceof String) {
+            return (String)username;
+        } else {
+            return super.userId(claims);
         }
     }
 
