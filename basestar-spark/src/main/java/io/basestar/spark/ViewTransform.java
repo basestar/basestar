@@ -25,7 +25,8 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.expression.aggregate.AggregateExtractingVisitor;
-import io.basestar.schema.*;
+import io.basestar.schema.Property;
+import io.basestar.schema.ViewSchema;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseBoolean;
 import io.basestar.spark.expression.SparkAggregateVisitor;
@@ -127,9 +128,15 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
     private Function<Path, Column> columnResolver(final Dataset<Row> ds) {
 
-        return path -> {
-            assert path.size() == 1;// && path.isChild(Path.of(Reserved.THIS));
-            return ds.col(path.get(0));
-        };
+        return path -> next(ds.col(path.get(0)), path.withoutFirst());
+    }
+
+    private Column next(final Column col, final Path rest) {
+
+        if(rest.isEmpty()) {
+            return col;
+        } else {
+            return next(col.getField(rest.first()), rest.withoutFirst());
+        }
     }
 }

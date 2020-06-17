@@ -8,7 +8,7 @@ B:
   type: object
   properties:
     key:
-      type: string
+      type: A
     value:
       type: integer
 
@@ -25,4 +25,4 @@ AggView:
   group:
     key:
       type: string
-      expression: key
+      expression: key.id

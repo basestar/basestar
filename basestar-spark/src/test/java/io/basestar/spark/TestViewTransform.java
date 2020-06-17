@@ -32,18 +32,39 @@ import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestViewTransform {
 
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
-//    @Accessors(chain = true)
+    public static class A {
+
+        private String id;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class B {
+
+        private A key;
+
+        private int value;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AggView {
 
         private String key;
 
-        private int value;
+        private long agg;
     }
 
     @Test
@@ -55,8 +76,11 @@ public class TestViewTransform {
 
         final Namespace namespace = Namespace.load(TestViewTransform.class.getResourceAsStream("schema.yml"));
 
+        final A a = new A("a");
+        final A b = new A("b");
+
         final Source<Dataset<Row>> sourceB = (Source<Dataset<Row>>) sink -> sink.accept(session.createDataset(ImmutableList.of(
-                new B("a", 1), new B("a", 2), new B("a", 3), new B("b", 2), new B("b", 4), new B("b", 6)
+                new B(a, 1), new B(a, 2), new B(a, 3), new B(b, 2), new B(b, 4), new B(b, 6)
         ), Encoders.bean(B.class)).toDF());
 
         final ViewTransform view = ViewTransform.builder()
@@ -65,7 +89,10 @@ public class TestViewTransform {
 
         sourceB.then(view).then(dataset -> {
 
-            System.err.println(dataset.collectAsList());
+            final List<AggView> rows = dataset.as(Encoders.bean(AggView.class)).collectAsList();
+            assertEquals(2, rows.size());
+            assertTrue(rows.contains(new AggView("a", 8)));
+            assertTrue(rows.contains(new AggView("b", 14)));
         });
     }
 }
