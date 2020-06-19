@@ -1,8 +1,8 @@
-package io.basestar.storage.aggregate;
+package io.basestar.expression.aggregate;
 
 /*-
  * #%L
- * basestar-schema
+ * basestar-expression
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -24,7 +24,7 @@ import com.google.common.collect.Ordering;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.type.Values;
-import io.basestar.storage.exception.InvalidAggregateException;
+import io.basestar.expression.exception.InvalidAggregateException;
 import lombok.Data;
 
 import java.util.List;

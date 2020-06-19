@@ -1,8 +1,8 @@
-package io.basestar.storage.aggregate;
+package io.basestar.expression.aggregate;
 
 /*-
  * #%L
- * basestar-schema
+ * basestar-storage
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -21,6 +21,11 @@ package io.basestar.storage.aggregate;
  */
 
 public interface AggregateVisitor<T> {
+
+    default T visit(final Aggregate aggregate) {
+
+        return aggregate.visit(this);
+    }
 
     T visitSum(Sum aggregate);
 

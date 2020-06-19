@@ -35,7 +35,7 @@ import io.basestar.schema.*;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
-import io.basestar.storage.aggregate.Aggregate;
+import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.hazelcast.serde.CustomPortable;

@@ -1,8 +1,8 @@
-package io.basestar.mapper.serde;
+package io.basestar.expression.exception;
 
 /*-
  * #%L
- * basestar-mapper
+ * basestar-expression
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -20,5 +20,10 @@ package io.basestar.mapper.serde;
  * #L%
  */
 
-public interface Deserializer<T> {
+public class InvalidAggregateException extends RuntimeException {
+
+    public InvalidAggregateException(final String aggregate) {
+
+        super("Invalid arguments for aggregate: " + aggregate);
+    }
 }

@@ -1,14 +1,38 @@
 package io.basestar.schema;
 
+/*-
+ * #%L
+ * basestar-schema
+ * %%
+ * Copyright (C) 2019 - 2020 Basestar.IO
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Ordering;
 import io.basestar.expression.Context;
+import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
+import io.basestar.jackson.serde.ExpressionDeseriaizer;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.use.Use;
@@ -58,6 +82,9 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver {
     @Nonnull
     private final SortedMap<String, Property> group;
 
+    @Nullable
+    private final Expression where;
+
     @Nonnull
     private final SortedMap<String, Property> declaredProperties;
 
@@ -96,6 +123,12 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver {
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         private Map<String, Property.Builder> group;
+
+        @Nullable
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        @JsonSerialize(using = ToStringSerializer.class)
+        @JsonDeserialize(using = ExpressionDeseriaizer.class)
+        private Expression where;
 
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
@@ -173,6 +206,7 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver {
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, e.getKey()))));
         this.group = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getGroup()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, e.getKey()))));
+        this.where = builder.getWhere();
         this.declaredProperties = ImmutableSortedMap.<String, Property>orderedBy(Ordering.natural())
                 .putAll(select).putAll(group).build();
         this.declaredPermissions = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getPermissions()).entrySet().stream()

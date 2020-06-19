@@ -23,7 +23,7 @@ package io.basestar.storage;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.storage.aggregate.Aggregate;
+import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.Sort;
 import lombok.Setter;

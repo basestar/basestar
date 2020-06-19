@@ -95,7 +95,7 @@ public class NimbusAuthenticator implements Authenticator {
                 @Override
                 public String getId() {
 
-                    return claims.getSubject();
+                    return userId(claims);
                 }
 
                 @Override
@@ -109,6 +109,11 @@ public class NimbusAuthenticator implements Authenticator {
 
             throw new AuthenticationFailedException(e.getMessage(), e);
         }
+    }
+
+    protected String userId(final JWTClaimsSet claims) {
+
+        return claims.getSubject();
     }
 
     @Override

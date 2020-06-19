@@ -2,7 +2,7 @@ package io.basestar.type.has;
 
 /*-
  * #%L
- * basestar-mapper
+ * basestar-core
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%

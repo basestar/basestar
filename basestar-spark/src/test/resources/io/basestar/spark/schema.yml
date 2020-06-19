@@ -6,6 +6,23 @@ A:
 
 B:
   type: object
+  properties:
+    key:
+      type: A
+    value:
+      type: integer
 
 C:
   type: object
+
+AggView:
+  type: view
+  select:
+    agg:
+      type: string
+      expression: sum(value) + 2
+  from: B
+  group:
+    key:
+      type: string
+      expression: key.id

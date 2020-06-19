@@ -114,11 +114,12 @@ TeamMemberStats:
   select:
     count:
       type: integer
-      expression: sum() / count()
+      expression: count()
   group:
     team:
       type: string
       expression: team.id
+  where: accepted
 
   permissions:
     read:

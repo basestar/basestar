@@ -2,7 +2,7 @@ package io.basestar.storage.leveldb;
 
 /*-
  * #%L
- * basestar-storage-s3
+ * basestar-storage-leveldb
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%

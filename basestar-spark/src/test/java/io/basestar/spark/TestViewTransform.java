@@ -21,10 +21,7 @@ package io.basestar.spark;
  */
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.Namespace;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.util.Path;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -35,66 +32,67 @@ import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.List;
 
-public class TestExpandTransform {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+public class TestViewTransform {
 
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
-//    @Accessors(chain = true)
     public static class A {
 
         private String id;
-
-        private B ref;
     }
 
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
-//    @Accessors(chain = true)
     public static class B {
 
-        private String id;
+        private A key;
+
+        private int value;
     }
 
     @Data
-//    @Accessors(chain = true)
-    public static class C {
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AggView {
 
+        private String key;
+
+        private long agg;
     }
 
     @Test
-    public void testExpand() throws IOException {
+    public void testView() throws IOException {
 
         final SparkSession session = SparkSession.builder()
             .master("local[*]")
             .getOrCreate();
 
-        final Namespace namespace = Namespace.load(TestExpandTransform.class.getResourceAsStream("schema.yml"));
+        final Namespace namespace = Namespace.load(TestViewTransform.class.getResourceAsStream("schema.yml"));
 
-        final ObjectSchema a = namespace.requireObjectSchema("A");
+        final A a = new A("a");
+        final A b = new A("b");
 
-        final Source<Dataset<Row>> sourceA = (Source<Dataset<Row>>) sink -> sink.accept(session.createDataset(ImmutableList.of(
-                new A("a:1", new B("b:1"))
-        ), Encoders.bean(A.class)).toDF());
+        final Source<Dataset<Row>> sourceB = (Source<Dataset<Row>>) sink -> sink.accept(session.createDataset(ImmutableList.of(
+                new B(a, 1), new B(a, 2), new B(a, 3), new B(b, 2), new B(b, 4), new B(b, 6)
+        ), Encoders.bean(B.class)).toDF());
 
-        final ExpandTransform expand = ExpandTransform.builder()
-                .schema(a)
-                .expand(ImmutableSet.of(
-                        Path.of("ref"),
-                        Path.of("link")
-                ))
-                .sources((name) -> {
-                    return null;
-                })
+        final ViewTransform view = ViewTransform.builder()
+                .schema(namespace.requireViewSchema("AggView"))
                 .build();
 
-        final SchemaTransform schema = SchemaTransform.builder().schema(a).build();
+        sourceB.then(view).then(dataset -> {
 
-        sourceA.then(schema).then(dataset -> {
-
-            System.err.println(dataset.collectAsList());
+            final List<AggView> rows = dataset.as(Encoders.bean(AggView.class)).collectAsList();
+            assertEquals(2, rows.size());
+            assertTrue(rows.contains(new AggView("a", 8)));
+            assertTrue(rows.contains(new AggView("b", 14)));
         });
     }
 }
