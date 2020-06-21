@@ -137,7 +137,7 @@ public class SchemaAdaptor {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
         builder.name(namingStrategy.queryLinkMethodName(schema, link));
-        builder.type(new TypeName(namingStrategy.pageTypeName(schema)));
+        builder.type(new TypeName(namingStrategy.pageTypeName(link.getSchema())));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(Reserved.ID).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
