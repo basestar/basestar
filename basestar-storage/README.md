@@ -9,9 +9,37 @@ The storage layer is responsible for:
 - Enforcing the level(s) of consistency advertised in StorageTraits
 - Converting query expressions into performant queries against the underlying storage
 
-Links, references and authentication are not handled by the storage layer, they are handled by the database
+Links, references, inheritance and authentication are not handled by the storage layer, they are handled by the database
 layer (although it maybe makes sense to optionally push some of this down where the storage engine
 can support it, e.g. SQL).
+
+### Required methods
+
+#### read(id)
+
+Required, returns the latest version of the object with this id
+
+#### read(id, version)
+
+If version history is not implemented/enabled, the storage engine should perform a read, and return null if the
+current version doesn't match the requested version.
+
+### Optional methods
+
+#### query(expression, sort)
+
+The storage engine should return a list of Pager sources, it is the responsibility of the caller to merge these Pager
+sources. A storage engine should support only the subset of queries that can be implemented optimally.
+
+#### aggregate(expression)
+
+As per query, but for aggregating view types.
+
+#### create(id, data)
+
+#### update(id, version, data)
+
+#### delete(id, version)
 
 ### StorageTraits
 
@@ -149,3 +177,73 @@ final UndertowConnector connector = new UndertowConnector(api, "localhost", 8080
 connector.start();
 
 ```
+
+## Layered storage/data-branching
+
+Data-branching is implemented in the general case using LayeredStorage, this storage engine has a primary (overlay) and
+secondary (base) storage engine, the primary and secondary storage engine may be of different types.
+
+In the special case, where layering storage may be implemented more efficiently when the underlying engines have
+awareness of each other and the layering, a custom implementation can be provided (how?). An example of where awareness
+may lead to better performance is Elasticsearch, where multi-index searches could be used to provide the overlay feature.
+
+Multiple LayeredStorage instances may be composed to represent complex chains of branching, with the caveat that
+performance degradation may occur at deeper levels, depending on the layering mechanism, e.g. the default LayeredStorage
+implementation will perform at least n times more work than the simple case where n is the number of layers.
+
+Layered storage from the point-of-view of the caller should appear as if the base storage was duplicated, in terms of
+reads, queries and writes, but only a minimal amount of data (the difference) should be stored.
+
+A general LayeredStorage implementation for partitioned storage (e.g. dynamodb, cassandra) works as follows:
+
+### With writer co-ordination
+
+This assumes that at a given branch point, there is one writer, than can select behaviour depending on which branch
+it is acting for, and no other writers can change the data in the storage.
+
+#### create
+
+If writing to the primary, the instance is created in the primary storage only.
+
+If writing to the secondary, the instance is created in the secondary storage, and a tombstone is created on all
+indexes that cover the instance in the primary storage.
+
+#### delete
+
+If writing to the primary, a tombstone record is created in the primary storage, and all covering indexes.
+
+If writing to the secondary, a tombstone record is created in the secondary storage and all covering indexes.
+
+#### update
+
+If writing to the primary, the instance is updated in the primary storage new index records are created as normal, and
+a tombstone record is created in the primary storage for all prior covering indexes that are no longer covering indexes.
+
+If writing to the secondary, the instance is updated in the secondary storage, new index records are created as normal,
+and a tombstone record is created in the secondary storage for all prior covering indexes that are no longer covering
+indexes. Tombstone records are also created in the primary storage for all newly covering indexes,
+unless non-tombstone records exist for the same id
+
+#### read
+
+The read request is executed on the primary and secondary storage engines in parallel, the response from the primary is
+returned if present, null is returned if a tombstone is present, otherwise the response from the secondary is returned.
+
+#### query
+
+The query ie executed on the primary and the secondary storage engines in parallel, since both queries have the same
+sort term(s), and since tombstones will have been placed on top of values that changed, it is possible to remove duplicates
+and overwritten tombstones by comparing only the values at the heads of the paging sources. This kind of de-duplication is
+already done for disjunctive queries on hash-range stores, the only difference is the introduction of tombstones to cover
+values that had their keys changed.
+
+### Without writer co-ordination
+
+This assumes that new writers have no knowledge of other writers (only that other writers might exist)
+
+The primary and secondary are each given a unique identifier (storage id), and a globally locked integer (sequence id) for the current
+change id. Each write obtains the latest value of the locked integer, and this is written to the underlying value
+(as a hidden property, i.e. preceded with a double underscore).
+
+Writes proceed as above, except that tombstones do not need to be written on the primary as a result of changes in the secondary,
+and filtering is done in queries to ignore values that come from the 'older' stream of data as defined by the starting sequence id.
