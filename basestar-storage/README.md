@@ -244,7 +244,7 @@ Baseline storage now looks like:
     <tr><td>a</td><td>1</td><td>matt</td></tr>
 </table>
 
-Baseline name index looks like:
+Baseline index looks like:
 
 <table>
     <tr><td>name</td><td>id</td><td>version</td></tr>
@@ -257,13 +257,6 @@ Now we'll create a LayeredStorage and write to the left side:
     <tr><td>id</td><td>b</td></tr>
     <tr><td>version</td><td>1</td></tr>
     <tr><td>name</td><td>sandy</td></tr>
-</table>
-
-Baseline is unchanged, left storage now looks like:
-
-<table>
-    <tr><td>id</td><td>version</td><td>name</td></tr>
-    <tr><td>b</td><td>1</td><td>sandy</td></tr>
 </table>
 
 Let's write to the right side:
@@ -286,6 +279,7 @@ Left storage now looks like this:
 
 <table>
     <tr><td>id</td><td>version</td><td>name</td></tr>
+    <tr><td>b</td><td>1</td><td>sandy</td></tr>
     <tr><td>a</td><td>2</td><td>sean</td></tr>
 </table>
 
@@ -294,6 +288,7 @@ Left storage name index looks like:
 <table>
     <tr><td>name</td><td>id</td><td>version</td></tr>
     <tr><td>matt*</td><td>-</td><td>-</td></tr>
+    <tr><td>sandy</td><td>b</td><td>1</td></tr>
     <tr><td>sean</td><td>a</td><td>2</td></tr>
 </table>
 
@@ -306,16 +301,16 @@ The layered storage view from the left looks like:
     <tr><td>id</td><td>version</td><td>name</td></tr>
     <tr><td>a</td><td>2</td><td>sean</td></tr>
     <tr><td>b</td><td>1</td><td>sandy</td></tr>
-    <tr><td>c</td><td>1</td><td>mark</td></tr>
 </table>
 
-And from the right it looks looks like:
+And from the right it looks like:
 
 <table>
     <tr><td>id</td><td>version</td><td>name</td></tr>
-    <tr><td>a</td><td>2</td><td>matt</td></tr>
-    <tr><td>b</td><td>1</td><td>sandy</td></tr>
+    <tr><td>a</td><td>1</td><td>matt</td></tr>
     <tr><td>c</td><td>1</td><td>mark</td></tr>
 </table>
+
+
 
 
