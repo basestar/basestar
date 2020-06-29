@@ -274,7 +274,7 @@ Let's write to the right side:
     <tr><td>name</td><td>mark</td></tr>
 </table>
 
-If we now edit the first record on the left side:
+If we now update the original record (id: a) on the left side:
 
 <table>
     <tr><td>id</td><td>a</td></tr>
