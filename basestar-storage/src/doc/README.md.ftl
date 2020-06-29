@@ -198,7 +198,7 @@ A general LayeredStorage implementation for partitioned storage (e.g. dynamodb, 
 
 ### With writer co-ordination
 
-This assumes that at a given branch point, there is one writer, than can select behaviour depending on which branch
+This assumes that at a given branch point, there is one writer which can select behaviour depending on which branch
 it is acting for, and no other writers can change the data in the storage.
 
 #### create
@@ -222,7 +222,7 @@ a tombstone record is created in the primary storage for all prior covering inde
 If writing to the secondary, the instance is updated in the secondary storage, new index records are created as normal,
 and a tombstone record is created in the secondary storage for all prior covering indexes that are no longer covering
 indexes. Tombstone records are also created in the primary storage for all newly covering indexes,
-unless non-tombstone records exist for the same id
+unless non-tombstone records exist for the same key
 
 #### read
 
