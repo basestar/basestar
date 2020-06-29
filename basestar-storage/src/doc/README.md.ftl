@@ -247,3 +247,67 @@ change id. Each write obtains the latest value of the locked integer, and this i
 
 Writes proceed as above, except that tombstones do not need to be written on the primary as a result of changes in the secondary,
 and filtering is done in queries to ignore values that come from the 'older' stream of data as defined by the starting sequence id.
+
+### Example
+
+Assume the following record is written to storage X:
+
+<table>
+    <tr><td>id</td><td>a</td></tr>
+    <tr><td>version</td><td>1</td></tr>
+    <tr><td>name</td><td>matt</td></tr>
+</table>
+
+Storage X now looks like:
+
+<table>
+    <tr><td>id</td><td>version</td><td>name</td></tr>
+    <tr><td>a</td><td>1</td><td>matt</td></tr>
+</table>
+
+Now we'll create a LayeredStorage with X as secondary and Y as primary. Let's write to the primary (overlay):
+
+<table>
+    <tr><td>id</td><td>b</td></tr>
+    <tr><td>version</td><td>1</td></tr>
+    <tr><td>name</td><td>sandy</td></tr>
+</table>
+
+Storage X is unchanged, storage Y now looks like:
+
+<table>
+    <tr><td>id</td><td>version</td><td>name</td></tr>
+    <tr><td>b</td><td>1</td><td>sandy</td></tr>
+</table>
+
+The layered storage view looks like:
+
+<table>
+    <tr><td>id</td><td>version</td><td>name</td></tr>
+    <tr><td>a</td><td>1</td><td>matt</td></tr>
+    <tr><td>b</td><td>1</td><td>sandy</td></tr>
+</table>
+
+Let's write to the secondary (base) now:
+
+<table>
+    <tr><td>id</td><td>c</td></tr>
+    <tr><td>version</td><td>1</td></tr>
+    <tr><td>name</td><td>mark</td></tr>
+</table>
+
+Storage X now looks like this:
+
+<table>
+    <tr><td>id</td><td>version</td><td>name</td></tr>
+    <tr><td>a</td><td>1</td><td>matt</td></tr>
+    <tr><td>c</td><td>1</td><td>mark</td></tr>
+</table>
+
+Storage Y looks like this:
+
+<table>
+    <tr><td>id</td><td>version</td><td>name</td></tr>
+    <tr><td>b</td><td>1</td><td>sandy</td></tr>
+    <tr><td>c*</td><td>1</td><td>mark</td></tr>
+</table>

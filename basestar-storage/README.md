@@ -196,8 +196,6 @@ reads, queries and writes, but only a minimal amount of data (the difference) sh
 
 A general LayeredStorage implementation for partitioned storage (e.g. dynamodb, cassandra) works as follows:
 
-### With writer co-ordination
-
 This assumes that at a given branch point, there is one writer which can select behaviour depending on which branch
 it is acting for, and no other writers can change the data in the storage.
 
@@ -222,7 +220,8 @@ a tombstone record is created in the primary storage for all prior covering inde
 If writing to the secondary, the instance is updated in the secondary storage, new index records are created as normal,
 and a tombstone record is created in the secondary storage for all prior covering indexes that are no longer covering
 indexes. Tombstone records are also created in the primary storage for all newly covering indexes,
-unless non-tombstone records exist for the same key
+unless non-tombstone records exist for the same key, and the original value from the secondary storage is written to the
+primary storage.
 
 #### read
 
@@ -237,13 +236,97 @@ and overwritten tombstones by comparing only the values at the heads of the pagi
 already done for disjunctive queries on hash-range stores, the only difference is the introduction of tombstones to cover
 values that had their keys changed.
 
-### Without writer co-ordination
+### Example
 
-This assumes that new writers have no knowledge of other writers (only that other writers might exist)
+Assume the following record is written to storage X:
 
-The primary and secondary are each given a unique identifier (storage id), and a globally locked integer (sequence id) for the current
-change id. Each write obtains the latest value of the locked integer, and this is written to the underlying value
-(as a hidden property, i.e. preceded with a double underscore).
+<table>
+<tr><td>id</td><td>a</td></tr>
+<tr><td>version</td><td>1</td></tr>
+<tr><td>name</td><td>matt</td></tr>
+</table>
 
-Writes proceed as above, except that tombstones do not need to be written on the primary as a result of changes in the secondary,
-and filtering is done in queries to ignore values that come from the 'older' stream of data as defined by the starting sequence id.
+Storage X now looks like:
+
+<table>
+<tr><td>id</td><td>version</td><td>name</td></tr>
+<tr><td>a</td><td>1</td><td>matt</td></tr>
+</table>
+
+Now we'll create a LayeredStorage with X as secondary and Y as primary. Let's write to the primary (overlay):
+
+<table>
+<tr><td>id</td><td>b</td></tr>
+<tr><td>version</td><td>1</td></tr>
+<tr><td>name</td><td>sandy</td></tr>
+</table>
+
+Storage X is unchanged, storage Y now looks like:
+
+<table>
+<tr><td>id</td><td>version</td><td>name</td></tr>
+<tr><td>b</td><td>1</td><td>sandy</td></tr>
+</table>
+
+The layered storage view looks like:
+
+<table>
+<tr><td>id</td><td>version</td><td>name</td></tr>
+<tr><td>a</td><td>1</td><td>matt</td></tr>
+<tr><td>b</td><td>1</td><td>sandy</td></tr>
+</table>
+
+Let's write to the secondary (base) now:
+
+<table>
+<tr><td>id</td><td>c</td></tr>
+<tr><td>version</td><td>1</td></tr>
+<tr><td>name</td><td>mark</td></tr>
+</table>
+
+Storage X now looks like this:
+
+<table>
+<tr><td>id</td><td>version</td><td>name</td></tr>
+<tr><td>a</td><td>1</td><td>matt</td></tr>
+<tr><td>c</td><td>1</td><td>mark</td></tr>
+</table>
+
+Storage Y looks like this:
+
+<table>
+<tr><td>id</td><td>version</td><td>name</td></tr>
+<tr><td>b</td><td>1</td><td>sandy</td></tr>
+<tr><td>c*</td><td>1</td><td>mark</td></tr>
+</table>
+
+The c* record is a tombstone record, reads on the primary side of the storage will receive both values for c, and treat
+the tombstone record as an indicator that the record does not exist in this side of the branch.
+
+If we now edit the first record:
+
+<table>
+<tr><td>id</td><td>a</td></tr>
+<tr><td>version</td><td>2</td></tr>
+<tr><td>name</td><td>sean</td></tr>
+</table>
+
+Storage X now looks like this:
+
+<table>
+<tr><td>id</td><td>version</td><td>name</td></tr>
+<tr><td>a</td><td>2</td><td>sean</td></tr>
+<tr><td>c</td><td>1</td><td>mark</td></tr>
+</table>
+
+Storage Y now looks like this:
+
+<table>
+<tr><td>id</td><td>version</td><td>name</td></tr>
+<tr><td>b</td><td>1</td><td>sandy</td></tr>
+<tr><td>c*</td><td>1</td><td>mark</td></tr>
+<tr><td>a</td><td>1</td><td>matt</td></tr>
+</table>
+
+If there were an index on the `name` field, then the same logic applies to the primary key of the index instead.
+
