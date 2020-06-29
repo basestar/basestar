@@ -180,11 +180,11 @@ connector.start();
 
 ## Layered storage/data-branching
 
-Data-branching is implemented in the general case using LayeredStorage, this storage engine has a primary (overlay) and
-secondary (base) storage engine, the primary and secondary storage engine may be of different types.
+Data-branching is implemented in the general case using LayeredStorage, this storage engine has a baseline
+and left and right storage engines, baseline, left and right storage engines may be of different types.
 
 In the special case, where layering storage may be implemented more efficiently when the underlying engines have
-awareness of each other and the layering, a custom implementation can be provided (how?). An example of where awareness
+awareness of each other and the layering, a custom implementation can be provided. An example of where awareness
 may lead to better performance is Elasticsearch, where multi-index searches could be used to provide the overlay feature.
 
 Multiple LayeredStorage instances may be composed to represent complex chains of branching, with the caveat that
@@ -196,61 +196,40 @@ reads, queries and writes, but only a minimal amount of data (the difference) sh
 
 A general LayeredStorage implementation for partitioned storage (e.g. dynamodb, cassandra) works as follows:
 
-### With writer co-ordination
-
 This assumes that at a given branch point, there is one writer which can select behaviour depending on which branch
 it is acting for, and no other writers can change the data in the storage.
 
 #### create
 
-If writing to the primary, the instance is created in the primary storage only.
-
-If writing to the secondary, the instance is created in the secondary storage, and a tombstone is created on all
-indexes that cover the instance in the primary storage.
+Instances are created on left/right branch storage depending on the request
 
 #### delete
 
-If writing to the primary, a tombstone record is created in the primary storage, and all covering indexes.
-
-If writing to the secondary, a tombstone record is created in the secondary storage and all covering indexes.
+If the instance exists in the baseline, a tombstone is written to the selected storage branch, else it is deleted
+directly.
 
 #### update
 
-If writing to the primary, the instance is updated in the primary storage new index records are created as normal, and
-a tombstone record is created in the primary storage for all prior covering indexes that are no longer covering indexes.
-
-If writing to the secondary, the instance is updated in the secondary storage, new index records are created as normal,
-and a tombstone record is created in the secondary storage for all prior covering indexes that are no longer covering
-indexes. Tombstone records are also created in the primary storage for all newly covering indexes,
-unless non-tombstone records exist for the same key
+The instance is written to the selected storage branch, if the value existed in the baseline storage with different
+index keys, then tombstone records are written to those index keys (assuming that no current records exist for those
+index keys).
 
 #### read
 
-The read request is executed on the primary and secondary storage engines in parallel, the response from the primary is
-returned if present, null is returned if a tombstone is present, otherwise the response from the secondary is returned.
+The read request is executed on the selected branch and the baseline engines in parallel, the response from the left/right branch is
+returned if present, null is returned if a tombstone is present, otherwise the response from the baseline is returned.
 
 #### query
 
-The query ie executed on the primary and the secondary storage engines in parallel, since both queries have the same
+The query ie executed on the selected branch and the baseline engines in parallel, since both queries have the same
 sort term(s), and since tombstones will have been placed on top of values that changed, it is possible to remove duplicates
 and overwritten tombstones by comparing only the values at the heads of the paging sources. This kind of de-duplication is
 already done for disjunctive queries on hash-range stores, the only difference is the introduction of tombstones to cover
 values that had their keys changed.
 
-### Without writer co-ordination
-
-This assumes that new writers have no knowledge of other writers (only that other writers might exist)
-
-The primary and secondary are each given a unique identifier (storage id), and a globally locked integer (sequence id) for the current
-change id. Each write obtains the latest value of the locked integer, and this is written to the underlying value
-(as a hidden property, i.e. preceded with a double underscore).
-
-Writes proceed as above, except that tombstones do not need to be written on the primary as a result of changes in the secondary,
-and filtering is done in queries to ignore values that come from the 'older' stream of data as defined by the starting sequence id.
-
 ### Example
 
-Assume the following record is written to storage X:
+Assume the following record is written to baseline storage, there is an index on `name`:
 
 <table>
     <tr><td>id</td><td>a</td></tr>
@@ -258,14 +237,21 @@ Assume the following record is written to storage X:
     <tr><td>name</td><td>matt</td></tr>
 </table>
 
-Storage X now looks like:
+Baseline storage now looks like:
 
 <table>
     <tr><td>id</td><td>version</td><td>name</td></tr>
     <tr><td>a</td><td>1</td><td>matt</td></tr>
 </table>
 
-Now we'll create a LayeredStorage with X as secondary and Y as primary. Let's write to the primary (overlay):
+Baseline index looks like:
+
+<table>
+    <tr><td>name</td><td>id</td><td>version</td></tr>
+    <tr><td>matt</td><td>a</td><td>1</td></tr>
+</table>
+
+Now we'll create a LayeredStorage and write to the left side:
 
 <table>
     <tr><td>id</td><td>b</td></tr>
@@ -273,22 +259,14 @@ Now we'll create a LayeredStorage with X as secondary and Y as primary. Let's wr
     <tr><td>name</td><td>sandy</td></tr>
 </table>
 
-Storage X is unchanged, storage Y now looks like:
+Baseline is unchanged, left storage now looks like:
 
 <table>
     <tr><td>id</td><td>version</td><td>name</td></tr>
     <tr><td>b</td><td>1</td><td>sandy</td></tr>
 </table>
 
-The layered storage view looks like:
-
-<table>
-    <tr><td>id</td><td>version</td><td>name</td></tr>
-    <tr><td>a</td><td>1</td><td>matt</td></tr>
-    <tr><td>b</td><td>1</td><td>sandy</td></tr>
-</table>
-
-Let's write to the secondary (base) now:
+Let's write to the right side:
 
 <table>
     <tr><td>id</td><td>c</td></tr>
@@ -296,18 +274,50 @@ Let's write to the secondary (base) now:
     <tr><td>name</td><td>mark</td></tr>
 </table>
 
-Storage X now looks like this:
+If we now edit the first record on the left side:
+
+<table>
+    <tr><td>id</td><td>a</td></tr>
+    <tr><td>version</td><td>2</td></tr>
+    <tr><td>name</td><td>sean</td></tr>
+</table>
+
+Left storage now looks like this:
 
 <table>
     <tr><td>id</td><td>version</td><td>name</td></tr>
-    <tr><td>a</td><td>1</td><td>matt</td></tr>
+    <tr><td>a</td><td>2</td><td>sean</td></tr>
+</table>
+
+Left storage name index looks like:
+
+<table>
+    <tr><td>name</td><td>id</td><td>version</td></tr>
+    <tr><td>matt*</td><td>-</td><td>-</td></tr>
+    <tr><td>sean</td><td>a</td><td>2</td></tr>
+</table>
+
+`matt*` is a tombstone record, when read in a query it covers the value from the baseline storage engine and stops it
+from being returned.
+
+The layered storage view from the left looks like:
+
+<table>
+    <tr><td>id</td><td>version</td><td>name</td></tr>
+    <tr><td>a</td><td>2</td><td>sean</td></tr>
+    <tr><td>b</td><td>1</td><td>sandy</td></tr>
     <tr><td>c</td><td>1</td><td>mark</td></tr>
 </table>
 
-Storage Y looks like this:
+And from the right it looks looks like:
 
 <table>
     <tr><td>id</td><td>version</td><td>name</td></tr>
+    <tr><td>a</td><td>2</td><td>matt</td></tr>
     <tr><td>b</td><td>1</td><td>sandy</td></tr>
-    <tr><td>c*</td><td>1</td><td>mark</td></tr>
+    <tr><td>c</td><td>1</td><td>mark</td></tr>
 </table>
+
+
+
+
