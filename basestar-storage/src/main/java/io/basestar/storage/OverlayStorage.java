@@ -20,18 +20,18 @@ package io.basestar.storage;
  * #L%
  */
 
-import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.schema.Consistency;
-import io.basestar.schema.Instance;
-import io.basestar.schema.ObjectSchema;
 import io.basestar.expression.aggregate.Aggregate;
+import io.basestar.schema.*;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.Nullsafe;
-import io.basestar.util.PagedList;
 import io.basestar.util.Sort;
 
-import java.util.*;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 // Used in batch to allow pending creates/updates to be linked and referenced in permission expressions.
@@ -41,83 +41,85 @@ import java.util.concurrent.CompletableFuture;
 
 public class OverlayStorage implements Storage {
 
-    private final Storage delegate;
+    private static final String TOMBSTONE_KEY = Reserved.PREFIX + "overlay";
 
-    private final Map<String, Map<String, Map<String, Object>>> data;
+    private final Storage baseline;
 
-    public OverlayStorage(final Storage delegate, final Collection<? extends Map<String, Object>> items) {
+    private final Storage overlay;
 
-        this.delegate = delegate;
-        final Map<String, Map<String, Map<String, Object>>> data = new HashMap<>();
-        items.forEach(item -> {
-            final String schema = Instance.getSchema(item);
-            final String id = Instance.getId(item);
-            final Map<String, Map<String, Object>> target = data.computeIfAbsent(schema, ignored -> new HashMap<>());
-            target.put(id, item);
-        });
-        this.data = Collections.unmodifiableMap(data);
-    }
+    @lombok.Builder(builderClassName = "Builder")
+    OverlayStorage(final Storage baseline, final Storage overlay) {
 
-    private Map<String, Object> get(final String schema, final String id) {
-
-        return Nullsafe.option(data.get(schema)).get(id);
-    }
-
-    private Map<String, Object> get(final Map<String, Object> instance) {
-
-        return get(Instance.getSchema(instance), Instance.getId(instance));
+        this.baseline = baseline;
+        this.overlay = overlay;
     }
 
     @Override
     public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
 
-        final Map<String, Object> object = get(schema.getName(), id);
-        if(object != null) {
-            return CompletableFuture.completedFuture(object);
-        } else {
-            return delegate.readObject(schema, id);
-        }
+        final CompletableFuture<Map<String, Object>> futBase = baseline.readObject(schema, id);
+        final CompletableFuture<Map<String, Object>> futOver = overlay.readObject(schema, id);
+        return CompletableFuture.allOf(futBase, futOver).thenApply(ignored -> {
+            final Map<String, Object> over = futOver.getNow(null);
+            return over != null ? over : futBase.getNow(null);
+        });
     }
 
     @Override
     public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
 
-        final Map<String, Object> object = get(schema.getName(), id);
-        if(object != null && Long.valueOf(version).equals(Instance.getVersion(object))) {
-            return CompletableFuture.completedFuture(object);
-        } else {
-            return delegate.readObjectVersion(schema, id, version);
-        }
+        final CompletableFuture<Map<String, Object>> futBase = baseline.readObjectVersion(schema, id, version);
+        final CompletableFuture<Map<String, Object>> futOver = overlay.readObjectVersion(schema, id, version);
+        final CompletableFuture<Map<String, Object>> futCheck = overlay.readObject(schema, id);
+        return CompletableFuture.allOf(futBase, futOver, futCheck).thenApply(ignored -> {
+            final Map<String, Object> over = futOver.getNow(null);
+            if (over != null) {
+                return over;
+            } else {
+                // Cannot return a version greater than the latest in the overlay
+                final Map<String, Object> check = futCheck.getNow(null);
+                if(check != null) {
+                    final Long checkVersion = Instance.getVersion(check);
+                    if(checkVersion != null && checkVersion > version) {
+                        return null;
+                    }
+                }
+                return futBase.getNow(null);
+            }
+        });
     }
 
     @Override
-    @SuppressWarnings({"unchecked", "rawtypes"})
+//    @SuppressWarnings({"unchecked", "rawtypes"})
     public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
 
         final List<Pager.Source<Map<String, Object>>> sources = new ArrayList<>();
 
+        // FIXME: relies on stable impl of Stream.min() in Pager
+        // Overlay entries appear first, so they will be chosen
+        sources.addAll(overlay.query(schema, query, sort));
+        sources.addAll(baseline.query(schema, query, sort));
+
+//        baseline.query(schema, query, sort).forEach(source -> sources.add((count, token) -> source.page(count, token)
+//                .thenApply(page -> page.filter(instance -> get(instance) == null))));
+
         // Add a source that will emit matching results
 
-        sources.add((count, token) -> {
-            // Don't do any paging, just return all matches
-            final List<Map<String, Object>> page = new ArrayList<>();
-            Nullsafe.option(data.get(schema.getName())).forEach((id, item) -> {
-                if(query.evaluatePredicate(Context.init(item))) {
-                    page.add(item);
-                }
-            });
-
-            // Must be sorted
-            final Comparator<Map<String, Object>> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
-            page.sort(comparator);
-
-            return CompletableFuture.completedFuture(new PagedList<>(page, null));
-        });
-
-        // Add underlying sources, but filter out any matches
-
-        delegate.query(schema, query, sort).forEach(source -> sources.add((count, token) -> source.page(count, token)
-                            .thenApply(page -> page.filter(instance -> get(instance) == null))));
+//        sources.add((count, token) -> {
+//            // Don't do any paging, just return all matches
+//            final List<Map<String, Object>> page = new ArrayList<>();
+//            Nullsafe.option(data.get(schema.getName())).forEach((id, item) -> {
+//                if(query.evaluatePredicate(Context.init(item))) {
+//                    page.add(item);
+//                }
+//            });
+//
+//            // Must be sorted
+//            final Comparator<Map<String, Object>> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
+//            page.sort(comparator);
+//
+//            return CompletableFuture.completedFuture(new PagedList<>(page, null));
+//        });
 
         return sources;
     }
@@ -131,64 +133,142 @@ public class OverlayStorage implements Storage {
     @Override
     public ReadTransaction read(final Consistency consistency) {
 
-        final ReadTransaction transaction = delegate.read(consistency);
-        return new ReadTransaction() {
-
-            private final Map<BatchResponse.Key, Map<String, Object>> results = new HashMap<>();
-
-            @Override
-            public ReadTransaction readObject(final ObjectSchema schema, final String id) {
-
-                final Map<String, Object> object = get(schema.getName(), id);
-                if(object != null) {
-                    results.put(new BatchResponse.Key(schema.getName(), id), object);
-                    return this;
-                } else {
-                    transaction.readObject(schema, id);
-                    return this;
-                }
-            }
-
-            @Override
-            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version) {
-
-                final Map<String, Object> object = get(schema.getName(), id);
-                if(object != null && Long.valueOf(version).equals(Instance.getVersion(object))) {
-                    results.put(new BatchResponse.Key(schema.getName(), id, version), object);
-                    return this;
-                } else {
-                    transaction.readObjectVersion(schema, id, version);
-                    return this;
-                }
-            }
-
-            @Override
-            public CompletableFuture<BatchResponse> read() {
-
-                return transaction.read().thenApply(response -> {
-                    final Map<BatchResponse.Key, Map<String, Object>> merged = new HashMap<>(response);
-                    merged.putAll(results);
-                    return new BatchResponse.Basic(merged);
-                });
-            }
-        };
+        return new ReadTransaction.Basic(this);
+//        final ReadTransaction fromBaseline = baseline.read(consistency);
+//        final ReadTransaction fromOverlay = overlay.read(consistency);
+//        return new ReadTransaction() {
+//
+//            private final Map<BatchResponse.Key, Map<String, Object>> results = new HashMap<>();
+//
+//            @Override
+//            public ReadTransaction readObject(final ObjectSchema schema, final String id) {
+//
+//                final Map<String, Object> object = get(schema.getName(), id);
+//                if(object != null) {
+//                    results.put(new BatchResponse.Key(schema.getName(), id), object);
+//                    return this;
+//                } else {
+//                    transaction.readObject(schema, id);
+//                    return this;
+//                }
+//            }
+//
+//            @Override
+//            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+//
+//                final Map<String, Object> object = get(schema.getName(), id);
+//                if(object != null && Long.valueOf(version).equals(Instance.getVersion(object))) {
+//                    results.put(new BatchResponse.Key(schema.getName(), id, version), object);
+//                    return this;
+//                } else {
+//                    transaction.readObjectVersion(schema, id, version);
+//                    return this;
+//                }
+//            }
+//
+//            @Override
+//            public CompletableFuture<BatchResponse> read() {
+//
+//                return transaction.read().thenApply(response -> {
+//                    final Map<BatchResponse.Key, Map<String, Object>> merged = new HashMap<>(response);
+//                    merged.putAll(results);
+//                    return new BatchResponse.Basic(merged);
+//                });
+//            }
+//        };
     }
 
     @Override
     public WriteTransaction write(final Consistency consistency) {
 
-        return delegate.write(consistency);
+        final WriteTransaction overlayWrite = overlay.write(consistency);
+        return new WriteTransaction() {
+            @Override
+            public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+
+                overlayWrite.createObject(schema, id, after);
+                return this;
+            }
+
+            @Override
+            public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
+
+                // FIXME: need to know if overlay has the value already for correct versioning
+                overlayWrite.updateObject(schema, id, before, after);
+                return this;
+            }
+
+            @Override
+            public WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
+
+                // FIXME: need to know if overlay has the value already for correct versioning
+                final Map<String, Object> tombstone = tombstone(schema, id, before);
+                overlayWrite.updateObject(schema, id, before, tombstone);
+                return this;
+            }
+            
+            private Map<String, Object> tombstone(final ObjectSchema schema, final String id, final Map<String, Object> before) {
+
+                final Map<String, Object> tombstone = new HashMap<>();
+                Instance.setSchema(tombstone, schema.getName());
+                Instance.setId(tombstone, id);
+                Instance.setCreated(tombstone, Instance.getCreated(before));
+                Instance.setUpdated(tombstone, LocalDateTime.now());
+                Instance.setVersion(tombstone, Nullsafe.option(Instance.getVersion(before)) + 1);
+                Instance.setHash(tombstone, schema.hash(tombstone));
+                tombstone.put(TOMBSTONE_KEY, true);
+                return tombstone;
+            }
+
+            @Override
+            public WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+
+                // FIXME: need to know if overlay has the value already for correct versioning
+                overlayWrite.createIndex(schema, index, id, version, key, projection);
+                return this;
+            }
+
+            @Override
+            public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+
+                // FIXME: need to know if overlay has the value already for correct versioning
+                overlayWrite.updateIndex(schema, index, id, version, key, projection);
+                return this;
+            }
+
+            @Override
+            public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
+
+                // FIXME: need to know if overlay has the value already for correct versioning
+                overlayWrite.deleteIndex(schema, index, id, version, key);
+                return this;
+            }
+
+            @Override
+            public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
+
+                // FIXME: need to know if overlay has the value already for correct versioning
+                overlayWrite.createHistory(schema, id, version, after);
+                return this;
+            }
+
+            @Override
+            public CompletableFuture<BatchResponse> commit() {
+
+                return overlayWrite.commit();
+            }
+        };
     }
 
     @Override
     public EventStrategy eventStrategy(final ObjectSchema schema) {
 
-        return delegate.eventStrategy(schema);
+        return overlay.eventStrategy(schema);
     }
 
     @Override
     public StorageTraits storageTraits(final ObjectSchema schema) {
 
-        return delegate.storageTraits(schema);
+        return overlay.storageTraits(schema);
     }
 }

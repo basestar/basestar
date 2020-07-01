@@ -48,6 +48,7 @@ import io.basestar.expression.constant.Constant;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Or;
 import io.basestar.schema.*;
+import io.basestar.storage.ConstantStorage;
 import io.basestar.storage.OverlayStorage;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
@@ -253,7 +254,11 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
                 // Perform expansion using overlay storage, so that permissions can reference other batch actions
 
-                final Storage overlayStorage = new OverlayStorage(storage, overlay.values());
+                final Storage overlayStorage = OverlayStorage.builder()
+                        .baseline(storage)
+                        .overlay(ConstantStorage.builder().items(overlay.values()).build())
+                        .build();
+
                 final ReadProcessor readOverlay = new ReadProcessor(namespace, overlayStorage);
 
                 return readOverlay.expandCaller(beforeContext, beforeCaller, afterCallerExpand).thenCompose(afterCaller -> {
