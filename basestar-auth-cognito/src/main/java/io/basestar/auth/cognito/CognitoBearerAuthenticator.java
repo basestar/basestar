@@ -58,11 +58,16 @@ public class CognitoBearerAuthenticator extends NimbusAuthenticator {
     protected String userId(final JWTClaimsSet claims) {
 
         // For federated login, claims.subject is not the cognito id
-        final Object username = claims.getClaim("cognito:username");
-        if(username instanceof String) {
-            return (String)username;
+        final Object cognitoUsername = claims.getClaim("cognito:username");
+        if(cognitoUsername instanceof String) {
+            return (String)cognitoUsername;
         } else {
-            return super.userId(claims);
+            final Object username = claims.getClaim("username");
+            if(username instanceof String) {
+                return (String)username;
+            } else {
+                return super.userId(claims);
+            }
         }
     }
 

@@ -112,6 +112,7 @@ public class Pager<T> {
                             .map(v -> v.getNow(null))
                             .collect(Collectors.toList());
 
+                    // FIXME: reimplement to be guaranteed stable min
                     final Optional<State<T>> first = states.stream()
                             .filter(State::hasNext)
                             .min((a, b) -> comparator.compare(a.peek(), b.peek()));

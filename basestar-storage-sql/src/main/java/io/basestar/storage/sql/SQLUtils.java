@@ -22,6 +22,7 @@ package io.basestar.storage.sql;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
 import io.basestar.schema.Index;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
@@ -91,25 +92,25 @@ public class SQLUtils {
             @Override
             public <T> DataType<?> visitArray(final UseArray<T> type) {
 
-                return SQLDataType.JSONB;
+                return SQLDataType.LONGVARCHAR;//JSONB;
             }
 
             @Override
             public <T> DataType<?> visitSet(final UseSet<T> type) {
 
-                return SQLDataType.JSONB;
+                return SQLDataType.LONGVARCHAR;//JSONB;
             }
 
             @Override
             public <T> DataType<?> visitMap(final UseMap<T> type) {
 
-                return SQLDataType.JSONB;
+                return SQLDataType.LONGVARCHAR;//JSONB;
             }
 
             @Override
             public DataType<?> visitStruct(final UseStruct type) {
 
-                return SQLDataType.JSONB;
+                return SQLDataType.LONGVARCHAR;//JSONB;
             }
 
             @Override
@@ -287,7 +288,9 @@ public class SQLUtils {
                 try {
                     final String str;
                     if(value instanceof String) {
-                        str = (String)value;
+                        str = (String) value;
+                    } else if(value instanceof byte[]) {
+                        str = new String((byte[])value, Charsets.UTF_8);
                     } else if(value instanceof JSON) {
                         str = unescape(((JSON)value).data());
                     } else if(value instanceof JSONB) {

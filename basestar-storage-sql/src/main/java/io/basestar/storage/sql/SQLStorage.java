@@ -23,13 +23,13 @@ package io.basestar.storage.sql;
 import com.google.common.base.MoreObjects;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Index;
 import io.basestar.schema.*;
 import io.basestar.schema.use.Use;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
-import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.DisjunctionVisitor;
@@ -56,6 +56,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class SQLStorage implements Storage {
 
@@ -98,10 +99,17 @@ public class SQLStorage implements Storage {
         }
     }
 
+    private List<SelectFieldOrAsterisk> selectFields(final ObjectSchema schema) {
+
+        return Stream.concat(schema.metadataSchema().keySet().stream(), schema.getProperties().keySet().stream())
+                .map(name -> DSL.field(DSL.name(name)).as(DSL.name(name)))
+                .collect(Collectors.toList());
+    }
+
     @Override
     public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
 
-        return withContext(context -> context.select(DSL.asterisk())
+        return withContext(context -> context.select(selectFields(schema))
                 .from(objectTableName(schema))
                 .where(idField(schema).eq(id))
                 .limit(1).fetchAsync().thenApply(result -> first(schema, result)));
@@ -110,7 +118,7 @@ public class SQLStorage implements Storage {
     @Override
     public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
 
-        return withContext(context -> context.select(DSL.asterisk())
+        return withContext(context -> context.select(selectFields(schema))
                     .from(historyTableName(schema))
                     .where(idField(schema).eq(id)
                             .and(versionField(schema).eq(version)))
@@ -153,7 +161,7 @@ public class SQLStorage implements Storage {
             sources.add((count, token) ->
                     withContext(context -> {
 
-                        final SelectSeekStepN<Record> select = context.select(DSL.asterisk())
+                        final SelectSeekStepN<Record> select = context.select(selectFields(schema))
                                 .from(index == null ? objectTableName(schema) : indexTableName(schema, index))
                                 .where(condition).orderBy(orderFields);
 
@@ -229,7 +237,7 @@ public class SQLStorage implements Storage {
                     for (final Map.Entry<ObjectSchema, Set<String>> entry : byId.entrySet()) {
                         final ObjectSchema schema = entry.getKey();
                         final Set<String> ids = entry.getValue();
-                        all(schema, context.select(DSL.asterisk())
+                        all(schema, context.select(selectFields(schema))
                                 .from(objectTableName(schema))
                                 .where(idField(schema).in(ids))
                                 .fetch())
@@ -241,7 +249,7 @@ public class SQLStorage implements Storage {
                         final Set<Row2<String, Long>> idVersions = entry.getValue().stream()
                                 .map(v -> DSL.row(v.getId(), v.getVersion()))
                                 .collect(Collectors.toSet());
-                        all(schema, context.select(DSL.asterisk())
+                        all(schema, context.select(selectFields(schema))
                                 .from(objectTableName(schema))
                                 .where(DSL.row(idField(schema), versionField(schema))
                                         .in(idVersions))
