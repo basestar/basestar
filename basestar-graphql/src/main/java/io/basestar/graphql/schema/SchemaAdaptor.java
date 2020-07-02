@@ -232,7 +232,6 @@ public class SchemaAdaptor {
         return builder.build();
     }
 
-
     private SDLDefinition<?> inputExpressionTypeDefinition(final InstanceSchema schema) {
 
         final InputObjectTypeDefinition.Builder builder = InputObjectTypeDefinition.newInputObjectDefinition();
@@ -252,8 +251,8 @@ public class SchemaAdaptor {
         if(property.getDescription() != null) {
             builder.description(new Description(property.getDescription(), null, true));
         }
-        // Cannot use NonNullType because value may come from an expression
-        final Type<?> type = inputType(property.getType());
+        final Type<?> valueType = inputType(property.getType());
+        final Type<?> type = property.isRequired() ? new NonNullType(valueType) : valueType;
         builder.type(type);
         return builder.build();
     }
