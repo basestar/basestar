@@ -62,7 +62,7 @@ public interface APIResponse {
 
     static APIResponse error(final APIRequest request, final ExceptionMetadata e) {
 
-        return response(request, e.getStatus(), null, e.getData());
+        return response(request, e.getStatus(), e.getHeaders(), e.getData());
     }
 
     static ExceptionMetadata exceptionMetadata(final Throwable e) {

@@ -21,6 +21,7 @@ package io.basestar.storage;
  */
 
 import io.basestar.expression.Expression;
+import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.Index;
 import io.basestar.schema.ObjectSchema;
@@ -52,6 +53,12 @@ public interface DelegatingStorage extends Storage {
     default CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
 
         return storage(schema).readObject(schema, id);
+    }
+
+    @Override
+    default List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
+
+        return storage(schema).aggregate(schema, query, group, aggregates);
     }
 
     @Override

@@ -20,19 +20,24 @@ package io.basestar.database.api;
  * #L%
  */
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Splitter;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
 import io.basestar.BuildMetadata;
 import io.basestar.api.API;
 import io.basestar.api.APIFormat;
 import io.basestar.api.APIRequest;
 import io.basestar.api.APIResponse;
+import io.basestar.api.exception.NotFoundException;
+import io.basestar.api.exception.UnsupportedMethodException;
 import io.basestar.auth.Caller;
 import io.basestar.database.Database;
 import io.basestar.database.options.*;
 import io.basestar.expression.Expression;
+import io.basestar.schema.Instance;
 import io.basestar.schema.Link;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
@@ -102,55 +107,64 @@ public class DatabaseAPI implements API {
                 path = PATH_SPLITTER.splitToList(request.getPath());
             }
 
-            switch (request.getMethod()) {
-                case HEAD:
-                case OPTIONS:
-                    return head(request);
-                case GET:
-                    switch (path.size()) {
-                        case 0:
+            final APIRequest.Method method = request.getMethod();
+            switch (path.size()) {
+                case 0:
+                    switch(method) {
+                        case HEAD:
+                        case OPTIONS:
+                            return head(request);
+                        case GET:
                             return health(request);
-                        case 1:
+                        default:
+                            throw new UnsupportedMethodException(ImmutableSet.of(APIRequest.Method.GET));
+                    }
+                case 1:
+                    switch (method) {
+                        case HEAD:
+                        case OPTIONS:
+                            return head(request);
+                        case GET:
                             if (path.get(0).equals("favicon.ico")) {
                                 return CompletableFuture.completedFuture(APIResponse.response(request,404, null));
                             } else {
                                 return query(caller, path.get(0), request);
                                 //return type(caller, request);
                             }
-                        case 2:
+                        case POST:
+                            return create(caller, path.get(0), request);
+                        default:
+                            throw new UnsupportedMethodException(ImmutableSet.of(APIRequest.Method.GET, APIRequest.Method.POST));
+                    }
+                case 2:
+                    switch (method) {
+                        case HEAD:
+                        case OPTIONS:
+                            return head(request);
+                        case GET:
                             return read(caller, path.get(0), path.get(1), request);
-                        case 3:
-                            return queryLink(caller, path.get(0), path.get(1), path.get(2), request);
-                    }
-                    break;
-                case PUT:
-                    switch (path.size()) {
-                        case 1:
-                            return create(caller, path.get(0), request);
-                        case 2:
-                            return create(caller, path.get(0), path.get(1), request);
-                    }
-                    break;
-                case PATCH:
-                    switch (path.size()) {
-                        case 2:
-                            return update(caller, path.get(0), path.get(1), request);
-                    }
-                    break;
-                case DELETE:
-                    switch (path.size()) {
-                        case 2:
+                        case PUT:
+                            return update(caller, path.get(0), path.get(1), UpdateOptions.Mode.REPLACE, request);
+                        case PATCH:
+                            return update(caller, path.get(0), path.get(1), UpdateOptions.Mode.MERGE, request);
+                        case DELETE:
                             return delete(caller, path.get(0), path.get(1), request);
+                        default:
+                            throw new UnsupportedMethodException(ImmutableSet.of(APIRequest.Method.GET, APIRequest.Method.PUT, APIRequest.Method.POST, APIRequest.Method.DELETE));
                     }
-                    break;
-                case POST:
-                    switch (path.size()) {
-                        case 1:
-                            return create(caller, path.get(0), request);
+                case 3:
+                    switch (method) {
+                        case HEAD:
+                        case OPTIONS:
+                            return head(request);
+                        case GET:
+                            return queryLink(caller, path.get(0), path.get(1), path.get(2), request);
+                        default:
+                            throw new UnsupportedMethodException(ImmutableSet.of(APIRequest.Method.GET));
                     }
-                    break;
+                default:
+                    throw new NotFoundException();
             }
-            throw new IllegalStateException();
 
         } catch (final Exception e) {
 
@@ -175,12 +189,8 @@ public class DatabaseAPI implements API {
 
     private CompletableFuture<APIResponse> create(final Caller caller, final String schema, final APIRequest request) throws IOException {
 
-        return create(caller, schema, null, request);
-    }
-
-    private CompletableFuture<APIResponse> create(final Caller caller, final String schema, final String id, final APIRequest request) throws IOException {
-
         final Map<String, Object> data = parseData(request);
+        final String id = Instance.getId(data);
 
         final CreateOptions options = CreateOptions.builder()
                 .schema(schema).id(id).data(data)
@@ -201,14 +211,14 @@ public class DatabaseAPI implements API {
         return respond(request, database.read(caller, options));
     }
 
-    private CompletableFuture<APIResponse> update(final Caller caller, final String schema, final String id, final APIRequest request) throws IOException {
+    private CompletableFuture<APIResponse> update(final Caller caller, final String schema, final String id, final UpdateOptions.Mode mode, final APIRequest request) throws IOException {
 
         final Map<String, Object> data = parseData(request);
 
         final UpdateOptions options = UpdateOptions.builder()
                 .schema(schema).id(id).data(data)
                 .expand(parseExpand(request))
-                .mode(parseUpdateMode(request))
+                .mode(MoreObjects.firstNonNull(parseUpdateMode(request), mode))
                 .version(parseVersion(request))
                 .build();
 
@@ -395,10 +405,11 @@ public class DatabaseAPI implements API {
         final Map<String, PathItem> paths = new HashMap<>();
         paths.put("/" + schema.getName(), new PathItem()
                 .get(openApiQuery(schema))
-                .put(openApiCreate(schema)));
+                .post(openApiCreate(schema)));
         paths.put("/" + schema.getName() + "/{" + PARAM_ID + "}", new PathItem()
                 .get(openApiGet(schema))
                 .put(openApiUpdate(schema))
+                .patch(openApiPatch(schema))
                 .delete(openApiDelete(schema)));
         schema.getLinks().forEach((name, link) -> {
             paths.put("/" + schema.getName() + "/{" + PARAM_ID + "}/" + name, new PathItem()
@@ -433,6 +444,19 @@ public class DatabaseAPI implements API {
                 .addParametersItem(new Parameter().name(PARAM_ID).in(IN_PATH).schema(new StringSchema()))
                 .addParametersItem(new Parameter().name(PARAM_VERSION).in(IN_QUERY).schema(new StringSchema()))
                 .addParametersItem(new Parameter().name(PARAM_EXPAND).in(IN_QUERY).schema(new StringSchema()))
+                .addParametersItem(new Parameter().name(PARAM_MODE).in(IN_QUERY).schema(new StringSchema()))
+                .requestBody(new RequestBody().$ref(schema.getName()))
+                .responses(openApiResponses(new ApiResponse().$ref(schema.getName())));
+    }
+
+    private Operation openApiPatch(final ObjectSchema schema) {
+
+        return new Operation()
+                .operationId("patch" + schema.getName())
+                .addParametersItem(new Parameter().name(PARAM_ID).in(IN_PATH).schema(new StringSchema()))
+                .addParametersItem(new Parameter().name(PARAM_VERSION).in(IN_QUERY).schema(new StringSchema()))
+                .addParametersItem(new Parameter().name(PARAM_EXPAND).in(IN_QUERY).schema(new StringSchema()))
+                .addParametersItem(new Parameter().name(PARAM_MODE).in(IN_QUERY).schema(new StringSchema()))
                 .requestBody(new RequestBody().$ref(schema.getName()))
                 .responses(openApiResponses(new ApiResponse().$ref(schema.getName())));
     }
