@@ -242,7 +242,7 @@ public class DatabaseAPI implements API {
                 .version(parseVersion(request))
                 .build();
 
-        return respond(request, database.delete(caller, options));
+        return respond(request, database.delete(caller, options), ignored -> 204);
     }
 
     private CompletableFuture<APIResponse> query(final Caller caller, final String schema, final APIRequest request) {
