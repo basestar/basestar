@@ -35,7 +35,7 @@ public interface Action {
 
     String id();
 
-    Permission permission();
+    Permission permission(Instance before);
 
 //    RefKey beforeKey();
 

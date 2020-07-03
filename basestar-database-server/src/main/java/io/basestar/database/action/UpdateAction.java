@@ -57,9 +57,13 @@ public class UpdateAction implements Action {
     }
 
     @Override
-    public Permission permission() {
+    public Permission permission(final Instance before) {
 
-        return schema.getPermission(Permission.UPDATE);
+        if(before == null) {
+            return schema.getPermission(Permission.CREATE);
+        } else {
+            return schema.getPermission(Permission.UPDATE);
+        }
     }
 
     @Override
