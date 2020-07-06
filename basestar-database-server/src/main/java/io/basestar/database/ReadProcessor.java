@@ -117,7 +117,7 @@ public class ReadProcessor {
                 .build();
 
         final List<Pager.Source<Instance>> sources = storage.query(objectSchema, expression, sort).stream()
-                .map(source -> (Pager.Source<Instance>) (c, t) -> source.page(c, t)
+                .map(source -> (Pager.Source<Instance>) (c, t, stats) -> source.page(c, t, stats)
                         .thenCompose(data -> cast(objectSchema, data)))
                 .collect(Collectors.toList());
 

@@ -582,7 +582,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         .build();
 
                 final List<Pager.Source<Instance>> sources = storage.aggregate(objectSchema, bound, group, aggregates).stream()
-                        .map(source -> (Pager.Source<Instance>) (c, t) -> source.page(c, t)
+                        .map(source -> (Pager.Source<Instance>) (c, t, stats) -> source.page(c, t, stats)
                                 .thenApply(data -> data.map(row -> {
                                     final Map<String, Object> values = new HashMap<>();
                                     columns.forEach((name, column) -> {

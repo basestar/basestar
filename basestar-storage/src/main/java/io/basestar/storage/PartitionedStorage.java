@@ -24,8 +24,8 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.schema.*;
 import io.basestar.expression.aggregate.Aggregate;
+import io.basestar.schema.*;
 import io.basestar.storage.exception.UnsupportedQueryException;
 import io.basestar.storage.query.DisjunctionVisitor;
 import io.basestar.storage.query.Range;
@@ -77,7 +77,7 @@ public abstract class PartitionedStorage implements Storage {
             final Optional<String> optId = constantId(query);
             if(optId.isPresent()) {
 
-                queries.add((c, p) -> readObject(schema, optId.get()).thenApply(object -> {
+                queries.add((c, p, stats) -> readObject(schema, optId.get()).thenApply(object -> {
                     if(object != null) {
                         return new PagedList<>(ImmutableList.of(object), null);
                     } else {
@@ -97,7 +97,7 @@ public abstract class PartitionedStorage implements Storage {
                         indexSort = index.getSort();
                     }
 
-                    queries.add((c, p) -> queryIndex(schema, index, satisfy, query, sort, c, p));
+                    queries.add((c, p, stats) -> queryIndex(schema, index, satisfy, query, sort, c, p));
 
                 } else {
                     throw new UnsupportedQueryException(schema.getName(), expression, "no index");

@@ -3,6 +3,14 @@ package io.basestar.expression.text;
 import io.basestar.expression.Expression;
 import lombok.Data;
 
+/**
+ * Like
+ *
+ * Case-insensitive wildcard match.
+ *
+ * The supported syntax is as-per standard SQL with ESCAPE \
+ */
+
 @Data
 public class ILike implements Like {
 
@@ -11,6 +19,13 @@ public class ILike implements Like {
     private final Expression lhs;
 
     private final Expression rhs;
+
+    /**
+     * lhs ILIKE rhs
+     *
+     * @param lhs string Left hand operand
+     * @param rhs string Right hand operand
+     */
 
     public ILike(final Expression lhs, final Expression rhs) {
 

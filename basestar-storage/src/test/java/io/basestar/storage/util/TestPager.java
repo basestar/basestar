@@ -37,12 +37,12 @@ public class TestPager {
     private Pager<Integer> sort(final PagingToken paging) {
 
         return new Pager<Integer>(Comparator.naturalOrder(), ImmutableList.of(
-                (count, token) -> CompletableFuture.supplyAsync(() ->
+                (count, token, stats) -> CompletableFuture.supplyAsync(() ->
                         token == null
                                 ? new PagedList<>(ImmutableList.of(1, 3, 5), new PagingToken("1".getBytes(Charsets.UTF_8)))
                                 : new PagedList<>(ImmutableList.of(8, 10, 12), null)
                 ),
-                (count, token) -> CompletableFuture.supplyAsync(() ->
+                (count, token, stats) -> CompletableFuture.supplyAsync(() ->
                         token == null
                                 ? new PagedList<>(ImmutableList.of(2, 3, 4, 6, 6), new PagingToken("1".getBytes(Charsets.UTF_8)))
                                 : new PagedList<>(ImmutableList.of(7, 7, 7, 9, 11, 12, 13, 14, 15), null)

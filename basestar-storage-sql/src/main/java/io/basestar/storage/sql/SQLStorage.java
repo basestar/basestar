@@ -158,7 +158,7 @@ public class SQLStorage implements Storage {
                     .collect(Collectors.toList());
 
             final Index index = best;
-            sources.add((count, token) ->
+            sources.add((count, token, stats) ->
                     withContext(context -> {
 
                         final SelectSeekStepN<Record> select = context.select(selectFields(schema))

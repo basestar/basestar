@@ -21,6 +21,7 @@ package io.basestar.database.options;
  */
 
 import io.basestar.expression.Expression;
+import io.basestar.util.PagedList;
 import io.basestar.util.PagingToken;
 import io.basestar.util.Path;
 import io.basestar.util.Sort;
@@ -55,6 +56,8 @@ public class QueryLinkOptions {
     private final Set<Path> expand;
 
     private final Set<Path> projection;
+
+    private final Set<PagedList.Stat> stats;
 
     private final PagingToken paging;
 }

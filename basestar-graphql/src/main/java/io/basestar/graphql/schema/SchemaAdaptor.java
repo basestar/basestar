@@ -158,6 +158,7 @@ public class SchemaAdaptor {
         namespace.forEachObjectSchema((k, v) -> {
             builder.fieldDefinition(createDefinition(v));
             builder.fieldDefinition(updateDefinition(v));
+            builder.fieldDefinition(patchDefinition(v));
             builder.fieldDefinition(deleteDefinition(v));
         });
         builder.fieldDefinition(transactionDefinition());
@@ -179,6 +180,7 @@ public class SchemaAdaptor {
         namespace.forEachObjectSchema((k, v) -> {
             builder.fieldDefinition(createDefinition(v));
             builder.fieldDefinition(updateDefinition(v));
+            builder.fieldDefinition(patchDefinition(v));
             builder.fieldDefinition(deleteDefinition(v));
         });
         return builder.build();
@@ -198,10 +200,10 @@ public class SchemaAdaptor {
         return builder.build();
     }
 
-    public FieldDefinition updateDefinition(final ObjectSchema schema) {
+    public FieldDefinition updateDefinition(final ObjectSchema schema, final String methodName) {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
-        builder.name(namingStrategy.updateMethodName(schema));
+        builder.name(methodName);
         builder.type(new TypeName(namingStrategy.typeName(schema)));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(Reserved.ID).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build());
@@ -212,6 +214,16 @@ public class SchemaAdaptor {
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(namingStrategy.expressionsArgumentName()).type(new TypeName(namingStrategy.inputExpressionsTypeName(schema))).build());
         return builder.build();
+    }
+
+    public FieldDefinition updateDefinition(final ObjectSchema schema) {
+
+        return updateDefinition(schema, namingStrategy.updateMethodName(schema));
+    }
+
+    public FieldDefinition patchDefinition(final ObjectSchema schema) {
+
+        return updateDefinition(schema, namingStrategy.patchMethodName(schema));
     }
 
     public FieldDefinition deleteDefinition(final ObjectSchema schema) {

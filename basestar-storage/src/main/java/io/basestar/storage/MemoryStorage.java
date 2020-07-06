@@ -26,8 +26,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.schema.*;
 import io.basestar.expression.aggregate.Aggregate;
+import io.basestar.schema.*;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;
@@ -125,7 +125,7 @@ public class MemoryStorage extends PartitionedStorage {
             });
 
             return ImmutableList.of(
-                    (count, token) -> CompletableFuture.completedFuture(new PagedList<>(page, null))
+                    (count, token, stats) -> CompletableFuture.completedFuture(new PagedList<>(page, null))
             );
         }
     }

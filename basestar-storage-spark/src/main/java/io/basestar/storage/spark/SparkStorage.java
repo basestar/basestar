@@ -22,6 +22,7 @@ package io.basestar.storage.spark;
 
 import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Expression;
+import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
@@ -29,7 +30,6 @@ import io.basestar.spark.SparkSchemaUtils;
 import io.basestar.spark.expression.SparkExpressionVisitor;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
-import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.PagedList;
 import io.basestar.util.Sort;
@@ -114,7 +114,7 @@ public class SparkStorage implements Storage {
     @Override
     public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
 
-        return ImmutableList.of((count, paging) -> CompletableFuture.supplyAsync(() -> {
+        return ImmutableList.of((count, paging, stats) -> CompletableFuture.supplyAsync(() -> {
 
             final Dataset<Row> input = routing.objectRead(session, schema);
             final Column column = query.visit(new SparkExpressionVisitor(path -> input.col(path.toString())));

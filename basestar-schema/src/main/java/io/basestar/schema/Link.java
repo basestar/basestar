@@ -210,7 +210,7 @@ public class Link implements Member {
                 changed = changed || after != before;
             }
             if(changed) {
-                return new PagedList<>(results, value.getPaging());
+                return new PagedList<>(results, value.getPaging(), PagedList.Stats.UNKNOWN);
             } else {
                 return value;
             }

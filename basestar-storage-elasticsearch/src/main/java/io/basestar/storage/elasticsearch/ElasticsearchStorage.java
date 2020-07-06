@@ -24,11 +24,11 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.*;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
-import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.storage.elasticsearch.mapping.Mappings;
 import io.basestar.storage.elasticsearch.mapping.Settings;
 import io.basestar.storage.exception.ObjectExistsException;
@@ -158,7 +158,7 @@ public class ElasticsearchStorage implements Storage {
         final List<Sort> normalizedSort = KeysetPagingUtils.normalizeSort(sort);
 
         return ImmutableList.of(
-                (count, token) -> getIndex(index, schema).thenCompose(ignored -> {
+                (count, token, stats) -> getIndex(index, schema).thenCompose(ignored -> {
 
                     final QueryBuilder queryBuilder = bound.visit(new ElasticsearchExpressionVisitor());
 

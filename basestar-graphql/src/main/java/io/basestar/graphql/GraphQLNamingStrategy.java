@@ -62,6 +62,8 @@ public interface GraphQLNamingStrategy {
 
     String updateMethodName(ObjectSchema type);
 
+    String patchMethodName(ObjectSchema type);
+
     String deleteMethodName(ObjectSchema type);
 
     String queryArgumentName();
@@ -206,6 +208,12 @@ public interface GraphQLNamingStrategy {
         public String updateMethodName(final ObjectSchema type) {
 
             return "update" + typeName(type);
+        }
+
+        @Override
+        public String patchMethodName(final ObjectSchema type) {
+
+            return "patch" + typeName(type);
         }
 
         @Override

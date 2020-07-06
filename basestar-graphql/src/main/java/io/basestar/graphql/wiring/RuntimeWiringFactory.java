@@ -50,6 +50,10 @@ public class RuntimeWiringFactory {
 
     private final GraphQLNamingStrategy namingStrategy;
 
+    private static final UpdateOptions.Mode DEFAULT_UPDATE_MODE = UpdateOptions.Mode.REPLACE;
+
+    private static final UpdateOptions.Mode DEFAULT_PATCH_MODE = UpdateOptions.Mode.MERGE_DEEP;
+
     public RuntimeWiringFactory(final Database database, final Namespace namespace, final GraphQLNamingStrategy namingStrategy) {
 
         this.database = database;
@@ -175,6 +179,7 @@ public class RuntimeWiringFactory {
                 final ObjectSchema objectSchema = (ObjectSchema)schema;
                 results.put(namingStrategy.createMethodName(objectSchema), createFetcher(objectSchema));
                 results.put(namingStrategy.updateMethodName(objectSchema), updateFetcher(objectSchema));
+                results.put(namingStrategy.patchMethodName(objectSchema), patchFetcher(objectSchema));
                 results.put(namingStrategy.deleteMethodName(objectSchema), deleteFetcher(objectSchema));
                 results.put(namingStrategy.transactionMethodName(), transactionFetcher());
             }
@@ -201,7 +206,7 @@ public class RuntimeWiringFactory {
         };
     }
 
-    private DataFetcher<CompletableFuture<?>> updateFetcher(final ObjectSchema schema) {
+    private DataFetcher<CompletableFuture<?>> updateFetcher(final ObjectSchema schema, final UpdateOptions.Mode mode) {
 
         return (env) -> {
             final Caller caller = GraphQLUtils.caller(env.getContext());
@@ -213,6 +218,7 @@ public class RuntimeWiringFactory {
             final Map<String, Expression> expressions = parseExpressions(env.getArgument(namingStrategy.expressionsArgumentName()));
             final UpdateOptions options = UpdateOptions.builder()
                     .schema(schema.getName()).id(id)
+                    .mode(mode)
                     .data(data).version(version)
                     .expressions(expressions)
                     .expand(expand)
@@ -220,6 +226,16 @@ public class RuntimeWiringFactory {
             return database.update(caller, options)
                     .thenApply(object -> GraphQLUtils.toResponse(schema, object));
         };
+    }
+
+    private DataFetcher<CompletableFuture<?>> updateFetcher(final ObjectSchema schema) {
+
+        return updateFetcher(schema, DEFAULT_UPDATE_MODE);
+    }
+
+    private DataFetcher<CompletableFuture<?>> patchFetcher(final ObjectSchema schema) {
+
+        return updateFetcher(schema, DEFAULT_PATCH_MODE);
     }
 
     private DataFetcher<CompletableFuture<?>> deleteFetcher(final ObjectSchema schema) {
