@@ -81,6 +81,12 @@ public class TestElasticsearchStorage extends TestStorage {
     }
 
     @Override
+    public boolean supportsLike() {
+
+        return true;
+    }
+
+    @Override
     public void testMultiValueIndex() {
 
         // Skipped

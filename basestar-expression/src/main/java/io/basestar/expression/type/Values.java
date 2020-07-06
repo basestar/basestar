@@ -106,19 +106,19 @@ public class Values {
         return COERCER.apply(a, b);
     }
 
-    public static String toString(final Object value) {
+    public static String toExpressionString(final Object value) {
 
-        return TO_STRING.apply(value);
+        return TO_EXPRESSION_STRING.apply(value);
     }
 
-    public static String toString(final Collection<?> args) {
+    public static String toExpressionString(final Collection<?> args) {
 
-        return "[" + args.stream().map(Values::toString).collect(Collectors.joining(", ")) + "]";
+        return "[" + args.stream().map(Values::toExpressionString).collect(Collectors.joining(", ")) + "]";
     }
 
-    public static String toString(final Map<?, ?> args) {
+    public static String toExpressionString(final Map<?, ?> args) {
 
-        return "{" + args.entrySet().stream().map(v -> toString(v.getKey()) + ": " + toString(v.getValue()))
+        return "{" + args.entrySet().stream().map(v -> toExpressionString(v.getKey()) + ": " + toExpressionString(v.getValue()))
                 .collect(Collectors.joining(", ")) + "}";
     }
 
@@ -239,7 +239,7 @@ public class Values {
         }
     };
 
-    private static final UnaryMatch<String> TO_STRING = new UnaryMatch<String>() {
+    private static final UnaryMatch<String> TO_EXPRESSION_STRING = new UnaryMatch<String>() {
 
         @Override
         public String defaultApply(final Object value) {
@@ -257,13 +257,13 @@ public class Values {
         @Override
         public String apply(final Collection<?> value) {
 
-            return Values.toString(value);
+            return Values.toExpressionString(value);
         }
 
         @Override
         public String apply(final Map<?, ?> value) {
 
-            return Values.toString(value);
+            return Values.toExpressionString(value);
         }
     };
 

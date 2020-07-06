@@ -47,7 +47,7 @@ public class Operator implements Binary {
     public Object evaluate(final Context context) {
 
         // FIXME:
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("operator " + name + " is not defined");
     }
 
     @Override
@@ -71,6 +71,6 @@ public class Operator implements Binary {
     @Override
     public String toString() {
 
-        return lhs + " " +  name + " " + rhs;
+        return lhs + " " + name + " " + rhs;
     }
 }

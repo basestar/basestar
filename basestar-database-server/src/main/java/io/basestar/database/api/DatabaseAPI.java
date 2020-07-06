@@ -90,6 +90,12 @@ public class DatabaseAPI implements API {
 
     private static final String IN_PATH = "path";
 
+    // FIXME: make configurable
+    private static final UpdateOptions.Mode DEFAULT_PUT_MODE = UpdateOptions.Mode.CREATE;
+
+    // FIXME: make configurable
+    private static final UpdateOptions.Mode DEFAULT_PATCH_MODE = UpdateOptions.Mode.MERGE_DEEP;
+
     private final Database database;
 
     public DatabaseAPI(final Database database) {
@@ -133,7 +139,6 @@ public class DatabaseAPI implements API {
                                 return CompletableFuture.completedFuture(APIResponse.response(request,404, null));
                             } else {
                                 return query(caller, path.get(0), request);
-                                //return type(caller, request);
                             }
                         case POST:
                             return create(caller, path.get(0), request);
@@ -148,9 +153,9 @@ public class DatabaseAPI implements API {
                         case GET:
                             return read(caller, path.get(0), path.get(1), request);
                         case PUT:
-                            return update(caller, path.get(0), path.get(1), UpdateOptions.Mode.CREATE, request);
+                            return update(caller, path.get(0), path.get(1), DEFAULT_PUT_MODE, request);
                         case PATCH:
-                            return update(caller, path.get(0), path.get(1), UpdateOptions.Mode.MERGE, request);
+                            return update(caller, path.get(0), path.get(1), DEFAULT_PATCH_MODE, request);
                         case DELETE:
                             return delete(caller, path.get(0), path.get(1), request);
                         default:

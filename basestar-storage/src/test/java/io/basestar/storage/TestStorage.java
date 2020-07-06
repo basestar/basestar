@@ -23,9 +23,9 @@ package io.basestar.storage;
 import com.google.common.base.Charsets;
 import com.google.common.collect.*;
 import io.basestar.expression.Expression;
+import io.basestar.expression.aggregate.Count;
 import io.basestar.expression.type.Values;
 import io.basestar.schema.*;
-import io.basestar.expression.aggregate.Count;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.util.Pager;
@@ -580,6 +580,66 @@ public abstract class TestStorage {
         storage.write(Consistency.ATOMIC)
                 .deleteObject(schema, id, null)
                 .commit().join();
+    }
+
+    @Test
+    public void testLike() throws IOException {
+
+        assumeTrue(supportsLike());
+
+        final Storage storage = storage(namespace);
+
+        final ObjectSchema schema = namespace.requireObjectSchema(ADDRESS);
+
+        createComplete(storage, schema, ImmutableMap.of(
+                "country", "United Kingdom",
+                "city", "london"
+        ));
+        createComplete(storage, schema, ImmutableMap.of(
+                "country", "United Kingdom",
+                "city", "London"
+        ));
+        createComplete(storage, schema, ImmutableMap.of(
+                "country", "United Kingdom",
+                "city", "l%ndon"
+        ));
+        createComplete(storage, schema, ImmutableMap.of(
+                "country", "United Kingdom",
+                "city", "L_ndon"
+        ));
+        createComplete(storage, schema, ImmutableMap.of(
+                "country", "United Kingdom",
+                "city", "L*ndon"
+        ));
+        createComplete(storage, schema, ImmutableMap.of(
+                "country", "United Kingdom",
+                "city", "l?ndon"
+        ));
+
+        final List<Sort> sort = ImmutableList.of(
+                Sort.asc(Path.of("city")),
+                Sort.asc(Path.of("zip"))
+        );
+
+        assertEquals(6, page(storage, schema, Expression.parse("country == 'United Kingdom' && city ILIKE 'l%'"), sort, 10).size());
+        assertEquals(3, page(storage, schema, Expression.parse("country == 'United Kingdom' && city LIKE 'l%'"), sort, 10).size());
+        assertEquals(1, page(storage, schema, Expression.parse("country == 'United Kingdom' && city LIKE 'l\\\\%n_on'"), sort, 10).size());
+        assertEquals(1, page(storage, schema, Expression.parse("country == 'United Kingdom' && city LIKE 'L\\\\_n_on'"), sort, 10).size());
+        assertEquals(1, page(storage, schema, Expression.parse("country == 'United Kingdom' && city LIKE 'l\\\\?n_on'"), sort, 10).size());
+        assertEquals(1, page(storage, schema, Expression.parse("country == 'United Kingdom' && city LIKE 'L\\\\*n_on'"), sort, 10).size());
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private PagedList<Map<String, Object>> page(final Storage storage, final ObjectSchema schema, final Expression expression, final List<Sort> sort, final int count) {
+
+        final Comparator<Map<String, Object>> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
+        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expression, sort);
+        return new Pager<>(comparator, sources, null).page(count).join();
+    }
+
+    protected boolean supportsLike() {
+
+        return false;
     }
 
     @Test

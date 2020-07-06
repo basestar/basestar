@@ -97,7 +97,7 @@ public class UpdateAction implements Action {
                 throw new IllegalStateException("Cannot change instance schema");
             }
 
-            if(mode == UpdateOptions.Mode.MERGE) {
+            if(mode == UpdateOptions.Mode.MERGE || mode == UpdateOptions.Mode.MERGE_DEEP) {
                 data.putAll(before);
             }
 
@@ -113,7 +113,11 @@ public class UpdateAction implements Action {
         }
 
         if(options.getData() != null) {
-            data.putAll(options.getData());
+            if(mode == UpdateOptions.Mode.MERGE_DEEP) {
+                mergeDeep(data, options.getData());
+            } else {
+                data.putAll(options.getData());
+            }
         }
         if(options.getExpressions() != null) {
             options.getExpressions().forEach((k, expr) -> data.put(k, expr.evaluate(context)));
@@ -135,6 +139,23 @@ public class UpdateAction implements Action {
         }
 
         return evaluated;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void mergeDeep(final Map<String, Object> target, final Map<String, Object> source) {
+
+        for(final Map.Entry<String, Object> e: source.entrySet()) {
+            final String key = e.getKey();
+            final Object merging = e.getValue();
+            final Object current = target.get(key);
+            if(current instanceof Map && merging instanceof Map) {
+                final Map<String, Object> merged = new HashMap<>((Map<String, Object>)current);
+                mergeDeep(merged, (Map<String, Object>)merging);
+                target.put(key, merged);
+            } else {
+                target.put(key, merging);
+            }
+        }
     }
 
     @Override

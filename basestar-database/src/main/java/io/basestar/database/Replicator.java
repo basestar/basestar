@@ -74,7 +74,7 @@ public class Replicator implements Handler<Event> {
                 .id(event.getId())
                 .data(event.getAfter())
                 .version(event.getVersion())
-                .mode(UpdateOptions.Mode.REPLACE)
+                .mode(UpdateOptions.Mode.CREATE)
                 .build();
         return target.update(caller, options);
     }

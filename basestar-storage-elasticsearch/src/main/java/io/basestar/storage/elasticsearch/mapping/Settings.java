@@ -20,6 +20,7 @@ package io.basestar.storage.elasticsearch.mapping;
  * #L%
  */
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.util.Nullsafe;
 import lombok.Data;
@@ -56,12 +57,35 @@ public class Settings {
                 .build();
     }
 
+    private Map<String, ?> analysis() {
+
+        return ImmutableMap.of(
+                "normalizer", normalizer()
+        );
+    }
+
+    private Map<String, ?> normalizer() {
+
+        return ImmutableMap.of(
+                "lowercase", lowercase()
+        );
+    }
+
+    private Map<String, ?> lowercase() {
+
+        return ImmutableMap.of(
+                "type", "custom",
+                "filter", ImmutableList.of("lowercase")
+        );
+    }
+
     public Map<String, ?> all() {
 
         return ImmutableMap.<String, Object>builder()
                 .putAll(dynamic())
                 .put("number_of_shards", shards)
                 .put("number_of_replicas", replicas)
+                .put("analysis", analysis())
                 .build();
     }
 }

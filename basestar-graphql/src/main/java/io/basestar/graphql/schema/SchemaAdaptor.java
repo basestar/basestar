@@ -55,10 +55,14 @@ public class SchemaAdaptor {
             if(schema instanceof InstanceSchema) {
                 final InstanceSchema instanceSchema = (InstanceSchema)schema;
                 mapTypes.putAll(mapTypes(instanceSchema));
-                registry.add(inputTypeDefinition(instanceSchema));
                 if(schema instanceof ObjectSchema) {
-                    registry.add(inputExpressionTypeDefinition(instanceSchema));
-                    registry.add(pageTypeDefinition(instanceSchema));
+                    final ObjectSchema objectSchema = (ObjectSchema)instanceSchema;
+                    registry.add(inputExpressionTypeDefinition(objectSchema));
+                    registry.add(pageTypeDefinition(objectSchema));
+                    registry.add(createInputTypeDefinition(objectSchema));
+                    registry.add(updateInputTypeDefinition(objectSchema));
+                } else {
+                    registry.add(inputTypeDefinition(instanceSchema));
                 }
             }
         });
@@ -188,7 +192,7 @@ public class SchemaAdaptor {
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(Reserved.ID).type(new TypeName(GraphQLUtils.ID_TYPE)).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(namingStrategy.dataArgumentName()).type(new TypeName(namingStrategy.inputTypeName(schema))).build());
+                .name(namingStrategy.dataArgumentName()).type(new TypeName(namingStrategy.createInputTypeName(schema))).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(namingStrategy.expressionsArgumentName()).type(new TypeName(namingStrategy.inputExpressionsTypeName(schema))).build());
         return builder.build();
@@ -204,7 +208,7 @@ public class SchemaAdaptor {
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(Reserved.VERSION).type(new TypeName(GraphQLUtils.INT_TYPE)).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(namingStrategy.dataArgumentName()).type(new TypeName(namingStrategy.inputTypeName(schema))).build());
+                .name(namingStrategy.dataArgumentName()).type(new TypeName(namingStrategy.updateInputTypeName(schema))).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(namingStrategy.expressionsArgumentName()).type(new TypeName(namingStrategy.inputExpressionsTypeName(schema))).build());
         return builder.build();
@@ -229,6 +233,30 @@ public class SchemaAdaptor {
         builder.description(description(schema.getDescription()));
         schema.getProperties()
                 .forEach((k, v) -> builder.inputValueDefinition(inputValueDefinition(v)));
+        return builder.build();
+    }
+
+    public InputObjectTypeDefinition createInputTypeDefinition(final ObjectSchema schema) {
+
+        final InputObjectTypeDefinition.Builder builder = InputObjectTypeDefinition.newInputObjectDefinition();
+        builder.name(namingStrategy.createInputTypeName(schema));
+        builder.description(description(schema.getDescription()));
+        schema.getProperties()
+                .forEach((k, v) -> builder.inputValueDefinition(inputValueDefinition(v)));
+        return builder.build();
+    }
+
+    public InputObjectTypeDefinition updateInputTypeDefinition(final ObjectSchema schema) {
+
+        final InputObjectTypeDefinition.Builder builder = InputObjectTypeDefinition.newInputObjectDefinition();
+        builder.name(namingStrategy.updateInputTypeName(schema));
+        builder.description(description(schema.getDescription()));
+        schema.getProperties()
+                .forEach((k, v) -> {
+                    if(!v.isImmutable()) {
+                        builder.inputValueDefinition(inputValueDefinition(v));
+                    }
+                });
         return builder.build();
     }
 

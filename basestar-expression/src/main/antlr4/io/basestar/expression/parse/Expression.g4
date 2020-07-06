@@ -20,7 +20,7 @@ as
 // Important! must list all name-like tokens here
 
 name
- : (Identifier | With | For | In | Where | Any | All | Of)
+ : (Identifier | With | For | In | Where | Any | All | Of | Like | ILike)
  ;
 
 expr
@@ -40,10 +40,11 @@ expr
  | expr BitXor expr #exprBitXor
  | expr BitOr expr #exprBitOr
  | expr In expr #exprIn
+ | expr Identifier expr #exprOperator
+ | expr op=(Like | ILike) expr #exprLike
  | expr And expr #exprAnd
  | expr Or expr #exprOr
  | <assoc=right> expr QQMark expr #exprCoalesce
-// | expr name expr #exprOperator
  | expr QMark expr Colon expr #exprIfElse
  | LBrace expr Colon expr For expr RBrace #exprForObject
  | LBrace expr For expr RBrace #exprForSet
@@ -65,14 +66,16 @@ expr
  | (name | (LParen name (Comma name)* RParen)) Arrow expr #exprLambda
  ;
 
-Null     : 'null';
-In       : 'in';
-For      : 'for';
-Of       : 'of';
-Where    : 'where';
-With     : 'with';
-Any      : 'any';
-All      : 'all';
+Null     : N U L L;
+In       : I N;
+For      : F O R;
+Of       : O F;
+Where    : W H E R E;
+With     : W I T H;
+Any      : A N Y;
+All      : A L L;
+Like     : L I K E;
+ILike    : I L I K E;
 
 Arrow    : '->';
 Or       : '||';
@@ -111,8 +114,8 @@ Dot      : '.';
 Assign   : '=';
 
 Bool
- : 'true'
- | 'false'
+ : T R U E
+ | F A L S E
  ;
 
 Number
@@ -148,3 +151,30 @@ fragment Int
 fragment Digit
  : [0-9]
  ;
+
+fragment A:('a'|'A');
+fragment B:('b'|'B');
+fragment C:('c'|'C');
+fragment D:('d'|'D');
+fragment E:('e'|'E');
+fragment F:('f'|'F');
+fragment G:('g'|'G');
+fragment H:('h'|'H');
+fragment I:('i'|'I');
+fragment J:('j'|'J');
+fragment K:('k'|'K');
+fragment L:('l'|'L');
+fragment M:('m'|'M');
+fragment N:('n'|'N');
+fragment O:('o'|'O');
+fragment P:('p'|'P');
+fragment Q:('q'|'Q');
+fragment R:('r'|'R');
+fragment S:('s'|'S');
+fragment T:('t'|'T');
+fragment U:('u'|'U');
+fragment V:('v'|'V');
+fragment W:('w'|'W');
+fragment X:('x'|'X');
+fragment Y:('y'|'Y');
+fragment Z:('z'|'Z');

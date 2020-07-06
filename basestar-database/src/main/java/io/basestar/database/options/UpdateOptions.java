@@ -38,7 +38,8 @@ public class UpdateOptions implements ActionOptions {
 
         CREATE,
         REPLACE,
-        MERGE
+        MERGE,
+        MERGE_DEEP
     }
 
     private final String schema;

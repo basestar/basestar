@@ -23,6 +23,7 @@ package io.basestar.storage.elasticsearch.mapping;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.BaseEncoding;
+import lombok.Data;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -30,6 +31,10 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public interface FieldType {
+
+    String TEXT_FIELD = "text";
+
+    String IKEYWORD_FIELD = "ikeyword";
 
     BinaryType BINARY = new BinaryType();
 
@@ -43,11 +48,27 @@ public interface FieldType {
 
     NumericType DOUBLE = new NumericType(NumericType.Type.DOUBLE);
 
-    TextType TEXT = new TextType();
+    MultiType TEXT = new MultiType(
+            KeywordType.CASE_SENSITIVE,
+            ImmutableMap.of(
+                    TEXT_FIELD, new TextType(),
+                    IKEYWORD_FIELD, KeywordType.CASE_INSENSITIVE
+            )
+    );
 
-    KeywordType KEYWORD = new KeywordType();
+    MultiType KEYWORD = new MultiType(
+            KeywordType.CASE_SENSITIVE,
+            ImmutableMap.of(
+                    IKEYWORD_FIELD, KeywordType.CASE_INSENSITIVE
+            )
+    );
 
-    Object source();
+    static String keywordSuffix(boolean caseSensitive) {
+
+        return caseSensitive ? "" : "." + IKEYWORD_FIELD;
+    }
+
+    Map<String, ?> source();
 
     Object toSource(Object value);
 
@@ -56,7 +77,7 @@ public interface FieldType {
     class BinaryType implements FieldType {
 
         @Override
-        public Object source() {
+        public Map<String, ?> source() {
 
             return ImmutableMap.of("type", "binary");
         }
@@ -89,7 +110,7 @@ public interface FieldType {
     class BooleanType implements FieldType {
 
         @Override
-        public Object source() {
+        public Map<String, ?> source() {
 
             return ImmutableMap.of("type", "boolean");
         }
@@ -110,7 +131,7 @@ public interface FieldType {
     class DateType implements FieldType {
 
         @Override
-        public Object source() {
+        public Map<String, ?> source() {
 
             return ImmutableMap.of("type", "date");
         }
@@ -131,7 +152,7 @@ public interface FieldType {
     class DateTimeType implements FieldType {
 
         @Override
-        public Object source() {
+        public Map<String, ?> source() {
 
             return ImmutableMap.of("type", "date");
         }
@@ -149,12 +170,23 @@ public interface FieldType {
         }
     }
 
+    @Data
     class KeywordType implements FieldType {
 
-        @Override
-        public Object source() {
+        public static final FieldType CASE_SENSITIVE = new KeywordType(true);
 
-            return ImmutableMap.of("type", "keyword");
+        public static final FieldType CASE_INSENSITIVE = new KeywordType(false);
+
+        private final boolean caseSensitive;
+
+        @Override
+        public Map<String, ?> source() {
+
+            if(caseSensitive) {
+                return ImmutableMap.of("type", "keyword");
+            } else {
+                return ImmutableMap.of("type", "keyword", "normalizer", "lowercase");
+            }
         }
 
         @Override
@@ -191,7 +223,7 @@ public interface FieldType {
         private final Type type;
 
         @Override
-        public Object source() {
+        public Map<String, ?> source() {
 
             return ImmutableMap.of("type", type.getType());
         }
@@ -215,7 +247,7 @@ public interface FieldType {
         private final Map<String, FieldType> properties;
 
         @Override
-        public Object source() {
+        public Map<String, ?> source() {
 
             return ImmutableMap.of("type", "nested", "properties", properties.entrySet().stream()
                     .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().source())));
@@ -260,7 +292,7 @@ public interface FieldType {
         private final FieldType valueType;
 
         @Override
-        public Object source() {
+        public Map<String, ?> source() {
 
             return valueType.source();
         }
@@ -306,7 +338,7 @@ public interface FieldType {
         private final FieldType valueType;
 
         @Override
-        public Object source() {
+        public Map<String, ?> source() {
 
             return ImmutableMap.of("type", "nested", "properties", ImmutableMap.of(
                     KEY, KEYWORD.source(),
@@ -352,7 +384,7 @@ public interface FieldType {
     class TextType implements FieldType {
 
         @Override
-        public Object source() {
+        public Map<String, ?> source() {
 
             return ImmutableMap.of("type", "text");
         }
@@ -367,6 +399,37 @@ public interface FieldType {
         public Object fromSource(final Object value) {
 
             return value;
+        }
+    }
+
+    @Data
+    class MultiType implements FieldType {
+
+        private final FieldType base;
+
+        private final Map<String, FieldType> fields;
+
+        @Override
+        public Map<String, ?> source() {
+
+            final Map<String, Object> result = new HashMap<>(base.source());
+            result.put("fields", fields.entrySet().stream().collect(Collectors.toMap(
+                    Map.Entry::getKey,
+                    v -> v.getValue().source()
+            )));
+            return result;
+        }
+
+        @Override
+        public Object toSource(final Object value) {
+
+            return base.toSource(value);
+        }
+
+        @Override
+        public Object fromSource(final Object value) {
+
+            return base.fromSource(value);
         }
     }
 }

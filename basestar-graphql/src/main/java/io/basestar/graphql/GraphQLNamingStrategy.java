@@ -36,6 +36,10 @@ public interface GraphQLNamingStrategy {
 
     String inputTypeName(Schema<?> type);
 
+    String createInputTypeName(ObjectSchema type);
+
+    String updateInputTypeName(ObjectSchema type);
+
     String inputExpressionsTypeName(Schema<?> type);
 
     String pageTypeName(Schema<?> type);
@@ -94,6 +98,16 @@ public interface GraphQLNamingStrategy {
             return "Input";
         }
 
+        protected String createInputPrefix() {
+
+            return inputPrefix() + "Create";
+        }
+
+        protected String updateInputPrefix() {
+
+            return inputPrefix() + "Update";
+        }
+
         protected String entryPrefix() {
 
             return "Entry";
@@ -114,6 +128,18 @@ public interface GraphQLNamingStrategy {
         public String inputTypeName(final Schema<?> type) {
 
             return inputPrefix() + typeName(type);
+        }
+
+        @Override
+        public String createInputTypeName(final ObjectSchema type) {
+
+            return createInputPrefix() + typeName(type);
+        }
+
+        @Override
+        public String updateInputTypeName(final ObjectSchema type) {
+
+            return updateInputPrefix() + typeName(type);
         }
 
         @Override

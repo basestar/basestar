@@ -24,8 +24,8 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.PathTransform;
-import io.basestar.expression.bitwise.BitOr;
 import io.basestar.expression.constant.Constant;
+import io.basestar.expression.text.Like;
 import io.basestar.util.Path;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -47,7 +47,7 @@ public class And implements Expression {
 
     public static final String TOKEN = "&&";
 
-    public static final int PRECEDENCE = BitOr.PRECEDENCE + 1;
+    public static final int PRECEDENCE = Like.PRECEDENCE + 1;
 
     private final List<Expression> terms;
 

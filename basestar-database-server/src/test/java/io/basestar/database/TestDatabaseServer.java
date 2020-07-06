@@ -720,6 +720,66 @@ public class TestDatabaseServer {
         System.err.println(results);
     }
 
+    @Test
+    public void merge() throws Exception {
+
+        final String id = UUID.randomUUID().toString();
+
+        database.create(Caller.SUPER, CreateOptions.builder()
+                .schema(SIMPLE)
+                .id(id)
+                .data(ImmutableMap.of(
+                        "boolean", true,
+                        "number", 5,
+                        "string", "hello",
+                        "map", ImmutableMap.of(
+                                "hello", "world"
+                        )
+                ))
+                .build()).get();
+
+        final Instance merged = database.update(Caller.SUPER, UpdateOptions.builder()
+                .schema(SIMPLE)
+                .id(id)
+                .mode(UpdateOptions.Mode.MERGE)
+                .data(ImmutableMap.of(
+                        "map", ImmutableMap.of(
+                                "goodbye", "blue sky"
+                        )
+                ))
+                .build()).get();
+
+        assertObject(SIMPLE, id, 2, ImmutableMap.of(
+                "boolean", true,
+                "number", 5,
+                "string", "hello",
+                "map", ImmutableMap.of(
+                        "goodbye", "blue sky"
+                )
+        ), merged);
+
+        final Instance deepMerged = database.update(Caller.SUPER, UpdateOptions.builder()
+                .schema(SIMPLE)
+                .id(id)
+                .mode(UpdateOptions.Mode.MERGE_DEEP)
+                .data(ImmutableMap.of(
+                        "map", ImmutableMap.of(
+                                "hello", "world"
+                        )
+                ))
+                .build()).get();
+
+        assertObject(SIMPLE, id, 3, ImmutableMap.of(
+                "boolean", true,
+                "number", 5,
+                "string", "hello",
+                "map", ImmutableMap.of(
+                        "hello", "world",
+                        "goodbye", "blue sky"
+                )
+        ), deepMerged);
+    }
+
     private Executable cause(final Executable target) {
 
         return () -> {

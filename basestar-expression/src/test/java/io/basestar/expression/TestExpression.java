@@ -473,6 +473,13 @@ public class TestExpression {
         assertTrue(bound instanceof Constant);
     }
 
+    @Test
+    public void testLike() {
+
+        final Expression expression = Expression.parse("'abc' like 'a%'");
+        final Expression bound = expression.bind(Context.init());
+    }
+
 //    @Test
 //    public void testPatternMatching() {
 ////
