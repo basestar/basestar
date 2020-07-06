@@ -422,7 +422,7 @@ public class DatabaseAPI implements API {
     }
 
     @Override
-    public OpenAPI openApi() {
+    public CompletableFuture<OpenAPI> openApi() {
 
         final Namespace namespace = database.namespace();
 
@@ -439,9 +439,9 @@ public class DatabaseAPI implements API {
             }
         });
 
-        return new OpenAPI()
+        return CompletableFuture.completedFuture(new OpenAPI()
                 .paths(paths)
-                .components(components);
+                .components(components));
     }
 
     private Map<String, PathItem> openApiPaths(final ObjectSchema schema) {

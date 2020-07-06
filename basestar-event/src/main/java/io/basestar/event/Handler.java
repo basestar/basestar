@@ -20,10 +20,11 @@ package io.basestar.event;
  * #L%
  */
 
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public interface Handler<E extends Event> {
 
-    CompletableFuture<?> handle(E event);
+    CompletableFuture<?> handle(E event, Map<String, String> metadata);
 
 }

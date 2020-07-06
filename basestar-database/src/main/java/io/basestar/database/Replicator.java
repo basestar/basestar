@@ -31,6 +31,7 @@ import io.basestar.event.Event;
 import io.basestar.event.Handler;
 import io.basestar.event.Handlers;
 
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public class Replicator implements Handler<Event> {
@@ -52,9 +53,9 @@ public class Replicator implements Handler<Event> {
     }
 
     @Override
-    public CompletableFuture<?> handle(final Event event) {
+    public CompletableFuture<?> handle(final Event event, final Map<String, String> meta) {
 
-        return HANDLERS.handle(this, event);
+        return HANDLERS.handle(this, event, meta);
     }
 
     private CompletableFuture<?> onCreated(final ObjectCreatedEvent event) {

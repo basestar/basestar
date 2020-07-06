@@ -20,9 +20,12 @@ package io.basestar.event;
  * #L%
  */
 
+import lombok.Data;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -30,7 +33,7 @@ public class Loopback implements Emitter, Receiver {
 
     private static final int DEFAULT_BATCH_SIZE = 50;
 
-    private final ConcurrentLinkedQueue<Event> queue = new ConcurrentLinkedQueue<>();
+    private final ConcurrentLinkedQueue<EventWithMeta> queue = new ConcurrentLinkedQueue<>();
 
     private final int batchSize;
 
@@ -47,9 +50,9 @@ public class Loopback implements Emitter, Receiver {
     }
 
     @Override
-    public CompletableFuture<?> emit(final Collection<? extends Event> events) {
+    public CompletableFuture<?> emit(final Collection<? extends Event> events, final Map<String, String> meta) {
 
-        queue.addAll(events);
+        events.forEach(e -> queue.add(new EventWithMeta(e, meta)));
         return CompletableFuture.completedFuture(null);
     }
 
@@ -58,14 +61,22 @@ public class Loopback implements Emitter, Receiver {
 
         final List<CompletableFuture<?>> futures = new ArrayList<>();
         for(int i = 0; i != batchSize; ++i) {
-            final Event event = queue.poll();
+            final EventWithMeta event = queue.poll();
             if(event != null) {
-                futures.add(handler.handle(event));
+                futures.add(handler.handle(event.getEvent(), event.getMeta()));
             } else {
                 break;
             }
         }
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]))
                 .thenApply(ignored -> futures.size());
+    }
+
+    @Data
+    private static class EventWithMeta {
+
+        private final Event event;
+
+        private final Map<String, String> meta;
     }
 }

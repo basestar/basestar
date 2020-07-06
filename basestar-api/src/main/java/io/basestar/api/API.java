@@ -28,5 +28,5 @@ public interface API {
 
     CompletableFuture<APIResponse> handle(APIRequest request);
 
-    OpenAPI openApi();
+    CompletableFuture<OpenAPI> openApi();
 }

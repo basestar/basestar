@@ -93,7 +93,7 @@ public class SNSEmitter implements Emitter {
     }
 
     @Override
-    public CompletableFuture<?> emit(final Collection<? extends Event> events) {
+    public CompletableFuture<?> emit(final Collection<? extends Event> events, final Map<String, String> meta) {
 
         return CompletableFuture.allOf(events.stream()
                 .map(event -> {
@@ -102,10 +102,10 @@ public class SNSEmitter implements Emitter {
 
                     // FIXME: these need to be included in sizing
                     final Map<String, MessageAttributeValue> attributes = new HashMap<>();
-//                    attributes.put("id", stringAttribute(id));
+
                     attributes.put(EVENT_ATTRIBUTE, stringAttribute(event.getClass().getName()));
                     attributes.put(DEDUPLICATION_ATTRIBUTE, stringAttribute(id));
-
+                    meta.forEach((k, v) -> attributes.put(k, stringAttribute(v)));
 
                     final byte[] body = serialization.serialize(event);
                     final String encoded = BASE_ENCODING.encode(body);

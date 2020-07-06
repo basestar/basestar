@@ -84,9 +84,9 @@ public class GraphQLAPI implements API {
     }
 
     @Override
-    public OpenAPI openApi() {
+    public CompletableFuture<OpenAPI> openApi() {
 
-        return new OpenAPI();
+        return CompletableFuture.completedFuture(new OpenAPI());
     }
 
     private CompletableFuture<APIResponse> query(final APIRequest request, final ExecutionInput input) {

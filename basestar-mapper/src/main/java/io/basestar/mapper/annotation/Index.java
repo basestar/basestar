@@ -20,6 +20,8 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
+import io.basestar.schema.Consistency;
+
 import java.lang.annotation.*;
 
 @Documented
@@ -39,6 +41,9 @@ public @interface Index {
     Over[] over() default {};
 
     String[] projection() default {};
+
+    // FIXME: need a DEFAULT mode that is equivalent to unspecified in schema DSL
+    Consistency consistency() default Consistency.ASYNC;
 
     @Documented
     @Retention(RetentionPolicy.RUNTIME)

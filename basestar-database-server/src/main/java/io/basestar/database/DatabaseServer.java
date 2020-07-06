@@ -98,9 +98,9 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
     }
 
     @Override
-    public CompletableFuture<?> handle(final Event event) {
+    public CompletableFuture<?> handle(final Event event, final Map<String, String> meta) {
 
-        return HANDLERS.handle(this, event);
+        return HANDLERS.handle(this, event, meta);
     }
 
     @Override

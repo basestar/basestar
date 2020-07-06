@@ -24,8 +24,21 @@ import java.lang.annotation.*;
 
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.FIELD, ElementType.METHOD})
+@Target({ElementType.TYPE})
+@Repeatable(Permission.Multi.class)
 public @interface Permission {
+
+    @SuppressWarnings("unused")
+    String READ = io.basestar.schema.Permission.READ;
+
+    @SuppressWarnings("unused")
+    String CREATE = io.basestar.schema.Permission.CREATE;
+
+    @SuppressWarnings("unused")
+    String UPDATE = io.basestar.schema.Permission.UPDATE;
+
+    @SuppressWarnings("unused")
+    String DELETE = io.basestar.schema.Permission.DELETE;
 
     String on();
 
@@ -34,4 +47,12 @@ public @interface Permission {
     String expression() default "";
 
     String[] expand() default {};
+
+    @Documented
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target({ElementType.TYPE})
+    @interface Multi {
+
+        Permission[] value();
+    }
 }
