@@ -50,10 +50,6 @@ public class RuntimeWiringFactory {
 
     private final GraphQLNamingStrategy namingStrategy;
 
-    private static final UpdateOptions.Mode DEFAULT_UPDATE_MODE = UpdateOptions.Mode.REPLACE;
-
-    private static final UpdateOptions.Mode DEFAULT_PATCH_MODE = UpdateOptions.Mode.MERGE_DEEP;
-
     public RuntimeWiringFactory(final Database database, final Namespace namespace, final GraphQLNamingStrategy namingStrategy) {
 
         this.database = database;
@@ -230,12 +226,12 @@ public class RuntimeWiringFactory {
 
     private DataFetcher<CompletableFuture<?>> updateFetcher(final ObjectSchema schema) {
 
-        return updateFetcher(schema, DEFAULT_UPDATE_MODE);
+        return updateFetcher(schema, namingStrategy.updateMode());
     }
 
     private DataFetcher<CompletableFuture<?>> patchFetcher(final ObjectSchema schema) {
 
-        return updateFetcher(schema, DEFAULT_PATCH_MODE);
+        return updateFetcher(schema, namingStrategy.patchMode());
     }
 
     private DataFetcher<CompletableFuture<?>> deleteFetcher(final ObjectSchema schema) {

@@ -20,6 +20,7 @@ package io.basestar.graphql;
  * #L%
  */
 
+import io.basestar.database.options.UpdateOptions;
 import io.basestar.schema.Link;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Schema;
@@ -29,6 +30,10 @@ import io.basestar.util.Text;
 public interface GraphQLNamingStrategy {
 
     Default DEFAULT = new Default();
+
+    UpdateOptions.Mode updateMode();
+
+    UpdateOptions.Mode patchMode();
 
     String typeName(Schema<?> type);
 
@@ -85,6 +90,19 @@ public interface GraphQLNamingStrategy {
     String transactionTypeName();
 
     class Default implements GraphQLNamingStrategy {
+
+        @Override
+        public UpdateOptions.Mode updateMode() {
+
+            // Gives correct behaviour with immutable properties
+            return UpdateOptions.Mode.MERGE;
+        }
+
+        @Override
+        public UpdateOptions.Mode patchMode() {
+
+            return UpdateOptions.Mode.MERGE_DEEP;
+        }
 
         @Override
         public String typeName(final Schema<?> type) {
