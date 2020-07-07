@@ -184,8 +184,10 @@ public class SchemaAdaptor {
         builder.name(namingStrategy.transactionTypeName());
         namespace.forEachObjectSchema((k, v) -> {
             builder.fieldDefinition(createDefinition(v));
-            builder.fieldDefinition(updateDefinition(v));
-            builder.fieldDefinition(patchDefinition(v));
+            if(v.hasMutableProperties()) {
+                builder.fieldDefinition(updateDefinition(v));
+                builder.fieldDefinition(patchDefinition(v));
+            }
             builder.fieldDefinition(deleteDefinition(v));
         });
         return builder.build();
@@ -253,10 +255,10 @@ public class SchemaAdaptor {
         return builder.build();
     }
 
-    public InputObjectTypeDefinition inputTypeDefinition(final ObjectSchema schema, final boolean create, final boolean required) {
+    public InputObjectTypeDefinition inputTypeDefinition(final ObjectSchema schema, final String name, final boolean create, final boolean required) {
 
         final InputObjectTypeDefinition.Builder builder = InputObjectTypeDefinition.newInputObjectDefinition();
-        builder.name(namingStrategy.createInputTypeName(schema));
+        builder.name(name);
         builder.description(description(schema.getDescription()));
         schema.getProperties()
                 .forEach((k, v) -> {
@@ -269,17 +271,17 @@ public class SchemaAdaptor {
 
     public InputObjectTypeDefinition createInputTypeDefinition(final ObjectSchema schema) {
 
-        return inputTypeDefinition(schema, true, true);
+        return inputTypeDefinition(schema, namingStrategy.createInputTypeName(schema), true, true);
     }
 
     public InputObjectTypeDefinition updateInputTypeDefinition(final ObjectSchema schema) {
 
-        return inputTypeDefinition(schema, false, true);
+        return inputTypeDefinition(schema, namingStrategy.updateInputTypeName(schema), false, true);
     }
 
     public InputObjectTypeDefinition patchInputTypeDefinition(final ObjectSchema schema) {
 
-        return inputTypeDefinition(schema, true, false);
+        return inputTypeDefinition(schema, namingStrategy.patchInputTypeName(schema), true, false);
     }
 
     private SDLDefinition<?> inputExpressionTypeDefinition(final InstanceSchema schema) {
