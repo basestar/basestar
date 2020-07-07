@@ -92,6 +92,8 @@ public class TestDatabaseServer {
 
     private static final String TRANSIENT = "Transient";
 
+    private static final String WITH_ENUM = "WithEnum";
+
     private DatabaseServer database;
 
     private Storage storage;
@@ -779,6 +781,20 @@ public class TestDatabaseServer {
                 )
         ), deepMerged);
     }
+
+//    @Test
+//    public void enumException() throws Exception {
+//
+//        final String id = UUID.randomUUID().toString();
+//
+//        database.create(Caller.SUPER, CreateOptions.builder()
+//                .schema(WITH_ENUM)
+//                .id(id)
+//                .data(ImmutableMap.of(
+//                        "value", "C"
+//                ))
+//                .build()).get();
+//    }
 
     private Executable cause(final Executable target) {
 

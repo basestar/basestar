@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.schema.exception.ReservedNameException;
+import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.use.Use;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Path;
@@ -176,6 +177,17 @@ public class StructSchema implements InstanceSchema {
         this.description = builder.getDescription();
         this.declaredProperties = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getProperties()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, e.getKey()))));
+        this.declaredProperties.forEach((k, v) -> {
+            if(v.isImmutable()) {
+                throw new SchemaValidationException("Struct types cannot have immutable properties");
+            }
+            if(v.getExpression() != null) {
+                throw new SchemaValidationException("Struct types cannot have properties with expressions");
+            }
+            if(v.getVisibility() != null) {
+                throw new SchemaValidationException("Struct types cannot have properties with custom visibility");
+            }
+        });
         this.concrete = Nullsafe.option(builder.getConcrete(), Boolean.TRUE);
         if(Reserved.isReserved(name)) {
             throw new ReservedNameException(name);

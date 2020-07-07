@@ -40,6 +40,8 @@ public interface GraphQLNamingStrategy {
 
     String updateInputTypeName(ObjectSchema type);
 
+    String patchInputTypeName(ObjectSchema type);
+
     String inputExpressionsTypeName(Schema<?> type);
 
     String pageTypeName(Schema<?> type);
@@ -110,6 +112,11 @@ public interface GraphQLNamingStrategy {
             return inputPrefix() + "Update";
         }
 
+        protected String updatePatchPrefix() {
+
+            return inputPrefix() + "Patch";
+        }
+
         protected String entryPrefix() {
 
             return "Entry";
@@ -142,6 +149,12 @@ public interface GraphQLNamingStrategy {
         public String updateInputTypeName(final ObjectSchema type) {
 
             return updateInputPrefix() + typeName(type);
+        }
+
+        @Override
+        public String patchInputTypeName(final ObjectSchema type) {
+
+            return updatePatchPrefix() + typeName(type);
         }
 
         @Override

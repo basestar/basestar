@@ -60,7 +60,10 @@ public class SchemaAdaptor {
                     registry.add(inputExpressionTypeDefinition(objectSchema));
                     registry.add(pageTypeDefinition(objectSchema));
                     registry.add(createInputTypeDefinition(objectSchema));
-                    registry.add(updateInputTypeDefinition(objectSchema));
+                    if(objectSchema.hasMutableProperties()) {
+                        registry.add(updateInputTypeDefinition(objectSchema));
+                        registry.add(patchInputTypeDefinition(objectSchema));
+                    }
                 } else {
                     registry.add(inputTypeDefinition(instanceSchema));
                 }
@@ -157,8 +160,10 @@ public class SchemaAdaptor {
         builder.name(GraphQLUtils.MUTATION_TYPE);
         namespace.forEachObjectSchema((k, v) -> {
             builder.fieldDefinition(createDefinition(v));
-            builder.fieldDefinition(updateDefinition(v));
-            builder.fieldDefinition(patchDefinition(v));
+            if(v.hasMutableProperties()) {
+                builder.fieldDefinition(updateDefinition(v));
+                builder.fieldDefinition(patchDefinition(v));
+            }
             builder.fieldDefinition(deleteDefinition(v));
         });
         builder.fieldDefinition(transactionDefinition());
@@ -200,7 +205,7 @@ public class SchemaAdaptor {
         return builder.build();
     }
 
-    public FieldDefinition updateDefinition(final ObjectSchema schema, final String methodName) {
+    public FieldDefinition updateDefinition(final ObjectSchema schema, final String methodName, final String typeName) {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
         builder.name(methodName);
@@ -210,7 +215,7 @@ public class SchemaAdaptor {
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(Reserved.VERSION).type(new TypeName(GraphQLUtils.INT_TYPE)).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(namingStrategy.dataArgumentName()).type(new TypeName(namingStrategy.updateInputTypeName(schema))).build());
+                .name(namingStrategy.dataArgumentName()).type(new TypeName(typeName)).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(namingStrategy.expressionsArgumentName()).type(new TypeName(namingStrategy.inputExpressionsTypeName(schema))).build());
         return builder.build();
@@ -218,12 +223,12 @@ public class SchemaAdaptor {
 
     public FieldDefinition updateDefinition(final ObjectSchema schema) {
 
-        return updateDefinition(schema, namingStrategy.updateMethodName(schema));
+        return updateDefinition(schema, namingStrategy.updateMethodName(schema), namingStrategy.updateInputTypeName(schema));
     }
 
     public FieldDefinition patchDefinition(final ObjectSchema schema) {
 
-        return updateDefinition(schema, namingStrategy.patchMethodName(schema));
+        return updateDefinition(schema, namingStrategy.patchMethodName(schema), namingStrategy.patchInputTypeName(schema));
     }
 
     public FieldDefinition deleteDefinition(final ObjectSchema schema) {
@@ -244,32 +249,37 @@ public class SchemaAdaptor {
         builder.name(namingStrategy.inputTypeName(schema));
         builder.description(description(schema.getDescription()));
         schema.getProperties()
-                .forEach((k, v) -> builder.inputValueDefinition(inputValueDefinition(v)));
+                .forEach((k, v) -> builder.inputValueDefinition(inputValueDefinition(v, true)));
         return builder.build();
     }
 
-    public InputObjectTypeDefinition createInputTypeDefinition(final ObjectSchema schema) {
+    public InputObjectTypeDefinition inputTypeDefinition(final ObjectSchema schema, final boolean create, final boolean required) {
 
         final InputObjectTypeDefinition.Builder builder = InputObjectTypeDefinition.newInputObjectDefinition();
         builder.name(namingStrategy.createInputTypeName(schema));
         builder.description(description(schema.getDescription()));
         schema.getProperties()
-                .forEach((k, v) -> builder.inputValueDefinition(inputValueDefinition(v)));
+                .forEach((k, v) -> {
+                    if(create || !v.isImmutable()) {
+                        builder.inputValueDefinition(inputValueDefinition(v, required));
+                    }
+                });
         return builder.build();
+    }
+
+    public InputObjectTypeDefinition createInputTypeDefinition(final ObjectSchema schema) {
+
+        return inputTypeDefinition(schema, true, true);
     }
 
     public InputObjectTypeDefinition updateInputTypeDefinition(final ObjectSchema schema) {
 
-        final InputObjectTypeDefinition.Builder builder = InputObjectTypeDefinition.newInputObjectDefinition();
-        builder.name(namingStrategy.updateInputTypeName(schema));
-        builder.description(description(schema.getDescription()));
-        schema.getProperties()
-                .forEach((k, v) -> {
-                    if(!v.isImmutable()) {
-                        builder.inputValueDefinition(inputValueDefinition(v));
-                    }
-                });
-        return builder.build();
+        return inputTypeDefinition(schema, false, true);
+    }
+
+    public InputObjectTypeDefinition patchInputTypeDefinition(final ObjectSchema schema) {
+
+        return inputTypeDefinition(schema, true, false);
     }
 
     private SDLDefinition<?> inputExpressionTypeDefinition(final InstanceSchema schema) {
@@ -284,7 +294,7 @@ public class SchemaAdaptor {
         return builder.build();
     }
 
-    public InputValueDefinition inputValueDefinition(final Property property) {
+    public InputValueDefinition inputValueDefinition(final Property property, final boolean required) {
 
         final InputValueDefinition.Builder builder = InputValueDefinition.newInputValueDefinition();
         builder.name(property.getName());
@@ -292,7 +302,7 @@ public class SchemaAdaptor {
             builder.description(new Description(property.getDescription(), null, true));
         }
         final Type<?> valueType = inputType(property.getType());
-        final Type<?> type = property.isRequired() ? new NonNullType(valueType) : valueType;
+        final Type<?> type = required && property.isRequired() ? new NonNullType(valueType) : valueType;
         builder.type(type);
         return builder.build();
     }

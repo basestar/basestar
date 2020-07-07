@@ -20,6 +20,8 @@ package io.basestar.schema;
  * #L%
  */
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.module.jsonSchema.JsonSchema;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
@@ -109,5 +111,12 @@ public class TestObjectSchema {
 
         final Set<Expression> nonQueries = schema.refQueries("Post", ImmutableSet.of());
         assertEquals(ImmutableSet.of(), nonQueries);
+    }
+
+    @Test
+    public void testJsonSchema() throws IOException {
+
+        final JsonSchema schema = Namespace.Builder.jsonSchema();
+        System.err.println(new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(schema));
     }
 }
