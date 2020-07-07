@@ -4,11 +4,13 @@ import io.basestar.expression.Expression;
 import lombok.Data;
 
 /**
- * Like
+ * ILike
  *
  * Case-insensitive wildcard match.
  *
  * The supported syntax is as-per standard SQL with ESCAPE \
+ *
+ * For example, % matches any number of characters and _ matches any single character
  */
 
 @Data
