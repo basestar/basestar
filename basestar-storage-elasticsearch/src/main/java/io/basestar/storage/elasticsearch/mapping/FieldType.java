@@ -51,21 +51,23 @@ public interface FieldType {
     MultiType TEXT = new MultiType(
             KeywordType.CASE_SENSITIVE,
             ImmutableMap.of(
-                    TEXT_FIELD, new TextType(),
-                    IKEYWORD_FIELD, KeywordType.CASE_INSENSITIVE
+                    TEXT_FIELD, new TextType()
+//                    IKEYWORD_FIELD, KeywordType.CASE_INSENSITIVE
             )
     );
 
     MultiType KEYWORD = new MultiType(
             KeywordType.CASE_SENSITIVE,
             ImmutableMap.of(
-                    IKEYWORD_FIELD, KeywordType.CASE_INSENSITIVE
+//                    IKEYWORD_FIELD, KeywordType.CASE_INSENSITIVE
             )
     );
 
     static String keywordSuffix(boolean caseSensitive) {
 
-        return caseSensitive ? "" : "." + IKEYWORD_FIELD;
+        // FIXME
+        return "";
+        //return caseSensitive ? "" : "." + IKEYWORD_FIELD;
     }
 
     Map<String, ?> source();
