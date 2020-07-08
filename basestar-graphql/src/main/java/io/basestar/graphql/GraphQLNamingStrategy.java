@@ -27,6 +27,8 @@ import io.basestar.schema.Schema;
 import io.basestar.schema.use.*;
 import io.basestar.util.Text;
 
+// FIXME: rename to GraphQL strategy, also create a corresponding RestStrategy
+
 public interface GraphQLNamingStrategy {
 
     Default DEFAULT = new Default();

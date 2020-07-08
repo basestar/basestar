@@ -35,7 +35,9 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class GraphQLAPI implements API {
@@ -126,14 +128,32 @@ public class GraphQLAPI implements API {
         private final Object data;
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        private final List<GraphQLError> errors;
+        private final List<ResponseError> errors;
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private final Map<Object, Object> extensions;
 
         public static Response from(final ExecutionResult response) {
 
-            return new Response(response.getData(), response.getErrors(), response.getExtensions());
+            final List<ResponseError> errors = Optional.ofNullable(response.getErrors())
+                    .map(errs -> errs.stream().map(ResponseError::from).collect(Collectors.toList()))
+                    .orElse(null);
+            return new Response(response.getData(), errors, response.getExtensions());
+        }
+    }
+
+    @Data
+    private static class ResponseError {
+
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        private final String message;
+
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        private final List<Object> path;
+
+        public static ResponseError from(final GraphQLError error) {
+
+            return new ResponseError(error.getMessage(), error.getPath());
         }
     }
 }
