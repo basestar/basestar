@@ -36,8 +36,10 @@ public class UpdateOptions implements ActionOptions {
 
     public enum Mode {
 
+        CREATE,
         REPLACE,
-        MERGE
+        MERGE,
+        MERGE_DEEP
     }
 
     private final String schema;

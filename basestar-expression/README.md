@@ -52,6 +52,9 @@
   - [Or](#or)
   - [Not](#not)
   - [And](#and)
+- [Text expressions](#text-expressions)
+  - [ILike](#ilike)
+  - [Like](#like)
 
 ## Arithmetic expressions
 
@@ -680,6 +683,45 @@ lhs && rhs
 </pre>
 **Parameters:**
 
+
+
+
+## Text expressions
+
+### ILike
+
+ Case-insensitive wildcard match.
+
+ The supported syntax is as-per standard SQL with ESCAPE \
+
+ For example, % matches any number of characters and _ matches any single character
+
+**Syntax:**
+<pre>
+lhs ILIKE rhs
+</pre>
+**Parameters:**
+
+- `lhs`:`string` Left hand operand
+- `rhs`:`string` Right hand operand
+
+
+### Like
+
+ Case-sensitive wildcard match.
+
+ The supported syntax is as-per standard SQL with ESCAPE \
+
+ For example, % matches any number of characters and _ matches any single character
+
+**Syntax:**
+<pre>
+lhs LIKE rhs
+</pre>
+**Parameters:**
+
+- `lhs`:`string` Left hand operand
+- `rhs`:`string` Right hand operand
 
 
 

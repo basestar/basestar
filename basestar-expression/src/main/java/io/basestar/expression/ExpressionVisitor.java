@@ -35,6 +35,7 @@ import io.basestar.expression.literal.LiteralSet;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
+import io.basestar.expression.text.Like;
 
 public interface ExpressionVisitor<T> {
 
@@ -132,6 +133,8 @@ public interface ExpressionVisitor<T> {
     T visitOr(Or expression);
 
     T visitOperator(Operator operator);
+
+    T visitLike(Like like);
 
     interface Defaulting<T> extends ExpressionVisitor<T> {
 
@@ -403,6 +406,12 @@ public interface ExpressionVisitor<T> {
 
         @Override
         default T visitOperator(final Operator expression) {
+
+            return visitDefault(expression);
+        }
+
+        @Override
+        default T visitLike(final Like expression) {
 
             return visitDefault(expression);
         }

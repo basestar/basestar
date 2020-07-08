@@ -33,6 +33,8 @@ import io.basestar.expression.iterate.Of;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
+import io.basestar.expression.text.Like;
+import io.basestar.storage.elasticsearch.mapping.FieldType;
 import io.basestar.util.Path;
 import org.apache.lucene.search.join.ScoreMode;
 import org.elasticsearch.index.query.BoolQueryBuilder;
@@ -89,22 +91,22 @@ public class ElasticsearchExpressionVisitor implements ExpressionVisitor.Default
 
     private QueryBuilder lt(final Path path, final Object value) {
 
-        return nest(path,QueryBuilders.rangeQuery(path.toString()).lt(value));
+        return nest(path, QueryBuilders.rangeQuery(path.toString()).lt(value));
     }
 
     private QueryBuilder gt(final Path path, final Object value) {
 
-        return nest(path,QueryBuilders.rangeQuery(path.toString()).gt(value));
+        return nest(path, QueryBuilders.rangeQuery(path.toString()).gt(value));
     }
 
     private QueryBuilder lte(final Path path, final Object value) {
 
-        return nest(path,QueryBuilders.rangeQuery(path.toString()).lte(value));
+        return nest(path, QueryBuilders.rangeQuery(path.toString()).lte(value));
     }
 
     private QueryBuilder gte(final Path path, final Object value) {
 
-        return nest(path,QueryBuilders.rangeQuery(path.toString()).gte(value));
+        return nest(path, QueryBuilders.rangeQuery(path.toString()).gte(value));
     }
 
     @Override
@@ -232,5 +234,21 @@ public class ElasticsearchExpressionVisitor implements ExpressionVisitor.Default
             }
         }
         return null;
+    }
+
+    @Override
+    public QueryBuilder visitLike(final Like expression) {
+
+        final Expression lhs = expression.getLhs();
+        final Expression rhs = expression.getRhs();
+        if (lhs instanceof PathConstant && rhs instanceof Constant) {
+            final Path path = ((PathConstant) lhs).getPath();
+            final String match = Objects.toString(((Constant) rhs).getValue());
+            final Like.Matcher matcher = Like.Matcher.Dialect.DEFAULT.parse(match);
+            final String wildcard = Like.Matcher.Dialect.LUCENE.toString(matcher);
+            return nest(path, QueryBuilders.wildcardQuery(path.toString() + FieldType.keywordSuffix(expression.isCaseSensitive()), wildcard));
+        } else {
+            return null;
+        }
     }
 }

@@ -259,6 +259,13 @@ Now we'll create a LayeredStorage and write to the left side:
     <tr><td>name</td><td>sandy</td></tr>
 </table>
 
+Baseline is unchanged, left storage now looks like:
+
+<table>
+    <tr><td>id</td><td>version</td><td>name</td></tr>
+    <tr><td>b</td><td>1</td><td>sandy</td></tr>
+</table>
+
 Let's write to the right side:
 
 <table>
@@ -307,7 +314,7 @@ And from the right it looks like:
 
 <table>
     <tr><td>id</td><td>version</td><td>name</td></tr>
-    <tr><td>a</td><td>1</td><td>matt</td></tr>
+    <tr><td>a</td><td>2</td><td>matt</td></tr>
     <tr><td>c</td><td>1</td><td>mark</td></tr>
 </table>
 

@@ -108,8 +108,7 @@ public class Mappings {
                     @Override
                     public FieldType visitString(final UseString type) {
 
-                        // FIXME
-                        return FieldType.KEYWORD;
+                        return FieldType.TEXT;
                     }
 
                     @Override

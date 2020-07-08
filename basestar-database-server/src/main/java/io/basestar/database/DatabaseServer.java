@@ -98,9 +98,9 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
     }
 
     @Override
-    public CompletableFuture<?> handle(final Event event) {
+    public CompletableFuture<?> handle(final Event event, final Map<String, String> meta) {
 
-        return HANDLERS.handle(this, event);
+        return HANDLERS.handle(this, event, meta);
     }
 
     @Override
@@ -156,11 +156,12 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                 if (!beforeCheck.add(key)) {
                     throw new BatchKeyRepeatedException(key.getSchema(), key.getId());
                 }
-                final Set<Path> permissionExpand = Sets.union(
-                        permissionExpand(schema, action.permission()),
-                        // Always need read permission for the target object
-                        permissionExpand(schema, schema.getPermission(Permission.READ))
-                );
+//                final Set<Path> permissionExpand = Sets.union(
+//                        permissionExpand(schema, action.permission()),
+//                        // Always need read permission for the target object
+//                        permissionExpand(schema, schema.getPermission(Permission.READ))
+//                );
+                final Set<Path> permissionExpand = permissionExpand(schema, schema.getPermission(Permission.READ));
                 beforeCallerExpand.addAll(Path.children(permissionExpand, Path.of(VAR_CALLER)));
                 final Set<Path> readExpand = Path.children(permissionExpand, Path.of(VAR_BEFORE));
                 final Set<Path> transientExpand = schema.transientExpand(Path.of(), readExpand);
@@ -233,7 +234,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         resultLookup.put(name, afterKey);
                         overlay.put(name, after);
                         assert beforeKey == null || beforeKey.equals(afterKey);
-                        final Set<Path> permissionExpand = permissionExpand(schema, action.permission());
+                        final Set<Path> permissionExpand = permissionExpand(schema, action.permission(before));
                         afterCallerExpand.addAll(Path.children(permissionExpand, Path.of(VAR_CALLER)));
                         final Set<Path> readExpand = Sets.union(
                                 Path.children(permissionExpand, Path.of(VAR_AFTER)),
@@ -279,9 +280,9 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         actions.forEach((name, action) -> {
                             final ObjectSchema schema = action.schema();
                             final RefKey key = resultLookup.get(name);
-                            final Permission permission = action.permission();
                             final Instance before = beforeResults.get(key);
                             final Instance after = afterResults.get(key);
+                            final Permission permission = action.permission(before);
                             final Map<String, Object> scope = new HashMap<>();
                             // FIXME: might make sense for before/after to be allowed to be null in scope
                             if(before != null) {
@@ -581,7 +582,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         .build();
 
                 final List<Pager.Source<Instance>> sources = storage.aggregate(objectSchema, bound, group, aggregates).stream()
-                        .map(source -> (Pager.Source<Instance>) (c, t) -> source.page(c, t)
+                        .map(source -> (Pager.Source<Instance>) (c, t, stats) -> source.page(c, t, stats)
                                 .thenApply(data -> data.map(row -> {
                                     final Map<String, Object> values = new HashMap<>();
                                     columns.forEach((name, column) -> {

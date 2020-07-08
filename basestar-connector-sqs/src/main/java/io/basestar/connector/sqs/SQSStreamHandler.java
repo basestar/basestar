@@ -29,9 +29,12 @@ import io.basestar.event.EventSerialization;
 import io.basestar.event.Handler;
 import io.basestar.event.sqs.SQSReceiver;
 import io.basestar.storage.Stash;
+import lombok.extern.slf4j.Slf4j;
 
+import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 public class SQSStreamHandler implements RequestHandler<SQSEvent, Void> {
 
     private final Handler<Event> handler;
@@ -60,6 +63,12 @@ public class SQSStreamHandler implements RequestHandler<SQSEvent, Void> {
 
                 final Map<String, SQSEvent.MessageAttribute> attributes = message.getMessageAttributes();
                 final String eventType = attributes.get(SQSReceiver.EVENT_ATTRIBUTE).getStringValue();
+                final Map<String, String> meta = new HashMap<>();
+                attributes.forEach((k, v) -> {
+                    if("String".equals(v.getDataType())) {
+                        meta.put(k, v.getStringValue());
+                    }
+                });
 
                 final Class<? extends Event> eventClass = (Class<? extends Event>) Class.forName(eventType);
                 if (Event.class.isAssignableFrom(eventClass)) {
@@ -72,7 +81,9 @@ public class SQSStreamHandler implements RequestHandler<SQSEvent, Void> {
                     }
 
                     final Event event = serialization.deserialize(eventClass, bytes);
-                    handler.handle(event).join();
+                    handler.handle(event, meta).join();
+                } else {
+                    log.error("Cannot deserialize an event into class {}", eventClass);
                 }
             }
 

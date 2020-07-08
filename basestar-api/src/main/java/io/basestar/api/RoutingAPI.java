@@ -22,6 +22,7 @@ package io.basestar.api;
 
 import io.swagger.v3.oas.models.OpenAPI;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -90,10 +91,20 @@ public class RoutingAPI implements API {
     }
 
     @Override
-    public OpenAPI openApi() {
+    public CompletableFuture<OpenAPI> openApi() {
 
-        return OpenAPIUtils.merge(apis.entrySet().stream()
-                .map(e -> OpenAPIUtils.prefix(e.getValue().openApi(), e.getKey()))
-                .collect(Collectors.toList()));
+        final Map<String, CompletableFuture<OpenAPI>> futures = apis.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        v -> v.getValue().openApi()
+                ));
+
+        return CompletableFuture.allOf(futures.values().toArray(new CompletableFuture<?>[0])).thenApply(ignored -> {
+
+            final List<OpenAPI> results = futures.entrySet().stream()
+                    .map(e -> OpenAPIUtils.prefix(e.getValue().getNow(new OpenAPI()), e.getKey()))
+                    .collect(Collectors.toList());
+            return OpenAPIUtils.merge(results);
+        });
     }
 }

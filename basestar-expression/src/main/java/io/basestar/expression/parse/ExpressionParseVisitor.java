@@ -58,6 +58,8 @@ import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
 import io.basestar.expression.parse.ExpressionParser.*;
+import io.basestar.expression.text.ILike;
+import io.basestar.expression.text.SLike;
 import io.basestar.expression.type.Values;
 import io.basestar.util.Path;
 import lombok.RequiredArgsConstructor;
@@ -78,6 +80,8 @@ import static io.basestar.expression.parse.ExpressionLexer.Div;
 import static io.basestar.expression.parse.ExpressionLexer.Eq;
 import static io.basestar.expression.parse.ExpressionLexer.Gt;
 import static io.basestar.expression.parse.ExpressionLexer.Gte;
+import static io.basestar.expression.parse.ExpressionLexer.ILike;
+import static io.basestar.expression.parse.ExpressionLexer.Like;
 import static io.basestar.expression.parse.ExpressionLexer.Lt;
 import static io.basestar.expression.parse.ExpressionLexer.Lte;
 import static io.basestar.expression.parse.ExpressionLexer.Mod;
@@ -253,6 +257,19 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
     }
 
     @Override
+    public Expression visitExprLike(final ExprLikeContext ctx) {
+
+        switch (ctx.op.getType()) {
+            case Like:
+                return new SLike(visit(ctx.expr(0)), visit(ctx.expr(1)));
+            case ILike:
+                return new ILike(visit(ctx.expr(0)), visit(ctx.expr(1)));
+            default:
+                throw new UnsupportedOperationException();
+        }
+    }
+
+    @Override
     public Expression visitExprCoalesce(final ExprCoalesceContext ctx) {
 
         return new Coalesce(visit(ctx.expr(0)), visit(ctx.expr(1)));
@@ -355,11 +372,11 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
         return Constant.NULL;
     }
 
-//    @Override
-//    public Expression visitExprOperator(final ExprOperatorContext ctx) {
-//
-//        return new Operator(ctx.name().getText(), visit(ctx.expr(0)), visit(ctx.expr(1)));
-//    }
+    @Override
+    public Expression visitExprOperator(final ExprOperatorContext ctx) {
+
+        return new Operator(ctx.Identifier().getText(), visit(ctx.expr(0)), visit(ctx.expr(1)));
+    }
 
     @Override
     public Expression visitExprOr(final ExprOrContext ctx) {

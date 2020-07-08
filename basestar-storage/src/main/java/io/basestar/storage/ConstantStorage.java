@@ -67,7 +67,7 @@ public class ConstantStorage implements Storage {
 
         // Add a source that will emit matching results
 
-        return ImmutableList.of((count, token) -> {
+        return ImmutableList.of((count, token, stats) -> {
             // Don't do any paging, just return all matches, this is compliant with Pager interface
             final List<Map<String, Object>> page = new ArrayList<>();
             Nullsafe.option(data.get(schema.getName())).forEach((id, item) -> {

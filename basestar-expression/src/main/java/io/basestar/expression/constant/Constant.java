@@ -123,7 +123,7 @@ public class Constant implements Expression {
     @Override
     public String toString() {
 
-        return Values.toString(value);
+        return Values.toExpressionString(value);
     }
 
     public static Expression valueOf(final Boolean value) {

@@ -8,7 +8,8 @@
     "io.basestar.expression.function",
     "io.basestar.expression.iterate",
     "io.basestar.expression.literal",
-    "io.basestar.expression.logical"
+    "io.basestar.expression.logical",
+    "io.basestar.expression.text"
 ]>
 
 <#list packageNames as packageName>

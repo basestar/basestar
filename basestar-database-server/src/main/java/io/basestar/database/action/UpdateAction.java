@@ -21,6 +21,7 @@ package io.basestar.database.action;
  */
 
 import io.basestar.database.CommonVars;
+import io.basestar.database.event.ObjectCreatedEvent;
 import io.basestar.database.event.ObjectUpdatedEvent;
 import io.basestar.database.options.UpdateOptions;
 import io.basestar.event.Event;
@@ -56,9 +57,13 @@ public class UpdateAction implements Action {
     }
 
     @Override
-    public Permission permission() {
+    public Permission permission(final Instance before) {
 
-        return schema.getPermission(Permission.UPDATE);
+        if(before == null) {
+            return schema.getPermission(Permission.CREATE);
+        } else {
+            return schema.getPermission(Permission.UPDATE);
+        }
     }
 
     @Override
@@ -72,54 +77,85 @@ public class UpdateAction implements Action {
 
         final String id = options.getId();
 
-        if (before == null) {
-            throw new ObjectMissingException(options.getSchema(), id);
-        }
-
-        if(!Instance.getSchema(before).equals(schema.getName())) {
-            throw new IllegalStateException("Cannot change instance schema");
-        }
-
         final Map<String, Object> data = new HashMap<>();
         final UpdateOptions.Mode mode = Nullsafe.option(options.getMode(), UpdateOptions.Mode.REPLACE);
-        if(mode == UpdateOptions.Mode.MERGE) {
-            data.putAll(before);
-        } else if(mode != UpdateOptions.Mode.REPLACE) {
-            throw new IllegalStateException();
+
+
+        final long version;
+        final LocalDateTime created;
+        final LocalDateTime updated = LocalDateTime.now();
+
+        if (before == null) {
+            if(mode == UpdateOptions.Mode.CREATE) {
+                version = 1L;
+                created = updated;
+            } else {
+                throw new ObjectMissingException(options.getSchema(), id);
+            }
+        } else {
+            if(!Instance.getSchema(before).equals(schema.getName())) {
+                throw new IllegalStateException("Cannot change instance schema");
+            }
+
+            if(mode == UpdateOptions.Mode.MERGE || mode == UpdateOptions.Mode.MERGE_DEEP) {
+                data.putAll(before);
+            }
+
+            final Long beforeVersion = Instance.getVersion(before);
+            assert beforeVersion != null;
+
+            if(options.getVersion() != null && !beforeVersion.equals(options.getVersion())) {
+                throw new VersionMismatchException(options.getSchema(), id, options.getVersion());
+            }
+
+            version = beforeVersion + 1;
+            created = Instance.getCreated(before);
         }
+
         if(options.getData() != null) {
-            data.putAll(options.getData());
+            if(mode == UpdateOptions.Mode.MERGE_DEEP) {
+                mergeDeep(data, options.getData());
+            } else {
+                data.putAll(options.getData());
+            }
         }
         if(options.getExpressions() != null) {
             options.getExpressions().forEach((k, expr) -> data.put(k, expr.evaluate(context)));
         }
         final Map<String, Object> initial = new HashMap<>(schema.create(data));
 
-        final LocalDateTime now = LocalDateTime.now();
-
-        final Long beforeVersion = Instance.getVersion(before);
-        assert beforeVersion != null;
-
-        if(options.getVersion() != null && !beforeVersion.equals(options.getVersion())) {
-            throw new VersionMismatchException(options.getSchema(), id, options.getVersion());
-        }
-
-        final Long afterVersion = beforeVersion + 1;
-
         Instance.setId(initial, id);
-        Instance.setVersion(initial, afterVersion);
-        Instance.setCreated(initial, Instance.getCreated(before));
-        Instance.setUpdated(initial, now);
+        Instance.setSchema(initial, schema.getName());
+        Instance.setVersion(initial, version);
+        Instance.setCreated(initial, created);
+        Instance.setUpdated(initial, updated);
         Instance.setHash(initial, schema.hash(initial));
 
         final Instance evaluated = schema.evaluateProperties(context.with(CommonVars.VAR_THIS, initial), new Instance(initial));
 
-        final Set<Constraint.Violation> violations = schema.validate(context.with(CommonVars.VAR_THIS, evaluated), before, evaluated);
+        final Set<Constraint.Violation> violations = schema.validate(context.with(CommonVars.VAR_THIS, evaluated), before == null ? evaluated : before, evaluated);
         if(!violations.isEmpty()) {
             throw new ConstraintViolationException(violations);
         }
 
         return evaluated;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void mergeDeep(final Map<String, Object> target, final Map<String, Object> source) {
+
+        for(final Map.Entry<String, Object> e: source.entrySet()) {
+            final String key = e.getKey();
+            final Object merging = e.getValue();
+            final Object current = target.get(key);
+            if(current instanceof Map && merging instanceof Map) {
+                final Map<String, Object> merged = new HashMap<>((Map<String, Object>)current);
+                mergeDeep(merged, (Map<String, Object>)merging);
+                target.put(key, merged);
+            } else {
+                target.put(key, merging);
+            }
+        }
     }
 
     @Override
@@ -131,11 +167,17 @@ public class UpdateAction implements Action {
     @Override
     public Event event(final Instance before, final Instance after) {
 
-        final String schema = Instance.getSchema(before);
-        final String id = Instance.getId(before);
-        final Long version = Instance.getVersion(before);
-        assert version != null;
-        return ObjectUpdatedEvent.of(schema, id, version, before, after);
+        if(before == null) {
+            final String schema = Instance.getSchema(after);
+            final String id = Instance.getId(after);
+            return ObjectCreatedEvent.of(schema, id, after);
+        } else {
+            final String schema = Instance.getSchema(before);
+            final String id = Instance.getId(before);
+            final Long version = Instance.getVersion(before);
+            assert version != null;
+            return ObjectUpdatedEvent.of(schema, id, version, before, after);
+        }
     }
 
     @Override

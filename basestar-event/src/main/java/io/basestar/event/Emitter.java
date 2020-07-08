@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public interface Emitter {
@@ -35,15 +36,25 @@ public interface Emitter {
 
     default CompletableFuture<?> emit(final Event event) {
 
-        return emit(Collections.singletonList(event));
+        return emit(event, Collections.emptyMap());
     }
 
-    CompletableFuture<?> emit(Collection<? extends Event> event);
+    default CompletableFuture<?> emit(final Event event, final Map<String, String> meta) {
+
+        return emit(Collections.singletonList(event), meta);
+    }
+
+    default CompletableFuture<?> emit(final Collection<? extends Event> events) {
+
+        return emit(events, Collections.emptyMap());
+    }
+
+    CompletableFuture<?> emit(Collection<? extends Event> event, Map<String, String> meta);
 
     class Skip implements Emitter {
 
         @Override
-        public CompletableFuture<?> emit(final Collection<? extends Event> event) {
+        public CompletableFuture<?> emit(final Collection<? extends Event> event, final Map<String, String> meta) {
 
             return CompletableFuture.completedFuture(null);
         }
@@ -59,9 +70,9 @@ public interface Emitter {
         }
 
         @Override
-        public CompletableFuture<?> emit(final Collection<? extends Event> events) {
+        public CompletableFuture<?> emit(final Collection<? extends Event> events, final Map<String, String> meta) {
 
-            return CompletableFuture.allOf(emitters.stream().map(v -> v.emit(events))
+            return CompletableFuture.allOf(emitters.stream().map(v -> v.emit(events, meta))
                     .toArray(CompletableFuture<?>[]::new));
         }
     }

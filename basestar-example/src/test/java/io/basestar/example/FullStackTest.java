@@ -179,11 +179,11 @@ public class FullStackTest {
 
         final APIResponse createUser1 = api.handle(TestRequests.put("User/user1", HashMultimap.create(), headers, ImmutableMap.of(
         ))).join();
-        assertEquals(200, createUser1.getStatusCode());
+        assertEquals(201, createUser1.getStatusCode());
 
         final APIResponse createUser2 = api.handle(TestRequests.put("User/user2", HashMultimap.create(), headers, ImmutableMap.of(
         ))).join();
-        assertEquals(200, createUser2.getStatusCode());
+        assertEquals(201, createUser2.getStatusCode());
 
         final APIResponse createGroup1 = api.handle(TestRequests.put("Group/group1", HashMultimap.create(), headers, ImmutableMap.of(
                 "owner", ImmutableMap.of(
@@ -198,7 +198,7 @@ public class FullStackTest {
                         )
                 )
         ))).join();
-        assertEquals(200, createGroup1.getStatusCode());
+        assertEquals(201, createGroup1.getStatusCode());
         System.err.println(TestRequests.responseBody(createGroup1, Map.class));
 
         final APIResponse queryGroups = api.handle(TestRequests.get("Group", HashMultimap.create(), headers)).join();
@@ -226,7 +226,7 @@ public class FullStackTest {
                         Reserved.ID, "group1"
                 )
         ))).join();
-        assertEquals(200, createProject1.getStatusCode());
+        assertEquals(201, createProject1.getStatusCode());
         System.err.println(TestRequests.responseBody(createProject1, Map.class));
 
         pump.stop();

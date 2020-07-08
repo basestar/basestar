@@ -20,12 +20,11 @@ package io.basestar.example;
  * #L%
  */
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.api.API;
 import io.basestar.api.AuthenticatingAPI;
+import io.basestar.api.DiscoverableAPI;
 import io.basestar.auth.Authenticator;
 import io.basestar.auth.Caller;
 import io.basestar.auth.StaticAuthenticator;
@@ -46,7 +45,6 @@ import io.basestar.storage.dynamodb.DynamoDBUtils;
 import io.basestar.storage.s3.S3Stash;
 import io.basestar.util.PagedList;
 import io.basestar.util.Path;
-import io.swagger.v3.oas.models.OpenAPI;
 import org.apache.commons.lang.StringUtils;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.model.TableDescription;
@@ -265,11 +263,12 @@ public class Test {
             System.err.println(readBig);
         }
 
-        final Authenticator authenticator = new StaticAuthenticator(caller);
+        final Authenticator authenticator = new StaticAuthenticator(Caller.SUPER);
 
-        final API api = new AuthenticatingAPI(authenticator, new DatabaseAPI(database));
-        final OpenAPI openAPI = api.openApi();
-        System.err.println(new ObjectMapper().setDefaultPropertyInclusion(JsonInclude.Include.NON_EMPTY).writerWithDefaultPrettyPrinter().writeValueAsString(openAPI));
+//        final API api = new AuthenticatingAPI(authenticator, new DatabaseAPI(database));
+//        final OpenAPI openAPI = api.openApi();
+        final API api = new AuthenticatingAPI(authenticator, DiscoverableAPI.builder().api(new DatabaseAPI(database)).build());
+        //System.err.println(new ObjectMapper().setDefaultPropertyInclusion(JsonInclude.Include.NON_EMPTY).writerWithDefaultPrettyPrinter().writeValueAsString(openAPI));
         final UndertowConnector connector = new UndertowConnector(api,"localhost", 5004);
         connector.start();
     }

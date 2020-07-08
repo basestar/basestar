@@ -20,6 +20,8 @@ package io.basestar.exception;
  * #L%
  */
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -36,7 +38,15 @@ public class ExceptionMetadata {
 
     private String message;
 
+    private final Multimap<String, String> headers = ArrayListMultimap.create();
+
     private final Map<String, Object> data = new HashMap<>();
+
+    public ExceptionMetadata putHeader(final String key, final String value) {
+
+        headers.put(key, value);
+        return this;
+    }
 
     public ExceptionMetadata putData(final String key, final Object value) {
 

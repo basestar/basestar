@@ -20,21 +20,34 @@ package io.basestar.graphql;
  * #L%
  */
 
+import io.basestar.database.options.UpdateOptions;
 import io.basestar.schema.Link;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Schema;
 import io.basestar.schema.use.*;
 import io.basestar.util.Text;
 
+// FIXME: rename to GraphQL strategy, also create a corresponding RestStrategy
+
 public interface GraphQLNamingStrategy {
 
     Default DEFAULT = new Default();
+
+    UpdateOptions.Mode updateMode();
+
+    UpdateOptions.Mode patchMode();
 
     String typeName(Schema<?> type);
 
     String inputRefTypeName();
 
     String inputTypeName(Schema<?> type);
+
+    String createInputTypeName(ObjectSchema type);
+
+    String updateInputTypeName(ObjectSchema type);
+
+    String patchInputTypeName(ObjectSchema type);
 
     String inputExpressionsTypeName(Schema<?> type);
 
@@ -58,6 +71,8 @@ public interface GraphQLNamingStrategy {
 
     String updateMethodName(ObjectSchema type);
 
+    String patchMethodName(ObjectSchema type);
+
     String deleteMethodName(ObjectSchema type);
 
     String queryArgumentName();
@@ -79,6 +94,19 @@ public interface GraphQLNamingStrategy {
     class Default implements GraphQLNamingStrategy {
 
         @Override
+        public UpdateOptions.Mode updateMode() {
+
+            // Gives correct behaviour with immutable properties
+            return UpdateOptions.Mode.MERGE;
+        }
+
+        @Override
+        public UpdateOptions.Mode patchMode() {
+
+            return UpdateOptions.Mode.MERGE_DEEP;
+        }
+
+        @Override
         public String typeName(final Schema<?> type) {
 
             return Text.upperCamel(type.getName());
@@ -92,6 +120,21 @@ public interface GraphQLNamingStrategy {
         protected String inputPrefix() {
 
             return "Input";
+        }
+
+        protected String createInputPrefix() {
+
+            return inputPrefix() + "Create";
+        }
+
+        protected String updateInputPrefix() {
+
+            return inputPrefix() + "Update";
+        }
+
+        protected String updatePatchPrefix() {
+
+            return inputPrefix() + "Patch";
         }
 
         protected String entryPrefix() {
@@ -114,6 +157,24 @@ public interface GraphQLNamingStrategy {
         public String inputTypeName(final Schema<?> type) {
 
             return inputPrefix() + typeName(type);
+        }
+
+        @Override
+        public String createInputTypeName(final ObjectSchema type) {
+
+            return createInputPrefix() + typeName(type);
+        }
+
+        @Override
+        public String updateInputTypeName(final ObjectSchema type) {
+
+            return updateInputPrefix() + typeName(type);
+        }
+
+        @Override
+        public String patchInputTypeName(final ObjectSchema type) {
+
+            return updatePatchPrefix() + typeName(type);
         }
 
         @Override
@@ -180,6 +241,12 @@ public interface GraphQLNamingStrategy {
         public String updateMethodName(final ObjectSchema type) {
 
             return "update" + typeName(type);
+        }
+
+        @Override
+        public String patchMethodName(final ObjectSchema type) {
+
+            return "patch" + typeName(type);
         }
 
         @Override

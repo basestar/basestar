@@ -33,7 +33,7 @@ public class DiscoverableAPI implements API {
 
     private final String path;
 
-    private final Supplier<OpenAPI> openApi = Suppliers.memoize(this::rebuildOpenApi);
+    private final Supplier<CompletableFuture<OpenAPI>> openApi = Suppliers.memoize(this::rebuildOpenApi);
 
     @lombok.Builder(builderClassName = "Builder")
     DiscoverableAPI(final API api, final String path) {
@@ -46,19 +46,19 @@ public class DiscoverableAPI implements API {
     public CompletableFuture<APIResponse> handle(final APIRequest request) {
 
         if(request.getPath().equals(path)) {
-            return CompletableFuture.supplyAsync(() -> APIResponse.success(request, openApi()));
+            return openApi().thenApply(v -> APIResponse.success(request, v));
         } else {
             return api.handle(request);
         }
     }
 
     @Override
-    public OpenAPI openApi() {
+    public CompletableFuture<OpenAPI> openApi() {
 
         return openApi.get();
     }
 
-    private OpenAPI rebuildOpenApi() {
+    private CompletableFuture<OpenAPI> rebuildOpenApi() {
 
         return api.openApi();
     }

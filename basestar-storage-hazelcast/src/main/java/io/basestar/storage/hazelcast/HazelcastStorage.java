@@ -31,11 +31,11 @@ import com.hazelcast.transaction.TransactionContext;
 import com.hazelcast.transaction.TransactionOptions;
 import com.hazelcast.transaction.TransactionalMap;
 import io.basestar.expression.Expression;
+import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.*;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
-import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.hazelcast.serde.CustomPortable;
@@ -161,7 +161,7 @@ public class HazelcastStorage implements Storage {
     @Override
     public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
 
-        return ImmutableList.of((count, token) -> CompletableFuture.supplyAsync(() -> {
+        return ImmutableList.of((count, token, stats) -> CompletableFuture.supplyAsync(() -> {
             try {
 
                 final Predicate<BatchResponse.Key, CustomPortable> predicate = query.visit(new HazelcastExpressionVisitor<>());

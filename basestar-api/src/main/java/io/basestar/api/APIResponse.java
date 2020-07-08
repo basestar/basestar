@@ -28,6 +28,8 @@ import io.basestar.exception.HasExceptionMetadata;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 public interface APIResponse {
 
@@ -50,7 +52,11 @@ public interface APIResponse {
     static APIResponse success(final APIRequest request, final Multimap<String, String> extraHeaders,
                                final Object data) {
 
-        return response(request, 200, extraHeaders, data);
+        if(data == null) {
+            return response(request, 204, extraHeaders, null);
+        } else {
+            return response(request, 200, extraHeaders, data);
+        }
     }
 
     static APIResponse error(final APIRequest request, final Throwable e) {
@@ -62,7 +68,11 @@ public interface APIResponse {
 
     static APIResponse error(final APIRequest request, final ExceptionMetadata e) {
 
-        return response(request, e.getStatus(), null, e.getData());
+        final Map<String, Object> data = new HashMap<>();
+        data.put("code", e.getCode());
+        data.put("message", e.getMessage());
+        data.putAll(e.getData());
+        return response(request, e.getStatus(), e.getHeaders(), data);
     }
 
     static ExceptionMetadata exceptionMetadata(final Throwable e) {

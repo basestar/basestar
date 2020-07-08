@@ -33,6 +33,7 @@ import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.model.*;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -42,6 +43,8 @@ public class SQSReceiver implements Receiver {
     public static final String EVENT_ATTRIBUTE = "event";
 
     public static final String OVERSIZE_ATTRIBUTE = "oversize";
+
+    public static final String ALL_ATTRIBUTES = "All";
 
     private static final int WAIT_SECONDS = 20;
 
@@ -96,7 +99,8 @@ public class SQSReceiver implements Receiver {
                 .maxNumberOfMessages(READ_COUNT)
                 .queueUrl(queueUrl)
 //                .attributeNames(QueueAttributeName.ALL)
-                .messageAttributeNames(EVENT_ATTRIBUTE, OVERSIZE_ATTRIBUTE)
+//                .messageAttributeNames(EVENT_ATTRIBUTE, OVERSIZE_ATTRIBUTE)
+                .messageAttributeNames(ALL_ATTRIBUTES)
                 .build();
 
         return client.receiveMessage(request)
@@ -120,6 +124,12 @@ public class SQSReceiver implements Receiver {
 
         final Map<String, MessageAttributeValue> attributes = message.messageAttributes();
         final String eventType = attributes.get(EVENT_ATTRIBUTE).stringValue();
+        final Map<String, String> meta = new HashMap<>();
+        attributes.forEach((k, v) -> {
+            if("String".equals(v.dataType())) {
+                meta.put(k, v.stringValue());
+            }
+        });
         try {
             final Class<? extends Event> eventClass = (Class<? extends Event>) Class.forName(eventType);
             if (Event.class.isAssignableFrom(eventClass)) {
@@ -130,14 +140,14 @@ public class SQSReceiver implements Receiver {
                     return oversizeStash.read(ref)
                             .thenCompose(bytes -> {
                                 final Event event = serialization.deserialize(eventClass, bytes);
-                                return handle(message, event, handler)
+                                return handle(message, event, meta, handler)
                                         .thenCompose(ignored -> oversizeStash.delete(ref));
                             });
                 } else {
 
                     final byte[] bytes = BASE_ENCODING.decode(message.body());
                     final Event event = serialization.deserialize(eventClass, bytes);
-                    return handle(message, event, handler);
+                    return handle(message, event, meta, handler);
                 }
 
             } else {
@@ -148,9 +158,9 @@ public class SQSReceiver implements Receiver {
         }
     }
 
-    private CompletableFuture<?> handle(final Message message, final Event event, final Handler<Event> handler) {
+    private CompletableFuture<?> handle(final Message message, final Event event, final Map<String, String> meta, final Handler<Event> handler) {
 
-        return handler.handle(event)
+        return handler.handle(event, meta)
                 .thenCompose(ignored -> client.deleteMessage(DeleteMessageRequest.builder()
                             .queueUrl(queueUrl)
                             .receiptHandle(message.receiptHandle())

@@ -1,8 +1,10 @@
-package io.basestar.event;
-
+/**
+ * Text expressions
+ */
+package io.basestar.expression.text;
 /*-
  * #%L
- * basestar-event
+ * basestar-expression
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -19,12 +21,3 @@ package io.basestar.event;
  * limitations under the License.
  * #L%
  */
-
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
-public interface Handler<E extends Event> {
-
-    CompletableFuture<?> handle(E event, Map<String, String> metadata);
-
-}

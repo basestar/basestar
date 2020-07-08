@@ -36,13 +36,13 @@ public class NullStorage implements Storage {
     @Override
     public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
 
-        return Collections.singletonList((count, pagingToken) -> CompletableFuture.completedFuture(PagedList.empty()));
+        return Collections.singletonList((count, pagingToken, stats) -> CompletableFuture.completedFuture(PagedList.empty()));
     }
 
     @Override
     public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
 
-        return Collections.singletonList((count, pagingToken) -> CompletableFuture.completedFuture(PagedList.empty()));
+        return Collections.singletonList((count, pagingToken, stats) -> CompletableFuture.completedFuture(PagedList.empty()));
     }
 
     @Override

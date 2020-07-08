@@ -56,27 +56,32 @@ public class Pager<T> {
 
     public Pager(final Comparator<T> comparator, final List<Source<T>> sources, final PagingToken paging) {
 
+        this(comparator, sources, EnumSet.noneOf(PagedList.Stat.class), paging);
+    }
+
+    public Pager(final Comparator<T> comparator, final List<Source<T>> sources, final Set<PagedList.Stat> stats, final PagingToken paging) {
+
         this.comparator = Nullsafe.require(comparator);
-        this.states = decodeStates(sources, paging);
+        this.states = decodeStates(sources, EnumSet.copyOf(stats), paging);
     }
 
     public interface Source<T> {
 
-        CompletableFuture<PagedList<T>> page(int count, PagingToken token);
+        CompletableFuture<PagedList<T>> page(int count, PagingToken token, Set<PagedList.Stat> stats);
     }
 
     public CompletableFuture<PagedList<T>> page(final int count) {
 
         return pageInternal(count)
-                .thenApply(page -> new PagedList<>(page, encodeStates(states)));
+                .thenApply(page -> new PagedList<>(page, encodeStates(states), stats(states)));
     }
 
     private CompletableFuture<List<T>> pageInternal(final int count) {
 
         final int buffer = Math.max(count, DEFAULT_BUFFER);
-        if(count == 0) {
+        if (count == 0) {
             return CompletableFuture.completedFuture(Collections.emptyList());
-        } else if(count == 1) {
+        } else if (count == 1) {
             return next(buffer).thenApply(head -> {
                 if (head == null) {
                     return Collections.emptyList();
@@ -117,7 +122,7 @@ public class Pager<T> {
                             .filter(State::hasNext)
                             .min((a, b) -> comparator.compare(a.peek(), b.peek()));
 
-                    if(first.isPresent()) {
+                    if (first.isPresent()) {
 
                         final T result = first.get().peek();
 
@@ -133,7 +138,7 @@ public class Pager<T> {
                                             .collect(Collectors.toList());
 
                                     return result;
-                    });
+                                });
 
                     } else {
 
@@ -159,14 +164,16 @@ public class Pager<T> {
 
         private final Source<T> source;
 
+        private final Set<PagedList.Stat> stats;
+
         private final OffsetToken paging;
 
         private final PagedList<T> page;
 
         public CompletableFuture<State<T>> next(final int buffer) {
 
-            if(this.page == null) {
-                return source.page(buffer, paging.getPaging())
+            if (this.page == null) {
+                return source.page(buffer, paging.getPaging(), stats)
                         .thenCompose(page -> next(buffer, page));
             } else {
                 return next(buffer, page);
@@ -175,10 +182,10 @@ public class Pager<T> {
 
         private CompletableFuture<State<T>> next(final int buffer, final PagedList<T> page) {
 
-            if(paging.getOffset() >= page.size() && page.hasPaging()) {
+            if (paging.getOffset() >= page.size() && page.hasPaging()) {
                 final PagingToken paging = page.getPaging();
                 final State<T> paged = withPaging(new OffsetToken(paging, 0));
-                return source.page(buffer, paging)
+                return source.page(buffer, paging, stats)
                         .thenCompose(next -> paged.next(buffer, next));
             } else {
                 return CompletableFuture.completedFuture(this.withPage(page));
@@ -207,14 +214,14 @@ public class Pager<T> {
 
         public CompletableFuture<State<T>> trim(final Comparator<T> comparator, final T value) {
 
-            if(page != null) {
+            if (page != null) {
                 int offset = paging.getOffset();
                 while (offset < page.size() && comparator.compare(page.get(offset), value) == 0) {
                     ++offset;
                 }
-                if(offset != paging.getOffset()) {
+                if (offset != paging.getOffset()) {
                     final State<T> offsetState = this.withPaging(paging.withOffset(offset));
-                    if(offset >= page.size() && page.hasPaging()) {
+                    if (offset >= page.size() && page.hasPaging()) {
                         return offsetState.next(TRIM_BUFFER).thenCompose(next -> next.trim(comparator, value));
                     } else {
                         return CompletableFuture.completedFuture(offsetState);
@@ -226,7 +233,7 @@ public class Pager<T> {
 
         public void encode(final DataOutputStream dos) throws IOException {
 
-            if(hasNext()) {
+            if (hasNext()) {
                 dos.writeByte(0);
                 final OffsetToken offset = getPaging();
                 final PagingToken token = offset.getPaging();
@@ -243,10 +250,10 @@ public class Pager<T> {
             }
         }
 
-        public static <T> State<T> decode(final Source<T> source, final DataInputStream dis) throws IOException{
+        public static <T> State<T> decode(final Source<T> source, final Set<PagedList.Stat> stats, final DataInputStream dis) throws IOException {
 
             final byte flag = dis.readByte();
-            if(flag == 0) {
+            if (flag == 0) {
                 final PagingToken token;
                 final int len = dis.readShort();
                 if (len > 0) {
@@ -258,32 +265,32 @@ public class Pager<T> {
                     token = null;
                 }
                 final int offset = dis.readUnsignedShort();
-                return new State<>(source, new OffsetToken(token, offset), null);
+                return new State<>(source, stats, new OffsetToken(token, offset), null);
             } else {
-                return new State<>(source, new OffsetToken(null, 0), PagedList.empty());
+                return new State<>(source, stats, new OffsetToken(null, 0), PagedList.empty());
             }
         }
 
-        public static <T> State<T> create(final Source<T> source) {
+        public static <T> State<T> create(final Source<T> source, final Set<PagedList.Stat> stats) {
 
-            return new State<>(source, new OffsetToken(null, 0), null);
+            return new State<>(source, stats, new OffsetToken(null, 0), null);
         }
     }
 
-    private static <T> List<State<T>> decodeStates(final List<Source<T>> sources, final PagingToken paging) {
+    private static <T> List<State<T>> decodeStates(final List<Source<T>> sources, final Set<PagedList.Stat> stats, final PagingToken paging) {
 
-        if(paging == null) {
-            return sources.stream().map(State::create)
+        if (paging == null) {
+            return sources.stream().map(source -> State.create(source, stats))
                     .collect(Collectors.toList());
         }
 
-        try(final ByteArrayInputStream bais = new ByteArrayInputStream(paging.getValue());
-            final DataInputStream dis = new DataInputStream(bais)) {
+        try (final ByteArrayInputStream bais = new ByteArrayInputStream(paging.getValue());
+             final DataInputStream dis = new DataInputStream(bais)) {
 
             final List<State<T>> result = new ArrayList<>();
 
-            for(final Source<T> source : sources) {
-                result.add(State.decode(source, dis));
+            for (final Source<T> source : sources) {
+                result.add(State.decode(source, stats, dis));
             }
 
             return result;
@@ -295,14 +302,14 @@ public class Pager<T> {
 
     private static <T> PagingToken encodeStates(final List<State<T>> states) {
 
-        try(final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            final DataOutputStream dos = new DataOutputStream(baos)) {
+        try (final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             final DataOutputStream dos = new DataOutputStream(baos)) {
 
-            for(final State<T> state : states) {
+            for (final State<T> state : states) {
                 state.encode(dos);
             }
 
-            if(baos.size() == 0) {
+            if (baos.size() == 0) {
                 return null;
             } else {
                 return new PagingToken(baos.toByteArray());
@@ -311,5 +318,13 @@ public class Pager<T> {
         } catch (final IOException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    private static <T> PagedList.Stats stats(final List<State<T>> states) {
+
+        return states.stream()
+                .map(v -> v.page.getStats())
+                .reduce(PagedList.Stats::sum)
+                .orElse(PagedList.Stats.UNKNOWN);
     }
 }

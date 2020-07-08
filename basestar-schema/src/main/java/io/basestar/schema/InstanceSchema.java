@@ -52,6 +52,11 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
 
     InstanceSchema getExtend();
 
+    default boolean hasMutableProperties() {
+
+        return !getProperties().values().stream().map(Property::isImmutable).reduce(true, (a, b) -> a && b);
+    }
+
     @Override
     @SuppressWarnings("unchecked")
     default Instance create(final Object value, final boolean expand, final boolean suppress) {

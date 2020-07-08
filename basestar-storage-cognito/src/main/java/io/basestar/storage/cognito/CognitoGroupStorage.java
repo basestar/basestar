@@ -23,6 +23,7 @@ package io.basestar.storage.cognito;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Expression;
+import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.Index;
 import io.basestar.schema.ObjectSchema;
@@ -30,7 +31,6 @@ import io.basestar.schema.Reserved;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
-import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.PagedList;
 import io.basestar.util.PagingToken;
@@ -101,7 +101,7 @@ public class CognitoGroupStorage implements Storage {
     public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
 
         return ImmutableList.of(
-                (count, token) -> {
+                (count, token, stats) -> {
                     final String userPoolId = routing.getUserPoolId(schema);
                     return client.listGroups(ListGroupsRequest.builder()
                             .userPoolId(userPoolId)

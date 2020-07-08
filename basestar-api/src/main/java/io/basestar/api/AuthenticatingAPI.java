@@ -69,11 +69,13 @@ public class AuthenticatingAPI implements API {
     }
 
     @Override
-    public OpenAPI openApi() {
+    public CompletableFuture<OpenAPI> openApi() {
 
-        final Map<String, SecurityScheme> schemes = authenticator.openApi();
-        final OpenAPI merge = new OpenAPI();
-        merge.setComponents(new Components().securitySchemes(schemes));
-        return OpenAPIUtils.merge(api.openApi(), merge);
+        return api.openApi().thenApply(api -> {
+            final Map<String, SecurityScheme> schemes = authenticator.openApi();
+            final OpenAPI merge = new OpenAPI();
+            merge.setComponents(new Components().securitySchemes(schemes));
+            return OpenAPIUtils.merge(api, merge);
+        });
     }
 }

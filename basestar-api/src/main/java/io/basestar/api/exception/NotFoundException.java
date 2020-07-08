@@ -1,8 +1,8 @@
-package io.basestar.event;
+package io.basestar.api.exception;
 
 /*-
  * #%L
- * basestar-event
+ * basestar-api
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -20,11 +20,21 @@ package io.basestar.event;
  * #L%
  */
 
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
+import io.basestar.exception.ExceptionMetadata;
+import io.basestar.exception.HasExceptionMetadata;
 
-public interface Handler<E extends Event> {
+public class NotFoundException extends RuntimeException implements HasExceptionMetadata {
 
-    CompletableFuture<?> handle(E event, Map<String, String> metadata);
+    public static final int STATUS = 404;
 
+    public static final String CODE = "NotFound";
+
+    @Override
+    public ExceptionMetadata getMetadata() {
+
+        return new ExceptionMetadata()
+                .setStatus(STATUS)
+                .setCode(CODE)
+                .setMessage(getMessage());
+    }
 }

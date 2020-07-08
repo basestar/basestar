@@ -26,6 +26,7 @@ import lombok.Data;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -36,10 +37,15 @@ public class Handlers<T> {
 
         private final Class<E> event;
 
-        private final UnboundHandler<T, E> handler;
+        private final UnboundWithMeta<T, E> handler;
     }
 
-    public interface UnboundHandler<T, E extends Event> {
+    public interface UnboundWithMeta<T, E extends Event> {
+
+        CompletableFuture<?> handle(T self, E event, Map<String, String> meta);
+    }
+
+    public interface UnboundWithoutMeta<T, E extends Event> {
 
         CompletableFuture<?> handle(T self, E event);
     }
@@ -52,15 +58,15 @@ public class Handlers<T> {
     }
 
     @SuppressWarnings("unchecked")
-    public CompletableFuture<?> handle(final T self, final Event event) {
+    public CompletableFuture<?> handle(final T self, final Event event, final Map<String, String> meta) {
 
-        final Collection<UnboundHandler<T, ?>> handlers = mappings.stream()
+        final Collection<UnboundWithMeta<T, ?>> handlers = mappings.stream()
                 .filter(e -> e.getEvent().equals(event.getClass()))
                 .map(Mapping::getHandler)
                 .collect(Collectors.toList());
         final List<CompletableFuture<?>> futures = new ArrayList<>();
-        for(final UnboundHandler<T, ?> handler : handlers) {
-            futures.add(((UnboundHandler<T, Event>)handler).handle(self, event));
+        for(final UnboundWithMeta<T, ?> handler : handlers) {
+            futures.add(((UnboundWithMeta<T, Event>)handler).handle(self, event, meta));
         }
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]));
     }
@@ -69,7 +75,13 @@ public class Handlers<T> {
 
         private final List<Mapping<T, ?>> mappings = new ArrayList<>();
 
-        public <E extends Event> Builder<T> on(final Class<E> event, final UnboundHandler<T, E> handler) {
+        public <E extends Event> Builder<T> on(final Class<E> event, final UnboundWithoutMeta<T, E> handler) {
+
+            mappings.add(new Mapping<>(event, (self, e, meta) -> handler.handle(self, e)));
+            return this;
+        }
+
+        public <E extends Event> Builder<T> on(final Class<E> event, final UnboundWithMeta<T, E> handler) {
 
             mappings.add(new Mapping<>(event, handler));
             return this;
@@ -77,7 +89,7 @@ public class Handlers<T> {
 
         public <E extends Event> Builder<T> on(final Class<E> event, final Handler<E> handler) {
 
-            mappings.add(new Mapping<>(event, (ignored, e) -> handler.handle(e)));
+            mappings.add(new Mapping<>(event, (ignored, e, meta) -> handler.handle(e, meta)));
             return this;
         }
 

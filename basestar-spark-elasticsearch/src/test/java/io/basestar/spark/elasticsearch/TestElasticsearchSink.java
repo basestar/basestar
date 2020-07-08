@@ -73,7 +73,7 @@ public class TestElasticsearchSink {
         final ObjectSchema schema = namespace.requireObjectSchema("Test1");
 
         final ElasticsearchRouting routing = ElasticsearchRouting.Simple.builder()
-                .objectPrefix("test123-")
+                .objectPrefix(UUID.randomUUID().toString() + "-")
                 .mappingsFactory(new Mappings.Factory.Default())
                 .settings(Settings.builder().build())
                 .build();
