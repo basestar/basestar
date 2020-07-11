@@ -20,16 +20,11 @@ package io.basestar.storage.s3;
  * #L%
  */
 
-import io.basestar.expression.Expression;
-import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Consistency;
-import io.basestar.schema.Index;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
-import io.basestar.storage.util.Pager;
-import io.basestar.util.Sort;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import software.amazon.awssdk.core.BytesWrapper;
@@ -45,7 +40,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
-public class S3BlobStorage implements Storage {
+public class S3BlobStorage implements Storage.WithoutWriteIndex, Storage.WithoutWriteHistory, Storage.WithoutQuery {
 
     private final S3AsyncClient client;
 
@@ -131,18 +126,6 @@ public class S3BlobStorage implements Storage {
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public ReadTransaction read(final Consistency consistency) {
 
         return new ReadTransaction.Basic(this);
@@ -219,31 +202,13 @@ public class S3BlobStorage implements Storage {
                 return this;
             }
 
-            @Override
-            public WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
-
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
-
-                steps.add(() -> writeHistory(schema, id, version, after)
-                        .thenApply(v -> BatchResponse.empty()));
-                return this;
-            }
+//            @Override
+//            public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
+//
+//                steps.add(() -> writeHistory(schema, id, version, after)
+//                        .thenApply(v -> BatchResponse.empty()));
+//                return this;
+//            }
 
             @Override
             public CompletableFuture<BatchResponse> commit() {

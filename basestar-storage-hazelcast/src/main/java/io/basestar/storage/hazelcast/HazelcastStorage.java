@@ -31,7 +31,6 @@ import com.hazelcast.transaction.TransactionContext;
 import com.hazelcast.transaction.TransactionOptions;
 import com.hazelcast.transaction.TransactionalMap;
 import io.basestar.expression.Expression;
-import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.*;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
@@ -58,7 +57,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class HazelcastStorage implements Storage {
+public class HazelcastStorage implements Storage.WithWriteHistory, Storage.WithoutWriteIndex, Storage.WithoutAggregate {
 
     @Nonnull
     private final HazelcastInstance instance;
@@ -183,12 +182,6 @@ public class HazelcastStorage implements Storage {
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public ReadTransaction read(final Consistency consistency) {
 
         return new ReadTransaction() {
@@ -234,155 +227,139 @@ public class HazelcastStorage implements Storage {
         CustomPortable apply(BatchResponse.Key key, CustomPortable value);
     }
 
+    protected class WriteTransaction implements WithWriteHistory.WriteTransaction {
+
+        private final Map<String, Map<BatchResponse.Key, WriteAction>> requests = new IdentityHashMap<>();
+
+        @Override
+        public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+
+            final String target = strategy.objectMapName(schema);
+            final Name schemaName = schema.getQualifiedName();
+            requests.computeIfAbsent(target, ignored -> new HashMap<>())
+                    .put(new BatchResponse.Key(schemaName, id), (key, value) -> {
+                        if(value == null) {
+                            return toRecord(schema, after);
+                        } else {
+                            throw new ObjectExistsException(schemaName, id);
+                        }
+                    });
+
+            return createHistory(schema, id, after);
+        }
+
+        private boolean checkExists(final Map<String, Object> current, final Long version) {
+
+            if(current == null) {
+                return false;
+            } else if(version != null) {
+                return version.equals(Instance.getVersion(current));
+            } else {
+                return true;
+            }
+        }
+
+        @Override
+        public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
+
+            final String target = strategy.objectMapName(schema);
+            final Name schemaName = schema.getQualifiedName();
+            final Long version = before == null ? null : Instance.getVersion(before);
+            requests.computeIfAbsent(target, ignored -> new HashMap<>())
+                    .put(new BatchResponse.Key(schemaName, id), (key, value) -> {
+                        final Map<String, Object> current = fromRecord(value);
+                        if(checkExists(current, version)) {
+                            return toRecord(schema, after);
+                        } else {
+                            throw new VersionMismatchException(schemaName, id, version);
+                        }
+                    });
+
+            return createHistory(schema, id, after);
+        }
+
+        @Override
+        public WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
+
+            final String target = strategy.objectMapName(schema);
+            final Name schemaName = schema.getQualifiedName();
+            final Long version = before == null ? null : Instance.getVersion(before);
+            requests.computeIfAbsent(target, ignored -> new HashMap<>())
+                    .put(new BatchResponse.Key(schemaName, id), (key, value) -> {
+                        final Map<String, Object> current = fromRecord(value);
+                        if(checkExists(current, version)) {
+                            return null;
+                        } else {
+                            throw new VersionMismatchException(schemaName, id, version);
+                        }
+                    });
+            return this;
+        }
+
+        @Override
+        public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
+
+            final String target = strategy.historyMapName(schema);
+            final Name schemaName = schema.getQualifiedName();
+            requests.computeIfAbsent(target, ignored -> new HashMap<>())
+                    .put(new BatchResponse.Key(schemaName, id, version), (key, value) -> toRecord(schema, after));
+            return this;
+        }
+
+        private WriteTransaction createHistory(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+
+            final History history = schema.getHistory();
+            if(history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
+                final Long afterVersion = Instance.getVersion(after);
+                assert afterVersion != null;
+                return createHistory(schema, id, afterVersion, after);
+            } else {
+                return this;
+            }
+        }
+
+        @Override
+        public CompletableFuture<BatchResponse> commit() {
+
+            return CompletableFuture.supplyAsync(() -> {
+
+                final TransactionOptions options = new TransactionOptions().setTransactionType(TransactionOptions.TransactionType.TWO_PHASE);
+                final TransactionContext context = instance.newTransactionContext(options);
+
+                context.beginTransaction();
+
+                final Map<BatchResponse.Key, Map<String, Object>> results = new HashMap<>();
+
+                try {
+                    requests.forEach((target, actions) -> {
+                        final TransactionalMap<BatchResponse.Key, CustomPortable> map = context.getMap(target);
+
+                        actions.forEach((key, action) -> {
+                            final CustomPortable oldValue = map.getForUpdate(key);
+                            final CustomPortable newValue = action.apply(key, oldValue);
+                            if(newValue != null) {
+                                map.put(key, newValue);
+                            } else if(oldValue != null) {
+                                map.delete(key);
+                            }
+                        });
+                    });
+                    context.commitTransaction();
+                } catch (final Throwable e) {
+                    log.error("Rolling back", e);
+                    context.rollbackTransaction();
+                    throw e;
+                }
+
+                return new BatchResponse.Basic(results);
+            });
+        }
+    }
+
     @Override
     public WriteTransaction write(final Consistency consistency) {
 
-        return new WriteTransaction() {
-
-            private final Map<String, Map<BatchResponse.Key, WriteAction>> requests = new IdentityHashMap<>();
-
-            @Override
-            public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
-
-                final String target = strategy.objectMapName(schema);
-                final Name schemaName = schema.getQualifiedName();
-                requests.computeIfAbsent(target, ignored -> new HashMap<>())
-                        .put(new BatchResponse.Key(schemaName, id), (key, value) -> {
-                            if(value == null) {
-                                return toRecord(schema, after);
-                            } else {
-                                throw new ObjectExistsException(schemaName, id);
-                            }
-                        });
-
-                return createHistory(schema, id, after);
-            }
-
-            private boolean checkExists(final Map<String, Object> current, final Long version) {
-
-                if(current == null) {
-                    return false;
-                } else if(version != null) {
-                    return version.equals(Instance.getVersion(current));
-                } else {
-                    return true;
-                }
-            }
-
-            @Override
-            public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
-
-                final String target = strategy.objectMapName(schema);
-                final Name schemaName = schema.getQualifiedName();
-                final Long version = before == null ? null : Instance.getVersion(before);
-                requests.computeIfAbsent(target, ignored -> new HashMap<>())
-                        .put(new BatchResponse.Key(schemaName, id), (key, value) -> {
-                            final Map<String, Object> current = fromRecord(value);
-                            if(checkExists(current, version)) {
-                                return toRecord(schema, after);
-                            } else {
-                                throw new VersionMismatchException(schemaName, id, version);
-                            }
-                        });
-
-                return createHistory(schema, id, after);
-            }
-
-            @Override
-            public WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
-
-                final String target = strategy.objectMapName(schema);
-                final Name schemaName = schema.getQualifiedName();
-                final Long version = before == null ? null : Instance.getVersion(before);
-                requests.computeIfAbsent(target, ignored -> new HashMap<>())
-                        .put(new BatchResponse.Key(schemaName, id), (key, value) -> {
-                            final Map<String, Object> current = fromRecord(value);
-                            if(checkExists(current, version)) {
-                                return null;
-                            } else {
-                                throw new VersionMismatchException(schemaName, id, version);
-                            }
-                        });
-                return this;
-            }
-
-            @Override
-            public WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                return this;
-            }
-
-            @Override
-            public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                return this;
-            }
-
-            @Override
-            public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
-
-                return this;
-            }
-
-            @Override
-            public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
-
-                final String target = strategy.historyMapName(schema);
-                final Name schemaName = schema.getQualifiedName();
-                requests.computeIfAbsent(target, ignored -> new HashMap<>())
-                        .put(new BatchResponse.Key(schemaName, id, version), (key, value) -> toRecord(schema, after));
-                return this;
-            }
-
-            private WriteTransaction createHistory(final ObjectSchema schema, final String id, final Map<String, Object> after) {
-
-                final History history = schema.getHistory();
-                if(history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
-                    final Long afterVersion = Instance.getVersion(after);
-                    assert afterVersion != null;
-                    return createHistory(schema, id, afterVersion, after);
-                } else {
-                    return this;
-                }
-            }
-
-            @Override
-            public CompletableFuture<BatchResponse> commit() {
-
-                return CompletableFuture.supplyAsync(() -> {
-
-                    final TransactionOptions options = new TransactionOptions().setTransactionType(TransactionOptions.TransactionType.TWO_PHASE);
-                    final TransactionContext context = instance.newTransactionContext(options);
-
-                    context.beginTransaction();
-
-                    final Map<BatchResponse.Key, Map<String, Object>> results = new HashMap<>();
-
-                    try {
-                        requests.forEach((target, actions) -> {
-                            final TransactionalMap<BatchResponse.Key, CustomPortable> map = context.getMap(target);
-
-                            actions.forEach((key, action) -> {
-                                final CustomPortable oldValue = map.getForUpdate(key);
-                                final CustomPortable newValue = action.apply(key, oldValue);
-                                if(newValue != null) {
-                                    map.put(key, newValue);
-                                } else if(oldValue != null) {
-                                    map.delete(key);
-                                }
-                            });
-                        });
-                        context.commitTransaction();
-                    } catch (final Throwable e) {
-                        log.error("Rolling back", e);
-                        context.rollbackTransaction();
-                        throw e;
-                    }
-
-                    return new BatchResponse.Basic(results);
-                });
-            }
-        };
+        return new WriteTransaction();
     }
 
     @Override

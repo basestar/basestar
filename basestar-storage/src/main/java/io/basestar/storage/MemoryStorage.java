@@ -43,6 +43,7 @@ import lombok.experimental.Accessors;
 import javax.annotation.Nonnull;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -214,6 +215,21 @@ public class MemoryStorage extends PartitionedStorage {
     }
 
     @Override
+    public CompletableFuture<?> asyncHistoryCreated(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
+
+        return CompletableFuture.supplyAsync(() -> {
+            synchronized (lock) {
+
+                final Long afterVersion = Instance.getVersion(after);
+                assert afterVersion != null;
+                state.history.put(new SchemaIdVersion(schema.getQualifiedName(), id, afterVersion), after);
+
+                return BatchResponse.empty();
+            }
+        });
+    }
+
+    @Override
     public WriteTransaction write(final Consistency consistency) {
 
         return new WriteTransaction() {
@@ -301,48 +317,32 @@ public class MemoryStorage extends PartitionedStorage {
             @Override
             public WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
 
-                items.add(state -> {
+                return withPartitionSort(schema, index, id, key, (partition, sortKey) -> {
 
-                    final IndexPartition partKey = new IndexPartition(schema.getQualifiedName(), index.getName(), binary(key.getPartition()));
-                    final IndexSort sortKey = new IndexSort(binary(key.getSort()), index.isUnique() ? null : id);
-
-                    final Map<IndexSort, Map<String, Object>> partition = state.index
-                            .computeIfAbsent(partKey, k -> new TreeMap<>());
-
-                    if(partition.containsKey(sortKey)) {
+                    if (partition.containsKey(sortKey)) {
                         throw new IllegalStateException();
                     } else {
                         partition.put(sortKey, projection);
                     }
-
-                    return BatchResponse.empty();
                 });
-
-                return this;
             }
 
             @Override
             public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
 
-                items.add(state -> {
-
-                    final IndexPartition partKey = new IndexPartition(schema.getQualifiedName(), index.getName(), binary(key.getPartition()));
-                    final IndexSort sortKey = new IndexSort(binary(key.getSort()), index.isUnique() ? null : id);
-
-                    final Map<IndexSort, Map<String, Object>> partition = state.index
-                            .computeIfAbsent(partKey, k -> new TreeMap<>());
-
-                    partition.put(sortKey, projection);
-
-                    return BatchResponse.empty();
-                });
-                return this;
+                return withPartitionSort(schema, index, id, key, (partition, sortKey) -> partition.put(sortKey, projection));
             }
 
             @Override
             public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
 
+                return withPartitionSort(schema, index, id, key, Map::remove);
+            }
+
+            private WriteTransaction withPartitionSort(final ObjectSchema schema, final Index index, final String id, final Index.Key key, final BiConsumer<Map<IndexSort, Map<String, Object>>, IndexSort> consumer) {
+
                 items.add(state -> {
+
 
                     final IndexPartition partKey = new IndexPartition(schema.getQualifiedName(), index.getName(), binary(key.getPartition()));
                     final IndexSort sortKey = new IndexSort(binary(key.getSort()), index.isUnique() ? null : id);
@@ -350,25 +350,10 @@ public class MemoryStorage extends PartitionedStorage {
                     final Map<IndexSort, Map<String, Object>> partition = state.index
                             .computeIfAbsent(partKey, k -> new TreeMap<>());
 
-                    partition.remove(sortKey);
+                    consumer.accept(partition, sortKey);
 
                     return BatchResponse.empty();
                 });
-                return this;
-            }
-
-            @Override
-            public Storage.WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
-
-                items.add(state -> {
-
-                    final Long afterVersion = Instance.getVersion(after);
-                    assert afterVersion != null;
-                    state.history.put(new SchemaIdVersion(schema.getQualifiedName(), id, afterVersion), after);
-
-                    return BatchResponse.empty();
-                });
-
                 return this;
             }
 
@@ -397,7 +382,7 @@ public class MemoryStorage extends PartitionedStorage {
     @Override
     public StorageTraits storageTraits(final ObjectSchema schema) {
 
-        return MemoryStorageTraits.INSTANCE;
+        return TRAITS;
     }
 
     @Data
@@ -483,4 +468,43 @@ public class MemoryStorage extends PartitionedStorage {
             return result;
         }
     }
+
+    private static final StorageTraits TRAITS = new StorageTraits() {
+
+        @Override
+        public Consistency getHistoryConsistency() {
+
+            return Consistency.ATOMIC;
+        }
+
+        @Override
+        public Consistency getSingleValueIndexConsistency() {
+
+            return Consistency.ATOMIC;
+        }
+
+        @Override
+        public Consistency getMultiValueIndexConsistency() {
+
+            return Consistency.ATOMIC;
+        }
+
+        @Override
+        public boolean supportsPolymorphism() {
+
+            return true;
+        }
+
+        @Override
+        public boolean supportsMultiObject() {
+
+            return true;
+        }
+
+        @Override
+        public Concurrency getObjectConcurrency() {
+
+            return Concurrency.OPTIMISTIC;
+        }
+    };
 }

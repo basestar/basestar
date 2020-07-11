@@ -40,7 +40,7 @@ import java.util.UUID;
  * @param <T>
  */
 
-public interface Schema<T> extends Named.Qualified, Described, Serializable, Extendable {
+public interface Schema<T> extends Named, Described, Serializable, Extendable {
 
     Name ANONYMOUS_NAME = Name.of(Reserved.PREFIX + "anon");
 

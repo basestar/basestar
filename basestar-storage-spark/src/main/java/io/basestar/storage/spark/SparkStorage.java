@@ -50,7 +50,7 @@ import java.util.stream.Collectors;
 
 
 @Slf4j
-public class SparkStorage implements Storage {
+public class SparkStorage implements Storage.WithoutWrite {
 
     private final SparkSession session;
 

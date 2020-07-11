@@ -58,7 +58,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class SQLStorage implements Storage {
+public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHistory {
 
     private final DataSource dataSource;
 
@@ -275,69 +275,23 @@ public class SQLStorage implements Storage {
     @Override
     public WriteTransaction write(final Consistency consistency) {
 
-        return new WriteTransaction() {
+        return new WriteTransaction();
+    }
 
-            private final List<Function<DSLContext, BatchResponse>> steps = new ArrayList<>();
+    protected class WriteTransaction implements WithWriteIndex.WriteTransaction, WithWriteHistory.WriteTransaction {
 
-            @Override
-            public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+        private final List<Function<DSLContext, BatchResponse>> steps = new ArrayList<>();
 
-                steps.add(context -> {
+        @Override
+        public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
-                    try {
+            steps.add(context -> {
 
-                        context.insertInto(DSL.table(objectTableName(schema)))
-                                .set(toRecord(schema, after))
-                                .execute();
+                try {
 
-                        final History history = schema.getHistory();
-                        if(history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
-                            context.insertInto(DSL.table(historyTableName(schema)))
-                                    .set(toRecord(schema, after))
-                                    .execute();
-                        }
-
-                        return BatchResponse.single(schema.getQualifiedName(), after);
-
-                    } catch (final DataAccessException e) {
-                        if(SQLStateClass.C23_INTEGRITY_CONSTRAINT_VIOLATION.equals(e.sqlStateClass())) {
-                            throw new ObjectExistsException(schema.getQualifiedName(), id);
-                        } else {
-                            throw e;
-                        }
-                    }
-                });
-
-                final StorageTraits traits = storageTraits(schema);
-                for(final Index index : schema.getIndexes().values()) {
-                    final Consistency best = traits.getMultiValueIndexConsistency();
-                    if (index.isMultiValue() && !index.getConsistency(best).isAsync()) {
-                        for(final Map.Entry<Index.Key, Map<String, Object>> entry : index.readValues(after).entrySet()) {
-                            createIndex(schema, index, id, 1L, entry.getKey(), entry.getValue());
-                        }
-                    }
-                }
-
-                return this;
-            }
-
-            @Override
-            public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
-
-                steps.add(context -> {
-
-                    final Long version = before == null ? null : Instance.getVersion(before);
-
-                    Condition condition = idField(schema).eq(id);
-                    if(version != null) {
-                        condition = condition.and(versionField(schema).eq(version));
-                    }
-
-                    if(context.update(DSL.table(objectTableName(schema))).set(toRecord(schema, after))
-                            .where(condition).limit(1).execute() != 1) {
-
-                        throw new VersionMismatchException(schema.getQualifiedName(), id, version);
-                    }
+                    context.insertInto(DSL.table(objectTableName(schema)))
+                            .set(toRecord(schema, after))
+                            .execute();
 
                     final History history = schema.getHistory();
                     if(history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
@@ -347,112 +301,160 @@ public class SQLStorage implements Storage {
                     }
 
                     return BatchResponse.single(schema.getQualifiedName(), after);
-                });
 
-                // FIXME: not writing non-async indexes
+                } catch (final DataAccessException e) {
+                    if(SQLStateClass.C23_INTEGRITY_CONSTRAINT_VIOLATION.equals(e.sqlStateClass())) {
+                        throw new ObjectExistsException(schema.getQualifiedName(), id);
+                    } else {
+                        throw e;
+                    }
+                }
+            });
 
-                return this;
+            final StorageTraits traits = storageTraits(schema);
+            for(final Index index : schema.getIndexes().values()) {
+                final Consistency best = traits.getMultiValueIndexConsistency();
+                if (index.isMultiValue() && !index.getConsistency(best).isAsync()) {
+                    for(final Map.Entry<Index.Key, Map<String, Object>> entry : index.readValues(after).entrySet()) {
+                        createIndex(schema, index, id, 1L, entry.getKey(), entry.getValue());
+                    }
+                }
             }
 
-            @Override
-            public WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
+            return this;
+        }
+
+        @Override
+        public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
+
+            steps.add(context -> {
+
+                final Long version = before == null ? null : Instance.getVersion(before);
+
+                Condition condition = idField(schema).eq(id);
+                if(version != null) {
+                    condition = condition.and(versionField(schema).eq(version));
+                }
+
+                if(context.update(DSL.table(objectTableName(schema))).set(toRecord(schema, after))
+                        .where(condition).limit(1).execute() != 1) {
+
+                    throw new VersionMismatchException(schema.getQualifiedName(), id, version);
+                }
+
+                final History history = schema.getHistory();
+                if(history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
+                    context.insertInto(DSL.table(historyTableName(schema)))
+                            .set(toRecord(schema, after))
+                            .execute();
+                }
+
+                return BatchResponse.single(schema.getQualifiedName(), after);
+            });
+
+            // FIXME: not writing non-async indexes
+
+            return this;
+        }
+
+        @Override
+        public WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
+
+            steps.add(context -> {
+
+                final Long version = before == null ? null : Instance.getVersion(before);
+
+                Condition condition = idField(schema).eq(id);
+                if(version != null) {
+                    condition = condition.and(versionField(schema).eq(version));
+                }
+
+                if(context.deleteFrom(DSL.table(objectTableName(schema)))
+                        .where(condition).limit(1).execute() != 1) {
+
+                    throw new VersionMismatchException(schema.getQualifiedName(), id, version);
+                }
+
+                return BatchResponse.empty();
+            });
+
+            // FIXME: not writing non-async indexes
+
+            return this;
+        }
+
+        @Override
+        public WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+
+            if (index.isMultiValue()) {
 
                 steps.add(context -> {
 
-                    final Long version = before == null ? null : Instance.getVersion(before);
-
-                    Condition condition = idField(schema).eq(id);
-                    if(version != null) {
-                        condition = condition.and(versionField(schema).eq(version));
-                    }
-
-                    if(context.deleteFrom(DSL.table(objectTableName(schema)))
-                            .where(condition).limit(1).execute() != 1) {
-
-                        throw new VersionMismatchException(schema.getQualifiedName(), id, version);
-                    }
+                    context.insertInto(DSL.table(indexTableName(schema, index)))
+                            .set(toRecord(schema, index, key, projection))
+                            .execute();
 
                     return BatchResponse.empty();
                 });
 
-                // FIXME: not writing non-async indexes
-
                 return this;
-            }
 
-            @Override
-            public WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                if (index.isMultiValue()) {
-
-                    steps.add(context -> {
-
-                        context.insertInto(DSL.table(indexTableName(schema, index)))
-                                .set(toRecord(schema, index, key, projection))
-                                .execute();
-
-                        return BatchResponse.empty();
-                    });
-
-                    return this;
-
-                } else {
-                    throw new UnsupportedOperationException();
-                }
-            }
-
-            @Override
-            public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                // FIXME
+            } else {
                 throw new UnsupportedOperationException();
             }
+        }
 
-            @Override
-            public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
+        @Override
+        public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
 
-                // FIXME
-                throw new UnsupportedOperationException();
-            }
+            // FIXME
+            throw new UnsupportedOperationException();
+        }
 
-            @Override
-            public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
+        @Override
+        public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
 
-                steps.add(context -> {
+            // FIXME
+            throw new UnsupportedOperationException();
+        }
 
-                    try {
+        @Override
+        public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
 
-                        context.insertInto(DSL.table(historyTableName(schema)))
-                                .set(toRecord(schema, after))
-                                .execute();
+            steps.add(context -> {
 
-                        return BatchResponse.single(schema.getQualifiedName(), after);
+                try {
 
-                    } catch (final DataAccessException e) {
-                        if(SQLStateClass.C23_INTEGRITY_CONSTRAINT_VIOLATION.equals(e.sqlStateClass())) {
-                            throw new ObjectExistsException(schema.getQualifiedName(), id);
-                        } else {
-                            throw e;
-                        }
+                    context.insertInto(DSL.table(historyTableName(schema)))
+                            .set(toRecord(schema, after))
+                            .execute();
+
+                    return BatchResponse.single(schema.getQualifiedName(), after);
+
+                } catch (final DataAccessException e) {
+                    if(SQLStateClass.C23_INTEGRITY_CONSTRAINT_VIOLATION.equals(e.sqlStateClass())) {
+                        throw new ObjectExistsException(schema.getQualifiedName(), id);
+                    } else {
+                        throw e;
                     }
-                });
+                }
+            });
 
-                return this;
-            }
+            return this;
+        }
 
-            @Override
-            public CompletableFuture<BatchResponse> commit() {
+        @Override
+        public CompletableFuture<BatchResponse> commit() {
 
-                final SortedMap<BatchResponse.Key, Map<String, Object>> changes = new TreeMap<>();
-                return withContext(initialContext -> initialContext.transactionAsync(config -> {
+            final SortedMap<BatchResponse.Key, Map<String, Object>> changes = new TreeMap<>();
+            return withContext(initialContext -> initialContext.transactionAsync(config -> {
 
-                    final DSLContext context = DSL.using(config);
+                final DSLContext context = DSL.using(config);
 
-                    steps.forEach(step -> changes.putAll(step.apply(context)));
+                steps.forEach(step -> changes.putAll(step.apply(context)));
 
-                }).thenApply(v -> new BatchResponse.Basic(changes)));
-            }
-        };
+            }).thenApply(v -> new BatchResponse.Basic(changes)));
+        }
     }
 
     @Override

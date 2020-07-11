@@ -23,6 +23,7 @@ package io.basestar.storage;
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Consistency;
+import io.basestar.schema.Index;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.Name;
@@ -136,6 +137,30 @@ public class ReplicatedStorage implements Storage {
     public StorageTraits storageTraits(final ObjectSchema schema) {
 
         return primary().storageTraits(schema);
+    }
+
+    @Override
+    public CompletableFuture<?> asyncIndexCreated(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+
+        return primary().asyncIndexCreated(schema, index, id, version, key, projection);
+    }
+
+    @Override
+    public CompletableFuture<?> asyncIndexUpdated(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+
+        return primary().asyncIndexUpdated(schema, index, id, version, key, projection);
+    }
+
+    @Override
+    public CompletableFuture<?> asyncIndexDeleted(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
+
+        return primary().asyncIndexDeleted(schema, index, id, version, key);
+    }
+
+    @Override
+    public CompletableFuture<?> asyncHistoryCreated(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
+
+        return primary().asyncHistoryCreated(schema, id, version, after);
     }
 
     @Override

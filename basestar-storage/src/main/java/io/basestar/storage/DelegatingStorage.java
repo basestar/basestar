@@ -86,6 +86,30 @@ public interface DelegatingStorage extends Storage {
     }
 
     @Override
+    default CompletableFuture<?> asyncIndexCreated(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+
+        return storage(schema).asyncIndexCreated(schema, index, id, version, key, projection);
+    }
+
+    @Override
+    default CompletableFuture<?> asyncIndexUpdated(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+
+        return storage(schema).asyncIndexUpdated(schema, index, id, version, key, projection);
+    }
+
+    @Override
+    default CompletableFuture<?> asyncIndexDeleted(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
+
+        return storage(schema).asyncIndexDeleted(schema, index, id, version, key);
+    }
+
+    @Override
+    default CompletableFuture<?> asyncHistoryCreated(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
+
+        return storage(schema).asyncHistoryCreated(schema, id, version, after);
+    }
+
+    @Override
     default ReadTransaction read(final Consistency consistency) {
 
         final IdentityHashMap<Storage, ReadTransaction> transactions = new IdentityHashMap<>();
@@ -144,42 +168,6 @@ public interface DelegatingStorage extends Storage {
 
                 transactions.computeIfAbsent(storage(schema), v -> v.write(consistency))
                         .deleteObject(schema, id, before);
-
-                return this;
-            }
-
-            @Override
-            public WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                transactions.computeIfAbsent(storage(schema), v -> v.write(consistency))
-                        .createIndex(schema, index, id, version, key, projection);
-
-                return this;
-            }
-
-            @Override
-            public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                transactions.computeIfAbsent(storage(schema), v -> v.write(consistency))
-                        .updateIndex(schema, index, id, version, key, projection);
-
-                return this;
-            }
-
-            @Override
-            public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
-
-                transactions.computeIfAbsent(storage(schema), v -> v.write(consistency))
-                        .deleteIndex(schema, index, id, version, key);
-
-                return this;
-            }
-
-            @Override
-            public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
-
-                transactions.computeIfAbsent(storage(schema), v -> v.write(consistency))
-                        .createHistory(schema, id, version, after);
 
                 return this;
             }

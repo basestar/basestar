@@ -35,6 +35,7 @@ import io.basestar.util.Name;
 import io.basestar.util.PagedList;
 import io.basestar.util.PagingToken;
 import io.basestar.util.Sort;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
@@ -52,7 +53,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Slf4j
-public class DynamoDBStorage extends PartitionedStorage {
+public class DynamoDBStorage extends PartitionedStorage implements Storage.WithoutWriteHistory {
 
     private static final int WRITE_BATCH = 25;
 
@@ -455,282 +456,280 @@ public class DynamoDBStorage extends PartitionedStorage {
     @Override
     public WriteTransaction write(final Consistency consistency) {
 
-        return new WriteTransaction() {
+        return new WriteTransaction(consistency);
+    }
 
-            private final List<TransactWriteItem> items = new ArrayList<>();
+    @RequiredArgsConstructor
+    protected class WriteTransaction extends PartitionedStorage.WriteTransaction {
 
-            private final List<Supplier<RuntimeException>> exceptions = new ArrayList<>();
+        private final List<TransactWriteItem> items = new ArrayList<>();
 
-            private final Map<String, byte[]> oversize = new HashMap<>();
+        private final List<Supplier<RuntimeException>> exceptions = new ArrayList<>();
 
-            private final SortedMap<BatchResponse.Key, Map<String, Object>> changes = new TreeMap<>();
+        private final Map<String, byte[]> oversize = new HashMap<>();
 
-            private Map<String, AttributeValue> oversize(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+        private final SortedMap<BatchResponse.Key, Map<String, Object>> changes = new TreeMap<>();
 
-                final Long afterVersion = Instance.getVersion(after);
-                assert afterVersion != null;
-                final String key = oversizeStashKey(schema, id, afterVersion);
-                oversize.put(key, DynamoDBUtils.toOversizeBytes(schema, after));
-                return oversizeItem(strategy, schema, id, after, key);
+        private final Consistency consistency;
+
+        private Map<String, AttributeValue> oversize(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+
+            final Long afterVersion = Instance.getVersion(after);
+            assert afterVersion != null;
+            final String key = oversizeStashKey(schema, id, afterVersion);
+            oversize.put(key, DynamoDBUtils.toOversizeBytes(schema, after));
+            return oversizeItem(strategy, schema, id, after, key);
+        }
+
+        @Override
+        public PartitionedStorage.WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+
+            final Map<String, AttributeValue> initialItem = objectItem(strategy, schema, id, after);
+            final long size = DynamoDBUtils.itemSize(initialItem);
+            log.debug("Create object {}:{} ({} bytes)", schema.getQualifiedName(), id, size);
+            final Map<String, AttributeValue> item;
+            if(size > DynamoDBUtils.MAX_ITEM_SIZE) {
+                log.info("Creating oversize object {}:{} ({} bytes)", schema.getQualifiedName(), id, size);
+                item = oversize(schema, id, after);
+            } else {
+                item = initialItem;
             }
+            items.add(TransactWriteItem.builder()
+                    .put(Put.builder()
+                            .tableName(strategy.objectTableName(schema))
+                            .item(item)
+                            .conditionExpression("attribute_not_exists(#id)")
+                            .expressionAttributeNames(ImmutableMap.of(
+                                    "#id", strategy.objectPartitionName(schema)
+                            ))
+                            .build())
+                    .build());
+            items.add(TransactWriteItem.builder()
+                    .put(Put.builder()
+                            .tableName(strategy.historyTableName(schema))
+                            .item(item)
+                            .build())
+                    .build());
 
-            @Override
-            public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+            exceptions.add(() -> new ObjectExistsException(schema.getQualifiedName(), id));
+            exceptions.add(null);
+            changes.put(BatchResponse.Key.from(schema.getQualifiedName(), after), after);
 
-                final Map<String, AttributeValue> initialItem = objectItem(strategy, schema, id, after);
-                final long size = DynamoDBUtils.itemSize(initialItem);
-                log.debug("Create object {}:{} ({} bytes)", schema.getQualifiedName(), id, size);
-                final Map<String, AttributeValue> item;
-                if(size > DynamoDBUtils.MAX_ITEM_SIZE) {
-                    log.info("Creating oversize object {}:{} ({} bytes)", schema.getQualifiedName(), id, size);
-                    item = oversize(schema, id, after);
+            return createIndexes(schema, id, after);
+        }
+
+        @Override
+        public PartitionedStorage.WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
+
+            final Long version = before == null ? null : Instance.getVersion(before);
+            // FIXME
+            assert version != null;
+
+            final Map<String, AttributeValue> initialItem = objectItem(strategy, schema, id, after);
+            final long size = DynamoDBUtils.itemSize(initialItem);
+            log.debug("Updating object {}:{} ({} bytes)", schema.getQualifiedName(), id, size);
+            final Map<String, AttributeValue> item;
+            if(size > DynamoDBUtils.MAX_ITEM_SIZE) {
+                log.info("Updating oversize object {}:{} ({} bytes)", schema.getQualifiedName(), id, size);
+                item = oversize(schema, id, after);
+            } else {
+                item = initialItem;
+            }
+            items.add(TransactWriteItem.builder()
+                    .put(Put.builder()
+                            .tableName(strategy.objectTableName(schema))
+                            .item(item)
+                            .conditionExpression("#version = :version")
+                            .expressionAttributeNames(ImmutableMap.of(
+                                    "#version", Reserved.VERSION
+                            ))
+                            .expressionAttributeValues(ImmutableMap.of(
+                                    ":version", AttributeValue.builder().n(Long.toString(version)).build()
+                            ))
+                            .build())
+                    .build());
+            items.add(TransactWriteItem.builder()
+                    .put(Put.builder()
+                            .tableName(strategy.historyTableName(schema))
+                            .item(item)
+                            .build())
+                    .build());
+
+            exceptions.add(() -> new VersionMismatchException(schema.getQualifiedName(), id, version));
+            exceptions.add(null);
+            changes.put(BatchResponse.Key.from(schema.getQualifiedName(), after), after);
+
+            return updateIndexes(schema, id, before, after);
+        }
+
+        @Override
+        public PartitionedStorage.WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
+
+            final Long version = before == null ? null : Instance.getVersion(before);
+            // FIXME
+            assert version != null;
+
+            items.add(TransactWriteItem.builder()
+                    .delete(Delete.builder()
+                            .tableName(strategy.objectTableName(schema))
+                            .key(objectKey(strategy, schema, id))
+                            .conditionExpression("#version = :version")
+                            .expressionAttributeNames(ImmutableMap.of(
+                                    "#version", Reserved.VERSION
+                            ))
+                            .expressionAttributeValues(ImmutableMap.of(
+                                    ":version", AttributeValue.builder().n(Long.toString(version)).build()
+                            ))
+                            .build())
+                    .build());
+
+            exceptions.add(() -> new VersionMismatchException(schema.getQualifiedName(), id, version));
+
+            return deleteIndexes(schema, id, before);
+        }
+
+        @Override
+        public PartitionedStorage.WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+
+            items.add(TransactWriteItem.builder()
+                    .put(Put.builder()
+                            .tableName(strategy.indexTableName(schema, index))
+                            .item(indexItem(strategy, schema, index, id, key, projection))
+                            .conditionExpression("attribute_not_exists(#id)")
+                            .expressionAttributeNames(ImmutableMap.of(
+                                    "#id", strategy.indexPartitionName(schema, index)
+                            ))
+                            .build())
+                    .build());
+
+            exceptions.add(() -> new UniqueIndexViolationException(schema.getQualifiedName(), id, index.getName()));
+
+            return this;
+        }
+
+        @Override
+        public PartitionedStorage.WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+
+            items.add(TransactWriteItem.builder()
+                    .put(Put.builder()
+                            .tableName(strategy.indexTableName(schema, index))
+                            .item(indexItem(strategy, schema, index, id, key, projection))
+                            .conditionExpression("#version = :version")
+                            .expressionAttributeNames(ImmutableMap.of(
+                                    "#version", Reserved.VERSION
+                            ))
+                            .expressionAttributeValues(ImmutableMap.of(
+                                    ":version", AttributeValue.builder().n(Long.toString(version)).build()
+                            ))
+                            .build())
+                    .build());
+
+            exceptions.add(() -> new CorruptedIndexException(index.getQualifiedName()));
+
+            return this;
+        }
+
+        @Override
+        public PartitionedStorage.WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
+
+            items.add(TransactWriteItem.builder()
+                    .delete(Delete.builder()
+                            .tableName(strategy.indexTableName(schema, index))
+                            .key(indexKey(strategy, schema, index, id, key))
+                            .conditionExpression("#version = :version")
+                            .expressionAttributeNames(ImmutableMap.of(
+                                    "#version", Reserved.VERSION
+                            ))
+                            .expressionAttributeValues(ImmutableMap.of(
+                                    ":version", AttributeValue.builder().n(Long.toString(version)).build()
+                            ))
+                            .build())
+                    .build());
+
+            exceptions.add(() -> new CorruptedIndexException(index.getQualifiedName()));
+
+            return this;
+        }
+
+        @Override
+        public CompletableFuture<BatchResponse> commit() {
+
+            if(!oversize.isEmpty()) {
+                final Stash oversizeStash = requireOversizeStash();
+                final List<CompletableFuture<?>> futures = new ArrayList<>();
+                oversize.forEach((k, v) -> futures.add(oversizeStash.write(k, v)));
+                return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]))
+                        .thenCompose(ignored -> write());
+            } else {
+                return write();
+            }
+        }
+
+        private BatchWriteItemRequest toBatchRequest(final List<TransactWriteItem> items) {
+
+            final Map<String, Collection<WriteRequest>> requests = new HashMap<>();
+            for(final TransactWriteItem item : items) {
+                if (item.put() != null) {
+                    requests.computeIfAbsent(item.put().tableName(), ignored -> new ArrayList<>())
+                            .add(WriteRequest.builder().putRequest(PutRequest.builder()
+                                    .item(item.put().item())
+                                    .build())
+                                    .build());
+                } else if (item.delete() != null) {
+                    requests.computeIfAbsent(item.delete().tableName(), ignored -> new ArrayList<>())
+                            .add(WriteRequest.builder().deleteRequest(DeleteRequest.builder()
+                                    .key(item.delete().key())
+                                    .build())
+                                    .build());
                 } else {
-                    item = initialItem;
-                }
-                items.add(TransactWriteItem.builder()
-                        .put(Put.builder()
-                                .tableName(strategy.objectTableName(schema))
-                                .item(item)
-                                .conditionExpression("attribute_not_exists(#id)")
-                                .expressionAttributeNames(ImmutableMap.of(
-                                        "#id", strategy.objectPartitionName(schema)
-                                ))
-                                .build())
-                        .build());
-                items.add(TransactWriteItem.builder()
-                        .put(Put.builder()
-                                .tableName(strategy.historyTableName(schema))
-                                .item(item)
-                                .build())
-                        .build());
-
-                exceptions.add(() -> new ObjectExistsException(schema.getQualifiedName(), id));
-                exceptions.add(null);
-                changes.put(BatchResponse.Key.from(schema.getQualifiedName(), after), after);
-
-                return createIndexes(schema, id, after);
-            }
-
-            @Override
-            public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
-
-                final Long version = before == null ? null : Instance.getVersion(before);
-                // FIXME
-                assert version != null;
-
-                final Map<String, AttributeValue> initialItem = objectItem(strategy, schema, id, after);
-                final long size = DynamoDBUtils.itemSize(initialItem);
-                log.debug("Updating object {}:{} ({} bytes)", schema.getQualifiedName(), id, size);
-                final Map<String, AttributeValue> item;
-                if(size > DynamoDBUtils.MAX_ITEM_SIZE) {
-                    log.info("Updating oversize object {}:{} ({} bytes)", schema.getQualifiedName(), id, size);
-                    item = oversize(schema, id, after);
-                } else {
-                    item = initialItem;
-                }
-                items.add(TransactWriteItem.builder()
-                        .put(Put.builder()
-                                .tableName(strategy.objectTableName(schema))
-                                .item(item)
-                                .conditionExpression("#version = :version")
-                                .expressionAttributeNames(ImmutableMap.of(
-                                        "#version", Reserved.VERSION
-                                ))
-                                .expressionAttributeValues(ImmutableMap.of(
-                                        ":version", AttributeValue.builder().n(Long.toString(version)).build()
-                                ))
-                                .build())
-                        .build());
-                items.add(TransactWriteItem.builder()
-                        .put(Put.builder()
-                                .tableName(strategy.historyTableName(schema))
-                                .item(item)
-                                .build())
-                        .build());
-
-                exceptions.add(() -> new VersionMismatchException(schema.getQualifiedName(), id, version));
-                exceptions.add(null);
-                changes.put(BatchResponse.Key.from(schema.getQualifiedName(), after), after);
-
-                return updateIndexes(schema, id, before, after);
-            }
-
-            @Override
-            public WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
-
-                final Long version = before == null ? null : Instance.getVersion(before);
-                // FIXME
-                assert version != null;
-
-                items.add(TransactWriteItem.builder()
-                        .delete(Delete.builder()
-                                .tableName(strategy.objectTableName(schema))
-                                .key(objectKey(strategy, schema, id))
-                                .conditionExpression("#version = :version")
-                                .expressionAttributeNames(ImmutableMap.of(
-                                        "#version", Reserved.VERSION
-                                ))
-                                .expressionAttributeValues(ImmutableMap.of(
-                                        ":version", AttributeValue.builder().n(Long.toString(version)).build()
-                                ))
-                                .build())
-                        .build());
-
-                exceptions.add(() -> new VersionMismatchException(schema.getQualifiedName(), id, version));
-
-                return deleteIndexes(schema, id, before);
-            }
-
-            @Override
-            public WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                items.add(TransactWriteItem.builder()
-                        .put(Put.builder()
-                                .tableName(strategy.indexTableName(schema, index))
-                                .item(indexItem(strategy, schema, index, id, key, projection))
-                                .conditionExpression("attribute_not_exists(#id)")
-                                .expressionAttributeNames(ImmutableMap.of(
-                                        "#id", strategy.indexPartitionName(schema, index)
-                                ))
-                                .build())
-                        .build());
-
-                exceptions.add(() -> new UniqueIndexViolationException(schema.getQualifiedName(), id, index.getName()));
-
-                return this;
-            }
-
-            @Override
-            public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                items.add(TransactWriteItem.builder()
-                        .put(Put.builder()
-                                .tableName(strategy.indexTableName(schema, index))
-                                .item(indexItem(strategy, schema, index, id, key, projection))
-                                .conditionExpression("#version = :version")
-                                .expressionAttributeNames(ImmutableMap.of(
-                                        "#version", Reserved.VERSION
-                                ))
-                                .expressionAttributeValues(ImmutableMap.of(
-                                        ":version", AttributeValue.builder().n(Long.toString(version)).build()
-                                ))
-                                .build())
-                        .build());
-
-                exceptions.add(() -> new CorruptedIndexException(index.getQualifiedName()));
-
-                return this;
-            }
-
-            @Override
-            public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
-
-                items.add(TransactWriteItem.builder()
-                        .delete(Delete.builder()
-                                .tableName(strategy.indexTableName(schema, index))
-                                .key(indexKey(strategy, schema, index, id, key))
-                                .conditionExpression("#version = :version")
-                                .expressionAttributeNames(ImmutableMap.of(
-                                        "#version", Reserved.VERSION
-                                ))
-                                .expressionAttributeValues(ImmutableMap.of(
-                                        ":version", AttributeValue.builder().n(Long.toString(version)).build()
-                                ))
-                                .build())
-                        .build());
-
-                exceptions.add(() -> new CorruptedIndexException(index.getQualifiedName()));
-
-                return this;
-            }
-
-            @Override
-            public Storage.WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
-
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public CompletableFuture<BatchResponse> commit() {
-
-                if(!oversize.isEmpty()) {
-                    final Stash oversizeStash = requireOversizeStash();
-                    final List<CompletableFuture<?>> futures = new ArrayList<>();
-                    oversize.forEach((k, v) -> futures.add(oversizeStash.write(k, v)));
-                    return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]))
-                            .thenCompose(ignored -> write());
-                } else {
-                    return write();
+                    throw new IllegalStateException();
                 }
             }
+            return BatchWriteItemRequest.builder().requestItems(requests).build();
+        }
 
-            private BatchWriteItemRequest toBatchRequest(final List<TransactWriteItem> items) {
+        private CompletableFuture<BatchResponse> write() {
 
-                final Map<String, Collection<WriteRequest>> requests = new HashMap<>();
-                for(final TransactWriteItem item : items) {
-                    if (item.put() != null) {
-                        requests.computeIfAbsent(item.put().tableName(), ignored -> new ArrayList<>())
-                                .add(WriteRequest.builder().putRequest(PutRequest.builder()
-                                        .item(item.put().item())
-                                        .build())
-                                .build());
-                    } else if (item.delete() != null) {
-                        requests.computeIfAbsent(item.delete().tableName(), ignored -> new ArrayList<>())
-                                .add(WriteRequest.builder().deleteRequest(DeleteRequest.builder()
-                                        .key(item.delete().key())
-                                        .build())
-                                .build());
-                    } else {
-                        throw new IllegalStateException();
-                    }
-                }
-                return BatchWriteItemRequest.builder().requestItems(requests).build();
-            }
+            if(consistency == Consistency.NONE) {
 
-            private CompletableFuture<BatchResponse> write() {
+                return CompletableFuture.allOf(Lists.partition(items, WRITE_BATCH).stream()
+                        .map(part -> {
+                            final BatchWriteItemRequest request = toBatchRequest(part);
+                            return client.batchWriteItem(request);
+                        })
+                        .toArray(CompletableFuture<?>[]::new))
+                        .thenApply(v -> new BatchResponse.Basic(changes));
 
-                if(consistency == Consistency.NONE) {
+            } else {
 
-                    return CompletableFuture.allOf(Lists.partition(items, WRITE_BATCH).stream()
-                            .map(part -> {
-                                final BatchWriteItemRequest request = toBatchRequest(part);
-                                return client.batchWriteItem(request);
-                            })
-                            .toArray(CompletableFuture<?>[]::new))
-                            .thenApply(v -> new BatchResponse.Basic(changes));
+                final TransactWriteItemsRequest request = TransactWriteItemsRequest.builder()
+                        .transactItems(items)
+                        .build();
 
-                } else {
-
-                    final TransactWriteItemsRequest request = TransactWriteItemsRequest.builder()
-                            .transactItems(items)
-                            .build();
-
-                    return client.transactWriteItems(request)
-                            .exceptionally(e -> {
-                                if (e.getCause() instanceof TransactionCanceledException) {
-                                    final TransactionCanceledException cancel = (TransactionCanceledException) e.getCause();
-                                    final List<CancellationReason> reasons = cancel.cancellationReasons();
-                                    for (int i = 0; i != reasons.size(); ++i) {
-                                        final CancellationReason reason = reasons.get(i);
-                                        if ("ConditionalCheckFailed".equals(reason.code())) {
-                                            final Supplier<RuntimeException> supplier = exceptions.get(i);
-                                            if (supplier != null) {
-                                                throw supplier.get();
-                                            }
+                return client.transactWriteItems(request)
+                        .exceptionally(e -> {
+                            if (e.getCause() instanceof TransactionCanceledException) {
+                                final TransactionCanceledException cancel = (TransactionCanceledException) e.getCause();
+                                final List<CancellationReason> reasons = cancel.cancellationReasons();
+                                for (int i = 0; i != reasons.size(); ++i) {
+                                    final CancellationReason reason = reasons.get(i);
+                                    if ("ConditionalCheckFailed".equals(reason.code())) {
+                                        final Supplier<RuntimeException> supplier = exceptions.get(i);
+                                        if (supplier != null) {
+                                            throw supplier.get();
                                         }
                                     }
-                                    throw new IllegalStateException(e);
-                                } else if (e instanceof RuntimeException) {
-                                    throw (RuntimeException) e;
-                                } else {
-                                    throw new CompletionException(e);
                                 }
-                            })
-                            .thenApply(v -> new BatchResponse.Basic(changes));
-                }
+                                throw new IllegalStateException(e);
+                            } else if (e instanceof RuntimeException) {
+                                throw (RuntimeException) e;
+                            } else {
+                                throw new CompletionException(e);
+                            }
+                        })
+                        .thenApply(v -> new BatchResponse.Basic(changes));
             }
-
-        };
+        }
     }
 
     @Override

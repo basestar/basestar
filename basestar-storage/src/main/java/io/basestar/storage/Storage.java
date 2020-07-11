@@ -22,11 +22,9 @@ package io.basestar.storage;
 
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
-import io.basestar.schema.Consistency;
-import io.basestar.schema.History;
-import io.basestar.schema.Index;
-import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.*;
 import io.basestar.schema.exception.UnsupportedConsistencyException;
+import io.basestar.storage.exception.UnsupportedQueryException;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
@@ -90,6 +88,14 @@ public interface Storage {
 
     StorageTraits storageTraits(ObjectSchema schema);
 
+    CompletableFuture<?> asyncIndexCreated(ObjectSchema schema, Index index, String id, long version, Index.Key key, Map<String, Object> projection);
+
+    CompletableFuture<?> asyncIndexUpdated(ObjectSchema schema, Index index, String id, long version, Index.Key key, Map<String, Object> projection);
+
+    CompletableFuture<?> asyncIndexDeleted(ObjectSchema schema, Index index, String id, long version, Index.Key key);
+
+    CompletableFuture<?> asyncHistoryCreated(ObjectSchema schema, String id, long version, Map<String, Object> after);
+
     interface ReadTransaction {
 
         ReadTransaction readObject(ObjectSchema schema, String id);
@@ -139,14 +145,6 @@ public interface Storage {
 
         WriteTransaction deleteObject(ObjectSchema schema, String id, Map<String, Object> before);
 
-        WriteTransaction createIndex(ObjectSchema schema, Index index, String id, long version, Index.Key key, Map<String, Object> projection);
-
-        WriteTransaction updateIndex(ObjectSchema schema, Index index, String id, long version, Index.Key key, Map<String, Object> projection);
-
-        WriteTransaction deleteIndex(ObjectSchema schema, Index index, String id, long version, Index.Key key);
-
-        WriteTransaction createHistory(ObjectSchema schema, String id, long version, Map<String, Object> after);
-
         CompletableFuture<BatchResponse> commit();
     }
 
@@ -154,5 +152,121 @@ public interface Storage {
 
         SUPPRESS,
         EMIT
+    }
+
+    interface WithoutWrite extends WithoutWriteIndex, WithoutWriteHistory {
+
+        default WriteTransaction write(final Consistency consistency) {
+
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    interface WithoutAggregate extends Storage {
+
+        default List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
+
+            throw new UnsupportedQueryException(schema.getQualifiedName(), query);
+        }
+    }
+
+    interface WithoutQuery extends WithoutAggregate {
+
+        default List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
+
+            throw new UnsupportedQueryException(schema.getQualifiedName(), query);
+        }
+    }
+
+    interface WithoutHistory extends WithoutWriteHistory {
+
+        default CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+
+            return readObject(schema, id).thenApply(object -> {
+                if (object != null && Long.valueOf(version).equals(Instance.getVersion(object))) {
+                    return object;
+                } else {
+                    return null;
+                }
+            });
+        }
+    }
+
+    interface WithoutWriteHistory extends Storage {
+
+        default CompletableFuture<?> asyncHistoryCreated(final ObjectSchema schema, String id, final long version, Map<String, Object> after) {
+
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    interface WithoutWriteIndex extends Storage {
+
+        default CompletableFuture<?> asyncIndexCreated(final ObjectSchema schema, final Index index, String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+
+            throw new UnsupportedOperationException();
+        }
+
+        default CompletableFuture<?> asyncIndexUpdated(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+
+            throw new UnsupportedOperationException();
+        }
+
+        default CompletableFuture<?> asyncIndexDeleted(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
+
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    interface WithWriteHistory extends Storage {
+
+        WriteTransaction write(Consistency consistency);
+
+        default CompletableFuture<?> asyncHistoryCreated(final ObjectSchema schema, String id, final long version, Map<String, Object> after) {
+
+            final WriteTransaction write = write(Consistency.ASYNC);
+            write.createHistory(schema, id, version, after);
+            return write.commit();
+        }
+
+        interface WriteTransaction extends Storage.WriteTransaction {
+
+            WriteTransaction createHistory(ObjectSchema schema, String id, long version, Map<String, Object> after);
+        }
+    }
+
+    interface WithWriteIndex extends Storage {
+
+        WriteTransaction write(Consistency consistency);
+
+        default CompletableFuture<?> asyncIndexCreated(final ObjectSchema schema, final Index index, String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+
+            final WriteTransaction write = write(Consistency.ASYNC);
+            write.createIndex(schema, index, id, version, key, projection);
+            return write.commit();
+        }
+
+        default CompletableFuture<?> asyncIndexUpdated(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+
+            final WriteTransaction write = write(Consistency.ASYNC);
+            write.updateIndex(schema, index, id, version, key, projection);
+            return write.commit();
+        }
+
+        default CompletableFuture<?> asyncIndexDeleted(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
+
+            final WriteTransaction write = write(Consistency.ASYNC);
+            write.deleteIndex(schema, index, id, version, key);
+            return write.commit();
+        }
+
+        interface WriteTransaction extends Storage.WriteTransaction {
+
+            WriteTransaction createIndex(ObjectSchema schema, Index index, String id, long version, Index.Key key, Map<String, Object> projection);
+
+            WriteTransaction updateIndex(ObjectSchema schema, Index index, String id, long version, Index.Key key, Map<String, Object> projection);
+
+            WriteTransaction deleteIndex(ObjectSchema schema, Index index, String id, long version, Index.Key key);
+        }
     }
 }

@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
-import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import io.basestar.storage.BatchResponse;
@@ -50,7 +49,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class CognitoUserStorage implements Storage {
+public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.WithoutHistory, Storage.WithoutAggregate {
 
     private static final String CUSTOM_ATTR_PREFIX = "custom:";
 
@@ -112,12 +111,6 @@ public class CognitoUserStorage implements Storage {
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
 
         return ImmutableList.of(
@@ -133,12 +126,6 @@ public class CognitoUserStorage implements Storage {
                                 .collect(Collectors.toList()), encodePaging(response.paginationToken()));
                     });
                 });
-    }
-
-    @Override
-    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
-
-        throw new UnsupportedOperationException();
     }
 
     private String decodePaging(final PagingToken token) {
@@ -208,30 +195,6 @@ public class CognitoUserStorage implements Storage {
                             .thenApply(ignored -> BatchResponse.empty());
                 });
                 return this;
-            }
-
-            @Override
-            public WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
-
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
-
-                throw new UnsupportedOperationException();
             }
 
             @Override

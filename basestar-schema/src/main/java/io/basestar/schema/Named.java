@@ -20,63 +20,18 @@ package io.basestar.schema;
  * #L%
  */
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
 import io.basestar.util.Name;
 
 import javax.annotation.Nonnull;
-import java.io.IOException;
 
 public interface Named {
 
+    @Nonnull
     default String getName() {
 
         return getQualifiedName().last();
     }
 
+    @Nonnull
     Name getQualifiedName();
-
-    class QualifiedNameSerializer extends JsonSerializer<Named> {
-
-        @Override
-        public void serialize(final Named named, final JsonGenerator jsonGenerator, final SerializerProvider serializerProvider) throws IOException {
-
-            jsonGenerator.writeString(named.getQualifiedName().toString());
-        }
-
-        @Override
-        public void serializeWithType(final Named named, final JsonGenerator jsonGenerator, final SerializerProvider serializerProvider, final TypeSerializer typeSerializer) throws IOException {
-
-            serialize(named, jsonGenerator, serializerProvider);
-        }
-    }
-
-    // FIXME: temporary
-    interface Qualified /*extends Named*/ {
-
-        default String getSimpleName() {
-
-            return getQualifiedName().last();
-        }
-
-        @Nonnull
-        Name getQualifiedName();
-
-        class Serializer extends JsonSerializer<Qualified> {
-
-            @Override
-            public void serialize(final Qualified qualifiedNamed, final JsonGenerator jsonGenerator, final SerializerProvider serializerProvider) throws IOException {
-
-                jsonGenerator.writeString(qualifiedNamed.getQualifiedName().toString());
-            }
-
-            @Override
-            public void serializeWithType(final Qualified qualifiedNamed, final JsonGenerator jsonGenerator, final SerializerProvider serializerProvider, final TypeSerializer typeSerializer) throws IOException {
-
-                serialize(qualifiedNamed, jsonGenerator, serializerProvider);
-            }
-        }
-    }
 }

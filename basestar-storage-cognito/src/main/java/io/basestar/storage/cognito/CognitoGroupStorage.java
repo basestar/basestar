@@ -23,9 +23,7 @@ package io.basestar.storage.cognito;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Expression;
-import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Consistency;
-import io.basestar.schema.Index;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.storage.BatchResponse;
@@ -47,7 +45,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-public class CognitoGroupStorage implements Storage {
+public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.WithoutHistory, Storage.WithoutAggregate {
 
     private static final String DESCRIPTION_KEY = "description";
 
@@ -92,12 +90,6 @@ public class CognitoGroupStorage implements Storage {
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
 
         return ImmutableList.of(
@@ -114,12 +106,6 @@ public class CognitoGroupStorage implements Storage {
 
                     });
                 });
-    }
-
-    @Override
-    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
-
-        throw new UnsupportedOperationException();
     }
 
     private String decodePaging(final PagingToken token) {
@@ -189,30 +175,6 @@ public class CognitoGroupStorage implements Storage {
                             .thenApply(ignored -> BatchResponse.empty());
                 });
                 return this;
-            }
-
-            @Override
-            public WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
-
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
-
-                throw new UnsupportedOperationException();
             }
 
             @Override

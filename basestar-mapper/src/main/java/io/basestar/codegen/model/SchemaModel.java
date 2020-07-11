@@ -43,7 +43,7 @@ public abstract class SchemaModel extends Model {
 
     public String getName() {
 
-        return schema.getSimpleName();
+        return schema.getName();
     }
 
     public String getDescription() {

@@ -46,7 +46,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-public abstract class PartitionedStorage implements Storage {
+public abstract class PartitionedStorage implements Storage.WithWriteIndex {
 
     protected abstract CompletableFuture<PagedList<Map<String, Object>>> queryIndex(ObjectSchema schema, Index index, SatisfyResult satisfyResult, Map<Name, Range<Object>> query, List<Sort> sort, int count, PagingToken paging);
 
@@ -292,75 +292,17 @@ public abstract class PartitionedStorage implements Storage {
         }
     }
 
-    protected abstract class WriteTransaction implements Storage.WriteTransaction {
+    @Override
+    public abstract WriteTransaction write(Consistency consistency);
 
-//        protected abstract void createObjectImpl(ObjectSchema schema, String id, Map<String, Object> after);
-//
-//        protected abstract void updateObjectImpl(ObjectSchema schema, String id, long version, Map<String, Object> before, Map<String, Object> after);
-//
-//        protected abstract void deleteObjectImpl(ObjectSchema schema, String id, long version, Map<String, Object> before);
-//
-//        protected abstract CompletableFuture<BatchResponse> commitImpl();
-//
-//        @Override
-//        public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
-//
-//            final StorageTraits traits = storageTraits(schema);
-//            createObjectImpl(schema, id, after);
-//
-//            schema.getAllIndexes().forEach((indexName, index) -> {
-//                final Consistency best = traits.getIndexConsistency(index.isMultiValue());
-//                if(!index.getConsistency(best).isAsync()) {
-//                    final Map<Index.Key, Map<String, Object>> records = index.readValues(after);
-//                    records.forEach((key, projection) -> createIndex(schema, index, id, 0L, key, projection));
-//                }
-//            });
-//
-//            return this;
-//        }
-//
-//        @Override
-//        public WriteTransaction updateObject(final ObjectSchema schema, final String id, final long version, final Map<String, Object> before, final Map<String, Object> after) {
-//
-//            final StorageTraits traits = storageTraits(schema);
-//            updateObjectImpl(schema, id, version, before, after);
-//
-//            schema.getAllIndexes().forEach((indexName, index) -> {
-//                final Consistency best = traits.getIndexConsistency(index.isMultiValue());
-//                if(!index.getConsistency(best).isAsync()) {
-//                    final IndexRecordDiff diff = IndexRecordDiff.from(index.readValues(before), index.readValues(after));
-//                    diff.getCreate().forEach((key, projection) -> createIndex(schema, index, id, version, key, projection));
-//                    diff.getUpdate().forEach((key, projection) -> updateIndex(schema, index, id, version, key, projection));
-//                    diff.getDelete().forEach((key) -> deleteIndex(schema, index, id, version, key));
-//                }
-//            });
-//
-//            return this;
-//        }
-//
-//        @Override
-//        public WriteTransaction deleteObject(final ObjectSchema schema, final String id, final long version, final Map<String, Object> before) {
-//
-//            final StorageTraits traits = storageTraits(schema);
-//            deleteObjectImpl(schema, id, version, before);
-//
-//            schema.getAllIndexes().forEach((indexName, index) -> {
-//                final Consistency best = traits.getIndexConsistency(index.isMultiValue());
-//                if(!index.getConsistency(best).isAsync()) {
-//                    final Map<Index.Key, Map<String, Object>> records = index.readValues(before);
-//                    records.keySet().forEach((key) -> deleteIndex(schema, index, id, version, key));
-//                }
-//            });
-//
-//            return this;
-//        }
+    protected abstract class WriteTransaction implements WithWriteIndex.WriteTransaction {
 
-        protected WriteTransaction createIndexes(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+        protected WriteTransaction createIndexes(final ObjectSchema schema, String id, Map<String, Object> after) {
 
             final StorageTraits traits = storageTraits(schema);
             schema.getIndexes().forEach((indexName, index) -> {
                 final Consistency best = traits.getIndexConsistency(index.isMultiValue());
-                if(!index.getConsistency(best).isAsync()) {
+                if (!index.getConsistency(best).isAsync()) {
                     final Map<Index.Key, Map<String, Object>> records = index.readValues(after);
                     records.forEach((key, projection) -> createIndex(schema, index, id, 0L, key, projection));
                 }
@@ -372,7 +314,7 @@ public abstract class PartitionedStorage implements Storage {
         protected WriteTransaction updateIndexes(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
             final Map<String, Index> indexes = schema.getIndexes();
-            if(!indexes.isEmpty()) {
+            if (!indexes.isEmpty()) {
                 final StorageTraits traits = storageTraits(schema);
                 final Long version = Instance.getVersion(before);
                 assert version != null;
@@ -392,7 +334,7 @@ public abstract class PartitionedStorage implements Storage {
         protected WriteTransaction deleteIndexes(final ObjectSchema schema, final String id, final Map<String, Object> before) {
 
             final Map<String, Index> indexes = schema.getIndexes();
-            if(!indexes.isEmpty()) {
+            if (!indexes.isEmpty()) {
                 final StorageTraits traits = storageTraits(schema);
                 final Long version = Instance.getVersion(before);
                 assert version != null;
@@ -406,59 +348,5 @@ public abstract class PartitionedStorage implements Storage {
             }
             return this;
         }
-
-//        @Override
-//        public CompletableFuture<BatchResponse> commit() {
-//
-//            return commitImpl();
-//        }
     }
-
-//    @Override
-//    public CompletableFuture<Set<Event>> onObjectCreated(final ObjectSchema schema, final String id, final Map<String, Object> after) {
-//
-//        return CompletableFuture.completedFuture(schema.getIndexes().values().stream().flatMap(index -> {
-//            if(index.getConsistency().isAsync()) {
-//                final Map<Index.Key, Map<String, Object>> records = index.readValues(after);
-//                return records.entrySet().stream()
-//                        .map(e -> AsyncIndexCreatedEvent.of(schema.getName(), id, 0L, e.getKey(), e.getValue()));
-//            } else {
-//                return Stream.empty();
-//            }
-//        }).collect(Collectors.toSet()));
-//    }
-//
-//    @Override
-//    public CompletableFuture<Set<Event>> onObjectUpdated(final ObjectSchema schema, final String id, final long version, final Map<String, Object> before, final Map<String, Object> after) {
-//
-//        return CompletableFuture.completedFuture(schema.getIndexes().values().stream().flatMap(index -> {
-//            if(index.getConsistency().isAsync()) {
-//                final IndexRecordDiff diff = IndexRecordDiff.from(index.readValues(before), index.readValues(after));
-//                final Stream<Event> create = diff.getCreate().entrySet().stream()
-//                        .map(e -> AsyncIndexCreatedEvent.of(schema.getName(), id, version, e.getKey(), e.getValue()));
-//                final Stream<Event> update = diff.getUpdate().entrySet().stream()
-//                        .map(e -> AsyncIndexUpdatedEvent.of(schema.getName(), id, version, e.getKey(), e.getValue()));
-//                final Stream<Event> delete = diff.getDelete().stream()
-//                        .map(key-> AsyncIndexDeletedEvent.of(schema.getName(), id, version, key));
-//                return Stream.of(create, update, delete)
-//                        .flatMap(v -> v);
-//            } else {
-//                return Stream.empty();
-//            }
-//        }).collect(Collectors.toSet()));
-//    }
-//
-//    @Override
-//    public CompletableFuture<Set<Event>> onObjectDeleted(final ObjectSchema schema, final String id, final long version, final Map<String, Object> before) {
-//
-//        return CompletableFuture.completedFuture(schema.getIndexes().values().stream().flatMap(index -> {
-//            if(index.getConsistency().isAsync()) {
-//                final Map<Index.Key, Map<String, Object>> records = index.readValues(before);
-//                return records.keySet().stream()
-//                        .map(key -> AsyncIndexDeletedEvent.of(schema.getName(), id, version, key));
-//            } else {
-//                return Stream.empty();
-//            }
-//        }).collect(Collectors.toSet()));
-//    }
 }

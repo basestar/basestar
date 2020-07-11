@@ -737,35 +737,27 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         final ObjectSchema schema = objectSchema(event.getSchema());
         final Index index = schema.requireIndex(event.getIndex(), true);
-        final Storage.WriteTransaction write = storage.write(Consistency.ASYNC);
-        write.createIndex(schema, index, event.getId(), event.getVersion(), event.getKey(), event.getProjection());
-        return write.commit();
+        return storage.asyncIndexCreated(schema, index, event.getId(), event.getVersion(), event.getKey(), event.getProjection());
     }
 
     protected CompletableFuture<?> onAsyncIndexUpdated(final AsyncIndexUpdatedEvent event) {
 
         final ObjectSchema schema = objectSchema(event.getSchema());
         final Index index = schema.requireIndex(event.getIndex(), true);
-        final Storage.WriteTransaction write = storage.write(Consistency.ASYNC);
-        write.updateIndex(schema, index, event.getId(), event.getVersion(), event.getKey(), event.getProjection());
-        return write.commit();
+        return storage.asyncIndexUpdated(schema, index, event.getId(), event.getVersion(), event.getKey(), event.getProjection());
     }
 
     protected CompletableFuture<?> onAsyncIndexDeleted(final AsyncIndexDeletedEvent event) {
 
         final ObjectSchema schema = objectSchema(event.getSchema());
         final Index index = schema.requireIndex(event.getIndex(), true);
-        final Storage.WriteTransaction write = storage.write(Consistency.ASYNC);
-        write.deleteIndex(schema, index, event.getId(), event.getVersion(), event.getKey());
-        return write.commit();
+        return storage.asyncIndexDeleted(schema, index, event.getId(), event.getVersion(), event.getKey());
     }
 
     protected CompletableFuture<?> onAsyncHistoryCreated(final AsyncHistoryCreatedEvent event) {
 
         final ObjectSchema schema = objectSchema(event.getSchema());
-        final Storage.WriteTransaction write = storage.write(Consistency.ASYNC);
-        write.createHistory(schema, event.getId(), event.getVersion(), event.getAfter());
-        return write.commit();
+        return storage.asyncHistoryCreated(schema, event.getId(), event.getVersion(), event.getAfter());
     }
 
     protected CompletableFuture<?> onRefQuery(final RefQueryEvent event) {
