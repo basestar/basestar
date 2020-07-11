@@ -24,10 +24,10 @@ import com.google.common.collect.Sets;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
-import io.basestar.expression.PathTransform;
+import io.basestar.expression.NameTransform;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.iterate.ForAll;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import lombok.Data;
 
 import java.util.HashMap;
@@ -55,7 +55,7 @@ public class With implements Expression {
     private final Expression yield;
 
     @Override
-    public Expression bind(final Context context, final PathTransform root) {
+    public Expression bind(final Context context, final NameTransform root) {
 
         boolean constant = true;
         boolean changed = false;
@@ -68,7 +68,7 @@ public class With implements Expression {
             changed = changed || after != before;
         }
         if(constant) {
-            final Expression _return = this.yield.bind(context, PathTransform.closure(with.keySet(), root));
+            final Expression _return = this.yield.bind(context, NameTransform.closure(with.keySet(), root));
             if(_return instanceof Constant) {
                 return _return;
             } else {
@@ -92,7 +92,7 @@ public class With implements Expression {
     }
 
     @Override
-    public Set<Path> paths() {
+    public Set<Name> paths() {
 
         return Stream.concat(Stream.of(yield), with.values().stream())
                 .flatMap(v -> v.paths().stream())

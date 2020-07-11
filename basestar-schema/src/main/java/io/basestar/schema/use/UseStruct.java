@@ -24,9 +24,13 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.schema.*;
+import io.basestar.schema.Constraint;
+import io.basestar.schema.Instance;
+import io.basestar.schema.StructSchema;
 import io.basestar.schema.exception.InvalidTypeException;
-import io.basestar.util.Path;
+import io.basestar.schema.util.Expander;
+import io.basestar.schema.util.Ref;
+import io.basestar.util.Name;
 import lombok.Data;
 
 import java.io.DataInput;
@@ -105,7 +109,7 @@ public class UseStruct implements UseInstance {
     }
 
     @Override
-    public Instance expand(final Instance value, final Expander expander, final Set<Path> expand) {
+    public Instance expand(final Instance value, final Expander expander, final Set<Name> expand) {
 
         if(value != null) {
             return schema.expand(value, expander, expand);
@@ -115,25 +119,25 @@ public class UseStruct implements UseInstance {
     }
 
     @Override
-    public Set<Constraint.Violation> validate(final Context context, final Path path, final Instance value) {
+    public Set<Constraint.Violation> validate(final Context context, final Name name, final Instance value) {
 
         if(value == null) {
             return Collections.emptySet();
         } else {
-            return schema.validate(context, path, value);
+            return schema.validate(context, name, value);
         }
     }
 
     @Override
-    public Set<Expression> refQueries(final String otherTypeName, final Set<Path> expand, final Path path) {
+    public Set<Expression> refQueries(final Name otherSchemaName, final Set<Name> expand, final Name name) {
 
-        return schema.refQueries(otherTypeName, expand, path);
+        return schema.refQueries(otherSchemaName, expand, name);
     }
 
     @Override
-    public Set<Path> refExpand(final String otherTypeName, final Set<Path> expand) {
+    public Set<Name> refExpand(final Name otherSchemaName, final Set<Name> expand) {
 
-        return schema.refExpand(otherTypeName, expand);
+        return schema.refExpand(otherSchemaName, expand);
     }
 
     @Override
@@ -153,14 +157,14 @@ public class UseStruct implements UseInstance {
 
     @Override
     @Deprecated
-    public Set<Path> requiredExpand(final Set<Path> paths) {
+    public Set<Name> requiredExpand(final Set<Name> names) {
 
-        return schema.requiredExpand(paths);
+        return schema.requiredExpand(names);
     }
 
     @Override
     @Deprecated
-    public Multimap<Path, Instance> refs(final Instance value) {
+    public Multimap<Name, Instance> refs(final Instance value) {
 
         if(value != null) {
             return schema.refs(value);
@@ -172,6 +176,6 @@ public class UseStruct implements UseInstance {
     @Override
     public String toString() {
 
-        return schema.getName();
+        return schema.getQualifiedName().toString();
     }
 }

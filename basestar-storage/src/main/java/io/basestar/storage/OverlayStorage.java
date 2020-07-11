@@ -210,7 +210,7 @@ public class OverlayStorage implements Storage {
             private Map<String, Object> tombstone(final ObjectSchema schema, final String id, final Map<String, Object> before) {
 
                 final Map<String, Object> tombstone = new HashMap<>();
-                Instance.setSchema(tombstone, schema.getName());
+                Instance.setSchema(tombstone, schema.getQualifiedName());
                 Instance.setId(tombstone, id);
                 Instance.setCreated(tombstone, Instance.getCreated(before));
                 Instance.setUpdated(tombstone, LocalDateTime.now());

@@ -22,8 +22,8 @@ package io.basestar.spark;
 
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.use.Use;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import io.basestar.util.Path;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -41,12 +41,12 @@ public class SchemaTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
     private final InstanceSchema schema;
 
-    private final Set<Path> expand;
+    private final Set<Name> expand;
 
     private final Map<String, Use<?>> extraMetadata;
 
     @lombok.Builder(builderClassName = "Builder")
-    SchemaTransform(final InstanceSchema schema, final Set<Path> expand, final Map<String, Use<?>> extraMetadata) {
+    SchemaTransform(final InstanceSchema schema, final Set<Name> expand, final Map<String, Use<?>> extraMetadata) {
 
         this.schema = Nullsafe.require(schema);
         this.expand = Nullsafe.option(expand);

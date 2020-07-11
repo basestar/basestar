@@ -26,9 +26,9 @@ import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
-import io.basestar.expression.PathTransform;
+import io.basestar.expression.NameTransform;
 import io.basestar.expression.type.Values;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import lombok.Data;
 
 import java.util.Collections;
@@ -60,7 +60,7 @@ public class Constant implements Expression {
     private final Object value;
 
     @Override
-    public Expression bind(final Context context, final PathTransform root) {
+    public Expression bind(final Context context, final NameTransform root) {
 
         return this;
     }
@@ -78,7 +78,7 @@ public class Constant implements Expression {
 //    }
 
     @Override
-    public Set<Path> paths() {
+    public Set<Name> paths() {
 
         return Collections.emptySet();
     }

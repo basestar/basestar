@@ -9,6 +9,7 @@ import io.basestar.schema.Consistency;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.storage.util.Pager;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.PagedList;
 import io.basestar.util.Sort;
@@ -18,14 +19,14 @@ import java.util.concurrent.CompletableFuture;
 
 public class ConstantStorage implements Storage {
 
-    private final Map<String, Map<String, Map<String, Object>>> data;
+    private final Map<Name, Map<String, Map<String, Object>>> data;
 
     @lombok.Builder(builderClassName = "Builder")
     ConstantStorage(final Collection<? extends Map<String, Object>> items) {
 
-        final Map<String, Map<String, Map<String, Object>>> data = new HashMap<>();
+        final Map<Name, Map<String, Map<String, Object>>> data = new HashMap<>();
         items.forEach(item -> {
-            final String schema = Instance.getSchema(item);
+            final Name schema = Instance.getSchema(item);
             final String id = Instance.getId(item);
             final Map<String, Map<String, Object>> target = data.computeIfAbsent(schema, ignored -> new HashMap<>());
             target.put(id, item);
@@ -33,7 +34,7 @@ public class ConstantStorage implements Storage {
         this.data = Collections.unmodifiableMap(data);
     }
 
-    private Map<String, Object> get(final String schema, final String id) {
+    private Map<String, Object> get(final Name schema, final String id) {
 
         return Nullsafe.option(data.get(schema)).get(id);
     }
@@ -46,14 +47,14 @@ public class ConstantStorage implements Storage {
     @Override
     public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
 
-        final Map<String, Object> object = get(schema.getName(), id);
+        final Map<String, Object> object = get(schema.getQualifiedName(), id);
         return CompletableFuture.completedFuture(object);
     }
 
     @Override
     public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
 
-        final Map<String, Object> object = get(schema.getName(), id);
+        final Map<String, Object> object = get(schema.getQualifiedName(), id);
         if(object != null && Long.valueOf(version).equals(Instance.getVersion(object))) {
             return CompletableFuture.completedFuture(object);
         } else {
@@ -70,7 +71,7 @@ public class ConstantStorage implements Storage {
         return ImmutableList.of((count, token, stats) -> {
             // Don't do any paging, just return all matches, this is compliant with Pager interface
             final List<Map<String, Object>> page = new ArrayList<>();
-            Nullsafe.option(data.get(schema.getName())).forEach((id, item) -> {
+            Nullsafe.option(data.get(schema.getQualifiedName())).forEach((id, item) -> {
                 if(query.evaluatePredicate(Context.init(item))) {
                     page.add(item);
                 }

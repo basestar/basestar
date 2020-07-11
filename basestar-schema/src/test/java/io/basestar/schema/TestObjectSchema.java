@@ -26,9 +26,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
 import io.basestar.expression.compare.Eq;
-import io.basestar.expression.constant.PathConstant;
+import io.basestar.expression.constant.NameConstant;
+import io.basestar.schema.util.Expander;
+import io.basestar.util.Name;
 import io.basestar.util.PagedList;
-import io.basestar.util.Path;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -48,11 +49,11 @@ public class TestObjectSchema {
 
         final ObjectSchema schema = namespace.requireObjectSchema("Post");
 
-        assertEquals(Path.parseSet("ref"), schema.requiredExpand(Path.parseSet("ref.ref.id")));
-        assertEquals(Path.parseSet(""), schema.requiredExpand(Path.parseSet("ref.id")));
-        assertEquals(Path.parseSet("ref.ref"), schema.requiredExpand(Path.parseSet("ref.ref.string")));
+        assertEquals(Name.parseSet("ref"), schema.requiredExpand(Name.parseSet("ref.ref.id")));
+        assertEquals(Name.parseSet(""), schema.requiredExpand(Name.parseSet("ref.id")));
+        assertEquals(Name.parseSet("ref.ref"), schema.requiredExpand(Name.parseSet("ref.ref.string")));
 
-        assertEquals(Path.parseSet(""), schema.requiredExpand(Path.parseSet("string")));
+        assertEquals(Name.parseSet(""), schema.requiredExpand(Name.parseSet("string")));
     }
 
     @Test
@@ -76,19 +77,19 @@ public class TestObjectSchema {
 
         final Instance instance = schema.expand(initial, new Expander() {
             @Override
-            public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Path> expand) {
+            public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
 
                 return Instance.getId(ref).equals(id) ? refValue : null;
             }
 
             @Override
-            public PagedList<Instance> expandLink(final Link link, final PagedList<Instance> value, final Set<Path> expand) {
+            public PagedList<Instance> expandLink(final Link link, final PagedList<Instance> value, final Set<Name> expand) {
 
                 return null;
             }
-        },  ImmutableSet.of(Path.of("ref")));
+        },  ImmutableSet.of(Name.of("ref")));
 
-        final Instance expanded = schema.expand(instance, Expander.noop(), ImmutableSet.of(Path.of("ref")));
+        final Instance expanded = schema.expand(instance, Expander.noop(), ImmutableSet.of(Name.of("ref")));
         final Map expandedRef = (Map)expanded.get("ref");
         assertNotNull(expandedRef.get(Reserved.SCHEMA));
         assertNotNull(expandedRef.get(Reserved.ID));
@@ -106,10 +107,10 @@ public class TestObjectSchema {
 
         final ObjectSchema schema = namespace.requireObjectSchema("Post");
 
-        final Set<Expression> queries = schema.refQueries("Post", ImmutableSet.of(Path.of("ref")));
-        assertEquals(ImmutableSet.of(new Eq(new PathConstant(Path.of("ref", "id")), new PathConstant(Path.of(Reserved.THIS, Reserved.ID)))), queries);
+        final Set<Expression> queries = schema.refQueries(Name.of("Post"), ImmutableSet.of(Name.of("ref")));
+        assertEquals(ImmutableSet.of(new Eq(new NameConstant(Name.of("ref", "id")), new NameConstant(Name.of(Reserved.THIS, Reserved.ID)))), queries);
 
-        final Set<Expression> nonQueries = schema.refQueries("Post", ImmutableSet.of());
+        final Set<Expression> nonQueries = schema.refQueries(Name.of("Post"), ImmutableSet.of());
         assertEquals(ImmutableSet.of(), nonQueries);
     }
 

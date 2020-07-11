@@ -31,8 +31,8 @@ import io.basestar.expression.Context;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.use.Use;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import io.basestar.util.Path;
 import lombok.Data;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -70,7 +70,7 @@ import java.util.stream.Collectors;
 public class StructSchema implements InstanceSchema {
 
     @Nonnull
-    private final String name;
+    private final Name qualifiedName;
 
     private final int slot;
 
@@ -118,7 +118,7 @@ public class StructSchema implements InstanceSchema {
         private Long version;
 
         @Nullable
-        private String extend;
+        private Name extend;
 
         @Nullable
         private String description;
@@ -146,15 +146,15 @@ public class StructSchema implements InstanceSchema {
         }
 
         @Override
-        public StructSchema build(final Resolver resolver, final String name, final int slot) {
+        public StructSchema build(final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
 
-            return new StructSchema(this, resolver, name, slot);
+            return new StructSchema(this, resolver, qualifiedName, slot);
         }
 
         @Override
         public StructSchema build() {
 
-            return new StructSchema(this, name -> null, Schema.anonymousName(), Schema.anonymousSlot());
+            return build(Resolver.Constructing.ANONYMOUS, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
         }
     }
 
@@ -163,10 +163,10 @@ public class StructSchema implements InstanceSchema {
         return new Builder();
     }
 
-    private StructSchema(final Builder builder, final Schema.Resolver resolver, final String name, final int slot) {
+    private StructSchema(final Builder builder, final Schema.Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
 
         resolver.constructing(this);
-        this.name = name;
+        this.qualifiedName = qualifiedName;
         this.slot = slot;
         this.version = Nullsafe.option(builder.getVersion(), 1L);
         if(builder.getExtend() != null) {
@@ -176,7 +176,7 @@ public class StructSchema implements InstanceSchema {
         }
         this.description = builder.getDescription();
         this.declaredProperties = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getProperties()).entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, e.getKey()))));
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, qualifiedName.with(e.getKey())))));
         this.declaredProperties.forEach((k, v) -> {
             if(v.isImmutable()) {
                 throw new SchemaValidationException("Struct types cannot have immutable properties");
@@ -189,8 +189,8 @@ public class StructSchema implements InstanceSchema {
             }
         });
         this.concrete = Nullsafe.option(builder.getConcrete(), Boolean.TRUE);
-        if(Reserved.isReserved(name)) {
-            throw new ReservedNameException(name);
+        if(Reserved.isReserved(qualifiedName.last())) {
+            throw new ReservedNameException(qualifiedName);
         }
         if(extend != null) {
             final SortedMap<String, Property> merged = new TreeMap<>();
@@ -228,10 +228,10 @@ public class StructSchema implements InstanceSchema {
     }
 
     @Override
-    public Set<Constraint.Violation> validate(final Context context, final Path path, final Instance after) {
+    public Set<Constraint.Violation> validate(final Context context, final Name name, final Instance after) {
 
         return this.getProperties().values().stream()
-                .flatMap(v -> v.validate(context, path, after.get(v.getName())).stream())
+                .flatMap(v -> v.validate(context, name, after.get(v.getName())).stream())
                 .collect(Collectors.toSet());
     }
 
@@ -252,11 +252,11 @@ public class StructSchema implements InstanceSchema {
     }
 
     @Deprecated
-    public Multimap<Path, Instance> refs(final Map<String, Object> object) {
+    public Multimap<Name, Instance> refs(final Map<String, Object> object) {
 
-        final Multimap<Path, Instance> results = HashMultimap.create();
+        final Multimap<Name, Instance> results = HashMultimap.create();
         properties.forEach((k, v) -> v.links(object.get(k)).forEach((k2, v2) ->
-                results.put(Path.of(v.getName()).with(k2), v2)));
+                results.put(Name.of(v.getName()).with(k2), v2)));
         return results;
     }
 }

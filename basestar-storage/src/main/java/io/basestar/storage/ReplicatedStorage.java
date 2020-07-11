@@ -21,10 +21,11 @@ package io.basestar.storage;
  */
 
 import io.basestar.expression.Expression;
+import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.storage.util.Pager;
+import io.basestar.util.Name;
 import io.basestar.util.Sort;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -149,13 +150,13 @@ public class ReplicatedStorage implements Storage {
 
             private final Set<BatchResponse.Key> keys = new HashSet<>();
 
-            private final Map<String, ObjectSchema> schemas = new HashMap<>();
+            private final Map<Name, ObjectSchema> schemas = new HashMap<>();
 
             @Override
             public ReadTransaction readObject(final ObjectSchema schema, final String id) {
 
-                keys.add(new BatchResponse.Key(schema.getName(), id, null));
-                schemas.put(schema.getName(), schema);
+                keys.add(new BatchResponse.Key(schema.getQualifiedName(), id, null));
+                schemas.put(schema.getQualifiedName(), schema);
                 delegate.readObject(schema, id);
                 return this;
             }
@@ -163,8 +164,8 @@ public class ReplicatedStorage implements Storage {
             @Override
             public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version) {
 
-                keys.add(new BatchResponse.Key(schema.getName(), id, version));
-                schemas.put(schema.getName(), schema);
+                keys.add(new BatchResponse.Key(schema.getQualifiedName(), id, version));
+                schemas.put(schema.getQualifiedName(), schema);
                 delegate.readObjectVersion(schema, id, version);
                 return this;
             }

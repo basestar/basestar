@@ -61,14 +61,14 @@ public class NullStorage implements Storage {
             @Override
             public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
-                data.put(BatchResponse.Key.from(schema.getName(), after), after);
+                data.put(BatchResponse.Key.from(schema.getQualifiedName(), after), after);
                 return this;
             }
 
             @Override
             public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
-                data.put(BatchResponse.Key.from(schema.getName(), after), after);
+                data.put(BatchResponse.Key.from(schema.getQualifiedName(), after), after);
                 return this;
             }
 

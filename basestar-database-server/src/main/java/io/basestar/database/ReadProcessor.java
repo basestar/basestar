@@ -32,11 +32,12 @@ import io.basestar.database.util.RefKey;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
+import io.basestar.schema.util.Expander;
 import io.basestar.storage.Storage;
 import io.basestar.storage.util.Pager;
+import io.basestar.util.Name;
 import io.basestar.util.PagedList;
 import io.basestar.util.PagingToken;
-import io.basestar.util.Path;
 import io.basestar.util.Sort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -60,7 +61,7 @@ public class ReadProcessor {
 
     protected final Storage storage;
 
-    protected ObjectSchema objectSchema(final String schema) {
+    protected ObjectSchema objectSchema(final Name schema) {
 
         return namespace.requireObjectSchema(schema);
     }
@@ -113,7 +114,7 @@ public class ReadProcessor {
 
         final List<Sort> pageSort = ImmutableList.<Sort>builder()
                 .addAll(sort)
-                .add(Sort.asc(Path.of(Reserved.ID)))
+                .add(Sort.asc(Name.of(Reserved.ID)))
                 .build();
 
         final List<Pager.Source<Instance>> sources = storage.query(objectSchema, expression, sort).stream()
@@ -151,7 +152,7 @@ public class ReadProcessor {
         }
     }
 
-    protected CompletableFuture<Instance> expand(final Context context, final Instance item, final Set<Path> expand) {
+    protected CompletableFuture<Instance> expand(final Context context, final Instance item, final Set<Name> expand) {
 
         if(item == null) {
             return CompletableFuture.completedFuture(null);
@@ -164,7 +165,7 @@ public class ReadProcessor {
         }
     }
 
-    protected CompletableFuture<PagedList<Instance>> expand(final Context context, final PagedList<Instance> items, final Set<Path> expand) {
+    protected CompletableFuture<PagedList<Instance>> expand(final Context context, final PagedList<Instance> items, final Set<Name> expand) {
 
         if(items == null) {
             return CompletableFuture.completedFuture(null);
@@ -211,7 +212,7 @@ public class ReadProcessor {
                 final ObjectSchema schema = objectSchema(ref.getKey().getSchema());
                 schema.expand(object, new Expander() {
                     @Override
-                    public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Path> expand) {
+                    public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
 
                         if(ref == null) {
                             return null;
@@ -222,7 +223,7 @@ public class ReadProcessor {
                     }
 
                     @Override
-                    public PagedList<Instance> expandLink(final Link link, final PagedList<Instance> value, final Set<Path> expand) {
+                    public PagedList<Instance> expandLink(final Link link, final PagedList<Instance> value, final Set<Name> expand) {
 
                         final RefKey refKey = ref.getKey();
                         final ExpandKey<LinkKey> linkKey = ExpandKey.from(LinkKey.from(refKey, link.getName()), expand);
@@ -260,7 +261,7 @@ public class ReadProcessor {
                     final Map<ExpandKey<RefKey>, Instance> resolved = new HashMap<>();
                     for (final Map<String, Object> initial : results.values()) {
 
-                        final String schemaName = Instance.getSchema(initial);
+                        final Name schemaName = Instance.getSchema(initial);
                         final String id = Instance.getId(initial);
                         final ObjectSchema schema = objectSchema(schemaName);
                         final Instance object = schema.create(initial);
@@ -283,7 +284,7 @@ public class ReadProcessor {
 
                             result.put(ref, schema.expand(object, new Expander() {
                                 @Override
-                                public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Path> expand) {
+                                public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
 
                                     final ExpandKey<RefKey> expandKey = ExpandKey.from(RefKey.from(schema, ref), expand);
                                     Instance result = expanded.get(expandKey);
@@ -294,7 +295,7 @@ public class ReadProcessor {
                                 }
 
                                 @Override
-                                public PagedList<Instance> expandLink(final Link link, final PagedList<Instance> value, final Set<Path> expand) {
+                                public PagedList<Instance> expandLink(final Link link, final PagedList<Instance> value, final Set<Name> expand) {
 
                                     final ExpandKey<LinkKey> linkKey = ExpandKey.from(LinkKey.from(refKey, link.getName()), expand);
                                     final CompletableFuture<PagedList<Instance>> future = links.get(linkKey);
@@ -323,8 +324,8 @@ public class ReadProcessor {
         if(data == null) {
             return CompletableFuture.completedFuture(null);
         }
-        final String castSchemaName = Instance.getSchema(data);
-        if(baseSchema.getName().equals(castSchemaName)) {
+        final Name castSchemaName = Instance.getSchema(data);
+        if(baseSchema.getQualifiedName().equals(castSchemaName)) {
             return CompletableFuture.completedFuture(baseSchema.create(data));
         } else {
             final String id = Instance.getId(data);
@@ -337,10 +338,10 @@ public class ReadProcessor {
 
     protected CompletableFuture<PagedList<Instance>> cast(final ObjectSchema baseSchema, final PagedList<? extends Map<String, Object>> data) {
 
-        final Multimap<String, Map<String, Object>> needed = ArrayListMultimap.create();
+        final Multimap<Name, Map<String, Object>> needed = ArrayListMultimap.create();
         data.forEach(v -> {
-            final String actualSchema = Instance.getSchema(v);
-            if(!baseSchema.getName().equals(actualSchema)) {
+            final Name actualSchema = Instance.getSchema(v);
+            if(!baseSchema.getQualifiedName().equals(actualSchema)) {
                 needed.put(actualSchema, v);
             }
         });
@@ -377,9 +378,9 @@ public class ReadProcessor {
 
     protected CompletableFuture<Map<ExpandKey<RefKey>, Instance>> cast(final Map<ExpandKey<RefKey>, ? extends Map<String, Object>> data) {
 
-        final Multimap<String, Map<String, Object>> needed = ArrayListMultimap.create();
+        final Multimap<Name, Map<String, Object>> needed = ArrayListMultimap.create();
         data.forEach((k, v) -> {
-            final String actualSchema = Instance.getSchema(v);
+            final Name actualSchema = Instance.getSchema(v);
             if(!k.getKey().getSchema().equals(actualSchema)) {
                 needed.put(actualSchema, v);
             }
@@ -421,7 +422,7 @@ public class ReadProcessor {
         }
     }
 
-    protected CompletableFuture<Caller> expandCaller(final Context context, final Caller caller, final Set<Path> expand) {
+    protected CompletableFuture<Caller> expandCaller(final Context context, final Caller caller, final Set<Name> expand) {
 
         if(caller.getId() == null || caller.isSuper()) {
 

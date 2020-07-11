@@ -32,9 +32,9 @@ import io.basestar.storage.query.Range;
 import io.basestar.storage.query.RangeVisitor;
 import io.basestar.storage.util.IndexRecordDiff;
 import io.basestar.storage.util.Pager;
+import io.basestar.util.Name;
 import io.basestar.util.PagedList;
 import io.basestar.util.PagingToken;
-import io.basestar.util.Path;
 import io.basestar.util.Sort;
 import lombok.Data;
 
@@ -48,7 +48,7 @@ import java.util.stream.Collectors;
 
 public abstract class PartitionedStorage implements Storage {
 
-    protected abstract CompletableFuture<PagedList<Map<String, Object>>> queryIndex(ObjectSchema schema, Index index, SatisfyResult satisfyResult, Map<Path, Range<Object>> query, List<Sort> sort, int count, PagingToken paging);
+    protected abstract CompletableFuture<PagedList<Map<String, Object>>> queryIndex(ObjectSchema schema, Index index, SatisfyResult satisfyResult, Map<Name, Range<Object>> query, List<Sort> sort, int count, PagingToken paging);
 
     @Override
     public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
@@ -66,11 +66,11 @@ public abstract class PartitionedStorage implements Storage {
 
         List<Sort> indexSort = null;
         for (final Expression conjunction : disjunction) {
-            final Map<Path, Range<Object>> query = new HashMap<>();
-            for(final Map.Entry<Path, Range<Object>> entry : conjunction.visit(new RangeVisitor()).entrySet()) {
-                final Path path = entry.getKey();
+            final Map<Name, Range<Object>> query = new HashMap<>();
+            for(final Map.Entry<Name, Range<Object>> entry : conjunction.visit(new RangeVisitor()).entrySet()) {
+                final Name name = entry.getKey();
 //                if(path.isChild(Path.of(Reserved.THIS))) {
-                    query.put(path, entry.getValue());
+                    query.put(name, entry.getValue());
 //                }
             }
 
@@ -100,7 +100,7 @@ public abstract class PartitionedStorage implements Storage {
                     queries.add((c, p, stats) -> queryIndex(schema, index, satisfy, query, sort, c, p));
 
                 } else {
-                    throw new UnsupportedQueryException(schema.getName(), expression, "no index");
+                    throw new UnsupportedQueryException(schema.getQualifiedName(), expression, "no index");
                 }
             }
         }
@@ -108,7 +108,7 @@ public abstract class PartitionedStorage implements Storage {
         return queries;
     }
 
-    public static Optional<SatisfyResult> satisfy(final Iterable<Index> indexes, final Map<Path, Range<Object>> query, final List<Sort> sort) {
+    public static Optional<SatisfyResult> satisfy(final Iterable<Index> indexes, final Map<Name, Range<Object>> query, final List<Sort> sort) {
 
         Optional<SatisfyResult> best = Optional.empty();
         for (final Index index : indexes) {
@@ -128,9 +128,9 @@ public abstract class PartitionedStorage implements Storage {
         return best;
     }
 
-    public static Optional<String> constantId(final Map<Path, Range<Object>> query) {
+    public static Optional<String> constantId(final Map<Name, Range<Object>> query) {
 
-        final Range<Object> range = query.get(Path.of(Reserved.ID));
+        final Range<Object> range = query.get(Name.of(Reserved.ID));
         if(range instanceof Range.Eq) {
             final Object eq = ((Range.Eq<?>) range).getEq();
             if(eq instanceof String) {
@@ -140,25 +140,25 @@ public abstract class PartitionedStorage implements Storage {
         return Optional.empty();
     }
 
-    public static Optional<SatisfyResult> satisfy(final Index index, final Map<Path, Range<Object>> query, final List<Sort> sort) {
+    public static Optional<SatisfyResult> satisfy(final Index index, final Map<Name, Range<Object>> query, final List<Sort> sort) {
 
-        final Map<Path, Object> constants = new HashMap<>();
+        final Map<Name, Object> constants = new HashMap<>();
         query.forEach((k, v) -> {
             if(v instanceof Range.Eq) {
                 constants.put(k, ((Range.Eq<?>) v).getEq());
             }
         });
 
-        final List<Path> partition;
-        final Map<String, Path> over = index.getOver();
+        final List<Name> partition;
+        final Map<String, Name> over = index.getOver();
         if(over.isEmpty()) {
             partition = index.getPartition();
         } else {
             partition = index.getPartition().stream()
                     .map(v -> {
-                        final Path overPath = over.get(v.first());
-                        if(overPath != null) {
-                            return overPath.with(v.withoutFirst());
+                        final Name overName = over.get(v.first());
+                        if(overName != null) {
+                            return overName.with(v.withoutFirst());
                         } else {
                             return v;
                         }
@@ -166,22 +166,22 @@ public abstract class PartitionedStorage implements Storage {
                     .collect(Collectors.toList());
         }
 
-        final Set<Path> matched = new HashSet<>();
+        final Set<Name> matched = new HashSet<>();
         final List<Object> partitionValues = new ArrayList<>();
-        for(final Path path : partition) {
-            if(constants.containsKey(path)) {
-                partitionValues.add(constants.get(path));
-                matched.add(path);
+        for(final Name name : partition) {
+            if(constants.containsKey(name)) {
+                partitionValues.add(constants.get(name));
+                matched.add(name);
             } else {
                 return Optional.empty();
             }
         }
         final List<Object> sortValues = new ArrayList<>();
         for(final Sort s : index.getSort()) {
-            final Path path = s.getPath();
-            if(constants.containsKey(path)) {
-                sortValues.add(constants.get(path));
-                matched.add(path);
+            final Name name = s.getName();
+            if(constants.containsKey(name)) {
+                sortValues.add(constants.get(name));
+                matched.add(name);
             } else {
                 break;
             }
@@ -189,10 +189,10 @@ public abstract class PartitionedStorage implements Storage {
         int matchedSort = sortValues.size();
         boolean reversed = false;
         for(final Sort thatSort : sort) {
-            if(!constants.containsKey(thatSort.getPath())) {
+            if(!constants.containsKey(thatSort.getName())) {
                 if (matchedSort < index.getSort().size()) {
                     final Sort thisSort = index.getSort().get(matchedSort);
-                    if (thisSort.getPath().equals(thatSort.getPath())) {
+                    if (thisSort.getName().equals(thatSort.getName())) {
                         final Sort.Order thisOrder = thisSort.getOrder();
                         if ((reversed ? thisOrder.reverse() : thisOrder).equals(thatSort.getOrder())) {
                             ++matchedSort;
@@ -274,11 +274,11 @@ public abstract class PartitionedStorage implements Storage {
 
         private final boolean reversed;
 
-        private final Set<Path> matched;
+        private final Set<Name> matched;
 
-        public boolean isMatched(final Path path) {
+        public boolean isMatched(final Name name) {
 
-            return matched != null && matched.contains(path);
+            return matched != null && matched.contains(name);
         }
 
         @Override

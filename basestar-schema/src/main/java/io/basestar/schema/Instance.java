@@ -21,6 +21,7 @@ package io.basestar.schema;
  */
 
 import com.google.common.collect.Maps;
+import io.basestar.util.Name;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -48,12 +49,12 @@ public class Instance extends AbstractMap<String, Object> implements Serializabl
         this.backing = Maps.newHashMap(copy.backing);
     }
 
-    public String getSchema() {
+    public Name getSchema() {
 
         return getSchema(backing);
     }
 
-    public Instance setSchema(final String schema) {
+    public Instance setSchema(final Name schema) {
 
         setSchema(backing, schema);
         return this;
@@ -142,14 +143,15 @@ public class Instance extends AbstractMap<String, Object> implements Serializabl
         return backing.entrySet();
     }
 
-    public static String getSchema(final Map<String, Object> data) {
+    public static Name getSchema(final Map<String, Object> data) {
 
-        return (String)data.get(Reserved.SCHEMA);
+        final String qualifiedName = (String)data.get(Reserved.SCHEMA);
+        return qualifiedName == null ? null : Name.parse(qualifiedName);
     }
 
-    public static void setSchema(final Map<String, Object> object, final String schema) {
+    public static void setSchema(final Map<String, Object> object, final Name qualifiedName) {
 
-        object.put(Reserved.SCHEMA, schema);
+        object.put(Reserved.SCHEMA, qualifiedName == null ? null : qualifiedName.toString());
     }
 
     public static String getId(final Map<String, Object> object) {

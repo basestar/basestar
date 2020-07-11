@@ -33,8 +33,8 @@ import io.basestar.schema.Permission;
 import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.storage.exception.ObjectMissingException;
 import io.basestar.storage.exception.VersionMismatchException;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import io.basestar.util.Path;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
@@ -93,7 +93,7 @@ public class UpdateAction implements Action {
                 throw new ObjectMissingException(options.getSchema(), id);
             }
         } else {
-            if(!Instance.getSchema(before).equals(schema.getName())) {
+            if(!Instance.getSchema(before).equals(schema.getQualifiedName())) {
                 throw new IllegalStateException("Cannot change instance schema");
             }
 
@@ -125,7 +125,7 @@ public class UpdateAction implements Action {
         final Map<String, Object> initial = new HashMap<>(schema.create(data));
 
         Instance.setId(initial, id);
-        Instance.setSchema(initial, schema.getName());
+        Instance.setSchema(initial, schema.getQualifiedName());
         Instance.setVersion(initial, version);
         Instance.setCreated(initial, created);
         Instance.setUpdated(initial, updated);
@@ -159,7 +159,7 @@ public class UpdateAction implements Action {
     }
 
     @Override
-    public Set<Path> afterExpand() {
+    public Set<Name> afterExpand() {
 
         return options.getExpand();
     }
@@ -168,11 +168,11 @@ public class UpdateAction implements Action {
     public Event event(final Instance before, final Instance after) {
 
         if(before == null) {
-            final String schema = Instance.getSchema(after);
+            final Name schema = Instance.getSchema(after);
             final String id = Instance.getId(after);
             return ObjectCreatedEvent.of(schema, id, after);
         } else {
-            final String schema = Instance.getSchema(before);
+            final Name schema = Instance.getSchema(before);
             final String id = Instance.getId(before);
             final Long version = Instance.getVersion(before);
             assert version != null;
@@ -181,7 +181,7 @@ public class UpdateAction implements Action {
     }
 
     @Override
-    public Set<Path> paths() {
+    public Set<Name> paths() {
 
         // FIXME: shouldn't have to bind here, need to fix multi-part path constants in parser
         return Nullsafe.option(options.getExpressions()).values().stream()

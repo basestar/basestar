@@ -24,14 +24,15 @@ import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
 import io.basestar.schema.ViewSchema;
 import io.basestar.type.TypeContext;
+import io.basestar.util.Name;
 
 public class ViewSchemaMapper<T> extends InstanceSchemaMapper<T, ViewSchema.Builder> {
 
-    private final String from;
+    private final Name from;
 
     private final Expression where;
 
-    public ViewSchemaMapper(final MappingContext context, final String name, final TypeContext type, final String from, final Expression where) {
+    public ViewSchemaMapper(final MappingContext context, final Name name, final TypeContext type, final Name from, final Expression where) {
 
         super(context, name, type, ViewSchema.Builder.class);
         this.from = from;

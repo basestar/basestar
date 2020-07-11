@@ -20,7 +20,14 @@ package io.basestar.schema.exception;
  * #L%
  */
 
+import io.basestar.util.Name;
+
 public class ReservedNameException extends RuntimeException {
+
+    public ReservedNameException(final Name qualifiedName) {
+
+        this(qualifiedName.toString());
+    }
 
     public ReservedNameException(final String name) {
 

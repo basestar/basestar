@@ -37,8 +37,8 @@ import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseInteger;
 import io.basestar.schema.use.UseString;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import io.basestar.util.Path;
 import io.basestar.util.Sort;
 import lombok.Data;
 import lombok.Getter;
@@ -61,7 +61,7 @@ public class Index implements Named, Described, Serializable, Extendable {
     private static final int DEFAULT_MAX = 100;
 
     @Nonnull
-    private final String name;
+    private final Name qualifiedName;
 
     private final long version;
 
@@ -69,7 +69,7 @@ public class Index implements Named, Described, Serializable, Extendable {
     private final String description;
 
     @Nonnull
-    private final List<Path> partition;
+    private final List<Name> partition;
 
     @Nonnull
     private final List<Sort> sort;
@@ -78,7 +78,7 @@ public class Index implements Named, Described, Serializable, Extendable {
     private final SortedSet<String> projection;
 
     @Nonnull
-    private final SortedMap<String, Path> over;
+    private final SortedMap<String, Name> over;
 
     @Nullable
     private final Consistency consistency;
@@ -109,7 +109,7 @@ public class Index implements Named, Described, Serializable, Extendable {
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         @JsonSerialize(contentUsing = ToStringSerializer.class)
         @JsonDeserialize(using = AbbrevListDeserializer.class)
-        private List<Path> partition;
+        private List<Name> partition;
 
         @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
@@ -128,7 +128,7 @@ public class Index implements Named, Described, Serializable, Extendable {
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonSerialize(contentUsing = ToStringSerializer.class)
         @JsonDeserialize(contentUsing = PathDeserializer.class)
-        private Map<String, Path> over;
+        private Map<String, Name> over;
 
         @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
@@ -142,9 +142,9 @@ public class Index implements Named, Described, Serializable, Extendable {
 
         private Integer max;
 
-        public Index build(final String name) {
+        public Index build(final Name qualifiedName) {
 
-            return new Index(this, name);
+            return new Index(this, qualifiedName);
         }
     }
 
@@ -153,9 +153,9 @@ public class Index implements Named, Described, Serializable, Extendable {
         return new Builder();
     }
 
-    private Index(final Builder builder, final String name) {
+    private Index(final Builder builder, final Name qualifiedName) {
 
-        this.name = name;
+        this.qualifiedName = qualifiedName;
         this.version = Nullsafe.option(builder.getVersion(), 1L);
         this.description = builder.getDescription();
         this.partition = Nullsafe.immutableCopy(builder.getPartition());
@@ -167,16 +167,16 @@ public class Index implements Named, Described, Serializable, Extendable {
         this.consistency = builder.getConsistency();
         this.max = Nullsafe.option(builder.getMax(), DEFAULT_MAX);
         this.extensions = Nullsafe.immutableSortedCopy(builder.getExtensions());
-        if (Reserved.isReserved(name)) {
-            throw new ReservedNameException(name);
+        if (Reserved.isReserved(qualifiedName.last())) {
+            throw new ReservedNameException(qualifiedName);
         }
-        for(final Path p : partition) {
+        for(final Name p : partition) {
             if(p.isEmpty()) {
                 throw new IndexValidationException("Partition path cannot be empty");
             }
         }
         for(final Sort s : sort) {
-            if(s.getPath().isEmpty()) {
+            if(s.getName().isEmpty()) {
                 throw new IndexValidationException("Sort path cannot be empty");
             }
         }
@@ -185,7 +185,7 @@ public class Index implements Named, Described, Serializable, Extendable {
         }
         if(isMultiValue()) {
             for(final Sort s : sort) {
-                if(over.containsKey(s.getPath().first())) {
+                if(over.containsKey(s.getName().first())) {
                     throw new IndexValidationException("Multi-value keys cannot be used as sort keys");
                 }
             }
@@ -214,25 +214,25 @@ public class Index implements Named, Described, Serializable, Extendable {
         return !over.isEmpty();
     }
 
-    public Set<Path> getMultiValuePaths() {
+    public Set<Name> getMultiValuePaths() {
 
         if(over.isEmpty()) {
             return Collections.emptySet();
         } else {
             return over.entrySet().stream()
                     .flatMap(e -> partition.stream()
-                            .filter(v -> v.isChild(Path.of(e.getKey())))
+                            .filter(v -> v.isChild(Name.of(e.getKey())))
                             .map(v -> e.getValue().with(v.withoutFirst())))
                     .collect(Collectors.toSet());
         }
     }
 
     @Deprecated
-    public Set<Path> requiredExpand(final ObjectSchema schema) {
+    public Set<Name> requiredExpand(final ObjectSchema schema) {
 
-        final Set<Path> paths = new HashSet<>(partition);
-        sort.forEach(v -> paths.add(v.getPath()));
-        return schema.requiredExpand(paths);
+        final Set<Name> names = new HashSet<>(partition);
+        sort.forEach(v -> names.add(v.getName()));
+        return schema.requiredExpand(names);
     }
 
     public List<Object> readPartition(final Map<String, Object> data) {
@@ -243,7 +243,7 @@ public class Index implements Named, Described, Serializable, Extendable {
 
     public List<Object> readSort(final Map<String, Object> data) {
 
-        return sort.stream().map(k -> k.getPath().apply(data))
+        return sort.stream().map(k -> k.getName().apply(data))
                 .collect(Collectors.toList());
     }
 
@@ -262,16 +262,16 @@ public class Index implements Named, Described, Serializable, Extendable {
         return result;
     }
 
-    public List<Path> resolvePartitionPaths() {
+    public List<Name> resolvePartitionPaths() {
 
         if(over.isEmpty()) {
             return partition;
         } else {
             return partition.stream()
                     .map(v -> {
-                        final Path overPath = over.get(v.first());
-                        if(overPath != null) {
-                            return overPath.with(v.withoutFirst());
+                        final Name overName = over.get(v.first());
+                        if(overName != null) {
+                            return overName.with(v.withoutFirst());
                         } else {
                             return v;
                         }
@@ -298,7 +298,7 @@ public class Index implements Named, Described, Serializable, Extendable {
             fullProjection.add(Reserved.ID);
             fullProjection.add(Reserved.VERSION);
             partition.forEach(v -> fullProjection.add(v.first()));
-            sort.forEach(v -> fullProjection.add(v.getPath().first()));
+            sort.forEach(v -> fullProjection.add(v.getName().first()));
             final Map<String, Object> result = new HashMap<>();
             fullProjection.forEach(k -> {
                 if(data.containsKey(k)) {
@@ -330,15 +330,15 @@ public class Index implements Named, Described, Serializable, Extendable {
             }
         } else {
             final Map<String, Collection<?>> values = new HashMap<>();
-            for (final Map.Entry<String, Path> entry : over.entrySet()) {
-                final Path path = entry.getValue();
-                final Object value = path.apply(data);
+            for (final Map.Entry<String, Name> entry : over.entrySet()) {
+                final Name name = entry.getValue();
+                final Object value = name.apply(data);
                 if (value instanceof Collection<?>) {
                     values.put(entry.getKey(), (Collection<?>) value);
                 } else if(value instanceof Map<?, ?>) {
                     values.put(entry.getKey(), ((Map<?, ?>)value).values());
                 } else {
-                    throw new IllegalStateException("Multi-value index path " + path + " must evaluate to a collection, a map, or null");
+                    throw new IllegalStateException("Multi-value index path " + name + " must evaluate to a collection, a map, or null");
                 }
             }
             final Map<Key, Map<String, Object>> records = new HashMap<>();

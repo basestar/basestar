@@ -20,7 +20,7 @@ package io.basestar.database.util;
  * #L%
  */
 
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -33,9 +33,9 @@ public class ExpandKey<T> {
 
     private final T key;
 
-    private final Set<Path> expand;
+    private final Set<Name> expand;
 
-    public static <T> ExpandKey<T> from(final T key, final Set<Path> expand) {
+    public static <T> ExpandKey<T> from(final T key, final Set<Name> expand) {
 
         assert expand != null;
         return new ExpandKey<>(key, expand);

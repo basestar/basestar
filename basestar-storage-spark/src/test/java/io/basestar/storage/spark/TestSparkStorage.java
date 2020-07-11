@@ -48,13 +48,13 @@ public class TestSparkStorage extends TestStorage {
                 .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
                 .getOrCreate();
 
-        final SparkRouting routing = new SparkRouting() {
+        final SparkStrategy strategy = new SparkStrategy() {
 
             @Override
             public Dataset<Row> objectRead(final SparkSession session, final ObjectSchema schema) {
 
                 final StructType structType = SparkSchemaUtils.structType(schema, null);
-                final List<Row> items = Nullsafe.option(data.get(schema.getName())).stream()
+                final List<Row> items = Nullsafe.option(data.get(schema.getQualifiedName().toString())).stream()
                         .map(schema::create)
                         .map(v -> SparkSchemaUtils.toSpark(schema, structType, v))
                         .collect(Collectors.toList());
@@ -71,7 +71,7 @@ public class TestSparkStorage extends TestStorage {
         };
 
         return SparkStorage.builder()
-                .setRouting(routing)
+                .setStrategy(strategy)
                 .setSession(session)
                 .build();
     }

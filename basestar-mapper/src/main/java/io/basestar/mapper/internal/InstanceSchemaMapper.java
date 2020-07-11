@@ -27,6 +27,7 @@ import io.basestar.schema.InstanceSchema;
 import io.basestar.type.AnnotationContext;
 import io.basestar.type.TypeContext;
 import io.basestar.type.has.HasType;
+import io.basestar.util.Name;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
@@ -37,14 +38,14 @@ import java.util.stream.Collectors;
 
 public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> implements SchemaMapper<T, Map<String, Object>> {
 
-    private final String name;
+    private final Name name;
 
     private final TypeContext type;
 
     private final List<MemberMapper<B>> members;
 
     @SuppressWarnings("unchecked")
-    public InstanceSchemaMapper(final MappingContext context, final String name, final TypeContext type, final Class<B> builderType) {
+    public InstanceSchemaMapper(final MappingContext context, final Name name, final TypeContext type, final Class<B> builderType) {
 
         this.name = name;
         this.type = type;
@@ -104,7 +105,7 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
     }
 
     @Override
-    public String name() {
+    public Name qualifiedName() {
 
         return name;
     }

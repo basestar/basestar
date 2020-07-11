@@ -25,8 +25,10 @@ import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
-import io.basestar.schema.exception.MissingTypeException;
-import io.basestar.util.Path;
+import io.basestar.schema.exception.MissingSchemaException;
+import io.basestar.schema.util.Expander;
+import io.basestar.schema.util.Ref;
+import io.basestar.util.Name;
 import lombok.Data;
 
 import java.io.DataInput;
@@ -36,7 +38,7 @@ import java.util.Set;
 
 public interface UseNamed<T> extends Use<T> {
 
-    String getName();
+    Name getQualifiedName();
 
     static Lazy from(final String name) {
 
@@ -45,25 +47,25 @@ public interface UseNamed<T> extends Use<T> {
 
     static Lazy from(final String name, final Object config) {
 
-        return new Lazy(name, config);
+        return new Lazy(Name.parse(name), config);
     }
 
     @Override
     default Object toJson() {
 
-        return getName();
+        return getQualifiedName().toString();
     }
 
     @Override
     default io.swagger.v3.oas.models.media.Schema<?> openApi() {
 
-        return new io.swagger.v3.oas.models.media.ObjectSchema().$ref(getName());
+        return new io.swagger.v3.oas.models.media.ObjectSchema().$ref(getQualifiedName().toString());
     }
 
     @Data
     class Lazy implements UseNamed<Object> {
 
-        private final String name;
+        private final Name qualifiedName;
 
         private final Object config;
 
@@ -76,7 +78,7 @@ public interface UseNamed<T> extends Use<T> {
         @Override
         public Use<?> resolve(final Schema.Resolver resolver) {
 
-            final Schema<?> schema = resolver.requireSchema(name);
+            final Schema<?> schema = resolver.requireSchema(qualifiedName);
             if(schema instanceof EnumSchema) {
                 return UseEnum.from((EnumSchema) schema, config);
             } else if(schema instanceof StructSchema) {
@@ -84,7 +86,7 @@ public interface UseNamed<T> extends Use<T> {
             } else if(schema instanceof ObjectSchema) {
                 return UseRef.from((ObjectSchema) schema, config);
             } else {
-                throw new MissingTypeException(name);
+                throw new MissingSchemaException(qualifiedName);
             }
         }
 
@@ -101,27 +103,27 @@ public interface UseNamed<T> extends Use<T> {
         }
 
         @Override
-        public Use<?> typeOf(final Path path) {
+        public Use<?> typeOf(final Name name) {
 
             throw new UnsupportedOperationException();
         }
 
         @Override
         @Deprecated
-        public Set<Path> requiredExpand(final Set<Path> paths) {
+        public Set<Name> requiredExpand(final Set<Name> names) {
 
             throw new UnsupportedOperationException();
         }
 
         @Override
         @Deprecated
-        public Multimap<Path, Instance> refs(final Object value) {
+        public Multimap<Name, Instance> refs(final Object value) {
 
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public Object expand(final Object value, final Expander expander, final Set<Path> expand) {
+        public Object expand(final Object value, final Expander expander, final Set<Name> expand) {
 
             throw new UnsupportedOperationException();
         }
@@ -145,7 +147,7 @@ public interface UseNamed<T> extends Use<T> {
         }
 
         @Override
-        public Object evaluateTransients(final Context context, final Object value, final Set<Path> expand) {
+        public Object evaluateTransients(final Context context, final Object value, final Set<Name> expand) {
 
             throw new UnsupportedOperationException();
         }
@@ -153,17 +155,17 @@ public interface UseNamed<T> extends Use<T> {
         @Override
         public String toString() {
 
-            return name;
+            return qualifiedName.toString();
         }
 
         @Override
-        public Set<Path> transientExpand(final Path path, final Set<Path> expand) {
+        public Set<Name> transientExpand(final Name name, final Set<Name> expand) {
 
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public Set<Constraint.Violation> validate(final Context context, final Path path, final Object value) {
+        public Set<Constraint.Violation> validate(final Context context, final Name name, final Object value) {
 
             throw new UnsupportedOperationException();
         }
@@ -171,17 +173,17 @@ public interface UseNamed<T> extends Use<T> {
         @Override
         public io.swagger.v3.oas.models.media.Schema<?> openApi() {
 
-            return new io.swagger.v3.oas.models.media.ObjectSchema().$ref(name);
+            return new io.swagger.v3.oas.models.media.ObjectSchema().$ref(qualifiedName.toString());
         }
 
         @Override
-        public Set<Expression> refQueries(final String otherTypeName, final Set<Path> expand, final Path path) {
+        public Set<Expression> refQueries(final Name otherSchemaName, final Set<Name> expand, final Name name) {
 
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public Set<Path> refExpand(final String otherTypeName, final Set<Path> expand) {
+        public Set<Name> refExpand(final Name otherSchemaName, final Set<Name> expand) {
 
             throw new UnsupportedOperationException();
         }

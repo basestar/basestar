@@ -57,7 +57,7 @@ public class TestCognitoStorage {
 
         return CognitoUserStorage.builder()
                 .setClient(CognitoIdentityProviderAsyncClient.builder().region(Region.of("us-east-1")).build())
-                .setRouting(schema -> "us-east-1_rhBrmRi8n")
+                .setStrategy(schema -> "us-east-1_rhBrmRi8n")
                 .build();
     }
 

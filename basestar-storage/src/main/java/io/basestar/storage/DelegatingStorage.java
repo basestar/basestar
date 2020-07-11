@@ -112,14 +112,6 @@ public interface DelegatingStorage extends Storage {
             public CompletableFuture<BatchResponse> read() {
 
                 return BatchResponse.mergeFutures(transactions.values().stream().map(ReadTransaction::read));
-
-//                final List<CompletableFuture<BatchResponse>> futures = batches.values().stream()
-//                        .map(ReadTransaction::read).collect(Collectors.toList());
-//
-//                return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]))
-//                        .thenApply(ignored -> new BatchResponse.Basic(futures.stream()
-//                                .flatMap(future -> future.getNow(BatchResponse.empty()).stream())
-//                                .collect(Collectors.toList())));
             }
         };
     }
@@ -200,18 +192,6 @@ public interface DelegatingStorage extends Storage {
                 } else {
 
                     return BatchResponse.mergeFutures(transactions.values().stream().map(WriteTransaction::commit));
-//
-//                    final List<CompletableFuture<BatchResponse>> futures = transactions.values().stream()
-//                            .map(WriteTransaction::commit)
-//                            .collect(Collectors.toList());
-//
-//                    return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]))
-//                            .thenApply(ignored -> {
-//                                final Set<Map<String, Object>> results = futures.stream()
-//                                        .flatMap(v -> v.getNow(BatchResponse.empty()).stream())
-//                                        .collect(Collectors.toSet());
-//                                return new BatchResponse.Basic(results);
-//                            });
                 }
             }
         };

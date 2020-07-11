@@ -24,6 +24,7 @@ import io.basestar.database.event.ObjectEvent;
 import io.basestar.event.Event;
 import io.basestar.stream.Change;
 import io.basestar.stream.Subscription;
+import io.basestar.util.Name;
 import io.basestar.util.PagingToken;
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -34,7 +35,7 @@ import java.util.Set;
 @Accessors(chain = true)
 public class SubscriptionQueryEvent implements ObjectEvent {
 
-    private String schema;
+    private Name schema;
 
     private String id;
 
@@ -48,12 +49,12 @@ public class SubscriptionQueryEvent implements ObjectEvent {
 
     private PagingToken paging;
 
-    public static SubscriptionQueryEvent of(final String schema, final String id, final Change.Event event, final Long before, final Long after, final Set<Subscription.Key> keys) {
+    public static SubscriptionQueryEvent of(final Name schema, final String id, final Change.Event event, final Long before, final Long after, final Set<Subscription.Key> keys) {
 
         return of(schema, id, event, before, after, keys, null);
     }
 
-    public static SubscriptionQueryEvent of(final String schema, final String id, final Change.Event event, final Long before, final Long after, final Set<Subscription.Key> keys, final PagingToken paging) {
+    public static SubscriptionQueryEvent of(final Name schema, final String id, final Change.Event event, final Long before, final Long after, final Set<Subscription.Key> keys, final PagingToken paging) {
 
         return new SubscriptionQueryEvent().setSchema(schema).setId(id).setEvent(event).setBefore(before).setAfter(after).setKeys(keys).setPaging(paging);
     }

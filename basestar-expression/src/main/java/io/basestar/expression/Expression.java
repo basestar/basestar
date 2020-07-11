@@ -22,7 +22,7 @@ package io.basestar.expression;
 
 import io.basestar.expression.parse.ExpressionCache;
 import io.basestar.expression.type.Values;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 
 import java.io.Serializable;
 import java.util.Collections;
@@ -33,11 +33,11 @@ import java.util.stream.Collectors;
 
 public interface Expression extends Serializable {
 
-    Expression bind(Context context, PathTransform root);
+    Expression bind(Context context, NameTransform root);
 
     default Expression bind(final Context context) {
 
-        return bind(context, PathTransform.noop());
+        return bind(context, NameTransform.noop());
     }
 
     Object evaluate(Context context);
@@ -55,7 +55,7 @@ public interface Expression extends Serializable {
 
     //    Query query();
 
-    Set<Path> paths();
+    Set<Name> paths();
 
     String token();
 

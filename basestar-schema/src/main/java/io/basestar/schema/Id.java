@@ -30,8 +30,8 @@ import com.google.common.collect.ImmutableSortedMap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.ExpressionDeseriaizer;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import io.basestar.util.Path;
 import lombok.Data;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -77,9 +77,9 @@ public class Id implements Serializable {
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         private final Map<String, Constraint.Builder> constraints = new TreeMap<>();
 
-        public Id build() {
+        public Id build(final Name qualifiedName) {
 
-            return new Id(this);
+            return new Id(this, qualifiedName);
         }
     }
 
@@ -88,11 +88,11 @@ public class Id implements Serializable {
         return new Builder();
     }
 
-    public Id(final Builder builder) {
+    public Id(final Builder builder, final Name qualifiedName) {
 
         this.expression = builder.getExpression();
         this.constraints = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getConstraints()).entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(e.getKey()))));
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(qualifiedName.with(e.getKey())))));
     }
 
     public String evaluate(final String value, final Context context) {
@@ -104,19 +104,19 @@ public class Id implements Serializable {
         }
     }
 
-    public Set<Constraint.Violation> validate(final Path path, final Object after, final Context context) {
+    public Set<Constraint.Violation> validate(final Name path, final Object after, final Context context) {
 
         final Set<Constraint.Violation> violations = new HashSet<>();
-        final Path newPath = path.with(Reserved.ID);
+        final Name newName = path.with(Reserved.ID);
         if(after == null) {
-            violations.add(new Constraint.Violation(newPath, Constraint.REQUIRED));
+            violations.add(new Constraint.Violation(newName, Constraint.REQUIRED));
         } else if(!constraints.isEmpty()) {
             final Context newContext = context.with(VAR_VALUE, after);
             for(final Map.Entry<String, Constraint> entry : constraints.entrySet()) {
                 final String name = entry.getKey();
                 final Constraint constraint = entry.getValue();
                 if(!constraint.getExpression().evaluatePredicate(newContext)) {
-                    violations.add(new Constraint.Violation(newPath, name));
+                    violations.add(new Constraint.Violation(newName, name));
                 }
             }
         }

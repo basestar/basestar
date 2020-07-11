@@ -23,10 +23,10 @@ package io.basestar.storage.elasticsearch;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
-import io.basestar.expression.PathTransform;
+import io.basestar.expression.NameTransform;
 import io.basestar.expression.compare.*;
 import io.basestar.expression.constant.Constant;
-import io.basestar.expression.constant.PathConstant;
+import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.function.In;
 import io.basestar.expression.iterate.ForAny;
 import io.basestar.expression.iterate.Of;
@@ -35,7 +35,7 @@ import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
 import io.basestar.expression.text.Like;
 import io.basestar.storage.elasticsearch.mapping.FieldType;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import org.apache.lucene.search.join.ScoreMode;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
@@ -62,51 +62,51 @@ public class ElasticsearchExpressionVisitor implements ExpressionVisitor.Default
 
     private QueryBuilder visitEqImpl(final Expression lhs, final Expression rhs) {
 
-        if (lhs instanceof PathConstant && rhs instanceof Constant) {
-            return eq(((PathConstant) lhs).getPath(), ((Constant) rhs).getValue());
-        } else if (lhs instanceof Constant && rhs instanceof PathConstant) {
-            return eq(((PathConstant) rhs).getPath(), ((Constant) lhs).getValue());
+        if (lhs instanceof NameConstant && rhs instanceof Constant) {
+            return eq(((NameConstant) lhs).getName(), ((Constant) rhs).getValue());
+        } else if (lhs instanceof Constant && rhs instanceof NameConstant) {
+            return eq(((NameConstant) rhs).getName(), ((Constant) lhs).getValue());
         } else {
             return null;
         }
     }
 
-    private QueryBuilder nest(final Path path, QueryBuilder query) {
+    private QueryBuilder nest(final Name name, QueryBuilder query) {
 
-        if(path.size() == 1) {
+        if(name.size() == 1) {
             return query;
         } else {
-            for(int i = 0; i != path.size() - 1; ++i) {
-                final Path nestedPath = path.subPath(0, path.size() - (i + 1));
-                query = QueryBuilders.nestedQuery(nestedPath.toString(), query, ScoreMode.Avg);
+            for(int i = 0; i != name.size() - 1; ++i) {
+                final Name nestedName = name.range(0, name.size() - (i + 1));
+                query = QueryBuilders.nestedQuery(nestedName.toString(), query, ScoreMode.Avg);
             }
             return query;
         }
     }
 
-    private QueryBuilder eq(final Path path, final Object value) {
+    private QueryBuilder eq(final Name name, final Object value) {
 
-        return nest(path, QueryBuilders.termQuery(path.toString(), value));
+        return nest(name, QueryBuilders.termQuery(name.toString(), value));
     }
 
-    private QueryBuilder lt(final Path path, final Object value) {
+    private QueryBuilder lt(final Name name, final Object value) {
 
-        return nest(path, QueryBuilders.rangeQuery(path.toString()).lt(value));
+        return nest(name, QueryBuilders.rangeQuery(name.toString()).lt(value));
     }
 
-    private QueryBuilder gt(final Path path, final Object value) {
+    private QueryBuilder gt(final Name name, final Object value) {
 
-        return nest(path, QueryBuilders.rangeQuery(path.toString()).gt(value));
+        return nest(name, QueryBuilders.rangeQuery(name.toString()).gt(value));
     }
 
-    private QueryBuilder lte(final Path path, final Object value) {
+    private QueryBuilder lte(final Name name, final Object value) {
 
-        return nest(path, QueryBuilders.rangeQuery(path.toString()).lte(value));
+        return nest(name, QueryBuilders.rangeQuery(name.toString()).lte(value));
     }
 
-    private QueryBuilder gte(final Path path, final Object value) {
+    private QueryBuilder gte(final Name name, final Object value) {
 
-        return nest(path, QueryBuilders.rangeQuery(path.toString()).gte(value));
+        return nest(name, QueryBuilders.rangeQuery(name.toString()).gte(value));
     }
 
     @Override
@@ -114,10 +114,10 @@ public class ElasticsearchExpressionVisitor implements ExpressionVisitor.Default
 
         final Expression lhs = expression.getLhs();
         final Expression rhs = expression.getRhs();
-        if (lhs instanceof PathConstant && rhs instanceof Constant) {
-            return gt(((PathConstant) lhs).getPath(), ((Constant) rhs).getValue());
-        } else if (lhs instanceof Constant && rhs instanceof PathConstant) {
-            return lte(((PathConstant) rhs).getPath(), ((Constant) lhs).getValue());
+        if (lhs instanceof NameConstant && rhs instanceof Constant) {
+            return gt(((NameConstant) lhs).getName(), ((Constant) rhs).getValue());
+        } else if (lhs instanceof Constant && rhs instanceof NameConstant) {
+            return lte(((NameConstant) rhs).getName(), ((Constant) lhs).getValue());
         } else {
             return null;
         }
@@ -128,10 +128,10 @@ public class ElasticsearchExpressionVisitor implements ExpressionVisitor.Default
 
         final Expression lhs = expression.getLhs();
         final Expression rhs = expression.getRhs();
-        if (lhs instanceof PathConstant && rhs instanceof Constant) {
-            return gte(((PathConstant) lhs).getPath(), ((Constant) rhs).getValue());
-        } else if (lhs instanceof Constant && rhs instanceof PathConstant) {
-            return lt(((PathConstant) rhs).getPath(), ((Constant) lhs).getValue());
+        if (lhs instanceof NameConstant && rhs instanceof Constant) {
+            return gte(((NameConstant) lhs).getName(), ((Constant) rhs).getValue());
+        } else if (lhs instanceof Constant && rhs instanceof NameConstant) {
+            return lt(((NameConstant) rhs).getName(), ((Constant) lhs).getValue());
         } else {
             return null;
         }
@@ -142,10 +142,10 @@ public class ElasticsearchExpressionVisitor implements ExpressionVisitor.Default
 
         final Expression lhs = expression.getLhs();
         final Expression rhs = expression.getRhs();
-        if (lhs instanceof PathConstant && rhs instanceof Constant) {
-            return lt(((PathConstant) lhs).getPath(), ((Constant) rhs).getValue());
-        } else if (lhs instanceof Constant && rhs instanceof PathConstant) {
-            return gte(((PathConstant) rhs).getPath(), ((Constant) lhs).getValue());
+        if (lhs instanceof NameConstant && rhs instanceof Constant) {
+            return lt(((NameConstant) lhs).getName(), ((Constant) rhs).getValue());
+        } else if (lhs instanceof Constant && rhs instanceof NameConstant) {
+            return gte(((NameConstant) rhs).getName(), ((Constant) lhs).getValue());
         } else {
             return null;
         }
@@ -156,10 +156,10 @@ public class ElasticsearchExpressionVisitor implements ExpressionVisitor.Default
 
         final Expression lhs = expression.getLhs();
         final Expression rhs = expression.getRhs();
-        if (lhs instanceof PathConstant && rhs instanceof Constant) {
-            return lte(((PathConstant) lhs).getPath(), ((Constant) rhs).getValue());
-        } else if (lhs instanceof Constant && rhs instanceof PathConstant) {
-            return gt(((PathConstant) rhs).getPath(), ((Constant) lhs).getValue());
+        if (lhs instanceof NameConstant && rhs instanceof Constant) {
+            return lte(((NameConstant) lhs).getName(), ((Constant) rhs).getValue());
+        } else if (lhs instanceof Constant && rhs instanceof NameConstant) {
+            return gt(((NameConstant) rhs).getName(), ((Constant) lhs).getValue());
         } else {
             return null;
         }
@@ -222,14 +222,14 @@ public class ElasticsearchExpressionVisitor implements ExpressionVisitor.Default
         final Expression rhs = expression.getRhs();
         if(rhs instanceof Of) {
             final Of of = (Of)rhs;
-            if(of.getExpr() instanceof PathConstant) {
-                final Path path = ((PathConstant) of.getExpr()).getPath();
+            if(of.getExpr() instanceof NameConstant) {
+                final Name name = ((NameConstant) of.getExpr()).getName();
                 // map keys not supported
                 if(of.getKey() == null) {
                     final String value = of.getValue();
-                    final Expression bound = lhs.bind(Context.init(), PathTransform.move(Path.of(value), path));
+                    final Expression bound = lhs.bind(Context.init(), NameTransform.move(Name.of(value), name));
                     final QueryBuilder lhsQuery = bound.visit(this);
-                    return QueryBuilders.nestedQuery(path.toString(), lhsQuery, ScoreMode.Avg);
+                    return QueryBuilders.nestedQuery(name.toString(), lhsQuery, ScoreMode.Avg);
                 }
             }
         }
@@ -241,12 +241,12 @@ public class ElasticsearchExpressionVisitor implements ExpressionVisitor.Default
 
         final Expression lhs = expression.getLhs();
         final Expression rhs = expression.getRhs();
-        if (lhs instanceof PathConstant && rhs instanceof Constant) {
-            final Path path = ((PathConstant) lhs).getPath();
+        if (lhs instanceof NameConstant && rhs instanceof Constant) {
+            final Name name = ((NameConstant) lhs).getName();
             final String match = Objects.toString(((Constant) rhs).getValue());
             final Like.Matcher matcher = Like.Matcher.Dialect.DEFAULT.parse(match);
             final String wildcard = Like.Matcher.Dialect.LUCENE.toString(matcher);
-            return nest(path, QueryBuilders.wildcardQuery(path.toString() + FieldType.keywordSuffix(expression.isCaseSensitive()), wildcard));
+            return nest(name, QueryBuilders.wildcardQuery(name.toString() + FieldType.keywordSuffix(expression.isCaseSensitive()), wildcard));
         } else {
             return null;
         }

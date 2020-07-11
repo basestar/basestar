@@ -21,14 +21,14 @@ package io.basestar.storage;
  */
 
 import io.basestar.expression.Expression;
+import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.History;
 import io.basestar.schema.Index;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.exception.UnsupportedConsistencyException;
-import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.storage.util.Pager;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import io.basestar.util.Sort;
 import lombok.RequiredArgsConstructor;
 
@@ -49,7 +49,7 @@ public interface Storage {
         if(history.isEnabled()) {
             final Consistency requested = history.getConsistency();
             if (requested != null && requested.isStronger(bestHistoryWrite)) {
-                throw new UnsupportedConsistencyException(schema.getName() + ".history", name(schema), bestHistoryWrite, requested);
+                throw new UnsupportedConsistencyException(schema.getQualifiedName() + ".history", name(schema), bestHistoryWrite, requested);
             }
         }
         for(final Map.Entry<String, Index> entry : schema.getIndexes().entrySet()) {
@@ -58,7 +58,7 @@ public interface Storage {
             if(requested != null) {
                 final Consistency best = index.isMultiValue() ? bestMultiIndexWrite : bestSingleIndexWrite;
                 if(requested.isStronger(best)) {
-                    throw new UnsupportedConsistencyException(schema.getName() + "." + entry.getKey(), name(schema), best, requested);
+                    throw new UnsupportedConsistencyException(schema.getQualifiedName() + "." + entry.getKey(), name(schema), best, requested);
                 }
             }
         }
@@ -77,7 +77,7 @@ public interface Storage {
 
     List<Pager.Source<Map<String, Object>>> aggregate(ObjectSchema schema, Expression query, Map<String, Expression> group, Map<String, Aggregate> aggregates);
 
-    default Set<Path> canHandleExpand(final ObjectSchema schema, final Set<Path> expand) {
+    default Set<Name> canHandleExpand(final ObjectSchema schema, final Set<Name> expand) {
 
         return Collections.emptySet();
     }
@@ -111,7 +111,7 @@ public interface Storage {
             public ReadTransaction readObject(final ObjectSchema schema, final String id) {
 
                 requests.add(() -> delegate.readObject(schema, id)
-                        .thenApply(v -> BatchResponse.single(schema.getName(), v)));
+                        .thenApply(v -> BatchResponse.single(schema.getQualifiedName(), v)));
                 return this;
             }
 
@@ -119,7 +119,7 @@ public interface Storage {
             public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version) {
 
                 requests.add(() -> delegate.readObjectVersion(schema, id, version)
-                        .thenApply(v -> BatchResponse.single(schema.getName(), v)));
+                        .thenApply(v -> BatchResponse.single(schema.getQualifiedName(), v)));
                 return this;
             }
 

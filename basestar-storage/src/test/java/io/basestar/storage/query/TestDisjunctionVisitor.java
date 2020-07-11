@@ -25,12 +25,12 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.compare.Eq;
 import io.basestar.expression.constant.Constant;
-import io.basestar.expression.constant.PathConstant;
+import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.iterate.ForAny;
 import io.basestar.expression.iterate.Of;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Or;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;
@@ -42,13 +42,13 @@ public class TestDisjunctionVisitor {
     @Test
     public void testDisjunction() {
 
-        final Eq a = new Eq(new PathConstant(Path.of("a")), new Constant(1));
-        final Eq b = new Eq(new PathConstant(Path.of("b")), new Constant(2));
-        final Eq c = new Eq(new PathConstant(Path.of("c")), new Constant(3));
-        final Eq d = new Eq(new PathConstant(Path.of("d")), new Constant(3));
-        final Eq e = new Eq(new PathConstant(Path.of("e")), new Constant(4));
-        final Eq f = new Eq(new PathConstant(Path.of("f")), new Constant(5));
-        final Eq g = new Eq(new PathConstant(Path.of("g")), new Constant(6));
+        final Eq a = new Eq(new NameConstant(Name.of("a")), new Constant(1));
+        final Eq b = new Eq(new NameConstant(Name.of("b")), new Constant(2));
+        final Eq c = new Eq(new NameConstant(Name.of("c")), new Constant(3));
+        final Eq d = new Eq(new NameConstant(Name.of("d")), new Constant(3));
+        final Eq e = new Eq(new NameConstant(Name.of("e")), new Constant(4));
+        final Eq f = new Eq(new NameConstant(Name.of("f")), new Constant(5));
+        final Eq g = new Eq(new NameConstant(Name.of("g")), new Constant(6));
 
         assertEquals(ImmutableSet.of(a, b), disjunction(new Or(a, b)));
 
@@ -83,11 +83,11 @@ public class TestDisjunctionVisitor {
 
         assertEquals(ImmutableSet.of(
             new Eq(
-                    new PathConstant(Path.of("x", "a")),
+                    new NameConstant(Name.of("x", "a")),
                     new Constant(1L)
             ),
             new Eq(
-                    new PathConstant(Path.of("x", "a")),
+                    new NameConstant(Name.of("x", "a")),
                     new Constant(2L)
             )
         ), result);
@@ -101,11 +101,11 @@ public class TestDisjunctionVisitor {
 
         assertEquals(ImmutableSet.of(
                 new ForAny(
-                        new PathConstant(Path.of("x", "a")),
-                        new Of("x", new PathConstant(Path.of("y")))),
+                        new NameConstant(Name.of("x", "a")),
+                        new Of("x", new NameConstant(Name.of("y")))),
                 new ForAny(
-                        new PathConstant(Path.of("x", "b")),
-                        new Of("x", new PathConstant(Path.of("y"))))
+                        new NameConstant(Name.of("x", "b")),
+                        new Of("x", new NameConstant(Name.of("y"))))
         ), result);
 
         // x.a || x.b for any x of y
@@ -122,16 +122,16 @@ public class TestDisjunctionVisitor {
         assertEquals(ImmutableSet.of(
                 new ForAny(
                         new Eq(
-                                new PathConstant(Path.of("x", "a")),
+                                new NameConstant(Name.of("x", "a")),
                                 new Constant(1L)
                         ),
-                        new Of("x", new PathConstant(Path.of("y")))),
+                        new Of("x", new NameConstant(Name.of("y")))),
                 new ForAny(
                         new Eq(
-                                new PathConstant(Path.of("x", "a")),
+                                new NameConstant(Name.of("x", "a")),
                                 new Constant(2L)
                         ),
-                        new Of("x", new PathConstant(Path.of("y"))))
+                        new Of("x", new NameConstant(Name.of("y"))))
         ), result);
 
         // x.a || x.b for any x of y

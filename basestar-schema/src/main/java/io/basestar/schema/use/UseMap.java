@@ -25,12 +25,16 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.expression.constant.PathConstant;
+import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.iterate.ForAny;
 import io.basestar.expression.iterate.Of;
-import io.basestar.schema.*;
+import io.basestar.schema.Constraint;
+import io.basestar.schema.Instance;
+import io.basestar.schema.Schema;
 import io.basestar.schema.exception.InvalidTypeException;
-import io.basestar.util.Path;
+import io.basestar.schema.util.Expander;
+import io.basestar.schema.util.Ref;
+import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.MapSchema;
 import lombok.Data;
 
@@ -150,22 +154,22 @@ public class UseMap<T> implements Use<Map<String, T>> {
     }
 
     @Override
-    public Set<Expression> refQueries(final String otherTypeName, final Set<Path> expand, final Path path) {
+    public Set<Expression> refQueries(final Name otherSchemaName, final Set<Name> expand, final Name name) {
 
         final int hash = System.identityHashCode(this);
         final String k = "k" + hash;
         final String v = "v" + hash;
         // FIXME: expand
-        return getType().refQueries(otherTypeName, expand, Path.of(v)).stream().map(
-                q -> new ForAny(q, new Of(k, v, new PathConstant(path)))
+        return getType().refQueries(otherSchemaName, expand, Name.of(v)).stream().map(
+                q -> new ForAny(q, new Of(k, v, new NameConstant(name)))
         ).collect(Collectors.toSet());
     }
 
     @Override
-    public Set<Path> refExpand(final String otherTypeName, final Set<Path> expand) {
+    public Set<Name> refExpand(final Name otherSchemaName, final Set<Name> expand) {
 
         // FIXME: expand
-        return getType().refExpand(otherTypeName, expand);
+        return getType().refExpand(otherSchemaName, expand);
     }
 
     @Override
@@ -180,12 +184,12 @@ public class UseMap<T> implements Use<Map<String, T>> {
     }
 
     @Override
-    public Use<?> typeOf(final Path path) {
+    public Use<?> typeOf(final Name name) {
 
-        if(path.isEmpty()) {
+        if(name.isEmpty()) {
             return this;
         } else {
-            return type.typeOf(path);
+            return type.typeOf(name);
         }
     }
 
@@ -234,9 +238,9 @@ public class UseMap<T> implements Use<Map<String, T>> {
 //        }
 //    }
 
-    private static Set<Path> branch(final Map<String, Set<Path>> branches, final String key) {
+    private static Set<Name> branch(final Map<String, Set<Name>> branches, final String key) {
 
-        final Set<Path> branch = branches.get(key);
+        final Set<Name> branch = branches.get(key);
         if(branch == null) {
             return branches.get(EXPAND_WILDCARD);
         } else {
@@ -245,11 +249,11 @@ public class UseMap<T> implements Use<Map<String, T>> {
     }
 
     @Override
-    public Map<String, T> expand(final Map<String, T> value, final Expander expander, final Set<Path> expand) {
+    public Map<String, T> expand(final Map<String, T> value, final Expander expander, final Set<Name> expand) {
 
-        final Map<String, Set<Path>> branches = Path.branch(expand);
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         return transform(value, (key, before) -> {
-            final Set<Path> branch = branch(branches, key);
+            final Set<Name> branch = branch(branches, key);
             if(branch != null) {
                 return type.expand(before, expander, branch);
             } else {
@@ -265,11 +269,11 @@ public class UseMap<T> implements Use<Map<String, T>> {
     }
 
     @Override
-    public Map<String, T> evaluateTransients(final Context context, final Map<String, T> value, final Set<Path> expand) {
+    public Map<String, T> evaluateTransients(final Context context, final Map<String, T> value, final Set<Name> expand) {
 
-        final Map<String, Set<Path>> branches = Path.branch(expand);
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         return transform(value, (key, before) -> {
-            final Set<Path> branch = branch(branches, key);
+            final Set<Name> branch = branch(branches, key);
             if(branch != null) {
                 return type.evaluateTransients(context, before, branch);
             } else {
@@ -279,22 +283,22 @@ public class UseMap<T> implements Use<Map<String, T>> {
     }
 
     @Override
-    public Set<Path> transientExpand(final Path path, final Set<Path> expand) {
+    public Set<Name> transientExpand(final Name name, final Set<Name> expand) {
 
-        final Map<String, Set<Path>> branch = Path.branch(expand);
-        final Set<Path> result = new HashSet<>(expand);
-        branch.forEach((k, v) -> result.addAll(type.transientExpand(path.with(k), v)));
+        final Map<String, Set<Name>> branch = Name.branch(expand);
+        final Set<Name> result = new HashSet<>(expand);
+        branch.forEach((k, v) -> result.addAll(type.transientExpand(name.with(k), v)));
         return result;
     }
 
     @Override
-    public Set<Constraint.Violation> validate(final Context context, final Path path, final Map<String, T> value) {
+    public Set<Constraint.Violation> validate(final Context context, final Name name, final Map<String, T> value) {
 
         if(value == null) {
             return Collections.emptySet();
         } else {
             return value.entrySet().stream()
-                    .flatMap(e -> type.validate(context, path.with(e.getKey()), e.getValue()).stream())
+                    .flatMap(e -> type.validate(context, name.with(e.getKey()), e.getValue()).stream())
                     .collect(Collectors.toSet());
         }
     }
@@ -323,22 +327,22 @@ public class UseMap<T> implements Use<Map<String, T>> {
     }
 
     @Override
-    public Set<Path> requiredExpand(final Set<Path> paths) {
+    public Set<Name> requiredExpand(final Set<Name> names) {
 
-        final Set<Path> result = new HashSet<>();
-        Path.branch(paths)
+        final Set<Name> result = new HashSet<>();
+        Name.branch(names)
                 .forEach((head, tail) -> type.requiredExpand(tail)
-                        .forEach(path -> result.add(Path.of(head).with(path))));
+                        .forEach(path -> result.add(Name.of(head).with(path))));
         return result;
     }
 
     @Override
-    public Multimap<Path, Instance> refs(final Map<String, T> value) {
+    public Multimap<Name, Instance> refs(final Map<String, T> value) {
 
-        final Multimap<Path, Instance> result = HashMultimap.create();
+        final Multimap<Name, Instance> result = HashMultimap.create();
         if(value != null) {
             value.forEach((k, v) -> type.refs(v).forEach((k2, v2) ->
-                    result.put(Path.of(k).with(k2), v2)));
+                    result.put(Name.of(k).with(k2), v2)));
         }
         return result;
     }

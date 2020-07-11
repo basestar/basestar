@@ -39,12 +39,12 @@ import io.basestar.expression.Expression;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Namespace;
 import io.basestar.storage.Storage;
-import io.basestar.storage.dynamodb.DynamoDBRouting;
 import io.basestar.storage.dynamodb.DynamoDBStorage;
+import io.basestar.storage.dynamodb.DynamoDBStrategy;
 import io.basestar.storage.dynamodb.DynamoDBUtils;
 import io.basestar.storage.s3.S3Stash;
+import io.basestar.util.Name;
 import io.basestar.util.PagedList;
-import io.basestar.util.Path;
 import org.apache.commons.lang.StringUtils;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.model.TableDescription;
@@ -111,8 +111,8 @@ public class Test {
         final S3Stash storageOversize = S3Stash.builder()
                 .setClient(s3).setBucket(storageOversizeBucket).build();
 
-        final DynamoDBRouting ddbRouting = DynamoDBRouting.SingleTable.builder().tablePrefix(UUID.randomUUID() + "-").build();
-        final Storage storage = DynamoDBStorage.builder().setClient(ddb).setRouting(ddbRouting)
+        final DynamoDBStrategy ddbRouting = DynamoDBStrategy.SingleTable.builder().tablePrefix(UUID.randomUUID() + "-").build();
+        final Storage storage = DynamoDBStorage.builder().setClient(ddb).setStrategy(ddbRouting)
                 .setOversizeStash(storageOversize).setEventStrategy(Storage.EventStrategy.EMIT)
                 .build();
 
@@ -163,9 +163,9 @@ public class Test {
             }
 
             @Override
-            public String getSchema() {
+            public Name getSchema() {
 
-                return "User";
+                return Name.of("User");
             }
 
             @Override
@@ -182,7 +182,7 @@ public class Test {
         };
 
         if(false) {
-            final Map<String, Object> createUser = database.create(caller, "User", "test", ImmutableMap.of(
+            final Map<String, Object> createUser = database.create(caller, Name.of("User"), "test", ImmutableMap.of(
                     "owner", ImmutableMap.of(
                             "id", "test"
                     ),
@@ -191,7 +191,7 @@ public class Test {
             )).get();
             System.err.println(createUser);
 
-            final Map<String, Object> createTeam = database.create(caller, "Team", "test", ImmutableMap.of(
+            final Map<String, Object> createTeam = database.create(caller, Name.of("Team"), "test", ImmutableMap.of(
                     "id", "test",
                     "owner", ImmutableMap.of(
                             "id", "test"
@@ -199,11 +199,11 @@ public class Test {
             )).get();
             System.err.println(createTeam);
 
-            final Map<String, Object> getTeam = database.read(caller, ReadOptions.builder().schema("Team").id("test")
-                    .expand(Path.parseSet("owner")).build()).get();
+            final Map<String, Object> getTeam = database.read(caller, ReadOptions.builder().schema(Name.of("Team")).id("test")
+                    .expand(Name.parseSet("owner")).build()).get();
             System.err.println(getTeam);
 
-            final Map<String, Object> createTeamInvite = database.create(caller, "TeamInvite", ImmutableMap.of(
+            final Map<String, Object> createTeamInvite = database.create(caller, Name.of("TeamInvite"), ImmutableMap.of(
                     "team", ImmutableMap.of(
                             "id", "test"
                     ), "user", ImmutableMap.of(
@@ -213,10 +213,10 @@ public class Test {
             )).get();
             System.err.println(createTeamInvite);
 
-            final PagedList<Instance> queryInvites = database.query(caller, "TeamInvite", Expression.parse("user.id == 'test'")).get();
+            final PagedList<Instance> queryInvites = database.query(caller, Name.of("TeamInvite"), Expression.parse("user.id == 'test'")).get();
             System.err.println(queryInvites);
 
-            final Map<String, Object> createTeamMember = database.create(caller, "TeamUser", ImmutableMap.of(
+            final Map<String, Object> createTeamMember = database.create(caller, Name.of("TeamUser"), ImmutableMap.of(
                     "team", ImmutableMap.of(
                             "id", "test"
                     ), "user", ImmutableMap.of(
@@ -226,7 +226,7 @@ public class Test {
             )).get();
             System.err.println(createTeamMember);
 
-            final Map<String, Object> createProject = database.create(caller, "Project", "myproject", ImmutableMap.of(
+            final Map<String, Object> createProject = database.create(caller, Name.of("Project"), "myproject", ImmutableMap.of(
                     "name", "myproject",
                     "description", "desc",
                     "owner", ImmutableMap.of(
@@ -234,23 +234,23 @@ public class Test {
                     )
             )).get();
             System.err.println(createProject);
-            final Map<String, Object> updateProject = database.update(caller, "Project", "myproject", createProject).get();
+            final Map<String, Object> updateProject = database.update(caller, Name.of("Project"), "myproject", createProject).get();
             System.err.println(updateProject);
 
-            final Map<String, Object> get = database.read(caller, ReadOptions.builder().schema("Project").id("myproject")
-                    .expand(Path.parseSet("owner")).build()).get();
+            final Map<String, Object> get = database.read(caller, ReadOptions.builder().schema(Name.of("Project")).id("myproject")
+                    .expand(Name.parseSet("owner")).build()).get();
             System.err.println(get);
 
-            final Map<String, Object> getVersion = database.read(caller, "Project", "myproject", 1L).get();
+            final Map<String, Object> getVersion = database.read(caller, Name.of("Project"), "myproject", 1L).get();
             System.err.println(getVersion);
 
-            final PagedList<Instance> queryProject = database.query(caller, "Project", Expression.parse("owner.id == 'test'")).get();
+            final PagedList<Instance> queryProject = database.query(caller, Name.of("Project"), Expression.parse("owner.id == 'test'")).get();
 
             System.err.println(queryProject);
 
             final String big = StringUtils.repeat("test", 40000);
 
-            database.create(caller, "Project", "myproject2", ImmutableMap.of(
+            database.create(caller, Name.of("Project"), "myproject2", ImmutableMap.of(
                     "name", "myproject2",
                     "description", big,
                     "owner", ImmutableMap.of(
@@ -258,8 +258,8 @@ public class Test {
                     )
             )).get();
 
-            final Map<String, Object> readBig = database.read(caller, ReadOptions.builder().schema("Project")
-                    .id("myproject2").expand(Path.parseSet("owner")).build()).get();
+            final Map<String, Object> readBig = database.read(caller, ReadOptions.builder().schema(Name.of("Project"))
+                    .id("myproject2").expand(Name.parseSet("owner")).build()).get();
             System.err.println(readBig);
         }
 

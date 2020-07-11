@@ -30,7 +30,7 @@ import org.jooq.impl.DSL;
 
 import java.util.Collection;
 
-public interface SQLRouting {
+public interface SQLStrategy {
 
     Name objectTableName(ObjectSchema schema);
 
@@ -43,28 +43,33 @@ public interface SQLRouting {
 
     @Data
     @Slf4j
-    class Simple implements SQLRouting {
+    class Simple implements SQLStrategy {
 
         private final String objectSchemaName;
 
         private final String historySchemaName;
 
+        private String name(final ObjectSchema schema) {
+
+            return schema.getQualifiedName().toString(Reserved.PREFIX);
+        }
+
         @Override
         public Name objectTableName(final ObjectSchema schema) {
 
-            return DSL.name(DSL.name(objectSchemaName), DSL.name(schema.getName()));
+            return DSL.name(DSL.name(objectSchemaName), DSL.name(name(schema)));
         }
 
         @Override
         public Name historyTableName(final ObjectSchema schema) {
 
-            return DSL.name(DSL.name(historySchemaName), DSL.name(schema.getName()));
+            return DSL.name(DSL.name(historySchemaName), DSL.name(name(schema)));
         }
 
         @Override
         public Name indexTableName(final ObjectSchema schema, final Index index) {
 
-            final String name = schema.getName() + Reserved.PREFIX + index.getName();
+            final String name = name(schema) + Reserved.PREFIX + index.getName();
             return DSL.name(DSL.name(objectSchemaName), DSL.name(name));
         }
 
@@ -80,8 +85,8 @@ public interface SQLRouting {
 
             for(final ObjectSchema schema : schemas) {
 
-                final Name objectTableName = DSL.name(DSL.name(objectSchemaName), DSL.name(schema.getName()));
-                final Name historyTableName = DSL.name(DSL.name(historySchemaName), DSL.name(schema.getName()));
+                final Name objectTableName = objectTableName(schema);
+                final Name historyTableName = historyTableName(schema);
 
                 log.info("Creating table {}", objectTableName);
                 try(final CreateTableFinalStep create = context.createTableIfNotExists(objectTableName)

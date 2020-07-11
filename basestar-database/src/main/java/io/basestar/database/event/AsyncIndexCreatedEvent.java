@@ -22,6 +22,7 @@ package io.basestar.database.event;
 
 import io.basestar.schema.Index;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.util.Name;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -31,7 +32,7 @@ import java.util.Map;
 @Accessors(chain = true)
 public class AsyncIndexCreatedEvent implements ObjectEvent {
 
-    private String schema;
+    private Name schema;
 
     private String index;
 
@@ -43,7 +44,7 @@ public class AsyncIndexCreatedEvent implements ObjectEvent {
 
     private Map<String, Object> projection;
 
-    public static AsyncIndexCreatedEvent of(final String schema, final String index, final String id,
+    public static AsyncIndexCreatedEvent of(final Name schema, final String index, final String id,
                                             final long version, final Index.Key key,
                                             final Map<String, Object> projection) {
 

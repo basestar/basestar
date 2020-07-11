@@ -27,8 +27,8 @@ import com.fasterxml.jackson.annotation.Nulls;
 import io.basestar.expression.Context;
 import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.schema.exception.ReservedNameException;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import io.basestar.util.Path;
 import io.swagger.v3.oas.models.media.StringSchema;
 import lombok.Data;
 import lombok.Getter;
@@ -61,7 +61,7 @@ import java.util.Set;
 public class EnumSchema implements Schema<String> {
 
     @Nonnull
-    private final String name;
+    private final Name qualifiedName;
 
     private final int slot;
 
@@ -105,15 +105,15 @@ public class EnumSchema implements Schema<String> {
         }
 
         @Override
-        public EnumSchema build() {
+        public EnumSchema build(final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
 
-            return new EnumSchema(this, name -> null, Schema.anonymousName(), Schema.anonymousSlot());
+            return new EnumSchema(this, resolver, qualifiedName, slot);
         }
 
         @Override
-        public EnumSchema build(final Resolver resolver, final String name, final int slot) {
+        public EnumSchema build() {
 
-            return new EnumSchema(this, resolver, name, slot);
+            return build(Resolver.Constructing.ANONYMOUS, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
         }
     }
 
@@ -122,16 +122,16 @@ public class EnumSchema implements Schema<String> {
         return new Builder();
     }
 
-    private EnumSchema(final Builder builder, final Resolver resolver, final String name, final int slot) {
+    private EnumSchema(final Builder builder, final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
 
         resolver.constructing(this);
-        this.name = name;
+        this.qualifiedName = qualifiedName;
         this.slot = slot;
         this.description = builder.getDescription();
         this.values = Nullsafe.immutableCopy(builder.getValues());
         this.extensions = Nullsafe.immutableSortedCopy(builder.getExtensions());
-        if(Reserved.isReserved(name)) {
-            throw new ReservedNameException(name);
+        if(Reserved.isReserved(qualifiedName.last())) {
+            throw new ReservedNameException(qualifiedName);
         }
     }
 
@@ -150,7 +150,7 @@ public class EnumSchema implements Schema<String> {
     }
 
     @Override
-    public Set<Constraint.Violation> validate(final Context context, final Path path, final String after) {
+    public Set<Constraint.Violation> validate(final Context context, final Name name, final String after) {
 
         return Collections.emptySet();
     }
@@ -158,6 +158,6 @@ public class EnumSchema implements Schema<String> {
     @Override
     public io.swagger.v3.oas.models.media.Schema<?> openApi() {
 
-        return new StringSchema()._enum(values).description(description).name(name);
+        return new StringSchema()._enum(values).description(description).name(qualifiedName.toString());
     }
 }

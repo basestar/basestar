@@ -26,8 +26,8 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.ExpressionDeseriaizer;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import io.basestar.util.Path;
 import lombok.Data;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -44,7 +44,7 @@ public class Constraint implements Named, Described, Serializable {
     public static final String IMMUTABLE = "immutable";
 
     @Nonnull
-    private final String name;
+    private final Name qualifiedName;
 
     @Nullable
     private final String description;
@@ -65,9 +65,9 @@ public class Constraint implements Named, Described, Serializable {
         @JsonDeserialize(using = ExpressionDeseriaizer.class)
         private Expression expression;
 
-        public Constraint build(final String name) {
+        public Constraint build(final Name qualifiedName) {
 
-            return new Constraint(this, name);
+            return new Constraint(this, qualifiedName);
         }
     }
 
@@ -76,9 +76,9 @@ public class Constraint implements Named, Described, Serializable {
         return new Builder();
     }
 
-    private Constraint(final Builder builder, final String name) {
+    private Constraint(final Builder builder, final Name qualifiedName) {
 
-        this.name = name;
+        this.qualifiedName = qualifiedName;
         this.description = builder.getDescription();
         this.expression = Nullsafe.require(builder.getExpression());
     }
@@ -87,7 +87,7 @@ public class Constraint implements Named, Described, Serializable {
     public static class Violation {
 
         @JsonSerialize(using = ToStringSerializer.class)
-        private final Path path;
+        private final Name name;
 
         private final String constraint;
     }

@@ -27,10 +27,10 @@ import com.google.common.collect.Streams;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
-import io.basestar.expression.PathTransform;
+import io.basestar.expression.NameTransform;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.function.IfElse;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import lombok.Data;
 
 import java.util.*;
@@ -72,10 +72,10 @@ public class ForObject implements Expression {
     }
 
     @Override
-    public Expression bind(final Context context, final PathTransform root) {
+    public Expression bind(final Context context, final NameTransform root) {
 
         final Set<String> closure = iter.closure();
-        final PathTransform closureTransform = PathTransform.closure(closure, root);
+        final NameTransform closureTransform = NameTransform.closure(closure, root);
         final Expression yieldKey = this.yieldKey.bind(context, closureTransform);
         final Expression yieldValue = this.yieldValue.bind(context, closureTransform);
         final Expression iter = this.iter.bind(context, root);
@@ -113,9 +113,9 @@ public class ForObject implements Expression {
     }
 
     @Override
-    public Set<Path> paths() {
+    public Set<Name> paths() {
 
-        return ImmutableSet.<Path>builder()
+        return ImmutableSet.<Name>builder()
                 .addAll(yieldKey.paths())
                 .addAll(yieldValue.paths())
                 .addAll(iter.paths())

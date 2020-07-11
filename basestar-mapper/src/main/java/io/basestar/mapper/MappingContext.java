@@ -27,6 +27,7 @@ import io.basestar.schema.Namespace;
 import io.basestar.type.AnnotationContext;
 import io.basestar.type.TypeContext;
 import io.basestar.type.has.HasType;
+import io.basestar.util.Name;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
@@ -81,7 +82,7 @@ public class MappingContext {
                 .collect(Collectors.toList());
 
         if (schemaAnnotations.size() == 0) {
-            final String name = type.simpleName();
+            final Name name = Name.of(type.simpleName());
             if (type.isEnum()) {
                 return (SchemaMapper<T, O>) new EnumSchemaMapper<>(this, name, type);
             } else {

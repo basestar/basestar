@@ -26,7 +26,7 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.compare.*;
 import io.basestar.expression.constant.Constant;
-import io.basestar.expression.constant.PathConstant;
+import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
@@ -48,14 +48,14 @@ public class HazelcastExpressionVisitor<K, V> implements ExpressionVisitor.Defau
 
         final Expression lhs = expression.getLhs();
         final Expression rhs = expression.getRhs();
-        if (lhs instanceof PathConstant && rhs instanceof Constant) {
+        if (lhs instanceof NameConstant && rhs instanceof Constant) {
             return new EqualPredicate(
-                    ((PathConstant) lhs).getPath().toString(),
+                    ((NameConstant) lhs).getName().toString(),
                     (Comparable<?>)((Constant) rhs).getValue()
             );
-        } else if (lhs instanceof Constant && rhs instanceof PathConstant) {
+        } else if (lhs instanceof Constant && rhs instanceof NameConstant) {
             return new EqualPredicate(
-                    ((PathConstant) rhs).getPath().toString(),
+                    ((NameConstant) rhs).getName().toString(),
                     (Comparable<?>)((Constant) lhs).getValue()
             );
         } else {
@@ -69,14 +69,14 @@ public class HazelcastExpressionVisitor<K, V> implements ExpressionVisitor.Defau
 
         final Expression lhs = expression.getLhs();
         final Expression rhs = expression.getRhs();
-        if (lhs instanceof PathConstant && rhs instanceof Constant) {
+        if (lhs instanceof NameConstant && rhs instanceof Constant) {
             return new NotEqualPredicate(
-                    ((PathConstant) lhs).getPath().toString(),
+                    ((NameConstant) lhs).getName().toString(),
                     (Comparable<?>)((Constant) rhs).getValue()
             );
-        } else if (lhs instanceof Constant && rhs instanceof PathConstant) {
+        } else if (lhs instanceof Constant && rhs instanceof NameConstant) {
             return new NotEqualPredicate(
-                    ((PathConstant) rhs).getPath().toString(),
+                    ((NameConstant) rhs).getName().toString(),
                     (Comparable<?>)((Constant) lhs).getValue()
             );
         } else {
@@ -111,15 +111,15 @@ public class HazelcastExpressionVisitor<K, V> implements ExpressionVisitor.Defau
     @SuppressWarnings("unchecked")
     private Predicate<K, V> visitGl(final Expression lhs, final Expression rhs, final boolean equal, final boolean less) {
 
-        if (lhs instanceof PathConstant && rhs instanceof Constant) {
+        if (lhs instanceof NameConstant && rhs instanceof Constant) {
             return new GreaterLessPredicate(
-                    ((PathConstant) lhs).getPath().toString(),
+                    ((NameConstant) lhs).getName().toString(),
                     (Comparable<?>)((Constant) rhs).getValue(),
                     equal, less
             );
-        } else if (lhs instanceof Constant && rhs instanceof PathConstant) {
+        } else if (lhs instanceof Constant && rhs instanceof NameConstant) {
             return new GreaterLessPredicate(
-                    ((PathConstant) rhs).getPath().toString(),
+                    ((NameConstant) rhs).getName().toString(),
                     (Comparable<?>)((Constant) lhs).getValue(),
                     !equal, !less
             );

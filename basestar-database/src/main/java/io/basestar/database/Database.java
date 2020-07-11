@@ -25,6 +25,7 @@ import io.basestar.database.options.*;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Namespace;
+import io.basestar.util.Name;
 import io.basestar.util.PagedList;
 
 import java.util.Map;
@@ -38,62 +39,62 @@ public interface Database {
 
     CompletableFuture<Instance> read(Caller caller, ReadOptions options);
 
-    default CompletableFuture<Instance> read(final Caller caller, final String schema, final String id) {
+    default CompletableFuture<Instance> read(final Caller caller, final Name schema, final String id) {
 
         return read(caller, schema, id, null);
     }
 
-    default CompletableFuture<Instance> read(final Caller caller, final String schema, final String id, final Long version) {
+    default CompletableFuture<Instance> read(final Caller caller, final Name schema, final String id, final Long version) {
 
         return read(caller, ReadOptions.builder().schema(schema).id(id).version(version).build());
     }
 
     CompletableFuture<Instance> create(Caller caller, CreateOptions options);
 
-    default CompletableFuture<Instance> create(final Caller caller, final String schema, final Map<String, Object> data) {
+    default CompletableFuture<Instance> create(final Caller caller, final Name schema, final Map<String, Object> data) {
 
         return create(caller, schema, null, data);
     }
 
-    default CompletableFuture<Instance> create(final Caller caller, final String schema, final String id, final Map<String, Object> data) {
+    default CompletableFuture<Instance> create(final Caller caller, final Name schema, final String id, final Map<String, Object> data) {
 
         return create(caller, CreateOptions.builder().schema(schema).id(id).data(data).build());
     }
 
     CompletableFuture<Instance> update(Caller caller, UpdateOptions options);
 
-    default CompletableFuture<Instance> update(final Caller caller, final String schema, final String id, final Map<String, Object> data) {
+    default CompletableFuture<Instance> update(final Caller caller, final Name schema, final String id, final Map<String, Object> data) {
 
         return update(caller, schema, id, null, data);
     }
 
-    default CompletableFuture<Instance> update(final Caller caller, final String schema, final String id, final Long version, final Map<String, Object> data) {
+    default CompletableFuture<Instance> update(final Caller caller, final Name schema, final String id, final Long version, final Map<String, Object> data) {
 
         return update(caller, UpdateOptions.builder().schema(schema).id(id).version(version).data(data).build());
     }
 
     CompletableFuture<Instance> delete(Caller caller, DeleteOptions options);
 
-    default CompletableFuture<Instance> delete(final Caller caller, final String schema, final String id) {
+    default CompletableFuture<Instance> delete(final Caller caller, final Name schema, final String id) {
 
         return delete(caller, schema, id, null);
     }
 
-    default CompletableFuture<Instance> delete(final Caller caller, final String schema, final String id, final Long version) {
+    default CompletableFuture<Instance> delete(final Caller caller, final Name schema, final String id, final Long version) {
 
         return delete(caller, DeleteOptions.builder().schema(schema).id(id).version(version).build());
     }
 
     CompletableFuture<PagedList<Instance>> query(Caller caller, QueryOptions options);
 
-    default CompletableFuture<PagedList<Instance>> query(final Caller caller, final String schema, final Expression expression) {
+    default CompletableFuture<PagedList<Instance>> query(final Caller caller, final Name schema, final Expression expression) {
 
         return query(caller, QueryOptions.builder().schema(schema).expression(expression).build());
     }
 
     CompletableFuture<PagedList<Instance>> queryLink(Caller caller, QueryLinkOptions options);
 
-    default CompletableFuture<PagedList<Instance>> queryLink(final Caller caller, final String schema, final String id, final String link) {
+    default CompletableFuture<PagedList<Instance>> queryLink(final Caller caller, final Name schema, final String id, final String link) {
 
         return queryLink(caller, QueryLinkOptions.builder().schema(schema).id(id).link(link).build());
     }

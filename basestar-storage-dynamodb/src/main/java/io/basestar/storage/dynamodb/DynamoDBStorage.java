@@ -31,9 +31,9 @@ import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.UniqueIndexViolationException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;
+import io.basestar.util.Name;
 import io.basestar.util.PagedList;
 import io.basestar.util.PagingToken;
-import io.basestar.util.Path;
 import io.basestar.util.Sort;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -60,7 +60,7 @@ public class DynamoDBStorage extends PartitionedStorage {
 
     private final DynamoDbAsyncClient client;
 
-    private final DynamoDBRouting routing;
+    private final DynamoDBStrategy strategy;
 
     private final Stash oversizeStash;
 
@@ -69,7 +69,7 @@ public class DynamoDBStorage extends PartitionedStorage {
     private DynamoDBStorage(final Builder builder) {
 
         this.client = builder.client;
-        this.routing = builder.routing;
+        this.strategy = builder.strategy;
         this.oversizeStash = builder.oversizeStash;
         this.eventStrategy = MoreObjects.firstNonNull(builder.eventStrategy, EventStrategy.EMIT);
     }
@@ -85,7 +85,7 @@ public class DynamoDBStorage extends PartitionedStorage {
 
         private DynamoDbAsyncClient client;
 
-        private DynamoDBRouting routing;
+        private DynamoDBStrategy strategy;
 
         private Stash oversizeStash;
 
@@ -111,8 +111,8 @@ public class DynamoDBStorage extends PartitionedStorage {
     public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
 
         final GetItemRequest request = GetItemRequest.builder()
-                .tableName(routing.objectTableName(schema))
-                .key(objectKey(routing, schema, id))
+                .tableName(strategy.objectTableName(schema))
+                .key(objectKey(strategy, schema, id))
                 .build();
 
         return client.getItem(request)
@@ -130,8 +130,8 @@ public class DynamoDBStorage extends PartitionedStorage {
     public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
 
         final GetItemRequest request = GetItemRequest.builder()
-                .tableName(routing.historyTableName(schema))
-                .key(historyKey(routing, schema, id, version))
+                .tableName(strategy.historyTableName(schema))
+                .key(historyKey(strategy, schema, id, version))
                 .build();
 
         return client.getItem(request)
@@ -147,7 +147,7 @@ public class DynamoDBStorage extends PartitionedStorage {
 
     private String oversizeStashKey(final ObjectSchema schema, final String id, final long version) {
 
-        return schema.getName() + "/" + id + "/" + version;
+        return schema.getQualifiedName() + "/" + id + "/" + version;
     }
 
     private CompletableFuture<Map<String, Object>> fromItem(final Map<String, AttributeValue> item) {
@@ -178,7 +178,7 @@ public class DynamoDBStorage extends PartitionedStorage {
             for (final Map<String, AttributeValue> item : entry.getValue()) {
                 final Map<String, Object> object = DynamoDBUtils.fromItem(item);
                 final ObjectSchema schema = matchKeyToSchema(keyToSchema, item);
-                final BatchResponse.Key key = BatchResponse.Key.from(schema.getName(), object);
+                final BatchResponse.Key key = BatchResponse.Key.from(schema.getQualifiedName(), object);
                 final String oversizeKey = checkOversize(object);
                 if (oversizeKey != null) {
                     oversize.put(key, readOversize(oversizeKey));
@@ -226,10 +226,10 @@ public class DynamoDBStorage extends PartitionedStorage {
     }
 
     @Override
-    protected CompletableFuture<PagedList<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfy, final Map<Path, Range<Object>> query, final List<Sort> sort, final int count, final PagingToken paging) {
+    protected CompletableFuture<PagedList<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfy, final Map<Name, Range<Object>> query, final List<Sort> sort, final int count, final PagingToken paging) {
 
         final List<Object> mergePartitions = new ArrayList<>();
-        mergePartitions.add(routing.indexPartitionPrefix(schema, index));
+        mergePartitions.add(strategy.indexPartitionPrefix(schema, index));
         mergePartitions.addAll(satisfy.getPartition());
 
         final SdkBytes partitionValue = SdkBytes.fromByteArray(binary(mergePartitions));
@@ -240,7 +240,7 @@ public class DynamoDBStorage extends PartitionedStorage {
         final List<String> keyTerms = new ArrayList<>();
 
         keyTerms.add("#__partition = :__partition");
-        names.put("#__partition", routing.indexPartitionName(schema, index));
+        names.put("#__partition", strategy.indexPartitionName(schema, index));
         values.put(":__partition", AttributeValue.builder().b(partitionValue).build());
 
         if(!satisfy.getSort().isEmpty()) {
@@ -249,7 +249,7 @@ public class DynamoDBStorage extends PartitionedStorage {
             final SdkBytes sortValueHi = SdkBytes.fromByteArray(binary(satisfy.getSort(), new byte[]{0}));
 
             keyTerms.add("#__sort BETWEEN :__sortLo AND :__sortHi");
-            names.put("#__sort", routing.indexSortName(schema, index));
+            names.put("#__sort", strategy.indexSortName(schema, index));
             values.put(":__sortLo", AttributeValue.builder().b(sortValueLo).build());
             values.put(":__sortHi", AttributeValue.builder().b(sortValueHi).build());
         }
@@ -266,7 +266,7 @@ public class DynamoDBStorage extends PartitionedStorage {
         log.debug("Query key=\"{}\", filter=\"{}\", names={}, values={}", keyExpression, filterExpression, names, values);
 
         QueryRequest.Builder queryBuilder = QueryRequest.builder()
-                .tableName(routing.indexTableName(schema, index))
+                .tableName(strategy.indexTableName(schema, index))
                 .keyConditionExpression(keyExpression)
                 .filterExpression(filterExpression)
                 .expressionAttributeNames(names)
@@ -315,8 +315,8 @@ public class DynamoDBStorage extends PartitionedStorage {
             @Override
             public ReadTransaction readObject(final ObjectSchema schema, final String id) {
 
-                final String tableName = routing.objectTableName(schema);
-                final Map<String, AttributeValue> key = objectKey(routing, schema, id);
+                final String tableName = strategy.objectTableName(schema);
+                final Map<String, AttributeValue> key = objectKey(strategy, schema, id);
                 keyToSchema.put(key, schema);
                 items.computeIfAbsent(tableName, ignored -> new ArrayList<>()).add(key);
                 return this;
@@ -325,8 +325,8 @@ public class DynamoDBStorage extends PartitionedStorage {
             @Override
             public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version) {
 
-                final String tableName = routing.historyTableName(schema);
-                final Map<String, AttributeValue> key = historyKey(routing, schema, id, version);
+                final String tableName = strategy.historyTableName(schema);
+                final Map<String, AttributeValue> key = historyKey(strategy, schema, id, version);
                 keyToSchema.put(key, schema);
                 items.computeIfAbsent(tableName, ignored -> new ArrayList<>()).add(key);
                 return this;
@@ -359,26 +359,26 @@ public class DynamoDBStorage extends PartitionedStorage {
         };
     }
 
-    private static Map<String, AttributeValue> oversizeItem(final DynamoDBRouting routing, final ObjectSchema schema, final String id, final Map<String, Object> data, final String key) {
+    private static Map<String, AttributeValue> oversizeItem(final DynamoDBStrategy strategy, final ObjectSchema schema, final String id, final Map<String, Object> data, final String key) {
 
         final Map<String, AttributeValue> item = new HashMap<>();
         item.putAll(DynamoDBUtils.toItem(ObjectSchema.readMeta(data)));
-        item.putAll(objectKey(routing, schema, id));
+        item.putAll(objectKey(strategy, schema, id));
         item.put(OVERSIZE_KEY, AttributeValue.builder().s(key).build());
         return item;
     }
 
-    private static Map<String, AttributeValue> objectItem(final DynamoDBRouting routing, final ObjectSchema schema, final String id, final Map<String, Object> data) {
+    private static Map<String, AttributeValue> objectItem(final DynamoDBStrategy strategy, final ObjectSchema schema, final String id, final Map<String, Object> data) {
 
         final Map<String, AttributeValue> item = new HashMap<>();
         item.putAll(DynamoDBUtils.toItem(data));
-        item.putAll(objectKey(routing, schema, id));
+        item.putAll(objectKey(strategy, schema, id));
         return item;
     }
 
-    private static Map<String, AttributeValue> objectKey(final DynamoDBRouting routing, final ObjectSchema schema, final String id) {
+    private static Map<String, AttributeValue> objectKey(final DynamoDBStrategy strategy, final ObjectSchema schema, final String id) {
 
-        final String prefix = routing.objectPartitionPrefix(schema);
+        final String prefix = strategy.objectPartitionPrefix(schema);
         final String partition;
         if(prefix == null) {
             partition = id;
@@ -386,13 +386,13 @@ public class DynamoDBStorage extends PartitionedStorage {
             partition = prefix + Reserved.DELIMITER + id;
         }
         return ImmutableMap.of(
-                routing.objectPartitionName(schema), AttributeValue.builder().s(partition).build()
+                strategy.objectPartitionName(schema), AttributeValue.builder().s(partition).build()
         );
     }
 
-    private static Map<String, AttributeValue> historyKey(final DynamoDBRouting routing, final ObjectSchema schema, final String id, final long version) {
+    private static Map<String, AttributeValue> historyKey(final DynamoDBStrategy strategy, final ObjectSchema schema, final String id, final long version) {
 
-        final String prefix = routing.historyPartitionPrefix(schema);
+        final String prefix = strategy.historyPartitionPrefix(schema);
         final String partition;
         if(prefix == null) {
             partition = id;
@@ -400,26 +400,26 @@ public class DynamoDBStorage extends PartitionedStorage {
             partition = prefix + Reserved.DELIMITER + id;
         }
         return ImmutableMap.of(
-                routing.historyPartitionName(schema), AttributeValue.builder().s(partition).build(),
-                routing.historySortName(schema), AttributeValue.builder()
+                strategy.historyPartitionName(schema), AttributeValue.builder().s(partition).build(),
+                strategy.historySortName(schema), AttributeValue.builder()
                         .n(Long.toString(version)).build()
         );
     }
 
-    private static Map<String, AttributeValue> indexKey(final DynamoDBRouting routing, final ObjectSchema schema, final Index index, final String id, final Index.Key key) {
+    private static Map<String, AttributeValue> indexKey(final DynamoDBStrategy strategy, final ObjectSchema schema, final Index index, final String id, final Index.Key key) {
 
         return ImmutableMap.of(
-                routing.indexPartitionName(schema, index), AttributeValue.builder()
-                        .b(SdkBytes.fromByteArray(partition(routing, schema, index, id, key.getPartition()))).build(),
-                routing.indexSortName(schema, index), AttributeValue.builder()
+                strategy.indexPartitionName(schema, index), AttributeValue.builder()
+                        .b(SdkBytes.fromByteArray(partition(strategy, schema, index, id, key.getPartition()))).build(),
+                strategy.indexSortName(schema, index), AttributeValue.builder()
                         .b(SdkBytes.fromByteArray(sort(schema, index, id, key.getSort()))).build()
         );
     }
 
     @SuppressWarnings("unused")
-    public static byte[] partition(final DynamoDBRouting routing, final ObjectSchema schema, final Index index, final String id, final List<Object> partition) {
+    public static byte[] partition(final DynamoDBStrategy strategy, final ObjectSchema schema, final Index index, final String id, final List<Object> partition) {
 
-        final String prefix = routing.indexPartitionPrefix(schema, index);
+        final String prefix = strategy.indexPartitionPrefix(schema, index);
         final List<Object> fullPartition = new ArrayList<>();
         if(prefix != null) {
             fullPartition.add(prefix);
@@ -444,11 +444,11 @@ public class DynamoDBStorage extends PartitionedStorage {
         return binary(fullSort);
     }
 
-    private static Map<String, AttributeValue> indexItem(final DynamoDBRouting routing, final ObjectSchema schema, final Index index, final String id, final Index.Key key, final Map<String, Object> data) {
+    private static Map<String, AttributeValue> indexItem(final DynamoDBStrategy strategy, final ObjectSchema schema, final Index index, final String id, final Index.Key key, final Map<String, Object> data) {
 
         final ImmutableMap.Builder<String, AttributeValue> builder = ImmutableMap.builder();
         builder.putAll(DynamoDBUtils.toItem(data));
-        builder.putAll(indexKey(routing, schema, index, id, key));
+        builder.putAll(indexKey(strategy, schema, index, id, key));
         return builder.build();
     }
 
@@ -471,42 +471,42 @@ public class DynamoDBStorage extends PartitionedStorage {
                 assert afterVersion != null;
                 final String key = oversizeStashKey(schema, id, afterVersion);
                 oversize.put(key, DynamoDBUtils.toOversizeBytes(schema, after));
-                return oversizeItem(routing, schema, id, after, key);
+                return oversizeItem(strategy, schema, id, after, key);
             }
 
             @Override
             public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
-                final Map<String, AttributeValue> initialItem = objectItem(routing, schema, id, after);
+                final Map<String, AttributeValue> initialItem = objectItem(strategy, schema, id, after);
                 final long size = DynamoDBUtils.itemSize(initialItem);
-                log.debug("Create object {}:{} ({} bytes)", schema.getName(), id, size);
+                log.debug("Create object {}:{} ({} bytes)", schema.getQualifiedName(), id, size);
                 final Map<String, AttributeValue> item;
                 if(size > DynamoDBUtils.MAX_ITEM_SIZE) {
-                    log.info("Creating oversize object {}:{} ({} bytes)", schema.getName(), id, size);
+                    log.info("Creating oversize object {}:{} ({} bytes)", schema.getQualifiedName(), id, size);
                     item = oversize(schema, id, after);
                 } else {
                     item = initialItem;
                 }
                 items.add(TransactWriteItem.builder()
                         .put(Put.builder()
-                                .tableName(routing.objectTableName(schema))
+                                .tableName(strategy.objectTableName(schema))
                                 .item(item)
                                 .conditionExpression("attribute_not_exists(#id)")
                                 .expressionAttributeNames(ImmutableMap.of(
-                                        "#id", routing.objectPartitionName(schema)
+                                        "#id", strategy.objectPartitionName(schema)
                                 ))
                                 .build())
                         .build());
                 items.add(TransactWriteItem.builder()
                         .put(Put.builder()
-                                .tableName(routing.historyTableName(schema))
+                                .tableName(strategy.historyTableName(schema))
                                 .item(item)
                                 .build())
                         .build());
 
-                exceptions.add(() -> new ObjectExistsException(schema.getName(), id));
+                exceptions.add(() -> new ObjectExistsException(schema.getQualifiedName(), id));
                 exceptions.add(null);
-                changes.put(BatchResponse.Key.from(schema.getName(), after), after);
+                changes.put(BatchResponse.Key.from(schema.getQualifiedName(), after), after);
 
                 return createIndexes(schema, id, after);
             }
@@ -518,19 +518,19 @@ public class DynamoDBStorage extends PartitionedStorage {
                 // FIXME
                 assert version != null;
 
-                final Map<String, AttributeValue> initialItem = objectItem(routing, schema, id, after);
+                final Map<String, AttributeValue> initialItem = objectItem(strategy, schema, id, after);
                 final long size = DynamoDBUtils.itemSize(initialItem);
-                log.debug("Updating object {}:{} ({} bytes)", schema.getName(), id, size);
+                log.debug("Updating object {}:{} ({} bytes)", schema.getQualifiedName(), id, size);
                 final Map<String, AttributeValue> item;
                 if(size > DynamoDBUtils.MAX_ITEM_SIZE) {
-                    log.info("Updating oversize object {}:{} ({} bytes)", schema.getName(), id, size);
+                    log.info("Updating oversize object {}:{} ({} bytes)", schema.getQualifiedName(), id, size);
                     item = oversize(schema, id, after);
                 } else {
                     item = initialItem;
                 }
                 items.add(TransactWriteItem.builder()
                         .put(Put.builder()
-                                .tableName(routing.objectTableName(schema))
+                                .tableName(strategy.objectTableName(schema))
                                 .item(item)
                                 .conditionExpression("#version = :version")
                                 .expressionAttributeNames(ImmutableMap.of(
@@ -543,14 +543,14 @@ public class DynamoDBStorage extends PartitionedStorage {
                         .build());
                 items.add(TransactWriteItem.builder()
                         .put(Put.builder()
-                                .tableName(routing.historyTableName(schema))
+                                .tableName(strategy.historyTableName(schema))
                                 .item(item)
                                 .build())
                         .build());
 
-                exceptions.add(() -> new VersionMismatchException(schema.getName(), id, version));
+                exceptions.add(() -> new VersionMismatchException(schema.getQualifiedName(), id, version));
                 exceptions.add(null);
-                changes.put(BatchResponse.Key.from(schema.getName(), after), after);
+                changes.put(BatchResponse.Key.from(schema.getQualifiedName(), after), after);
 
                 return updateIndexes(schema, id, before, after);
             }
@@ -564,8 +564,8 @@ public class DynamoDBStorage extends PartitionedStorage {
 
                 items.add(TransactWriteItem.builder()
                         .delete(Delete.builder()
-                                .tableName(routing.objectTableName(schema))
-                                .key(objectKey(routing, schema, id))
+                                .tableName(strategy.objectTableName(schema))
+                                .key(objectKey(strategy, schema, id))
                                 .conditionExpression("#version = :version")
                                 .expressionAttributeNames(ImmutableMap.of(
                                         "#version", Reserved.VERSION
@@ -576,7 +576,7 @@ public class DynamoDBStorage extends PartitionedStorage {
                                 .build())
                         .build());
 
-                exceptions.add(() -> new VersionMismatchException(schema.getName(), id, version));
+                exceptions.add(() -> new VersionMismatchException(schema.getQualifiedName(), id, version));
 
                 return deleteIndexes(schema, id, before);
             }
@@ -586,16 +586,16 @@ public class DynamoDBStorage extends PartitionedStorage {
 
                 items.add(TransactWriteItem.builder()
                         .put(Put.builder()
-                                .tableName(routing.indexTableName(schema, index))
-                                .item(indexItem(routing, schema, index, id, key, projection))
+                                .tableName(strategy.indexTableName(schema, index))
+                                .item(indexItem(strategy, schema, index, id, key, projection))
                                 .conditionExpression("attribute_not_exists(#id)")
                                 .expressionAttributeNames(ImmutableMap.of(
-                                        "#id", routing.indexPartitionName(schema, index)
+                                        "#id", strategy.indexPartitionName(schema, index)
                                 ))
                                 .build())
                         .build());
 
-                exceptions.add(() -> new UniqueIndexViolationException(schema.getName(), id, index.getName()));
+                exceptions.add(() -> new UniqueIndexViolationException(schema.getQualifiedName(), id, index.getName()));
 
                 return this;
             }
@@ -605,8 +605,8 @@ public class DynamoDBStorage extends PartitionedStorage {
 
                 items.add(TransactWriteItem.builder()
                         .put(Put.builder()
-                                .tableName(routing.indexTableName(schema, index))
-                                .item(indexItem(routing, schema, index, id, key, projection))
+                                .tableName(strategy.indexTableName(schema, index))
+                                .item(indexItem(strategy, schema, index, id, key, projection))
                                 .conditionExpression("#version = :version")
                                 .expressionAttributeNames(ImmutableMap.of(
                                         "#version", Reserved.VERSION
@@ -617,7 +617,7 @@ public class DynamoDBStorage extends PartitionedStorage {
                                 .build())
                         .build());
 
-                exceptions.add(() -> new CorruptedIndexException(schema.getName(), index.getName()));
+                exceptions.add(() -> new CorruptedIndexException(index.getQualifiedName()));
 
                 return this;
             }
@@ -627,8 +627,8 @@ public class DynamoDBStorage extends PartitionedStorage {
 
                 items.add(TransactWriteItem.builder()
                         .delete(Delete.builder()
-                                .tableName(routing.indexTableName(schema, index))
-                                .key(indexKey(routing, schema, index, id, key))
+                                .tableName(strategy.indexTableName(schema, index))
+                                .key(indexKey(strategy, schema, index, id, key))
                                 .conditionExpression("#version = :version")
                                 .expressionAttributeNames(ImmutableMap.of(
                                         "#version", Reserved.VERSION
@@ -639,7 +639,7 @@ public class DynamoDBStorage extends PartitionedStorage {
                                 .build())
                         .build());
 
-                exceptions.add(() -> new CorruptedIndexException(schema.getName(), index.getName()));
+                exceptions.add(() -> new CorruptedIndexException(index.getQualifiedName()));
 
                 return this;
             }
@@ -747,7 +747,7 @@ public class DynamoDBStorage extends PartitionedStorage {
 
     private PagingToken encodeIndexPaging(final ObjectSchema schema, final Index index, final Map<String, AttributeValue> key) {
 
-        final byte[] indexSort = key.get(routing.indexSortName(schema, index)).b().asByteArray();
+        final byte[] indexSort = key.get(strategy.indexSortName(schema, index)).b().asByteArray();
 
         try(final ByteArrayOutputStream baos = new ByteArrayOutputStream();
             final DataOutputStream dos = new DataOutputStream(baos)) {
@@ -773,8 +773,8 @@ public class DynamoDBStorage extends PartitionedStorage {
             assert(read == len);
 
             return ImmutableMap.of(
-                    routing.indexPartitionName(schema, index), AttributeValue.builder().b(partition).build(),
-                    routing.indexSortName(schema, index), AttributeValue.builder().b(SdkBytes.fromByteArray(indexSort)).build()
+                    strategy.indexPartitionName(schema, index), AttributeValue.builder().b(partition).build(),
+                    strategy.indexSortName(schema, index), AttributeValue.builder().b(SdkBytes.fromByteArray(indexSort)).build()
             );
 
         } catch (final IOException e) {

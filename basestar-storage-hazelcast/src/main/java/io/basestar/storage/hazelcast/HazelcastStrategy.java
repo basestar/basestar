@@ -35,7 +35,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public interface HazelcastRouting {
+public interface HazelcastStrategy {
 
     String objectMapName(ObjectSchema schema);
 
@@ -67,7 +67,7 @@ public interface HazelcastRouting {
                     if(!index.isMultiValue()) {
                         final List<String> keys = new ArrayList<>();
                         index.getPartition().forEach(p -> keys.add(p.toString()));
-                        index.getSort().forEach(s -> keys.add(s.getPath().toString()));
+                        index.getSort().forEach(s -> keys.add(s.getName().toString()));
 
                         return Stream.of(new IndexConfig(IndexType.SORTED, keys.toArray(new String[0])));
                     } else {
@@ -77,7 +77,7 @@ public interface HazelcastRouting {
     }
 
     @Builder
-    class Simple implements HazelcastRouting {
+    class Simple implements HazelcastStrategy {
 
         private final String objectPrefix;
 
@@ -90,13 +90,13 @@ public interface HazelcastRouting {
         @Override
         public String objectMapName(final ObjectSchema schema) {
 
-            return Nullsafe.option(objectPrefix) + schema.getName() + Nullsafe.option(objectSuffix);
+            return Nullsafe.option(objectPrefix) + schema.getQualifiedName() + Nullsafe.option(objectSuffix);
         }
 
         @Override
         public String historyMapName(final ObjectSchema schema) {
 
-            return Nullsafe.option(historyPrefix) + schema.getName() + Nullsafe.option(historySuffix);
+            return Nullsafe.option(historyPrefix) + schema.getQualifiedName() + Nullsafe.option(historySuffix);
         }
 
     }

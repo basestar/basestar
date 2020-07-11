@@ -46,7 +46,7 @@ public class ObjectSchemaModel extends InstanceSchemaModel {
 
         final List<AnnotationModel> annotations = new ArrayList<>();
         annotations.add(new AnnotationModel(getSettings(), javax.validation.Valid.class));
-        annotations.add(new AnnotationModel(getSettings(), io.basestar.mapper.annotation.ObjectSchema.class, ImmutableMap.of("name", schema.getName())));
+        annotations.add(new AnnotationModel(getSettings(), io.basestar.mapper.annotation.ObjectSchema.class, ImmutableMap.of("name", schema.getQualifiedName())));
 //        schema.getIndexes().forEach((name, index) -> {
 //            final List<String> partition = index.getPartition().stream().map(AbstractPath::toString).collect(Collectors.toList());
 //            final List<String> sort = index.getSort().stream().map(Sort::toString).collect(Collectors.toList());

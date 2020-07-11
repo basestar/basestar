@@ -22,21 +22,22 @@ package io.basestar.schema.exception;
 
 import io.basestar.exception.ExceptionMetadata;
 import io.basestar.exception.HasExceptionMetadata;
+import io.basestar.util.Name;
 
-public class MissingTypeException extends RuntimeException implements HasExceptionMetadata {
+public class MissingSchemaException extends RuntimeException implements HasExceptionMetadata {
 
     public static final int STATUS = 400;
 
-    public static final String CODE = "MissingType";
+    public static final String CODE = "MissingSchema";
 
-    public static final String TYPE = "type";
+    public static final String SCHEMA = "schema";
 
-    private final String type;
+    private final Name schema;
 
-    public MissingTypeException(final String type) {
+    public MissingSchemaException(final Name schema) {
 
-        super("Type " + type + " not found");
-        this.type = type;
+        super("Schema " + schema + " not found");
+        this.schema = schema;
     }
 
     @Override
@@ -46,6 +47,6 @@ public class MissingTypeException extends RuntimeException implements HasExcepti
                 .setStatus(STATUS)
                 .setCode(CODE)
                 .setMessage(getMessage())
-                .putData(TYPE, type);
+                .putData(SCHEMA, schema);
     }
 }

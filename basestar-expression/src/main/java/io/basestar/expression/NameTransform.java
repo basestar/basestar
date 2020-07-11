@@ -20,25 +20,25 @@ package io.basestar.expression;
  * #L%
  */
 
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 
 import java.util.Collection;
 
-public interface PathTransform {
+public interface NameTransform {
 
-    Path transform(Path path);
+    Name transform(Name name);
 
-    static PathTransform noop() {
+    static NameTransform noop() {
 
         return path -> path;
     }
 
-    static PathTransform root(final Path root) {
+    static NameTransform root(final Name root) {
 
         return root::with;
     }
 
-    static PathTransform unroot(final Path root) {
+    static NameTransform unroot(final Name root) {
 
         return path -> {
             if(path.isChild(root)) {
@@ -49,7 +49,7 @@ public interface PathTransform {
         };
     }
 
-    static PathTransform move(final Path from, final Path to) {
+    static NameTransform move(final Name from, final Name to) {
 
         return path -> {
             if(path.isChild(from)) {
@@ -60,7 +60,7 @@ public interface PathTransform {
         };
     }
 
-    static PathTransform closure(final Collection<String> closed, final PathTransform transform) {
+    static NameTransform closure(final Collection<String> closed, final NameTransform transform) {
 
         return path -> {
 

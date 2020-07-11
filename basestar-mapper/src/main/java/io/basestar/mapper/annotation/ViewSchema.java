@@ -26,6 +26,7 @@ import io.basestar.mapper.SchemaMapper;
 import io.basestar.mapper.internal.ViewSchemaMapper;
 import io.basestar.mapper.internal.annotation.SchemaDeclaration;
 import io.basestar.type.TypeContext;
+import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.annotation.*;
@@ -55,7 +56,7 @@ public @interface ViewSchema {
             final String name = annotation.name().equals(INFER_NAME) ? type.simpleName() : annotation.name();
             final String from = annotation.from();
             final Expression where = annotation.where().isEmpty() ? null : Expression.parse(annotation.where());
-            return new ViewSchemaMapper<>(context, name, type, from, where);
+            return new ViewSchemaMapper<>(context, Name.parse(name), type, Name.parse(from), where);
         }
     }
 }

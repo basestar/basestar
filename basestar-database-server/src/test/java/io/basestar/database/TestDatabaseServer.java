@@ -33,11 +33,11 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Namespace;
-import io.basestar.schema.Ref;
+import io.basestar.schema.util.Ref;
 import io.basestar.storage.MemoryStorage;
 import io.basestar.storage.Storage;
+import io.basestar.util.Name;
 import io.basestar.util.PagedList;
-import io.basestar.util.Path;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -58,41 +58,41 @@ import static org.mockito.Mockito.*;
 @Slf4j
 public class TestDatabaseServer {
 
-    private static final String SIMPLE = "Simple";
+    private static final Name SIMPLE = Name.of("Simple");
 
-    private static final String INDEXED = "Indexed";
+    private static final Name INDEXED = Name.of("Indexed");
 
-    private static final String MULTI_INDEXED = "MultiIndexed";
+    private static final Name MULTI_INDEXED = Name.of("MultiIndexed");
 
-    private static final String MAP_MULTI_INDEXED = "MapMultiIndexed";
+    private static final Name MAP_MULTI_INDEXED = Name.of("MapMultiIndexed");
 
-    private static final String REF_SOURCE = "RefSource";
+    private static final Name REF_SOURCE = Name.of("RefSource");
 
-    private static final String REF_TARGET = "RefTarget";
+    private static final Name REF_TARGET = Name.of("RefTarget");
 
-    private static final String SIMPLE_PERMS = "SimplePerms";
+    private static final Name SIMPLE_PERMS = Name.of("SimplePerms");
 
-    private static final String CUSTOM_ID = "CustomId";
+    private static final Name CUSTOM_ID = Name.of("CustomId");
 
-    private static final String ANIMAL = "Animal";
+    private static final Name ANIMAL = Name.of("Animal");
 
-    private static final String TEAM = "Team";
+    private static final Name TEAM = Name.of("Team");
 
-    private static final String TEAM_MEMBER = "TeamMember";
+    private static final Name TEAM_MEMBER = Name.of("TeamMember");
 
-    private static final String CAT = "Cat";
+    private static final Name CAT = Name.of("Cat");
 
-    private static final String DOG = "Dog";
+    private static final Name DOG = Name.of("Dog");
 
-    private static final String KENNEL = "Kennel";
+    private static final Name KENNEL = Name.of("Kennel");
 
-    private static final String USER = "User";
+    private static final Name USER = Name.of("User");
 
-    private static final String VISIBILITY = "Visibility";
+    private static final Name VISIBILITY = Name.of("Visibility");
 
-    private static final String TRANSIENT = "Transient";
+    private static final Name TRANSIENT = Name.of("Transient");
 
-    private static final String WITH_ENUM = "WithEnum";
+    private static final Name WITH_ENUM = Name.of("WithEnum");
 
     private DatabaseServer database;
 
@@ -125,7 +125,7 @@ public class TestDatabaseServer {
         this.caller = Mockito.mock(Caller.class);
     }
 
-    private static void assertObject(final String schema, final String id, final long version, final Map<String, Object> data, final Map<String, Object> object) {
+    private static void assertObject(final Name schema, final String id, final long version, final Map<String, Object> data, final Map<String, Object> object) {
 
         assertEquals(schema, Instance.getSchema(object));
         assertEquals(id, Instance.getId(object));
@@ -319,7 +319,7 @@ public class TestDatabaseServer {
         assertObject(REF_SOURCE, idA, 1, dataA, createA);
 
         final Map<String, Object> readA = database.read(caller, ReadOptions.builder().schema(REF_SOURCE)
-                .id(idA).expand(Path.parseSet("target")).build()).get();
+                .id(idA).expand(Name.parseSet("target")).build()).get();
         assertEquals(createRefA, readA.get("target"));
 
         final PagedList<Instance> linkA = database.queryLink(caller, REF_TARGET, refA, "sources").get();
@@ -327,7 +327,7 @@ public class TestDatabaseServer {
         assertEquals(createA, linkA.get(0));
 
         final Map<String, Object> expandLinkA = database.read(caller, ReadOptions.builder().schema(REF_TARGET)
-                .id(refA).expand(Path.parseSet("sources")).build()).get();
+                .id(refA).expand(Name.parseSet("sources")).build()).get();
         final PagedList<?> source = (PagedList<?>)expandLinkA.get("sources");
         assertEquals(1, source.size());
         assertEquals(createA, source.get(0));
@@ -335,7 +335,7 @@ public class TestDatabaseServer {
         final PagedList<Instance> expandQuery = database.query(caller, QueryOptions.builder()
                 .schema(REF_SOURCE)
                 .expression(Expression.parse("target.id == \"" + refA + "\""))
-                .expand(ImmutableSet.of(Path.of("target")))
+                .expand(ImmutableSet.of(Name.of("target")))
                 .build()).get();
         assertEquals(1, expandQuery.size());
         final Instance queryTarget = expandQuery.get(0).get("target", Instance.class);
@@ -358,7 +358,7 @@ public class TestDatabaseServer {
                 "target", ImmutableMap.of(
                         "id", idA
                 )
-        )).expand(Path.parseSet("target")).build()).get();
+        )).expand(Name.parseSet("target")).build()).get();
         // Check reading refs doesn't wipe properties
         assertNotNull(createRefB.get("value"));
         assertEquals(createRefA, createRefB.get("target"));
@@ -372,7 +372,7 @@ public class TestDatabaseServer {
                 "target", ImmutableMap.of(
                         "id", idB
                 )
-        )).expand(Path.parseSet("target.target")).build()).get();
+        )).expand(Name.parseSet("target.target")).build()).get();
         assertEquals(createRefB, createRefC.get("target"));
     }
 
@@ -387,7 +387,7 @@ public class TestDatabaseServer {
                 "target", ImmutableMap.of(
                         "id", missing
                 )
-        )).expand(Path.parseSet("target")).build()).get();
+        )).expand(Name.parseSet("target")).build()).get();
         @SuppressWarnings("unchecked")
         final Map<String, Object> target = (Map<String, Object>)createRefA.get("target");
         assertNotNull(target);
@@ -481,7 +481,7 @@ public class TestDatabaseServer {
                 )
         )).join();
 
-        final Set<Path> expand = ImmutableSet.of(Path.of("residents"));
+        final Set<Name> expand = ImmutableSet.of(Name.of("residents"));
         final Instance readC = database.read(caller, ReadOptions.builder().schema(KENNEL)
                 .id(idC).expand(expand).build()).join();
         final Collection<Map<String, Object>> residents = (Collection<Map<String, Object>>)readC.get("residents");
@@ -604,14 +604,14 @@ public class TestDatabaseServer {
                 .data(ImmutableMap.of(
                         "refs", ImmutableList.of(createA)
                 ))
-                .expand(ImmutableSet.of(Path.of("names")))
+                .expand(ImmutableSet.of(Name.of("names")))
                 .build()).get();
         assertEquals(ImmutableList.of("test"), createB.get("names"));
 
         final Instance readB = database.read(Caller.SUPER, ReadOptions.builder()
                 .schema(TRANSIENT)
                 .id(createB.getId())
-                .expand(ImmutableSet.of(Path.of("names")))
+                .expand(ImmutableSet.of(Name.of("names")))
                 .build()).get();
         assertEquals(ImmutableList.of("test"), readB.get("names"));
     }
@@ -716,7 +716,7 @@ public class TestDatabaseServer {
                 .build()).get();
 
         final PagedList<Instance> results = database.query(Caller.SUPER, QueryOptions.builder()
-                .schema("TeamMemberStats")
+                .schema(Name.of("TeamMemberStats"))
                 .build()).get();
 
         System.err.println(results);

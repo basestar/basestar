@@ -23,7 +23,7 @@ package io.basestar.stream;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.basestar.auth.Caller;
 import io.basestar.expression.Expression;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import lombok.Data;
 
 import java.util.List;
@@ -43,12 +43,12 @@ public class Subscription {
 
     private Expression expression;
 
-    private Set<Path> expand;
+    private Set<Name> expand;
 
     @Data
     public static class Key {
 
-        private final String schema;
+        private final Name schema;
 
         private final String index;
 

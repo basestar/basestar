@@ -32,9 +32,9 @@ import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;
 import io.basestar.storage.util.Pager;
+import io.basestar.util.Name;
 import io.basestar.util.PagedList;
 import io.basestar.util.PagingToken;
-import io.basestar.util.Path;
 import io.basestar.util.Sort;
 import lombok.Data;
 import lombok.Setter;
@@ -78,7 +78,7 @@ public class MemoryStorage extends PartitionedStorage {
 
         return CompletableFuture.supplyAsync(() -> {
             synchronized (lock) {
-                return state.objects.get(new TypeId(schema.getName(), id));
+                return state.objects.get(new SchemaId(schema.getQualifiedName(), id));
             }
         });
     }
@@ -88,7 +88,7 @@ public class MemoryStorage extends PartitionedStorage {
 
         return CompletableFuture.supplyAsync(() -> {
             synchronized (lock) {
-                return state.history.get(new TypeIdVersion(schema.getName(), id, version));
+                return state.history.get(new SchemaIdVersion(schema.getQualifiedName(), id, version));
             }
         });
     }
@@ -102,7 +102,7 @@ public class MemoryStorage extends PartitionedStorage {
             final Multimap<Map<String, Object>, Map<String, Object>> groups = HashMultimap.create();
 
             state.objects.forEach((typeId, object) -> {
-                if(typeId.getType().equals(schema.getName())) {
+                if(typeId.getSchema().equals(schema.getQualifiedName())) {
                     final Map<String, Object> g = group.entrySet().stream().collect(Collectors.toMap(
                             Map.Entry::getKey,
                             e -> e.getValue().evaluate(Context.init(object))
@@ -131,13 +131,13 @@ public class MemoryStorage extends PartitionedStorage {
     }
 
     @Override
-    protected CompletableFuture<PagedList<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfy, final Map<Path, Range<Object>> query, final List<Sort> sort, final int count, final PagingToken paging) {
+    protected CompletableFuture<PagedList<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfy, final Map<Name, Range<Object>> query, final List<Sort> sort, final int count, final PagingToken paging) {
 
         return CompletableFuture.supplyAsync(() -> {
             synchronized (lock) {
 
                 final byte[] partBinary = binary(satisfy.getPartition());
-                final IndexPartition partKey = new IndexPartition(schema.getName(), index.getName(), partBinary);
+                final IndexPartition partKey = new IndexPartition(schema.getQualifiedName(), index.getName(), partBinary);
 
                 final NavigableMap<IndexSort, Map<String, Object>> partition = state.index.get(partKey);
 
@@ -172,10 +172,10 @@ public class MemoryStorage extends PartitionedStorage {
 
                 final CompletableFuture<Map<String, Object>> future = CompletableFuture.supplyAsync(() -> {
                     synchronized (lock) {
-                        return state.objects.get(new TypeId(schema.getName(), id));
+                        return state.objects.get(new SchemaId(schema.getQualifiedName(), id));
                     }
                 });
-                futures.add(future.thenApply(v -> BatchResponse.single(schema.getName(), v)));
+                futures.add(future.thenApply(v -> BatchResponse.single(schema.getQualifiedName(), v)));
 
                 return this;
             }
@@ -185,10 +185,10 @@ public class MemoryStorage extends PartitionedStorage {
 
                 final CompletableFuture<Map<String, Object>> future = CompletableFuture.supplyAsync(() -> {
                     synchronized (lock) {
-                        return state.history.get(new TypeIdVersion(schema.getName(), id, version));
+                        return state.history.get(new SchemaIdVersion(schema.getQualifiedName(), id, version));
                     }
                 });
-                futures.add(future.thenApply(v -> BatchResponse.single(schema.getName(), v)));
+                futures.add(future.thenApply(v -> BatchResponse.single(schema.getQualifiedName(), v)));
 
                 return this;
             }
@@ -225,17 +225,17 @@ public class MemoryStorage extends PartitionedStorage {
 
                 items.add(state -> {
 
-                    final TypeId typeId = new TypeId(schema.getName(), id);
+                    final SchemaId typeId = new SchemaId(schema.getQualifiedName(), id);
                     if(state.objects.containsKey(typeId)) {
-                        throw new ObjectExistsException(schema.getName(), id);
+                        throw new ObjectExistsException(schema.getQualifiedName(), id);
                     } else {
                         state.objects.put(typeId, after);
                     }
                     final History history = schema.getHistory();
                     if(history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
-                        state.history.put(new TypeIdVersion(schema.getName(), id, 1L), after);
+                        state.history.put(new SchemaIdVersion(schema.getQualifiedName(), id, 1L), after);
                     }
-                    return BatchResponse.single(schema.getName(), after);
+                    return BatchResponse.single(schema.getQualifiedName(), after);
                 });
 
                 return createIndexes(schema, id, after);
@@ -259,20 +259,20 @@ public class MemoryStorage extends PartitionedStorage {
 
                     final Long version = before == null ? null : Instance.getVersion(before);
 
-                    final TypeId typeId = new TypeId(schema.getName(), id);
+                    final SchemaId typeId = new SchemaId(schema.getQualifiedName(), id);
                     final Map<String, Object> current = state.objects.get(typeId);
                     if(checkExists(current, version)) {
                         state.objects.put(typeId, after);
                     } else {
-                        throw new VersionMismatchException(schema.getName(), id, version);
+                        throw new VersionMismatchException(schema.getQualifiedName(), id, version);
                     }
                     final History history = schema.getHistory();
                     if(history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
                         final Long afterVersion = Instance.getVersion(after);
                         assert afterVersion != null;
-                        state.history.put(new TypeIdVersion(schema.getName(), id, afterVersion), after);
+                        state.history.put(new SchemaIdVersion(schema.getQualifiedName(), id, afterVersion), after);
                     }
-                    return BatchResponse.single(schema.getName(), after);
+                    return BatchResponse.single(schema.getQualifiedName(), after);
                 });
 
                 return updateIndexes(schema, id, before, after);
@@ -285,12 +285,12 @@ public class MemoryStorage extends PartitionedStorage {
 
                     final Long version = before == null ? null : Instance.getVersion(before);
 
-                    final TypeId typeId = new TypeId(schema.getName(), id);
+                    final SchemaId typeId = new SchemaId(schema.getQualifiedName(), id);
                     final Map<String, Object> current = state.objects.get(typeId);
                     if(checkExists(current, version)) {
                         state.objects.remove(typeId);
                     } else {
-                        throw new VersionMismatchException(schema.getName(), id, version);
+                        throw new VersionMismatchException(schema.getQualifiedName(), id, version);
                     }
                     return BatchResponse.empty();
                 });
@@ -303,7 +303,7 @@ public class MemoryStorage extends PartitionedStorage {
 
                 items.add(state -> {
 
-                    final IndexPartition partKey = new IndexPartition(schema.getName(), index.getName(), binary(key.getPartition()));
+                    final IndexPartition partKey = new IndexPartition(schema.getQualifiedName(), index.getName(), binary(key.getPartition()));
                     final IndexSort sortKey = new IndexSort(binary(key.getSort()), index.isUnique() ? null : id);
 
                     final Map<IndexSort, Map<String, Object>> partition = state.index
@@ -326,7 +326,7 @@ public class MemoryStorage extends PartitionedStorage {
 
                 items.add(state -> {
 
-                    final IndexPartition partKey = new IndexPartition(schema.getName(), index.getName(), binary(key.getPartition()));
+                    final IndexPartition partKey = new IndexPartition(schema.getQualifiedName(), index.getName(), binary(key.getPartition()));
                     final IndexSort sortKey = new IndexSort(binary(key.getSort()), index.isUnique() ? null : id);
 
                     final Map<IndexSort, Map<String, Object>> partition = state.index
@@ -344,7 +344,7 @@ public class MemoryStorage extends PartitionedStorage {
 
                 items.add(state -> {
 
-                    final IndexPartition partKey = new IndexPartition(schema.getName(), index.getName(), binary(key.getPartition()));
+                    final IndexPartition partKey = new IndexPartition(schema.getQualifiedName(), index.getName(), binary(key.getPartition()));
                     final IndexSort sortKey = new IndexSort(binary(key.getSort()), index.isUnique() ? null : id);
 
                     final Map<IndexSort, Map<String, Object>> partition = state.index
@@ -364,7 +364,7 @@ public class MemoryStorage extends PartitionedStorage {
 
                     final Long afterVersion = Instance.getVersion(after);
                     assert afterVersion != null;
-                    state.history.put(new TypeIdVersion(schema.getName(), id, afterVersion), after);
+                    state.history.put(new SchemaIdVersion(schema.getQualifiedName(), id, afterVersion), after);
 
                     return BatchResponse.empty();
                 });
@@ -401,17 +401,17 @@ public class MemoryStorage extends PartitionedStorage {
     }
 
     @Data
-    private static class TypeId {
+    private static class SchemaId {
 
-        private final String type;
+        private final Name schema;
 
         private final String id;
     }
 
     @Data
-    private static class TypeIdVersion {
+    private static class SchemaIdVersion {
 
-        private final String type;
+        private final Name schema;
 
         private final String id;
 
@@ -421,7 +421,7 @@ public class MemoryStorage extends PartitionedStorage {
     @Data
     private static class IndexPartition {
 
-        private final String type;
+        private final Name schema;
 
         private final String index;
 
@@ -468,9 +468,9 @@ public class MemoryStorage extends PartitionedStorage {
 
     private static class State {
 
-        private final Map<TypeId, Map<String, Object>> objects = new HashMap<>();
+        private final Map<SchemaId, Map<String, Object>> objects = new HashMap<>();
 
-        private final Map<TypeIdVersion, Map<String, Object>> history = new HashMap<>();
+        private final Map<SchemaIdVersion, Map<String, Object>> history = new HashMap<>();
 
         private final Map<IndexPartition, NavigableMap<IndexSort, Map<String, Object>>> index = new HashMap<>();
 

@@ -22,9 +22,9 @@ package io.basestar.storage.leveldb;
 
 import com.google.common.io.BaseEncoding;
 import io.basestar.expression.Expression;
+import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.*;
 import io.basestar.storage.*;
-import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;
@@ -73,7 +73,7 @@ public class LevelDBStorage extends PartitionedStorage {
     }
 
     @Override
-    protected CompletableFuture<PagedList<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfyResult, final Map<Path, Range<Object>> query, final List<Sort> sort, final int count, final PagingToken paging) {
+    protected CompletableFuture<PagedList<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfyResult, final Map<Name, Range<Object>> query, final List<Sort> sort, final int count, final PagingToken paging) {
 
         return CompletableFuture.supplyAsync(() -> {
             final List<Object> values = new ArrayList<>();
@@ -172,7 +172,7 @@ public class LevelDBStorage extends PartitionedStorage {
                     batch.put(key, data);
                 });
                 createHistory(schema, id, afterVersion, after);
-                changes.put(new BatchResponse.Key(schema.getName(), id, afterVersion), after);
+                changes.put(new BatchResponse.Key(schema.getQualifiedName(), id, afterVersion), after);
             }
 
             private void checkVersion(final ObjectSchema schema, final String id, final long version) {
@@ -183,9 +183,9 @@ public class LevelDBStorage extends PartitionedStorage {
                     final long recordVersion = versionFromBytes(data);
                     if(recordVersion != version) {
                         if(version == 0L) {
-                            throw new ObjectExistsException(schema.getName(), id);
+                            throw new ObjectExistsException(schema.getQualifiedName(), id);
                         } else {
-                            throw new VersionMismatchException(schema.getName(), id, version);
+                            throw new VersionMismatchException(schema.getQualifiedName(), id, version);
                         }
                     }
                 });
@@ -197,7 +197,7 @@ public class LevelDBStorage extends PartitionedStorage {
                     final byte[] data = db.get(key);
                     final long recordVersion = versionFromBytes(data);
                     if(recordVersion != version) {
-                        throw new VersionMismatchException(schema.getName(), id, version);
+                        throw new VersionMismatchException(schema.getQualifiedName(), id, version);
                     }
                 });
             }
@@ -288,12 +288,12 @@ public class LevelDBStorage extends PartitionedStorage {
 
     private static byte[] key(final ObjectSchema schema, final String id) {
 
-        return PartitionedStorage.binary(Arrays.asList(schema.getName(), null, id));
+        return PartitionedStorage.binary(Arrays.asList(schema.getQualifiedName(), null, id));
     }
 
     private static byte[] key(final ObjectSchema schema, final String id, final long version) {
 
-        return PartitionedStorage.binary(Arrays.asList(schema.getName(), Reserved.PREFIX + Reserved.VERSION, id, invert(version)));
+        return PartitionedStorage.binary(Arrays.asList(schema.getQualifiedName(), Reserved.PREFIX + Reserved.VERSION, id, invert(version)));
     }
 
     private static byte[] key(final ObjectSchema schema, final Index index, final Index.Key key, final String id) {
@@ -308,7 +308,7 @@ public class LevelDBStorage extends PartitionedStorage {
     private static byte[] key(final ObjectSchema schema, final Index index, final List<?> values) {
 
         final List<Object> all = new ArrayList<>();
-        all.add(schema.getName());
+        all.add(schema.getQualifiedName());
         all.add(index.getName());
         all.addAll(values);
         return PartitionedStorage.binary(all);

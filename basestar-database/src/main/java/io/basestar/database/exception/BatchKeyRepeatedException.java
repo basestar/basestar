@@ -22,6 +22,7 @@ package io.basestar.database.exception;
 
 import io.basestar.exception.ExceptionMetadata;
 import io.basestar.exception.HasExceptionMetadata;
+import io.basestar.util.Name;
 
 public class BatchKeyRepeatedException extends RuntimeException implements HasExceptionMetadata {
 
@@ -29,7 +30,7 @@ public class BatchKeyRepeatedException extends RuntimeException implements HasEx
 
     public static final String CODE = "BatchKeyRepeated";
 
-    public BatchKeyRepeatedException(final String schema, final String id) {
+    public BatchKeyRepeatedException(final Name schema, final String id) {
 
         super("Batch request refers to " + schema + " : " + id + " multiple times");
     }

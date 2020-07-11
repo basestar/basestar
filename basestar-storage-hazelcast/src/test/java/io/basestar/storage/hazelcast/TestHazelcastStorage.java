@@ -58,7 +58,7 @@ public class TestHazelcastStorage extends TestStorage {
 
         final String suffix = "-" + UUID.randomUUID().toString();
 
-        final HazelcastRouting.Simple routing = HazelcastRouting.Simple.builder()
+        final HazelcastStrategy.Simple strategy = HazelcastStrategy.Simple.builder()
                 .objectPrefix("object-")
                 .objectSuffix(suffix)
                 .historyPrefix("history-")
@@ -70,7 +70,7 @@ public class TestHazelcastStorage extends TestStorage {
 
         final Config config = new Config()
                 .setSerializationConfig(recordFactory.serializationConfig())
-                .setMapConfigs(routing.mapConfigs(namespace));
+                .setMapConfigs(strategy.mapConfigs(namespace));
 //                .addMapConfig(new MapConfig()
 //                        .setName("*")
 //                        .addEntryListenerConfig(new EntryListenerConfig()
@@ -116,7 +116,7 @@ public class TestHazelcastStorage extends TestStorage {
 //        for(final Schema<?> schema : namespace.getSchemas().values()) {
 //            if(schema instanceof ObjectSchema) {
 //                final ObjectSchema objectSchema = (ObjectSchema)schema;
-//                final String name = routing.objectMapName(objectSchema);
+//                final String name = strategy.objectMapName(objectSchema);
 //                final IMap<BatchResponse.Key, Map<String, Object>> map = instance.getMap(name);
 //                final List<IndexConfig> indexes = PortableSchemaFactory.indexes(objectSchema);
 //                indexes.forEach(map::addIndex);
@@ -125,7 +125,7 @@ public class TestHazelcastStorage extends TestStorage {
 
         final Storage storage = HazelcastStorage.builder()
                 .setInstance(instance)
-                .setRouting(routing)
+                .setStrategy(strategy)
                 .setSchemaFactory(recordFactory)
                 .build();
 

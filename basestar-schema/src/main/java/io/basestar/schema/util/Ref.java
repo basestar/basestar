@@ -1,8 +1,8 @@
-package io.basestar.storage.spark;
+package io.basestar.schema.util;
 
 /*-
  * #%L
- * basestar-storage-spark
+ * basestar-schema
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -20,14 +20,21 @@ package io.basestar.storage.spark;
  * #L%
  */
 
-import io.basestar.schema.ObjectSchema;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.basestar.util.Name;
+import lombok.Data;
 
-public interface SparkRouting {
+@Data
+public class Ref {
 
-    Dataset<Row> objectRead(SparkSession session, ObjectSchema schema);
+    private final Name schema;
 
-    Dataset<Row> historyRead(SparkSession session, ObjectSchema schema);
+    private final String id;
+
+    @JsonCreator
+    public static Ref of(@JsonProperty("schema") final Name schema, @JsonProperty("id") final String id) {
+
+        return new Ref(schema, id);
+    }
 }

@@ -41,13 +41,15 @@ import io.basestar.event.Handler;
 import io.basestar.event.Handlers;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.expression.PathTransform;
+import io.basestar.expression.NameTransform;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.expression.aggregate.AggregateExtractingVisitor;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Or;
 import io.basestar.schema.*;
+import io.basestar.schema.util.Expander;
+import io.basestar.schema.util.Ref;
 import io.basestar.storage.ConstantStorage;
 import io.basestar.storage.OverlayStorage;
 import io.basestar.storage.Storage;
@@ -137,7 +139,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                 .thenApply(v -> v.get(SINGLE_BATCH_ROOT));
     }
 
-    private Set<Path> permissionExpand(final ObjectSchema schema, final Permission permission) {
+    private Set<Name> permissionExpand(final ObjectSchema schema, final Permission permission) {
 
         return permission == null ? Collections.emptySet() : Nullsafe.option(permission.getExpand());
     }
@@ -146,13 +148,13 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         final Set<RefKey> beforeCheck = new HashSet<>();
         final Set<ExpandKey<RefKey>> beforeKeys = new HashSet<>();
-        final Set<Path> beforeCallerExpand = new HashSet<>();
+        final Set<Name> beforeCallerExpand = new HashSet<>();
 
         actions.forEach((name, action) -> {
             final String id = action.id();
             if (id != null) {
                 final ObjectSchema schema = action.schema();
-                final RefKey key = new RefKey(schema.getName(), id);
+                final RefKey key = new RefKey(schema.getQualifiedName(), id);
                 if (!beforeCheck.add(key)) {
                     throw new BatchKeyRepeatedException(key.getSchema(), key.getId());
                 }
@@ -161,10 +163,10 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 //                        // Always need read permission for the target object
 //                        permissionExpand(schema, schema.getPermission(Permission.READ))
 //                );
-                final Set<Path> permissionExpand = permissionExpand(schema, schema.getPermission(Permission.READ));
-                beforeCallerExpand.addAll(Path.children(permissionExpand, Path.of(VAR_CALLER)));
-                final Set<Path> readExpand = Path.children(permissionExpand, Path.of(VAR_BEFORE));
-                final Set<Path> transientExpand = schema.transientExpand(Path.of(), readExpand);
+                final Set<Name> permissionExpand = permissionExpand(schema, schema.getPermission(Permission.READ));
+                beforeCallerExpand.addAll(Name.children(permissionExpand, Name.of(VAR_CALLER)));
+                final Set<Name> readExpand = Name.children(permissionExpand, Name.of(VAR_BEFORE));
+                final Set<Name> transientExpand = schema.transientExpand(Name.of(), readExpand);
                 beforeKeys.add(ExpandKey.from(key, transientExpand));
             }
         });
@@ -205,7 +207,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
                 final Set<RefKey> afterCheck = new HashSet<>();
                 final Map<ExpandKey<RefKey>, Instance> afterKeys = new HashMap<>();
-                final Set<Path> afterCallerExpand = new HashSet<>();
+                final Set<Name> afterCallerExpand = new HashSet<>();
 
                 final Map<String, RefKey> resultLookup = new HashMap<>();
                 final Map<String, Instance> overlay = new HashMap<>();
@@ -219,7 +221,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                     final RefKey beforeKey;
                     final Instance before;
                     if (id != null) {
-                        beforeKey = new RefKey(schema.getName(), id);
+                        beforeKey = new RefKey(schema.getQualifiedName(), id);
                         before = beforeResults.get(beforeKey);
                     } else {
                         beforeKey = null;
@@ -234,14 +236,14 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         resultLookup.put(name, afterKey);
                         overlay.put(name, after);
                         assert beforeKey == null || beforeKey.equals(afterKey);
-                        final Set<Path> permissionExpand = permissionExpand(schema, action.permission(before));
-                        afterCallerExpand.addAll(Path.children(permissionExpand, Path.of(VAR_CALLER)));
-                        final Set<Path> readExpand = Sets.union(
-                                Path.children(permissionExpand, Path.of(VAR_AFTER)),
+                        final Set<Name> permissionExpand = permissionExpand(schema, action.permission(before));
+                        afterCallerExpand.addAll(Name.children(permissionExpand, Name.of(VAR_CALLER)));
+                        final Set<Name> readExpand = Sets.union(
+                                Name.children(permissionExpand, Name.of(VAR_AFTER)),
                                 Nullsafe.option(action.afterExpand())
                         );
-                        final Set<Path> transientExpand = schema.transientExpand(Path.of(), readExpand);
-                        final Set<Path> writeExpand = Sets.union(transientExpand, schema.getExpand());
+                        final Set<Name> transientExpand = schema.transientExpand(Name.of(), readExpand);
+                        final Set<Name> writeExpand = Sets.union(transientExpand, schema.getExpand());
                         final ExpandKey<RefKey> expandKey = ExpandKey.from(afterKey, writeExpand);
                         afterKeys.put(expandKey, after);
                     } else {
@@ -350,8 +352,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         final LinkedHashMap<String, Set<String>> dependencies = new LinkedHashMap<>();
         actions.forEach((name, action) -> {
-            final Set<Path> paths = Path.children(action.paths(), Path.of(VAR_BATCH));
-            final Set<String> matches = paths.stream().map(AbstractPath::first)
+            final Set<Name> names = Name.children(action.paths(), Name.of(VAR_BATCH));
+            final Set<String> matches = names.stream().map(AbstractPath::first)
                     .filter(actions::containsKey)
                     .collect(Collectors.toSet());
             dependencies.put(name, matches);
@@ -420,7 +422,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
     }
 
     // FIXME need to apply nested permissions
-    private Instance restrict(final Caller caller, final Instance instance, final Set<Path> expand) {
+    private Instance restrict(final Caller caller, final Instance instance, final Set<Name> expand) {
 
         final ObjectSchema schema = objectSchema(Instance.getSchema(instance));
         final Permission read = schema.getPermission(Permission.READ);
@@ -430,7 +432,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
     }
 
     // FIXME need to create a deeper permission expand for nested permissions
-    private CompletableFuture<Instance> expandAndRestrict(final Caller caller, final Instance instance, final Set<Path> expand) {
+    private CompletableFuture<Instance> expandAndRestrict(final Caller caller, final Instance instance, final Set<Name> expand) {
 
         if(instance == null) {
             return CompletableFuture.completedFuture(null);
@@ -438,10 +440,10 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         final ObjectSchema schema = objectSchema(Instance.getSchema(instance));
         final Permission read = schema.getPermission(Permission.READ);
-        final Set<Path> permissionExpand = permissionExpand(schema, read);
-        final Set<Path> callerExpand = Path.children(permissionExpand, Path.of(VAR_CALLER));
-        final Set<Path> readExpand = Sets.union(Path.children(permissionExpand, Path.of(VAR_THIS)), Nullsafe.option(expand));
-        final Set<Path> transientExpand = schema.transientExpand(Path.of(), readExpand);
+        final Set<Name> permissionExpand = permissionExpand(schema, read);
+        final Set<Name> callerExpand = Name.children(permissionExpand, Name.of(VAR_CALLER));
+        final Set<Name> readExpand = Sets.union(Name.children(permissionExpand, Name.of(VAR_THIS)), Nullsafe.option(expand));
+        final Set<Name> transientExpand = schema.transientExpand(Name.of(), readExpand);
 
         return expandCaller(Context.init(), caller, callerExpand)
                 .thenCompose(expandedCaller -> expand(context(expandedCaller), instance, transientExpand)
@@ -449,17 +451,17 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
     }
 
     // FIXME need to create a deeper permission expand for nested permissions
-    private CompletableFuture<PagedList<Instance>> expandAndRestrict(final Caller caller, final PagedList<Instance> instances, final Set<Path> expand) {
+    private CompletableFuture<PagedList<Instance>> expandAndRestrict(final Caller caller, final PagedList<Instance> instances, final Set<Name> expand) {
 
-        final Set<Path> callerExpand = new HashSet<>();
-        final Set<Path> transientExpand = new HashSet<>();
+        final Set<Name> callerExpand = new HashSet<>();
+        final Set<Name> transientExpand = new HashSet<>();
         for(final Instance instance : instances) {
             final ObjectSchema schema = objectSchema(Instance.getSchema(instance));
             final Permission read = schema.getPermission(Permission.READ);
-            final Set<Path> permissionExpand = permissionExpand(schema, read);
-            callerExpand.addAll(Path.children(permissionExpand, Path.of(VAR_CALLER)));
-            final Set<Path> readExpand = Sets.union(Path.children(permissionExpand, Path.of(VAR_THIS)), Nullsafe.option(expand));
-            transientExpand.addAll(schema.transientExpand(Path.of(), readExpand));
+            final Set<Name> permissionExpand = permissionExpand(schema, read);
+            callerExpand.addAll(Name.children(permissionExpand, Name.of(VAR_CALLER)));
+            final Set<Name> readExpand = Sets.union(Name.children(permissionExpand, Name.of(VAR_THIS)), Nullsafe.option(expand));
+            transientExpand.addAll(schema.transientExpand(Name.of(), readExpand));
         }
 
         return expandCaller(Context.init(), caller, callerExpand)
@@ -500,11 +502,11 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final Link link = ownerSchema.requireLink(options.getLink(), true);
         final String ownerId = options.getId();
 
-        return read(caller, ReadOptions.builder().schema(ownerSchema.getName()).id(ownerId).build())
+        return read(caller, ReadOptions.builder().schema(ownerSchema.getQualifiedName()).id(ownerId).build())
                 .thenCompose(owner -> {
 
                     if (owner == null) {
-                        throw new ObjectMissingException(ownerSchema.getName(), ownerId);
+                        throw new ObjectMissingException(ownerSchema.getQualifiedName(), ownerId);
                     }
 
                     final int count = MoreObjects.firstNonNull(options.getCount(), QueryLinkOptions.DEFAULT_COUNT);
@@ -578,7 +580,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                 //FIXME: should de-duplicate sort keys, also need to deal with empty case
                 final List<Sort> sort = ImmutableList.<Sort>builder()
                         .addAll(MoreObjects.firstNonNull(options.getSort(), viewSchema.getSort()))
-                        .addAll(group.keySet().stream().map(k -> Sort.asc(Path.of(k))).collect(Collectors.toList()))
+                        .addAll(group.keySet().stream().map(k -> Sort.asc(Name.of(k))).collect(Collectors.toList()))
                         .build();
 
                 final List<Pager.Source<Instance>> sources = storage.aggregate(objectSchema, bound, group, aggregates).stream()
@@ -607,7 +609,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
             final Expression rooted;
             if (expression != null) {
-                rooted = expression.bind(Context.init(), PathTransform.root(Path.of(Reserved.THIS)));
+                rooted = expression.bind(Context.init(), NameTransform.root(Name.of(Reserved.THIS)));
             } else {
                 rooted = new Constant(true);
             }
@@ -622,7 +624,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             final Expression bound = merged.bind(context);
 
             final List<Sort> sort = MoreObjects.firstNonNull(options.getSort(), Collections.emptyList());
-            final Expression unrooted = bound.bind(Context.init(), PathTransform.unroot(Path.of(Reserved.THIS)));
+            final Expression unrooted = bound.bind(Context.init(), NameTransform.unroot(Name.of(Reserved.THIS)));
 
             return queryImpl(context, objectSchema, unrooted, sort, count, paging)
                     .thenCompose(results -> expandAndRestrict(caller, results, options.getExpand()));
@@ -680,7 +682,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             if(index.getConsistency(best).isAsync()) {
                 final Map<Index.Key, Map<String, Object>> records = index.readValues(after);
                 return records.entrySet().stream()
-                        .map(e -> AsyncIndexCreatedEvent.of(schema.getName(), index.getName(), id, 0L, e.getKey(), e.getValue()));
+                        .map(e -> AsyncIndexCreatedEvent.of(schema.getQualifiedName(), index.getName(), id, 0L, e.getKey(), e.getValue()));
             } else {
                 return Stream.empty();
             }
@@ -714,7 +716,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             if(index.getConsistency(best).isAsync()) {
                 final Map<Index.Key, Map<String, Object>> records = index.readValues(before);
                 records.keySet()
-                        .forEach(key -> events.add(AsyncIndexDeletedEvent.of(schema.getName(), index.getName(), id, version, key)));
+                        .forEach(key -> events.add(AsyncIndexDeletedEvent.of(schema.getQualifiedName(), index.getName(), id, version, key)));
             }
         });
         events.addAll(refQueryEvents(schema, id));
@@ -773,7 +775,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                 event.getExpression(), ImmutableList.of(), REF_QUERY_BATCH_SIZE, event.getPaging());
         return query.thenApply(page -> {
             final Set<Event> events = new HashSet<>();
-            page.forEach(instance -> events.add(RefRefreshEvent.of(event.getRef(), schema.getName(), Instance.getId(instance))));
+            page.forEach(instance -> events.add(RefRefreshEvent.of(event.getRef(), schema.getQualifiedName(), Instance.getId(instance))));
             if(page.hasPaging()) {
                 events.add(event.withPaging(page.getPaging()));
             }
@@ -793,7 +795,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         return read.read().thenCompose(readResponse -> {
             final Instance before = schema.create(readResponse.getObject(schema, id), true, true);
             if(before != null) {
-                final Set<Path> refExpand = schema.refExpand(refSchema.getName(), schema.getExpand());
+                final Set<Name> refExpand = schema.refExpand(refSchema.getQualifiedName(), schema.getExpand());
                 final Instance refAfter = refSchema.create(readResponse.getObject(refSchema, refId), true, true);
                 return expand(context(Caller.SUPER), refAfter, refExpand).thenCompose(expandedRefAfter -> {
 
@@ -801,12 +803,12 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                     assert version != null;
                     final Instance after = schema.expand(before, new Expander() {
                         @Override
-                        public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Path> expand) {
+                        public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
 
                             if (ref == null) {
                                 return null;
                             }
-                            if (schema.getName().equals(refSchema.getName())) {
+                            if (schema.getQualifiedName().equals(refSchema.getQualifiedName())) {
                                 if (refId.equals(Instance.getId(ref))) {
                                     if (refAfter == null) {
                                         return ObjectSchema.ref(refId);
@@ -819,7 +821,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         }
 
                         @Override
-                        public PagedList<Instance> expandLink(final Link link, final PagedList<Instance> value, final Set<Path> expand) {
+                        public PagedList<Instance> expandLink(final Link link, final PagedList<Instance> value, final Set<Name> expand) {
 
                             return value;
                         }
@@ -827,7 +829,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                     final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC);
                     write.updateObject(schema, id, before, after);
                     return write.commit()
-                            .thenCompose(ignored -> emitter.emit(ObjectRefreshedEvent.of(schema.getName(), id, version, before, after)));
+                            .thenCompose(ignored -> emitter.emit(ObjectRefreshedEvent.of(schema.getQualifiedName(), id, version, before, after)));
 
                 });
             } else {
@@ -840,11 +842,11 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         final Set<Event> events = new HashSet<>();
         namespace.forEachObjectSchema((k, v) -> {
-            final Set<Expression> queries = v.refQueries(schema.getName(), v.getExpand());
+            final Set<Expression> queries = v.refQueries(schema.getQualifiedName(), v.getExpand());
             if(!queries.isEmpty()) {
                 final Or merged = new Or(queries.toArray(new Expression[0]));
                 final Expression bound = merged.bind(context(Caller.ANON, ImmutableMap.of(Reserved.THIS, ObjectSchema.ref(id))));
-                events.add(RefQueryEvent.of(Ref.of(schema.getName(), id), k, bound));
+                events.add(RefQueryEvent.of(Ref.of(schema.getQualifiedName(), id), k, bound));
             }
         });
         return events;
@@ -857,7 +859,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final StorageTraits traits = storage.storageTraits(schema);
         final History history = schema.getHistory();
         if(history.isEnabled() && history.getConsistency(traits.getHistoryConsistency()).isAsync()) {
-            return Collections.singleton(AsyncHistoryCreatedEvent.of(schema.getName(), id, afterVersion, after));
+            return Collections.singleton(AsyncHistoryCreatedEvent.of(schema.getQualifiedName(), id, afterVersion, after));
         } else {
             return Collections.emptySet();
         }
@@ -876,11 +878,11 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             if(index.getConsistency(best).isAsync()) {
                 final IndexRecordDiff diff = IndexRecordDiff.from(index.readValues(before), index.readValues(after));
                 final Stream<Event> create = diff.getCreate().entrySet().stream()
-                        .map(e -> AsyncIndexCreatedEvent.of(schema.getName(), index.getName(), id, beforeVersion, e.getKey(), e.getValue()));
+                        .map(e -> AsyncIndexCreatedEvent.of(schema.getQualifiedName(), index.getName(), id, beforeVersion, e.getKey(), e.getValue()));
                 final Stream<Event> update = diff.getUpdate().entrySet().stream()
-                        .map(e -> AsyncIndexUpdatedEvent.of(schema.getName(), index.getName(), id, beforeVersion, e.getKey(), e.getValue()));
+                        .map(e -> AsyncIndexUpdatedEvent.of(schema.getQualifiedName(), index.getName(), id, beforeVersion, e.getKey(), e.getValue()));
                 final Stream<Event> delete = diff.getDelete().stream()
-                        .map(key-> AsyncIndexDeletedEvent.of(schema.getName(), index.getName(), id, beforeVersion, key));
+                        .map(key-> AsyncIndexDeletedEvent.of(schema.getQualifiedName(), index.getName(), id, beforeVersion, key));
                 return Stream.of(create, update, delete)
                         .flatMap(v -> v);
             } else {

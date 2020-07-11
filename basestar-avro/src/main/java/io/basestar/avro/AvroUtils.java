@@ -20,10 +20,7 @@ package io.basestar.avro;
  * #L%
  */
 
-import io.basestar.schema.EnumSchema;
-import io.basestar.schema.InstanceSchema;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.Property;
+import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
@@ -37,12 +34,17 @@ import java.util.stream.Collectors;
 
 public class AvroUtils {
 
+    private static String name(final io.basestar.schema.Schema<?> schema) {
+
+        return schema.getQualifiedName().toString(Reserved.PREFIX);
+    }
+
     public static Schema schema(final io.basestar.schema.Schema<?> schema) {
 
         if(schema instanceof EnumSchema) {
             final EnumSchema enumSchema = (EnumSchema)schema;
             final List<String> values = enumSchema.getValues();
-            return Schema.createEnum(schema.getName(), schema.getDescription(), null, values);
+            return Schema.createEnum(name(schema), schema.getDescription(), null, values);
         } else if(schema instanceof InstanceSchema) {
             final InstanceSchema instanceSchema = (InstanceSchema)schema;
             final List<Schema.Field> fields = new ArrayList<>();
@@ -50,7 +52,7 @@ public class AvroUtils {
                     .forEach((k, v) -> fields.add(new Schema.Field(k, schema(v))));
             instanceSchema.getProperties()
                     .forEach((k, v) -> fields.add(new Schema.Field(k, schema(v))));
-            return Schema.createRecord(schema.getName(), schema.getDescription(), null, false, fields);
+            return Schema.createRecord(name(schema), schema.getDescription(), null, false, fields);
         } else {
             throw new IllegalStateException();
         }
@@ -61,7 +63,7 @@ public class AvroUtils {
         final List<Schema.Field> fields = new ArrayList<>();
         ObjectSchema.REF_SCHEMA
                 .forEach((k, v) -> fields.add(new Schema.Field(k, schema(v))));
-        return Schema.createRecord(schema.getName(), schema.getDescription(), null, false, fields);
+        return Schema.createRecord(name(schema), schema.getDescription(), null, false, fields);
     }
 
     public static Schema schema(final Property property) {

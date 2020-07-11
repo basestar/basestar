@@ -21,6 +21,7 @@ package io.basestar.database.util;
  */
 
 import io.basestar.schema.Instance;
+import io.basestar.util.Name;
 import lombok.Data;
 
 import java.util.Map;
@@ -28,7 +29,7 @@ import java.util.Map;
 @Data
 public class LinkKey {
 
-    private final String schema;
+    private final Name schema;
 
     private final String id;
 

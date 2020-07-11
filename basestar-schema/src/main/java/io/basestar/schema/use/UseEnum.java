@@ -23,7 +23,7 @@ package io.basestar.schema.use;
 import io.basestar.expression.Context;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.EnumSchema;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import lombok.Data;
 
 import java.io.DataInput;
@@ -47,9 +47,9 @@ public class UseEnum implements UseScalar<String>, UseNamed<String> {
     private final EnumSchema schema;
 
     @Override
-    public String getName() {
+    public Name getQualifiedName() {
 
-        return schema.getName();
+        return schema.getQualifiedName();
     }
 
     @Override
@@ -95,16 +95,16 @@ public class UseEnum implements UseScalar<String>, UseNamed<String> {
     @Override
     public String toString() {
 
-        return schema.getName();
+        return schema.getQualifiedName().toString();
     }
 
     @Override
-    public Set<Constraint.Violation> validate(final Context context, final Path path, final String value) {
+    public Set<Constraint.Violation> validate(final Context context, final Name name, final String value) {
 
         if(value == null) {
             return Collections.emptySet();
         } else {
-            return schema.validate(context, path, value);
+            return schema.validate(context, name, value);
         }
     }
 

@@ -35,9 +35,10 @@ import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseArray;
 import io.basestar.schema.use.UseRef;
+import io.basestar.schema.util.Expander;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.PagedList;
-import io.basestar.util.Path;
 import io.basestar.util.Sort;
 import lombok.Data;
 import lombok.Getter;
@@ -57,7 +58,7 @@ import java.util.function.Function;
 public class Link implements Member {
 
     @Nonnull
-    private final String name;
+    private final Name qualifiedName;
 
     @Nullable
     private final String description;
@@ -83,7 +84,7 @@ public class Link implements Member {
     public static class Builder implements Member.Builder {
 
         @Nullable
-        private String schema;
+        private Name schema;
 
         @Nullable
         private String description;
@@ -105,9 +106,9 @@ public class Link implements Member {
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private Map<String, Object> extensions;
 
-        public Link build(final Schema.Resolver resolver, final String name) {
+        public Link build(final Schema.Resolver resolver, final Name qualifiedName) {
 
-            return new Link(this, resolver, name);
+            return new Link(this, resolver, qualifiedName);
         }
     }
 
@@ -116,17 +117,17 @@ public class Link implements Member {
         return new Builder();
     }
 
-    public Link(final Builder builder, final Schema.Resolver resolver, final String name) {
+    public Link(final Builder builder, final Schema.Resolver resolver, final Name qualifiedName) {
 
-        this.name = name;
+        this.qualifiedName = qualifiedName;
         this.description = builder.getDescription();
         this.schema = resolver.requireObjectSchema(builder.getSchema());
         this.expression = Nullsafe.require(builder.getExpression());
         this.sort = Nullsafe.immutableCopy(builder.getSort());
         this.visibility = builder.getVisibility();
         this.extensions = Nullsafe.immutableSortedCopy(builder.getExtensions());
-        if(Reserved.isReserved(name)) {
-            throw new ReservedNameException(name);
+        if(Reserved.isReserved(qualifiedName.last())) {
+            throw new ReservedNameException(qualifiedName);
         }
     }
 
@@ -138,7 +139,7 @@ public class Link implements Member {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Object expand(final Object value, final Expander expander, final Set<Path> expand) {
+    public Object expand(final Object value, final Expander expander, final Set<Name> expand) {
 
         if(expand == null) {
             return null;
@@ -148,25 +149,25 @@ public class Link implements Member {
     }
 
     @Override
-    public Set<Path> requiredExpand(final Set<Path> paths) {
+    public Set<Name> requiredExpand(final Set<Name> names) {
 
-        final Set<Path> result = new HashSet<>();
-        result.add(Path.empty());
-        result.addAll(schema.requiredExpand(paths));
+        final Set<Name> result = new HashSet<>();
+        result.add(Name.empty());
+        result.addAll(schema.requiredExpand(names));
         return result;
     }
 
     //FIXME
     @Override
-    public <T> Use<T> typeOf(final Path path) {
+    public <T> Use<T> typeOf(final Name name) {
 
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public Set<Path> transientExpand(final Path path, final Set<Path> expand) {
+    public Set<Name> transientExpand(final Name name, final Set<Name> expand) {
 
-        return schema.transientExpand(path, expand);
+        return schema.transientExpand(name, expand);
     }
 
     @Override
@@ -178,20 +179,20 @@ public class Link implements Member {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Object evaluateTransients(final Context context, final Object value, final Set<Path> expand) {
+    public Object evaluateTransients(final Context context, final Object value, final Set<Name> expand) {
 
         return transform((PagedList<Instance>)value, before -> schema.evaluateTransients(context, before, expand));
     }
 
     @Override
-    public Set<Expression> refQueries(final String otherTypeName, final Set<Path> expand, final Path path) {
+    public Set<Expression> refQueries(Name otherSchemaName, final Set<Name> expand, final Name name) {
 
         // FIXME
         return Collections.emptySet();
     }
 
     @Override
-    public Set<Path> refExpand(final String otherTypeName, final Set<Path> expand) {
+    public Set<Name> refExpand(Name otherSchemaName, final Set<Name> expand) {
 
         // FIXME
         return Collections.emptySet();

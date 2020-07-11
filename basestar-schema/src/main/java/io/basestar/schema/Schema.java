@@ -23,8 +23,8 @@ package io.basestar.schema;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.basestar.expression.Context;
-import io.basestar.schema.exception.MissingTypeException;
-import io.basestar.util.Path;
+import io.basestar.schema.exception.MissingSchemaException;
+import io.basestar.util.Name;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -40,7 +40,9 @@ import java.util.UUID;
  * @param <T>
  */
 
-public interface Schema<T> extends Named, Described, Serializable, Extendable {
+public interface Schema<T> extends Named.Qualified, Described, Serializable, Extendable {
+
+    Name ANONYMOUS_NAME = Name.of(Reserved.PREFIX + "anon");
 
     String VAR_THIS = "this";
 
@@ -53,9 +55,9 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
     })
     interface Builder<T> extends Described {
 
-        Schema<T> build();
+        Schema<T> build(Resolver.Constructing resolver, Name qualifiedName, int slot);
 
-        Schema<T> build(Resolver resolver, String name, int slot);
+        Schema<T> build();
     }
 
     default T create(final Object value) {
@@ -72,9 +74,9 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
 
     int getSlot();
 
-    static String anonymousName() {
+    static Name anonymousQualifiedName() {
 
-        return "Anonymous#" + UUID.randomUUID().toString();
+        return ANONYMOUS_NAME.with(UUID.randomUUID().toString());
     }
 
     static int anonymousSlot() {
@@ -89,89 +91,136 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
 
     default Set<Constraint.Violation> validate(final Context context, final T after) {
 
-        return validate(context, Path.empty(), after);
+        return validate(context, Name.empty(), after);
     }
 
-    Set<Constraint.Violation> validate(Context context, Path path, T after);
+    Set<Constraint.Violation> validate(Context context, Name name, T after);
 
     io.swagger.v3.oas.models.media.Schema<?> openApi();
 
     interface Resolver {
 
-        // 'Magic' method to handles cycles in namespace builder, instance under construction
-        // must call resolver.constructing(this); as first constructor line.
+        interface Constructing extends Resolver {
 
-        default void constructing(final Schema<?> schema) {
+            // 'Magic' method to handles cycles in namespace builder, instance under construction
+            // must call resolver.constructing(this); as first constructor line.
 
+            void constructing(final Schema<?> schema);
+
+            // Convenience for anonymous construction
+
+            Constructing ANONYMOUS = new Constructing() {
+
+                @Override
+                public void constructing(final Schema<?> schema) {
+
+                }
+
+                @Nullable
+                @Override
+                public Schema<?> getSchema(final Name qualifiedName) {
+                    return null;
+                }
+            };
         }
 
         @Nullable
-        Schema<?> getSchema(String name);
+        Schema<?> getSchema(Name qualifiedName);
 
         @Nonnull
-        default Schema<?> requireSchema(final String name) {
+        default Schema<?> requireSchema(final Name qualifiedName) {
 
-            final Schema<?> result = getSchema(name);
+            final Schema<?> result = getSchema(qualifiedName);
             if(result == null) {
-                throw new MissingTypeException(name);
+                throw new MissingSchemaException(qualifiedName);
             } else {
                 return result;
             }
         }
 
-        @Nonnull
-        default InstanceSchema requireInstanceSchema(final String name) {
+        default Schema<?> requireSchema(final String name) {
 
-            final Schema<?> schema = requireSchema(name);
+            return requireSchema(Name.parse(name));
+        }
+
+        @Nonnull
+        default InstanceSchema requireInstanceSchema(final Name qualifiedName) {
+
+            final Schema<?> schema = requireSchema(qualifiedName);
             if(schema instanceof InstanceSchema) {
                 return (InstanceSchema)schema;
             } else {
-                throw new IllegalStateException(name + " is not an instance schema");
+                throw new IllegalStateException(qualifiedName + " is not an instance schema");
             }
         }
 
-        @Nonnull
-        default ObjectSchema requireObjectSchema(final String name) {
+        default InstanceSchema requireInstanceSchema(final String name) {
 
-            final Schema<?> schema = requireSchema(name);
+            return requireInstanceSchema(Name.parse(name));
+        }
+
+        @Nonnull
+        default ObjectSchema requireObjectSchema(final Name qualifiedName) {
+
+            final Schema<?> schema = requireSchema(qualifiedName);
             if (schema instanceof ObjectSchema) {
                 return (ObjectSchema) schema;
             } else {
-                throw new IllegalStateException(name + " is not an object schema");
+                throw new IllegalStateException(qualifiedName + " is not an object schema");
             }
         }
 
-        @Nonnull
-        default StructSchema requireStructSchema(final String name) {
+        default ObjectSchema requireObjectSchema(final String name) {
 
-            final Schema<?> schema = requireSchema(name);
+            return requireObjectSchema(Name.parse(name));
+        }
+
+        @Nonnull
+        default StructSchema requireStructSchema(final Name qualifiedName) {
+
+            final Schema<?> schema = requireSchema(qualifiedName);
             if(schema instanceof StructSchema) {
                 return (StructSchema)schema;
             } else {
-                throw new IllegalStateException(name + " is not a struct schema");
+                throw new IllegalStateException(qualifiedName + " is not a struct schema");
             }
         }
 
-        @Nonnull
-        default EnumSchema requireEnumSchema(final String name) {
+        default StructSchema requireStructSchema(final String name) {
 
-            final Schema<?> schema = requireSchema(name);
+            return requireStructSchema(Name.parse(name));
+        }
+
+        @Nonnull
+        default EnumSchema requireEnumSchema(final Name qualifiedName) {
+
+            final Schema<?> schema = requireSchema(qualifiedName);
             if(schema instanceof EnumSchema) {
                 return (EnumSchema)schema;
             } else {
-                throw new IllegalStateException(name + " is not an enum schema");
+                throw new IllegalStateException(qualifiedName + " is not an enum schema");
             }
         }
 
-        @Nonnull
-        default ViewSchema requireViewSchema(final String name) {
+        default EnumSchema requireEnumSchema(final String name) {
 
-            final Schema<?> schema = requireSchema(name);
+            return requireEnumSchema(Name.parse(name));
+        }
+
+        @Nonnull
+        default ViewSchema requireViewSchema(final Name qualifiedName) {
+
+            final Schema<?> schema = requireSchema(qualifiedName);
             if (schema instanceof ViewSchema) {
                 return (ViewSchema) schema;
             } else {
-                throw new IllegalStateException(name + " is not a view schema");
+                throw new IllegalStateException(qualifiedName + " is not a view schema");
             }
+        }
+
+        default ViewSchema requireViewSchema(final String name) {
+
+            return requireViewSchema(Name.parse(name));
         }
     }
 }

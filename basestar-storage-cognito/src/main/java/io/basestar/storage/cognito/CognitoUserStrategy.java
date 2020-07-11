@@ -1,8 +1,8 @@
-package io.basestar.schema;
+package io.basestar.storage.cognito;
 
 /*-
  * #%L
- * basestar-schema
+ * basestar-storage-cognito
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -20,20 +20,9 @@ package io.basestar.schema;
  * #L%
  */
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Data;
+import io.basestar.schema.ObjectSchema;
 
-@Data
-public class Ref {
+public interface CognitoUserStrategy {
 
-    private final String schema;
-
-    private final String id;
-
-    @JsonCreator
-    public static Ref of(@JsonProperty("schema") final String schema, @JsonProperty("id") final String id) {
-
-        return new Ref(schema, id);
-    }
+    String getUserPoolId(ObjectSchema schema);
 }

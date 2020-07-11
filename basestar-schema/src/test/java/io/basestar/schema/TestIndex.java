@@ -23,7 +23,7 @@ package io.basestar.schema;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import io.basestar.util.Sort;
 import org.junit.jupiter.api.Test;
 
@@ -41,18 +41,18 @@ public class TestIndex {
         final Index index = Index.builder()
                 .setConsistency(Consistency.ASYNC)
                 .setOver(ImmutableMap.of(
-                        "a", Path.of("as"),
-                        "b", Path.of("bs"),
-                        "c", Path.of("cs")
+                        "a", Name.of("as"),
+                        "b", Name.of("bs"),
+                        "c", Name.of("cs")
                 ))
                 .setPartition(ImmutableList.of(
-                    Path.of("a", "id"),
-                    Path.of("b", "id"),
-                    Path.of("c", "id"),
-                    Path.of("d")
+                    Name.of("a", "id"),
+                    Name.of("b", "id"),
+                    Name.of("c", "id"),
+                    Name.of("d")
             )).setSort(ImmutableList.of(
-                    Sort.asc(Path.of("e"))
-            )).build("test");
+                    Sort.asc(Name.of("e"))
+            )).build(Name.of("test"));
 
         final Map<String, Object> data = new HashMap<>();
         data.put("as", ImmutableList.of(

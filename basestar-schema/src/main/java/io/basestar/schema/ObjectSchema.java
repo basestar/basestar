@@ -34,8 +34,8 @@ import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseInteger;
 import io.basestar.schema.use.UseString;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import io.basestar.util.Path;
 import lombok.Data;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -73,7 +73,7 @@ import java.util.stream.Stream;
 public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolver, Transient.Resolver, Permission.Resolver {
 
     @Nonnull
-    private final String name;
+    private final Name qualifiedName;
 
     private final int slot;
 
@@ -152,10 +152,10 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
     private final SortedMap<String, Permission> permissions;
 
     @Nonnull
-    private final SortedSet<Path> declaredExpand;
+    private final SortedSet<Name> declaredExpand;
 
     @Nonnull
-    private final SortedSet<Path> expand;
+    private final SortedSet<Name> expand;
 
     private final boolean concrete;
 
@@ -182,7 +182,7 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         private Long version;
 
         @Nullable
-        private String extend;
+        private Name extend;
 
         @Nullable
         private Id.Builder id;
@@ -223,7 +223,7 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         @JsonDeserialize(contentUsing = PathDeserializer.class)
-        private Set<Path> expand;
+        private Set<Name> expand;
 
         @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
@@ -265,15 +265,15 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         }
 
         @Override
-        public ObjectSchema build(final Resolver resolver, final String name, final int slot) {
+        public ObjectSchema build(final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
 
-            return new ObjectSchema(this, resolver, name, slot);
+            return new ObjectSchema(this, resolver, qualifiedName, slot);
         }
 
         @Override
         public ObjectSchema build() {
 
-            return new ObjectSchema(this, name -> null, Schema.anonymousName(), Schema.anonymousSlot());
+            return build(Resolver.Constructing.ANONYMOUS, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
         }
     }
 
@@ -295,10 +295,10 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
             .put(Reserved.ID, UseString.DEFAULT)
             .build();
 
-    private ObjectSchema(final Builder builder, final Schema.Resolver resolver, final String name, final int slot) {
+    private ObjectSchema(final Builder builder, final Schema.Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
 
         resolver.constructing(this);
-        this.name = name;
+        this.qualifiedName = qualifiedName;
         this.slot = slot;
         this.version = Nullsafe.option(builder.getVersion(), 1L);
         if(builder.getExtend() != null) {
@@ -307,23 +307,23 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
             this.extend = null;
         }
         this.description = builder.getDescription();
-        this.id = builder.getId() == null ? null : builder.getId().build();
+        this.id = builder.getId() == null ? null : builder.getId().build(qualifiedName.with(Reserved.ID));
         this.history = Nullsafe.option(builder.getHistory(), History.ENABLED);
         this.declaredProperties = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getProperties()).entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, e.getKey()))));
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, qualifiedName.with(e.getKey())))));
         this.declaredTransients = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getTransients()).entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(e.getKey()))));
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(qualifiedName.with(e.getKey())))));
         this.declaredLinks = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getLinks()).entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, e.getKey()))));
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, qualifiedName.with(e.getKey())))));
         this.declaredIndexes = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getIndexes()).entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(e.getKey()))));
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(qualifiedName.with(e.getKey())))));
         this.declaredPermissions = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getPermissions()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(e.getKey()))));
         this.declaredExpand = ImmutableSortedSet.copyOf(Nullsafe.option(builder.getExpand()));
         this.concrete = Nullsafe.option(builder.getConcrete(), Boolean.TRUE);
         this.extensions = Nullsafe.immutableSortedCopy(builder.getExtensions());
-        if(Reserved.isReserved(name)) {
-            throw new ReservedNameException(name);
+        if(Reserved.isReserved(qualifiedName.last())) {
+            throw new ReservedNameException(qualifiedName);
         }
         Stream.of(this.declaredProperties, this.declaredLinks, this.declaredTransients)
                 .flatMap(v -> v.keySet().stream()).forEach(k -> {
@@ -438,11 +438,11 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
     }
 
     @Deprecated
-    public Multimap<Path, Instance> refs(final Map<String, Object> object) {
+    public Multimap<Name, Instance> refs(final Map<String, Object> object) {
 
-        final Multimap<Path, Instance> results = HashMultimap.create();
+        final Multimap<Name, Instance> results = HashMultimap.create();
         properties.forEach((k, v) -> v.links(object.get(k)).forEach((k2, v2) ->
-                results.put(Path.of(v.getName()).with(k2), v2)));
+                results.put(Name.of(v.getName()).with(k2), v2)));
         return results;
     }
 
@@ -455,7 +455,7 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         final HashMap<String, Object> result = new HashMap<>(readProperties(value, expand, suppress));
         result.putAll(readMeta(value));
         if(Instance.getSchema(result) == null) {
-            Instance.setSchema(result, this.getName());
+            Instance.setSchema(result, this.getQualifiedName());
         }
         if(Instance.getHash(result) == null) {
            Instance.setHash(result, hash(result));
@@ -507,26 +507,26 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
 //    }
 
     @Override
-    public Set<Constraint.Violation> validate(final Context context, final Path path, final Instance after) {
+    public Set<Constraint.Violation> validate(final Context context, final Name name, final Instance after) {
 
-        return validate(context, path, after, after);
+        return validate(context, name, after, after);
     }
 
     public Set<Constraint.Violation> validate(final Context context, final Instance before, final Instance after) {
 
-        return validate(context, Path.empty(), before, after);
+        return validate(context, Name.empty(), before, after);
     }
 
-    public Set<Constraint.Violation> validate(final Context context, final Path path, final Instance before, final Instance after) {
+    public Set<Constraint.Violation> validate(final Context context, final Name name, final Instance before, final Instance after) {
 
         final Set<Constraint.Violation> violations = new HashSet<>();
 
         if(id != null) {
-            violations.addAll(id.validate(path, Instance.getId(after), context));
+            violations.addAll(id.validate(name, Instance.getId(after), context));
         }
 
         violations.addAll(this.getProperties().values().stream()
-                .flatMap(v -> v.validate(context, path, before.get(v.getName()), after.get(v.getName())).stream())
+                .flatMap(v -> v.validate(context, name, before.get(v.getName()), after.get(v.getName())).stream())
                 .collect(Collectors.toSet()));
 
         return violations;
@@ -549,13 +549,13 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
 
     public void serialize(final Map<String, Object> object, final DataOutput out) throws IOException {
 
-        final String schema = Instance.getSchema(object);
+        final Name schema = Instance.getSchema(object);
         final String id = Instance.getId(object);
         final Long version = Instance.getVersion(object);
         final LocalDateTime created = Instance.getCreated(object);
         final LocalDateTime updated = Instance.getUpdated(object);
         final String hash = Instance.getHash(object);
-        UseString.DEFAULT.serialize(schema, out);
+        UseString.DEFAULT.serialize(schema == null ? null : schema.toString(), out);
         UseString.DEFAULT.serialize(id, out);
         UseInteger.DEFAULT.serialize(version, out);
         UseString.DEFAULT.serialize(created == null ? null : created.toString(), out);
@@ -574,7 +574,7 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         final String hash = Use.deserializeAny(in);
 
         final Map<String, Object> data = new HashMap<>(InstanceSchema.deserializeProperties(in));
-        Instance.setSchema(data, schema);
+        Instance.setSchema(data, schema == null ? null : Name.parse(schema));
         Instance.setId(data, id);
         Instance.setVersion(data, version);
         Instance.setCreated(data, created == null ? null : LocalDateTime.parse(created));

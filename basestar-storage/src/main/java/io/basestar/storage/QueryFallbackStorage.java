@@ -21,8 +21,8 @@ package io.basestar.storage;
  */
 
 import io.basestar.expression.Expression;
-import io.basestar.schema.ObjectSchema;
 import io.basestar.expression.aggregate.Aggregate;
+import io.basestar.schema.ObjectSchema;
 import io.basestar.storage.exception.UnsupportedQueryException;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.Nullsafe;
@@ -64,7 +64,7 @@ public class QueryFallbackStorage implements DelegatingStorage {
     public List<Pager.Source<Map<String, Object>>> tryQuery(final List<Storage> storage, final ObjectSchema schema, final Expression query, final List<Sort> sort) {
 
         if (storage.isEmpty()) {
-            throw new UnsupportedQueryException(schema.getName(), query);
+            throw new UnsupportedQueryException(schema.getQualifiedName(), query);
         } else {
             try {
                 return storage.get(0).query(schema, query, sort);

@@ -37,6 +37,7 @@ import io.basestar.auth.Authenticator;
 import io.basestar.auth.Authorization;
 import io.basestar.auth.Caller;
 import io.basestar.auth.exception.AuthenticationFailedException;
+import io.basestar.util.Name;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import lombok.Data;
 
@@ -87,9 +88,9 @@ public class NimbusAuthenticator implements Authenticator {
                 }
 
                 @Override
-                public String getSchema() {
+                public Name getSchema() {
 
-                    return "User";
+                    return Name.of("User");
                 }
 
                 @Override

@@ -42,8 +42,8 @@ public class ViewSchemaModel extends InstanceSchemaModel {
     public List<AnnotationModel> getAnnotations() {
 
         final Map<String, Object> values = new HashMap<>();
-        values.put("name", schema.getName());
-        values.put("from", schema.getFrom().getName());
+        values.put("name", schema.getQualifiedName());
+        values.put("from", schema.getFrom().getQualifiedName());
         if(schema.getWhere() != null) {
             values.put("where", schema.getWhere().toString());
         }

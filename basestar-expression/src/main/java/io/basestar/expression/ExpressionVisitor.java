@@ -26,7 +26,7 @@ import io.basestar.expression.call.LambdaCall;
 import io.basestar.expression.call.MemberCall;
 import io.basestar.expression.compare.*;
 import io.basestar.expression.constant.Constant;
-import io.basestar.expression.constant.PathConstant;
+import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.function.*;
 import io.basestar.expression.iterate.*;
 import io.basestar.expression.literal.LiteralArray;
@@ -86,7 +86,7 @@ public interface ExpressionVisitor<T> {
 
     T visitConstant(Constant expression);
 
-    T visitPathConstant(PathConstant expression);
+    T visitPathConstant(NameConstant expression);
 
     T visitCoalesce(Coalesce expression);
 
@@ -267,7 +267,7 @@ public interface ExpressionVisitor<T> {
         }
 
         @Override
-        default T visitPathConstant(final PathConstant expression) {
+        default T visitPathConstant(final NameConstant expression) {
             
             return visitDefault(expression);
         }

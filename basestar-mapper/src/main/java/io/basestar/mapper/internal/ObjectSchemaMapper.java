@@ -27,7 +27,7 @@ import io.basestar.mapper.annotation.Permission;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.type.AnnotationContext;
 import io.basestar.type.TypeContext;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import io.basestar.util.Sort;
 
 import java.util.*;
@@ -39,7 +39,7 @@ public class ObjectSchemaMapper<T> extends InstanceSchemaMapper<T, ObjectSchema.
 
     private final Map<String, io.basestar.schema.Permission.Builder> permissions = new HashMap<>();
 
-    public ObjectSchemaMapper(final MappingContext context, final String name, final TypeContext type) {
+    public ObjectSchemaMapper(final MappingContext context, final Name name, final TypeContext type) {
 
         super(context, name, type, ObjectSchema.Builder.class);
         for(final AnnotationContext<Index> annot : type.annotations(Index.class)) {
@@ -61,17 +61,17 @@ public class ObjectSchemaMapper<T> extends InstanceSchemaMapper<T, ObjectSchema.
         }
     }
 
-    private Map<String, Path> over(final Index.Over[] over) {
+    private Map<String, Name> over(final Index.Over[] over) {
 
         return Arrays.stream(over).collect(Collectors.toMap(
                 Index.Over::as,
-                v -> Path.parse(v.path())
+                v -> Name.parse(v.path())
         ));
     }
 
-    private Set<Path> expand(final String[] partition) {
+    private Set<Name> expand(final String[] partition) {
 
-        return Arrays.stream(partition).map(Path::parse).collect(Collectors.toSet());
+        return Arrays.stream(partition).map(Name::parse).collect(Collectors.toSet());
     }
 
     private Set<String> projection(final String[] projection) {
@@ -84,9 +84,9 @@ public class ObjectSchemaMapper<T> extends InstanceSchemaMapper<T, ObjectSchema.
         return Arrays.stream(sort).map(Sort::parse).collect(Collectors.toList());
     }
 
-    private List<Path> partition(final String[] partition) {
+    private List<Name> partition(final String[] partition) {
 
-        return Arrays.stream(partition).map(Path::parse).collect(Collectors.toList());
+        return Arrays.stream(partition).map(Name::parse).collect(Collectors.toList());
     }
 
     @Override

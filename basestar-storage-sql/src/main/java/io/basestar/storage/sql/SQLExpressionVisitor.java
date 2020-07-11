@@ -27,7 +27,7 @@ import io.basestar.expression.arithmetic.*;
 import io.basestar.expression.bitwise.*;
 import io.basestar.expression.compare.*;
 import io.basestar.expression.constant.Constant;
-import io.basestar.expression.constant.PathConstant;
+import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.function.Coalesce;
 import io.basestar.expression.function.IfElse;
 import io.basestar.expression.function.In;
@@ -36,10 +36,9 @@ import io.basestar.expression.iterate.Of;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import org.jooq.Condition;
 import org.jooq.Field;
-import org.jooq.Name;
 import org.jooq.QueryPart;
 import org.jooq.impl.DSL;
 
@@ -218,11 +217,11 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     }
 
     @Override
-    public QueryPart visitPathConstant(final PathConstant expression) {
+    public QueryPart visitPathConstant(final NameConstant expression) {
 
-        final Path path = expression.getPath();
-        return DSL.field(DSL.name(path.stream()
-                .map(DSL::name).toArray(Name[]::new)));
+        final Name name = expression.getName();
+        return DSL.field(DSL.name(name.stream()
+                .map(DSL::name).toArray(org.jooq.Name[]::new)));
     }
 
     @Override
@@ -254,14 +253,14 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
         final Expression rhs = expression.getRhs();
         if(rhs instanceof Of) {
             final Of of = (Of)rhs;
-            if(of.getExpr() instanceof PathConstant) {
-                final Path rhsPath = ((PathConstant) of.getExpr()).getPath();
+            if(of.getExpr() instanceof NameConstant) {
+                final Name rhsName = ((NameConstant) of.getExpr()).getName();
                 // map keys not supported
                 if(of.getKey() == null) {
                     final String first = of.getValue();
                     final Expression bound = lhs.bind(Context.init(), path -> {
                         if(first.equals(path.first())) {
-                            return SQLUtils.columnPath(rhsPath.with(path.withoutFirst()));
+                            return SQLUtils.columnPath(rhsName.with(path.withoutFirst()));
                         } else {
                             return path;
                         }

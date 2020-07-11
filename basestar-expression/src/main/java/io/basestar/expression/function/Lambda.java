@@ -25,10 +25,10 @@ import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
-import io.basestar.expression.PathTransform;
+import io.basestar.expression.NameTransform;
 import io.basestar.expression.call.Callable;
 import io.basestar.expression.iterate.Of;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import lombok.Data;
 
 import java.util.HashMap;
@@ -67,10 +67,10 @@ public class Lambda implements Expression {
     }
 
     @Override
-    public Expression bind(final Context context, final PathTransform root) {
+    public Expression bind(final Context context, final NameTransform root) {
 
         final BindContext bindContext = new BindContext(context);
-        final Expression yield = this.yield.bind(bindContext, PathTransform.closure(args, root));
+        final Expression yield = this.yield.bind(bindContext, NameTransform.closure(args, root));
 
         if(yield == this.yield) {
             return this;
@@ -94,7 +94,7 @@ public class Lambda implements Expression {
     }
 
     @Override
-    public Set<Path> paths() {
+    public Set<Name> paths() {
 
         return yield.paths().stream()
                 .filter(v -> !args.contains(v.first()))

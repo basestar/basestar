@@ -31,8 +31,8 @@ import io.basestar.expression.logical.And;
 import io.basestar.jackson.serde.ExpressionDeseriaizer;
 import io.basestar.jackson.serde.PathDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import io.basestar.util.Path;
 import lombok.Data;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -83,10 +83,10 @@ public class Permission implements Serializable {
     private final Expression expression;
 
     @Nonnull
-    private final SortedSet<Path> expand;
+    private final SortedSet<Name> expand;
 
     @Nonnull
-    private final SortedSet<Path> inherit;
+    private final SortedSet<Name> inherit;
 
     @Data
     @Accessors(chain = true)
@@ -108,13 +108,13 @@ public class Permission implements Serializable {
         @JsonSetter(contentNulls = Nulls.FAIL)
         @JsonSerialize(contentUsing = ToStringSerializer.class)
         @JsonDeserialize(contentUsing = PathDeserializer.class)
-        private Set<Path> expand;
+        private Set<Name> expand;
 
         @Nullable
         @JsonSetter(contentNulls = Nulls.FAIL)
         @JsonSerialize(contentUsing = ToStringSerializer.class)
         @JsonDeserialize(contentUsing = PathDeserializer.class)
-        private Set<Path> inherit;
+        private Set<Name> inherit;
 
         public Permission build(final String name) {
 
@@ -148,11 +148,11 @@ public class Permission implements Serializable {
         this.description = b.getDescription();
         this.anonymous = a.isAnonymous() && b.isAnonymous();
         this.expression = new And(a.getExpression(), b.getExpression());
-        final SortedSet<Path> expand = new TreeSet<>();
+        final SortedSet<Name> expand = new TreeSet<>();
         expand.addAll(a.getExpand());
         expand.addAll(b.getExpand());
         this.expand = Collections.unmodifiableSortedSet(expand);
-        final SortedSet<Path> inherit = new TreeSet<>();
+        final SortedSet<Name> inherit = new TreeSet<>();
         inherit.addAll(a.getExpand());
         inherit.addAll(b.getExpand());
         this.inherit = Collections.unmodifiableSortedSet(inherit);

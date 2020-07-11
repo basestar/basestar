@@ -24,14 +24,14 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.expression.constant.PathConstant;
+import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.iterate.ForAny;
 import io.basestar.expression.iterate.Of;
 import io.basestar.schema.Constraint;
-import io.basestar.schema.Expander;
 import io.basestar.schema.Instance;
-import io.basestar.schema.Ref;
-import io.basestar.util.Path;
+import io.basestar.schema.util.Expander;
+import io.basestar.schema.util.Ref;
+import io.basestar.util.Name;
 
 import java.io.DataOutput;
 import java.io.IOException;
@@ -46,13 +46,13 @@ public interface UseCollection<V, T extends Collection<V>> extends Use<T> {
     T transform(T value, Function<V, V> fn);
 
     @Override
-    default Set<Constraint.Violation> validate(final Context context, final Path path, final T value) {
+    default Set<Constraint.Violation> validate(final Context context, final Name name, final T value) {
 
         if(value == null) {
             return Collections.emptySet();
         } else {
             final Use<V> type = getType();
-            return value.stream().flatMap(v -> type.validate(context, path, v).stream()).collect(Collectors.toSet());
+            return value.stream().flatMap(v -> type.validate(context, name, v).stream()).collect(Collectors.toSet());
         }
     }
 
@@ -67,19 +67,19 @@ public interface UseCollection<V, T extends Collection<V>> extends Use<T> {
     }
 
     @Override
-    default Set<Expression> refQueries(final String otherTypeName, final Set<Path> expand, final Path path) {
+    default Set<Expression> refQueries(final Name otherSchemaName, final Set<Name> expand, final Name name) {
 
         final int hash = System.identityHashCode(this);
         final String v = "v" + hash;
-        return getType().refQueries(otherTypeName, expand, Path.of(v)).stream().map(
-                q -> new ForAny(q, new Of(v, new PathConstant(path)))
+        return getType().refQueries(otherSchemaName, expand, Name.of(v)).stream().map(
+                q -> new ForAny(q, new Of(v, new NameConstant(name)))
         ).collect(Collectors.toSet());
     }
 
     @Override
-    default Set<Path> refExpand(final String otherTypeName, final Set<Path> expand) {
+    default Set<Name> refExpand(final Name otherSchemaName, final Set<Name> expand) {
 
-        return getType().refExpand(otherTypeName, expand);
+        return getType().refExpand(otherSchemaName, expand);
     }
 
     @Override
@@ -94,17 +94,17 @@ public interface UseCollection<V, T extends Collection<V>> extends Use<T> {
     }
 
     @Override
-    default Use<?> typeOf(final Path path) {
+    default Use<?> typeOf(final Name name) {
 
-        if(path.isEmpty()) {
+        if(name.isEmpty()) {
             return this;
         } else {
-            return getType().typeOf(path);
+            return getType().typeOf(name);
         }
     }
 
     @Override
-    default T expand(final T value, final Expander expander, final Set<Path> expand) {
+    default T expand(final T value, final Expander expander, final Set<Name> expand) {
 
         final Use<V> type = getType();
         return transform(value, before -> type.expand(before, expander, expand));
@@ -118,29 +118,29 @@ public interface UseCollection<V, T extends Collection<V>> extends Use<T> {
     }
 
     @Override
-    default T evaluateTransients(final Context context, final T value, final Set<Path> expand) {
+    default T evaluateTransients(final Context context, final T value, final Set<Name> expand) {
 
         final Use<V> type = getType();
         return transform(value, before -> type.evaluateTransients(context, before, expand));
     }
 
     @Override
-    default Set<Path> transientExpand(final Path path, final Set<Path> expand) {
+    default Set<Name> transientExpand(final Name name, final Set<Name> expand) {
 
-        return getType().transientExpand(path, expand);
+        return getType().transientExpand(name, expand);
     }
 
     @Override
-    default Set<Path> requiredExpand(final Set<Path> paths) {
+    default Set<Name> requiredExpand(final Set<Name> names) {
 
-        return getType().requiredExpand(paths);
+        return getType().requiredExpand(names);
     }
 
     @Override
     @Deprecated
-    default Multimap<Path, Instance> refs(final T value) {
+    default Multimap<Name, Instance> refs(final T value) {
 
-        final Multimap<Path, Instance> result = HashMultimap.create();
+        final Multimap<Name, Instance> result = HashMultimap.create();
         if(value != null) {
             value.forEach(v -> getType().refs(v).forEach(result::put));
         }

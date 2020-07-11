@@ -28,7 +28,7 @@ import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.schema.use.*;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import io.basestar.util.Sort;
 import org.apache.commons.text.StringEscapeUtils;
 import org.jooq.*;
@@ -383,21 +383,21 @@ public class SQLUtils {
 
         return Stream.concat(
                 index.getPartition().stream().map(v -> DSL.field(DSL.name(v.toString()))),
-                index.getSort().stream().map(v -> DSL.field(DSL.name(v.getPath().toString()))
+                index.getSort().stream().map(v -> DSL.field(DSL.name(v.getName().toString()))
                         .sort(sort(v.getOrder())))
         ).collect(Collectors.toList());
     }
 
     public static List<Field<?>> fields(final ObjectSchema schema, final Index index) {
 
-        final List<Path> partitionPaths = index.resolvePartitionPaths();
+        final List<Name> partitionNames = index.resolvePartitionPaths();
         final List<Sort> sortPaths = index.getSort();
 
         return Stream.of(
-                partitionPaths.stream()
+                partitionNames.stream()
                         .map(v -> DSL.field(columnName(v), dataType(schema.typeOf(v)).nullable(true))),
                 sortPaths.stream()
-                        .map(Sort::getPath)
+                        .map(Sort::getName)
                         .map(v -> DSL.field(columnName(v), dataType(schema.typeOf(v)).nullable(true))),
                 index.projectionSchema(schema).entrySet().stream()
                         .map(e -> DSL.field(DSL.name(e.getKey()), dataType(e.getValue()).nullable(true)))
@@ -405,21 +405,21 @@ public class SQLUtils {
         ).flatMap(v -> v).collect(Collectors.toList());
     }
 
-    public static Path columnPath(final Path v) {
+    public static Name columnPath(final Name v) {
 
-        return Path.of(v.toString(Reserved.PREFIX));
+        return Name.of(v.toString(Reserved.PREFIX));
     }
 
-    public static Name columnName(final Path v) {
+    public static org.jooq.Name columnName(final Name v) {
 
         return DSL.name(v.toString(Reserved.PREFIX));
     }
 
     public static Constraint primaryKey(final ObjectSchema schema, final Index index) {
 
-        final List<Name> names = new ArrayList<>();
+        final List<org.jooq.Name> names = new ArrayList<>();
         index.resolvePartitionPaths().forEach(v -> names.add(columnName(v)));
-        index.getSort().forEach(v -> names.add(columnName(v.getPath())));
-        return DSL.primaryKey(names.toArray(new Name[0]));
+        index.getSort().forEach(v -> names.add(columnName(v.getName())));
+        return DSL.primaryKey(names.toArray(new org.jooq.Name[0]));
     }
 }

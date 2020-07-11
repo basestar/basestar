@@ -20,17 +20,21 @@ package io.basestar.schema.use;
  * #L%
  */
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.compare.Eq;
-import io.basestar.expression.constant.PathConstant;
-import io.basestar.schema.*;
+import io.basestar.expression.constant.NameConstant;
+import io.basestar.schema.Constraint;
+import io.basestar.schema.Instance;
+import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.Reserved;
 import io.basestar.schema.exception.InvalidTypeException;
-import io.basestar.util.Path;
+import io.basestar.schema.util.Expander;
+import io.basestar.schema.util.Ref;
+import io.basestar.util.Name;
 import lombok.Data;
 
 import java.io.DataInput;
@@ -54,7 +58,6 @@ public class UseRef implements UseInstance {
 
     public static final String NAME = "ref";
 
-    @JsonSerialize(using = Named.NameSerializer.class)
     private final ObjectSchema schema;
 
     @Override
@@ -119,7 +122,7 @@ public class UseRef implements UseInstance {
     }
 
     @Override
-    public Instance expand(final Instance value, final Expander expander, final Set<Path> expand) {
+    public Instance expand(final Instance value, final Expander expander, final Set<Name> expand) {
 
         if(value != null) {
             if(expand == null) {
@@ -139,7 +142,7 @@ public class UseRef implements UseInstance {
     }
 
     @Override
-    public Set<Constraint.Violation> validate(final Context context, final Path path, final Instance value) {
+    public Set<Constraint.Violation> validate(final Context context, final Name name, final Instance value) {
 
         // Not our responsibility to validate another object
         return Collections.emptySet();
@@ -147,16 +150,16 @@ public class UseRef implements UseInstance {
 
     @Override
     @Deprecated
-    public Set<Path> requiredExpand(final Set<Path> paths) {
+    public Set<Name> requiredExpand(final Set<Name> names) {
 
-        final Set<Path> copy = Sets.newHashSet(paths);
-        copy.remove(Path.of(Reserved.SCHEMA));
-        copy.remove(Path.of(Reserved.ID));
+        final Set<Name> copy = Sets.newHashSet(names);
+        copy.remove(Name.of(Reserved.SCHEMA));
+        copy.remove(Name.of(Reserved.ID));
 
         if(!copy.isEmpty()) {
-            final Set<Path> result = Sets.newHashSet();
-            result.add(Path.of());
-            result.addAll(schema.requiredExpand(paths));
+            final Set<Name> result = Sets.newHashSet();
+            result.add(Name.of());
+            result.addAll(schema.requiredExpand(names));
             return result;
         } else {
             return Collections.emptySet();
@@ -165,36 +168,36 @@ public class UseRef implements UseInstance {
 
     @Override
     @Deprecated
-    public Multimap<Path, Instance> refs(final Instance value) {
+    public Multimap<Name, Instance> refs(final Instance value) {
 
-        final Multimap<Path, Instance> result = HashMultimap.create();
-        result.put(Path.empty(), value);
+        final Multimap<Name, Instance> result = HashMultimap.create();
+        result.put(Name.empty(), value);
         return result;
     }
 
     @Override
     public String toString() {
 
-        return schema.getName();
+        return schema.getQualifiedName().toString();
     }
 
     @Override
-    public Set<Expression> refQueries(final String otherTypeName, final Set<Path> expand, final Path path) {
+    public Set<Expression> refQueries(final Name otherTypeName, final Set<Name> expand, final Name name) {
 
         final Set<Expression> queries = new HashSet<>();
-        if(schema.getName().equals(otherTypeName)) {
-            queries.add(new Eq(new PathConstant(path.with(Reserved.ID)), new PathConstant(Path.of(Reserved.THIS, Reserved.ID))));
+        if(schema.getQualifiedName().equals(otherTypeName)) {
+            queries.add(new Eq(new NameConstant(name.with(Reserved.ID)), new NameConstant(Name.of(Reserved.THIS, Reserved.ID))));
         }
         if(expand != null && !expand.isEmpty()) {
-            queries.addAll(schema.refQueries(otherTypeName, expand, path));
+            queries.addAll(schema.refQueries(otherTypeName, expand, name));
         }
         return queries;
     }
 
     @Override
-    public Set<Path> refExpand(final String otherTypeName, final Set<Path> expand) {
+    public Set<Name> refExpand(final Name otherSchemaName, final Set<Name> expand) {
 
-        if(schema.getName().equals(otherTypeName)) {
+        if(schema.getQualifiedName().equals(otherSchemaName)) {
             return expand;
         } else {
             return Collections.emptySet();
@@ -212,7 +215,7 @@ public class UseRef implements UseInstance {
             if(id == null || version == null) {
                 return Collections.emptyMap();
             } else {
-                return Collections.singletonMap(Ref.of(schema.getName(), id), version);
+                return Collections.singletonMap(Ref.of(schema.getQualifiedName(), id), version);
             }
         }
     }

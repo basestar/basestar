@@ -22,6 +22,7 @@ package io.basestar.storage.exception;
 
 import io.basestar.exception.ExceptionMetadata;
 import io.basestar.exception.HasExceptionMetadata;
+import io.basestar.util.Name;
 
 public class ObjectExistsException extends RuntimeException implements HasExceptionMetadata {
 
@@ -29,7 +30,7 @@ public class ObjectExistsException extends RuntimeException implements HasExcept
 
     public static final String CODE = "ObjectExists";
 
-    public ObjectExistsException(final String schema, final String id) {
+    public ObjectExistsException(final Name schema, final String id) {
 
         super(schema + " with id \"" + id  + "\" already exists");
     }

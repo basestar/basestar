@@ -35,9 +35,9 @@ import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.util.KeysetPagingUtils;
 import io.basestar.storage.util.Pager;
+import io.basestar.util.Name;
 import io.basestar.util.PagedList;
 import io.basestar.util.PagingToken;
-import io.basestar.util.Path;
 import io.basestar.util.Sort;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -77,7 +77,7 @@ public class ElasticsearchStorage implements Storage {
 
     private final RestHighLevelClient client;
 
-    private final ElasticsearchRouting routing;
+    private final ElasticsearchStrategy strategy;
 
     private final EventStrategy eventStrategy;
 
@@ -97,7 +97,7 @@ public class ElasticsearchStorage implements Storage {
     private ElasticsearchStorage(final Builder builder) {
 
         this.client = builder.client;
-        this.routing = builder.routing;
+        this.strategy = builder.strategy;
         this.eventStrategy = MoreObjects.firstNonNull(builder.eventStrategy, EventStrategy.EMIT);
         this.createdIndices = new ConcurrentSkipListSet<>();
     }
@@ -113,7 +113,7 @@ public class ElasticsearchStorage implements Storage {
 
         private RestHighLevelClient client;
 
-        private ElasticsearchRouting routing;
+        private ElasticsearchStrategy strategy;
 
         private EventStrategy eventStrategy;
 
@@ -126,7 +126,7 @@ public class ElasticsearchStorage implements Storage {
     @Override
     public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
 
-        final String index = routing.objectIndex(schema);
+        final String index = strategy.objectIndex(schema);
         return getIndex(index, schema).thenCompose(ignored -> {
             final GetRequest request = new GetRequest(index, id);
             return ElasticsearchUtils.<GetResponse>future(listener -> client.getAsync(request, OPTIONS, listener))
@@ -137,10 +137,10 @@ public class ElasticsearchStorage implements Storage {
     @Override
     public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
 
-        if (!routing.historyEnabled(schema)) {
+        if (!strategy.historyEnabled(schema)) {
             throw new UnsupportedOperationException("History not enabled");
         }
-        final String index = routing.historyIndex(schema);
+        final String index = strategy.historyIndex(schema);
         return getIndex(index, schema).thenCompose(ignored -> {
             final String key = historyKey(id, version);
             final GetRequest request = new GetRequest(index, key);
@@ -153,7 +153,7 @@ public class ElasticsearchStorage implements Storage {
     public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
 
         final Expression bound = query.bind(Context.init());
-        final String index = routing.objectIndex(schema);
+        final String index = strategy.objectIndex(schema);
 
         final List<Sort> normalizedSort = KeysetPagingUtils.normalizeSort(sort);
 
@@ -216,8 +216,8 @@ public class ElasticsearchStorage implements Storage {
             } else {
                 final BoolQueryBuilder inner = QueryBuilders.boolQuery();
                 for (int j = 0; j < i; ++j) {
-                    final Path path = sort.get(j).getPath();
-                    inner.must(QueryBuilders.termQuery(path.toString(), values.get(j)));
+                    final Name name = sort.get(j).getName();
+                    inner.must(QueryBuilders.termQuery(name.toString(), values.get(j)));
                 }
                 inner.must(pagingRange(sort.get(i), values.get(i)));
                 outer.should(inner);
@@ -228,7 +228,7 @@ public class ElasticsearchStorage implements Storage {
 
     private QueryBuilder pagingRange(final Sort sort, final Object value) {
 
-        final String name = sort.getPath().toString();
+        final String name = sort.getName().toString();
         if(sort.getOrder() == Sort.Order.ASC) {
             return QueryBuilders.rangeQuery(name).gt(value);
         } else {
@@ -239,7 +239,7 @@ public class ElasticsearchStorage implements Storage {
     private SearchSourceBuilder applySort(final SearchSourceBuilder builder, final List<Sort> sort) {
 
         for (final Sort s : sort) {
-            builder.sort(s.getPath().toString(), s.getOrder() == Sort.Order.ASC ? SortOrder.ASC : SortOrder.DESC);
+            builder.sort(s.getName().toString(), s.getOrder() == Sort.Order.ASC ? SortOrder.ASC : SortOrder.DESC);
         }
         return builder;
     }
@@ -256,7 +256,7 @@ public class ElasticsearchStorage implements Storage {
             @Override
             public ReadTransaction readObject(final ObjectSchema schema, final String id) {
 
-                final String index = routing.objectIndex(schema);
+                final String index = strategy.objectIndex(schema);
                 indexToSchema.put(index, schema);
                 request.add(index, id);
                 return this;
@@ -265,10 +265,10 @@ public class ElasticsearchStorage implements Storage {
             @Override
             public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version) {
 
-                if (!routing.historyEnabled(schema)) {
+                if (!strategy.historyEnabled(schema)) {
                     throw new UnsupportedOperationException("History not enabled");
                 }
-                final String index = routing.historyIndex(schema);
+                final String index = strategy.historyIndex(schema);
                 indexToSchema.put(index, schema);
                 final String key = historyKey(id, version);
                 request.add(index, key);
@@ -286,7 +286,7 @@ public class ElasticsearchStorage implements Storage {
                                 final ObjectSchema schema = indexToSchema.get(index);
                                 final Map<String, Object> result = fromResponse(schema, item.getResponse());
                                 if (result != null) {
-                                    results.put(BatchResponse.Key.from(schema.getName(), result), result);
+                                    results.put(BatchResponse.Key.from(schema.getQualifiedName(), result), result);
                                 }
                             }
                             return new BatchResponse.Basic(results);
@@ -344,8 +344,8 @@ public class ElasticsearchStorage implements Storage {
 
     private CompletableFuture<?> syncIndex(final String name, final ObjectSchema schema) {
 
-        final Mappings mappings = routing.mappings(schema);
-        final Settings settings = routing.settings(schema);
+        final Mappings mappings = strategy.mappings(schema);
+        final Settings settings = strategy.settings(schema);
         return ElasticsearchUtils.syncIndex(client, name, mappings, settings);
     }
 
@@ -366,7 +366,7 @@ public class ElasticsearchStorage implements Storage {
             @Override
             public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
-                final String index = routing.objectIndex(schema);
+                final String index = strategy.objectIndex(schema);
                 indices.put(index, schema);
                 request.add(new IndexRequest()
                         .index(index).source(toSource(schema, after)).id(id)
@@ -374,9 +374,9 @@ public class ElasticsearchStorage implements Storage {
                 responders.add((response) -> {
                     final BulkItemResponse.Failure failure = response.getFailure();
                     if (failure != null && failure.getStatus() == RestStatus.CONFLICT) {
-                        throw new ObjectExistsException(schema.getName(), id);
+                        throw new ObjectExistsException(schema.getQualifiedName(), id);
                     }
-                    return BatchResponse.single(schema.getName(), after);
+                    return BatchResponse.single(schema.getQualifiedName(), after);
                 });
 
                 checkAndCreateHistory(schema, id, after);
@@ -397,7 +397,7 @@ public class ElasticsearchStorage implements Storage {
             @Override
             public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
-                final String index = routing.objectIndex(schema);
+                final String index = strategy.objectIndex(schema);
                 indices.put(index, schema);
 
                 final IndexRequest req = new IndexRequest().id(id)
@@ -424,9 +424,9 @@ public class ElasticsearchStorage implements Storage {
                     final BulkItemResponse.Failure failure = response.getFailure();
                     if (failure != null && failure.getStatus() == RestStatus.CONFLICT) {
                         assert version != null;
-                        throw new VersionMismatchException(schema.getName(), id, version);
+                        throw new VersionMismatchException(schema.getQualifiedName(), id, version);
                     }
-                    return BatchResponse.single(schema.getName(), after);
+                    return BatchResponse.single(schema.getQualifiedName(), after);
                 });
 
                 checkAndCreateHistory(schema, id, after);
@@ -437,7 +437,7 @@ public class ElasticsearchStorage implements Storage {
             @Override
             public WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
 
-                final String index = routing.objectIndex(schema);
+                final String index = strategy.objectIndex(schema);
                 indices.put(index, schema);
 
                 final DeleteRequest req = new DeleteRequest().id(id)
@@ -463,7 +463,7 @@ public class ElasticsearchStorage implements Storage {
                 responders.add(response -> {
                     final BulkItemResponse.Failure failure = response.getFailure();
                     if (failure != null && failure.getStatus() == RestStatus.CONFLICT) {
-                        throw new VersionMismatchException(schema.getName(), id, version);
+                        throw new VersionMismatchException(schema.getQualifiedName(), id, version);
                     }
                     return BatchResponse.empty();
                 });
@@ -492,14 +492,14 @@ public class ElasticsearchStorage implements Storage {
             @Override
             public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
 
-                if (routing.historyEnabled(schema)) {
-                    final String index = routing.historyIndex(schema);
+                if (strategy.historyEnabled(schema)) {
+                    final String index = strategy.historyIndex(schema);
                     final String key = historyKey(id, version);
                     indices.put(index, schema);
                     request.add(new IndexRequest()
                             .index(index).source(toSource(schema, after)).id(key)
                             .opType(DocWriteRequest.OpType.CREATE));
-                    responders.add(response -> BatchResponse.single(schema.getName(), after));
+                    responders.add(response -> BatchResponse.single(schema.getQualifiedName(), after));
                 }
                 return this;
             }
@@ -526,7 +526,7 @@ public class ElasticsearchStorage implements Storage {
     private Map<String, Object> toSource(final ObjectSchema schema, final Map<String, Object> data) {
 
         final Map<String, Object> source = new HashMap<>();
-        final Mappings mappings = routing.mappings(schema);
+        final Mappings mappings = strategy.mappings(schema);
         mappings.getProperties().forEach((name, type) -> {
             final Object value = data.get(name);
             source.put(name, type.toSource(value));
@@ -537,7 +537,7 @@ public class ElasticsearchStorage implements Storage {
     private Map<String, Object> fromSource(final ObjectSchema schema, final Map<String, Object> source) {
 
         final Map<String, Object> data = new HashMap<>();
-        final Mappings mappings = routing.mappings(schema);
+        final Mappings mappings = strategy.mappings(schema);
         mappings.getProperties().forEach((name, type) -> {
             final Object value = source.get(name);
             data.put(name, type.fromSource(value));

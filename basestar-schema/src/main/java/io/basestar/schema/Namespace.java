@@ -32,6 +32,7 @@ import com.fasterxml.jackson.module.jsonSchema.JsonSchemaGenerator;
 import com.google.common.collect.ImmutableSortedMap;
 import io.basestar.jackson.BasestarFactory;
 import io.basestar.jackson.BasestarModule;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -74,7 +75,7 @@ public class Namespace implements Serializable, Schema.Resolver {
            .registerModule(new BasestarModule())
            .configure(JsonParser.Feature.ALLOW_COMMENTS, true);
 
-    private final SortedMap<String, Schema<?>> schemas;
+    private final SortedMap<Name, Schema<?>> schemas;
 
     @Data
     @Accessors(chain = true)
@@ -124,9 +125,12 @@ public class Namespace implements Serializable, Schema.Resolver {
 
     public Namespace(final Builder builder) {
 
-        final SortedMap<String, Schema.Builder<?>> builders = ImmutableSortedMap.copyOf(builder.getSchemas());
-        final Map<String, Schema<?>> schemas = new HashMap<>();
-        for(final Map.Entry<String, Schema.Builder<?>> entry : builders.entrySet()) {
+        final SortedMap<Name, Schema.Builder<?>> builders = ImmutableSortedMap.copyOf(builder.getSchemas().entrySet().stream().collect(Collectors.toMap(
+                e -> Name.parse(e.getKey()),
+                Map.Entry::getValue
+        )));
+        final Map<Name, Schema<?>> schemas = new HashMap<>();
+        for(final Map.Entry<Name, Schema.Builder<?>> entry : builders.entrySet()) {
             resolveCyclic(entry.getKey(), entry.getValue(), builders, schemas);
         }
         this.schemas = ImmutableSortedMap.copyOf(schemas);
@@ -136,20 +140,20 @@ public class Namespace implements Serializable, Schema.Resolver {
 
         return builder()
                 .setSchemas(schemas.entrySet().stream().collect(Collectors.toMap(
-                        Map.Entry::getKey,
+                        e -> e.getKey().toString(),
                         e -> e.getValue().toBuilder()
                 )));
     }
 
-    private static Schema<?> resolveCyclic(final String name, final Schema.Builder<?> builder,
-                                           final SortedMap<String, Schema.Builder<?>> builders,
-                                           final Map<String, Schema<?>> out) {
+    private static Schema<?> resolveCyclic(final Name name, final Schema.Builder<?> builder,
+                                           final SortedMap<Name, Schema.Builder<?>> builders,
+                                           final Map<Name, Schema<?>> out) {
 
         if(out.containsKey(name)) {
             return out.get(name);
         } else {
             final int slot = builders.headMap(name).size();
-            return builder.build(new Schema.Resolver() {
+            return builder.build(new Schema.Resolver.Constructing() {
                @Override
                public void constructing(final Schema<?> schema) {
 
@@ -159,7 +163,7 @@ public class Namespace implements Serializable, Schema.Resolver {
 
                @Nullable
                @Override
-               public Schema<?> getSchema(final String name) {
+               public Schema<?> getSchema(final Name name) {
 
                    final Schema.Builder<?> builder = builders.get(name);
                    if(builder == null) {
@@ -173,9 +177,9 @@ public class Namespace implements Serializable, Schema.Resolver {
     }
 
     @Override
-    public Schema<?> getSchema(final String name) {
+    public Schema<?> getSchema(final Name qualifiedName) {
 
-        return schemas.get(name);
+        return schemas.get(qualifiedName);
     }
 
 //    public Map<String, Object> openApiSchemas() {
@@ -223,7 +227,7 @@ public class Namespace implements Serializable, Schema.Resolver {
         }
     }
 
-    public void forEachEnumSchema(final BiConsumer<? super String, ? super EnumSchema> fn) {
+    public void forEachEnumSchema(final BiConsumer<? super Name, ? super EnumSchema> fn) {
 
         schemas.forEach((k, v) -> {
             if(v instanceof EnumSchema) {
@@ -232,7 +236,7 @@ public class Namespace implements Serializable, Schema.Resolver {
         });
     }
 
-    public void forEachInstanceSchema(final BiConsumer<? super String, ? super InstanceSchema> fn) {
+    public void forEachInstanceSchema(final BiConsumer<? super Name, ? super InstanceSchema> fn) {
 
         schemas.forEach((k, v) -> {
             if(v instanceof InstanceSchema) {
@@ -241,7 +245,7 @@ public class Namespace implements Serializable, Schema.Resolver {
         });
     }
 
-    public void forEachStructSchema(final BiConsumer<? super String, ? super StructSchema> fn) {
+    public void forEachStructSchema(final BiConsumer<? super Name, ? super StructSchema> fn) {
 
         schemas.forEach((k, v) -> {
             if(v instanceof StructSchema) {
@@ -250,7 +254,7 @@ public class Namespace implements Serializable, Schema.Resolver {
         });
     }
 
-    public void forEachObjectSchema(final BiConsumer<? super String, ? super ObjectSchema> fn) {
+    public void forEachObjectSchema(final BiConsumer<? super Name, ? super ObjectSchema> fn) {
 
         schemas.forEach((k, v) -> {
             if(v instanceof ObjectSchema) {

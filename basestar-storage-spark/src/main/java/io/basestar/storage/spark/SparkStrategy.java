@@ -1,8 +1,8 @@
-package io.basestar.storage.cognito;
+package io.basestar.storage.spark;
 
 /*-
  * #%L
- * basestar-storage-cognito
+ * basestar-storage-spark
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -21,8 +21,13 @@ package io.basestar.storage.cognito;
  */
 
 import io.basestar.schema.ObjectSchema;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 
-public interface CognitoGroupRouting {
+public interface SparkStrategy {
 
-    String getUserPoolId(ObjectSchema schema);
+    Dataset<Row> objectRead(SparkSession session, ObjectSchema schema);
+
+    Dataset<Row> historyRead(SparkSession session, ObjectSchema schema);
 }

@@ -41,6 +41,7 @@ import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.hazelcast.serde.CustomPortable;
 import io.basestar.storage.hazelcast.serde.PortableSchemaFactory;
 import io.basestar.storage.util.Pager;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.PagedList;
 import io.basestar.util.Sort;
@@ -63,7 +64,7 @@ public class HazelcastStorage implements Storage {
     private final HazelcastInstance instance;
 
     @Nonnull
-    private final HazelcastRouting routing;
+    private final HazelcastStrategy strategy;
 
     @Nonnull
     private final PortableSchemaFactory schemaFactory;
@@ -75,20 +76,20 @@ public class HazelcastStorage implements Storage {
     private HazelcastStorage(final Builder builder) {
 
         this.instance = Nullsafe.require(builder.instance);
-        this.routing = Nullsafe.require(builder.routing);
+        this.strategy = Nullsafe.require(builder.strategy);
         this.schemaFactory = Nullsafe.require(builder.schemaFactory);
         this.object = CacheBuilder.newBuilder()
                 .build(new CacheLoader<ObjectSchema, IMap<BatchResponse.Key, CustomPortable>>() {
                     @Override
                     public IMap<BatchResponse.Key, CustomPortable> load(final ObjectSchema s) {
-                        return instance.getMap(routing.objectMapName(s));
+                        return instance.getMap(strategy.objectMapName(s));
                     }
                 });
         this.history = CacheBuilder.newBuilder()
                 .build(new CacheLoader<ObjectSchema, IMap<BatchResponse.Key, CustomPortable>>() {
                     @Override
                     public IMap<BatchResponse.Key, CustomPortable> load(final ObjectSchema s) {
-                        return instance.getMap(routing.historyMapName(s));
+                        return instance.getMap(strategy.historyMapName(s));
                     }
                 });
     }
@@ -106,7 +107,7 @@ public class HazelcastStorage implements Storage {
         private HazelcastInstance instance;
 
         @Nullable
-        private HazelcastRouting routing;
+        private HazelcastStrategy strategy;
 
         @Nullable
         private PortableSchemaFactory schemaFactory;
@@ -124,7 +125,7 @@ public class HazelcastStorage implements Storage {
         try {
             final IMap<BatchResponse.Key, CustomPortable> map = object.get(schema);
 
-            return map.getAsync(new BatchResponse.Key(schema.getName(), id, null))
+            return map.getAsync(new BatchResponse.Key(schema.getQualifiedName(), id, null))
                     .thenApply(this::fromRecord)
                     .toCompletableFuture();
         } catch (final ExecutionException e) {
@@ -150,7 +151,7 @@ public class HazelcastStorage implements Storage {
         try {
             final IMap<BatchResponse.Key, CustomPortable> map = history.get(schema);
 
-            return map.getAsync(new BatchResponse.Key(schema.getName(), id, version))
+            return map.getAsync(new BatchResponse.Key(schema.getQualifiedName(), id, version))
                     .thenApply(this::fromRecord)
                     .toCompletableFuture();
         } catch (final ExecutionException e) {
@@ -197,18 +198,18 @@ public class HazelcastStorage implements Storage {
             @Override
             public ReadTransaction readObject(final ObjectSchema schema, final String id) {
 
-                final String target = routing.objectMapName(schema);
+                final String target = strategy.objectMapName(schema);
                 requests.computeIfAbsent(target, ignored -> new HashSet<>())
-                        .add(new BatchResponse.Key(schema.getName(), id, null));
+                        .add(new BatchResponse.Key(schema.getQualifiedName(), id, null));
                 return this;
             }
 
             @Override
             public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version) {
 
-                final String target = routing.historyMapName(schema);
+                final String target = strategy.historyMapName(schema);
                 requests.computeIfAbsent(target, ignored -> new HashSet<>())
-                        .add(new BatchResponse.Key(schema.getName(), id, version));
+                        .add(new BatchResponse.Key(schema.getQualifiedName(), id, version));
                 return this;
             }
 
@@ -243,8 +244,8 @@ public class HazelcastStorage implements Storage {
             @Override
             public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
-                final String target = routing.objectMapName(schema);
-                final String schemaName = schema.getName();
+                final String target = strategy.objectMapName(schema);
+                final Name schemaName = schema.getQualifiedName();
                 requests.computeIfAbsent(target, ignored -> new HashMap<>())
                         .put(new BatchResponse.Key(schemaName, id), (key, value) -> {
                             if(value == null) {
@@ -271,8 +272,8 @@ public class HazelcastStorage implements Storage {
             @Override
             public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
-                final String target = routing.objectMapName(schema);
-                final String schemaName = schema.getName();
+                final String target = strategy.objectMapName(schema);
+                final Name schemaName = schema.getQualifiedName();
                 final Long version = before == null ? null : Instance.getVersion(before);
                 requests.computeIfAbsent(target, ignored -> new HashMap<>())
                         .put(new BatchResponse.Key(schemaName, id), (key, value) -> {
@@ -290,8 +291,8 @@ public class HazelcastStorage implements Storage {
             @Override
             public WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
 
-                final String target = routing.objectMapName(schema);
-                final String schemaName = schema.getName();
+                final String target = strategy.objectMapName(schema);
+                final Name schemaName = schema.getQualifiedName();
                 final Long version = before == null ? null : Instance.getVersion(before);
                 requests.computeIfAbsent(target, ignored -> new HashMap<>())
                         .put(new BatchResponse.Key(schemaName, id), (key, value) -> {
@@ -326,8 +327,8 @@ public class HazelcastStorage implements Storage {
             @Override
             public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
 
-                final String target = routing.historyMapName(schema);
-                final String schemaName = schema.getName();
+                final String target = strategy.historyMapName(schema);
+                final Name schemaName = schema.getQualifiedName();
                 requests.computeIfAbsent(target, ignored -> new HashMap<>())
                         .put(new BatchResponse.Key(schemaName, id, version), (key, value) -> toRecord(schema, after));
                 return this;

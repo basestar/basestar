@@ -21,6 +21,7 @@ package io.basestar.database.event;
  */
 
 import io.basestar.schema.Index;
+import io.basestar.util.Name;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -28,7 +29,7 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class AsyncIndexDeletedEvent implements ObjectEvent {
 
-    private String schema;
+    private Name schema;
 
     private String index;
 
@@ -38,7 +39,7 @@ public class AsyncIndexDeletedEvent implements ObjectEvent {
 
     private Index.Key key;
 
-    public static AsyncIndexDeletedEvent of(final String schema, final String index, final String id,
+    public static AsyncIndexDeletedEvent of(final Name schema, final String index, final String id,
                                             final long version, final Index.Key key) {
 
         return new AsyncIndexDeletedEvent().setSchema(schema).setIndex(index).setId(id)

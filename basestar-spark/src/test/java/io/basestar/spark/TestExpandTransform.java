@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -82,8 +82,8 @@ public class TestExpandTransform {
         final ExpandTransform expand = ExpandTransform.builder()
                 .schema(a)
                 .expand(ImmutableSet.of(
-                        Path.of("ref"),
-                        Path.of("link")
+                        Name.of("ref"),
+                        Name.of("link")
                 ))
                 .sources((name) -> {
                     return null;

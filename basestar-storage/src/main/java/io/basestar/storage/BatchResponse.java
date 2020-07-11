@@ -23,6 +23,7 @@ package io.basestar.storage;
 import com.google.common.collect.ImmutableSortedMap;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.util.Name;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
@@ -36,24 +37,24 @@ public interface BatchResponse extends Map<BatchResponse.Key, Map<String, Object
 
     default Map<String, Object> getObject(final ObjectSchema schema, final String id) {
 
-        return getObject(schema.getName(), id);
+        return getObject(schema.getQualifiedName(), id);
     }
 
-    Map<String, Object> getObject(String schema, String id);
+    Map<String, Object> getObject(Name schema, String id);
 
     default Map<String, Object> getObjectVersion(final ObjectSchema schema, final String id, final long version) {
 
-        return getObjectVersion(schema.getName(), id, version);
+        return getObjectVersion(schema.getQualifiedName(), id, version);
     }
 
-    Map<String, Object> getObjectVersion(String schema, String id, long version);
+    Map<String, Object> getObjectVersion(Name schema, String id, long version);
 
     static BatchResponse empty() {
 
         return Basic.EMPTY;
     }
 
-    static BatchResponse single(final String schema, final Map<String, Object> object) {
+    static BatchResponse single(final Name schema, final Map<String, Object> object) {
 
         return object == null ? empty() : new Basic(Key.from(schema, object), object);
     }
@@ -108,14 +109,14 @@ public interface BatchResponse extends Map<BatchResponse.Key, Map<String, Object
         }
 
         @Override
-        public Map<String, Object> getObject(final String schema, final String id) {
+        public Map<String, Object> getObject(final Name schema, final String id) {
 
             final Map.Entry<Key, Map<String, Object>> entry = items.floorEntry(new Key(schema, id, null));
             return entry == null ? null : entry.getValue();
         }
 
         @Override
-        public Map<String, Object> getObjectVersion(final String schema, final String id, final long version) {
+        public Map<String, Object> getObjectVersion(final Name schema, final String id, final long version) {
 
             return items.get(new Key(schema, id, version));
         }
@@ -125,18 +126,18 @@ public interface BatchResponse extends Map<BatchResponse.Key, Map<String, Object
     @RequiredArgsConstructor
     class Key implements Comparable<Key>, Serializable {
 
-        private final String schema;
+        private final Name schema;
 
         private final String id;
 
         private final Long version;
 
-        public Key(final String schema, final String id) {
+        public Key(final Name schema, final String id) {
 
             this(schema, id, null);
         }
 
-        public static Key from(final String schema, final Map<String, Object> object) {
+        public static Key from(final Name schema, final Map<String, Object> object) {
 
             final String id = Instance.getId(object);
             final Long version = Instance.getVersion(object);

@@ -23,10 +23,11 @@ package io.basestar.mapper.internal;
 import io.basestar.mapper.MappingContext;
 import io.basestar.schema.StructSchema;
 import io.basestar.type.TypeContext;
+import io.basestar.util.Name;
 
 public class StructSchemaMapper<T> extends InstanceSchemaMapper<T, StructSchema.Builder> {
 
-    public StructSchemaMapper(final MappingContext context, final String name, final TypeContext type) {
+    public StructSchemaMapper(final MappingContext context, final Name name, final TypeContext type) {
 
         super(context, name, type, StructSchema.Builder.class);
     }

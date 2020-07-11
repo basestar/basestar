@@ -20,6 +20,7 @@ package io.basestar.database.options;
  * #L%
  */
 
+import io.basestar.util.Name;
 import lombok.Builder;
 import lombok.Data;
 
@@ -29,7 +30,7 @@ public class DeleteOptions implements ActionOptions {
 
     public static final String TYPE = "delete";
 
-    private final String schema;
+    private final Name schema;
 
     private final String id;
 

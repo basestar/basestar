@@ -42,7 +42,7 @@ import io.basestar.storage.query.Range;
 import io.basestar.storage.query.RangeVisitor;
 import io.basestar.stream.event.SubscriptionPublishEvent;
 import io.basestar.stream.event.SubscriptionQueryEvent;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -88,7 +88,7 @@ public class DefaultNexus implements Nexus, Handler<Event> {
     }
 
     @Override
-    public CompletableFuture<?> subscribe(final Caller caller, final String sub, final String channel, final String schemaName, final Expression expression, final Set<Path> expand) {
+    public CompletableFuture<?> subscribe(final Caller caller, final String sub, final String channel, final String schemaName, final Expression expression, final Set<Name> expand) {
 
         final ObjectSchema schema = namespace.requireObjectSchema(schemaName);
 
@@ -122,7 +122,7 @@ public class DefaultNexus implements Nexus, Handler<Event> {
         final ObjectSchema schema = namespace.requireObjectSchema(event.getSchema());
         final Map<String, Object> after = event.getAfter();
         final Set<Subscription.Key> keys = keys(schema, after);
-        return emitter.emit(SubscriptionQueryEvent.of(schema.getName(), event.getId(), Change.Event.CREATE, null, Instance.getVersion(after), keys));
+        return emitter.emit(SubscriptionQueryEvent.of(schema.getQualifiedName(), event.getId(), Change.Event.CREATE, null, Instance.getVersion(after), keys));
     }
 
     private CompletableFuture<?> onObjectUpdated(final ObjectUpdatedEvent event) {
@@ -131,7 +131,7 @@ public class DefaultNexus implements Nexus, Handler<Event> {
         final Map<String, Object> before = event.getBefore();
         final Map<String, Object> after = event.getAfter();
         final Set<Subscription.Key> keys = Sets.union(keys(schema, after), keys(schema, before));
-        return emitter.emit(SubscriptionQueryEvent.of(schema.getName(), event.getId(), Change.Event.UPDATE, Instance.getVersion(before), Instance.getVersion(after), keys));
+        return emitter.emit(SubscriptionQueryEvent.of(schema.getQualifiedName(), event.getId(), Change.Event.UPDATE, Instance.getVersion(before), Instance.getVersion(after), keys));
     }
 
     private CompletableFuture<?> onObjectDeleted(final ObjectDeletedEvent event) {
@@ -139,7 +139,7 @@ public class DefaultNexus implements Nexus, Handler<Event> {
         final ObjectSchema schema = namespace.requireObjectSchema(event.getSchema());
         final Map<String, Object> before = event.getBefore();
         final Set<Subscription.Key> keys = keys(schema, before);
-        return emitter.emit(SubscriptionQueryEvent.of(schema.getName(), event.getId(), Change.Event.DELETE, Instance.getVersion(before), null, keys));
+        return emitter.emit(SubscriptionQueryEvent.of(schema.getQualifiedName(), event.getId(), Change.Event.DELETE, Instance.getVersion(before), null, keys));
     }
 
     private CompletableFuture<?> onSubscriptionQuery(final SubscriptionQueryEvent event) {
@@ -150,7 +150,7 @@ public class DefaultNexus implements Nexus, Handler<Event> {
             final List<Event> events = new ArrayList<>();
 
             results.forEach(result -> {
-                events.add(SubscriptionPublishEvent.of(schema.getName(), event.getId(), event.getEvent(), event.getBefore(), event.getAfter(), result));
+                events.add(SubscriptionPublishEvent.of(schema.getQualifiedName(), event.getId(), event.getEvent(), event.getBefore(), event.getAfter(), result));
             });
 
             if(results.hasPaging()) {
@@ -167,14 +167,14 @@ public class DefaultNexus implements Nexus, Handler<Event> {
         final Subscription subscription = event.getSubscription();
         final Caller caller = subscription.getCaller();
         final Expression expression = subscription.getExpression();
-        final Set<Path> expand = subscription.getExpand();
+        final Set<Name> expand = subscription.getExpand();
         final CompletableFuture<Instance> beforeFuture = load(caller, schema, id, event.getBefore(), expand);
         final CompletableFuture<Instance> afterFuture = load(caller, schema, id, event.getAfter(), expand);
         return CompletableFuture.allOf(beforeFuture, afterFuture).thenCompose(ignored -> {
             final Instance before = beforeFuture.getNow(null);
             final Instance after = afterFuture.getNow(null);
             if(match(before, expression) || match(after, expression)) {
-                return publisher.publish(subscription.getSub(), subscription.getChannel(), Change.of(event.getEvent(), schema.getName(), id, before, after));
+                return publisher.publish(subscription.getSub(), subscription.getChannel(), Change.of(event.getEvent(), schema.getQualifiedName(), id, before, after));
             } else {
                 return CompletableFuture.completedFuture(null);
             }
@@ -190,10 +190,10 @@ public class DefaultNexus implements Nexus, Handler<Event> {
         }
     }
 
-    private CompletableFuture<Instance> load(final Caller caller, final ObjectSchema schema, final String id, final Long version, final Set<Path> expand) {
+    private CompletableFuture<Instance> load(final Caller caller, final ObjectSchema schema, final String id, final Long version, final Set<Name> expand) {
 
         if(version != null) {
-            return database.read(caller, ReadOptions.builder().schema(schema.getName()).id(id).version(version).expand(expand).build());
+            return database.read(caller, ReadOptions.builder().schema(schema.getQualifiedName()).id(id).version(version).expand(expand).build());
         } else {
             return CompletableFuture.completedFuture(null);
         }
@@ -201,7 +201,7 @@ public class DefaultNexus implements Nexus, Handler<Event> {
 
     private static Subscription.Key idKey(final ObjectSchema schema, final String id) {
 
-        return new Subscription.Key(schema.getName(), Reserved.PREFIX + Reserved.ID, ImmutableList.of(id));
+        return new Subscription.Key(schema.getQualifiedName(), Reserved.PREFIX + Reserved.ID, ImmutableList.of(id));
     }
 
     private static Set<Subscription.Key> keys(final ObjectSchema schema, final Expression expression) {
@@ -210,7 +210,7 @@ public class DefaultNexus implements Nexus, Handler<Event> {
 
         final Set<Subscription.Key> keys = new HashSet<>();
         for (final Expression conjunction : disjunction) {
-            final Map<Path, Range<Object>> query = conjunction.visit(new RangeVisitor());
+            final Map<Name, Range<Object>> query = conjunction.visit(new RangeVisitor());
             final Optional<String> optId = PartitionedStorage.constantId(query);
             if(optId.isPresent()) {
                 keys.add(idKey(schema, optId.get()));
@@ -219,9 +219,9 @@ public class DefaultNexus implements Nexus, Handler<Event> {
                 if (optSatisfy.isPresent()) {
                     final PartitionedStorage.SatisfyResult satisfy = optSatisfy.get();
                     final Index index = satisfy.getIndex();
-                    keys.add(new Subscription.Key(schema.getName(), index.getName(), satisfy.getPartition()));
+                    keys.add(new Subscription.Key(schema.getQualifiedName(), index.getName(), satisfy.getPartition()));
                 } else {
-                    throw new UnsupportedQueryException(schema.getName(), expression, "no index");
+                    throw new UnsupportedQueryException(schema.getQualifiedName(), expression, "no index");
                 }
             }
         }
@@ -234,7 +234,7 @@ public class DefaultNexus implements Nexus, Handler<Event> {
         keys.add(idKey(schema, Instance.getId(object)));
         for(final Index index : schema.getIndexes().values()) {
             index.readValues(object).forEach((k, projection) -> {
-                keys.add(new Subscription.Key(schema.getName(), index.getName(), k.getPartition()));
+                keys.add(new Subscription.Key(schema.getQualifiedName(), index.getName(), k.getPartition()));
             });
         }
         return keys;

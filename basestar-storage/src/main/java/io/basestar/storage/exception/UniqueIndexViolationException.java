@@ -22,6 +22,7 @@ package io.basestar.storage.exception;
 
 import io.basestar.exception.ExceptionMetadata;
 import io.basestar.exception.HasExceptionMetadata;
+import io.basestar.util.Name;
 
 public class UniqueIndexViolationException extends RuntimeException implements HasExceptionMetadata {
 
@@ -33,7 +34,7 @@ public class UniqueIndexViolationException extends RuntimeException implements H
 
     private final String index;
 
-    public UniqueIndexViolationException(final String schema, final String id, final String index) {
+    public UniqueIndexViolationException(final Name schema, final String id, final String index) {
 
         super(schema + " with id \"" + id + "\" cannot be created because index values for " + index + " already exist");
         this.index = index;

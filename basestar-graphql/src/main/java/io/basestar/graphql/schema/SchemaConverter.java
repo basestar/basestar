@@ -26,6 +26,7 @@ import graphql.schema.idl.TypeDefinitionRegistry;
 import io.basestar.graphql.GraphQLUtils;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
+import io.basestar.util.Name;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
@@ -101,7 +102,7 @@ public class SchemaConverter {
         final StructSchema.Builder builder = StructSchema.builder();
         def.getImplements().forEach(impl -> {
             // FIXME:
-            builder.setExtend(def.getName());
+            builder.setExtend(Name.of(def.getName()));
         });
         builder.setProperties(instanceProperties(def.getFieldDefinitions(), Collections.emptySet()));
         return builder;
@@ -112,7 +113,7 @@ public class SchemaConverter {
         final ObjectSchema.Builder builder = ObjectSchema.builder();
         def.getImplements().forEach(impl -> {
             // FIXME:
-            builder.setExtend(def.getName());
+            builder.setExtend(Name.of(def.getName()));
         });
         builder.setProperties(instanceProperties(def.getFieldDefinitions(), ObjectSchema.METADATA_SCHEMA.keySet()));
         return builder;

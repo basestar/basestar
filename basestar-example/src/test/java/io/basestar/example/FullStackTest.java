@@ -36,8 +36,8 @@ import io.basestar.event.sqs.SQSReceiver;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.Reserved;
 import io.basestar.storage.Storage;
-import io.basestar.storage.dynamodb.DynamoDBRouting;
 import io.basestar.storage.dynamodb.DynamoDBStorage;
+import io.basestar.storage.dynamodb.DynamoDBStrategy;
 import io.basestar.storage.dynamodb.DynamoDBUtils;
 import io.basestar.storage.s3.S3Stash;
 import io.basestar.test.Localstack;
@@ -149,8 +149,8 @@ public class FullStackTest {
         final S3Stash storageOversize = S3Stash.builder()
                 .setClient(s3).setBucket(storageOversizeBucket).build();
 
-        final DynamoDBRouting ddbRouting = DynamoDBRouting.SingleTable.builder().tablePrefix(UUID.randomUUID() + "-").build();
-        final Storage storage = DynamoDBStorage.builder().setClient(ddb).setRouting(ddbRouting)
+        final DynamoDBStrategy ddbRouting = DynamoDBStrategy.SingleTable.builder().tablePrefix(UUID.randomUUID() + "-").build();
+        final Storage storage = DynamoDBStorage.builder().setClient(ddb).setStrategy(ddbRouting)
                 .setOversizeStash(storageOversize).setEventStrategy(Storage.EventStrategy.EMIT)
                 .build();
 

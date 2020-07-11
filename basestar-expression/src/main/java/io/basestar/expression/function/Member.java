@@ -24,10 +24,10 @@ import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
-import io.basestar.expression.PathTransform;
+import io.basestar.expression.NameTransform;
 import io.basestar.expression.constant.Constant;
-import io.basestar.expression.constant.PathConstant;
-import io.basestar.util.Path;
+import io.basestar.expression.constant.NameConstant;
+import io.basestar.util.Name;
 import lombok.Data;
 
 import java.util.List;
@@ -63,14 +63,14 @@ public class Member implements Expression {
     }
 
     @Override
-    public Expression bind(final Context context, final PathTransform root) {
+    public Expression bind(final Context context, final NameTransform root) {
 
         final Expression with = this.with.bind(context, root);
         // Fold x.y.z into a path constant, helps with query generation
         if(with instanceof Constant) {
             return new Constant(context.member(((Constant) with).getValue(), member));
-        } else if(with instanceof PathConstant) {
-            return new PathConstant(((PathConstant)with).getPath().with(member));
+        } else if(with instanceof NameConstant) {
+            return new NameConstant(((NameConstant)with).getName().with(member));
         } else if(with == this.with) {
             return this;
         } else {
@@ -90,7 +90,7 @@ public class Member implements Expression {
     }
 
     @Override
-    public Set<Path> paths() {
+    public Set<Name> paths() {
 
         return with.paths();
     }

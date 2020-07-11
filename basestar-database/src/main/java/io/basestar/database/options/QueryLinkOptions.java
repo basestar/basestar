@@ -21,9 +21,9 @@ package io.basestar.database.options;
  */
 
 import io.basestar.expression.Expression;
+import io.basestar.util.Name;
 import io.basestar.util.PagedList;
 import io.basestar.util.PagingToken;
-import io.basestar.util.Path;
 import io.basestar.util.Sort;
 import lombok.Builder;
 import lombok.Data;
@@ -41,7 +41,7 @@ public class QueryLinkOptions {
 
     public static final int MAX_COUNT = 50;
 
-    private final String schema;
+    private final Name schema;
 
     private final String id;
 
@@ -53,9 +53,9 @@ public class QueryLinkOptions {
 
     private final List<Sort> sort;
 
-    private final Set<Path> expand;
+    private final Set<Name> expand;
 
-    private final Set<Path> projection;
+    private final Set<Name> projection;
 
     private final Set<PagedList.Stat> stats;
 

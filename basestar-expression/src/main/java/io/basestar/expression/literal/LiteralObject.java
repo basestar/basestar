@@ -23,9 +23,9 @@ package io.basestar.expression.literal;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
-import io.basestar.expression.PathTransform;
+import io.basestar.expression.NameTransform;
 import io.basestar.expression.constant.Constant;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import lombok.Data;
 
 import java.util.HashMap;
@@ -51,7 +51,7 @@ public class LiteralObject implements Expression {
     private final Map<Expression, Expression> args;
 
     @Override
-    public Expression bind(final Context context, final PathTransform root) {
+    public Expression bind(final Context context, final NameTransform root) {
 
         boolean changed = false;
         boolean constant = true;
@@ -85,7 +85,7 @@ public class LiteralObject implements Expression {
     }
 
     @Override
-    public Set<Path> paths() {
+    public Set<Name> paths() {
 
         return Stream.concat(args.keySet().stream(), args.values().stream())
                 .flatMap(v -> v.paths().stream())

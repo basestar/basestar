@@ -24,8 +24,12 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.schema.*;
-import io.basestar.util.Path;
+import io.basestar.schema.Constraint;
+import io.basestar.schema.Instance;
+import io.basestar.schema.Schema;
+import io.basestar.schema.util.Expander;
+import io.basestar.schema.util.Ref;
+import io.basestar.util.Name;
 
 import java.util.Collections;
 import java.util.Map;
@@ -34,7 +38,7 @@ import java.util.Set;
 public interface UseScalar<T> extends Use<T> {
 
     @Override
-    default Set<Constraint.Violation> validate(final Context context, final Path path, final T value) {
+    default Set<Constraint.Violation> validate(final Context context, final Name name, final T value) {
 
         return Collections.emptySet();
     }
@@ -46,7 +50,7 @@ public interface UseScalar<T> extends Use<T> {
     }
 
     @Override
-    default T expand(final T value, final Expander expander, final Set<Path> expand) {
+    default T expand(final T value, final Expander expander, final Set<Name> expand) {
 
         return value;
     }
@@ -58,13 +62,13 @@ public interface UseScalar<T> extends Use<T> {
     }
 
     @Override
-    default Set<Expression> refQueries(final String otherTypeName, final Set<Path> expand, final Path path) {
+    default Set<Expression> refQueries(final Name otherSchemaName, final Set<Name> expand, final Name name) {
 
         return Collections.emptySet();
     }
 
     @Override
-    default Set<Path> refExpand(final String otherTypeName, final Set<Path> expand) {
+    default Set<Name> refExpand(final Name otherSchemaName, final Set<Name> expand) {
 
         return Collections.emptySet();
     }
@@ -76,29 +80,29 @@ public interface UseScalar<T> extends Use<T> {
     }
 
     @Override
-    default T evaluateTransients(final Context context, final T value, final Set<Path> expand) {
+    default T evaluateTransients(final Context context, final T value, final Set<Name> expand) {
 
         return value;
     }
 
     @Override
     @Deprecated
-    default Set<Path> requiredExpand(final Set<Path> paths) {
+    default Set<Name> requiredExpand(final Set<Name> names) {
 
         return Collections.emptySet();
     }
 
     @Override
     @Deprecated
-    default Multimap<Path, Instance> refs(final T value) {
+    default Multimap<Name, Instance> refs(final T value) {
 
         return HashMultimap.create();
     }
 
     @Override
-    default Use<?> typeOf(final Path path) {
+    default Use<?> typeOf(final Name name) {
 
-        if(path.isEmpty()) {
+        if(name.isEmpty()) {
             return this;
         } else {
             throw new IllegalStateException();
@@ -106,7 +110,7 @@ public interface UseScalar<T> extends Use<T> {
     }
 
     @Override
-    default Set<Path> transientExpand(final Path path, final Set<Path> expand) {
+    default Set<Name> transientExpand(final Name name, final Set<Name> expand) {
 
         return Collections.emptySet();
     }

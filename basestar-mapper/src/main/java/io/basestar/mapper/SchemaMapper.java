@@ -21,12 +21,18 @@ package io.basestar.mapper;
  */
 
 import io.basestar.schema.Schema;
+import io.basestar.util.Name;
 
 import java.util.Set;
 
 public interface SchemaMapper<T, O> {
 
-    String name();
+    Name qualifiedName();
+
+    default String name() {
+
+        return qualifiedName().toString();
+    }
 
     Schema.Builder<? extends O> schema();
 

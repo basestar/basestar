@@ -25,6 +25,7 @@ import io.basestar.mapper.SchemaMapper;
 import io.basestar.mapper.internal.StructSchemaMapper;
 import io.basestar.mapper.internal.annotation.SchemaDeclaration;
 import io.basestar.type.TypeContext;
+import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.annotation.*;
@@ -48,7 +49,7 @@ public @interface StructSchema {
         public SchemaMapper<?, ?> mapper(final MappingContext context, final TypeContext type) {
 
             final String name = annotation.name().equals(INFER_NAME) ? type.simpleName() : annotation.name();
-            return new StructSchemaMapper<>(context, name, type);
+            return new StructSchemaMapper<>(context, Name.parse(name), type);
         }
     }
 }

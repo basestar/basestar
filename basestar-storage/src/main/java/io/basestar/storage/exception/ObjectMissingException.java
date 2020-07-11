@@ -22,6 +22,7 @@ package io.basestar.storage.exception;
 
 import io.basestar.exception.ExceptionMetadata;
 import io.basestar.exception.HasExceptionMetadata;
+import io.basestar.util.Name;
 
 public class ObjectMissingException extends RuntimeException implements HasExceptionMetadata {
 
@@ -29,7 +30,7 @@ public class ObjectMissingException extends RuntimeException implements HasExcep
 
     public static final String CODE = "ObjectMissing";
 
-    public ObjectMissingException(final String schema, final String id) {
+    public ObjectMissingException(final Name schema, final String id) {
 
         super(schema + " with id \"" + id  + "\" does not exist");
     }

@@ -22,6 +22,7 @@ package io.basestar.storage.exception;
 
 import io.basestar.exception.ExceptionMetadata;
 import io.basestar.exception.HasExceptionMetadata;
+import io.basestar.util.Name;
 
 public class CorruptedIndexException extends RuntimeException implements HasExceptionMetadata {
 
@@ -31,11 +32,11 @@ public class CorruptedIndexException extends RuntimeException implements HasExce
 
     public static final String INDEX = "index";
 
-    private final String index;
+    private final Name index;
 
-    public CorruptedIndexException(final String type, final String index) {
+    public CorruptedIndexException(final Name index) {
 
-        super(type + "." + index + " is corrupted");
+        super(index + " is corrupted");
         this.index = index;
     }
 
@@ -46,6 +47,6 @@ public class CorruptedIndexException extends RuntimeException implements HasExce
                 .setStatus(STATUS)
                 .setCode(CODE)
                 .setMessage(getMessage())
-                .putData(INDEX, index);
+                .putData(INDEX, index.toString());
     }
 }

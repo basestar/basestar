@@ -22,7 +22,7 @@ package io.basestar.expression;
 
 import com.google.common.collect.ImmutableList;
 import io.basestar.expression.constant.Constant;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 
 import java.util.List;
 import java.util.Set;
@@ -34,13 +34,13 @@ public interface Unary extends Expression {
     Expression create(Expression operand);
 
     @Override
-    default Set<Path> paths() {
+    default Set<Name> paths() {
 
         return getOperand().paths();
     }
 
     @Override
-    default Expression bind(final Context context, final PathTransform root) {
+    default Expression bind(final Context context, final NameTransform root) {
 
         final Expression before = getOperand();
         final Expression after = before.bind(context, root);

@@ -75,7 +75,7 @@ public interface TypeModel {
                     @Override
                     public String getName() {
 
-                        return type.getSchema().getName();
+                        return type.getSchema().getQualifiedName().toString();
                     }
 
                     @Override
@@ -94,7 +94,7 @@ public interface TypeModel {
                     @Override
                     public String getName() {
 
-                        return type.getSchema().getName();
+                        return type.getSchema().getQualifiedName().toString();
                     }
 
                     @Override
@@ -170,7 +170,7 @@ public interface TypeModel {
                     @Override
                     public String getName() {
 
-                        return type.getSchema().getName();
+                        return type.getSchema().getQualifiedName().toString();
                     }
 
                     @Override

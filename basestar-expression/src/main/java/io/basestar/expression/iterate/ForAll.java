@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 import io.basestar.expression.*;
 import io.basestar.expression.type.Values;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import lombok.Data;
 
 import java.util.Iterator;
@@ -99,15 +99,15 @@ public class ForAll implements Binary {
     }
 
     @Override
-    public Expression bindLhs(final Context context, final PathTransform root) {
+    public Expression bindLhs(final Context context, final NameTransform root) {
 
-        return getLhs().bind(context, PathTransform.closure(getRhs().closure(), root));
+        return getLhs().bind(context, NameTransform.closure(getRhs().closure(), root));
     }
 
     @Override
-    public Set<Path> paths() {
+    public Set<Name> paths() {
 
-        return ImmutableSet.<Path>builder()
+        return ImmutableSet.<Name>builder()
                 .addAll(lhs.paths())
                 .addAll(rhs.paths())
                 .build();

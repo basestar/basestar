@@ -23,8 +23,8 @@ package io.basestar.expression.aggregate;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.call.LambdaCall;
-import io.basestar.expression.constant.PathConstant;
-import io.basestar.util.Path;
+import io.basestar.expression.constant.NameConstant;
+import io.basestar.util.Name;
 import lombok.Getter;
 
 import java.util.HashMap;
@@ -46,8 +46,8 @@ public class AggregateExtractingVisitor implements ExpressionVisitor.Defaulting<
     public Expression visitLambdaCall(final LambdaCall expression) {
 
         final Expression with = expression.getWith();
-        if(with instanceof PathConstant) {
-            final Path path = ((PathConstant) with).getPath();
+        if(with instanceof NameConstant) {
+            final Name path = ((NameConstant) with).getName();
             if(path.size() == 1) {
                 final String name = path.first();
                 final Aggregate.Factory factory = Aggregate.factory(name);
@@ -56,7 +56,7 @@ public class AggregateExtractingVisitor implements ExpressionVisitor.Defaulting<
                     final Aggregate aggregate = factory.create(args);
                     final String id = "v" + System.identityHashCode(aggregate);
                     aggregates.put(id, aggregate);
-                    return new PathConstant(Path.of(id));
+                    return new NameConstant(Name.of(id));
                 }
             }
         }

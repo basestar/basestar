@@ -23,7 +23,7 @@ package io.basestar.expression;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.constant.Constant;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 
 import java.util.List;
 import java.util.Set;
@@ -37,9 +37,9 @@ public interface Binary extends Expression {
     Expression create(Expression lhs, Expression rhs);
 
     @Override
-    default Set<Path> paths() {
+    default Set<Name> paths() {
 
-        return ImmutableSet.<Path>builder()
+        return ImmutableSet.<Name>builder()
                 .addAll(getLhs().paths())
                 .addAll(getRhs().paths())
                 .build();
@@ -75,7 +75,7 @@ public interface Binary extends Expression {
 //    }
 
     @Override
-    default Expression bind(final Context context, final PathTransform root) {
+    default Expression bind(final Context context, final NameTransform root) {
 
         final Expression beforeLhs = getLhs();
         final Expression beforeRhs = getRhs();
@@ -88,12 +88,12 @@ public interface Binary extends Expression {
         }
     }
 
-    default Expression bindLhs(final Context context, final PathTransform root) {
+    default Expression bindLhs(final Context context, final NameTransform root) {
 
         return getLhs().bind(context, root);
     }
 
-    default Expression bindRhs(final Context context, final PathTransform root) {
+    default Expression bindRhs(final Context context, final NameTransform root) {
 
         return getRhs().bind(context, root);
     }

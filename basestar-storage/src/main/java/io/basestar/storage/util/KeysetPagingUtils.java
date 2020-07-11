@@ -24,8 +24,8 @@ import com.google.common.collect.ImmutableList;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.schema.use.Use;
+import io.basestar.util.Name;
 import io.basestar.util.PagingToken;
-import io.basestar.util.Path;
 import io.basestar.util.Sort;
 
 import java.io.*;
@@ -38,17 +38,17 @@ public class KeysetPagingUtils {
     public static List<Sort> normalizeSort(final List<Sort> sort) {
 
         if(sort == null) {
-            return ImmutableList.of(Sort.asc(Path.of(Reserved.ID)));
+            return ImmutableList.of(Sort.asc(Name.of(Reserved.ID)));
         } else {
             final List<Sort> result = new ArrayList<>();
             for(final Sort s : sort) {
                 result.add(s);
-                if(s.getPath().equalsSingle(Reserved.ID)) {
+                if(s.getName().equalsSingle(Reserved.ID)) {
                     // Other sort paths are irrelevant
                     return result;
                 }
             }
-            result.add(Sort.asc(Path.of(Reserved.ID)));
+            result.add(Sort.asc(Name.of(Reserved.ID)));
             return result;
         }
     }
@@ -60,8 +60,8 @@ public class KeysetPagingUtils {
         try(final ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
             final DataInputStream dis = new DataInputStream(bais)) {
             for(final Sort s : sort) {
-                final Path path = s.getPath();
-                final Use<Object> type = schema.typeOf(path);
+                final Name name = s.getName();
+                final Use<Object> type = schema.typeOf(name);
                 final Object value = type.deseralize(dis);
                 values.add(value);
             }
@@ -78,9 +78,9 @@ public class KeysetPagingUtils {
         try(final ByteArrayOutputStream baos = new ByteArrayOutputStream();
             final DataOutputStream dos = new DataOutputStream(baos)) {
             for (final Sort s : sort) {
-                final Path path = s.getPath();
-                final Object value = path.apply(object);
-                final Use<Object> type = schema.typeOf(path);
+                final Name name = s.getName();
+                final Object value = name.apply(object);
+                final Use<Object> type = schema.typeOf(name);
                 type.serialize(value, dos);
             }
             dos.flush();

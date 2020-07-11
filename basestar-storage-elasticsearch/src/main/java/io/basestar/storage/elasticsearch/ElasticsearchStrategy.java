@@ -21,12 +21,13 @@ package io.basestar.storage.elasticsearch;
  */
 
 import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.Reserved;
 import io.basestar.storage.elasticsearch.mapping.Mappings;
 import io.basestar.storage.elasticsearch.mapping.Settings;
 import io.basestar.util.Nullsafe;
 import lombok.Builder;
 
-public interface ElasticsearchRouting {
+public interface ElasticsearchStrategy {
 
     String objectIndex(ObjectSchema schema);
 
@@ -39,7 +40,7 @@ public interface ElasticsearchRouting {
     boolean historyEnabled(ObjectSchema schema);
 
     @Builder
-    class Simple implements ElasticsearchRouting {
+    class Simple implements ElasticsearchStrategy {
 
         private final String objectPrefix;
 
@@ -55,16 +56,21 @@ public interface ElasticsearchRouting {
 
         private final boolean historyEnabled;
 
+        private String name(final ObjectSchema schema) {
+
+            return schema.getQualifiedName().toString(Reserved.PREFIX).toLowerCase();
+        }
+
         @Override
         public String objectIndex(final ObjectSchema schema) {
 
-            return Nullsafe.option(objectPrefix) + schema.getName().toLowerCase() +  Nullsafe.option(objectSuffix);
+            return Nullsafe.option(objectPrefix) + name(schema) +  Nullsafe.option(objectSuffix);
         }
 
         @Override
         public String historyIndex(final ObjectSchema schema) {
 
-            return Nullsafe.option(historyPrefix) + schema.getName().toLowerCase() + Nullsafe.option(historySuffix);
+            return Nullsafe.option(historyPrefix) + name(schema) + Nullsafe.option(historySuffix);
         }
 
         @Override

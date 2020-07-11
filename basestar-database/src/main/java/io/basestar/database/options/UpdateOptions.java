@@ -21,7 +21,7 @@ package io.basestar.database.options;
  */
 
 import io.basestar.expression.Expression;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import lombok.Builder;
 import lombok.Data;
 
@@ -42,7 +42,7 @@ public class UpdateOptions implements ActionOptions {
         MERGE_DEEP
     }
 
-    private final String schema;
+    private final Name schema;
 
     private final String id;
 
@@ -50,9 +50,9 @@ public class UpdateOptions implements ActionOptions {
 
     private final Map<String, Expression> expressions;
 
-    private final Set<Path> expand;
+    private final Set<Name> expand;
 
-    private final Set<Path> projection;
+    private final Set<Name> projection;
 
     private final Long version;
 

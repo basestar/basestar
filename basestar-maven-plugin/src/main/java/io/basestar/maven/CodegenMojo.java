@@ -86,10 +86,10 @@ public class CodegenMojo extends AbstractMojo {
             output.mkdirs();
 
             for(final Schema<?> schema : ns.getSchemas().values()) {
-                final File file = new File(output, schema.getName() + ".java");
+                final File file = new File(output, schema.getQualifiedName() + ".java");
                 try(final FileOutputStream fos = new FileOutputStream(file);
                     final OutputStreamWriter writer = new OutputStreamWriter(fos, Charsets.UTF_8)) {
-                    getLog().info("Writing schema " + schema.getName() + " to " + file.getAbsolutePath());
+                    getLog().info("Writing schema " + schema.getQualifiedName() + " to " + file.getAbsolutePath());
                     codegen.generate(schema, writer);
                 }
             }
