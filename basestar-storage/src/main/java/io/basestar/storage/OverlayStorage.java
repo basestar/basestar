@@ -249,9 +249,9 @@ public class OverlayStorage implements Storage {
             }
 
             @Override
-            public CompletableFuture<BatchResponse> commit() {
+            public CompletableFuture<BatchResponse> write() {
 
-                return overlayWrite.commit();
+                return overlayWrite.write();
             }
         };
     }

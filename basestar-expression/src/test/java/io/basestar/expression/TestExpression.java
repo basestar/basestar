@@ -413,7 +413,7 @@ public class TestExpression {
     public void testBindWith() {
 
         final Expression expression = Expression.parse("with(m = a) m");
-        final Expression bound = expression.bind(Context.init(), NameTransform.root(Name.of("this")));
+        final Expression bound = expression.bind(Context.init(), Renaming.addPrefix(Name.of("this")));
         assertEquals(Name.of("m"), ((NameConstant)((With)bound).getYield()).getName());
     }
 
@@ -421,7 +421,7 @@ public class TestExpression {
     public void testBindForAny() {
 
         final Expression expression = Expression.parse("m.id for any m of members");
-        final Expression bound = expression.bind(Context.init(), NameTransform.root(Name.of("this")));
+        final Expression bound = expression.bind(Context.init(), Renaming.addPrefix(Name.of("this")));
         assertEquals(Name.of("m", "id"), ((NameConstant)((ForAny)bound).getLhs()).getName());
     }
 
@@ -429,7 +429,7 @@ public class TestExpression {
     public void testBindForAll() {
 
         final Expression expression = Expression.parse("m.id for all m of members");
-        final Expression bound = expression.bind(Context.init(), NameTransform.root(Name.of("this")));
+        final Expression bound = expression.bind(Context.init(), Renaming.addPrefix(Name.of("this")));
         assertEquals(Name.of("m", "id"), ((NameConstant)((ForAll)bound).getLhs()).getName());
     }
 
@@ -437,7 +437,7 @@ public class TestExpression {
     public void testBindWhere() {
 
         final Expression expression = Expression.parse("m of members where m.id");
-        final Expression bound = expression.bind(Context.init(), NameTransform.root(Name.of("this")));
+        final Expression bound = expression.bind(Context.init(), Renaming.addPrefix(Name.of("this")));
         assertEquals(Name.of("m", "id"), ((NameConstant)((Where)bound).getRhs()).getName());
     }
 

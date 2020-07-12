@@ -490,7 +490,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
         }
 
         @Override
-        public CompletableFuture<BatchResponse> commit() {
+        public CompletableFuture<BatchResponse> write() {
 
             return getIndices(indices)
                     .thenCompose(ignored -> ElasticsearchUtils

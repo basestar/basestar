@@ -70,20 +70,29 @@ public class Name extends AbstractPath<Name> implements Comparable<Name> {
         return new Name(parts);
     }
 
-    public static Name parse(final String path) {
+    public static Name parseNonEmpty(final String str) {
 
-        return new Name(splitter(DELIMITER).splitToList(path));
+        final Name name = parse(str);
+        if(name.isEmpty()) {
+            throw new IllegalStateException("Cannot be empty");
+        }
+        return name;
     }
 
-    public static Set<Name> parseSet(final String paths) {
+    public static Name parse(final String str) {
 
-        return splitter(MULTIPLE_DELIMITER).splitToList(paths).stream().map(Name::parse)
+        return new Name(splitter(DELIMITER).splitToList(str));
+    }
+
+    public static Set<Name> parseSet(final String str) {
+
+        return splitter(MULTIPLE_DELIMITER).splitToList(str).stream().map(Name::parse)
                 .collect(Collectors.toSet());
     }
 
-    public static List<Name> parseList(final String paths) {
+    public static List<Name> parseList(final String str) {
 
-        return splitter(MULTIPLE_DELIMITER).splitToList(paths).stream().map(Name::parse)
+        return splitter(MULTIPLE_DELIMITER).splitToList(str).stream().map(Name::parse)
                 .collect(Collectors.toList());
     }
 

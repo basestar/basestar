@@ -180,7 +180,7 @@ public class ReplicatedStorage implements Storage {
             @Override
             public ReadTransaction readObject(final ObjectSchema schema, final String id) {
 
-                keys.add(new BatchResponse.Key(schema.getQualifiedName(), id, null));
+                keys.add(BatchResponse.Key.latest(schema.getQualifiedName(), id));
                 schemas.put(schema.getQualifiedName(), schema);
                 delegate.readObject(schema, id);
                 return this;
@@ -189,7 +189,7 @@ public class ReplicatedStorage implements Storage {
             @Override
             public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version) {
 
-                keys.add(new BatchResponse.Key(schema.getQualifiedName(), id, version));
+                keys.add(BatchResponse.Key.version(schema.getQualifiedName(), id, version));
                 schemas.put(schema.getQualifiedName(), schema);
                 delegate.readObjectVersion(schema, id, version);
                 return this;

@@ -30,7 +30,7 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.jackson.serde.AbbrevSetDeserializer;
-import io.basestar.jackson.serde.PathDeserializer;
+import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.IndexValidationException;
 import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.exception.ReservedNameException;
@@ -92,45 +92,65 @@ public class Index implements Named, Described, Serializable, Extendable {
 
     private final int max;
 
+    @JsonDeserialize(as = Builder.class)
+    public interface Descriptor extends Described, Extendable {
+
+        Long getVersion();
+
+        List<Name> getPartition();
+
+        List<Sort> getSort();
+
+        Set<String> getProjection();
+
+        Map<String, Name> getOver();
+
+        Consistency getConsistency();
+
+        Boolean getUnique();
+
+        Boolean getSparse();
+
+        Integer getMax();
+
+        default Index build(final Name qualifiedName) {
+
+            return new Index(this, qualifiedName);
+        }
+    }
+
     @Data
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonPropertyOrder({"version", "description", "partition", "sort", "unique", "sparse", "over", "max", "consistency", "projection", "extensions"})
-    public static class Builder implements Described {
+    public static class Builder implements Descriptor {
 
-        @Nullable
         private Long version;
 
-        @Nullable
         private String description;
 
-        @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         @JsonSerialize(contentUsing = ToStringSerializer.class)
         @JsonDeserialize(using = AbbrevListDeserializer.class)
         private List<Name> partition;
 
-        @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         @JsonSerialize(contentUsing = ToStringSerializer.class)
         @JsonDeserialize(using = AbbrevListDeserializer.class)
         private List<Sort> sort;
 
-        @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         @JsonDeserialize(using = AbbrevSetDeserializer.class)
         private Set<String> projection;
 
-        @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonSerialize(contentUsing = ToStringSerializer.class)
-        @JsonDeserialize(contentUsing = PathDeserializer.class)
+        @JsonDeserialize(contentUsing = NameDeserializer.class)
         private Map<String, Name> over;
 
-        @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private Map<String, Object> extensions;
 
@@ -141,11 +161,6 @@ public class Index implements Named, Described, Serializable, Extendable {
         private Boolean sparse;
 
         private Integer max;
-
-        public Index build(final Name qualifiedName) {
-
-            return new Index(this, qualifiedName);
-        }
     }
 
     public static Builder builder() {
@@ -153,20 +168,20 @@ public class Index implements Named, Described, Serializable, Extendable {
         return new Builder();
     }
 
-    private Index(final Builder builder, final Name qualifiedName) {
+    private Index(final Descriptor descriptor, final Name qualifiedName) {
 
         this.qualifiedName = qualifiedName;
-        this.version = Nullsafe.option(builder.getVersion(), 1L);
-        this.description = builder.getDescription();
-        this.partition = Nullsafe.immutableCopy(builder.getPartition());
-        this.sort = Nullsafe.immutableCopy(builder.getSort());
-        this.projection = Nullsafe.immutableSortedCopy(builder.getProjection());
-        this.over = Nullsafe.immutableSortedCopy(builder.getOver());
-        this.unique = Nullsafe.option(builder.getUnique(), false);
-        this.sparse = Nullsafe.option(builder.getSparse(), false);
-        this.consistency = builder.getConsistency();
-        this.max = Nullsafe.option(builder.getMax(), DEFAULT_MAX);
-        this.extensions = Nullsafe.immutableSortedCopy(builder.getExtensions());
+        this.version = Nullsafe.option(descriptor.getVersion(), 1L);
+        this.description = descriptor.getDescription();
+        this.partition = Nullsafe.immutableCopy(descriptor.getPartition());
+        this.sort = Nullsafe.immutableCopy(descriptor.getSort());
+        this.projection = Nullsafe.immutableSortedCopy(descriptor.getProjection());
+        this.over = Nullsafe.immutableSortedCopy(descriptor.getOver());
+        this.unique = Nullsafe.option(descriptor.getUnique(), false);
+        this.sparse = Nullsafe.option(descriptor.getSparse(), false);
+        this.consistency = descriptor.getConsistency();
+        this.max = Nullsafe.option(descriptor.getMax(), DEFAULT_MAX);
+        this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());
         if (Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
@@ -423,5 +438,78 @@ public class Index implements Named, Described, Serializable, Extendable {
                 return result;
             }
         }
+    }
+
+    public Descriptor descriptor() {
+
+        return new Descriptor() {
+
+            @Override
+            public Map<String, Object> getExtensions() {
+
+                return extensions;
+            }
+
+            @Nullable
+            @Override
+            public String getDescription() {
+
+                return description;
+            }
+
+            @Override
+            public Long getVersion() {
+
+                return version;
+            }
+
+            @Override
+            public List<Name> getPartition() {
+
+                return partition;
+            }
+
+            @Override
+            public List<Sort> getSort() {
+
+                return sort;
+            }
+
+            @Override
+            public Set<String> getProjection() {
+
+                return projection;
+            }
+
+            @Override
+            public Map<String, Name> getOver() {
+
+                return over;
+            }
+
+            @Override
+            public Consistency getConsistency() {
+
+                return consistency;
+            }
+
+            @Override
+            public Boolean getUnique() {
+
+                return unique;
+            }
+
+            @Override
+            public Boolean getSparse() {
+
+                return sparse;
+            }
+
+            @Override
+            public Integer getMax() {
+
+                return max;
+            }
+        };
     }
 }

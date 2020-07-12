@@ -35,9 +35,9 @@ import java.util.stream.Collectors;
 
 public class ObjectSchemaMapper<T> extends InstanceSchemaMapper<T, ObjectSchema.Builder> {
 
-    private final Map<String, io.basestar.schema.Index.Builder> indexes = new HashMap<>();
+    private final Map<String, io.basestar.schema.Index.Descriptor> indexes = new HashMap<>();
 
-    private final Map<String, io.basestar.schema.Permission.Builder> permissions = new HashMap<>();
+    private final Map<String, io.basestar.schema.Permission.Descriptor> permissions = new HashMap<>();
 
     public ObjectSchemaMapper(final MappingContext context, final Name name, final TypeContext type) {
 

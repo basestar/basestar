@@ -29,6 +29,7 @@ import io.basestar.expression.iterate.ForAny;
 import io.basestar.expression.iterate.Of;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.Instance;
+import io.basestar.schema.Schema;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
@@ -145,6 +146,12 @@ public interface UseCollection<V, T extends Collection<V>> extends Use<T> {
             value.forEach(v -> getType().refs(v).forEach(result::put));
         }
         return result;
+    }
+
+    @Override
+    default void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+
+        getType().collectDependencies(expand, out);
     }
 }
 

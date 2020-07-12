@@ -84,7 +84,7 @@ public interface UseNamed<T> extends Use<T> {
             } else if(schema instanceof StructSchema) {
                 return UseStruct.from((StructSchema) schema, config);
             } else if(schema instanceof ObjectSchema) {
-                return UseRef.from((ObjectSchema) schema, config);
+                return UseObject.from((ObjectSchema) schema, config);
             } else {
                 throw new MissingSchemaException(qualifiedName);
             }
@@ -190,6 +190,12 @@ public interface UseNamed<T> extends Use<T> {
 
         @Override
         public Map<Ref, Long> refVersions(final Object value) {
+
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
             throw new UnsupportedOperationException();
         }

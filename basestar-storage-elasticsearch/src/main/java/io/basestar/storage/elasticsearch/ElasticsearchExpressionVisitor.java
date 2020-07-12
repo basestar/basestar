@@ -23,7 +23,7 @@ package io.basestar.storage.elasticsearch;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
-import io.basestar.expression.NameTransform;
+import io.basestar.expression.Renaming;
 import io.basestar.expression.compare.*;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.NameConstant;
@@ -227,7 +227,7 @@ public class ElasticsearchExpressionVisitor implements ExpressionVisitor.Default
                 // map keys not supported
                 if(of.getKey() == null) {
                     final String value = of.getValue();
-                    final Expression bound = lhs.bind(Context.init(), NameTransform.move(Name.of(value), name));
+                    final Expression bound = lhs.bind(Context.init(), Renaming.move(Name.of(value), name));
                     final QueryBuilder lhsQuery = bound.visit(this);
                     return QueryBuilders.nestedQuery(name.toString(), lhsQuery, ScoreMode.Avg);
                 }

@@ -33,11 +33,11 @@ import java.util.stream.Collectors;
 
 public interface Expression extends Serializable {
 
-    Expression bind(Context context, NameTransform root);
+    Expression bind(Context context, Renaming root);
 
     default Expression bind(final Context context) {
 
-        return bind(context, NameTransform.noop());
+        return bind(context, Renaming.noop());
     }
 
     Object evaluate(Context context);

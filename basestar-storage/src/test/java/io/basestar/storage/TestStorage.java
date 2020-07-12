@@ -90,7 +90,7 @@ public abstract class TestStorage {
                 });
             });
 
-            write.commit().join();
+            write.write().join();
         }
     }
 
@@ -217,7 +217,7 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .createObject(schema, id, after)
-                .commit().join();
+                .write().join();
 
         final Map<String, Object> current = storage.readObject(schema, id).join();
         assertNotNull(current);
@@ -275,7 +275,7 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .createObject(schema, id, init)
-                .commit().join();
+                .write().join();
 
         final Instance before = schema.create(storage.readObject(schema, id).join());
         assertEquals(1L, before.getVersion());
@@ -284,7 +284,7 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .updateObject(schema, id, setVersion(before, 1L), after)
-                .commit().join();
+                .write().join();
 
         final Map<String, Object> current = storage.readObject(schema, id).join();
         assertNotNull(current);
@@ -316,13 +316,13 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .createObject(schema, id, init)
-                .commit().join();
+                .write().join();
 
         final Instance before = schema.create(storage.readObject(schema, id).join());
 
         storage.write(Consistency.ATOMIC)
                 .deleteObject(schema, id, setVersion(before, 1L))
-                .commit().join();
+                .write().join();
 
         final Map<String, Object> current = storage.readObject(schema, id).join();
         assertNull(current);
@@ -357,7 +357,7 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .createObject(schema, id, instance)
-                .commit().join();
+                .write().join();
 
         final BatchResponse results = storage.read(Consistency.ATOMIC)
                 .readObject(schema, id)
@@ -381,11 +381,11 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .createObject(schema, id, after)
-                .commit().join();
+                .write().join();
 
         assertCause(ObjectExistsException.class, () -> storage.write(Consistency.ATOMIC)
                     .createObject(schema, id, after)
-                    .commit().get());
+                    .write().get());
     }
 
     @Test
@@ -403,19 +403,19 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .createObject(schema, id, init)
-                .commit().join();
+                .write().join();
 
         final Instance before = schema.create(storage.readObject(schema, id).join());
 
         storage.write(Consistency.ATOMIC)
                 .deleteObject(schema, id, setVersion(before, 1L))
-                .commit().join();
+                .write().join();
 
         final Instance after = instance(schema, id, 2L);
 
         assertCause(VersionMismatchException.class, () -> storage.write(Consistency.ATOMIC)
                 .updateObject(schema, id, setVersion(before, 1L), after)
-                .commit().get());
+                .write().get());
     }
 
     @Test
@@ -433,17 +433,17 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .createObject(schema, id, init)
-                .commit().join();
+                .write().join();
 
         final Instance before = schema.create(storage.readObject(schema, id).join());
 
         storage.write(Consistency.ATOMIC)
                 .deleteObject(schema, id, setVersion(before, 1L))
-                .commit().join();
+                .write().join();
 
         assertCause(VersionMismatchException.class, () -> storage.write(Consistency.ATOMIC)
                 .deleteObject(schema, id, setVersion(before, 1L))
-                .commit().get());
+                .write().get());
     }
 
     @Test
@@ -461,7 +461,7 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .createObject(schema, id, init)
-                .commit().join();
+                .write().join();
 
         final Instance before = schema.create(storage.readObject(schema, id).join());
 
@@ -469,11 +469,11 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .updateObject(schema, id, setVersion(before, 1L), after)
-                .commit().join();
+                .write().join();
 
         assertCause(VersionMismatchException.class, () -> storage.write(Consistency.ATOMIC)
                 .deleteObject(schema, id, setVersion(before, 1L))
-                .commit().get());
+                .write().get());
     }
 
     @Test
@@ -491,7 +491,7 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .createObject(schema, id, init)
-                .commit().join();
+                .write().join();
 
         final Instance before = schema.create(storage.readObject(schema, id).join());
 
@@ -499,7 +499,7 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .updateObject(schema, id, setVersion(before, 1L), after)
-                .commit().join();
+                .write().join();
 
 //        storage.write(Consistency.ATOMIC)
 //                .updateObject(schema, id, 1L, before, after)
@@ -507,7 +507,7 @@ public abstract class TestStorage {
 
         assertCause(VersionMismatchException.class, () -> storage.write(Consistency.ATOMIC)
                 .updateObject(schema, id, setVersion(before, 1L), after)
-                .commit().get());
+                .write().get());
     }
 
     @Test
@@ -555,11 +555,11 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .createObject(schema, id, instance(schema, id, 1L))
-                .commit().join();
+                .write().join();
 
         storage.write(Consistency.ATOMIC)
                 .updateObject(schema, id, null, instance(schema, id, 2L))
-                .commit().join();
+                .write().join();
     }
 
     @Test
@@ -575,11 +575,11 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .createObject(schema, id, instance(schema, id, 1L))
-                .commit().join();
+                .write().join();
 
         storage.write(Consistency.ATOMIC)
                 .deleteObject(schema, id, null)
-                .commit().join();
+                .write().join();
     }
 
     @Test
@@ -681,7 +681,7 @@ public abstract class TestStorage {
             }
         }
 
-        write.commit().join();
+        write.write().join();
     }
 
     private Instance instance(final ObjectSchema schema, final String id, final long version) {

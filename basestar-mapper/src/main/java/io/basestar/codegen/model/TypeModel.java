@@ -87,7 +87,7 @@ public interface TypeModel {
             }
 
             @Override
-            public TypeModel visitRef(final UseRef type) {
+            public TypeModel visitRef(final UseObject type) {
 
                 return new TypeModel() {
 

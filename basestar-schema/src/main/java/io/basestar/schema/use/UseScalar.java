@@ -115,4 +115,8 @@ public interface UseScalar<T> extends Use<T> {
         return Collections.emptySet();
     }
 
+    @Override
+    default void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+
+    }
 }

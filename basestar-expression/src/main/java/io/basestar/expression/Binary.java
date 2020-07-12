@@ -75,7 +75,7 @@ public interface Binary extends Expression {
 //    }
 
     @Override
-    default Expression bind(final Context context, final NameTransform root) {
+    default Expression bind(final Context context, final Renaming root) {
 
         final Expression beforeLhs = getLhs();
         final Expression beforeRhs = getRhs();
@@ -88,12 +88,12 @@ public interface Binary extends Expression {
         }
     }
 
-    default Expression bindLhs(final Context context, final NameTransform root) {
+    default Expression bindLhs(final Context context, final Renaming root) {
 
         return getLhs().bind(context, root);
     }
 
-    default Expression bindRhs(final Context context, final NameTransform root) {
+    default Expression bindRhs(final Context context, final Renaming root) {
 
         return getRhs().bind(context, root);
     }

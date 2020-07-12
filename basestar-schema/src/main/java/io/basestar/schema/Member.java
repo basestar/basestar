@@ -36,6 +36,36 @@ public interface Member extends Named, Described, Serializable, Extendable {
 
     String VAR_VALUE = "value";
 
+    interface Descriptor extends Described, Extendable {
+
+        Visibility getVisibility();
+    }
+
+    interface Builder extends Descriptor {
+
+    }
+
+    interface Resolver {
+
+        @JsonIgnore
+        Map<String, ? extends Member> getDeclaredMembers();
+
+        @JsonIgnore
+        Map<String, ? extends Member> getMembers();
+
+        Member getMember(String name, boolean inherited);
+
+        default Member requireMember(final String name, final boolean inherited) {
+
+            final Member result = getMember(name, inherited);
+            if (result == null) {
+                throw new MissingMemberException(name);
+            } else {
+                return result;
+            }
+        }
+    }
+
     Use<?> getType();
 
     Visibility getVisibility();
@@ -55,6 +85,11 @@ public interface Member extends Named, Described, Serializable, Extendable {
     Set<Expression> refQueries(Name otherSchemaName, Set<Name> expand, Name name);
 
     Set<Name> refExpand(Name otherSchemaName, Set<Name> expand);
+
+    default void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+
+        getType().collectDependencies(expand, out);
+    }
 
     default boolean isVisible(final Context context, final Object value) {
 
@@ -84,28 +119,5 @@ public interface Member extends Named, Described, Serializable, Extendable {
         return getType().openApi().description(getDescription());
     }
 
-    interface Builder extends Described {
-
-    }
-
-    interface Resolver {
-
-        @JsonIgnore
-        Map<String, ? extends Member> getDeclaredMembers();
-
-        @JsonIgnore
-        Map<String, ? extends Member> getMembers();
-
-        Member getMember(String name, boolean inherited);
-
-        default Member requireMember(final String name, final boolean inherited) {
-
-            final Member result = getMember(name, inherited);
-            if (result == null) {
-                throw new MissingMemberException(name);
-            } else {
-                return result;
-            }
-        }
-    }
+    Descriptor descriptor();
 }

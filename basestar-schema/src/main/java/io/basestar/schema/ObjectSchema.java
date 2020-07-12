@@ -29,7 +29,7 @@ import com.google.common.collect.*;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import io.basestar.expression.Context;
-import io.basestar.jackson.serde.PathDeserializer;
+import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseInteger;
@@ -162,23 +162,55 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
     @Nonnull
     private final SortedMap<String, Object> extensions;
 
-//    public Set<Path> transientExpand(final Path path, final Set<Path> expand) {
-//
-//        final Set<Path> transientExpand = new HashSet<>(expand);
-//        transientExpand.addAll(InstanceSchema.super.transientExpand(path, expand));
-//        final Map<String, Set<Path>> branch = Path.branch(expand);
-//        return transientExpand;
-//    }
+    @JsonDeserialize(as = Builder.class)
+    public interface Descriptor extends InstanceSchema.Descriptor {
+
+        String TYPE = "object";
+
+        default String type() {
+
+            return TYPE;
+        }
+
+        Long getVersion();
+
+        Name getExtend();
+
+        Id.Descriptor getId();
+
+        Boolean getConcrete();
+
+        History getHistory();
+
+        Map<String, Transient.Descriptor> getTransients();
+
+        Map<String, Link.Descriptor> getLinks();
+
+        Map<String, Index.Descriptor> getIndexes();
+
+        Map<String, Permission.Descriptor> getPermissions();
+
+        Set<Name> getExpand();
+
+        @Override
+        default ObjectSchema build(final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
+
+            return new ObjectSchema(this, resolver, qualifiedName, slot);
+        }
+
+        @Override
+        default ObjectSchema build() {
+
+            return build(Resolver.Constructing.ANONYMOUS, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
+        }
+    }
 
     @Data
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonPropertyOrder({"type", "description", "version", "extend", "concrete", "id", "history", "properties", "transients", "links", "indexes", "permissions", "extensions"})
-    public static class Builder implements InstanceSchema.Builder {
+    public static class Builder implements InstanceSchema.Builder, Descriptor {
 
-        public static final String TYPE = "object";
-
-        @Nullable
         private Long version;
 
         @Nullable
@@ -198,31 +230,27 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
 
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
-        private Map<String, Property.Builder> properties;
+        private Map<String, Property.Descriptor> properties;
 
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
-        private Map<String, Transient.Builder> transients;
+        private Map<String, Transient.Descriptor> transients;
 
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
-        private Map<String, Link.Builder> links;
-//
-//        @Nullable
-//        @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
-//        private Map<String, Method.Config> methods;
+        private Map<String, Link.Descriptor> links;
 
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
-        private Map<String, Index.Builder> indexes;
+        private Map<String, Index.Descriptor> indexes;
 
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
-        private Map<String, Permission.Builder> permissions;
+        private Map<String, Permission.Descriptor> permissions;
 
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
-        @JsonDeserialize(contentUsing = PathDeserializer.class)
+        @JsonDeserialize(contentUsing = NameDeserializer.class)
         private Set<Name> expand;
 
         @Nullable
@@ -234,46 +262,34 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
             return TYPE;
         }
 
-        public Builder setProperty(final String name, final Property.Builder v) {
+        public Builder setProperty(final String name, final Property.Descriptor v) {
 
             properties = Nullsafe.immutableCopyPut(properties, name, v);
             return this;
         }
 
-        public Builder setTransient(final String name, final Transient.Builder v) {
+        public Builder setTransient(final String name, final Transient.Descriptor v) {
 
             transients = Nullsafe.immutableCopyPut(transients, name, v);
             return this;
         }
 
-        public Builder setLink(final String name, final Link.Builder v) {
+        public Builder setLink(final String name, final Link.Descriptor v) {
 
             links = Nullsafe.immutableCopyPut(links, name, v);
             return this;
         }
 
-        public Builder setIndex(final String name, final Index.Builder v) {
+        public Builder setIndex(final String name, final Index.Descriptor v) {
 
             indexes = Nullsafe.immutableCopyPut(indexes, name, v);
             return this;
         }
 
-        public Builder setPermission(final String name, final Permission.Builder v) {
+        public Builder setPermission(final String name, final Permission.Descriptor v) {
 
             permissions = Nullsafe.immutableCopyPut(permissions, name, v);
             return this;
-        }
-
-        @Override
-        public ObjectSchema build(final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
-
-            return new ObjectSchema(this, resolver, qualifiedName, slot);
-        }
-
-        @Override
-        public ObjectSchema build() {
-
-            return build(Resolver.Constructing.ANONYMOUS, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
         }
     }
 
@@ -295,33 +311,33 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
             .put(Reserved.ID, UseString.DEFAULT)
             .build();
 
-    private ObjectSchema(final Builder builder, final Schema.Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
+    private ObjectSchema(final Descriptor descriptor, final Schema.Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
 
         resolver.constructing(this);
         this.qualifiedName = qualifiedName;
         this.slot = slot;
-        this.version = Nullsafe.option(builder.getVersion(), 1L);
-        if(builder.getExtend() != null) {
-            this.extend = resolver.requireInstanceSchema(builder.getExtend());
+        this.version = Nullsafe.option(descriptor.getVersion(), 1L);
+        if(descriptor.getExtend() != null) {
+            this.extend = resolver.requireInstanceSchema(descriptor.getExtend());
         } else {
             this.extend = null;
         }
-        this.description = builder.getDescription();
-        this.id = builder.getId() == null ? null : builder.getId().build(qualifiedName.with(Reserved.ID));
-        this.history = Nullsafe.option(builder.getHistory(), History.ENABLED);
-        this.declaredProperties = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getProperties()).entrySet().stream()
+        this.description = descriptor.getDescription();
+        this.id = descriptor.getId() == null ? null : descriptor.getId().build(qualifiedName.with(Reserved.ID));
+        this.history = Nullsafe.option(descriptor.getHistory(), History.ENABLED);
+        this.declaredProperties = ImmutableSortedMap.copyOf(Nullsafe.option(descriptor.getProperties()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, qualifiedName.with(e.getKey())))));
-        this.declaredTransients = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getTransients()).entrySet().stream()
+        this.declaredTransients = ImmutableSortedMap.copyOf(Nullsafe.option(descriptor.getTransients()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(qualifiedName.with(e.getKey())))));
-        this.declaredLinks = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getLinks()).entrySet().stream()
+        this.declaredLinks = ImmutableSortedMap.copyOf(Nullsafe.option(descriptor.getLinks()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, qualifiedName.with(e.getKey())))));
-        this.declaredIndexes = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getIndexes()).entrySet().stream()
+        this.declaredIndexes = ImmutableSortedMap.copyOf(Nullsafe.option(descriptor.getIndexes()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(qualifiedName.with(e.getKey())))));
-        this.declaredPermissions = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getPermissions()).entrySet().stream()
+        this.declaredPermissions = ImmutableSortedMap.copyOf(Nullsafe.option(descriptor.getPermissions()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(e.getKey()))));
-        this.declaredExpand = ImmutableSortedSet.copyOf(Nullsafe.option(builder.getExpand()));
-        this.concrete = Nullsafe.option(builder.getConcrete(), Boolean.TRUE);
-        this.extensions = Nullsafe.immutableSortedCopy(builder.getExtensions());
+        this.declaredExpand = ImmutableSortedSet.copyOf(Nullsafe.option(descriptor.getExpand()));
+        this.concrete = Nullsafe.option(descriptor.getConcrete(), Boolean.TRUE);
+        this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
@@ -488,24 +504,6 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         return new Instance(result);
     }
 
-//    @Override
-//    public Instance applyVisibility(final Context context, final Instance object) {
-//
-//        final Map<String, Object> result = new HashMap<>();
-//        Stream.of(allProperties, allTransients, allLinks).forEach(members -> {
-//           members.forEach((name, member) -> {
-//               if (object.containsKey(name)) {
-//                   final Object value = object.get(name);
-//                   if (member.isVisible(context, value)) {
-//                       result.put(name, member.applyVisibility(context, value));
-//                   }
-//               }
-//           });
-//        });
-//        copyMeta(object, result);
-//        return new Instance(result);
-//    }
-
     @Override
     public Set<Constraint.Violation> validate(final Context context, final Name name, final Instance after) {
 
@@ -588,5 +586,125 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         return new Instance(ImmutableMap.of(
                 Reserved.ID, key
         ));
+    }
+
+    @Override
+    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+
+        if(!out.containsKey(qualifiedName)) {
+            if(extend != null) {
+                extend.collectDependencies(expand, out);
+            }
+            out.put(qualifiedName, this);
+            final Map<String, Set<Name>> branches = Name.branch(expand);
+            declaredProperties.forEach((k, v) -> v.collectDependencies(branches.get(k), out));
+            Stream.of(declaredLinks, declaredTransients).forEach(members -> members.forEach((k, v) -> {
+                final Set<Name> branch = branches.get(k);
+                if(branch != null) {
+                    v.collectDependencies(branch, out);
+                }
+            }));
+        }
+    }
+
+    @Override
+    public Descriptor descriptor() {
+
+        return new Descriptor() {
+
+            @Override
+            public Long getVersion() {
+
+                return version;
+            }
+
+            @Override
+            public Name getExtend() {
+
+                return extend == null ? null : extend.getQualifiedName();
+            }
+
+            @Override
+            public Id.Descriptor getId() {
+
+                return id == null ? null : id.descriptor();
+            }
+
+            @Override
+            public Boolean getConcrete() {
+
+                return concrete;
+            }
+
+            @Override
+            public History getHistory() {
+
+                return history;
+            }
+
+            @Override
+            public Map<String, Property.Descriptor> getProperties() {
+
+                return declaredProperties.entrySet().stream().collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().descriptor()
+                ));
+            }
+
+            @Override
+            public Map<String, Transient.Descriptor> getTransients() {
+
+                return declaredTransients.entrySet().stream().collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().descriptor()
+                ));
+            }
+
+            @Override
+            public Map<String, Link.Descriptor> getLinks() {
+
+                return declaredLinks.entrySet().stream().collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().descriptor()
+                ));
+            }
+
+            @Override
+            public Map<String, Index.Descriptor> getIndexes() {
+
+                return declaredIndexes.entrySet().stream().collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().descriptor()
+                ));
+            }
+
+            @Override
+            public Map<String, Permission.Descriptor> getPermissions() {
+
+                return declaredPermissions.entrySet().stream().collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().descriptor()
+                ));
+            }
+
+            @Override
+            public Set<Name> getExpand() {
+
+                return expand;
+            }
+
+            @Nullable
+            @Override
+            public String getDescription() {
+
+                return description;
+            }
+
+            @Override
+            public Map<String, Object> getExtensions() {
+
+                return extensions;
+            }
+        };
     }
 }

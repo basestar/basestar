@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
-import io.basestar.expression.NameTransform;
+import io.basestar.expression.Renaming;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.literal.LiteralObject;
 import io.basestar.util.Name;
@@ -82,7 +82,7 @@ public class Of implements Expression {
     }
 
     @Override
-    public Expression bind(final Context context, final NameTransform root) {
+    public Expression bind(final Context context, final Renaming root) {
 
         final Expression expr = this.expr.bind(context, root);
         if(expr instanceof Constant) {

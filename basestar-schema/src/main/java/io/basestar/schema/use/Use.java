@@ -122,6 +122,8 @@ public interface Use<T> extends Serializable {
 
     Map<Ref, Long> refVersions(T value);
 
+    void collectDependencies(Set<Name> expand, Map<Name, Schema<?>> out);
+
     @JsonCreator
     @SuppressWarnings("unchecked")
     static Use<?> fromConfig(final Object value) {
@@ -239,7 +241,7 @@ public interface Use<T> extends Serializable {
             case MAP:
                 return (T)UseMap.deserializeAnyValue(in);
             case REF:
-                return (T)UseRef.deserializeAnyValue(in);
+                return (T) UseObject.deserializeAnyValue(in);
             case STRUCT:
                 return (T)UseStruct.deserializeAnyValue(in);
             case BINARY:
@@ -265,7 +267,7 @@ public interface Use<T> extends Serializable {
 
         R visitEnum(UseEnum type);
 
-        R visitRef(UseRef type);
+        R visitRef(UseObject type);
 
         <T> R visitArray(UseArray<T> type);
 
@@ -326,7 +328,7 @@ public interface Use<T> extends Serializable {
             }
 
             @Override
-            default R visitRef(final UseRef type) {
+            default R visitRef(final UseObject type) {
 
                 return visitDefault(type);
             }

@@ -75,7 +75,12 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
     @Override
     public UseArray<?> resolve(final Schema.Resolver resolver) {
 
-        return new UseArray<>(this.type.resolve(resolver));
+        final Use<?> resolved = type.resolve(resolver);
+        if(resolved == type) {
+            return this;
+        } else {
+            return new UseArray<>(resolved);
+        }
     }
 
     @Override
@@ -148,8 +153,4 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
 
         return NAME + "<" + type + ">";
     }
-//
-//    class Bound<List<T>> {
-//
-//    }
 }

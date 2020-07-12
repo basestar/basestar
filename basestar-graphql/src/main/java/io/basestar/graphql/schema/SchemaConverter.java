@@ -119,9 +119,9 @@ public class SchemaConverter {
         return builder;
     }
 
-    private Map<String, Property.Builder> instanceProperties(final List<FieldDefinition> defs, final Set<String> skipMetadata) {
+    private Map<String, Property.Descriptor> instanceProperties(final List<FieldDefinition> defs, final Set<String> skipMetadata) {
 
-        final Map<String, Property.Builder> builder = new HashMap<>();
+        final Map<String, Property.Descriptor> builder = new HashMap<>();
         defs.forEach(fieldDef -> {
             final String name = fieldDef.getName();
             if(!skipMetadata.contains(name)) {

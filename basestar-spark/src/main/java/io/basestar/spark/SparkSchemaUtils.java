@@ -166,7 +166,7 @@ public class SparkSchemaUtils {
             }
 
             @Override
-            public DataType visitRef(final UseRef type) {
+            public DataType visitRef(final UseObject type) {
 
                 return refType(type.getSchema(), expand);
             }
@@ -275,7 +275,7 @@ public class SparkSchemaUtils {
             }
 
             @Override
-            public Object visitRef(final UseRef type) {
+            public Object visitRef(final UseObject type) {
 
                 if(value instanceof Row) {
                     return refFromSpark((Row)value);
@@ -441,7 +441,7 @@ public class SparkSchemaUtils {
 
             @Override
             @SuppressWarnings("unchecked")
-            public Object visitRef(final UseRef type) {
+            public Object visitRef(final UseObject type) {
 
                 if(value instanceof Map<?, ?> && dataType instanceof StructType) {
                     return refToSpark((StructType)dataType, (Map<String, Object>) value);

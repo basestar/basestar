@@ -23,7 +23,7 @@ package io.basestar.expression.literal;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
-import io.basestar.expression.NameTransform;
+import io.basestar.expression.Renaming;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.function.With;
 import io.basestar.util.Name;
@@ -61,7 +61,7 @@ public class LiteralArray implements Expression {
     }
 
     @Override
-    public Expression bind(final Context context, final NameTransform root) {
+    public Expression bind(final Context context, final Renaming root) {
 
         boolean changed = false;
         boolean constant = true;

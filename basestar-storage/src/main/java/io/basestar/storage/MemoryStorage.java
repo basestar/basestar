@@ -358,7 +358,7 @@ public class MemoryStorage extends PartitionedStorage {
             }
 
             @Override
-            public CompletableFuture<BatchResponse> commit() {
+            public CompletableFuture<BatchResponse> write() {
 
                 return CompletableFuture.supplyAsync(() -> {
                     final SortedMap<BatchResponse.Key, Map<String, Object>> changes = new TreeMap<>();

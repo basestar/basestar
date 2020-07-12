@@ -24,32 +24,43 @@ import io.basestar.util.Name;
 
 import java.util.Collection;
 
-public interface NameTransform {
+public interface Renaming {
 
-    Name transform(Name name);
+    Name apply(Name name);
 
-    static NameTransform noop() {
+    static Renaming noop() {
 
         return path -> path;
     }
 
-    static NameTransform root(final Name root) {
+    static Renaming addPrefix(final Name prefix) {
 
-        return root::with;
+        return prefix::with;
     }
 
-    static NameTransform unroot(final Name root) {
+    static Renaming removeExpectedPrefix(final Name prefix) {
 
         return path -> {
-            if(path.isChild(root)) {
-                return path.withoutFirst(root.size());
+            if(path.isChild(prefix)) {
+                return path.withoutFirst(prefix.size());
             } else {
                 throw new IllegalStateException("Unbound path " + path);
             }
         };
     }
 
-    static NameTransform move(final Name from, final Name to) {
+    static Renaming removeOptionalPrefix(final Name prefix) {
+
+        return path -> {
+            if(path.isChild(prefix)) {
+                return path.withoutFirst(prefix.size());
+            } else {
+                return path;
+            }
+        };
+    }
+
+    static Renaming move(final Name from, final Name to) {
 
         return path -> {
             if(path.isChild(from)) {
@@ -60,7 +71,7 @@ public interface NameTransform {
         };
     }
 
-    static NameTransform closure(final Collection<String> closed, final NameTransform transform) {
+    static Renaming closure(final Collection<String> closed, final Renaming transform) {
 
         return path -> {
 
@@ -68,7 +79,7 @@ public interface NameTransform {
             if(closed.contains(first)) {
                 return path;
             } else {
-                return transform.transform(path);
+                return transform.apply(path);
             }
         };
     }

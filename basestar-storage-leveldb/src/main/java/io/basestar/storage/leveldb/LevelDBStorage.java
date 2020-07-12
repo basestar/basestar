@@ -166,7 +166,7 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
                 batch.put(key, data);
             });
             createHistory(schema, id, afterVersion, after);
-            changes.put(new BatchResponse.Key(schema.getQualifiedName(), id, afterVersion), after);
+            changes.put(BatchResponse.Key.version(schema.getQualifiedName(), id, afterVersion), after);
         }
 
         private void checkVersion(final ObjectSchema schema, final String id, final long version) {
@@ -245,7 +245,7 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
         }
 
         @Override
-        public CompletableFuture<BatchResponse> commit() {
+        public CompletableFuture<BatchResponse> write() {
 
             return CompletableFuture.supplyAsync(() -> {
                 final Set<String> locks = checks.keySet();

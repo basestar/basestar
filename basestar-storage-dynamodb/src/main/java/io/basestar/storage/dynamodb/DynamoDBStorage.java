@@ -652,16 +652,16 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
         }
 
         @Override
-        public CompletableFuture<BatchResponse> commit() {
+        public CompletableFuture<BatchResponse> write() {
 
             if(!oversize.isEmpty()) {
                 final Stash oversizeStash = requireOversizeStash();
                 final List<CompletableFuture<?>> futures = new ArrayList<>();
                 oversize.forEach((k, v) -> futures.add(oversizeStash.write(k, v)));
                 return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]))
-                        .thenCompose(ignored -> write());
+                        .thenCompose(ignored -> writeImpl());
             } else {
-                return write();
+                return writeImpl();
             }
         }
 
@@ -688,7 +688,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
             return BatchWriteItemRequest.builder().requestItems(requests).build();
         }
 
-        private CompletableFuture<BatchResponse> write() {
+        private CompletableFuture<BatchResponse> writeImpl() {
 
             if(consistency == Consistency.NONE) {
 

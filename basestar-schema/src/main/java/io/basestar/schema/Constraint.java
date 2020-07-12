@@ -52,10 +52,21 @@ public class Constraint implements Named, Described, Serializable {
     @Nonnull
     private final Expression expression;
 
+    @JsonDeserialize(as = Builder.class)
+    public interface Descriptor extends Described {
+
+        Expression getExpression();
+
+        default Constraint build(final Name qualifiedName) {
+
+            return new Constraint(this, qualifiedName);
+        }
+    }
+
     @Data
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public static class Builder implements Described {
+    public static class Builder implements Descriptor {
 
         @Nullable
         private String description;
@@ -64,11 +75,6 @@ public class Constraint implements Named, Described, Serializable {
         @JsonSerialize(using = ToStringSerializer.class)
         @JsonDeserialize(using = ExpressionDeseriaizer.class)
         private Expression expression;
-
-        public Constraint build(final Name qualifiedName) {
-
-            return new Constraint(this, qualifiedName);
-        }
     }
 
     public static Builder builder() {
@@ -76,11 +82,11 @@ public class Constraint implements Named, Described, Serializable {
         return new Builder();
     }
 
-    private Constraint(final Builder builder, final Name qualifiedName) {
+    private Constraint(final Descriptor descriptor, final Name qualifiedName) {
 
         this.qualifiedName = qualifiedName;
-        this.description = builder.getDescription();
-        this.expression = Nullsafe.require(builder.getExpression());
+        this.description = descriptor.getDescription();
+        this.expression = Nullsafe.require(descriptor.getExpression());
     }
 
     @Data
@@ -90,5 +96,23 @@ public class Constraint implements Named, Described, Serializable {
         private final Name name;
 
         private final String constraint;
+    }
+
+    public Descriptor descriptor() {
+
+        return new Descriptor() {
+            @Override
+            public Expression getExpression() {
+
+                return expression;
+            }
+
+            @Nullable
+            @Override
+            public String getDescription() {
+
+                return description;
+            }
+        };
     }
 }

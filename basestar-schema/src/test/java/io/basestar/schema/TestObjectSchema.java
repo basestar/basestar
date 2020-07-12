@@ -120,4 +120,16 @@ public class TestObjectSchema {
         final JsonSchema schema = Namespace.Builder.jsonSchema();
         System.err.println(new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(schema));
     }
+
+    @Test
+    public void testDependencies() throws IOException {
+
+        final Namespace namespace = Namespace.load(TestObjectSchema.class.getResource("schema.yml"));
+
+        final ObjectSchema schema = namespace.requireObjectSchema("Comment");
+
+        final Map<Name, Schema<?>> deps = schema.dependencies();
+
+        assertEquals(2, deps.size());
+    }
 }

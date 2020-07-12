@@ -145,7 +145,7 @@ public interface Storage {
 
         WriteTransaction deleteObject(ObjectSchema schema, String id, Map<String, Object> before);
 
-        CompletableFuture<BatchResponse> commit();
+        CompletableFuture<BatchResponse> write();
     }
 
     enum EventStrategy {
@@ -226,7 +226,7 @@ public interface Storage {
 
             final WriteTransaction write = write(Consistency.ASYNC);
             write.createHistory(schema, id, version, after);
-            return write.commit();
+            return write.write();
         }
 
         interface WriteTransaction extends Storage.WriteTransaction {
@@ -243,21 +243,21 @@ public interface Storage {
 
             final WriteTransaction write = write(Consistency.ASYNC);
             write.createIndex(schema, index, id, version, key, projection);
-            return write.commit();
+            return write.write();
         }
 
         default CompletableFuture<?> asyncIndexUpdated(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
 
             final WriteTransaction write = write(Consistency.ASYNC);
             write.updateIndex(schema, index, id, version, key, projection);
-            return write.commit();
+            return write.write();
         }
 
         default CompletableFuture<?> asyncIndexDeleted(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
 
             final WriteTransaction write = write(Consistency.ASYNC);
             write.deleteIndex(schema, index, id, version, key);
-            return write.commit();
+            return write.write();
         }
 
         interface WriteTransaction extends Storage.WriteTransaction {

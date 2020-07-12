@@ -26,6 +26,7 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.Instance;
+import io.basestar.schema.Schema;
 import io.basestar.schema.StructSchema;
 import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.schema.util.Expander;
@@ -62,6 +63,21 @@ public class UseStruct implements UseInstance {
     public static UseStruct from(final StructSchema schema, final Object config) {
 
         return new UseStruct(schema);
+    }
+
+    @Override
+    public UseStruct resolve(final Schema.Resolver resolver) {
+
+        if(schema.isAnonymous()) {
+            return this;
+        } else {
+            final StructSchema resolved = resolver.requireStructSchema(schema.getQualifiedName());
+            if(resolved == schema) {
+                return this;
+            } else {
+                return new UseStruct(resolved);
+            }
+        }
     }
 
     @Override

@@ -99,9 +99,9 @@ public class ForAny implements Binary {
     }
 
     @Override
-    public Expression bindLhs(final Context context, final NameTransform root) {
+    public Expression bindLhs(final Context context, final Renaming root) {
 
-        return getLhs().bind(context, NameTransform.closure(getRhs().closure(), root));
+        return getLhs().bind(context, Renaming.closure(getRhs().closure(), root));
     }
 
     @Override

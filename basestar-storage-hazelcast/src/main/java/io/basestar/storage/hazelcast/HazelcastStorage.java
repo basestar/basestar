@@ -124,7 +124,7 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
         try {
             final IMap<BatchResponse.Key, CustomPortable> map = object.get(schema);
 
-            return map.getAsync(new BatchResponse.Key(schema.getQualifiedName(), id, null))
+            return map.getAsync(BatchResponse.Key.latest(schema.getQualifiedName(), id))
                     .thenApply(this::fromRecord)
                     .toCompletableFuture();
         } catch (final ExecutionException e) {
@@ -150,7 +150,7 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
         try {
             final IMap<BatchResponse.Key, CustomPortable> map = history.get(schema);
 
-            return map.getAsync(new BatchResponse.Key(schema.getQualifiedName(), id, version))
+            return map.getAsync(BatchResponse.Key.version(schema.getQualifiedName(), id, version))
                     .thenApply(this::fromRecord)
                     .toCompletableFuture();
         } catch (final ExecutionException e) {
@@ -193,7 +193,7 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
 
                 final String target = strategy.objectMapName(schema);
                 requests.computeIfAbsent(target, ignored -> new HashSet<>())
-                        .add(new BatchResponse.Key(schema.getQualifiedName(), id, null));
+                        .add(BatchResponse.Key.latest(schema.getQualifiedName(), id));
                 return this;
             }
 
@@ -202,7 +202,7 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
 
                 final String target = strategy.historyMapName(schema);
                 requests.computeIfAbsent(target, ignored -> new HashSet<>())
-                        .add(new BatchResponse.Key(schema.getQualifiedName(), id, version));
+                        .add(BatchResponse.Key.version(schema.getQualifiedName(), id, version));
                 return this;
             }
 
@@ -237,7 +237,7 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
             final String target = strategy.objectMapName(schema);
             final Name schemaName = schema.getQualifiedName();
             requests.computeIfAbsent(target, ignored -> new HashMap<>())
-                    .put(new BatchResponse.Key(schemaName, id), (key, value) -> {
+                    .put(BatchResponse.Key.latest(schemaName, id), (key, value) -> {
                         if(value == null) {
                             return toRecord(schema, after);
                         } else {
@@ -266,7 +266,7 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
             final Name schemaName = schema.getQualifiedName();
             final Long version = before == null ? null : Instance.getVersion(before);
             requests.computeIfAbsent(target, ignored -> new HashMap<>())
-                    .put(new BatchResponse.Key(schemaName, id), (key, value) -> {
+                    .put(BatchResponse.Key.latest(schemaName, id), (key, value) -> {
                         final Map<String, Object> current = fromRecord(value);
                         if(checkExists(current, version)) {
                             return toRecord(schema, after);
@@ -285,7 +285,7 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
             final Name schemaName = schema.getQualifiedName();
             final Long version = before == null ? null : Instance.getVersion(before);
             requests.computeIfAbsent(target, ignored -> new HashMap<>())
-                    .put(new BatchResponse.Key(schemaName, id), (key, value) -> {
+                    .put(BatchResponse.Key.latest(schemaName, id), (key, value) -> {
                         final Map<String, Object> current = fromRecord(value);
                         if(checkExists(current, version)) {
                             return null;
@@ -302,7 +302,7 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
             final String target = strategy.historyMapName(schema);
             final Name schemaName = schema.getQualifiedName();
             requests.computeIfAbsent(target, ignored -> new HashMap<>())
-                    .put(new BatchResponse.Key(schemaName, id, version), (key, value) -> toRecord(schema, after));
+                    .put(BatchResponse.Key.version(schemaName, id, version), (key, value) -> toRecord(schema, after));
             return this;
         }
 
@@ -319,7 +319,7 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
         }
 
         @Override
-        public CompletableFuture<BatchResponse> commit() {
+        public CompletableFuture<BatchResponse> write() {
 
             return CompletableFuture.supplyAsync(() -> {
 

@@ -1,4 +1,4 @@
-//package io.basestar.jackson.serde;
+package io.basestar.jackson.serde;
 
 /*-
  * #%L
@@ -19,19 +19,25 @@
  * limitations under the License.
  * #L%
  */
-//
-//import com.fasterxml.jackson.core.JsonGenerator;
-//import com.fasterxml.jackson.databind.JsonSerializer;
-//import com.fasterxml.jackson.databind.SerializerProvider;
-//import io.basestar.util.Path;
-//
-//import java.io.IOException;
-//
-//public class PathSerializer extends JsonSerializer<Path> {
-//
-//    @Override
-//    public void serialize(final Path path, final JsonGenerator jsonGenerator, final SerializerProvider serializerProvider) throws IOException {
-//
-//        jsonGenerator.writeString(path.toString());
-//    }
-//}
+
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.KeyDeserializer;
+import io.basestar.util.Name;
+import lombok.RequiredArgsConstructor;
+
+@RequiredArgsConstructor
+public class NameKeyDeserializer extends KeyDeserializer {
+
+    private final boolean allowEmpty;
+
+    public NameKeyDeserializer() {
+
+        this(false);
+    }
+
+    @Override
+    public Object deserializeKey(final String str, final DeserializationContext deserializationContext) {
+
+        return allowEmpty ? Name.parse(str) : Name.parseNonEmpty(str);
+    }
+}

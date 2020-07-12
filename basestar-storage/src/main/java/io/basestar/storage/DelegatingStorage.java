@@ -173,13 +173,13 @@ public interface DelegatingStorage extends Storage {
             }
 
             @Override
-            public CompletableFuture<BatchResponse> commit() {
+            public CompletableFuture<BatchResponse> write() {
 
                 if(consistency != Consistency.NONE && transactions.size() > 1) {
                     throw new IllegalStateException("Consistent write transaction spanned multiple storage engines");
                 } else {
 
-                    return BatchResponse.mergeFutures(transactions.values().stream().map(WriteTransaction::commit));
+                    return BatchResponse.mergeFutures(transactions.values().stream().map(WriteTransaction::write));
                 }
             }
         };

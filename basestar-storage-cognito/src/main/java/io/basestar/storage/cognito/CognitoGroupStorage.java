@@ -178,7 +178,7 @@ public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.W
             }
 
             @Override
-            public CompletableFuture<BatchResponse> commit() {
+            public CompletableFuture<BatchResponse> write() {
 
                 return BatchResponse.mergeFutures(requests.stream().map(Supplier::get));
             }

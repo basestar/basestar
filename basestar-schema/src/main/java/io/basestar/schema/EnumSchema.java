@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.basestar.expression.Context;
 import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.schema.exception.ReservedNameException;
@@ -63,6 +64,12 @@ public class EnumSchema implements Schema<String> {
     @Nonnull
     private final Name qualifiedName;
 
+    /**
+     * Current version of the schema, defaults to 1
+     */
+
+    private final long version;
+
     private final int slot;
 
     /** Text description */
@@ -78,14 +85,37 @@ public class EnumSchema implements Schema<String> {
     @Nonnull
     private final Map<String, Object> extensions;
 
+    @JsonDeserialize(as = Builder.class)
+    public interface Descriptor extends Schema.Descriptor<String> {
+
+        String TYPE = "enum";
+
+        @Override
+        default String type() {
+
+            return TYPE;
+        }
+
+        List<String> getValues();
+
+        @Override
+        default EnumSchema build(final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
+
+            return new EnumSchema(this, resolver, qualifiedName, slot);
+        }
+
+        @Override
+        default EnumSchema build() {
+
+            return build(Resolver.Constructing.ANONYMOUS, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
+        }
+    }
+
     @Data
     @Accessors(chain = true)
     @JsonPropertyOrder({"type", "description", "version", "values", "extensions"})
-    public static class Builder implements Schema.Builder<String> {
+    public static class Builder implements Schema.Builder<String>, Descriptor {
 
-        public static final String TYPE = "enum";
-
-        @Nullable
         private Long version;
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
@@ -98,23 +128,6 @@ public class EnumSchema implements Schema<String> {
         @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private Map<String, Object> extensions;
-
-        public String getType() {
-
-            return TYPE;
-        }
-
-        @Override
-        public EnumSchema build(final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
-
-            return new EnumSchema(this, resolver, qualifiedName, slot);
-        }
-
-        @Override
-        public EnumSchema build() {
-
-            return build(Resolver.Constructing.ANONYMOUS, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
-        }
     }
 
     public static Builder builder() {
@@ -122,14 +135,15 @@ public class EnumSchema implements Schema<String> {
         return new Builder();
     }
 
-    private EnumSchema(final Builder builder, final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
+    private EnumSchema(final Descriptor descriptor, final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
 
         resolver.constructing(this);
         this.qualifiedName = qualifiedName;
         this.slot = slot;
-        this.description = builder.getDescription();
-        this.values = Nullsafe.immutableCopy(builder.getValues());
-        this.extensions = Nullsafe.immutableSortedCopy(builder.getExtensions());
+        this.version = Nullsafe.option(descriptor.getVersion(), 1L);
+        this.description = descriptor.getDescription();
+        this.values = Nullsafe.immutableCopy(descriptor.getValues());
+        this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
@@ -159,5 +173,42 @@ public class EnumSchema implements Schema<String> {
     public io.swagger.v3.oas.models.media.Schema<?> openApi() {
 
         return new StringSchema()._enum(values).description(description).name(qualifiedName.toString());
+    }
+
+    @Override
+    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+
+    }
+
+    @Override
+    public Descriptor descriptor() {
+
+        return new Descriptor() {
+
+            @Override
+            public Long getVersion() {
+
+                return version;
+            }
+
+            @Override
+            public List<String> getValues() {
+
+                return values;
+            }
+
+            @Nullable
+            @Override
+            public String getDescription() {
+
+                return description;
+            }
+
+            @Override
+            public Map<String, Object> getExtensions() {
+
+                return extensions;
+            }
+        };
     }
 }

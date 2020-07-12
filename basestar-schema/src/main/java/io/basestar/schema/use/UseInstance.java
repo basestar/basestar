@@ -26,6 +26,7 @@ import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Schema;
 import io.basestar.util.Name;
 
+import java.util.Map;
 import java.util.Set;
 
 public interface UseInstance extends UseNamed<Instance> {
@@ -36,12 +37,6 @@ public interface UseInstance extends UseNamed<Instance> {
     default Name getQualifiedName() {
 
         return getSchema().getQualifiedName();
-    }
-
-    @Override
-    default UseInstance resolve(final Schema.Resolver resolver) {
-
-        return this;
     }
 
     @Override
@@ -78,5 +73,11 @@ public interface UseInstance extends UseNamed<Instance> {
     default Set<Name> transientExpand(final Name name, final Set<Name> expand) {
 
         return getSchema().transientExpand(name, expand);
+    }
+
+    @Override
+    default void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+
+        getSchema().collectDependencies(expand, out);
     }
 }

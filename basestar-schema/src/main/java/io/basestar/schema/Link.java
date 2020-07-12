@@ -34,7 +34,7 @@ import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseArray;
-import io.basestar.schema.use.UseRef;
+import io.basestar.schema.use.UseObject;
 import io.basestar.schema.util.Expander;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -78,10 +78,25 @@ public class Link implements Member {
     @Nonnull
     private final Map<String, Object> extensions;
 
+    @JsonDeserialize(as = Builder.class)
+    public interface Descriptor extends Member.Descriptor {
+
+        Name getSchema();
+
+        Expression getExpression();
+
+        List<Sort> getSort();
+
+        default Link build(final Schema.Resolver resolver, final Name qualifiedName) {
+
+            return new Link(this, resolver, qualifiedName);
+        }
+    }
+
     @Data
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public static class Builder implements Member.Builder {
+    public static class Builder implements Descriptor, Member.Builder {
 
         @Nullable
         private Name schema;
@@ -105,11 +120,6 @@ public class Link implements Member {
         @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private Map<String, Object> extensions;
-
-        public Link build(final Schema.Resolver resolver, final Name qualifiedName) {
-
-            return new Link(this, resolver, qualifiedName);
-        }
     }
 
     public static Builder builder() {
@@ -117,7 +127,7 @@ public class Link implements Member {
         return new Builder();
     }
 
-    public Link(final Builder builder, final Schema.Resolver resolver, final Name qualifiedName) {
+    private Link(final Descriptor builder, final Schema.Resolver resolver, final Name qualifiedName) {
 
         this.qualifiedName = qualifiedName;
         this.description = builder.getDescription();
@@ -134,7 +144,7 @@ public class Link implements Member {
     @Override
     public Use<?> getType() {
 
-        return new UseArray<>(new UseRef(schema));
+        return new UseArray<>(new UseObject(schema));
     }
 
     @Override
@@ -242,5 +252,49 @@ public class Link implements Member {
                 return result;
             }
         }
+    }
+
+    @Override
+    public Descriptor descriptor() {
+
+        return new Descriptor() {
+
+            @Override
+            public Map<String, Object> getExtensions() {
+
+                return extensions;
+            }
+
+            @Nullable
+            @Override
+            public String getDescription() {
+
+                return schema.getDescription();
+            }
+
+            @Override
+            public Name getSchema() {
+
+                return schema.getQualifiedName();
+            }
+
+            @Override
+            public Expression getExpression() {
+
+                return expression;
+            }
+
+            @Override
+            public List<Sort> getSort() {
+
+                return sort;
+            }
+
+            @Override
+            public Visibility getVisibility() {
+
+                return visibility;
+            }
+        };
     }
 }

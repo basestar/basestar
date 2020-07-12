@@ -79,7 +79,7 @@ public class NullStorage implements Storage.WithoutWriteIndex, Storage.WithoutWr
             }
 
             @Override
-            public CompletableFuture<BatchResponse> commit() {
+            public CompletableFuture<BatchResponse> write() {
 
                 return CompletableFuture.completedFuture(new BatchResponse.Basic(data));
             }

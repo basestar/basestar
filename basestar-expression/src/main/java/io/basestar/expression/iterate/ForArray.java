@@ -27,7 +27,7 @@ import com.google.common.collect.Streams;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
-import io.basestar.expression.NameTransform;
+import io.basestar.expression.Renaming;
 import io.basestar.expression.constant.Constant;
 import io.basestar.util.Name;
 import lombok.Data;
@@ -67,10 +67,10 @@ public class ForArray implements Expression {
     }
 
     @Override
-    public Expression bind(final Context context, final NameTransform root) {
+    public Expression bind(final Context context, final Renaming root) {
 
         final Set<String> closure = iter.closure();
-        final Expression yield = this.yield.bind(context, NameTransform.closure(closure, root));
+        final Expression yield = this.yield.bind(context, Renaming.closure(closure, root));
         final Expression iter = this.iter.bind(context, root);
         if(iter instanceof Constant && yield.isConstant(closure)) {
             return new Constant(evaluate(context, yield, ((Constant) iter).getValue()));

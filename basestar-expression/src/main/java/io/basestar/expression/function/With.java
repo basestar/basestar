@@ -24,7 +24,7 @@ import com.google.common.collect.Sets;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
-import io.basestar.expression.NameTransform;
+import io.basestar.expression.Renaming;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.iterate.ForAll;
 import io.basestar.util.Name;
@@ -55,7 +55,7 @@ public class With implements Expression {
     private final Expression yield;
 
     @Override
-    public Expression bind(final Context context, final NameTransform root) {
+    public Expression bind(final Context context, final Renaming root) {
 
         boolean constant = true;
         boolean changed = false;
@@ -68,7 +68,7 @@ public class With implements Expression {
             changed = changed || after != before;
         }
         if(constant) {
-            final Expression _return = this.yield.bind(context, NameTransform.closure(with.keySet(), root));
+            final Expression _return = this.yield.bind(context, Renaming.closure(with.keySet(), root));
             if(_return instanceof Constant) {
                 return _return;
             } else {

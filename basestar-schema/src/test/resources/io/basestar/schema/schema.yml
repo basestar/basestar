@@ -12,6 +12,8 @@ Comment:
   properties:
     string:
       type: string
+    post:
+      type: Post
   indexes:
     parent:
       over:

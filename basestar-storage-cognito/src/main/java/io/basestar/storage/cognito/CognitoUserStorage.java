@@ -198,7 +198,7 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
             }
 
             @Override
-            public CompletableFuture<BatchResponse> commit() {
+            public CompletableFuture<BatchResponse> write() {
 
                 return BatchResponse.mergeFutures(requests.stream().map(Supplier::get));
             }
@@ -282,7 +282,7 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
             }
 
             @Override
-            public Map<Name, String> visitRef(final UseRef type) {
+            public Map<Name, String> visitRef(final UseObject type) {
 
                 final Instance instance = type.create(value);
                 if(instance != null) {
@@ -377,7 +377,7 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
             }
 
             @Override
-            public Map<String, Object> visitRef(final UseRef type) {
+            public Map<String, Object> visitRef(final UseObject type) {
 
                 final String id = attrs.get(path.with(Reserved.ID));
                 return id == null ? null : ObjectSchema.ref(id);

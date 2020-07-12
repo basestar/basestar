@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSortedMap;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.util.Name;
+import lombok.AccessLevel;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
@@ -123,7 +124,7 @@ public interface BatchResponse extends Map<BatchResponse.Key, Map<String, Object
     }
 
     @Data
-    @RequiredArgsConstructor
+    @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
     class Key implements Comparable<Key>, Serializable {
 
         private final Name schema;
@@ -132,9 +133,14 @@ public interface BatchResponse extends Map<BatchResponse.Key, Map<String, Object
 
         private final Long version;
 
-        public Key(final Name schema, final String id) {
+        public static Key latest(final Name schema, final String id) {
 
-            this(schema, id, null);
+            return new Key(schema, id, null);
+        }
+
+        public static Key version(final Name schema, final String id, final Long version) {
+
+            return new Key(schema, id, version);
         }
 
         public static Key from(final Name schema, final Map<String, Object> object) {

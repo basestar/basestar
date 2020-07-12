@@ -27,10 +27,7 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.compare.Eq;
 import io.basestar.expression.constant.NameConstant;
-import io.basestar.schema.Constraint;
-import io.basestar.schema.Instance;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.Reserved;
+import io.basestar.schema.*;
 import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
@@ -54,9 +51,9 @@ import java.util.*;
  */
 
 @Data
-public class UseRef implements UseInstance {
+public class UseObject implements UseInstance {
 
-    public static final String NAME = "ref";
+    public static final String NAME = "object";
 
     private final ObjectSchema schema;
 
@@ -66,9 +63,24 @@ public class UseRef implements UseInstance {
         return visitor.visitRef(this);
     }
 
-    public static UseRef from(final ObjectSchema schema, final Object config) {
+    public static UseObject from(final ObjectSchema schema, final Object config) {
 
-        return new UseRef(schema);
+        return new UseObject(schema);
+    }
+
+    @Override
+    public UseObject resolve(final Schema.Resolver resolver) {
+
+        if(schema.isAnonymous()) {
+            return this;
+        } else {
+            final ObjectSchema resolved = resolver.requireObjectSchema(schema.getQualifiedName());
+            if(resolved == schema) {
+                return this;
+            } else {
+                return new UseObject(resolved);
+            }
+        }
     }
 
     @Override

@@ -23,6 +23,7 @@ package io.basestar.schema.use;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
@@ -87,7 +88,12 @@ public class UseMap<T> implements Use<Map<String, T>> {
     @Override
     public UseMap<?> resolve(final Schema.Resolver resolver) {
 
-        return new UseMap<>(this.type.resolve(resolver));
+        final Use<?> resolved = type.resolve(resolver);
+        if(resolved == type) {
+            return this;
+        } else {
+            return new UseMap<>(resolved);
+        }
     }
 
     @Override
@@ -351,5 +357,12 @@ public class UseMap<T> implements Use<Map<String, T>> {
     public String toString() {
 
         return NAME + "<" + type + ">";
+    }
+
+    @Override
+    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+
+        final Set<Name> union = Name.branch(expand).values().stream().reduce(Collections.emptySet(), Sets::union);
+        type.collectDependencies(union, out);
     }
 }

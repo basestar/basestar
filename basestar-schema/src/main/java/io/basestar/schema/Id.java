@@ -37,7 +37,10 @@ import lombok.Getter;
 import lombok.experimental.Accessors;
 
 import java.io.Serializable;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
 import java.util.stream.Collectors;
 
 /**
@@ -63,10 +66,23 @@ public class Id implements Serializable {
 
     private final SortedMap<String, Constraint> constraints;
 
+    @JsonDeserialize(as = Builder.class)
+    public interface Descriptor {
+
+        Expression getExpression();
+
+        Map<String, ? extends Constraint.Descriptor> getConstraints();
+
+        default Id build(final Name qualifiedName) {
+
+            return new Id(this, qualifiedName);
+        }
+    }
+
     @Data
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public static class Builder {
+    public static class Builder implements Descriptor {
 
         @JsonInclude(JsonInclude.Include.NON_NULL)
         @JsonSerialize(using = ToStringSerializer.class)
@@ -75,12 +91,7 @@ public class Id implements Serializable {
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
-        private final Map<String, Constraint.Builder> constraints = new TreeMap<>();
-
-        public Id build(final Name qualifiedName) {
-
-            return new Id(this, qualifiedName);
-        }
+        private Map<String, Constraint.Builder> constraints;
     }
 
     public static Builder builder() {
@@ -88,10 +99,10 @@ public class Id implements Serializable {
         return new Builder();
     }
 
-    public Id(final Builder builder, final Name qualifiedName) {
+    public Id(final Descriptor descriptor, final Name qualifiedName) {
 
-        this.expression = builder.getExpression();
-        this.constraints = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getConstraints()).entrySet().stream()
+        this.expression = descriptor.getExpression();
+        this.constraints = ImmutableSortedMap.copyOf(Nullsafe.option(descriptor.getConstraints()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(qualifiedName.with(e.getKey())))));
     }
 
@@ -121,5 +132,25 @@ public class Id implements Serializable {
             }
         }
         return violations;
+    }
+
+    public Descriptor descriptor() {
+
+        return new Descriptor() {
+            @Override
+            public Expression getExpression() {
+
+                return expression;
+            }
+
+            @Override
+            public Map<String, ? extends Constraint.Descriptor> getConstraints() {
+
+                return constraints.entrySet().stream().collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().descriptor()
+                ));
+            }
+        };
     }
 }

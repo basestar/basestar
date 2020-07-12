@@ -23,6 +23,7 @@ package io.basestar.schema.use;
 import io.basestar.expression.Context;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.EnumSchema;
+import io.basestar.schema.Schema;
 import io.basestar.util.Name;
 import lombok.Data;
 
@@ -50,6 +51,21 @@ public class UseEnum implements UseScalar<String>, UseNamed<String> {
     public Name getQualifiedName() {
 
         return schema.getQualifiedName();
+    }
+
+    @Override
+    public UseEnum resolve(final Schema.Resolver resolver) {
+
+        if(schema.isAnonymous()) {
+            return this;
+        } else {
+            final EnumSchema resolved = resolver.requireEnumSchema(schema.getQualifiedName());
+            if(resolved == schema) {
+                return this;
+            } else {
+                return new UseEnum(resolved);
+            }
+        }
     }
 
     @Override

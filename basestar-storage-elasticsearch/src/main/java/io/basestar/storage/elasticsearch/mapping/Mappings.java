@@ -118,7 +118,7 @@ public class Mappings {
                     }
 
                     @Override
-                    public FieldType visitRef(final UseRef type) {
+                    public FieldType visitRef(final UseObject type) {
 
                         if(expand == null) {
                             final Map<String, FieldType> properties = new HashMap<>();

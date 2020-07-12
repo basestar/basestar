@@ -41,7 +41,7 @@ import io.basestar.event.Handler;
 import io.basestar.event.Handlers;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.expression.NameTransform;
+import io.basestar.expression.Renaming;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.expression.aggregate.AggregateExtractingVisitor;
 import io.basestar.expression.constant.Constant;
@@ -330,7 +330,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                             results.put(name, restricted);
                         });
 
-                        return write.commit()
+                        return write.write()
                                 .thenCompose(ignored -> emitter.emit(events))
                                 .thenApply(ignored -> results);
                     });
@@ -609,7 +609,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
             final Expression rooted;
             if (expression != null) {
-                rooted = expression.bind(Context.init(), NameTransform.root(Name.of(Reserved.THIS)));
+                rooted = expression.bind(Context.init(), Renaming.addPrefix(Name.of(Reserved.THIS)));
             } else {
                 rooted = new Constant(true);
             }
@@ -624,7 +624,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             final Expression bound = merged.bind(context);
 
             final List<Sort> sort = MoreObjects.firstNonNull(options.getSort(), Collections.emptyList());
-            final Expression unrooted = bound.bind(Context.init(), NameTransform.unroot(Name.of(Reserved.THIS)));
+            final Expression unrooted = bound.bind(Context.init(), Renaming.removeExpectedPrefix(Name.of(Reserved.THIS)));
 
             return queryImpl(context, objectSchema, unrooted, sort, count, paging)
                     .thenCompose(results -> expandAndRestrict(caller, results, options.getExpand()));
@@ -820,7 +820,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                     }, schema.getExpand());
                     final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC);
                     write.updateObject(schema, id, before, after);
-                    return write.commit()
+                    return write.write()
                             .thenCompose(ignored -> emitter.emit(ObjectRefreshedEvent.of(schema.getQualifiedName(), id, version, before, after)));
 
                 });

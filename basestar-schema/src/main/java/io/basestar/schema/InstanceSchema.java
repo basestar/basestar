@@ -40,17 +40,22 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
 
     Instance create(Map<String, Object> value, boolean expand, boolean suppress);
 
-    interface Builder extends Schema.Builder<Instance> {
+    interface Descriptor extends Schema.Descriptor<Instance> {
 
-        Builder setProperty(String name, Property.Builder v);
-
-        Builder setProperties(Map<String, Property.Builder> vs);
+        Map<String, Property.Descriptor> getProperties();
 
         @Override
         InstanceSchema build(Resolver.Constructing resolver, Name qualifiedName, int slot);
 
         @Override
         InstanceSchema build();
+    }
+
+    interface Builder extends Schema.Builder<Instance>, Descriptor {
+
+        Builder setProperty(String name, Property.Descriptor v);
+
+        Builder setProperties(Map<String, Property.Descriptor> vs);
     }
 
     SortedMap<String, Use<?>> metadataSchema();
@@ -276,4 +281,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         getProperties().forEach((k, v) -> versions.putAll(v.refVersions(value.get(k))));
         return versions;
     }
+
+    @Override
+    Descriptor descriptor();
 }

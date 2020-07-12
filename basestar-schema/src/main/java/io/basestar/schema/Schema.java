@@ -29,8 +29,7 @@ import io.basestar.util.Name;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Schema
@@ -53,21 +52,24 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
             @JsonSubTypes.Type(name = ObjectSchema.Builder.TYPE, value = ObjectSchema.Builder.class),
             @JsonSubTypes.Type(name = ViewSchema.Builder.TYPE, value = ViewSchema.Builder.class)
     })
-    interface Builder<T> extends Described {
+    interface Descriptor<T> extends Described, Extendable {
+
+        String type();
+
+        Long getVersion();
 
         Schema<T> build(Resolver.Constructing resolver, Name qualifiedName, int slot);
 
         Schema<T> build();
     }
 
+    interface Builder<T> extends Descriptor<T> {
+
+    }
+
     default T create(final Object value) {
 
         return create(value, false, false);
-    }
-
-    default Builder<T> toBuilder() {
-
-        throw new UnsupportedOperationException();
     }
 
     T create(Object value, boolean expand, boolean suppress);
@@ -97,6 +99,22 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
     Set<Constraint.Violation> validate(Context context, Name name, T after);
 
     io.swagger.v3.oas.models.media.Schema<?> openApi();
+
+    Descriptor<T> descriptor();
+
+    default Map<Name, Schema<?>> dependencies() {
+
+        return dependencies(Collections.emptySet());
+    }
+
+    default Map<Name, Schema<?>> dependencies(final Set<Name> expand) {
+
+        final Map<Name, Schema<?>> dependencies = new HashMap<>();
+        collectDependencies(expand, dependencies);
+        return dependencies;
+    }
+
+    void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out);
 
     interface Resolver {
 

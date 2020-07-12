@@ -40,7 +40,7 @@ public interface Unary extends Expression {
     }
 
     @Override
-    default Expression bind(final Context context, final NameTransform root) {
+    default Expression bind(final Context context, final Renaming root) {
 
         final Expression before = getOperand();
         final Expression after = before.bind(context, root);

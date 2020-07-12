@@ -25,7 +25,8 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.ExpressionDeseriaizer;
-import io.basestar.jackson.serde.PathDeserializer;
+import io.basestar.jackson.serde.NameDeserializer;
+import io.basestar.jackson.serde.NameKeyDeserializer;
 import io.basestar.jackson.serde.SortDeserializer;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
@@ -39,7 +40,10 @@ public class BasestarModule extends SimpleModule {
         final ToStringSerializer toString = new ToStringSerializer();
 
         addSerializer(Name.class, toString);
-        addDeserializer(Name.class, new PathDeserializer());
+        addDeserializer(Name.class, new NameDeserializer());
+
+        addKeySerializer(Name.class, toString);
+        addKeyDeserializer(Name.class, new NameKeyDeserializer());
 
         addSerializer(Sort.class, toString);
         addDeserializer(Sort.class, new SortDeserializer());

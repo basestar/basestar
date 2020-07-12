@@ -49,13 +49,13 @@ public class NameConstant implements Expression {
     }
 
     @Override
-    public Expression bind(final Context context, final NameTransform root) {
+    public Expression bind(final Context context, final Renaming root) {
 
         if (context.has(name.first())) {
             final Object target = context.get(name.first());
             return new Constant(resolve(target, name.withoutFirst(), context));
         } else {
-            final Name newName = root.transform(name);
+            final Name newName = root.apply(name);
             if(newName == name) {
                 return this;
             } else {

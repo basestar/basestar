@@ -495,7 +495,7 @@ public class SchemaAdaptor {
             }
 
             @Override
-            public Type<?> visitRef(final UseRef type) {
+            public Type<?> visitRef(final UseObject type) {
 
                 return new TypeName(namingStrategy.typeName(type.getSchema()));
             }
@@ -579,7 +579,7 @@ public class SchemaAdaptor {
             }
 
             @Override
-            public Type<?> visitRef(final UseRef type) {
+            public Type<?> visitRef(final UseObject type) {
 
                 return new TypeName(namingStrategy.inputRefTypeName());
             }
@@ -665,7 +665,7 @@ public class SchemaAdaptor {
                 }
 
                 @Override
-                public Void visitRef(final UseRef type) {
+                public Void visitRef(final UseObject type) {
 
                     return null;
                 }

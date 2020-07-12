@@ -444,7 +444,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         }
 
         @Override
-        public CompletableFuture<BatchResponse> commit() {
+        public CompletableFuture<BatchResponse> write() {
 
             final SortedMap<BatchResponse.Key, Map<String, Object>> changes = new TreeMap<>();
             return withContext(initialContext -> initialContext.transactionAsync(config -> {

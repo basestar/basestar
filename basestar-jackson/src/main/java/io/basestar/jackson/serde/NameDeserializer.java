@@ -20,7 +20,6 @@ package io.basestar.jackson.serde;
  * #L%
  */
 
-import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
@@ -30,11 +29,11 @@ import lombok.RequiredArgsConstructor;
 import java.io.IOException;
 
 @RequiredArgsConstructor
-public class PathDeserializer extends JsonDeserializer<Name> {
+public class NameDeserializer extends JsonDeserializer<Name> {
 
     private final boolean allowEmpty;
 
-    public PathDeserializer() {
+    public NameDeserializer() {
 
         this(false);
     }
@@ -42,10 +41,7 @@ public class PathDeserializer extends JsonDeserializer<Name> {
     @Override
     public Name deserialize(final JsonParser jsonParser, final DeserializationContext deserializationContext) throws IOException {
 
-        final Name name = Name.parse(jsonParser.getText());
-        if(name.isEmpty() && !allowEmpty) {
-            throw new JsonParseException(jsonParser, "Cannot be empty");
-        }
-        return name;
+        final String str = jsonParser.getText();
+        return allowEmpty ? Name.parse(str) : Name.parseNonEmpty(str);
     }
 }

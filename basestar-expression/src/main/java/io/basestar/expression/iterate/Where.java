@@ -66,9 +66,9 @@ public class Where implements Binary {
     }
 
     @Override
-    public Expression bindRhs(final Context context, final NameTransform root) {
+    public Expression bindRhs(final Context context, final Renaming root) {
 
-        return getRhs().bind(context, NameTransform.closure(getLhs().closure(), root));
+        return getRhs().bind(context, Renaming.closure(getLhs().closure(), root));
     }
 
     @Override

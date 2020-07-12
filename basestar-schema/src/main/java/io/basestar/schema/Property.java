@@ -80,10 +80,29 @@ public class Property implements Member {
     @Nonnull
     private final Map<String, Object> extensions;
 
+    @JsonDeserialize(as = Builder.class)
+    public interface Descriptor extends Member.Descriptor {
+
+        Use<?> getType();
+
+        boolean isRequired();
+
+        boolean isImmutable();
+
+        Expression getExpression();
+
+        Map<String, ? extends Constraint.Descriptor> getConstraints();
+
+        default Property build(final Schema.Resolver resolver, final Name qualifiedName) {
+
+            return new Property(this, resolver, qualifiedName);
+        }
+    }
+
     @Data
     @Accessors(chain = true)
     @JsonPropertyOrder({"type", "description", "required", "immutable", "expression", "constraints", "visibility", "extensions"})
-    public static class Builder implements Member.Builder {
+    public static class Builder implements Descriptor, Member.Builder {
 
         private Use<?> type;
 
@@ -103,7 +122,7 @@ public class Property implements Member {
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
-        private final Map<String, Constraint.Builder> constraints = new TreeMap<>();
+        private Map<String, ? extends Constraint.Descriptor> constraints;
 
         @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         private Visibility visibility;
@@ -111,11 +130,6 @@ public class Property implements Member {
         @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private Map<String, Object> extensions;
-
-        public Property build(final Schema.Resolver resolver, final Name qualifiedName) {
-
-            return new Property(this, resolver, qualifiedName);
-        }
     }
 
     public static Builder builder() {
@@ -123,7 +137,7 @@ public class Property implements Member {
         return new Builder();
     }
 
-    public Property(final Builder builder, final Schema.Resolver schemaResolver, final Name qualifiedName) {
+    public Property(final Descriptor builder, final Schema.Resolver schemaResolver, final Name qualifiedName) {
 
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
@@ -294,5 +308,62 @@ public class Property implements Member {
                 return result;
             }
         }
+    }
+
+    @Override
+    public Descriptor descriptor() {
+
+        return new Descriptor() {
+            @Override
+            public Use<?> getType() {
+
+                return type;
+            }
+
+            @Override
+            public String getDescription() {
+
+                return description;
+            }
+
+            @Override
+            public boolean isRequired() {
+
+                return required;
+            }
+
+            @Override
+            public boolean isImmutable() {
+
+                return immutable;
+            }
+
+            @Override
+            public Expression getExpression() {
+
+                return expression;
+            }
+
+            @Override
+            public Map<String, ? extends Constraint.Descriptor> getConstraints() {
+
+                return constraints.entrySet().stream().collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().descriptor()
+                ));
+            }
+
+            @Override
+            public Visibility getVisibility() {
+
+                return visibility;
+            }
+
+            @Override
+            public Map<String, Object> getExtensions() {
+
+                return extensions;
+            }
+        };
     }
 }

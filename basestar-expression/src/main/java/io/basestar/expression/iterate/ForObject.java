@@ -27,7 +27,7 @@ import com.google.common.collect.Streams;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
-import io.basestar.expression.NameTransform;
+import io.basestar.expression.Renaming;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.function.IfElse;
 import io.basestar.util.Name;
@@ -72,10 +72,10 @@ public class ForObject implements Expression {
     }
 
     @Override
-    public Expression bind(final Context context, final NameTransform root) {
+    public Expression bind(final Context context, final Renaming root) {
 
         final Set<String> closure = iter.closure();
-        final NameTransform closureTransform = NameTransform.closure(closure, root);
+        final Renaming closureTransform = Renaming.closure(closure, root);
         final Expression yieldKey = this.yieldKey.bind(context, closureTransform);
         final Expression yieldValue = this.yieldValue.bind(context, closureTransform);
         final Expression iter = this.iter.bind(context, root);

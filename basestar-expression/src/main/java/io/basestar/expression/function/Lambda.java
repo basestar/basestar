@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
-import io.basestar.expression.NameTransform;
+import io.basestar.expression.Renaming;
 import io.basestar.expression.call.Callable;
 import io.basestar.expression.iterate.Of;
 import io.basestar.util.Name;
@@ -67,10 +67,10 @@ public class Lambda implements Expression {
     }
 
     @Override
-    public Expression bind(final Context context, final NameTransform root) {
+    public Expression bind(final Context context, final Renaming root) {
 
         final BindContext bindContext = new BindContext(context);
-        final Expression yield = this.yield.bind(bindContext, NameTransform.closure(args, root));
+        final Expression yield = this.yield.bind(bindContext, Renaming.closure(args, root));
 
         if(yield == this.yield) {
             return this;

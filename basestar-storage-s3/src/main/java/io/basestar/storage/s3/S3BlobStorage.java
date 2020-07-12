@@ -211,7 +211,7 @@ public class S3BlobStorage implements Storage.WithoutWriteIndex, Storage.Without
 //            }
 
             @Override
-            public CompletableFuture<BatchResponse> commit() {
+            public CompletableFuture<BatchResponse> write() {
 
                 return BatchResponse.mergeFutures(steps.stream().map(Supplier::get));
             }
