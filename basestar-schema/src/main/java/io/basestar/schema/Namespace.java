@@ -83,22 +83,25 @@ public class Namespace implements Serializable, Schema.Resolver {
 
         private Map<Name, Schema.Descriptor<?>> schemas;
 
-        @JsonAnySetter
         public Builder setSchema(final Name name, final Schema.Descriptor<?> schema) {
 
             schemas = Nullsafe.immutableCopyPut(schemas, name, schema);
             return this;
         }
 
+        @JsonAnySetter
         public Builder setSchema(final String name, final Schema.Descriptor<?> schema) {
 
             return setSchema(Name.parseNonEmpty(name), schema);
         }
 
         @JsonValue
-        public Map<Name, Schema.Descriptor<?>> getSchemas() {
+        public Map<String, Schema.Descriptor<?>> jsonValue() {
 
-            return schemas;
+            return schemas.entrySet().stream().collect(Collectors.toMap(
+                    e -> e.getKey().toString(),
+                    Map.Entry::getValue
+            ));
         }
 
         public Namespace build() {
@@ -118,12 +121,12 @@ public class Namespace implements Serializable, Schema.Resolver {
 
         public void yaml(final OutputStream os) throws IOException {
 
-            objectMapper.writeValue(os, this);
+            objectMapper.writeValue(os, jsonValue());
         }
 
         public void yaml(final Writer os) throws IOException {
 
-            objectMapper.writeValue(os, this);
+            objectMapper.writeValue(os, jsonValue());
         }
 
         public static JsonSchema jsonSchema() throws IOException {

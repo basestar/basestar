@@ -178,6 +178,10 @@ MyEnum:
 
   
 
+- `version` **long**
+
+  Current version of the schema, defaults to 1
+
 - `slot` **int**
 
   
@@ -414,6 +418,16 @@ The variables available in the context of a permission expression depend on the 
 <strong>Example</strong>
 <pre>
 type: string
+</pre>
+
+### Object Type
+
+
+Stores a reference to the object.
+
+<strong>Example</strong>
+<pre>
+type: MyObject
 </pre>
 
 ### Integer Type

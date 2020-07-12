@@ -90,7 +90,7 @@ public class GraphQLTest {
         final SchemaConverter converter = new SchemaConverter();
         final Namespace.Builder ns = converter.namespace(tdr);
         assertNotNull(ns);
-//        ns.yaml(System.out);
+        ns.yaml(System.out);
     }
 
     @Test
