@@ -32,6 +32,7 @@ import io.basestar.expression.Context;
 import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseDateTime;
 import io.basestar.schema.use.UseInteger;
 import io.basestar.schema.use.UseString;
 import io.basestar.util.Name;
@@ -302,8 +303,8 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
             .put(Reserved.ID, UseString.DEFAULT)
             .put(Reserved.SCHEMA, UseString.DEFAULT)
             .put(Reserved.VERSION, UseInteger.DEFAULT)
-            .put(Reserved.CREATED, UseString.DEFAULT)
-            .put(Reserved.UPDATED, UseString.DEFAULT)
+            .put(Reserved.CREATED, UseDateTime.DEFAULT)
+            .put(Reserved.UPDATED, UseDateTime.DEFAULT)
             .put(Reserved.HASH, UseString.DEFAULT)
             .build();
 

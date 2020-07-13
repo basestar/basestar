@@ -24,6 +24,10 @@ MyObject:
     test3:
       type: MyObject
       required: true
+    mydate:
+      type: date
+    mydatetime:
+      type: datetime
   links:
     test4:
       expression: id==this.id && "test"==test1

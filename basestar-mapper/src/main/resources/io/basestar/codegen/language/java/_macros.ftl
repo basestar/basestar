@@ -7,6 +7,8 @@
     <#case "Number">Double<#break>
     <#case "Set">java.util.Set<<@type of=of.type/>><#break>
     <#case "String">String<#break>
+    <#case "Date">java.time.Date<#break>
+    <#case "DateTime">java.time.DateTime<#break>
     <#default>${of.schema.className}<#break>
 </#switch></#macro>
 
