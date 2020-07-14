@@ -20,8 +20,7 @@ package io.basestar.jackson;
  * #L%
  */
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -906,14 +905,22 @@ public class BasestarFactory extends JsonFactory {
 
         JsonFactory configure(JsonFactory.Feature f, boolean state);
 
+        JsonFactory configure(JsonParser.Feature f, boolean state);
+
         boolean isEnabled(JsonFactory.Feature f);
 
-        JsonFactory configure(com.fasterxml.jackson.core.JsonParser.Feature f, boolean state);
+        boolean isEnabled(StreamReadFeature f);
 
-        boolean isEnabled(com.fasterxml.jackson.core.JsonParser.Feature f);
+        boolean isEnabled(StreamWriteFeature f);
 
-        JsonFactory configure(com.fasterxml.jackson.core.JsonGenerator.Feature f, boolean state);
+        boolean isEnabled(JsonParser.Feature f);
 
-        boolean isEnabled(com.fasterxml.jackson.core.JsonGenerator.Feature f);
+        boolean isEnabled(JsonGenerator.Feature f);
+
+        JsonFactory configure(JsonGenerator.Feature f, boolean state);
+
+        int getParserFeatures();
+
+        int getGeneratorFeatures();
     }
 }
