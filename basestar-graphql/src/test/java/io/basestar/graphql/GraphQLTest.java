@@ -32,6 +32,7 @@ import io.basestar.database.options.CreateOptions;
 import io.basestar.graphql.schema.SchemaConverter;
 import io.basestar.schema.Namespace;
 import io.basestar.storage.MemoryStorage;
+import io.basestar.util.Name;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -55,7 +56,7 @@ public class GraphQLTest {
         final DatabaseServer databaseServer = new DatabaseServer(namespace, storage);
 
         databaseServer.create(Caller.SUPER, CreateOptions.builder()
-                .schema("Test4")
+                .schema(Name.of("Test4"))
                 .id("test4")
                 .data(ImmutableMap.of(
                         "test", ImmutableMap.of(
@@ -65,7 +66,7 @@ public class GraphQLTest {
                 .build()).get();
 
         databaseServer.create(Caller.SUPER, CreateOptions.builder()
-                .schema("Test1")
+                .schema(Name.of("Test1"))
                 .id("test1")
                 .data(ImmutableMap.of(
                         "z", ImmutableMap.of(

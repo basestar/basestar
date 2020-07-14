@@ -26,7 +26,7 @@ import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Property;
 import io.basestar.schema.use.UseString;
 import io.basestar.spark.InstanceTransform;
-import io.basestar.storage.elasticsearch.ElasticsearchRouting;
+import io.basestar.storage.elasticsearch.ElasticsearchStrategy;
 import io.basestar.storage.elasticsearch.mapping.Mappings;
 import io.basestar.storage.elasticsearch.mapping.Settings;
 import io.basestar.test.ContainerSpec;
@@ -72,7 +72,7 @@ public class TestElasticsearchSink {
 
         final ObjectSchema schema = namespace.requireObjectSchema("Test1");
 
-        final ElasticsearchRouting routing = ElasticsearchRouting.Simple.builder()
+        final ElasticsearchStrategy strategy = ElasticsearchStrategy.Simple.builder()
                 .objectPrefix(UUID.randomUUID().toString() + "-")
                 .mappingsFactory(new Mappings.Factory.Default())
                 .settings(Settings.builder().build())
@@ -82,9 +82,9 @@ public class TestElasticsearchSink {
                 .hostName("localhost")
                 .port(PORT)
                 .protocol("http")
-                .indexName(routing.objectIndex(schema))
-                .mappings(routing.mappings(schema))
-                .settings(routing.settings(schema))
+                .indexName(strategy.objectIndex(schema))
+                .mappings(strategy.mappings(schema))
+                .settings(strategy.settings(schema))
                 .build();
 
         final Dataset<Row> ds = session.createDataFrame(ImmutableList.of(

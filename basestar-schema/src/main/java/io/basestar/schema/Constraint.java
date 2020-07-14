@@ -26,8 +26,8 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.ExpressionDeseriaizer;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import io.basestar.util.Path;
 import lombok.Data;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -44,7 +44,7 @@ public class Constraint implements Named, Described, Serializable {
     public static final String IMMUTABLE = "immutable";
 
     @Nonnull
-    private final String name;
+    private final Name qualifiedName;
 
     @Nullable
     private final String description;
@@ -52,10 +52,21 @@ public class Constraint implements Named, Described, Serializable {
     @Nonnull
     private final Expression expression;
 
+    @JsonDeserialize(as = Builder.class)
+    public interface Descriptor extends Described {
+
+        Expression getExpression();
+
+        default Constraint build(final Name qualifiedName) {
+
+            return new Constraint(this, qualifiedName);
+        }
+    }
+
     @Data
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public static class Builder implements Described {
+    public static class Builder implements Descriptor {
 
         @Nullable
         private String description;
@@ -64,11 +75,6 @@ public class Constraint implements Named, Described, Serializable {
         @JsonSerialize(using = ToStringSerializer.class)
         @JsonDeserialize(using = ExpressionDeseriaizer.class)
         private Expression expression;
-
-        public Constraint build(final String name) {
-
-            return new Constraint(this, name);
-        }
     }
 
     public static Builder builder() {
@@ -76,19 +82,37 @@ public class Constraint implements Named, Described, Serializable {
         return new Builder();
     }
 
-    private Constraint(final Builder builder, final String name) {
+    private Constraint(final Descriptor descriptor, final Name qualifiedName) {
 
-        this.name = name;
-        this.description = builder.getDescription();
-        this.expression = Nullsafe.require(builder.getExpression());
+        this.qualifiedName = qualifiedName;
+        this.description = descriptor.getDescription();
+        this.expression = Nullsafe.require(descriptor.getExpression());
     }
 
     @Data
     public static class Violation {
 
         @JsonSerialize(using = ToStringSerializer.class)
-        private final Path path;
+        private final Name name;
 
         private final String constraint;
+    }
+
+    public Descriptor descriptor() {
+
+        return new Descriptor() {
+            @Override
+            public Expression getExpression() {
+
+                return expression;
+            }
+
+            @Nullable
+            @Override
+            public String getDescription() {
+
+                return description;
+            }
+        };
     }
 }

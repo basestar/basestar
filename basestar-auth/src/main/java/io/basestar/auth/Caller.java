@@ -20,6 +20,7 @@ package io.basestar.auth;
  * #L%
  */
 
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.AccessLevel;
 import lombok.Data;
@@ -39,7 +40,7 @@ public interface Caller {
 
     boolean isSuper();
 
-    String getSchema();
+    Name getSchema();
 
     String getId();
 
@@ -54,7 +55,7 @@ public interface Caller {
     @Accessors(chain = true)
     class Builder {
 
-        private String schema;
+        private Name schema;
 
         private String id;
 
@@ -72,7 +73,7 @@ public interface Caller {
 
         public Caller build() {
 
-            final String schema = this.schema;
+            final Name schema = this.schema;
             final String id = this.id;
             final Map<String, Object> claims = Nullsafe.immutableCopy(this.claims);
             final boolean anon = this.anon;
@@ -91,7 +92,7 @@ public interface Caller {
                 }
 
                 @Override
-                public String getSchema() {
+                public Name getSchema() {
 
                     return schema;
                 }
@@ -129,7 +130,7 @@ public interface Caller {
         }
 
         @Override
-        public String getSchema() {
+        public Name getSchema() {
 
             return delegate.getSchema();
         }
@@ -162,7 +163,7 @@ public interface Caller {
         }
 
         @Override
-        public String getSchema() {
+        public Name getSchema() {
 
             return null;
         }
@@ -195,7 +196,7 @@ public interface Caller {
         }
 
         @Override
-        public String getSchema() {
+        public Name getSchema() {
 
             return null;
         }

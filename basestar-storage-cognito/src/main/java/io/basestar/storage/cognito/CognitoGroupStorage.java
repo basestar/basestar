@@ -23,9 +23,7 @@ package io.basestar.storage.cognito;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Expression;
-import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Consistency;
-import io.basestar.schema.Index;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.storage.BatchResponse;
@@ -47,18 +45,18 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-public class CognitoGroupStorage implements Storage {
+public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.WithoutHistory, Storage.WithoutAggregate {
 
     private static final String DESCRIPTION_KEY = "description";
 
     private final CognitoIdentityProviderAsyncClient client;
 
-    private final CognitoGroupRouting routing;
+    private final CognitoGroupStrategy strategy;
 
     private CognitoGroupStorage(final Builder builder) {
 
         this.client = builder.client;
-        this.routing = builder.routing;
+        this.strategy = builder.strategy;
     }
 
     public static Builder builder() {
@@ -72,7 +70,7 @@ public class CognitoGroupStorage implements Storage {
 
         private CognitoIdentityProviderAsyncClient client;
 
-        private CognitoGroupRouting routing;
+        private CognitoGroupStrategy strategy;
 
         public CognitoGroupStorage build() {
 
@@ -83,7 +81,7 @@ public class CognitoGroupStorage implements Storage {
     @Override
     public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
 
-        final String userPoolId = routing.getUserPoolId(schema);
+        final String userPoolId = strategy.getUserPoolId(schema);
         return client.getGroup(GetGroupRequest.builder()
                 .userPoolId(userPoolId)
                 .groupName(id)
@@ -92,17 +90,11 @@ public class CognitoGroupStorage implements Storage {
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
 
         return ImmutableList.of(
                 (count, token, stats) -> {
-                    final String userPoolId = routing.getUserPoolId(schema);
+                    final String userPoolId = strategy.getUserPoolId(schema);
                     return client.listGroups(ListGroupsRequest.builder()
                             .userPoolId(userPoolId)
                             .limit(count)
@@ -114,12 +106,6 @@ public class CognitoGroupStorage implements Storage {
 
                     });
                 });
-    }
-
-    @Override
-    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
-
-        throw new UnsupportedOperationException();
     }
 
     private String decodePaging(final PagingToken token) {
@@ -149,14 +135,14 @@ public class CognitoGroupStorage implements Storage {
             public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
                 requests.add(() -> {
-                    final String userPoolId = routing.getUserPoolId(schema);
+                    final String userPoolId = strategy.getUserPoolId(schema);
                     final String description = null;
                     return client.createGroup(CreateGroupRequest.builder()
                             .userPoolId(userPoolId)
                             .groupName(id)
                             .description(description)
                             .build())
-                            .thenApply(ignored -> BatchResponse.single(schema.getName(), after));
+                            .thenApply(ignored -> BatchResponse.single(schema.getQualifiedName(), after));
                 });
                 return this;
             }
@@ -165,14 +151,14 @@ public class CognitoGroupStorage implements Storage {
             public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
                 requests.add(() -> {
-                    final String userPoolId = routing.getUserPoolId(schema);
+                    final String userPoolId = strategy.getUserPoolId(schema);
                     final String description = null;
                     return client.updateGroup(UpdateGroupRequest.builder()
                             .userPoolId(userPoolId)
                             .groupName(id)
                             .description(description)
                             .build())
-                            .thenApply(ignored -> BatchResponse.single(schema.getName(), after));
+                            .thenApply(ignored -> BatchResponse.single(schema.getQualifiedName(), after));
                 });
                 return this;
             }
@@ -181,7 +167,7 @@ public class CognitoGroupStorage implements Storage {
             public WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
 
                 requests.add(() -> {
-                    final String userPoolId = routing.getUserPoolId(schema);
+                    final String userPoolId = strategy.getUserPoolId(schema);
                     return client.deleteGroup(DeleteGroupRequest.builder()
                             .userPoolId(userPoolId)
                             .groupName(id)
@@ -192,31 +178,7 @@ public class CognitoGroupStorage implements Storage {
             }
 
             @Override
-            public WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
-
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
-
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public CompletableFuture<BatchResponse> commit() {
+            public CompletableFuture<BatchResponse> write() {
 
                 return BatchResponse.mergeFutures(requests.stream().map(Supplier::get));
             }

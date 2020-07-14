@@ -25,7 +25,9 @@ import io.basestar.expression.Expression;
 import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseString;
-import io.basestar.util.Path;
+import io.basestar.schema.util.Expander;
+import io.basestar.schema.util.Ref;
+import io.basestar.util.Name;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -38,14 +40,22 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
 
     Instance create(Map<String, Object> value, boolean expand, boolean suppress);
 
-    interface Builder extends Schema.Builder<Instance> {
+    interface Descriptor extends Schema.Descriptor<Instance> {
 
-        Builder setProperty(String name, Property.Builder v);
-
-        Builder setProperties(Map<String, Property.Builder> vs);
+        Map<String, Property.Descriptor> getProperties();
 
         @Override
-        InstanceSchema build(Resolver resolver, String name, int slot);
+        InstanceSchema build(Resolver.Constructing resolver, Name qualifiedName, int slot);
+
+        @Override
+        InstanceSchema build();
+    }
+
+    interface Builder extends Schema.Builder<Instance>, Descriptor {
+
+        Builder setProperty(String name, Property.Descriptor v);
+
+        Builder setProperties(Map<String, Property.Descriptor> vs);
     }
 
     SortedMap<String, Use<?>> metadataSchema();
@@ -70,27 +80,27 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         }
     }
 
-    default Set<Path> requiredExpand(final Set<Path> paths) {
+    default Set<Name> requiredExpand(final Set<Name> names) {
 
-        final Set<Path> result = new HashSet<>();
-        for (final Map.Entry<String, Set<Path>> branch : Path.branch(paths).entrySet()) {
+        final Set<Name> result = new HashSet<>();
+        for (final Map.Entry<String, Set<Name>> branch : Name.branch(names).entrySet()) {
             final Member member = getMember(branch.getKey(), true);
             if(member != null) {
-                for(final Path tail : member.requiredExpand(branch.getValue())) {
-                    result.add(Path.of(branch.getKey()).with(tail));
+                for(final Name tail : member.requiredExpand(branch.getValue())) {
+                    result.add(Name.of(branch.getKey()).with(tail));
                 }
             }
         }
-        return Path.simplify(result);
+        return Name.simplify(result);
     }
 
-    default Set<Path> transientExpand(final Path path, final Set<Path> expand) {
+    default Set<Name> transientExpand(final Name path, final Set<Name> expand) {
 
-        final Set<Path> transientExpand = new HashSet<>(expand);
-        final Map<String, Set<Path>> branch = Path.branch(expand);
+        final Set<Name> transientExpand = new HashSet<>(expand);
+        final Map<String, Set<Name>> branch = Name.branch(expand);
         getMembers().forEach((name, member) -> {
             if(branch.containsKey(name)) {
-                final Set<Path> memberExpand = branch.get(name);
+                final Set<Name> memberExpand = branch.get(name);
                 transientExpand.addAll(member.transientExpand(path.with(name), memberExpand));
             }
         });
@@ -100,30 +110,30 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
     boolean isConcrete();
 
     @SuppressWarnings("unchecked")
-    default <T> Use<T> typeOf(final Path path) {
+    default <T> Use<T> typeOf(final Name name) {
 
-        if(path.isEmpty()) {
+        if(name.isEmpty()) {
             throw new IllegalStateException();
         } else {
-            final String first = path.first();
+            final String first = name.first();
             final Map<String, Use<?>> metadataSchema = metadataSchema();
             if(metadataSchema.containsKey(first)) {
-                return (Use<T>)metadataSchema.get(first).typeOf(path.withoutFirst());
+                return (Use<T>)metadataSchema.get(first).typeOf(name.withoutFirst());
             } else {
                 final Member member = requireMember(first, true);
-                return member.typeOf(path.withoutFirst());
+                return member.typeOf(name.withoutFirst());
             }
         }
     }
 
-    default boolean hasParent(final String name) {
+    default boolean hasParent(final Name qualifiedName) {
 
         final InstanceSchema extend = getExtend();
         if(extend != null) {
-            if(extend.getName().equals(name)) {
+            if(extend.getQualifiedName().equals(qualifiedName)) {
                 return true;
             } else {
-                return extend.hasParent(name);
+                return extend.hasParent(qualifiedName);
             }
         } else {
             return false;
@@ -164,14 +174,14 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         return new io.swagger.v3.oas.models.media.ObjectSchema()
                 .properties(properties)
                 .description(getDescription())
-                .name(getName());
+                .name(getQualifiedName().toString());
     }
 
-    default Instance expand(final Instance object, final Expander expander, final Set<Path> expand) {
+    default Instance expand(final Instance object, final Expander expander, final Set<Name> expand) {
 
-        final Map<String, Set<Path>> branches = Path.branch(expand);
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         return transformMembers(object, (member, before) -> {
-            final Set<Path> branch = branches.get(member.getName());
+            final Set<Name> branch = branches.get(member.getName());
             return member.expand(before, expander, branch);
         });
     }
@@ -197,9 +207,9 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         }
     }
 
-    default Instance evaluateTransients(final Context context, final Instance object, final Set<Path> expand) {
+    default Instance evaluateTransients(final Context context, final Instance object, final Set<Name> expand) {
 
-        final Map<String, Set<Path>> branches = Path.branch(expand);
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         final Context thisContext = context.with(VAR_THIS, object);
         return transformMembers(object, (member, value) -> {
             if(branches.containsKey(member.getName())) {
@@ -242,26 +252,26 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         return data;
     }
 
-    default Set<Expression> refQueries(final String otherTypeName, final Set<Path> expand) {
+    default Set<Expression> refQueries(final Name otherSchemaName, final Set<Name> expand) {
 
-        return refQueries(otherTypeName, expand, Path.empty());
+        return refQueries(otherSchemaName, expand, Name.empty());
     }
 
-    default Set<Expression> refQueries(final String otherTypeName, final Set<Path> expand, final Path path) {
+    default Set<Expression> refQueries(final Name otherSchemaName, final Set<Name> expand, final Name name) {
 
-        final Map<String, Set<Path>> branches = Path.branch(expand);
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         return getMembers().entrySet().stream()
                 .filter(e -> branches.containsKey(e.getKey()))
-                .flatMap(e -> e.getValue().refQueries(otherTypeName, branches.get(e.getKey()), path.with(e.getKey())).stream())
+                .flatMap(e -> e.getValue().refQueries(otherSchemaName, branches.get(e.getKey()), name.with(e.getKey())).stream())
                 .collect(Collectors.toSet());
     }
 
-    default Set<Path> refExpand(final String otherTypeName, final Set<Path> expand) {
+    default Set<Name> refExpand(final Name otherSchemaName, final Set<Name> expand) {
 
-        final Map<String, Set<Path>> branches = Path.branch(expand);
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         return getMembers().entrySet().stream()
                 .filter(e -> branches.containsKey(e.getKey()))
-                .flatMap(e -> e.getValue().refExpand(otherTypeName, branches.get(e.getKey())).stream())
+                .flatMap(e -> e.getValue().refExpand(otherSchemaName, branches.get(e.getKey())).stream())
                 .collect(Collectors.toSet());
     }
 
@@ -271,4 +281,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         getProperties().forEach((k, v) -> versions.putAll(v.refVersions(value.get(k))));
         return versions;
     }
+
+    @Override
+    Descriptor descriptor();
 }

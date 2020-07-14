@@ -21,7 +21,8 @@ package io.basestar.database.event;
  */
 
 import io.basestar.event.Event;
-import io.basestar.schema.Ref;
+import io.basestar.schema.util.Ref;
+import io.basestar.util.Name;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -31,11 +32,11 @@ public class RefRefreshEvent implements RefEvent, ObjectEvent {
 
     private Ref ref;
 
-    private String schema;
+    private Name schema;
 
     private String id;
 
-    public static RefRefreshEvent of(final Ref ref, final String schema, final String id) {
+    public static RefRefreshEvent of(final Ref ref, final Name schema, final String id) {
 
         return new RefRefreshEvent().setRef(ref).setSchema(schema).setId(id);
     }

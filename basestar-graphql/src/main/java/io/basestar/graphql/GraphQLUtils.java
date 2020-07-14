@@ -28,7 +28,7 @@ import graphql.language.*;
 import io.basestar.auth.Caller;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -55,127 +55,127 @@ public class GraphQLUtils {
 
     private static final SelectionSet EMPTY_SELECTION = SelectionSet.newSelectionSet().build();
 
-    public static Set<Path> paths(final InstanceSchema schema, final SelectionSet selections) {
+    public static Set<Name> paths(final InstanceSchema schema, final SelectionSet selections) {
 
         return selections.getSelections().stream()
                 .flatMap(v -> paths(schema, v).stream())
                 .collect(Collectors.toSet());
     }
 
-    public static Set<Path> paths(final InstanceSchema schema, final Selection<?> selection) {
+    public static Set<Name> paths(final InstanceSchema schema, final Selection<?> selection) {
 
         if(selection instanceof Field) {
             final Field field = (Field)selection;
             final String name = field.getName();
 
             if(schema.metadataSchema().containsKey(name)) {
-                return Collections.singleton(Path.of(name));
+                return Collections.singleton(Name.of(name));
             }
 
             if(schema instanceof Link.Resolver) {
                 final Link link = ((Link.Resolver) schema).getLink(name, true);
                 if(link != null) {
                     return paths(link.getSchema(), field.getSelectionSet()).stream()
-                            .map(v -> Path.of(name).with(v)).collect(Collectors.toSet());
+                            .map(v -> Name.of(name).with(v)).collect(Collectors.toSet());
                 }
             }
             final Property property = schema.requireProperty(name, true);
-            return paths(property.getType(), Path.of(name), field.getSelectionSet());
+            return paths(property.getType(), Name.of(name), field.getSelectionSet());
 
         } else{
             throw new IllegalStateException();
         }
     }
 
-    protected static Set<Path> paths(final Use<?> type, final Path parent, final SelectionSet selections) {
+    protected static Set<Name> paths(final Use<?> type, final Name parent, final SelectionSet selections) {
 
-        return type.visit(new Use.Visitor<Set<Path>>() {
+        return type.visit(new Use.Visitor<Set<Name>>() {
             @Override
-            public Set<Path> visitBoolean(final UseBoolean type) {
+            public Set<Name> visitBoolean(final UseBoolean type) {
 
                 return ImmutableSet.of(parent);
             }
 
             @Override
-            public Set<Path> visitInteger(final UseInteger type) {
+            public Set<Name> visitInteger(final UseInteger type) {
 
                 return ImmutableSet.of(parent);
             }
 
             @Override
-            public Set<Path> visitNumber(final UseNumber type) {
+            public Set<Name> visitNumber(final UseNumber type) {
 
                 return ImmutableSet.of(parent);
             }
 
             @Override
-            public Set<Path> visitString(final UseString type) {
+            public Set<Name> visitString(final UseString type) {
 
                 return ImmutableSet.of(parent);
             }
 
             @Override
-            public Set<Path> visitEnum(final UseEnum type) {
+            public Set<Name> visitEnum(final UseEnum type) {
 
                 return ImmutableSet.of(parent);
             }
 
             @Override
-            public Set<Path> visitRef(final UseRef type) {
+            public Set<Name> visitRef(final UseObject type) {
 
                 return paths(type.getSchema(), selections).stream()
                         .map(parent::with).collect(Collectors.toSet());
             }
 
             @Override
-            public <T> Set<Path> visitArray(final UseArray<T> type) {
+            public <T> Set<Name> visitArray(final UseArray<T> type) {
 
                 return paths(type.getType(), parent, selections);
             }
 
             @Override
-            public <T> Set<Path> visitSet(final UseSet<T> type) {
+            public <T> Set<Name> visitSet(final UseSet<T> type) {
 
                 return paths(type.getType(), parent, selections);
             }
 
             @Override
-            public <T> Set<Path> visitMap(final UseMap<T> type) {
+            public <T> Set<Name> visitMap(final UseMap<T> type) {
 
-                final Set<Path> paths = new HashSet<>();
+                final Set<Name> names = new HashSet<>();
                 for(final Selection<?> selection : selections.getSelections()) {
                     final Field field = (Field)selection;
                     final String name = field.getName();
                     if(MAP_KEY.equals(name)) {
-                        paths.add(parent.with("*"));
+                        names.add(parent.with("*"));
                     } else if(MAP_VALUE.equals(name)) {
-                        paths.addAll(paths(type.getType(), parent.with("*"), field.getSelectionSet()));
+                        names.addAll(paths(type.getType(), parent.with("*"), field.getSelectionSet()));
                     }
                 }
-                return paths;
+                return names;
             }
 
             @Override
-            public Set<Path> visitStruct(final UseStruct type) {
+            public Set<Name> visitStruct(final UseStruct type) {
 
                 return paths(type.getSchema(), selections).stream()
                         .map(parent::with).collect(Collectors.toSet());
             }
 
             @Override
-            public Set<Path> visitBinary(final UseBinary type) {
+            public Set<Name> visitBinary(final UseBinary type) {
 
                 return ImmutableSet.of(parent);
             }
 
             @Override
-            public Set<Path> visitDate(final UseDate type) {
+            public Set<Name> visitDate(final UseDate type) {
 
                 return ImmutableSet.of(parent);
             }
 
             @Override
-            public Set<Path> visitDateTime(final UseDateTime type) {
+            public Set<Name> visitDateTime(final UseDateTime type) {
 
                 return ImmutableSet.of(parent);
             }
@@ -234,7 +234,7 @@ public class GraphQLUtils {
                 }
 
                 @Override
-                public Object visitRef(final UseRef type) {
+                public Object visitRef(final UseObject type) {
 
                     return type.create(value);
                 }
@@ -356,7 +356,7 @@ public class GraphQLUtils {
 
                 @Override
                 @SuppressWarnings("unchecked")
-                public Object visitRef(final UseRef type) {
+                public Object visitRef(final UseObject type) {
 
                     return toResponse(type.getSchema(), (Map<String, Object>)value);
                 }
@@ -498,7 +498,7 @@ public class GraphQLUtils {
                 }
 
                 @Override
-                public Object visitRef(final UseRef type) {
+                public Object visitRef(final UseObject type) {
 
                     if(value instanceof ObjectValue) {
                         final String id = fromInput(context, UseString.DEFAULT, get((ObjectValue)value, Reserved.ID));
@@ -644,7 +644,7 @@ public class GraphQLUtils {
 
                 @Override
                 @SuppressWarnings("unchecked")
-                public Object visitRef(final UseRef type) {
+                public Object visitRef(final UseObject type) {
 
                     if(value instanceof Map) {
                         return ObjectSchema.ref(Instance.getId((Map<String, Object>) value));
@@ -801,7 +801,7 @@ public class GraphQLUtils {
 
                 @Override
                 @SuppressWarnings("unchecked")
-                public Object visitRef(final UseRef type) {
+                public Object visitRef(final UseObject type) {
 
                     return toResponse(type.getSchema(), selections, (Map<String, Object>)value);
                 }

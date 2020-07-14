@@ -25,10 +25,10 @@ import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
-import io.basestar.expression.PathTransform;
+import io.basestar.expression.Renaming;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.function.IfElse;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import lombok.Data;
 
 import java.util.ArrayList;
@@ -66,7 +66,7 @@ public class LambdaCall implements Expression {
     }
 
     @Override
-    public Expression bind(final Context context, final PathTransform root) {
+    public Expression bind(final Context context, final Renaming root) {
 
         final Expression with = this.with.bind(context, root);
         final List<Expression> args = new ArrayList<>();
@@ -100,7 +100,7 @@ public class LambdaCall implements Expression {
     }
 
     @Override
-    public Set<Path> paths() {
+    public Set<Name> paths() {
 
         return Stream.concat(Stream.of(with), args.stream())
                 .flatMap(v -> v.paths().stream())

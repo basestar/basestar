@@ -44,7 +44,7 @@ import io.basestar.expression.compare.Lt;
 import io.basestar.expression.compare.Lte;
 import io.basestar.expression.compare.Ne;
 import io.basestar.expression.constant.Constant;
-import io.basestar.expression.constant.PathConstant;
+import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.function.In;
 import io.basestar.expression.function.With;
 import io.basestar.expression.function.*;
@@ -61,7 +61,7 @@ import io.basestar.expression.parse.ExpressionParser.*;
 import io.basestar.expression.text.ILike;
 import io.basestar.expression.text.SLike;
 import io.basestar.expression.type.Values;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.RuleContext;
@@ -322,10 +322,10 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
     }
 
     @Override
-    public Expression visitExprPathConstant(final ExprPathConstantContext ctx) {
+    public Expression visitExprNameConstant(final ExprNameConstantContext ctx) {
 
-        final Path path = Path.of(ctx.Identifier().stream().map(ParseTree::getText).toArray(java.lang.String[]::new));
-        return new PathConstant(path);
+        final Name name = Name.of(ctx.Identifier().stream().map(ParseTree::getText).toArray(java.lang.String[]::new));
+        return new NameConstant(name);
     }
 
     @Override

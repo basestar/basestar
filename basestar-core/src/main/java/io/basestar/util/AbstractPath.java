@@ -32,6 +32,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -41,12 +42,12 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
 
     private final List<String> parts;
 
-    public AbstractPath(final String ... parts) {
+    protected AbstractPath(final String ... parts) {
 
         this.parts = ImmutableList.copyOf(parts);
     }
 
-    public AbstractPath(final List<String> parts) {
+    protected AbstractPath(final List<String> parts) {
 
         this.parts = ImmutableList.copyOf(parts);
     }
@@ -61,45 +62,6 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
     protected abstract SELF create();
 
     protected abstract SELF create(final List<String> parts);
-
-//
-////    @JsonCreator
-//    public static AbstractPath parse(final String path) {
-//
-//        return new AbstractPath(splitter().splitToList(path));
-//    }
-//
-//    public static AbstractPath parse(final String path, final String delimiter) {
-//
-//        return new AbstractPath(splitter(delimiter).splitToList(path));
-//    }
-//
-//    public static Set<AbstractPath> parseSet(final String paths) {
-//
-//        return MULTIPLE_SPLITTER.splitToList(paths).stream().map(AbstractPath::parse)
-//                .collect(Collectors.toSet());
-//    }
-//
-//    public static List<AbstractPath> parseList(final String paths) {
-//
-//        return MULTIPLE_SPLITTER.splitToList(paths).stream().map(AbstractPath::parse)
-//                .collect(Collectors.toList());
-//    }
-//
-//    public static AbstractPath of(final String ... parts) {
-//
-//        return new AbstractPath(Arrays.asList(parts));
-//    }
-//
-//    public static AbstractPath of(final List<String> parts) {
-//
-//        return new AbstractPath(parts);
-//    }
-//
-//    public static AbstractPath empty() {
-//
-//        return new AbstractPath(Collections.emptyList());
-//    }
 
     public boolean isEmpty() {
 
@@ -178,12 +140,12 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
         return this.parts.size();
     }
 
-    public SELF subPath(final int from) {
+    public SELF range(final int from) {
 
-        return subPath(from, this.parts.size());
+        return range(from, this.parts.size());
     }
 
-    public SELF subPath(final int from, final int to) {
+    public SELF range(final int from, final int to) {
 
         return create(this.parts.subList(from, to));
     }
@@ -305,7 +267,7 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
         final Set<SELF> results = new HashSet<>();
         for(final SELF path : paths) {
             if(parent.isParentOrEqual(path)) {
-                results.add(path.subPath(parent.size()));
+                results.add(path.range(parent.size()));
             }
         }
         return results;
@@ -337,5 +299,10 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
     protected static Joiner joiner(final String delimiter) {
 
         return Joiner.on(delimiter);
+    }
+
+    public SELF transform(final Function<String, String> fn) {
+
+        return create(parts.stream().map(fn).collect(Collectors.toList()));
     }
 }

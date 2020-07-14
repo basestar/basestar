@@ -24,6 +24,7 @@ import com.google.common.base.Charsets;
 import io.basestar.mapper.MappingContext;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.Schema;
+import io.basestar.util.Name;
 import lombok.Setter;
 import org.apache.maven.model.Resource;
 import org.apache.maven.plugin.AbstractMojo;
@@ -74,9 +75,9 @@ public class NamespaceMojo extends AbstractMojo {
             final MappingContext context = new MappingContext();
 
             final Namespace.Builder all = context.namespace(classes);
-            for(final Map.Entry<String, Schema.Builder<?>> entry : all.getSchemas().entrySet()) {
-                final String name = entry.getKey();
-                final Schema.Builder<?> schema = entry.getValue();
+            for(final Map.Entry<Name, Schema.Descriptor<?>> entry : all.getSchemas().entrySet()) {
+                final Name name = entry.getKey();
+                final Schema.Descriptor<?> schema = entry.getValue();
                 final File file = new File(output, name + ".yml");
                 final Namespace.Builder one = Namespace.builder()
                         .setSchema(name, schema);

@@ -20,16 +20,11 @@ package io.basestar.storage.s3;
  * #L%
  */
 
-import io.basestar.expression.Expression;
 import io.basestar.schema.Consistency;
-import io.basestar.schema.Index;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
-import io.basestar.expression.aggregate.Aggregate;
-import io.basestar.storage.util.Pager;
-import io.basestar.util.Sort;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import software.amazon.awssdk.core.BytesWrapper;
@@ -45,16 +40,16 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
-public class S3BlobStorage implements Storage {
+public class S3BlobStorage implements Storage.WithoutWriteIndex, Storage.WithoutWriteHistory, Storage.WithoutQuery {
 
     private final S3AsyncClient client;
 
-    private final S3BlobRouting routing;
+    private final S3BlobStrategy strategy;
 
     private S3BlobStorage(final Builder builder) {
 
         this.client = builder.client;
-        this.routing = builder.routing;
+        this.strategy = builder.strategy;
     }
 
     public static Builder builder() {
@@ -68,7 +63,7 @@ public class S3BlobStorage implements Storage {
 
         private S3AsyncClient client;
 
-        private S3BlobRouting routing;
+        private S3BlobStrategy strategy;
 
         public S3BlobStorage build() {
 
@@ -79,7 +74,7 @@ public class S3BlobStorage implements Storage {
     @Override
     public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
 
-        final String bucket = routing.objectBucket(schema);
+        final String bucket = strategy.objectBucket(schema);
         final String key = objectKey(schema, id);
         return readObjectImpl(bucket, key);
     }
@@ -87,7 +82,7 @@ public class S3BlobStorage implements Storage {
     @Override
     public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
 
-        final String bucket = routing.historyBucket(schema);
+        final String bucket = strategy.historyBucket(schema);
         final String key = historyKey(schema, id, version);
         return readObjectImpl(bucket, key);
     }
@@ -131,18 +126,6 @@ public class S3BlobStorage implements Storage {
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public ReadTransaction read(final Consistency consistency) {
 
         return new ReadTransaction.Basic(this);
@@ -159,7 +142,7 @@ public class S3BlobStorage implements Storage {
             public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
                 steps.add(() -> writeObject(schema, id, after)
-                        .thenApply(v -> BatchResponse.single(schema.getName(), after)));
+                        .thenApply(v -> BatchResponse.single(schema.getQualifiedName(), after)));
                 return this;
             }
 
@@ -167,14 +150,14 @@ public class S3BlobStorage implements Storage {
             public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
                 steps.add(() -> writeObject(schema, id, after)
-                        .thenApply(v -> BatchResponse.single(schema.getName(), after)));
+                        .thenApply(v -> BatchResponse.single(schema.getQualifiedName(), after)));
                 return this;
             }
 
             private CompletableFuture<String> writeObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
                 final byte[] object = encode(schema, after);
-                final String bucket = routing.objectBucket(schema);
+                final String bucket = strategy.objectBucket(schema);
                 final String key = objectKey(schema, id);
                 return writeImpl(bucket, key, object);
             }
@@ -182,7 +165,7 @@ public class S3BlobStorage implements Storage {
             private CompletableFuture<String> writeHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
 
                 final byte[] object = encode(schema, after);
-                final String bucket = routing.historyBucket(schema);
+                final String bucket = strategy.historyBucket(schema);
                 final String key = historyKey(schema, id, version);
                 return writeImpl(bucket, key, object);
             }
@@ -209,7 +192,7 @@ public class S3BlobStorage implements Storage {
             @Override
             public WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
 
-                final String bucket = routing.objectBucket(schema);
+                final String bucket = strategy.objectBucket(schema);
                 final String key = objectKey(schema, id);
                 final DeleteObjectRequest request = DeleteObjectRequest.builder()
                         .bucket(bucket)
@@ -219,34 +202,16 @@ public class S3BlobStorage implements Storage {
                 return this;
             }
 
-            @Override
-            public WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                throw new UnsupportedOperationException();
-            }
+//            @Override
+//            public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
+//
+//                steps.add(() -> writeHistory(schema, id, version, after)
+//                        .thenApply(v -> BatchResponse.empty()));
+//                return this;
+//            }
 
             @Override
-            public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
-
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
-
-                steps.add(() -> writeHistory(schema, id, version, after)
-                        .thenApply(v -> BatchResponse.empty()));
-                return this;
-            }
-
-            @Override
-            public CompletableFuture<BatchResponse> commit() {
+            public CompletableFuture<BatchResponse> write() {
 
                 return BatchResponse.mergeFutures(steps.stream().map(Supplier::get));
             }
@@ -267,13 +232,13 @@ public class S3BlobStorage implements Storage {
 
     private String objectKey(final ObjectSchema schema, final String id) {
 
-        final String prefix = routing.objectPrefix(schema);
+        final String prefix = strategy.objectPrefix(schema);
         return prefix + id;
     }
 
     private String historyKey(final ObjectSchema schema, final String id, final long version) {
 
-        final String prefix = routing.historyPrefix(schema);
+        final String prefix = strategy.historyPrefix(schema);
         return prefix + id + "/" + version;
     }
 }

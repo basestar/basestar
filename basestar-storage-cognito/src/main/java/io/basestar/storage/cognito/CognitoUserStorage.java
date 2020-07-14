@@ -24,16 +24,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
-import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
 import io.basestar.storage.util.Pager;
+import io.basestar.util.Name;
 import io.basestar.util.PagedList;
 import io.basestar.util.PagingToken;
-import io.basestar.util.Path;
 import io.basestar.util.Sort;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -50,7 +49,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class CognitoUserStorage implements Storage {
+public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.WithoutHistory, Storage.WithoutAggregate {
 
     private static final String CUSTOM_ATTR_PREFIX = "custom:";
 
@@ -62,12 +61,12 @@ public class CognitoUserStorage implements Storage {
 
     private final CognitoIdentityProviderAsyncClient client;
 
-    private final CognitoUserRouting routing;
+    private final CognitoUserStrategy strategy;
 
     private CognitoUserStorage(final Builder builder) {
 
         this.client = builder.client;
-        this.routing = builder.routing;
+        this.strategy = builder.strategy;
     }
 
     public static Builder builder() {
@@ -81,7 +80,7 @@ public class CognitoUserStorage implements Storage {
 
         private CognitoIdentityProviderAsyncClient client;
 
-        private CognitoUserRouting routing;
+        private CognitoUserStrategy strategy;
 
         public CognitoUserStorage build() {
 
@@ -92,7 +91,7 @@ public class CognitoUserStorage implements Storage {
     @Override
     public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
 
-        final String userPoolId = routing.getUserPoolId(schema);
+        final String userPoolId = strategy.getUserPoolId(schema);
         return client.adminGetUser(AdminGetUserRequest.builder()
                 .userPoolId(userPoolId)
                 .username(id)
@@ -112,17 +111,11 @@ public class CognitoUserStorage implements Storage {
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
 
         return ImmutableList.of(
                 (count, token, stats) -> {
-                    final String userPoolId = routing.getUserPoolId(schema);
+                    final String userPoolId = strategy.getUserPoolId(schema);
                     return client.listUsers(ListUsersRequest.builder()
                             .userPoolId(userPoolId)
                             .limit(count)
@@ -133,12 +126,6 @@ public class CognitoUserStorage implements Storage {
                                 .collect(Collectors.toList()), encodePaging(response.paginationToken()));
                     });
                 });
-    }
-
-    @Override
-    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
-
-        throw new UnsupportedOperationException();
     }
 
     private String decodePaging(final PagingToken token) {
@@ -168,14 +155,14 @@ public class CognitoUserStorage implements Storage {
             public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
                 requests.add(() -> {
-                    final String userPoolId = routing.getUserPoolId(schema);
+                    final String userPoolId = strategy.getUserPoolId(schema);
                     final List<AttributeType> attributes = attributes(schema, after);
                     return client.adminCreateUser(AdminCreateUserRequest.builder()
                             .userPoolId(userPoolId)
                             .username(id)
                             .userAttributes(attributes)
                             .build())
-                            .thenApply(ignored -> BatchResponse.single(schema.getName(), after));
+                            .thenApply(ignored -> BatchResponse.single(schema.getQualifiedName(), after));
                 });
                 return this;
             }
@@ -184,14 +171,14 @@ public class CognitoUserStorage implements Storage {
             public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
                 requests.add(() -> {
-                    final String userPoolId = routing.getUserPoolId(schema);
+                    final String userPoolId = strategy.getUserPoolId(schema);
                     final List<AttributeType> attributes = attributes(schema, after);
                     return client.adminUpdateUserAttributes(AdminUpdateUserAttributesRequest.builder()
                             .userPoolId(userPoolId)
                             .username(id)
                             .userAttributes(attributes)
                             .build())
-                            .thenApply(ignored -> BatchResponse.single(schema.getName(), after));
+                            .thenApply(ignored -> BatchResponse.single(schema.getQualifiedName(), after));
                 });
                 return this;
             }
@@ -200,7 +187,7 @@ public class CognitoUserStorage implements Storage {
             public WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
 
                 requests.add(() -> {
-                    final String userPoolId = routing.getUserPoolId(schema);
+                    final String userPoolId = strategy.getUserPoolId(schema);
                     return client.adminDeleteUser(AdminDeleteUserRequest.builder()
                             .userPoolId(userPoolId)
                             .username(id)
@@ -211,31 +198,7 @@ public class CognitoUserStorage implements Storage {
             }
 
             @Override
-            public WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
-
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
-
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public CompletableFuture<BatchResponse> commit() {
+            public CompletableFuture<BatchResponse> write() {
 
                 return BatchResponse.mergeFutures(requests.stream().map(Supplier::get));
             }
@@ -263,7 +226,7 @@ public class CognitoUserStorage implements Storage {
         }
         for(final Map.Entry<String, Property> entry : schema.getProperties().entrySet()) {
             final String name = entry.getKey();
-            attributes(Path.of(name), entry.getValue().getType(), after.get(name)).forEach((k, v) -> {
+            attributes(Name.of(name), entry.getValue().getType(), after.get(name)).forEach((k, v) -> {
                 final String attrName = k.toString();
                 if(REQUIRED_ATTRS.contains(attrName)) {
                     result.add(AttributeType.builder().name(attrName).value(v).build());
@@ -275,40 +238,40 @@ public class CognitoUserStorage implements Storage {
         return result;
     }
 
-    public Map<Path, String> attributes(final Path path, final Use<?> use, final Object value) {
+    public Map<Name, String> attributes(final Name path, final Use<?> use, final Object value) {
 
-        return use.visit(new Use.Visitor.Defaulting<Map<Path, String>>() {
+        return use.visit(new Use.Visitor.Defaulting<Map<Name, String>>() {
 
             @Override
-            public Map<Path, String> visitDefault(final Use<?> type) {
+            public Map<Name, String> visitDefault(final Use<?> type) {
 
                 throw new UnsupportedOperationException("Type " + type.code() + " not supported");
             }
 
             @Override
-            public Map<Path, String> visitBoolean(final UseBoolean type) {
+            public Map<Name, String> visitBoolean(final UseBoolean type) {
 
                 return value == null ? ImmutableMap.of() : ImmutableMap.of(path, Boolean.toString(type.create(value)));
             }
 
             @Override
-            public Map<Path, String> visitInteger(final UseInteger type) {
+            public Map<Name, String> visitInteger(final UseInteger type) {
 
                 return value == null ? ImmutableMap.of() : ImmutableMap.of(path, Long.toString(type.create(value)));
             }
 
             @Override
-            public Map<Path, String> visitString(final UseString type) {
+            public Map<Name, String> visitString(final UseString type) {
 
                 return value == null ? ImmutableMap.of() : ImmutableMap.of(path, type.create(value));
             }
 
             @Override
-            public Map<Path, String> visitStruct(final UseStruct type) {
+            public Map<Name, String> visitStruct(final UseStruct type) {
 
                 final Map<String, Object> instance = type.create(value);
                 if(instance != null) {
-                    final Map<Path, String> result = new HashMap<>();
+                    final Map<Name, String> result = new HashMap<>();
                     type.getSchema().getProperties().forEach((name, prop) -> {
                         result.putAll(attributes(path.with(name), prop.getType(), instance.get(name)));
                     });
@@ -319,7 +282,7 @@ public class CognitoUserStorage implements Storage {
             }
 
             @Override
-            public Map<Path, String> visitRef(final UseRef type) {
+            public Map<Name, String> visitRef(final UseObject type) {
 
                 final Instance instance = type.create(value);
                 if(instance != null) {
@@ -348,7 +311,7 @@ public class CognitoUserStorage implements Storage {
                                      final UserStatusType userStatus, final Instant created, final Instant updated) {
 
         final Map<String, Object> result = new HashMap<>();
-        Instance.setSchema(result, schema.getName());
+        Instance.setSchema(result, schema.getQualifiedName());
         Instance.setId(result, username);
         if(created != null) {
             Instance.setCreated(result, LocalDateTime.ofInstant(created, ZoneOffset.UTC));
@@ -356,7 +319,7 @@ public class CognitoUserStorage implements Storage {
         if(updated != null) {
             Instance.setUpdated(result, LocalDateTime.ofInstant(updated, ZoneOffset.UTC));
         }
-        final Map<Path, String> attrs = new HashMap<>();
+        final Map<Name, String> attrs = new HashMap<>();
         attributes.forEach(attr -> {
             final String name;
             if(attr.name().startsWith(CUSTOM_ATTR_PREFIX)) {
@@ -364,16 +327,16 @@ public class CognitoUserStorage implements Storage {
             } else {
                 name = attr.name();
             }
-            attrs.put(Path.parse(name), attr.value());
+            attrs.put(Name.parse(name), attr.value());
         });
-        final String version = attrs.get(Path.of(Reserved.VERSION));
+        final String version = attrs.get(Name.of(Reserved.VERSION));
         if(version == null) {
             Instance.setVersion(result, 1L);
         } else {
             Instance.setVersion(result, Long.valueOf(version));
         }
         schema.getProperties().forEach((name, prop) -> {
-            result.put(name, from(Path.of(name), prop.getType(), attrs));
+            result.put(name, from(Name.of(name), prop.getType(), attrs));
         });
 
         if(userStatus != null) {
@@ -383,7 +346,7 @@ public class CognitoUserStorage implements Storage {
         return result;
     }
 
-    public Object from(final Path path, final Use<?> use, final Map<Path, String> attrs) {
+    public Object from(final Name path, final Use<?> use, final Map<Name, String> attrs) {
 
         return use.visit(new Use.Visitor.Defaulting<Object>() {
 
@@ -414,7 +377,7 @@ public class CognitoUserStorage implements Storage {
             }
 
             @Override
-            public Map<String, Object> visitRef(final UseRef type) {
+            public Map<String, Object> visitRef(final UseObject type) {
 
                 final String id = attrs.get(path.with(Reserved.ID));
                 return id == null ? null : ObjectSchema.ref(id);

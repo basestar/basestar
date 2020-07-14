@@ -21,15 +21,16 @@ package io.basestar.storage.exception;
  */
 
 import io.basestar.expression.Expression;
+import io.basestar.util.Name;
 
 public class UnsupportedQueryException extends RuntimeException {
 
-    public UnsupportedQueryException(final String schema, final Expression expression) {
+    public UnsupportedQueryException(final Name schema, final Expression expression) {
 
         this(schema, expression, "unspecified");
     }
 
-    public UnsupportedQueryException(final String schema, final Expression expression, final String reason) {
+    public UnsupportedQueryException(final Name schema, final Expression expression, final String reason) {
 
         super("Schema " + schema + " does not support query " + expression + " (reason: " + reason + ")");
     }

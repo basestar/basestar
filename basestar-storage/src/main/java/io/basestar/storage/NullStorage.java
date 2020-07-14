@@ -2,8 +2,8 @@ package io.basestar.storage;
 
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
+import io.basestar.schema.Concurrency;
 import io.basestar.schema.Consistency;
-import io.basestar.schema.Index;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.PagedList;
@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 @RequiredArgsConstructor
-public class NullStorage implements Storage {
+public class NullStorage implements Storage.WithoutWriteIndex, Storage.WithoutWriteHistory {
 
     private final EventStrategy eventStrategy;
 
@@ -61,14 +61,14 @@ public class NullStorage implements Storage {
             @Override
             public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
-                data.put(BatchResponse.Key.from(schema.getName(), after), after);
+                data.put(BatchResponse.Key.from(schema.getQualifiedName(), after), after);
                 return this;
             }
 
             @Override
             public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
-                data.put(BatchResponse.Key.from(schema.getName(), after), after);
+                data.put(BatchResponse.Key.from(schema.getQualifiedName(), after), after);
                 return this;
             }
 
@@ -79,31 +79,7 @@ public class NullStorage implements Storage {
             }
 
             @Override
-            public WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                return this;
-            }
-
-            @Override
-            public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                return this;
-            }
-
-            @Override
-            public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
-
-                return this;
-            }
-
-            @Override
-            public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
-
-                return this;
-            }
-
-            @Override
-            public CompletableFuture<BatchResponse> commit() {
+            public CompletableFuture<BatchResponse> write() {
 
                 return CompletableFuture.completedFuture(new BatchResponse.Basic(data));
             }
@@ -119,6 +95,45 @@ public class NullStorage implements Storage {
     @Override
     public StorageTraits storageTraits(final ObjectSchema schema) {
 
-        return NullStorageTraits.INSTANCE;
+        return TRAITS;
     }
+
+    public static final StorageTraits TRAITS = new StorageTraits() {
+
+        @Override
+        public Consistency getHistoryConsistency() {
+
+            return Consistency.NONE;
+        }
+
+        @Override
+        public Consistency getSingleValueIndexConsistency() {
+
+            return Consistency.NONE;
+        }
+
+        @Override
+        public Consistency getMultiValueIndexConsistency() {
+
+            return Consistency.NONE;
+        }
+
+        @Override
+        public boolean supportsPolymorphism() {
+
+            return true;
+        }
+
+        @Override
+        public boolean supportsMultiObject() {
+
+            return true;
+        }
+
+        @Override
+        public Concurrency getObjectConcurrency() {
+
+            return Concurrency.NONE;
+        }
+    };
 }

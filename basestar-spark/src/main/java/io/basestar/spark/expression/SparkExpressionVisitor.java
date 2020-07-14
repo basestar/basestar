@@ -25,12 +25,12 @@ import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.arithmetic.*;
 import io.basestar.expression.compare.*;
 import io.basestar.expression.constant.Constant;
-import io.basestar.expression.constant.PathConstant;
+import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.function.Coalesce;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
@@ -45,7 +45,7 @@ import static org.apache.spark.sql.functions.lit;
 @RequiredArgsConstructor
 public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Column> {
 
-    private final Function<Path, Column> columnResolver;
+    private final Function<Name, Column> columnResolver;
 
     @Override
     public Column visitDefault(final Expression expression) {
@@ -152,9 +152,9 @@ public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Colu
     }
 
     @Override
-    public Column visitPathConstant(final PathConstant expression) {
+    public Column visitPathConstant(final NameConstant expression) {
 
-        return columnResolver.apply(expression.getPath());
+        return columnResolver.apply(expression.getName());
     }
 
     @Override

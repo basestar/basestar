@@ -25,7 +25,7 @@ import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.spark.SparkSchemaUtils;
 import io.basestar.spark.Transform;
-import io.basestar.storage.dynamodb.DynamoDBRouting;
+import io.basestar.storage.dynamodb.DynamoDBStrategy;
 import lombok.Builder;
 import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.sql.Dataset;
@@ -42,7 +42,7 @@ import java.util.Map;
 @Builder(builderClassName = "Builder")
 public class DynamoDBIndexTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
-    private final DynamoDBRouting routing;
+    private final DynamoDBStrategy strategy;
 
     private final ObjectSchema schema;
 
@@ -51,7 +51,7 @@ public class DynamoDBIndexTransform implements Transform<Dataset<Row>, Dataset<R
     @Override
     public Dataset<Row> accept(final Dataset<Row> df) {
 
-        final StructType structType = DynamoDBSparkSchemaUtils.type(routing, schema, index);
+        final StructType structType = DynamoDBSparkSchemaUtils.type(strategy, schema, index);
 
         return df.flatMap((FlatMapFunction<Row, Row>) row -> {
 
@@ -60,7 +60,7 @@ public class DynamoDBIndexTransform implements Transform<Dataset<Row>, Dataset<R
             final Map<Index.Key, Map<String, Object>> records = index.readValues(initial);
 
             return records.entrySet().stream()
-                    .map(e -> DynamoDBSparkSchemaUtils.toSpark(routing, schema, index, structType, id, e.getKey(), e.getValue()))
+                    .map(e -> DynamoDBSparkSchemaUtils.toSpark(strategy, schema, index, structType, id, e.getKey(), e.getValue()))
                     .iterator();
 
         }, RowEncoder.apply(structType));

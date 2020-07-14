@@ -22,6 +22,7 @@ package io.basestar.database.options;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.basestar.util.Name;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.WRAPPER_OBJECT)
 @JsonSubTypes({
@@ -31,7 +32,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 })
 public interface ActionOptions extends Options {
 
-    String getSchema();
+    Name getSchema();
 
     String getId();
 }

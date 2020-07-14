@@ -21,6 +21,7 @@ package io.basestar.database.event;
  */
 
 import io.basestar.schema.ObjectSchema;
+import io.basestar.util.Name;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -30,7 +31,7 @@ import java.util.Map;
 @Accessors(chain = true)
 public class ObjectDeletedEvent implements ObjectEvent {
 
-    private String schema;
+    private Name schema;
 
     private String id;
 
@@ -38,8 +39,8 @@ public class ObjectDeletedEvent implements ObjectEvent {
 
     private Map<String, Object> before;
 
-    public static ObjectDeletedEvent of(final String schema, final String id, final long version,
-                                          final Map<String, Object> before) {
+    public static ObjectDeletedEvent of(final Name schema, final String id, final long version,
+                                        final Map<String, Object> before) {
 
         return new ObjectDeletedEvent().setSchema(schema).setId(id).setVersion(version)
                 .setBefore(before);

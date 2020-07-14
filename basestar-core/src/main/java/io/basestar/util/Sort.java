@@ -37,23 +37,23 @@ public class Sort implements Serializable {
 
     private static final Splitter SPLITTER = Splitter.on(DELIMITER).trimResults().omitEmptyStrings().limit(2);
 
-    private final Path path;
+    private final Name name;
 
     private final Order order;
 
     public Sort reverse() {
 
-        return new Sort(path, order.reverse());
+        return new Sort(name, order.reverse());
     }
 
-    public static Sort asc(final Path path) {
+    public static Sort asc(final Name name) {
 
-        return new Sort(path, Order.ASC);
+        return new Sort(name, Order.ASC);
     }
 
-    public static Sort desc(final Path path) {
+    public static Sort desc(final Name name) {
 
-        return new Sort(path, Order.DESC);
+        return new Sort(name, Order.DESC);
     }
 
 //    @JsonCreator
@@ -63,28 +63,28 @@ public class Sort implements Serializable {
         if(parts.size() < 1) {
             throw new IllegalStateException();
         } else {
-            final Path path = Path.parse(parts.get(0));
+            final Name name = Name.parse(parts.get(0));
             final Order order;
             if (parts.size() == 2) {
                 order = Order.valueOf(parts.get(1).toUpperCase());
             } else {
                 order = Order.ASC;
             }
-            return new Sort(path, order);
+            return new Sort(name, order);
         }
     }
 
-    public <T, V extends Comparable<V>> Comparator<T> comparator(final BiFunction<T, Path, V> getter) {
+    public <T, V extends Comparable<V>> Comparator<T> comparator(final BiFunction<T, Name, V> getter) {
 
         final Comparator<V> cmp = (order == Order.DESC) ? Comparator.reverseOrder() : Comparator.naturalOrder();
         return (a, b) -> {
-            final V va = getter.apply(a, path);
-            final V vb = getter.apply(b, path);
+            final V va = getter.apply(a, name);
+            final V vb = getter.apply(b, name);
             return Objects.compare(va, vb, cmp);
         };
     }
 
-    public static <T, V extends Comparable<V>> Comparator<T> comparator(final Collection<Sort> sort, final BiFunction<T, Path, V> getter) {
+    public static <T, V extends Comparable<V>> Comparator<T> comparator(final Collection<Sort> sort, final BiFunction<T, Name, V> getter) {
 
         Comparator<T> result = null;
         for(final Sort s : sort) {
@@ -106,7 +106,7 @@ public class Sort implements Serializable {
 //    @JsonValue
     public String toString() {
 
-        return path + DELIMITER + order;
+        return name + DELIMITER + order;
     }
 
     public enum Order {

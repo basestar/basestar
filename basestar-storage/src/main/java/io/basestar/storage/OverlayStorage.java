@@ -179,6 +179,34 @@ public class OverlayStorage implements Storage {
     }
 
     @Override
+    public CompletableFuture<?> asyncIndexCreated(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+
+        // FIXME: need to know if overlay has the value already for correct versioning
+        return overlay.asyncIndexCreated(schema, index, id, version, key, projection);
+    }
+
+    @Override
+    public CompletableFuture<?> asyncIndexUpdated(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+
+        // FIXME: need to know if overlay has the value already for correct versioning
+        return overlay.asyncIndexUpdated(schema, index, id, version, key, projection);
+    }
+
+    @Override
+    public CompletableFuture<?> asyncIndexDeleted(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
+
+        // FIXME: need to know if overlay has the value already for correct versioning
+        return overlay.asyncIndexDeleted(schema, index, id, version, key);
+    }
+
+    @Override
+    public CompletableFuture<?> asyncHistoryCreated(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
+
+        // FIXME: need to know if overlay has the value already for correct versioning
+        return overlay.asyncHistoryCreated(schema, id, version, after);
+    }
+
+    @Override
     public WriteTransaction write(final Consistency consistency) {
 
         final WriteTransaction overlayWrite = overlay.write(consistency);
@@ -210,7 +238,7 @@ public class OverlayStorage implements Storage {
             private Map<String, Object> tombstone(final ObjectSchema schema, final String id, final Map<String, Object> before) {
 
                 final Map<String, Object> tombstone = new HashMap<>();
-                Instance.setSchema(tombstone, schema.getName());
+                Instance.setSchema(tombstone, schema.getQualifiedName());
                 Instance.setId(tombstone, id);
                 Instance.setCreated(tombstone, Instance.getCreated(before));
                 Instance.setUpdated(tombstone, LocalDateTime.now());
@@ -221,41 +249,9 @@ public class OverlayStorage implements Storage {
             }
 
             @Override
-            public WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+            public CompletableFuture<BatchResponse> write() {
 
-                // FIXME: need to know if overlay has the value already for correct versioning
-                overlayWrite.createIndex(schema, index, id, version, key, projection);
-                return this;
-            }
-
-            @Override
-            public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                // FIXME: need to know if overlay has the value already for correct versioning
-                overlayWrite.updateIndex(schema, index, id, version, key, projection);
-                return this;
-            }
-
-            @Override
-            public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
-
-                // FIXME: need to know if overlay has the value already for correct versioning
-                overlayWrite.deleteIndex(schema, index, id, version, key);
-                return this;
-            }
-
-            @Override
-            public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
-
-                // FIXME: need to know if overlay has the value already for correct versioning
-                overlayWrite.createHistory(schema, id, version, after);
-                return this;
-            }
-
-            @Override
-            public CompletableFuture<BatchResponse> commit() {
-
-                return overlayWrite.commit();
+                return overlayWrite.write();
             }
         };
     }

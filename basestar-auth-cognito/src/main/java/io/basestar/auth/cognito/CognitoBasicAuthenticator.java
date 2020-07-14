@@ -26,6 +26,7 @@ import com.google.common.io.BaseEncoding;
 import io.basestar.auth.BasicAuthenticator;
 import io.basestar.auth.Caller;
 import io.basestar.auth.exception.AuthenticationFailedException;
+import io.basestar.util.Name;
 import io.basestar.util.Throwables;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import net.minidev.json.parser.JSONParser;
@@ -101,9 +102,9 @@ public class CognitoBasicAuthenticator extends BasicAuthenticator {
                 }
 
                 @Override
-                public String getSchema() {
+                public Name getSchema() {
 
-                    return "User";
+                    return Name.of("User");
                 }
 
                 @Override

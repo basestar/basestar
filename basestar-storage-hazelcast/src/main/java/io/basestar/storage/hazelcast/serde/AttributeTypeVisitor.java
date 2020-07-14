@@ -57,7 +57,7 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
     }
 
     @Override
-    public AttributeType<?> visitRef(final UseRef type) {
+    public AttributeType<?> visitRef(final UseObject type) {
 
         return AttributeType.REF;
     }
@@ -95,15 +95,13 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
     @Override
     public AttributeType<?> visitDate(final UseDate type) {
 
-        //FIXME
-        return AttributeType.encoded(type);
+        return AttributeType.STRING;
     }
 
     @Override
     public AttributeType<?> visitDateTime(final UseDateTime type) {
 
-        //FIXME
-        return AttributeType.encoded(type);
+        return AttributeType.STRING;
     }
 
     public static class ForArray implements Use.Visitor<AttributeType<?>> {
@@ -141,7 +139,7 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
         }
 
         @Override
-        public AttributeType<?> visitRef(final UseRef type) {
+        public AttributeType<?> visitRef(final UseObject type) {
 
             return AttributeType.REF_ARRAY;
         }
@@ -179,15 +177,13 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
         @Override
         public AttributeType<?> visitDate(final UseDate type) {
 
-            //FIXME
-            return AttributeType.encodedArray(type);
+            return AttributeType.STRING_ARRAY;
         }
 
         @Override
         public AttributeType<?> visitDateTime(final UseDateTime type) {
 
-            //FIXME
-            return AttributeType.encodedArray(type);
+            return AttributeType.STRING_ARRAY;
         }
     }
 }

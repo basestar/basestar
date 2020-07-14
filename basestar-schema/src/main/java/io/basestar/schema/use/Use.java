@@ -25,9 +25,13 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.schema.*;
+import io.basestar.schema.Constraint;
+import io.basestar.schema.Instance;
+import io.basestar.schema.Schema;
 import io.basestar.schema.exception.InvalidTypeException;
-import io.basestar.util.Path;
+import io.basestar.schema.util.Expander;
+import io.basestar.schema.util.Ref;
+import io.basestar.util.Name;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -84,14 +88,14 @@ public interface Use<T> extends Serializable {
 
     Code code();
 
-    Use<?> typeOf(Path path);
+    Use<?> typeOf(Name name);
 
-    T expand(T value, Expander expander, Set<Path> expand);
+    T expand(T value, Expander expander, Set<Name> expand);
 
-    Set<Path> requiredExpand(Set<Path> paths);
+    Set<Name> requiredExpand(Set<Name> names);
 
     @Deprecated
-    Multimap<Path, Instance> refs(T value);
+    Multimap<Name, Instance> refs(T value);
 
     @JsonValue
     Object toJson();
@@ -104,19 +108,21 @@ public interface Use<T> extends Serializable {
 
     T applyVisibility(Context context, T value);
 
-    T evaluateTransients(Context context, T value, Set<Path> expand);
+    T evaluateTransients(Context context, T value, Set<Name> expand);
 
-    Set<Path> transientExpand(Path path, Set<Path> expand);
+    Set<Name> transientExpand(Name name, Set<Name> expand);
 
-    Set<Constraint.Violation> validate(Context context, Path path, T value);
+    Set<Constraint.Violation> validate(Context context, Name name, T value);
 
     io.swagger.v3.oas.models.media.Schema<?> openApi();
 
-    Set<Expression> refQueries(String otherTypeName, Set<Path> expand, Path path);
+    Set<Expression> refQueries(Name otherSchemaName, Set<Name> expand, Name name);
 
-    Set<Path> refExpand(String otherTypeName, Set<Path> expand);
+    Set<Name> refExpand(Name otherSchemaName, Set<Name> expand);
 
     Map<Ref, Long> refVersions(T value);
+
+    void collectDependencies(Set<Name> expand, Map<Name, Schema<?>> out);
 
     @JsonCreator
     @SuppressWarnings("unchecked")
@@ -235,7 +241,7 @@ public interface Use<T> extends Serializable {
             case MAP:
                 return (T)UseMap.deserializeAnyValue(in);
             case REF:
-                return (T)UseRef.deserializeAnyValue(in);
+                return (T) UseObject.deserializeAnyValue(in);
             case STRUCT:
                 return (T)UseStruct.deserializeAnyValue(in);
             case BINARY:
@@ -261,7 +267,7 @@ public interface Use<T> extends Serializable {
 
         R visitEnum(UseEnum type);
 
-        R visitRef(UseRef type);
+        R visitRef(UseObject type);
 
         <T> R visitArray(UseArray<T> type);
 
@@ -322,7 +328,7 @@ public interface Use<T> extends Serializable {
             }
 
             @Override
-            default R visitRef(final UseRef type) {
+            default R visitRef(final UseObject type) {
 
                 return visitDefault(type);
             }

@@ -54,6 +54,11 @@
   - [And](#and)
 - [Text expressions](#text-expressions)
   - [ILike](#ilike)
+  - [](#)
+  - [](#)
+  - [](#)
+  - [](#)
+  - [](#)
   - [Like](#like)
 
 ## Arithmetic expressions
@@ -704,6 +709,61 @@ lhs ILIKE rhs
 
 - `lhs`:`string` Left hand operand
 - `rhs`:`string` Right hand operand
+
+
+### 
+
+
+**Syntax:**
+<pre>
+
+</pre>
+**Parameters:**
+
+
+
+### 
+
+
+**Syntax:**
+<pre>
+
+</pre>
+**Parameters:**
+
+
+
+### 
+
+
+**Syntax:**
+<pre>
+
+</pre>
+**Parameters:**
+
+
+
+### 
+
+
+**Syntax:**
+<pre>
+
+</pre>
+**Parameters:**
+
+
+
+### 
+
+
+**Syntax:**
+<pre>
+
+</pre>
+**Parameters:**
+
 
 
 ### Like

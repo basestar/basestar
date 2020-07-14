@@ -75,7 +75,12 @@ public class UseSet<T> implements UseCollection<T, Set<T>> {
     @Override
     public UseSet<?> resolve(final Schema.Resolver resolver) {
 
-        return new UseSet<>(this.type.resolve(resolver));
+        final Use<?> resolved = type.resolve(resolver);
+        if(resolved == type) {
+            return this;
+        } else {
+            return new UseSet<>(resolved);
+        }
     }
 
     @Override

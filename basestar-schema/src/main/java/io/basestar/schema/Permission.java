@@ -29,10 +29,10 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.basestar.expression.Expression;
 import io.basestar.expression.logical.And;
 import io.basestar.jackson.serde.ExpressionDeseriaizer;
-import io.basestar.jackson.serde.PathDeserializer;
+import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import io.basestar.util.Path;
 import lombok.Data;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -83,15 +83,32 @@ public class Permission implements Serializable {
     private final Expression expression;
 
     @Nonnull
-    private final SortedSet<Path> expand;
+    private final SortedSet<Name> expand;
 
     @Nonnull
-    private final SortedSet<Path> inherit;
+    private final SortedSet<Name> inherit;
+
+    @JsonDeserialize(as = Builder.class)
+    public interface Descriptor extends Described {
+
+        Boolean getAnonymous();
+
+        Expression getExpression();
+
+        Set<Name> getExpand();
+
+        Set<Name> getInherit();
+
+        default Permission build(final String name) {
+
+            return new Permission(this, name);
+        }
+    }
 
     @Data
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public static class Builder implements Described {
+    public static class Builder implements Descriptor {
 
         @Nullable
         private Boolean anonymous;
@@ -107,19 +124,14 @@ public class Permission implements Serializable {
         @Nullable
         @JsonSetter(contentNulls = Nulls.FAIL)
         @JsonSerialize(contentUsing = ToStringSerializer.class)
-        @JsonDeserialize(contentUsing = PathDeserializer.class)
-        private Set<Path> expand;
+        @JsonDeserialize(contentUsing = NameDeserializer.class)
+        private Set<Name> expand;
 
         @Nullable
         @JsonSetter(contentNulls = Nulls.FAIL)
         @JsonSerialize(contentUsing = ToStringSerializer.class)
-        @JsonDeserialize(contentUsing = PathDeserializer.class)
-        private Set<Path> inherit;
-
-        public Permission build(final String name) {
-
-            return new Permission(this, name);
-        }
+        @JsonDeserialize(contentUsing = NameDeserializer.class)
+        private Set<Name> inherit;
     }
 
     public static Builder builder() {
@@ -127,14 +139,14 @@ public class Permission implements Serializable {
         return new Builder();
     }
 
-    private Permission(final Builder builder, final String name) {
+    private Permission(final Descriptor descriptor, final String name) {
 
         this.name = name;
-        this.description = builder.getDescription();
-        this.anonymous = Nullsafe.option(builder.getAnonymous(), false);
-        this.expression = Nullsafe.require(builder.getExpression());
-        this.expand = Nullsafe.immutableSortedCopy(builder.getExpand());
-        this.inherit = Nullsafe.immutableSortedCopy(builder.getInherit());
+        this.description = descriptor.getDescription();
+        this.anonymous = Nullsafe.option(descriptor.getAnonymous(), false);
+        this.expression = Nullsafe.require(descriptor.getExpression());
+        this.expand = Nullsafe.immutableSortedCopy(descriptor.getExpand());
+        this.inherit = Nullsafe.immutableSortedCopy(descriptor.getInherit());
         if(Reserved.isReserved(name)) {
             throw new ReservedNameException(name);
         }
@@ -148,11 +160,11 @@ public class Permission implements Serializable {
         this.description = b.getDescription();
         this.anonymous = a.isAnonymous() && b.isAnonymous();
         this.expression = new And(a.getExpression(), b.getExpression());
-        final SortedSet<Path> expand = new TreeSet<>();
+        final SortedSet<Name> expand = new TreeSet<>();
         expand.addAll(a.getExpand());
         expand.addAll(b.getExpand());
         this.expand = Collections.unmodifiableSortedSet(expand);
-        final SortedSet<Path> inherit = new TreeSet<>();
+        final SortedSet<Name> inherit = new TreeSet<>();
         inherit.addAll(a.getExpand());
         inherit.addAll(b.getExpand());
         this.inherit = Collections.unmodifiableSortedSet(inherit);
@@ -182,5 +194,41 @@ public class Permission implements Serializable {
                 return getDeclaredPermissions().get(name);
             }
         }
+    }
+
+    public Descriptor descriptor() {
+
+        return new Descriptor() {
+            @Override
+            public Boolean getAnonymous() {
+
+                return anonymous;
+            }
+
+            @Override
+            public Expression getExpression() {
+
+                return expression;
+            }
+
+            @Override
+            public Set<Name> getExpand() {
+
+                return expand;
+            }
+
+            @Override
+            public Set<Name> getInherit() {
+
+                return inherit;
+            }
+
+            @Nullable
+            @Override
+            public String getDescription() {
+
+                return description;
+            }
+        };
     }
 }

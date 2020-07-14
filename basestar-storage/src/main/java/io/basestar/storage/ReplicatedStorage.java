@@ -21,10 +21,12 @@ package io.basestar.storage;
  */
 
 import io.basestar.expression.Expression;
-import io.basestar.schema.Consistency;
-import io.basestar.schema.ObjectSchema;
 import io.basestar.expression.aggregate.Aggregate;
+import io.basestar.schema.Consistency;
+import io.basestar.schema.Index;
+import io.basestar.schema.ObjectSchema;
 import io.basestar.storage.util.Pager;
+import io.basestar.util.Name;
 import io.basestar.util.Sort;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -138,6 +140,30 @@ public class ReplicatedStorage implements Storage {
     }
 
     @Override
+    public CompletableFuture<?> asyncIndexCreated(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+
+        return primary().asyncIndexCreated(schema, index, id, version, key, projection);
+    }
+
+    @Override
+    public CompletableFuture<?> asyncIndexUpdated(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+
+        return primary().asyncIndexUpdated(schema, index, id, version, key, projection);
+    }
+
+    @Override
+    public CompletableFuture<?> asyncIndexDeleted(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
+
+        return primary().asyncIndexDeleted(schema, index, id, version, key);
+    }
+
+    @Override
+    public CompletableFuture<?> asyncHistoryCreated(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
+
+        return primary().asyncHistoryCreated(schema, id, version, after);
+    }
+
+    @Override
     public ReadTransaction read(final Consistency consistency) {
 
         // Atomic reads cannot
@@ -149,13 +175,13 @@ public class ReplicatedStorage implements Storage {
 
             private final Set<BatchResponse.Key> keys = new HashSet<>();
 
-            private final Map<String, ObjectSchema> schemas = new HashMap<>();
+            private final Map<Name, ObjectSchema> schemas = new HashMap<>();
 
             @Override
             public ReadTransaction readObject(final ObjectSchema schema, final String id) {
 
-                keys.add(new BatchResponse.Key(schema.getName(), id, null));
-                schemas.put(schema.getName(), schema);
+                keys.add(BatchResponse.Key.latest(schema.getQualifiedName(), id));
+                schemas.put(schema.getQualifiedName(), schema);
                 delegate.readObject(schema, id);
                 return this;
             }
@@ -163,8 +189,8 @@ public class ReplicatedStorage implements Storage {
             @Override
             public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version) {
 
-                keys.add(new BatchResponse.Key(schema.getName(), id, version));
-                schemas.put(schema.getName(), schema);
+                keys.add(BatchResponse.Key.version(schema.getQualifiedName(), id, version));
+                schemas.put(schema.getQualifiedName(), schema);
                 delegate.readObjectVersion(schema, id, version);
                 return this;
             }

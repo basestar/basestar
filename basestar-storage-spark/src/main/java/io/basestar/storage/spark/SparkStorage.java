@@ -50,18 +50,18 @@ import java.util.stream.Collectors;
 
 
 @Slf4j
-public class SparkStorage implements Storage {
+public class SparkStorage implements Storage.WithoutWrite {
 
     private final SparkSession session;
 
-    private final SparkRouting routing;
+    private final SparkStrategy strategy;
 
     private final ExecutorService executor;
 
     private SparkStorage(final Builder builder) {
 
         this.session = builder.session;
-        this.routing = builder.routing;
+        this.strategy = builder.strategy;
         this.executor = Executors.newSingleThreadExecutor();
     }
 
@@ -76,7 +76,7 @@ public class SparkStorage implements Storage {
 
         private SparkSession session;
 
-        private SparkRouting routing;
+        private SparkStrategy strategy;
 
         public SparkStorage build() {
 
@@ -89,7 +89,7 @@ public class SparkStorage implements Storage {
 
         return CompletableFuture.supplyAsync(() -> {
 
-            Dataset<Row> ds = routing.objectRead(session, schema);
+            Dataset<Row> ds = strategy.objectRead(session, schema);
             ds = ds.filter(ds.col(Reserved.ID).equalTo(id));
             final Row row = ds.first();
             return row == null ? null : SparkSchemaUtils.fromSpark(schema, row);
@@ -102,7 +102,7 @@ public class SparkStorage implements Storage {
 
         return CompletableFuture.supplyAsync(() -> {
 
-            Dataset<Row> ds = routing.historyRead(session, schema);
+            Dataset<Row> ds = strategy.historyRead(session, schema);
             ds = ds.filter(ds.col(Reserved.ID).equalTo(id)
                     .and(ds.col(Reserved.VERSION).equalTo(version)));
             final Row row = ds.first();
@@ -116,7 +116,7 @@ public class SparkStorage implements Storage {
 
         return ImmutableList.of((count, paging, stats) -> CompletableFuture.supplyAsync(() -> {
 
-            final Dataset<Row> input = routing.objectRead(session, schema);
+            final Dataset<Row> input = strategy.objectRead(session, schema);
             final Column column = query.visit(new SparkExpressionVisitor(path -> input.col(path.toString())));
             Dataset<Row> ds = input.filter(column);
             if(paging != null) {

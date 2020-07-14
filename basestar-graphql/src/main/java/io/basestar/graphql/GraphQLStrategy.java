@@ -23,13 +23,15 @@ package io.basestar.graphql;
 import io.basestar.database.options.UpdateOptions;
 import io.basestar.schema.Link;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.Reserved;
 import io.basestar.schema.Schema;
 import io.basestar.schema.use.*;
+import io.basestar.util.Name;
 import io.basestar.util.Text;
 
 // FIXME: rename to GraphQL strategy, also create a corresponding RestStrategy
 
-public interface GraphQLNamingStrategy {
+public interface GraphQLStrategy {
 
     Default DEFAULT = new Default();
 
@@ -37,7 +39,12 @@ public interface GraphQLNamingStrategy {
 
     UpdateOptions.Mode patchMode();
 
-    String typeName(Schema<?> type);
+    String typeName(Name name);
+
+    default String typeName(Schema<?> type) {
+
+        return typeName(type.getQualifiedName());
+    }
 
     String inputRefTypeName();
 
@@ -91,7 +98,13 @@ public interface GraphQLNamingStrategy {
 
     String transactionTypeName();
 
-    class Default implements GraphQLNamingStrategy {
+    class Default implements GraphQLStrategy {
+
+        protected String delimiter() {
+
+            // Safe strategy, but won't make the prettiest GQL
+            return Reserved.PREFIX;
+        }
 
         @Override
         public UpdateOptions.Mode updateMode() {
@@ -107,9 +120,9 @@ public interface GraphQLNamingStrategy {
         }
 
         @Override
-        public String typeName(final Schema<?> type) {
+        public String typeName(final Name name) {
 
-            return Text.upperCamel(type.getName());
+            return name.transform(Text::upperCamel).toString(delimiter());
         }
 
         protected String typeName(final Use<?> type) {
@@ -336,7 +349,7 @@ public interface GraphQLNamingStrategy {
             }
 
             @Override
-            public String visitRef(final UseRef type) {
+            public String visitRef(final UseObject type) {
 
                 return typeName(type.getSchema());
             }

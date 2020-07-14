@@ -23,7 +23,7 @@ package io.basestar.graphql.schema;
 import com.google.common.collect.ImmutableList;
 import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
-import io.basestar.graphql.GraphQLNamingStrategy;
+import io.basestar.graphql.GraphQLStrategy;
 import io.basestar.graphql.GraphQLUtils;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
@@ -37,9 +37,9 @@ public class SchemaAdaptor {
 
     private final Namespace namespace;
 
-    private final GraphQLNamingStrategy namingStrategy;
+    private final GraphQLStrategy namingStrategy;
 
-    public SchemaAdaptor(final Namespace namespace, final GraphQLNamingStrategy namingStrategy) {
+    public SchemaAdaptor(final Namespace namespace, final GraphQLStrategy namingStrategy) {
 
 
         this.namespace = namespace;
@@ -495,7 +495,7 @@ public class SchemaAdaptor {
             }
 
             @Override
-            public Type<?> visitRef(final UseRef type) {
+            public Type<?> visitRef(final UseObject type) {
 
                 return new TypeName(namingStrategy.typeName(type.getSchema()));
             }
@@ -579,7 +579,7 @@ public class SchemaAdaptor {
             }
 
             @Override
-            public Type<?> visitRef(final UseRef type) {
+            public Type<?> visitRef(final UseObject type) {
 
                 return new TypeName(namingStrategy.inputRefTypeName());
             }
@@ -665,7 +665,7 @@ public class SchemaAdaptor {
                 }
 
                 @Override
-                public Void visitRef(final UseRef type) {
+                public Void visitRef(final UseObject type) {
 
                     return null;
                 }

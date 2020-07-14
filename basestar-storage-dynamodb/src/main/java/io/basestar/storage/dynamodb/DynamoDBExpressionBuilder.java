@@ -22,7 +22,7 @@ package io.basestar.storage.dynamodb;
 
 import com.google.common.base.Joiner;
 import io.basestar.storage.query.Range;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import lombok.Data;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
@@ -31,7 +31,7 @@ import java.util.*;
 @Data
 class DynamoDBExpressionBuilder {
 
-    private final Set<Path> matched;
+    private final Set<Name> matched;
 
     private final List<String> expr = new ArrayList<>();
 
@@ -43,7 +43,7 @@ class DynamoDBExpressionBuilder {
 
     int valueOffset;
 
-    private String name(final Path path) {
+    private String name(final Name path) {
 
         final String str = path.toString();
         for(final Map.Entry<String, String> entry : names.entrySet()) {
@@ -71,7 +71,7 @@ class DynamoDBExpressionBuilder {
         return ":" + name;
     }
 
-    public void and(final Path path, final Range<Object> term) {
+    public void and(final Name name, final Range<Object> term) {
 
         term.visit(new Range.Visitor<Object, Void>() {
 
@@ -84,8 +84,8 @@ class DynamoDBExpressionBuilder {
             @Override
             public Void visitEq(final Object eq) {
 
-                if(!matched.contains(path)) {
-                    expr.add(name(path) + " = " + value(eq));
+                if(!matched.contains(name)) {
+                    expr.add(name(name) + " = " + value(eq));
                 }
                 return null;
             }
@@ -93,28 +93,28 @@ class DynamoDBExpressionBuilder {
             @Override
             public Void visitLt(final Object lt) {
 
-                expr.add(name(path) + " < " + value(lt));
+                expr.add(name(name) + " < " + value(lt));
                 return null;
             }
 
             @Override
             public Void visitLte(final Object lte) {
 
-                expr.add(name(path) + " <= " + value(lte));
+                expr.add(name(name) + " <= " + value(lte));
                 return null;
             }
 
             @Override
             public Void visitGt(final Object gt) {
 
-                expr.add(name(path) + " > " + value(gt));
+                expr.add(name(name) + " > " + value(gt));
                 return null;
             }
 
             @Override
             public Void visitGte(final Object gte) {
 
-                expr.add(name(path) + " >= " + value(gte));
+                expr.add(name(name) + " >= " + value(gte));
                 return null;
             }
 

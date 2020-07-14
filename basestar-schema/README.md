@@ -44,6 +44,10 @@ MyObject:
 
 **Fields**
 
+- `qualifiedName` **io.basestar.util.Name**
+
+  
+
 - `slot` **int**
 
   
@@ -88,7 +92,7 @@ MyObject:
 
   
 
-- `expand` **set of Path**
+- `expand` **set of io.basestar.util.Name**
 
   
 
@@ -119,6 +123,10 @@ MyStruct:
 </pre>
 
 **Fields**
+
+- `qualifiedName` **io.basestar.util.Name**
+
+  
 
 - `slot` **int**
 
@@ -166,6 +174,14 @@ MyEnum:
 
 **Fields**
 
+- `qualifiedName` **io.basestar.util.Name**
+
+  
+
+- `version` **long**
+
+  Current version of the schema, defaults to 1
+
 - `slot` **int**
 
   
@@ -189,6 +205,10 @@ MyEnum:
 
 
 **Fields**
+
+- `qualifiedName` **io.basestar.util.Name**
+
+  
 
 - `description` **string**
 
@@ -229,6 +249,10 @@ MyEnum:
 
 **Fields**
 
+- `qualifiedName` **io.basestar.util.Name**
+
+  
+
 - `type` **[Type Use](#type-use)**
 
   
@@ -245,7 +269,7 @@ MyEnum:
 
   
 
-- `expand` **set of Path**
+- `expand` **set of io.basestar.util.Name**
 
   
 
@@ -259,6 +283,10 @@ MyEnum:
 
 
 **Fields**
+
+- `qualifiedName` **io.basestar.util.Name**
+
+  
 
 - `description` **string**
 
@@ -291,6 +319,10 @@ MyEnum:
 
 **Fields**
 
+- `qualifiedName` **io.basestar.util.Name**
+
+  
+
 - `version` **long**
 
   
@@ -299,7 +331,7 @@ MyEnum:
 
   
 
-- `partition` **array of Path**
+- `partition` **array of io.basestar.util.Name**
 
   
 
@@ -311,7 +343,7 @@ MyEnum:
 
   
 
-- `over` **map of Path**
+- `over` **map of io.basestar.util.Name**
 
   
 
@@ -367,11 +399,11 @@ The variables available in the context of a permission expression depend on the 
 
   
 
-- `expand` **set of Path**
+- `expand` **set of io.basestar.util.Name**
 
   
 
-- `inherit` **set of Path**
+- `inherit` **set of io.basestar.util.Name**
 
   
 
@@ -386,6 +418,16 @@ The variables available in the context of a permission expression depend on the 
 <strong>Example</strong>
 <pre>
 type: string
+</pre>
+
+### Object Type
+
+
+Stores a reference to the object.
+
+<strong>Example</strong>
+<pre>
+type: MyObject
 </pre>
 
 ### Integer Type

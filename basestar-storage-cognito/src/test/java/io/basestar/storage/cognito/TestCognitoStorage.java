@@ -57,7 +57,7 @@ public class TestCognitoStorage {
 
         return CognitoUserStorage.builder()
                 .setClient(CognitoIdentityProviderAsyncClient.builder().region(Region.of("us-east-1")).build())
-                .setRouting(schema -> "us-east-1_rhBrmRi8n")
+                .setStrategy(schema -> "us-east-1_rhBrmRi8n")
                 .build();
     }
 
@@ -82,7 +82,7 @@ public class TestCognitoStorage {
 
         storage.write(Consistency.ATOMIC)
                 .createObject(schema, id, before)
-                .commit().join();
+                .write().join();
 
         assertValid(before, storage.readObject(schema, id).join());
 
@@ -95,7 +95,7 @@ public class TestCognitoStorage {
 
         storage.write(Consistency.ATOMIC)
                 .updateObject(schema, id, before, after)
-                .commit().join();
+                .write().join();
 
         assertValid(after, storage.readObject(schema, id).join());
     }

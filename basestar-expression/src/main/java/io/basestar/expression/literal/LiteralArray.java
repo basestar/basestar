@@ -23,10 +23,10 @@ package io.basestar.expression.literal;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
-import io.basestar.expression.PathTransform;
+import io.basestar.expression.Renaming;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.function.With;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import lombok.Data;
 
 import java.util.ArrayList;
@@ -61,7 +61,7 @@ public class LiteralArray implements Expression {
     }
 
     @Override
-    public Expression bind(final Context context, final PathTransform root) {
+    public Expression bind(final Context context, final Renaming root) {
 
         boolean changed = false;
         boolean constant = true;
@@ -100,7 +100,7 @@ public class LiteralArray implements Expression {
 //    }
 
     @Override
-    public Set<Path> paths() {
+    public Set<Name> paths() {
 
         return args.stream().flatMap(v -> v.paths().stream())
                 .collect(Collectors.toSet());

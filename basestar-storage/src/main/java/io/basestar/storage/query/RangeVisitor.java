@@ -25,105 +25,105 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.compare.*;
 import io.basestar.expression.constant.Constant;
-import io.basestar.expression.constant.PathConstant;
+import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.iterate.ForAny;
 import io.basestar.expression.iterate.Of;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.type.Values;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class RangeVisitor implements ExpressionVisitor.Defaulting<Map<Path, Range<Object>>> {
+public class RangeVisitor implements ExpressionVisitor.Defaulting<Map<Name, Range<Object>>> {
 
     @Override
-    public Map<Path, Range<Object>> visitDefault(final Expression expression) {
+    public Map<Name, Range<Object>> visitDefault(final Expression expression) {
 
         return ImmutableMap.of();
     }
 
-    public Map<Path, Range<Object>> visitEq(final Eq expression) {
+    public Map<Name, Range<Object>> visitEq(final Eq expression) {
 
         final Expression lhs = expression.getLhs();
         final Expression rhs = expression.getRhs();
-        if (lhs instanceof PathConstant && rhs instanceof Constant) {
-            return ImmutableMap.of(((PathConstant) lhs).getPath(), Range.eq(((Constant) rhs).getValue()));
-        } else if (lhs instanceof Constant && rhs instanceof PathConstant) {
-            return ImmutableMap.of(((PathConstant) rhs).getPath(), Range.eq(((Constant) lhs).getValue()));
+        if (lhs instanceof NameConstant && rhs instanceof Constant) {
+            return ImmutableMap.of(((NameConstant) lhs).getName(), Range.eq(((Constant) rhs).getValue()));
+        } else if (lhs instanceof Constant && rhs instanceof NameConstant) {
+            return ImmutableMap.of(((NameConstant) rhs).getName(), Range.eq(((Constant) lhs).getValue()));
         } else {
             return ImmutableMap.of();
         }
     }
 
     @Override
-    public Map<Path, Range<Object>> visitLt(final Lt expression) {
+    public Map<Name, Range<Object>> visitLt(final Lt expression) {
 
         final Expression lhs = expression.getLhs();
         final Expression rhs = expression.getRhs();
-        if (lhs instanceof PathConstant && rhs instanceof Constant) {
-            return ImmutableMap.of(((PathConstant) lhs).getPath(), Range.lt(((Constant) rhs).getValue()));
-        } else if (lhs instanceof Constant && rhs instanceof PathConstant) {
-            return ImmutableMap.of(((PathConstant) rhs).getPath(), Range.gte(((Constant) lhs).getValue()));
+        if (lhs instanceof NameConstant && rhs instanceof Constant) {
+            return ImmutableMap.of(((NameConstant) lhs).getName(), Range.lt(((Constant) rhs).getValue()));
+        } else if (lhs instanceof Constant && rhs instanceof NameConstant) {
+            return ImmutableMap.of(((NameConstant) rhs).getName(), Range.gte(((Constant) lhs).getValue()));
         } else {
             return ImmutableMap.of();
         }
     }
 
     @Override
-    public Map<Path, Range<Object>> visitLte(final Lte expression) {
+    public Map<Name, Range<Object>> visitLte(final Lte expression) {
 
         final Expression lhs = expression.getLhs();
         final Expression rhs = expression.getRhs();
-        if (lhs instanceof PathConstant && rhs instanceof Constant) {
-            return ImmutableMap.of(((PathConstant) lhs).getPath(), Range.lte(((Constant) rhs).getValue()));
-        } else if (lhs instanceof Constant && rhs instanceof PathConstant) {
-            return ImmutableMap.of(((PathConstant) rhs).getPath(), Range.gt(((Constant) lhs).getValue()));
+        if (lhs instanceof NameConstant && rhs instanceof Constant) {
+            return ImmutableMap.of(((NameConstant) lhs).getName(), Range.lte(((Constant) rhs).getValue()));
+        } else if (lhs instanceof Constant && rhs instanceof NameConstant) {
+            return ImmutableMap.of(((NameConstant) rhs).getName(), Range.gt(((Constant) lhs).getValue()));
         } else {
             return ImmutableMap.of();
         }
     }
 
     @Override
-    public Map<Path, Range<Object>> visitGt(final Gt expression) {
+    public Map<Name, Range<Object>> visitGt(final Gt expression) {
 
         final Expression lhs = expression.getLhs();
         final Expression rhs = expression.getRhs();
-        if (lhs instanceof PathConstant && rhs instanceof Constant) {
-            return ImmutableMap.of(((PathConstant) lhs).getPath(), Range.gt(((Constant) rhs).getValue()));
-        } else if (lhs instanceof Constant && rhs instanceof PathConstant) {
-            return ImmutableMap.of(((PathConstant) rhs).getPath(), Range.lte(((Constant) lhs).getValue()));
+        if (lhs instanceof NameConstant && rhs instanceof Constant) {
+            return ImmutableMap.of(((NameConstant) lhs).getName(), Range.gt(((Constant) rhs).getValue()));
+        } else if (lhs instanceof Constant && rhs instanceof NameConstant) {
+            return ImmutableMap.of(((NameConstant) rhs).getName(), Range.lte(((Constant) lhs).getValue()));
         } else {
             return ImmutableMap.of();
         }
     }
 
     @Override
-    public Map<Path, Range<Object>> visitGte(final Gte expression) {
+    public Map<Name, Range<Object>> visitGte(final Gte expression) {
 
         final Expression lhs = expression.getLhs();
         final Expression rhs = expression.getRhs();
-        if (lhs instanceof PathConstant && rhs instanceof Constant) {
-            return ImmutableMap.of(((PathConstant) lhs).getPath(), Range.gte(((Constant) rhs).getValue()));
-        } else if (lhs instanceof Constant && rhs instanceof PathConstant) {
-            return ImmutableMap.of(((PathConstant) rhs).getPath(), Range.lt(((Constant) lhs).getValue()));
+        if (lhs instanceof NameConstant && rhs instanceof Constant) {
+            return ImmutableMap.of(((NameConstant) lhs).getName(), Range.gte(((Constant) rhs).getValue()));
+        } else if (lhs instanceof Constant && rhs instanceof NameConstant) {
+            return ImmutableMap.of(((NameConstant) rhs).getName(), Range.lt(((Constant) lhs).getValue()));
         } else {
             return ImmutableMap.of();
         }
     }
 
     @Override
-    public Map<Path, Range<Object>> visitAnd(final And expression) {
+    public Map<Name, Range<Object>> visitAnd(final And expression) {
 
-        final Map<Path, Range<Object>> result = new HashMap<>();
+        final Map<Name, Range<Object>> result = new HashMap<>();
         for(final Expression term : expression.getTerms()) {
-            for (final Map.Entry<Path, Range<Object>> entry : visit(term).entrySet()) {
-                final Path path = entry.getKey();
+            for (final Map.Entry<Name, Range<Object>> entry : visit(term).entrySet()) {
+                final Name name = entry.getKey();
                 final Range<Object> range = entry.getValue();
-                if (result.containsKey(path)) {
-                    result.put(path, Range.and(result.get(path), range, Values::compare));
+                if (result.containsKey(name)) {
+                    result.put(name, Range.and(result.get(name), range, Values::compare));
                 } else {
-                    result.put(path, range);
+                    result.put(name, range);
                 }
             }
         }
@@ -133,22 +133,22 @@ public class RangeVisitor implements ExpressionVisitor.Defaulting<Map<Path, Rang
     // FIXME: wont work when 2 for any are in the same disjunction branch
 
     @Override
-    public Map<Path, Range<Object>> visitForAny(final ForAny expression) {
+    public Map<Name, Range<Object>> visitForAny(final ForAny expression) {
 
         final Expression lhs = expression.getLhs();
         final Expression rhs = expression.getRhs();
         if(rhs instanceof Of) {
             final Of of = (Of)rhs;
-            if(of.getExpr() instanceof PathConstant) {
-                final Path path = ((PathConstant) of.getExpr()).getPath();
+            if(of.getExpr() instanceof NameConstant) {
+                final Name name = ((NameConstant) of.getExpr()).getName();
                 // map keys not supported
                 if(of.getKey() == null) {
                     final String value = of.getValue();
-                    final Map<Path, Range<Object>> lhsRange = lhs.visit(this);
-                    final Map<Path, Range<Object>> results = new HashMap<>();
+                    final Map<Name, Range<Object>> lhsRange = lhs.visit(this);
+                    final Map<Name, Range<Object>> results = new HashMap<>();
                     lhsRange.forEach((k, v) -> {
                         if(k.first().equals(value)) {
-                            results.put(path.with(k.withoutFirst()), v);
+                            results.put(name.with(k.withoutFirst()), v);
                         }
                     });
                     return results;

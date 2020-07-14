@@ -28,8 +28,8 @@ import io.basestar.database.options.*;
 import io.basestar.database.transport.Transport;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Namespace;
+import io.basestar.util.Name;
 import io.basestar.util.PagedList;
-import io.basestar.util.Path;
 import lombok.RequiredArgsConstructor;
 
 import java.util.Map;
@@ -51,7 +51,7 @@ public class DatabaseClient implements Database {
     @Override
     public CompletableFuture<Instance> read(final Caller caller, final ReadOptions options) {
 
-        final String schema = options.getSchema();
+        final Name schema = options.getSchema();
         final String id = options.getId();
         final Multimap<String, String> query = HashMultimap.create();
         addVersion(query, options.getVersion());
@@ -64,7 +64,7 @@ public class DatabaseClient implements Database {
     @Override
     public CompletableFuture<Instance> create(final Caller caller, final CreateOptions options) {
 
-        final String schema = options.getSchema();
+        final Name schema = options.getSchema();
         final String id = options.getId();
         final Map<String, Object> data = options.getData();
         final Multimap<String, String> query = HashMultimap.create();
@@ -77,7 +77,7 @@ public class DatabaseClient implements Database {
     @Override
     public CompletableFuture<Instance> update(final Caller caller, final UpdateOptions options) {
 
-        final String schema = options.getSchema();
+        final Name schema = options.getSchema();
         final String id = options.getId();
         final Map<String, Object> data = options.getData();
         final Multimap<String, String> query = HashMultimap.create();
@@ -91,7 +91,7 @@ public class DatabaseClient implements Database {
     @Override
     public CompletableFuture<Instance> delete(final Caller caller, final DeleteOptions options) {
 
-        final String schema = options.getSchema();
+        final Name schema = options.getSchema();
         final String id = options.getId();
         final Multimap<String, String> query = HashMultimap.create();
         addVersion(query, options.getVersion());
@@ -124,7 +124,7 @@ public class DatabaseClient implements Database {
         }
     }
 
-    private void addExpand(final Multimap<String, String> query, final Set<Path> expand) {
+    private void addExpand(final Multimap<String, String> query, final Set<Name> expand) {
 
         if(expand != null) {
             query.put("expand", Joiner.on(",").join(expand));
@@ -138,11 +138,14 @@ public class DatabaseClient implements Database {
         }
     }
 
-    private String schemaUrl(final String schema) {
+    private String schemaUrl(final Name schema) {
+
+
         return null;
     }
 
-    private String objectUrl(final String schema, final String id) {
+    private String objectUrl(final Name schema, final String id) {
+
         return null;
     }
 

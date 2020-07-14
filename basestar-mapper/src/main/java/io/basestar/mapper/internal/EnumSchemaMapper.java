@@ -24,6 +24,7 @@ import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.SchemaMapper;
 import io.basestar.schema.Schema;
 import io.basestar.type.TypeContext;
+import io.basestar.util.Name;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -33,18 +34,18 @@ import java.util.stream.Collectors;
 
 public class EnumSchemaMapper<T extends Enum<?>> implements SchemaMapper<T, String> {
 
-    private final String name;
+    private final Name name;
 
     private final T[] constants;
 
-    public EnumSchemaMapper(final MappingContext context, final String name, final TypeContext type) {
+    public EnumSchemaMapper(final MappingContext context, final Name name, final TypeContext type) {
 
         this.name = name;
         this.constants = type.enumConstants();
     }
 
     @Override
-    public String name() {
+    public Name qualifiedName() {
 
         return name;
     }

@@ -25,7 +25,7 @@ import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.schema.use.*;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import lombok.Data;
 
 import java.util.HashMap;
@@ -56,16 +56,16 @@ public class Mappings {
                 return new Mappings(properties(schema, schema.getExpand()));
             }
 
-            protected Map<String, FieldType> properties(final InstanceSchema schema, final Set<Path> expand) {
+            protected Map<String, FieldType> properties(final InstanceSchema schema, final Set<Name> expand) {
 
                 final Map<String, FieldType> properties = new HashMap<>();
-                final Map<String, Set<Path>> branches = Path.branch(expand);
+                final Map<String, Set<Name>> branches = Name.branch(expand);
                 schema.metadataSchema().forEach((k, v) -> properties.put(k, fieldType(schema, k, v, branches.get(k))));
                 schema.getProperties().forEach((k, v) -> properties.put(k, fieldType(schema, k, v.getType(), branches.get(k))));
                 return properties;
             }
 
-            protected FieldType fieldType(final InstanceSchema schema, final String name, final Use<?> use, final Set<Path> expand) {
+            protected FieldType fieldType(final InstanceSchema schema, final String name, final Use<?> use, final Set<Name> expand) {
 
                 if(schema instanceof ObjectSchema) {
                     switch (name) {
@@ -83,7 +83,7 @@ public class Mappings {
                 }
             }
 
-            protected FieldType fieldType(final Use<?> use, final Set<Path> expand) {
+            protected FieldType fieldType(final Use<?> use, final Set<Name> expand) {
 
                 return use.visit(new Use.Visitor<FieldType>() {
 
@@ -118,7 +118,7 @@ public class Mappings {
                     }
 
                     @Override
-                    public FieldType visitRef(final UseRef type) {
+                    public FieldType visitRef(final UseObject type) {
 
                         if(expand == null) {
                             final Map<String, FieldType> properties = new HashMap<>();

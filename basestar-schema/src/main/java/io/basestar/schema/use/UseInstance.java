@@ -24,8 +24,9 @@ import io.basestar.expression.Context;
 import io.basestar.schema.Instance;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Schema;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 
+import java.util.Map;
 import java.util.Set;
 
 public interface UseInstance extends UseNamed<Instance> {
@@ -33,24 +34,18 @@ public interface UseInstance extends UseNamed<Instance> {
     InstanceSchema getSchema();
 
     @Override
-    default String getName() {
+    default Name getQualifiedName() {
 
-        return getSchema().getName();
+        return getSchema().getQualifiedName();
     }
 
     @Override
-    default UseInstance resolve(final Schema.Resolver resolver) {
+    default Use<?> typeOf(final Name name) {
 
-        return this;
-    }
-
-    @Override
-    default Use<?> typeOf(final Path path) {
-
-        if(path.isEmpty()) {
+        if(name.isEmpty()) {
             return this;
         } else {
-            return getSchema().typeOf(path);
+            return getSchema().typeOf(name);
         }
     }
 
@@ -65,7 +60,7 @@ public interface UseInstance extends UseNamed<Instance> {
     }
 
     @Override
-    default Instance evaluateTransients(final Context context, final Instance value, final Set<Path> expand) {
+    default Instance evaluateTransients(final Context context, final Instance value, final Set<Name> expand) {
 
         if(value == null) {
             return null;
@@ -75,8 +70,14 @@ public interface UseInstance extends UseNamed<Instance> {
     }
 
     @Override
-    default Set<Path> transientExpand(final Path path, final Set<Path> expand) {
+    default Set<Name> transientExpand(final Name name, final Set<Name> expand) {
 
-        return getSchema().transientExpand(path, expand);
+        return getSchema().transientExpand(name, expand);
+    }
+
+    @Override
+    default void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+
+        getSchema().collectDependencies(expand, out);
     }
 }

@@ -29,7 +29,7 @@ import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Permission;
 import io.basestar.storage.exception.ObjectMissingException;
 import io.basestar.storage.exception.VersionMismatchException;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
@@ -76,7 +76,7 @@ public class DeleteAction implements Action {
 
         assert id.equals(Instance.getId(before));
 
-        if(!Instance.getSchema(before).equals(schema.getName())) {
+        if(!Instance.getSchema(before).equals(schema.getQualifiedName())) {
             throw new IllegalStateException("Must delete using actual schema");
         }
 
@@ -106,7 +106,7 @@ public class DeleteAction implements Action {
     }
 
     @Override
-    public Set<Path> afterExpand() {
+    public Set<Name> afterExpand() {
 
         return Collections.emptySet();
     }
@@ -114,7 +114,7 @@ public class DeleteAction implements Action {
     @Override
     public Event event(final Instance before, final Instance after) {
 
-        final String schema = Instance.getSchema(before);
+        final Name schema = Instance.getSchema(before);
         final String id = Instance.getId(before);
         final Long version = Instance.getVersion(before);
         assert version != null;
@@ -122,7 +122,7 @@ public class DeleteAction implements Action {
     }
 
     @Override
-    public Set<Path> paths() {
+    public Set<Name> paths() {
 
         return Collections.emptySet();
     }

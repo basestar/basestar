@@ -21,10 +21,11 @@ package io.basestar.database.event;
  */
 
 import io.basestar.event.Event;
+import io.basestar.util.Name;
 
 public interface ObjectEvent extends Event {
 
-    String getSchema();
+    Name getSchema();
 
     String getId();
 }

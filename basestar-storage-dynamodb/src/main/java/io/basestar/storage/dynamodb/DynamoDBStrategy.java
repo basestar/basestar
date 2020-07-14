@@ -35,7 +35,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public interface DynamoDBRouting extends Serializable {
+public interface DynamoDBStrategy extends Serializable {
 
     String objectTableName(ObjectSchema schema);
 
@@ -70,7 +70,7 @@ public interface DynamoDBRouting extends Serializable {
     }
 
     @Data
-    class SingleTable implements DynamoDBRouting {
+    class SingleTable implements DynamoDBStrategy {
 
         public static final String OBJECT_PARTITION_KEY = Reserved.PREFIX + "partition";
 
@@ -96,7 +96,7 @@ public interface DynamoDBRouting extends Serializable {
         @Override
         public String objectPartitionPrefix(final ObjectSchema schema) {
 
-            return dataPrefix + schema.getName() + Reserved.DELIMITER + schema.getVersion();
+            return dataPrefix + schema.getQualifiedName() + Reserved.DELIMITER + schema.getVersion();
         }
 
         @Override
@@ -108,7 +108,7 @@ public interface DynamoDBRouting extends Serializable {
         @Override
         public String indexPartitionPrefix(final ObjectSchema schema, final Index index) {
 
-            return  dataPrefix + schema.getName() + Reserved.DELIMITER + schema.getVersion()
+            return  dataPrefix + schema.getQualifiedName() + Reserved.DELIMITER + schema.getVersion()
                     + Reserved.DELIMITER + index.getName() + Reserved.DELIMITER + index.getVersion();
         }
 
@@ -202,7 +202,7 @@ public interface DynamoDBRouting extends Serializable {
     }
 
     @Data
-    class MultiTable implements DynamoDBRouting {
+    class MultiTable implements DynamoDBStrategy {
 
         public static final String NAME_DELIMITER = ".";
 
@@ -299,13 +299,13 @@ public interface DynamoDBRouting extends Serializable {
         @Override
         public String objectTableName(final ObjectSchema schema) {
 
-            return tablePrefix + schema.getName() + NAME_DELIMITER + schema.getVersion();
+            return tablePrefix + schema.getQualifiedName() + NAME_DELIMITER + schema.getVersion();
         }
 
         @Override
         public String historyTableName(final ObjectSchema schema) {
 
-            return tablePrefix + schema.getName() + NAME_DELIMITER + schema.getVersion()
+            return tablePrefix + schema.getQualifiedName() + NAME_DELIMITER + schema.getVersion()
                     + NAME_DELIMITER + "History";
         }
 
@@ -314,7 +314,7 @@ public interface DynamoDBRouting extends Serializable {
 
             switch(indexType(schema, index)) {
                 case EXT:
-                    return tablePrefix + schema.getName() + NAME_DELIMITER + schema.getVersion()
+                    return tablePrefix + schema.getQualifiedName() + NAME_DELIMITER + schema.getVersion()
                             + NAME_DELIMITER + index.getName() + NAME_DELIMITER + index.getVersion();
                 case GSI:
                     return index.getName() + NAME_DELIMITER + index.getVersion();
@@ -358,7 +358,7 @@ public interface DynamoDBRouting extends Serializable {
                         attributeDefinitions.add(DynamoDBUtils.attributeDefinition(indexPartition, ScalarAttributeType.B));
                         attributeDefinitions.add(DynamoDBUtils.attributeDefinition(indexSort, ScalarAttributeType.B));
                     } else {
-                        tables.put(schema.getName() + Reserved.PREFIX + index.getName() + Reserved.PREFIX + "Index", TableDescription.builder()
+                        tables.put(schema.getQualifiedName() + Reserved.PREFIX + index.getName() + Reserved.PREFIX + "Index", TableDescription.builder()
                                 .tableName(indexTableName)
                                 .keySchema(
                                         DynamoDBUtils.keySchemaElement(indexPartition, KeyType.HASH),
@@ -375,7 +375,7 @@ public interface DynamoDBRouting extends Serializable {
                 final String objectTableName = objectTableName(schema);
                 final String objectPartition = objectPartitionName(schema);
                 attributeDefinitions.add(DynamoDBUtils.attributeDefinition(objectPartition, ScalarAttributeType.S));
-                tables.put(schema.getName() + Reserved.PREFIX + "Object", TableDescription.builder()
+                tables.put(schema.getQualifiedName() + Reserved.PREFIX + "Object", TableDescription.builder()
                         .tableName(objectTableName)
                         .keySchema(DynamoDBUtils.keySchemaElement(objectPartition, KeyType.HASH))
                         .attributeDefinitions(attributeDefinitions)
@@ -385,7 +385,7 @@ public interface DynamoDBRouting extends Serializable {
                 final String historyTableName = historyTableName(schema);
                 final String historyPartition = historyPartitionName(schema);
                 final String historySort = historySortName(schema);
-                tables.put(schema.getName() + Reserved.PREFIX + "History", TableDescription.builder()
+                tables.put(schema.getQualifiedName() + Reserved.PREFIX + "History", TableDescription.builder()
                         .tableName(historyTableName)
                         .keySchema(
                                 DynamoDBUtils.keySchemaElement(historyPartition, KeyType.HASH),

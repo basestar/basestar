@@ -30,16 +30,17 @@ import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.ExpressionDeseriaizer;
-import io.basestar.jackson.serde.PathDeserializer;
+import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseCollection;
 import io.basestar.schema.use.UseMap;
-import io.basestar.schema.use.UseRef;
+import io.basestar.schema.use.UseObject;
+import io.basestar.schema.util.Expander;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import io.basestar.util.Path;
 import lombok.Data;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -57,7 +58,7 @@ import java.util.*;
 public class Transient implements Member {
 
     @Nonnull
-    private final String name;
+    private final Name qualifiedName;
 
     @Nullable
     private final Use<?> type;
@@ -74,15 +75,30 @@ public class Transient implements Member {
     // FIXME: what does this do?
 
     @Nonnull
-    private final SortedSet<Path> expand;
+    private final SortedSet<Name> expand;
 
     @Nonnull
     private final Map<String, Object> extensions;
 
+    @JsonDeserialize(as = Builder.class)
+    public interface Descriptor extends Member.Descriptor {
+
+        Use<?> getType();
+
+        Expression getExpression();
+
+        Set<Name> getExpand();
+
+        default Transient build(final Name qualifiedName) {
+
+            return new Transient(this, qualifiedName);
+        }
+    }
+
     @Data
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public static class Builder implements Member.Builder {
+    public static class Builder implements Descriptor {
 
         private Use<?> type;
 
@@ -97,8 +113,8 @@ public class Transient implements Member {
         @Nullable
         @JsonSetter(contentNulls = Nulls.FAIL)
         @JsonSerialize(contentUsing = ToStringSerializer.class)
-        @JsonDeserialize(contentUsing = PathDeserializer.class)
-        private Set<Path> expand;
+        @JsonDeserialize(contentUsing = NameDeserializer.class)
+        private Set<Name> expand;
 
         @Nullable
         private Visibility visibility;
@@ -106,11 +122,6 @@ public class Transient implements Member {
         @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private Map<String, Object> extensions;
-
-        public Transient build(final String name) {
-
-            return new Transient(this, name);
-        }
     }
 
     public static Builder builder() {
@@ -118,21 +129,21 @@ public class Transient implements Member {
         return new Builder();
     }
 
-    private Transient(final Builder builder, final String name) {
+    private Transient(final Descriptor descriptor, final Name qualifiedName) {
 
-        this.name = name;
-        this.type = builder.getType();
-        this.description = builder.getDescription();
-        this.expression =  Nullsafe.require(builder.getExpression());
-        this.visibility = builder.getVisibility();
-        this.expand = Nullsafe.immutableSortedCopy(builder.getExpand());
-        if(Reserved.isReserved(name)) {
-            throw new ReservedNameException(name);
+        this.qualifiedName = qualifiedName;
+        this.type = descriptor.getType();
+        this.description = descriptor.getDescription();
+        this.expression =  Nullsafe.require(descriptor.getExpression());
+        this.visibility = descriptor.getVisibility();
+        this.expand = Nullsafe.immutableSortedCopy(descriptor.getExpand());
+        if(Reserved.isReserved(qualifiedName.last())) {
+            throw new ReservedNameException(qualifiedName);
         }
         if(type != null) {
             type.visit(TypeValidator.INSTANCE);
         }
-        this.extensions = Nullsafe.immutableSortedCopy(builder.getExtensions());
+        this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());
     }
 
     public boolean isTyped() {
@@ -141,7 +152,7 @@ public class Transient implements Member {
     }
 
     @Override
-    public Object expand(final Object value, final Expander expander, final Set<Path> expand) {
+    public Object expand(final Object value, final Expander expander, final Set<Name> expand) {
 
         return value;
     }
@@ -153,7 +164,7 @@ public class Transient implements Member {
     }
 
     @Override
-    public Object evaluateTransients(final Context context, final Object value, final Set<Path> expand) {
+    public Object evaluateTransients(final Context context, final Object value, final Set<Name> expand) {
 
         final Object raw = expression.evaluate(context);
         if(type != null) {
@@ -164,13 +175,13 @@ public class Transient implements Member {
     }
 
     @Override
-    public Set<Expression> refQueries(final String otherTypeName, final Set<Path> expand, final Path path) {
+    public Set<Expression> refQueries(final Name otherSchemaName, final Set<Name> expand, final Name name) {
 
         return Collections.emptySet();
     }
 
     @Override
-    public Set<Path> refExpand(final String otherTypeName, final Set<Path> expand) {
+    public Set<Name> refExpand(final Name otherSchemaName, final Set<Name> expand) {
 
         // FIXME
         return Collections.emptySet();
@@ -179,24 +190,24 @@ public class Transient implements Member {
     //FIXME
     @Override
     @SuppressWarnings("unchecked")
-    public <T> Use<T> typeOf(final Path path) {
+    public <T> Use<T> typeOf(final Name name) {
 
         if(type != null) {
-            return (Use<T>)type.typeOf(path);
+            return (Use<T>)type.typeOf(name);
         } else {
             throw new UnsupportedOperationException();
         }
     }
 
     @Override
-    public Set<Path> transientExpand(final Path path, final Set<Path> expand) {
+    public Set<Name> transientExpand(final Name name, final Set<Name> expand) {
 
-        final Set<Path> result = new HashSet<>();
+        final Set<Name> result = new HashSet<>();
         this.expand.forEach(p -> {
-            if(p.isChild(Path.of(Schema.VAR_THIS))) {
+            if(p.isChild(Name.of(Schema.VAR_THIS))) {
                 // Move expand from this to expand on the parameter path, have to remove the
                 // last parent path element, because it will point to this transient
-                result.add(path.withoutLast().with(p.withoutFirst()));
+                result.add(name.withoutLast().with(p.withoutFirst()));
             } else {
                 result.add(p);
             }
@@ -205,9 +216,9 @@ public class Transient implements Member {
     }
 
     @Override
-    public Set<Path> requiredExpand(final Set<Path> paths) {
+    public Set<Name> requiredExpand(final Set<Name> names) {
 
-        return ImmutableSet.of(Path.of());
+        return ImmutableSet.of(Name.of());
     }
 
     public interface Resolver {
@@ -247,7 +258,7 @@ public class Transient implements Member {
         }
 
         @Override
-        public Void visitRef(final UseRef type) {
+        public Void visitRef(final UseObject type) {
 
             throw new SchemaValidationException("Transients cannot use references");
         }
@@ -263,5 +274,48 @@ public class Transient implements Member {
 
             return type.getType().visit(this);
         }
+    }
+
+    @Override
+    public Descriptor descriptor() {
+
+        return new Descriptor() {
+            @Override
+            public Use<?> getType() {
+
+                return type;
+            }
+
+            @Override
+            public Expression getExpression() {
+
+                return expression;
+            }
+
+            @Override
+            public Set<Name> getExpand() {
+
+                return expand;
+            }
+
+            @Override
+            public Visibility getVisibility() {
+
+                return visibility;
+            }
+
+            @Nullable
+            @Override
+            public String getDescription() {
+
+                return description;
+            }
+
+            @Override
+            public Map<String, Object> getExtensions() {
+
+                return extensions;
+            }
+        };
     }
 }

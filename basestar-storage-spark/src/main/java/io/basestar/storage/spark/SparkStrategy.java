@@ -1,8 +1,8 @@
-//package io.basestar.jackson.serde;
+package io.basestar.storage.spark;
 
 /*-
  * #%L
- * basestar-jackson
+ * basestar-storage-spark
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -19,19 +19,15 @@
  * limitations under the License.
  * #L%
  */
-//
-//import com.fasterxml.jackson.core.JsonGenerator;
-//import com.fasterxml.jackson.databind.JsonSerializer;
-//import com.fasterxml.jackson.databind.SerializerProvider;
-//import io.basestar.util.Path;
-//
-//import java.io.IOException;
-//
-//public class PathSerializer extends JsonSerializer<Path> {
-//
-//    @Override
-//    public void serialize(final Path path, final JsonGenerator jsonGenerator, final SerializerProvider serializerProvider) throws IOException {
-//
-//        jsonGenerator.writeString(path.toString());
-//    }
-//}
+
+import io.basestar.schema.ObjectSchema;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
+
+public interface SparkStrategy {
+
+    Dataset<Row> objectRead(SparkSession session, ObjectSchema schema);
+
+    Dataset<Row> historyRead(SparkSession session, ObjectSchema schema);
+}

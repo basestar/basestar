@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.call.LambdaCall;
 import io.basestar.expression.constant.Constant;
-import io.basestar.expression.constant.PathConstant;
+import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.function.With;
 import io.basestar.expression.iterate.ForAll;
 import io.basestar.expression.iterate.ForAny;
@@ -33,8 +33,8 @@ import io.basestar.expression.iterate.Where;
 import io.basestar.expression.methods.Methods;
 import io.basestar.expression.parse.ExpressionCache;
 import io.basestar.expression.type.Values;
+import io.basestar.util.Name;
 import io.basestar.util.Pair;
-import io.basestar.util.Path;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -413,32 +413,32 @@ public class TestExpression {
     public void testBindWith() {
 
         final Expression expression = Expression.parse("with(m = a) m");
-        final Expression bound = expression.bind(Context.init(), PathTransform.root(Path.of("this")));
-        assertEquals(Path.of("m"), ((PathConstant)((With)bound).getYield()).getPath());
+        final Expression bound = expression.bind(Context.init(), Renaming.addPrefix(Name.of("this")));
+        assertEquals(Name.of("m"), ((NameConstant)((With)bound).getYield()).getName());
     }
 
     @Test
     public void testBindForAny() {
 
         final Expression expression = Expression.parse("m.id for any m of members");
-        final Expression bound = expression.bind(Context.init(), PathTransform.root(Path.of("this")));
-        assertEquals(Path.of("m", "id"), ((PathConstant)((ForAny)bound).getLhs()).getPath());
+        final Expression bound = expression.bind(Context.init(), Renaming.addPrefix(Name.of("this")));
+        assertEquals(Name.of("m", "id"), ((NameConstant)((ForAny)bound).getLhs()).getName());
     }
 
     @Test
     public void testBindForAll() {
 
         final Expression expression = Expression.parse("m.id for all m of members");
-        final Expression bound = expression.bind(Context.init(), PathTransform.root(Path.of("this")));
-        assertEquals(Path.of("m", "id"), ((PathConstant)((ForAll)bound).getLhs()).getPath());
+        final Expression bound = expression.bind(Context.init(), Renaming.addPrefix(Name.of("this")));
+        assertEquals(Name.of("m", "id"), ((NameConstant)((ForAll)bound).getLhs()).getName());
     }
 
     @Test
     public void testBindWhere() {
 
         final Expression expression = Expression.parse("m of members where m.id");
-        final Expression bound = expression.bind(Context.init(), PathTransform.root(Path.of("this")));
-        assertEquals(Path.of("m", "id"), ((PathConstant)((Where)bound).getRhs()).getPath());
+        final Expression bound = expression.bind(Context.init(), Renaming.addPrefix(Name.of("this")));
+        assertEquals(Name.of("m", "id"), ((NameConstant)((Where)bound).getRhs()).getName());
     }
 
     @Test

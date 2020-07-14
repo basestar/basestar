@@ -27,6 +27,7 @@ import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Ordering;
 import io.basestar.expression.Context;
@@ -38,9 +39,9 @@ import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseCollection;
 import io.basestar.schema.use.UseMap;
-import io.basestar.schema.use.UseRef;
+import io.basestar.schema.use.UseObject;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import io.basestar.util.Path;
 import io.basestar.util.Sort;
 import lombok.Data;
 import lombok.Getter;
@@ -55,7 +56,7 @@ import java.util.stream.Collectors;
 public class ViewSchema implements InstanceSchema, Permission.Resolver {
 
     @Nonnull
-    private final String name;
+    private final Name qualifiedName;
 
     private final int slot;
 
@@ -94,11 +95,55 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver {
     @Nonnull
     private final SortedMap<String, Object> extensions;
 
+    @JsonDeserialize(as = Builder.class)
+    public interface Descriptor extends InstanceSchema.Descriptor {
+
+        String TYPE = "view";
+
+        default String type() {
+
+            return TYPE;
+        }
+
+        Name getFrom();
+
+        List<Sort> getSort();
+
+        Map<String, Property.Descriptor> getSelect();
+
+        Map<String, Property.Descriptor> getGroup();
+
+        Expression getWhere();
+
+        Map<String, Permission.Descriptor> getPermissions();
+
+        @Override
+        default Map<String, Property.Descriptor> getProperties() {
+
+            return ImmutableMap.<String, Property.Descriptor>builder()
+                    .putAll(Nullsafe.option(getSelect()))
+                    .putAll(Nullsafe.option(getGroup()))
+                    .build();
+        }
+
+        @Override
+        default ViewSchema build(final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
+
+            return new ViewSchema(this, resolver, qualifiedName, slot);
+        }
+
+        @Override
+        default ViewSchema build() {
+
+            return new ViewSchema(this, Resolver.Constructing.ANONYMOUS, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
+        }
+    }
+
     @Data
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonPropertyOrder({"type", "description", "version", "from", "select", "group", "permissions", "extensions"})
-    public static class Builder implements InstanceSchema.Builder {
+    public static class Builder implements InstanceSchema.Builder, Descriptor {
 
         public static final String TYPE = "view";
 
@@ -109,7 +154,7 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver {
         private String description;
 
         @Nullable
-        private String from;
+        private Name from;
 
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
@@ -118,11 +163,11 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver {
 
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
-        private Map<String, Property.Builder> select;
+        private Map<String, Property.Descriptor> select;
 
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
-        private Map<String, Property.Builder> group;
+        private Map<String, Property.Descriptor> group;
 
         @Nullable
         @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -132,7 +177,7 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver {
 
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
-        private Map<String, Permission.Builder> permissions;
+        private Map<String, Permission.Descriptor> permissions;
 
         @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
@@ -163,28 +208,16 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver {
 
         // FIXME:
         @Override
-        public InstanceSchema.Builder setProperty(final String name, final Property.Builder v) {
+        public Builder setProperty(final String name, final Property.Descriptor v) {
 
             throw new UnsupportedOperationException();
         }
 
         // FIXME:
         @Override
-        public InstanceSchema.Builder setProperties(final Map<String, Property.Builder> vs) {
+        public Builder setProperties(final Map<String, Property.Descriptor> vs) {
 
             throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ViewSchema build(final Resolver resolver, final String name, final int slot) {
-
-            return new ViewSchema(this, resolver, name, slot);
-        }
-
-        @Override
-        public ViewSchema build() {
-
-            return new ViewSchema(this, name -> null, Schema.anonymousName(), Schema.anonymousSlot());
         }
     }
 
@@ -193,27 +226,27 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver {
         return new Builder();
     }
 
-    private ViewSchema(final Builder builder, final Schema.Resolver resolver, final String name, final int slot) {
+    private ViewSchema(final Descriptor descriptor, final Schema.Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
 
         resolver.constructing(this);
-        this.name = name;
+        this.qualifiedName = qualifiedName;
         this.slot = slot;
-        this.version = Nullsafe.option(builder.getVersion(), 1L);
-        this.from = resolver.requireInstanceSchema(builder.getFrom());
-        this.sort = Nullsafe.immutableCopy(builder.getSort());
-        this.description = builder.getDescription();
-        this.select = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getSelect()).entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, e.getKey()))));
-        this.group = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getGroup()).entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, e.getKey()))));
-        this.where = builder.getWhere();
+        this.version = Nullsafe.option(descriptor.getVersion(), 1L);
+        this.from = resolver.requireInstanceSchema(descriptor.getFrom());
+        this.sort = Nullsafe.immutableCopy(descriptor.getSort());
+        this.description = descriptor.getDescription();
+        this.select = ImmutableSortedMap.copyOf(Nullsafe.option(descriptor.getSelect()).entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, qualifiedName.with(e.getKey())))));
+        this.group = ImmutableSortedMap.copyOf(Nullsafe.option(descriptor.getGroup()).entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, qualifiedName.with(e.getKey())))));
+        this.where = descriptor.getWhere();
         this.declaredProperties = ImmutableSortedMap.<String, Property>orderedBy(Ordering.natural())
                 .putAll(select).putAll(group).build();
-        this.declaredPermissions = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getPermissions()).entrySet().stream()
+        this.declaredPermissions = ImmutableSortedMap.copyOf(Nullsafe.option(descriptor.getPermissions()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(e.getKey()))));
-        this.extensions = Nullsafe.immutableSortedCopy(builder.getExtensions());
-        if(Reserved.isReserved(name)) {
-            throw new ReservedNameException(name);
+        this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());
+        if(Reserved.isReserved(qualifiedName.last())) {
+            throw new ReservedNameException(qualifiedName.toString());
         }
         this.declaredProperties.forEach(ViewSchema::validateProperty);
     }
@@ -236,7 +269,7 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver {
     }
 
     @Override
-    public Set<Constraint.Violation> validate(final Context context, final Path path, final Instance after) {
+    public Set<Constraint.Violation> validate(final Context context, final Name name, final Instance after) {
 
         return Collections.emptySet();
     }
@@ -300,7 +333,7 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver {
         }
 
         @Override
-        public Void visitRef(final UseRef type) {
+        public Void visitRef(final UseObject type) {
 
             throw new SchemaValidationException("View properties cannot use references");
         }
@@ -316,5 +349,86 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver {
 
             return type.getType().visit(this);
         }
+    }
+
+    @Override
+    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+
+        if(!out.containsKey(qualifiedName)) {
+            out.put(qualifiedName, this);
+            from.collectDependencies(expand, out);
+            select.forEach((k, v) -> v.collectDependencies(expand, out));
+            group.forEach((k, v) -> v.collectDependencies(expand, out));
+        }
+    }
+
+    @Override
+    public Descriptor descriptor() {
+
+        return new Descriptor() {
+            @Override
+            public Name getFrom() {
+
+                return from.getQualifiedName();
+            }
+
+            @Override
+            public List<Sort> getSort() {
+
+                return sort;
+            }
+
+            @Override
+            public Map<String, Property.Descriptor> getSelect() {
+
+                return select.entrySet().stream().collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().descriptor()
+                ));
+            }
+
+            @Override
+            public Map<String, Property.Descriptor> getGroup() {
+
+                return group.entrySet().stream().collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().descriptor()
+                ));
+            }
+
+            @Override
+            public Expression getWhere() {
+
+                return where;
+            }
+
+            @Override
+            public Map<String, Permission.Descriptor> getPermissions() {
+
+                return declaredPermissions.entrySet().stream().collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().descriptor()
+                ));
+            }
+
+            @Override
+            public Long getVersion() {
+
+                return version;
+            }
+
+            @Nullable
+            @Override
+            public String getDescription() {
+
+                return description;
+            }
+
+            @Override
+            public Map<String, Object> getExtensions() {
+
+                return extensions;
+            }
+        };
     }
 }

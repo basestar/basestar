@@ -37,9 +37,9 @@ import io.basestar.storage.query.Range;
 import io.basestar.storage.query.RangeVisitor;
 import io.basestar.storage.util.KeysetPagingUtils;
 import io.basestar.storage.util.Pager;
+import io.basestar.util.Name;
 import io.basestar.util.PagedList;
 import io.basestar.util.PagingToken;
-import io.basestar.util.Path;
 import io.basestar.util.Sort;
 import lombok.Data;
 import lombok.Setter;
@@ -58,13 +58,13 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class SQLStorage implements Storage {
+public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHistory {
 
     private final DataSource dataSource;
 
     private final SQLDialect dialect;
 
-    private final SQLRouting routing;
+    private final SQLStrategy strategy;
 
     private final EventStrategy eventStrategy;
 
@@ -72,7 +72,7 @@ public class SQLStorage implements Storage {
 
         this.dataSource = builder.dataSource;
         this.dialect = builder.dialect;
-        this.routing = builder.routing;
+        this.strategy = builder.strategy;
         this.eventStrategy = MoreObjects.firstNonNull(builder.eventStrategy, EventStrategy.EMIT);
     }
 
@@ -89,7 +89,7 @@ public class SQLStorage implements Storage {
 
         private SQLDialect dialect;
 
-        private SQLRouting routing;
+        private SQLStrategy strategy;
 
         private EventStrategy eventStrategy;
 
@@ -135,14 +135,14 @@ public class SQLStorage implements Storage {
         final List<Pager.Source<Map<String, Object>>> sources = new ArrayList<>();
 
         for(final Expression conjunction : disjunction) {
-            final Map<Path, Range<Object>> ranges = conjunction.visit(new RangeVisitor());
+            final Map<Name, Range<Object>> ranges = conjunction.visit(new RangeVisitor());
 
             Index best = null;
             // Only multi-value indexes need to be matched
             for(final Index index : schema.getIndexes().values()) {
                 if(index.isMultiValue()) {
-                    final Set<Path> paths = index.getMultiValuePaths();
-                    if (ranges.keySet().containsAll(paths)) {
+                    final Set<Name> names = index.getMultiValuePaths();
+                    if (ranges.keySet().containsAll(names)) {
                         best = index;
                     }
                 }
@@ -152,7 +152,7 @@ public class SQLStorage implements Storage {
 
             final List<OrderField<?>> orderFields = sort.stream()
                     .map(v -> {
-                        final Field<?> field = DSL.field(SQLUtils.columnName(v.getPath()));
+                        final Field<?> field = DSL.field(SQLUtils.columnName(v.getName()));
                         return v.getOrder() == Sort.Order.ASC ? field.asc() : field.desc();
                     })
                     .collect(Collectors.toList());
@@ -241,7 +241,7 @@ public class SQLStorage implements Storage {
                                 .from(objectTableName(schema))
                                 .where(idField(schema).in(ids))
                                 .fetch())
-                                .forEach(v -> results.put(BatchResponse.Key.from(schema.getName(), v), v));
+                                .forEach(v -> results.put(BatchResponse.Key.from(schema.getQualifiedName(), v), v));
                     }
 
                     for (final Map.Entry<ObjectSchema, Set<IdVersion>> entry : byIdVersion.entrySet()) {
@@ -254,7 +254,7 @@ public class SQLStorage implements Storage {
                                 .where(DSL.row(idField(schema), versionField(schema))
                                         .in(idVersions))
                                 .fetch())
-                                .forEach(v -> results.put(BatchResponse.Key.from(schema.getName(), v), v));
+                                .forEach(v -> results.put(BatchResponse.Key.from(schema.getQualifiedName(), v), v));
                     }
 
                     return new BatchResponse.Basic(results);
@@ -275,69 +275,23 @@ public class SQLStorage implements Storage {
     @Override
     public WriteTransaction write(final Consistency consistency) {
 
-        return new WriteTransaction() {
+        return new WriteTransaction();
+    }
 
-            private final List<Function<DSLContext, BatchResponse>> steps = new ArrayList<>();
+    protected class WriteTransaction implements WithWriteIndex.WriteTransaction, WithWriteHistory.WriteTransaction {
 
-            @Override
-            public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+        private final List<Function<DSLContext, BatchResponse>> steps = new ArrayList<>();
 
-                steps.add(context -> {
+        @Override
+        public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
-                    try {
+            steps.add(context -> {
 
-                        context.insertInto(DSL.table(objectTableName(schema)))
-                                .set(toRecord(schema, after))
-                                .execute();
+                try {
 
-                        final History history = schema.getHistory();
-                        if(history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
-                            context.insertInto(DSL.table(historyTableName(schema)))
-                                    .set(toRecord(schema, after))
-                                    .execute();
-                        }
-
-                        return BatchResponse.single(schema.getName(), after);
-
-                    } catch (final DataAccessException e) {
-                        if(SQLStateClass.C23_INTEGRITY_CONSTRAINT_VIOLATION.equals(e.sqlStateClass())) {
-                            throw new ObjectExistsException(schema.getName(), id);
-                        } else {
-                            throw e;
-                        }
-                    }
-                });
-
-                final StorageTraits traits = storageTraits(schema);
-                for(final Index index : schema.getIndexes().values()) {
-                    final Consistency best = traits.getMultiValueIndexConsistency();
-                    if (index.isMultiValue() && !index.getConsistency(best).isAsync()) {
-                        for(final Map.Entry<Index.Key, Map<String, Object>> entry : index.readValues(after).entrySet()) {
-                            createIndex(schema, index, id, 1L, entry.getKey(), entry.getValue());
-                        }
-                    }
-                }
-
-                return this;
-            }
-
-            @Override
-            public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
-
-                steps.add(context -> {
-
-                    final Long version = before == null ? null : Instance.getVersion(before);
-
-                    Condition condition = idField(schema).eq(id);
-                    if(version != null) {
-                        condition = condition.and(versionField(schema).eq(version));
-                    }
-
-                    if(context.update(DSL.table(objectTableName(schema))).set(toRecord(schema, after))
-                            .where(condition).limit(1).execute() != 1) {
-
-                        throw new VersionMismatchException(schema.getName(), id, version);
-                    }
+                    context.insertInto(DSL.table(objectTableName(schema)))
+                            .set(toRecord(schema, after))
+                            .execute();
 
                     final History history = schema.getHistory();
                     if(history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
@@ -346,113 +300,161 @@ public class SQLStorage implements Storage {
                                 .execute();
                     }
 
-                    return BatchResponse.single(schema.getName(), after);
-                });
+                    return BatchResponse.single(schema.getQualifiedName(), after);
 
-                // FIXME: not writing non-async indexes
+                } catch (final DataAccessException e) {
+                    if(SQLStateClass.C23_INTEGRITY_CONSTRAINT_VIOLATION.equals(e.sqlStateClass())) {
+                        throw new ObjectExistsException(schema.getQualifiedName(), id);
+                    } else {
+                        throw e;
+                    }
+                }
+            });
 
-                return this;
+            final StorageTraits traits = storageTraits(schema);
+            for(final Index index : schema.getIndexes().values()) {
+                final Consistency best = traits.getMultiValueIndexConsistency();
+                if (index.isMultiValue() && !index.getConsistency(best).isAsync()) {
+                    for(final Map.Entry<Index.Key, Map<String, Object>> entry : index.readValues(after).entrySet()) {
+                        createIndex(schema, index, id, 1L, entry.getKey(), entry.getValue());
+                    }
+                }
             }
 
-            @Override
-            public WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
+            return this;
+        }
+
+        @Override
+        public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
+
+            steps.add(context -> {
+
+                final Long version = before == null ? null : Instance.getVersion(before);
+
+                Condition condition = idField(schema).eq(id);
+                if(version != null) {
+                    condition = condition.and(versionField(schema).eq(version));
+                }
+
+                if(context.update(DSL.table(objectTableName(schema))).set(toRecord(schema, after))
+                        .where(condition).limit(1).execute() != 1) {
+
+                    throw new VersionMismatchException(schema.getQualifiedName(), id, version);
+                }
+
+                final History history = schema.getHistory();
+                if(history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
+                    context.insertInto(DSL.table(historyTableName(schema)))
+                            .set(toRecord(schema, after))
+                            .execute();
+                }
+
+                return BatchResponse.single(schema.getQualifiedName(), after);
+            });
+
+            // FIXME: not writing non-async indexes
+
+            return this;
+        }
+
+        @Override
+        public WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
+
+            steps.add(context -> {
+
+                final Long version = before == null ? null : Instance.getVersion(before);
+
+                Condition condition = idField(schema).eq(id);
+                if(version != null) {
+                    condition = condition.and(versionField(schema).eq(version));
+                }
+
+                if(context.deleteFrom(DSL.table(objectTableName(schema)))
+                        .where(condition).limit(1).execute() != 1) {
+
+                    throw new VersionMismatchException(schema.getQualifiedName(), id, version);
+                }
+
+                return BatchResponse.empty();
+            });
+
+            // FIXME: not writing non-async indexes
+
+            return this;
+        }
+
+        @Override
+        public WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+
+            if (index.isMultiValue()) {
 
                 steps.add(context -> {
 
-                    final Long version = before == null ? null : Instance.getVersion(before);
-
-                    Condition condition = idField(schema).eq(id);
-                    if(version != null) {
-                        condition = condition.and(versionField(schema).eq(version));
-                    }
-
-                    if(context.deleteFrom(DSL.table(objectTableName(schema)))
-                            .where(condition).limit(1).execute() != 1) {
-
-                        throw new VersionMismatchException(schema.getName(), id, version);
-                    }
+                    context.insertInto(DSL.table(indexTableName(schema, index)))
+                            .set(toRecord(schema, index, key, projection))
+                            .execute();
 
                     return BatchResponse.empty();
                 });
 
-                // FIXME: not writing non-async indexes
-
                 return this;
-            }
 
-            @Override
-            public WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                if (index.isMultiValue()) {
-
-                    steps.add(context -> {
-
-                        context.insertInto(DSL.table(indexTableName(schema, index)))
-                                .set(toRecord(schema, index, key, projection))
-                                .execute();
-
-                        return BatchResponse.empty();
-                    });
-
-                    return this;
-
-                } else {
-                    throw new UnsupportedOperationException();
-                }
-            }
-
-            @Override
-            public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                // FIXME
+            } else {
                 throw new UnsupportedOperationException();
             }
+        }
 
-            @Override
-            public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
+        @Override
+        public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
 
-                // FIXME
-                throw new UnsupportedOperationException();
-            }
+            // FIXME
+            throw new UnsupportedOperationException();
+        }
 
-            @Override
-            public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
+        @Override
+        public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
 
-                steps.add(context -> {
+            // FIXME
+            throw new UnsupportedOperationException();
+        }
 
-                    try {
+        @Override
+        public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
 
-                        context.insertInto(DSL.table(historyTableName(schema)))
-                                .set(toRecord(schema, after))
-                                .execute();
+            steps.add(context -> {
 
-                        return BatchResponse.single(schema.getName(), after);
+                try {
 
-                    } catch (final DataAccessException e) {
-                        if(SQLStateClass.C23_INTEGRITY_CONSTRAINT_VIOLATION.equals(e.sqlStateClass())) {
-                            throw new ObjectExistsException(schema.getName(), id);
-                        } else {
-                            throw e;
-                        }
+                    context.insertInto(DSL.table(historyTableName(schema)))
+                            .set(toRecord(schema, after))
+                            .execute();
+
+                    return BatchResponse.single(schema.getQualifiedName(), after);
+
+                } catch (final DataAccessException e) {
+                    if(SQLStateClass.C23_INTEGRITY_CONSTRAINT_VIOLATION.equals(e.sqlStateClass())) {
+                        throw new ObjectExistsException(schema.getQualifiedName(), id);
+                    } else {
+                        throw e;
                     }
-                });
+                }
+            });
 
-                return this;
-            }
+            return this;
+        }
 
-            @Override
-            public CompletableFuture<BatchResponse> commit() {
+        @Override
+        public CompletableFuture<BatchResponse> write() {
 
-                final SortedMap<BatchResponse.Key, Map<String, Object>> changes = new TreeMap<>();
-                return withContext(initialContext -> initialContext.transactionAsync(config -> {
+            final SortedMap<BatchResponse.Key, Map<String, Object>> changes = new TreeMap<>();
+            return withContext(initialContext -> initialContext.transactionAsync(config -> {
 
-                    final DSLContext context = DSL.using(config);
+                final DSLContext context = DSL.using(config);
 
-                    steps.forEach(step -> changes.putAll(step.apply(context)));
+                steps.forEach(step -> changes.putAll(step.apply(context)));
 
-                }).thenApply(v -> new BatchResponse.Basic(changes)));
-            }
-        };
+            }).thenApply(v -> new BatchResponse.Basic(changes)));
+        }
     }
 
     @Override
@@ -508,19 +510,19 @@ public class SQLStorage implements Storage {
         return DSL.field(DSL.name(Reserved.VERSION), Long.class);
     }
 
-    private Name objectTableName(final ObjectSchema schema) {
+    private org.jooq.Name objectTableName(final ObjectSchema schema) {
 
-        return routing.objectTableName(schema);
+        return strategy.objectTableName(schema);
     }
 
-    private Name historyTableName(final ObjectSchema schema) {
+    private org.jooq.Name historyTableName(final ObjectSchema schema) {
 
-        return routing.historyTableName(schema);
+        return strategy.historyTableName(schema);
     }
 
-    private Name indexTableName(final ObjectSchema schema, final Index index) {
+    private org.jooq.Name indexTableName(final ObjectSchema schema, final Index index) {
 
-        return routing.indexTableName(schema, index);
+        return strategy.indexTableName(schema, index);
     }
 
     private Map<String, Object> first(final ObjectSchema schema, final Result<Record> result) {
@@ -566,23 +568,23 @@ public class SQLStorage implements Storage {
         index.projectionSchema(schema).forEach((k, v) ->
                 result.put(DSL.field(DSL.name(k)), SQLUtils.toSQLValue(v, object.get(k))));
 
-        final List<Path> partitionPaths = index.resolvePartitionPaths();
+        final List<Name> partitionNames = index.resolvePartitionPaths();
         final List<Object> partition = key.getPartition();
-        assert partitionPaths.size() == partition.size();
+        assert partitionNames.size() == partition.size();
         for(int i = 0; i != partition.size(); ++i) {
-            final Path path = partitionPaths.get(i);
+            final Name name = partitionNames.get(i);
             final Object value = partition.get(i);
-            final Use<?> type = schema.typeOf(path);
-            result.put(DSL.field(SQLUtils.columnName(path)), SQLUtils.toSQLValue(type, value));
+            final Use<?> type = schema.typeOf(name);
+            result.put(DSL.field(SQLUtils.columnName(name)), SQLUtils.toSQLValue(type, value));
         }
         final List<Sort> sortPaths = index.getSort();
         final List<Object> sort = key.getSort();
         assert sortPaths.size() == sort.size();
         for(int i = 0; i != sort.size(); ++i) {
-            final Path path = sortPaths.get(i).getPath();
+            final Name name = sortPaths.get(i).getName();
             final Object value = sort.get(i);
-            final Use<?> type = schema.typeOf(path);
-            result.put(DSL.field(SQLUtils.columnName(path)), SQLUtils.toSQLValue(type, value));
+            final Use<?> type = schema.typeOf(name);
+            result.put(DSL.field(SQLUtils.columnName(name)), SQLUtils.toSQLValue(type, value));
         }
         return result;
     }

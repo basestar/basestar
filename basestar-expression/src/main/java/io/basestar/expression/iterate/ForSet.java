@@ -27,9 +27,9 @@ import com.google.common.collect.Streams;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
-import io.basestar.expression.PathTransform;
+import io.basestar.expression.Renaming;
 import io.basestar.expression.constant.Constant;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import lombok.Data;
 
 import java.util.*;
@@ -67,10 +67,10 @@ public class ForSet implements Expression {
     }
 
     @Override
-    public Expression bind(final Context context, final PathTransform root) {
+    public Expression bind(final Context context, final Renaming root) {
 
         final Set<String> closure = iter.closure();
-        final Expression yield = this.yield.bind(context, PathTransform.closure(closure, root));
+        final Expression yield = this.yield.bind(context, Renaming.closure(closure, root));
         final Expression iter = this.iter.bind(context, root);
         if(iter instanceof Constant && yield.isConstant(closure)) {
             return new Constant(evaluate(context, yield, ((Constant) iter).getValue()));
@@ -105,9 +105,9 @@ public class ForSet implements Expression {
     }
 
     @Override
-    public Set<Path> paths() {
+    public Set<Name> paths() {
 
-        return ImmutableSet.<Path>builder()
+        return ImmutableSet.<Name>builder()
                 .addAll(yield.paths())
                 .addAll(iter.paths())
                 .build();

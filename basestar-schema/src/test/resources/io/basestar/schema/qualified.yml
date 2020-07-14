@@ -1,0 +1,20 @@
+source.A:
+  properties:
+    target:
+      type: target.A
+  links:
+    a:
+      schema: A
+      expression: true
+
+target.A:
+  properties:
+    source:
+      type: source.A
+
+A:
+  properties:
+    source:
+      type: target.A
+
+

@@ -23,7 +23,7 @@ package io.basestar.expression.constant;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.*;
 import io.basestar.expression.exception.UndefinedNameException;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -35,31 +35,31 @@ import java.util.function.Function;
 
 @Data
 @AllArgsConstructor
-public class PathConstant implements Expression {
+public class NameConstant implements Expression {
 
     public static final String TOKEN = ".";
 
     public static final int PRECEDENCE = 0;
 
-    private final Path path;
+    private final Name name;
 
-    public PathConstant(final String name) {
+    public NameConstant(final String name) {
 
-        this.path = new Path(name);
+        this.name = Name.of(name);
     }
 
     @Override
-    public Expression bind(final Context context, final PathTransform root) {
+    public Expression bind(final Context context, final Renaming root) {
 
-        if (context.has(path.first())) {
-            final Object target = context.get(path.first());
-            return new Constant(resolve(target, path.withoutFirst(), context));
+        if (context.has(name.first())) {
+            final Object target = context.get(name.first());
+            return new Constant(resolve(target, name.withoutFirst(), context));
         } else {
-            final Path newPath = root.transform(path);
-            if(newPath == path) {
+            final Name newName = root.apply(name);
+            if(newName == name) {
                 return this;
             } else {
-                return new PathConstant(newPath);
+                return new NameConstant(newName);
             }
         }
     }
@@ -67,15 +67,15 @@ public class PathConstant implements Expression {
     @Override
     public Object evaluate(final Context context) {
 
-        if(context.has(path.first())) {
-            final Object target = context.get(path.first());
-            return resolve(target, path.withoutFirst(), context);
+        if(context.has(name.first())) {
+            final Object target = context.get(name.first());
+            return resolve(target, name.withoutFirst(), context);
         } else {
-            throw new UndefinedNameException(path.first());
+            throw new UndefinedNameException(name.first());
         }
     }
 
-    private Object resolve(Object target, final Path tail, final Context context) {
+    private Object resolve(Object target, final Name tail, final Context context) {
 
         final Iterator<String> iter = tail.iterator();
         while(iter.hasNext()) {
@@ -86,9 +86,9 @@ public class PathConstant implements Expression {
     }
 
     @Override
-    public Set<Path> paths() {
+    public Set<Name> paths() {
 
-        return ImmutableSet.of(path);
+        return ImmutableSet.of(name);
     }
 
     @Override
@@ -106,7 +106,7 @@ public class PathConstant implements Expression {
     @Override
     public boolean isConstant(final Set<String> closure) {
 
-        return closure.stream().anyMatch(c -> path.isChildOrEqual(Path.of(c)));
+        return closure.stream().anyMatch(c -> name.isChildOrEqual(Name.of(c)));
     }
 
     @Override
@@ -131,19 +131,19 @@ public class PathConstant implements Expression {
     @Override
     public String toString() {
 
-        return path.toString();
+        return name.toString();
     }
 
-    public static Matcher<PathConstant> match() {
+    public static Matcher<NameConstant> match() {
 
         return match(p -> p);
     }
 
-    public static <R> Matcher<R> match(final Function<PathConstant, R> then) {
+    public static <R> Matcher<R> match(final Function<NameConstant, R> then) {
 
         return e -> {
-            if(e instanceof PathConstant) {
-                return then.apply((PathConstant) e);
+            if(e instanceof NameConstant) {
+                return then.apply((NameConstant) e);
             } else {
                 return null;
             }

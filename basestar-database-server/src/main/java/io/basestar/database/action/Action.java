@@ -25,7 +25,7 @@ import io.basestar.expression.Context;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Permission;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 
 import java.util.Set;
 
@@ -43,11 +43,11 @@ public interface Action {
 
     Instance after(Context context, Instance before);
 
-    Set<Path> afterExpand();
+    Set<Name> afterExpand();
 
     Event event(Instance before, Instance after);
 
-    Set<Path> paths();
+    Set<Name> paths();
 
 //    ExpandKey<RefKey> afterKey(Instance after);
 //

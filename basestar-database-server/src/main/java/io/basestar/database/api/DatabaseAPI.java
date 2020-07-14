@@ -39,16 +39,15 @@ import io.basestar.auth.Caller;
 import io.basestar.database.Database;
 import io.basestar.database.options.*;
 import io.basestar.expression.Expression;
-import io.basestar.schema.Instance;
-import io.basestar.schema.Link;
-import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.*;
 import io.basestar.storage.exception.ObjectMissingException;
+import io.basestar.util.Name;
 import io.basestar.util.PagedList;
 import io.basestar.util.PagingToken;
-import io.basestar.util.Path;
 import io.basestar.util.Sort;
 import io.swagger.v3.oas.models.*;
+import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.media.*;
 import io.swagger.v3.oas.models.parameters.Parameter;
 import io.swagger.v3.oas.models.parameters.RequestBody;
@@ -138,10 +137,10 @@ public class DatabaseAPI implements API {
                             if (path.get(0).equals("favicon.ico")) {
                                 return CompletableFuture.completedFuture(APIResponse.response(request,404, null));
                             } else {
-                                return query(caller, path.get(0), request);
+                                return query(caller, Name.parse(path.get(0)), request);
                             }
                         case POST:
-                            return create(caller, path.get(0), request);
+                            return create(caller, Name.parse(path.get(0)), request);
                         default:
                             throw new UnsupportedMethodException(ImmutableSet.of(APIRequest.Method.GET, APIRequest.Method.POST));
                     }
@@ -151,13 +150,13 @@ public class DatabaseAPI implements API {
                         case OPTIONS:
                             return head(request);
                         case GET:
-                            return read(caller, path.get(0), path.get(1), request);
+                            return read(caller, Name.parse(path.get(0)), path.get(1), request);
                         case PUT:
-                            return update(caller, path.get(0), path.get(1), DEFAULT_PUT_MODE, request);
+                            return update(caller, Name.parse(path.get(0)), path.get(1), DEFAULT_PUT_MODE, request);
                         case PATCH:
-                            return update(caller, path.get(0), path.get(1), DEFAULT_PATCH_MODE, request);
+                            return update(caller, Name.parse(path.get(0)), path.get(1), DEFAULT_PATCH_MODE, request);
                         case DELETE:
-                            return delete(caller, path.get(0), path.get(1), request);
+                            return delete(caller, Name.parse(path.get(0)), path.get(1), request);
                         default:
                             throw new UnsupportedMethodException(ImmutableSet.of(APIRequest.Method.GET, APIRequest.Method.PUT, APIRequest.Method.POST, APIRequest.Method.DELETE));
                     }
@@ -167,7 +166,7 @@ public class DatabaseAPI implements API {
                         case OPTIONS:
                             return head(request);
                         case GET:
-                            return queryLink(caller, path.get(0), path.get(1), path.get(2), request);
+                            return queryLink(caller, Name.parse(path.get(0)), path.get(1), path.get(2), request);
                         default:
                             throw new UnsupportedMethodException(ImmutableSet.of(APIRequest.Method.GET));
                     }
@@ -196,7 +195,7 @@ public class DatabaseAPI implements API {
         return CompletableFuture.completedFuture(APIResponse.success(request,null));
     }
 
-    private CompletableFuture<APIResponse> create(final Caller caller, final String schema, final APIRequest request) {
+    private CompletableFuture<APIResponse> create(final Caller caller, final Name schema, final APIRequest request) {
 
         final Map<String, Object> data = parseData(request);
         final String id = Instance.getId(data);
@@ -209,7 +208,7 @@ public class DatabaseAPI implements API {
         return respond(request, database.create(caller, options), ignored -> 201);
     }
 
-    private CompletableFuture<APIResponse> read(final Caller caller, final String schema, final String id, final APIRequest request) {
+    private CompletableFuture<APIResponse> read(final Caller caller, final Name schema, final String id, final APIRequest request) {
 
         final ReadOptions options = ReadOptions.builder()
                 .schema(schema).id(id)
@@ -226,7 +225,7 @@ public class DatabaseAPI implements API {
         }));
     }
 
-    private CompletableFuture<APIResponse> update(final Caller caller, final String schema, final String id, final UpdateOptions.Mode mode, final APIRequest request) {
+    private CompletableFuture<APIResponse> update(final Caller caller, final Name schema, final String id, final UpdateOptions.Mode mode, final APIRequest request) {
 
         final Map<String, Object> data = parseData(request);
 
@@ -240,7 +239,7 @@ public class DatabaseAPI implements API {
         return respond(request, database.update(caller, options), v -> Long.valueOf(1).equals(Instance.getVersion(v)) ? 201 : 200);
     }
 
-    private CompletableFuture<APIResponse> delete(final Caller caller, final String schema, final String id, final APIRequest request) {
+    private CompletableFuture<APIResponse> delete(final Caller caller, final Name schema, final String id, final APIRequest request) {
 
         final DeleteOptions options = DeleteOptions.builder()
                 .schema(schema).id(id)
@@ -250,7 +249,7 @@ public class DatabaseAPI implements API {
         return respond(request, database.delete(caller, options), ignored -> 204);
     }
 
-    private CompletableFuture<APIResponse> query(final Caller caller, final String schema, final APIRequest request) {
+    private CompletableFuture<APIResponse> query(final Caller caller, final Name schema, final APIRequest request) {
 
         final Expression query = parseQuery(request);
 
@@ -265,7 +264,7 @@ public class DatabaseAPI implements API {
         return respondPaged(request, database.query(caller, options));
     }
 
-    private CompletableFuture<APIResponse> queryLink(final Caller caller, final String schema, final String id, final String link, final APIRequest request) {
+    private CompletableFuture<APIResponse> queryLink(final Caller caller, final Name schema, final String id, final String link, final APIRequest request) {
 
         final QueryLinkOptions options = QueryLinkOptions.builder()
                 .schema(schema).id(id).link(link)
@@ -277,12 +276,12 @@ public class DatabaseAPI implements API {
         return respondPaged(request, database.queryLink(caller, options));
     }
 
-    private Set<Path> parseExpand(final APIRequest request) {
+    private Set<Name> parseExpand(final APIRequest request) {
 
         try {
             final String expand = request.getFirstQuery(PARAM_EXPAND);
             if(expand != null) {
-                return Path.parseSet(expand);
+                return Name.parseSet(expand);
             } else {
                 return null;
             }
@@ -426,6 +425,16 @@ public class DatabaseAPI implements API {
         }
     }
 
+    private String name(final io.basestar.schema.Schema<?> schema) {
+
+        return schema.getQualifiedName().toString(Reserved.PREFIX);
+    }
+
+    private String tag(final ObjectSchema schema) {
+
+        return schema.getQualifiedName().toString();
+    }
+
     @Override
     public CompletableFuture<OpenAPI> openApi() {
 
@@ -433,7 +442,8 @@ public class DatabaseAPI implements API {
 
         final Paths paths = new Paths();
         final Components components = new Components();
-        namespace.getSchemas().forEach((name, schema) -> {
+        namespace.getSchemas().forEach((qualifiedName, schema) -> {
+            final String name = name(schema);
             components.addSchemas(name, schema.openApi());
             if(schema instanceof ObjectSchema) {
                 final ObjectSchema objectSchema = (ObjectSchema)schema;
@@ -452,16 +462,16 @@ public class DatabaseAPI implements API {
     private Map<String, PathItem> openApiPaths(final ObjectSchema schema) {
 
         final Map<String, PathItem> paths = new HashMap<>();
-        paths.put("/" + schema.getName(), new PathItem()
+        paths.put("/" + schema.getQualifiedName(), new PathItem()
                 .get(openApiQuery(schema))
                 .post(openApiCreate(schema)));
-        paths.put("/" + schema.getName() + "/{" + PARAM_ID + "}", new PathItem()
+        paths.put("/" + schema.getQualifiedName() + "/{" + PARAM_ID + "}", new PathItem()
                 .get(openApiGet(schema))
                 .put(openApiUpdate(schema))
                 .patch(openApiPatch(schema))
                 .delete(openApiDelete(schema)));
         schema.getLinks().forEach((name, link) -> {
-            paths.put("/" + schema.getName() + "/{" + PARAM_ID + "}/" + name, new PathItem()
+            paths.put("/" + schema.getQualifiedName() + "/{" + PARAM_ID + "}/" + name, new PathItem()
                     .get(openApiLinkQuery(schema, link)));
         });
         return paths;
@@ -469,89 +479,97 @@ public class DatabaseAPI implements API {
 
     private Operation openApiGet(final ObjectSchema schema) {
 
+        final String name = name(schema);
         return new Operation()
-                .operationId("get" + schema.getName())
+                .operationId("get" + schema.getQualifiedName())
                 .addParametersItem(new Parameter().name(PARAM_ID).in(IN_PATH).schema(new StringSchema()))
                 .addParametersItem(new Parameter().name(PARAM_EXPAND).in(IN_QUERY).schema(new StringSchema()))
-                .responses(openApiResponses(new ApiResponse().$ref(schema.getName())))
-                .addTagsItem(schema.getName());
+                .responses(openApiResponses(new ApiResponse().$ref(name)))
+                .addTagsItem(tag(schema));
     }
 
     private Operation openApiCreate(final ObjectSchema schema) {
 
+        final String name = name(schema);
         return new Operation()
-                .operationId("create" + schema.getName())
+                .operationId("create" + schema.getQualifiedName())
                 .addParametersItem(new Parameter().name(PARAM_EXPAND).in(IN_QUERY).schema(new StringSchema()))
                 .addParametersItem(new Parameter().name(PARAM_VERSION).in(IN_QUERY).schema(new StringSchema()))
-                .requestBody(new RequestBody().$ref(schema.getName()))
-                .responses(openApiResponses(new ApiResponse().$ref(schema.getName())))
-                .addTagsItem(schema.getName());
+                .requestBody(new RequestBody().$ref(name))
+                .responses(openApiResponses(new ApiResponse().$ref(name)))
+                .addTagsItem(tag(schema));
     }
 
     private Operation openApiUpdate(final ObjectSchema schema) {
 
+        final String name = name(schema);
         return new Operation()
-                .operationId("update" + schema.getName())
+                .operationId("update" + schema.getQualifiedName())
                 .addParametersItem(new Parameter().name(PARAM_ID).in(IN_PATH).schema(new StringSchema()))
                 .addParametersItem(new Parameter().name(PARAM_VERSION).in(IN_QUERY).schema(new StringSchema()))
                 .addParametersItem(new Parameter().name(PARAM_EXPAND).in(IN_QUERY).schema(new StringSchema()))
                 .addParametersItem(new Parameter().name(PARAM_MODE).in(IN_QUERY).schema(new StringSchema()))
-                .requestBody(new RequestBody().$ref(schema.getName()))
-                .responses(openApiResponses(new ApiResponse().$ref(schema.getName())))
-                .addTagsItem(schema.getName());
+                .requestBody(new RequestBody().$ref(name))
+                .responses(openApiResponses(new ApiResponse().$ref(name)))
+                .addTagsItem(tag(schema));
     }
 
     private Operation openApiPatch(final ObjectSchema schema) {
 
+        final String name = name(schema);
         return new Operation()
-                .operationId("patch" + schema.getName())
+                .operationId("patch" + schema.getQualifiedName())
                 .addParametersItem(new Parameter().name(PARAM_ID).in(IN_PATH).schema(new StringSchema()))
                 .addParametersItem(new Parameter().name(PARAM_VERSION).in(IN_QUERY).schema(new StringSchema()))
                 .addParametersItem(new Parameter().name(PARAM_EXPAND).in(IN_QUERY).schema(new StringSchema()))
                 .addParametersItem(new Parameter().name(PARAM_MODE).in(IN_QUERY).schema(new StringSchema()))
-                .requestBody(new RequestBody().$ref(schema.getName()))
-                .responses(openApiResponses(new ApiResponse().$ref(schema.getName())))
-                .addTagsItem(schema.getName());
+                .requestBody(new RequestBody().$ref(name))
+                .responses(openApiResponses(new ApiResponse().$ref(name)))
+                .addTagsItem(tag(schema));
     }
 
     private Operation openApiDelete(final ObjectSchema schema) {
 
+        final String name = name(schema);
         return new Operation()
-                .operationId("delete" + schema.getName())
+                .operationId("delete" + schema.getQualifiedName())
                 .addParametersItem(new Parameter().name(PARAM_ID).in(IN_PATH).schema(new StringSchema()))
                 .addParametersItem(new Parameter().name(PARAM_VERSION).in(IN_QUERY).schema(new StringSchema()))
-                .responses(openApiResponses(new ApiResponse().$ref(schema.getName())))
-                .addTagsItem(schema.getName());
+                .responses(openApiResponses(new ApiResponse().$ref(name)))
+                .addTagsItem(tag(schema));
     }
 
     private Operation openApiQuery(final ObjectSchema schema) {
 
+        final String name = name(schema);
         return new Operation()
-                .operationId("query" + schema.getName())
+                .operationId("query" + schema.getQualifiedName())
                 .addParametersItem(new Parameter().name(PARAM_QUERY).in(IN_QUERY).schema(new StringSchema()))
                 .addParametersItem(new Parameter().name(PARAM_EXPAND).in(IN_QUERY).schema(new StringSchema()))
                 .addParametersItem(new Parameter().name(PARAM_COUNT).in(IN_QUERY).schema(new IntegerSchema()))
                 .addParametersItem(new Parameter().name(PARAM_PAGING).in(IN_QUERY).schema(new StringSchema()))
-                .responses(openApiResponses(new ApiResponse().$ref(schema.getName() + "Page")))
-                .addTagsItem(schema.getName());
+                .responses(openApiResponses(new ApiResponse().$ref(name + "Page")))
+                .addTagsItem(tag(schema));
     }
 
     private Operation openApiLinkQuery(final ObjectSchema schema, final Link link) {
 
+        final String linkName = name(link.getSchema());
         return new Operation()
-                .operationId("queryLink" + schema.getName() + link.getName())
+                .operationId("queryLink" + schema.getQualifiedName() + link.getName())
                 .addParametersItem(new Parameter().name(PARAM_ID).in(IN_PATH).schema(new StringSchema()))
                 .addParametersItem(new Parameter().name(PARAM_QUERY).in(IN_QUERY).schema(new StringSchema()))
                 .addParametersItem(new Parameter().name(PARAM_EXPAND).in(IN_QUERY).schema(new StringSchema()))
                 .addParametersItem(new Parameter().name(PARAM_COUNT).in(IN_QUERY).schema(new IntegerSchema()))
                 .addParametersItem(new Parameter().name(PARAM_PAGING).in(IN_QUERY).schema(new StringSchema()))
-                .responses(openApiResponses(new ApiResponse().$ref(schema.getName() + "Page")))
-                .addTagsItem(schema.getName());
+                .responses(openApiResponses(new ApiResponse().$ref(linkName + "Page")))
+                .addTagsItem(tag(schema));
     }
 
     private Schema<?> openApiRef(final ObjectSchema schema) {
 
-        return new io.swagger.v3.oas.models.media.ObjectSchema().$ref(schema.getName());
+        final String name = name(schema);
+        return new io.swagger.v3.oas.models.media.ObjectSchema().$ref(name);
     }
 
     private Content openApiContent(final io.swagger.v3.oas.models.media.Schema<?> schema) {

@@ -22,6 +22,7 @@ package io.basestar.database.util;
 
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.util.Name;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
@@ -31,13 +32,13 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class RefKey {
 
-    private final String schema;
+    private final Name schema;
 
     private final String id;
 
     public static RefKey from(final Map<String, Object> item) {
 
-        final String schema = Instance.getSchema(item);
+        final Name schema = Instance.getSchema(item);
         final String id = Instance.getId(item);
         assert schema != null && id != null;
         return new RefKey(schema, id);
@@ -47,6 +48,6 @@ public class RefKey {
 
         final String id = Instance.getId(item);
         assert id != null;
-        return new RefKey(schema.getName(), id);
+        return new RefKey(schema.getQualifiedName(), id);
     }
 }

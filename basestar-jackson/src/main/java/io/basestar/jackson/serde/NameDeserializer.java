@@ -20,15 +20,28 @@ package io.basestar.jackson.serde;
  * #L%
  */
 
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.KeyDeserializer;
-import io.basestar.util.Path;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import io.basestar.util.Name;
+import lombok.RequiredArgsConstructor;
 
-public class PathKeyDeserializer extends KeyDeserializer {
+import java.io.IOException;
+
+@RequiredArgsConstructor
+public class NameDeserializer extends JsonDeserializer<Name> {
+
+    private final boolean allowEmpty;
+
+    public NameDeserializer() {
+
+        this(false);
+    }
 
     @Override
-    public Object deserializeKey(final String s, final DeserializationContext deserializationContext) {
+    public Name deserialize(final JsonParser jsonParser, final DeserializationContext deserializationContext) throws IOException {
 
-        return Path.parse(s);
+        final String str = jsonParser.getText();
+        return allowEmpty ? Name.parse(str) : Name.parseNonEmpty(str);
     }
 }

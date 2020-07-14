@@ -24,7 +24,7 @@ import io.basestar.schema.ObjectSchema;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
-public interface S3BlobRouting {
+public interface S3BlobStrategy {
 
     String objectBucket(ObjectSchema schema);
 
@@ -36,7 +36,7 @@ public interface S3BlobRouting {
 
     @Data
     @RequiredArgsConstructor
-    class Simple implements S3BlobRouting {
+    class Simple implements S3BlobStrategy {
 
         private final String bucket;
 
@@ -69,7 +69,7 @@ public interface S3BlobRouting {
         protected String prefix(final ObjectSchema schema) {
 
             final String base = (prefix == null ? "" : (prefix + (prefix.endsWith("/") ? "" : "/")));
-            return base + schema.getName() + "/";
+            return base + schema.getQualifiedName() + "/";
         }
     }
 }

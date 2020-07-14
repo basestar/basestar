@@ -23,7 +23,7 @@ package io.basestar.spark;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.*;
@@ -35,15 +35,15 @@ import java.util.stream.Stream;
 
 public class SparkSchemaUtils {
 
-    public static StructType structType(final InstanceSchema schema, final Set<Path> expand) {
+    public static StructType structType(final InstanceSchema schema, final Set<Name> expand) {
 
         return structType(schema, expand, ImmutableMap.of());
     }
 
-    public static StructType structType(final InstanceSchema schema, final Set<Path> expand, final Map<String, Use<?>> extraMetadata) {
+    public static StructType structType(final InstanceSchema schema, final Set<Name> expand, final Map<String, Use<?>> extraMetadata) {
 
         final List<StructField> fields = new ArrayList<>();
-        final Map<String, Set<Path>> branches = Path.branch(expand);
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         schema.getProperties()
                 .forEach((name, property) -> fields.add(field(name, property, branches.get(name))));
         schema.metadataSchema()
@@ -52,7 +52,7 @@ public class SparkSchemaUtils {
         if(schema instanceof Link.Resolver) {
             ((Link.Resolver)schema).getLinks()
                     .forEach((name, link) -> {
-                        final Set<Path> branch = branches.get(name);
+                        final Set<Name> branch = branches.get(name);
                         if(branch != null) {
                             fields.add(field(name, link, branch));
                         }
@@ -61,7 +61,7 @@ public class SparkSchemaUtils {
         if(schema instanceof Transient.Resolver) {
             ((Transient.Resolver)schema).getTransients()
                     .forEach((name, trans) -> {
-                        final Set<Path> branch = branches.get(name);
+                        final Set<Name> branch = branches.get(name);
                         if(branch != null) {
                             fields.add(field(name, trans, branch));
                         }
@@ -71,7 +71,7 @@ public class SparkSchemaUtils {
         return DataTypes.createStructType(fields);
     }
 
-    public static StructType refType(final ObjectSchema schema, final Set<Path> expand) {
+    public static StructType refType(final ObjectSchema schema, final Set<Name> expand) {
 
         if(expand == null) {
             return refType();
@@ -89,17 +89,17 @@ public class SparkSchemaUtils {
         return DataTypes.createStructType(fields);
     }
 
-    public static StructField field(final String name, final Property property, final Set<Path> expand) {
+    public static StructField field(final String name, final Property property, final Set<Name> expand) {
 
         return field(name, property.getType(), expand);
     }
 
-    public static StructField field(final String name, final Link link, final Set<Path> expand) {
+    public static StructField field(final String name, final Link link, final Set<Name> expand) {
 
         return field(name, link.getType(), expand);
     }
 
-    public static StructField field(final String name, final Transient trans, final Set<Path> expand) {
+    public static StructField field(final String name, final Transient trans, final Set<Name> expand) {
 
         if(trans.isTyped()) {
             return field(name, trans.getType(), expand);
@@ -108,7 +108,7 @@ public class SparkSchemaUtils {
         }
     }
 
-    public static StructField field(final String name, final Use<?> type, final Set<Path> expand) {
+    public static StructField field(final String name, final Use<?> type, final Set<Name> expand) {
 
         return field(name, type(type, expand));
     }
@@ -118,7 +118,7 @@ public class SparkSchemaUtils {
         return StructField.apply(name, type, true, Metadata.empty());
     }
 
-    public static DataType type(final Schema<?> schema, final Set<Path> expand) {
+    public static DataType type(final Schema<?> schema, final Set<Name> expand) {
 
         if (schema instanceof ObjectSchema) {
             return structType((ObjectSchema) schema, expand);
@@ -131,7 +131,7 @@ public class SparkSchemaUtils {
         }
     }
 
-    public static DataType type(final Use<?> type, final Set<Path> expand) {
+    public static DataType type(final Use<?> type, final Set<Name> expand) {
 
         return type.visit(new Use.Visitor<DataType>() {
 
@@ -166,7 +166,7 @@ public class SparkSchemaUtils {
             }
 
             @Override
-            public DataType visitRef(final UseRef type) {
+            public DataType visitRef(final UseObject type) {
 
                 return refType(type.getSchema(), expand);
             }
@@ -275,7 +275,7 @@ public class SparkSchemaUtils {
             }
 
             @Override
-            public Object visitRef(final UseRef type) {
+            public Object visitRef(final UseObject type) {
 
                 if(value instanceof Row) {
                     return refFromSpark((Row)value);
@@ -441,7 +441,7 @@ public class SparkSchemaUtils {
 
             @Override
             @SuppressWarnings("unchecked")
-            public Object visitRef(final UseRef type) {
+            public Object visitRef(final UseObject type) {
 
                 if(value instanceof Map<?, ?> && dataType instanceof StructType) {
                     return refToSpark((StructType)dataType, (Map<String, Object>) value);

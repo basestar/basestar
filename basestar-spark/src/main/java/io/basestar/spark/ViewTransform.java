@@ -31,8 +31,8 @@ import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseBoolean;
 import io.basestar.spark.expression.SparkAggregateVisitor;
 import io.basestar.spark.expression.SparkExpressionVisitor;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import io.basestar.util.Path;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.RelationalGroupedDataset;
@@ -126,12 +126,12 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         return apply(ds, expression).cast(SparkSchemaUtils.type(type, ImmutableSet.of()));
     }
 
-    private Function<Path, Column> columnResolver(final Dataset<Row> ds) {
+    private Function<Name, Column> columnResolver(final Dataset<Row> ds) {
 
         return path -> next(ds.col(path.get(0)), path.withoutFirst());
     }
 
-    private Column next(final Column col, final Path rest) {
+    private Column next(final Column col, final Name rest) {
 
         if(rest.isEmpty()) {
             return col;

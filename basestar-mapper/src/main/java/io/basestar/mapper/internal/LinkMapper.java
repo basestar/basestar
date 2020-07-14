@@ -76,7 +76,7 @@ public class LinkMapper implements MemberMapper<ObjectSchema.Builder> {
 
         final SchemaMapper<?, ?> schema = itemType.getMapper();
         builder.setLink(name, Link.builder()
-                .setSchema(schema.name())
+                .setSchema(schema.qualifiedName())
                 .setExpression(expression)
                 .setSort(sort));
     }

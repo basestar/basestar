@@ -24,6 +24,16 @@ import java.util.concurrent.CompletableFuture;
 
 public class CompletableFutures {
 
+//    static <I, O> CompletableFuture<O> mergeFutures(final Stream<? extends CompletableFuture<? extends BatchResponse>> responses) {
+//
+//        final List<CompletableFuture<? extends BatchResponse>> futures = responses.collect(Collectors.toList());
+//
+//        return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]))
+//                .thenApply(ignored -> BatchResponse.merge(futures.stream()
+//                        .map(v -> v.getNow(null))
+//                        .map(v -> v == null ? BatchResponse.empty() : v)));
+//    }
+
     public static <T> CompletableFuture<T> completedExceptionally(final Throwable err) {
 
         final CompletableFuture<T> future = new CompletableFuture<>();

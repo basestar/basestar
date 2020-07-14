@@ -21,6 +21,7 @@ package io.basestar.auth;
  */
 
 import com.google.common.collect.ImmutableMap;
+import io.basestar.util.Name;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 
 import java.util.Map;
@@ -61,9 +62,9 @@ public class ExplicitAuthenticator implements Authenticator {
             }
 
             @Override
-            public String getSchema() {
+            public Name getSchema() {
 
-                return "User";
+                return Name.of("User");
             }
 
             @Override

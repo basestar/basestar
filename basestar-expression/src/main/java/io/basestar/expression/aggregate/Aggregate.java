@@ -33,6 +33,7 @@ public interface Aggregate {
     Map<String, Factory> REGISTRY = ImmutableMap.<String, Factory>builder()
             .put(Avg.NAME, Avg::create)
             .put(Count.NAME, Count::create)
+            // MORE COMPLICATED THAN OTHERS
             .put(Max.NAME, Max::create)
             .put(Min.NAME, Min::create)
             .put(Sum.NAME, Sum::create)

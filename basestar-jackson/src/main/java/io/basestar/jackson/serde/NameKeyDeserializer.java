@@ -1,8 +1,8 @@
-package io.basestar.storage.cognito;
+package io.basestar.jackson.serde;
 
 /*-
  * #%L
- * basestar-storage-cognito
+ * basestar-jackson
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -20,9 +20,24 @@ package io.basestar.storage.cognito;
  * #L%
  */
 
-import io.basestar.schema.ObjectSchema;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.KeyDeserializer;
+import io.basestar.util.Name;
+import lombok.RequiredArgsConstructor;
 
-public interface CognitoUserRouting {
+@RequiredArgsConstructor
+public class NameKeyDeserializer extends KeyDeserializer {
 
-    String getUserPoolId(ObjectSchema schema);
+    private final boolean allowEmpty;
+
+    public NameKeyDeserializer() {
+
+        this(false);
+    }
+
+    @Override
+    public Object deserializeKey(final String str, final DeserializationContext deserializationContext) {
+
+        return allowEmpty ? Name.parse(str) : Name.parseNonEmpty(str);
+    }
 }

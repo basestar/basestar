@@ -29,6 +29,8 @@ import lombok.*;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -68,6 +70,16 @@ public class Pager<T> {
     public interface Source<T> {
 
         CompletableFuture<PagedList<T>> page(int count, PagingToken token, Set<PagedList.Stat> stats);
+
+        default Source<T> filter(final Predicate<T> fn) {
+
+            return (count, token, stats) -> this.page(count, token, stats).thenApply(page -> page.filter(fn));
+        }
+
+        default <U> Source<U> map(final Function<T, U> fn) {
+
+            return (count, token, stats) -> this.page(count, token, stats).thenApply(page -> page.map(fn));
+        }
     }
 
     public CompletableFuture<PagedList<T>> page(final int count) {

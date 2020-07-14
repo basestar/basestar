@@ -76,8 +76,8 @@ public class TestDynamoDBStorage extends TestStorage {
     @Override
     protected Storage storage(final Namespace namespace, final Multimap<String, Map<String, Object>> data) {
 
-        final DynamoDBRouting ddbRouting = DynamoDBRouting.SingleTable.builder().tablePrefix(UUID.randomUUID() + "-").build();
-        final Storage storage = DynamoDBStorage.builder().setClient(ddb).setRouting(ddbRouting)
+        final DynamoDBStrategy ddbRouting = DynamoDBStrategy.SingleTable.builder().tablePrefix(UUID.randomUUID() + "-").build();
+        final Storage storage = DynamoDBStorage.builder().setClient(ddb).setStrategy(ddbRouting)
                 .setEventStrategy(Storage.EventStrategy.SUPPRESS)
                 .setOversizeStash(MemoryStash.builder().build())
                 .build();

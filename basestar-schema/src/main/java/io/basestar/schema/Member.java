@@ -25,7 +25,8 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.use.Use;
-import io.basestar.util.Path;
+import io.basestar.schema.util.Expander;
+import io.basestar.util.Name;
 
 import java.io.Serializable;
 import java.util.Map;
@@ -35,31 +36,60 @@ public interface Member extends Named, Described, Serializable, Extendable {
 
     String VAR_VALUE = "value";
 
-    String getName();
+    interface Descriptor extends Described, Extendable {
+
+        Visibility getVisibility();
+    }
+
+    interface Builder extends Descriptor {
+
+    }
+
+    interface Resolver {
+
+        @JsonIgnore
+        Map<String, ? extends Member> getDeclaredMembers();
+
+        @JsonIgnore
+        Map<String, ? extends Member> getMembers();
+
+        Member getMember(String name, boolean inherited);
+
+        default Member requireMember(final String name, final boolean inherited) {
+
+            final Member result = getMember(name, inherited);
+            if (result == null) {
+                throw new MissingMemberException(name);
+            } else {
+                return result;
+            }
+        }
+    }
 
     Use<?> getType();
 
     Visibility getVisibility();
 
-//    void resolve(String name, Schema schema, Namespace namespace);
+    Object expand(Object value, Expander expander, Set<Name> expand);
 
-    Object expand(Object value, Expander expander, Set<Path> expand);
+    Set<Name> requiredExpand(Set<Name> names);
 
-//    Optional<Object> collapse(Object value, Set<Path> expand);
+    <T> Use<T> typeOf(Name name);
 
-    Set<Path> requiredExpand(Set<Path> paths);
-
-    <T> Use<T> typeOf(Path path);
-
-    Set<Path> transientExpand(Path path, Set<Path> expand);
+    Set<Name> transientExpand(Name name, Set<Name> expand);
 
     Object applyVisibility(Context context, Object value);
 
-    Object evaluateTransients(Context context, Object value, Set<Path> expand);
+    Object evaluateTransients(Context context, Object value, Set<Name> expand);
 
-    Set<Expression> refQueries(String otherTypeName, Set<Path> expand, Path path);
+    Set<Expression> refQueries(Name otherSchemaName, Set<Name> expand, Name name);
 
-    Set<Path> refExpand(String otherTypeName, Set<Path> expand);
+    Set<Name> refExpand(Name otherSchemaName, Set<Name> expand);
+
+    default void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+
+        getType().collectDependencies(expand, out);
+    }
 
     default boolean isVisible(final Context context, final Object value) {
 
@@ -89,28 +119,5 @@ public interface Member extends Named, Described, Serializable, Extendable {
         return getType().openApi().description(getDescription());
     }
 
-    interface Builder extends Described {
-
-    }
-
-    interface Resolver {
-
-        @JsonIgnore
-        Map<String, ? extends Member> getDeclaredMembers();
-
-        @JsonIgnore
-        Map<String, ? extends Member> getMembers();
-
-        Member getMember(String name, boolean inherited);
-
-        default Member requireMember(final String name, final boolean inherited) {
-
-            final Member result = getMember(name, inherited);
-            if (result == null) {
-                throw new MissingMemberException(name);
-            } else {
-                return result;
-            }
-        }
-    }
+    Descriptor descriptor();
 }

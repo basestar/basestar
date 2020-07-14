@@ -20,7 +20,7 @@ package io.basestar.database.options;
  * #L%
  */
 
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 import lombok.Builder;
 import lombok.Data;
 
@@ -32,13 +32,13 @@ public class ReadOptions implements Options {
 
     public static final String TYPE = "read";
 
-    private final String schema;
+    private final Name schema;
 
     private final String id;
 
-    private final Set<Path> expand;
+    private final Set<Name> expand;
 
-    private final Set<Path> projection;
+    private final Set<Name> projection;
 
     private final Long version;
 }

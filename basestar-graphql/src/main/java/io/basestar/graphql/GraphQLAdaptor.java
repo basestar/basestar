@@ -37,24 +37,24 @@ public class GraphQLAdaptor {
 
     private final Namespace namespace;
 
-    private final GraphQLNamingStrategy namingStrategy;
+    private final GraphQLStrategy strategy;
 
     public GraphQLAdaptor(final Database database, final Namespace namespace) {
 
-        this(database, namespace, GraphQLNamingStrategy.DEFAULT);
+        this(database, namespace, GraphQLStrategy.DEFAULT);
     }
 
-    public GraphQLAdaptor(final Database database, final Namespace namespace, final GraphQLNamingStrategy namingStrategy) {
+    public GraphQLAdaptor(final Database database, final Namespace namespace, final GraphQLStrategy strategy) {
 
         this.database = database;
         this.namespace = namespace;
-        this.namingStrategy = namingStrategy;
+        this.strategy = strategy;
     }
 
     public GraphQL graphQL() {
 
-        final TypeDefinitionRegistry registry = new SchemaAdaptor(namespace, namingStrategy).typeDefinitionRegistry();
-        final RuntimeWiring wiring = new RuntimeWiringFactory(database, namespace, namingStrategy).runtimeWiring();
+        final TypeDefinitionRegistry registry = new SchemaAdaptor(namespace, strategy).typeDefinitionRegistry();
+        final RuntimeWiring wiring = new RuntimeWiringFactory(database, namespace, strategy).runtimeWiring();
 
         final SchemaGenerator generator = new SchemaGenerator();
         final GraphQLSchema schema = generator.makeExecutableSchema(registry, wiring);

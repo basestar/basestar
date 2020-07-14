@@ -28,8 +28,8 @@ import io.basestar.schema.Reserved;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseString;
 import io.basestar.spark.expression.SparkExpressionVisitor;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import io.basestar.util.Path;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -40,10 +40,10 @@ public class ExpressionTransform implements Transform<Dataset<Row>, Dataset<Row>
 
     private final ObjectSchema schema;
 
-    private final Set<Path> expand;
+    private final Set<Name> expand;
 
     @lombok.Builder(builderClassName = "Builder")
-    ExpressionTransform(final ObjectSchema schema, final Set<Path> expand) {
+    ExpressionTransform(final ObjectSchema schema, final Set<Name> expand) {
 
         this.schema = Nullsafe.require(schema);
         this.expand = Nullsafe.option(expand);
@@ -74,7 +74,7 @@ public class ExpressionTransform implements Transform<Dataset<Row>, Dataset<Row>
     private SparkExpressionVisitor visitor(final Dataset<Row> ds) {
 
         return new SparkExpressionVisitor(path -> {
-            assert path.size() == 2 && path.isChild(Path.of(Reserved.THIS));
+            assert path.size() == 2 && path.isChild(Name.of(Reserved.THIS));
             return ds.col(path.get(1));
         });
     }

@@ -50,7 +50,7 @@ public class TestSQLStorage extends TestStorage {
 
         final String objectSchema = UUID.randomUUID().toString().replaceAll("-", "_");
         final String historySchema = UUID.randomUUID().toString().replaceAll("-", "_");
-        final SQLRouting routing = new SQLRouting.Simple(objectSchema, historySchema);
+        final SQLStrategy strategy = new SQLStrategy.Simple(objectSchema, historySchema);
 
         final List<ObjectSchema> schemas = new ArrayList<>();
         for(final Schema<?> schema : namespace.getSchemas().values()) {
@@ -62,7 +62,7 @@ public class TestSQLStorage extends TestStorage {
         try(final Connection conn = ds.getConnection()) {
             conn.prepareStatement("CREATE DOMAIN IF NOT EXISTS JSONB AS JSON").execute();
             final DSLContext context = DSL.using(conn, SQLDialect.H2);
-            routing.createTables(context, schemas);
+            strategy.createTables(context, schemas);
             conn.commit();
         } catch (final SQLException e) {
             throw new IllegalStateException(e);
@@ -71,7 +71,7 @@ public class TestSQLStorage extends TestStorage {
         final Storage storage = SQLStorage.builder()
                 .setDataSource(ds)
                 .setDialect(SQLDialect.H2)
-                .setRouting(routing)
+                .setStrategy(strategy)
                 .build();
 
         writeAll(storage, namespace, data);

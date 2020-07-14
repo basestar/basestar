@@ -86,6 +86,30 @@ public interface DelegatingStorage extends Storage {
     }
 
     @Override
+    default CompletableFuture<?> asyncIndexCreated(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+
+        return storage(schema).asyncIndexCreated(schema, index, id, version, key, projection);
+    }
+
+    @Override
+    default CompletableFuture<?> asyncIndexUpdated(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+
+        return storage(schema).asyncIndexUpdated(schema, index, id, version, key, projection);
+    }
+
+    @Override
+    default CompletableFuture<?> asyncIndexDeleted(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
+
+        return storage(schema).asyncIndexDeleted(schema, index, id, version, key);
+    }
+
+    @Override
+    default CompletableFuture<?> asyncHistoryCreated(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
+
+        return storage(schema).asyncHistoryCreated(schema, id, version, after);
+    }
+
+    @Override
     default ReadTransaction read(final Consistency consistency) {
 
         final IdentityHashMap<Storage, ReadTransaction> transactions = new IdentityHashMap<>();
@@ -112,14 +136,6 @@ public interface DelegatingStorage extends Storage {
             public CompletableFuture<BatchResponse> read() {
 
                 return BatchResponse.mergeFutures(transactions.values().stream().map(ReadTransaction::read));
-
-//                final List<CompletableFuture<BatchResponse>> futures = batches.values().stream()
-//                        .map(ReadTransaction::read).collect(Collectors.toList());
-//
-//                return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]))
-//                        .thenApply(ignored -> new BatchResponse.Basic(futures.stream()
-//                                .flatMap(future -> future.getNow(BatchResponse.empty()).stream())
-//                                .collect(Collectors.toList())));
             }
         };
     }
@@ -157,61 +173,13 @@ public interface DelegatingStorage extends Storage {
             }
 
             @Override
-            public WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                transactions.computeIfAbsent(storage(schema), v -> v.write(consistency))
-                        .createIndex(schema, index, id, version, key, projection);
-
-                return this;
-            }
-
-            @Override
-            public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-                transactions.computeIfAbsent(storage(schema), v -> v.write(consistency))
-                        .updateIndex(schema, index, id, version, key, projection);
-
-                return this;
-            }
-
-            @Override
-            public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
-
-                transactions.computeIfAbsent(storage(schema), v -> v.write(consistency))
-                        .deleteIndex(schema, index, id, version, key);
-
-                return this;
-            }
-
-            @Override
-            public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
-
-                transactions.computeIfAbsent(storage(schema), v -> v.write(consistency))
-                        .createHistory(schema, id, version, after);
-
-                return this;
-            }
-
-            @Override
-            public CompletableFuture<BatchResponse> commit() {
+            public CompletableFuture<BatchResponse> write() {
 
                 if(consistency != Consistency.NONE && transactions.size() > 1) {
                     throw new IllegalStateException("Consistent write transaction spanned multiple storage engines");
                 } else {
 
-                    return BatchResponse.mergeFutures(transactions.values().stream().map(WriteTransaction::commit));
-//
-//                    final List<CompletableFuture<BatchResponse>> futures = transactions.values().stream()
-//                            .map(WriteTransaction::commit)
-//                            .collect(Collectors.toList());
-//
-//                    return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]))
-//                            .thenApply(ignored -> {
-//                                final Set<Map<String, Object>> results = futures.stream()
-//                                        .flatMap(v -> v.getNow(BatchResponse.empty()).stream())
-//                                        .collect(Collectors.toSet());
-//                                return new BatchResponse.Basic(results);
-//                            });
+                    return BatchResponse.mergeFutures(transactions.values().stream().map(WriteTransaction::write));
                 }
             }
         };

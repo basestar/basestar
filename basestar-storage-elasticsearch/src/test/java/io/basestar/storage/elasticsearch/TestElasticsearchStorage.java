@@ -56,7 +56,7 @@ public class TestElasticsearchStorage extends TestStorage {
     @Override
     protected Storage storage(final Namespace namespace, final Multimap<String, Map<String, Object>> data) {
 
-        final ElasticsearchRouting routing = ElasticsearchRouting.Simple.builder()
+        final ElasticsearchStrategy strategy = ElasticsearchStrategy.Simple.builder()
                 .objectPrefix(UUID.randomUUID().toString() + "-")
                 .historyPrefix(UUID.randomUUID().toString() + "-")
                 .settings(Settings.builder()
@@ -72,7 +72,7 @@ public class TestElasticsearchStorage extends TestStorage {
 
         final Storage storage = ElasticsearchStorage.builder()
                 .setClient(client)
-                .setRouting(routing)
+                .setStrategy(strategy)
                 .build();
 
         writeAll(storage, namespace, data);

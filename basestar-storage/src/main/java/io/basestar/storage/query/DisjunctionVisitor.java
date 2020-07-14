@@ -24,12 +24,12 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.compare.Eq;
 import io.basestar.expression.constant.Constant;
-import io.basestar.expression.constant.PathConstant;
+import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.function.In;
 import io.basestar.expression.iterate.ForAny;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Or;
-import io.basestar.util.Path;
+import io.basestar.util.Name;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -65,12 +65,12 @@ public class DisjunctionVisitor implements ExpressionVisitor.Defaulting<Set<Expr
 
         final Expression lhs = expression.getLhs();
         final Expression rhs = expression.getRhs();
-        if(lhs instanceof PathConstant && rhs instanceof Constant) {
-            final Path path = ((PathConstant)lhs).getPath();
+        if(lhs instanceof NameConstant && rhs instanceof Constant) {
+            final Name name = ((NameConstant)lhs).getName();
             final Object value = ((Constant)rhs).getValue();
             if(value instanceof Collection<?>) {
                 return ((Collection<?>) value).stream()
-                        .map(v -> new Eq(new PathConstant(path), new Constant(v)))
+                        .map(v -> new Eq(new NameConstant(name), new Constant(v)))
                         .collect(Collectors.toSet());
             } else {
                 return Collections.singleton(expression);

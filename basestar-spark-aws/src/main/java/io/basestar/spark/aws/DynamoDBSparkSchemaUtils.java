@@ -27,8 +27,8 @@ import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.spark.SparkSchemaUtils;
 import io.basestar.storage.dynamodb.DynamoDBLegacyUtils;
-import io.basestar.storage.dynamodb.DynamoDBRouting;
 import io.basestar.storage.dynamodb.DynamoDBStorage;
+import io.basestar.storage.dynamodb.DynamoDBStrategy;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
@@ -55,26 +55,26 @@ public class DynamoDBSparkSchemaUtils {
         return DataTypes.createStructType(fields);
     }
 
-    public static StructType type(final DynamoDBRouting routing, final ObjectSchema schema, final Index index) {
+    public static StructType type(final DynamoDBStrategy strategy, final ObjectSchema schema, final Index index) {
 
         final List<StructField> fields = new ArrayList<>();
         index.projectionSchema(schema).forEach((name, type) -> fields.add(SparkSchemaUtils.field(name, type, null)));
-        fields.add(SparkSchemaUtils.field(routing.indexPartitionName(schema, index), DataTypes.BinaryType));
-        fields.add(SparkSchemaUtils.field(routing.indexSortName(schema, index), DataTypes.BinaryType));
+        fields.add(SparkSchemaUtils.field(strategy.indexPartitionName(schema, index), DataTypes.BinaryType));
+        fields.add(SparkSchemaUtils.field(strategy.indexSortName(schema, index), DataTypes.BinaryType));
         fields.sort(Comparator.comparing(StructField::name));
         return DataTypes.createStructType(fields);
     }
 
-    public static Row toSpark(final DynamoDBRouting routing, final ObjectSchema schema, final Index index,
+    public static Row toSpark(final DynamoDBStrategy strategy, final ObjectSchema schema, final Index index,
                               final StructType structType, final String id, final Index.Key key,
                               final Map<String, Object> projection) {
 
         final StructField[] fields = structType.fields();
         final Object[] values = new Object[fields.length];
-        final byte[] partition = DynamoDBStorage.partition(routing, schema, index, id, key.getPartition());
+        final byte[] partition = DynamoDBStorage.partition(strategy, schema, index, id, key.getPartition());
         final byte[] sort = DynamoDBStorage.sort(schema, index, id, key.getSort());
-        values[structType.fieldIndex(routing.indexPartitionName(schema, index))] = partition;
-        values[structType.fieldIndex(routing.indexSortName(schema, index))] = sort;
+        values[structType.fieldIndex(strategy.indexPartitionName(schema, index))] = partition;
+        values[structType.fieldIndex(strategy.indexSortName(schema, index))] = sort;
         index.projectionSchema(schema).forEach((name, type) -> {
             final int i = structType.fieldIndex(name);
             values[i] = SparkSchemaUtils.toSpark(type, fields[i].dataType(), projection.get(name));

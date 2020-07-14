@@ -29,9 +29,9 @@ import io.basestar.schema.*;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.util.Pager;
+import io.basestar.util.Name;
 import io.basestar.util.PagedList;
 import io.basestar.util.PagingToken;
-import io.basestar.util.Path;
 import io.basestar.util.Sort;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -90,7 +90,7 @@ public abstract class TestStorage {
                 });
             });
 
-            write.commit().join();
+            write.write().join();
         }
     }
 
@@ -133,8 +133,8 @@ public abstract class TestStorage {
         assumeConcurrentObjectWrite(storage, schema);
 
         final List<Sort> sort = ImmutableList.of(
-                Sort.asc(Path.of("city")),
-                Sort.asc(Path.of("zip"))
+                Sort.asc(Name.of("city")),
+                Sort.asc(Name.of("zip"))
         );
 
         final Expression expr = Expression.parse("country == 'United Kingdom' || state == 'Victoria'");
@@ -178,8 +178,8 @@ public abstract class TestStorage {
         assumeConcurrentObjectWrite(storage, schema);
 
         final List<Sort> sort = ImmutableList.of(
-                Sort.asc(Path.of("city")),
-                Sort.asc(Path.of("zip"))
+                Sort.asc(Name.of("city")),
+                Sort.asc(Name.of("zip"))
         );
 
         final Expression expr = Expression.parse("country == '" + country + "'");
@@ -217,7 +217,7 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .createObject(schema, id, after)
-                .commit().join();
+                .write().join();
 
         final Map<String, Object> current = storage.readObject(schema, id).join();
         assertNotNull(current);
@@ -275,7 +275,7 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .createObject(schema, id, init)
-                .commit().join();
+                .write().join();
 
         final Instance before = schema.create(storage.readObject(schema, id).join());
         assertEquals(1L, before.getVersion());
@@ -284,7 +284,7 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .updateObject(schema, id, setVersion(before, 1L), after)
-                .commit().join();
+                .write().join();
 
         final Map<String, Object> current = storage.readObject(schema, id).join();
         assertNotNull(current);
@@ -316,13 +316,13 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .createObject(schema, id, init)
-                .commit().join();
+                .write().join();
 
         final Instance before = schema.create(storage.readObject(schema, id).join());
 
         storage.write(Consistency.ATOMIC)
                 .deleteObject(schema, id, setVersion(before, 1L))
-                .commit().join();
+                .write().join();
 
         final Map<String, Object> current = storage.readObject(schema, id).join();
         assertNull(current);
@@ -357,7 +357,7 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .createObject(schema, id, instance)
-                .commit().join();
+                .write().join();
 
         final BatchResponse results = storage.read(Consistency.ATOMIC)
                 .readObject(schema, id)
@@ -381,11 +381,11 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .createObject(schema, id, after)
-                .commit().join();
+                .write().join();
 
         assertCause(ObjectExistsException.class, () -> storage.write(Consistency.ATOMIC)
                     .createObject(schema, id, after)
-                    .commit().get());
+                    .write().get());
     }
 
     @Test
@@ -403,19 +403,19 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .createObject(schema, id, init)
-                .commit().join();
+                .write().join();
 
         final Instance before = schema.create(storage.readObject(schema, id).join());
 
         storage.write(Consistency.ATOMIC)
                 .deleteObject(schema, id, setVersion(before, 1L))
-                .commit().join();
+                .write().join();
 
         final Instance after = instance(schema, id, 2L);
 
         assertCause(VersionMismatchException.class, () -> storage.write(Consistency.ATOMIC)
                 .updateObject(schema, id, setVersion(before, 1L), after)
-                .commit().get());
+                .write().get());
     }
 
     @Test
@@ -433,17 +433,17 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .createObject(schema, id, init)
-                .commit().join();
+                .write().join();
 
         final Instance before = schema.create(storage.readObject(schema, id).join());
 
         storage.write(Consistency.ATOMIC)
                 .deleteObject(schema, id, setVersion(before, 1L))
-                .commit().join();
+                .write().join();
 
         assertCause(VersionMismatchException.class, () -> storage.write(Consistency.ATOMIC)
                 .deleteObject(schema, id, setVersion(before, 1L))
-                .commit().get());
+                .write().get());
     }
 
     @Test
@@ -461,7 +461,7 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .createObject(schema, id, init)
-                .commit().join();
+                .write().join();
 
         final Instance before = schema.create(storage.readObject(schema, id).join());
 
@@ -469,11 +469,11 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .updateObject(schema, id, setVersion(before, 1L), after)
-                .commit().join();
+                .write().join();
 
         assertCause(VersionMismatchException.class, () -> storage.write(Consistency.ATOMIC)
                 .deleteObject(schema, id, setVersion(before, 1L))
-                .commit().get());
+                .write().get());
     }
 
     @Test
@@ -491,7 +491,7 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .createObject(schema, id, init)
-                .commit().join();
+                .write().join();
 
         final Instance before = schema.create(storage.readObject(schema, id).join());
 
@@ -499,7 +499,7 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .updateObject(schema, id, setVersion(before, 1L), after)
-                .commit().join();
+                .write().join();
 
 //        storage.write(Consistency.ATOMIC)
 //                .updateObject(schema, id, 1L, before, after)
@@ -507,7 +507,7 @@ public abstract class TestStorage {
 
         assertCause(VersionMismatchException.class, () -> storage.write(Consistency.ATOMIC)
                 .updateObject(schema, id, setVersion(before, 1L), after)
-                .commit().get());
+                .write().get());
     }
 
     @Test
@@ -534,7 +534,7 @@ public abstract class TestStorage {
                 )
         ));
 
-        final List<Sort> sort = ImmutableList.of(Sort.asc(Path.of(Reserved.ID)));
+        final List<Sort> sort = ImmutableList.of(Sort.asc(Name.of(Reserved.ID)));
         final Expression expr = Expression.parse("p.x == 10 && p.y == 100 for any p of points");
         final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, Collections.emptyList());
         final Comparator<Map<String, Object>> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
@@ -555,11 +555,11 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .createObject(schema, id, instance(schema, id, 1L))
-                .commit().join();
+                .write().join();
 
         storage.write(Consistency.ATOMIC)
                 .updateObject(schema, id, null, instance(schema, id, 2L))
-                .commit().join();
+                .write().join();
     }
 
     @Test
@@ -575,11 +575,11 @@ public abstract class TestStorage {
 
         storage.write(Consistency.ATOMIC)
                 .createObject(schema, id, instance(schema, id, 1L))
-                .commit().join();
+                .write().join();
 
         storage.write(Consistency.ATOMIC)
                 .deleteObject(schema, id, null)
-                .commit().join();
+                .write().join();
     }
 
     @Test
@@ -617,8 +617,8 @@ public abstract class TestStorage {
         ));
 
         final List<Sort> sort = ImmutableList.of(
-                Sort.asc(Path.of("city")),
-                Sort.asc(Path.of("zip"))
+                Sort.asc(Name.of("city")),
+                Sort.asc(Name.of("zip"))
         );
 
 //        assertEquals(6, page(storage, schema, Expression.parse("country == 'United Kingdom' && city ILIKE 'l%'"), sort, 10).size());
@@ -653,7 +653,7 @@ public abstract class TestStorage {
         assumeTrue(storage.storageTraits(schema).supportsAggregation(),
                 "Aggregation must be enabled for this test");
 
-        final List<Sort> sort = ImmutableList.of(Sort.asc(Path.of("country")), Sort.asc(Path.of(Reserved.ID)));
+        final List<Sort> sort = ImmutableList.of(Sort.asc(Name.of("country")), Sort.asc(Name.of(Reserved.ID)));
         final List<Pager.Source<Map<String, Object>>> sources = storage.aggregate(schema, Expression.parse("true"),
                 ImmutableMap.of("country", Expression.parse("country")),
                 ImmutableMap.of("count", new Count()));
@@ -670,18 +670,18 @@ public abstract class TestStorage {
         final String id = UUID.randomUUID().toString();
         Instance.setId(instance, id);
         Instance.setVersion(instance, 1L);
-        Instance.setSchema(instance, schema.getName());
+        Instance.setSchema(instance, schema.getQualifiedName());
         final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC);
         write.createObject(schema, id, instance);
         for(final Index index : schema.getIndexes().values()) {
             final Consistency best = traits.getIndexConsistency(index.isMultiValue());
-            if(index.getConsistency(best).isAsync()) {
+            if(index.getConsistency(best).isAsync() && write instanceof Storage.WithWriteIndex.WriteTransaction) {
                 final Map<Index.Key, Map<String, Object>> records = index.readValues(instance);
-                records.forEach((key, projection) -> write.createIndex(schema, index, id, 0L, key, projection));
+                records.forEach((key, projection) -> ((Storage.WithWriteIndex.WriteTransaction)write).createIndex(schema, index, id, 0L, key, projection));
             }
         }
 
-        write.commit().join();
+        write.write().join();
     }
 
     private Instance instance(final ObjectSchema schema, final String id, final long version) {

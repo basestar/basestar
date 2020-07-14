@@ -20,6 +20,7 @@ package io.basestar.stream;
  * #L%
  */
 
+import io.basestar.util.Name;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -31,7 +32,7 @@ public class Change {
 
     private Event event;
 
-    private String schema;
+    private Name schema;
 
     private String id;
 
@@ -39,7 +40,7 @@ public class Change {
 
     private Map<String, Object> after;
 
-    public static Change of(final Event event, final String schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
+    public static Change of(final Event event, final Name schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
         return new Change().setEvent(event).setSchema(schema).setId(id).setBefore(before).setAfter(after);
     }

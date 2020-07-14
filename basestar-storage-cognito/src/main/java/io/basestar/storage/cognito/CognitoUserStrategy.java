@@ -22,7 +22,7 @@ package io.basestar.storage.cognito;
 
 import io.basestar.schema.ObjectSchema;
 
-public interface CognitoGroupRouting {
+public interface CognitoUserStrategy {
 
     String getUserPoolId(ObjectSchema schema);
 }

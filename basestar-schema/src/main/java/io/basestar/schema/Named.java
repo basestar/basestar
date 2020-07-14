@@ -20,29 +20,18 @@ package io.basestar.schema;
  * #L%
  */
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
+import io.basestar.util.Name;
 
-import java.io.IOException;
+import javax.annotation.Nonnull;
 
 public interface Named {
 
-    String getName();
+    @Nonnull
+    default String getName() {
 
-    class NameSerializer extends JsonSerializer<Named> {
-
-        @Override
-        public void serialize(final Named named, final JsonGenerator jsonGenerator, final SerializerProvider serializerProvider) throws IOException {
-
-            jsonGenerator.writeString(named.getName());
-        }
-
-        @Override
-        public void serializeWithType(final Named named, final JsonGenerator jsonGenerator, final SerializerProvider serializerProvider, final TypeSerializer typeSerializer) throws IOException {
-
-            serialize(named, jsonGenerator, serializerProvider);
-        }
+        return getQualifiedName().last();
     }
+
+    @Nonnull
+    Name getQualifiedName();
 }

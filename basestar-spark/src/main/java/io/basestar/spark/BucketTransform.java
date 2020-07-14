@@ -22,8 +22,8 @@ package io.basestar.spark;
 
 import com.google.common.collect.ImmutableList;
 import io.basestar.schema.Reserved;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import io.basestar.util.Path;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -36,18 +36,18 @@ import java.util.List;
 
 public class BucketTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
-    private static final List<Path> DEFAULT_INPUT_PATHS = ImmutableList.of(Path.of(Reserved.ID));
+    private static final List<Name> DEFAULT_INPUT_NAMES = ImmutableList.of(Name.of(Reserved.ID));
 
-    private final List<Path> inputPaths;
+    private final List<Name> inputNames;
 
     private final String outputColumnName;
 
     private final UserDefinedFunction bucket;
 
     @lombok.Builder(builderClassName = "Builder")
-    BucketTransform(final List<Path> inputPaths, final String outputColumnName, final BucketFunction bucketFunction) {
+    BucketTransform(final List<Name> inputNames, final String outputColumnName, final BucketFunction bucketFunction) {
 
-        this.inputPaths = Nullsafe.option(inputPaths, DEFAULT_INPUT_PATHS);
+        this.inputNames = Nullsafe.option(inputNames, DEFAULT_INPUT_NAMES);
         this.outputColumnName = Nullsafe.require(outputColumnName);
         Nullsafe.require(bucketFunction);
         this.bucket = functions.udf(
@@ -60,7 +60,7 @@ public class BucketTransform implements Transform<Dataset<Row>, Dataset<Row>> {
     public Dataset<Row> accept(final Dataset<Row> input) {
 
         // FIXME: need to handle nested paths
-        final Column concat = functions.concat_ws("", inputPaths.stream().map(Path::toString).map(input::col).toArray(Column[]::new));
+        final Column concat = functions.concat_ws("", inputNames.stream().map(Name::toString).map(input::col).toArray(Column[]::new));
         final Column bucketValue = bucket.apply(concat);
         return input.withColumn(outputColumnName, bucketValue);
     }

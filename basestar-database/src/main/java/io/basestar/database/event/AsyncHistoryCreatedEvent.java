@@ -21,6 +21,7 @@ package io.basestar.database.event;
  */
 
 import io.basestar.schema.ObjectSchema;
+import io.basestar.util.Name;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -30,7 +31,7 @@ import java.util.Map;
 @Accessors(chain = true)
 public class AsyncHistoryCreatedEvent implements ObjectEvent {
 
-    private String schema;
+    private Name schema;
 
     private String id;
 
@@ -38,7 +39,7 @@ public class AsyncHistoryCreatedEvent implements ObjectEvent {
 
     private Map<String, Object> after;
 
-    public static AsyncHistoryCreatedEvent of(final String schema, final String id, final long version, final Map<String, Object> after) {
+    public static AsyncHistoryCreatedEvent of(final Name schema, final String id, final long version, final Map<String, Object> after) {
 
         return new AsyncHistoryCreatedEvent().setSchema(schema).setId(id).setVersion(version).setAfter(after);
     }

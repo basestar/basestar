@@ -50,12 +50,12 @@ public class TestS3BlobStorage extends TestStorage {
 
         Runtime.getRuntime().addShutdownHook(new Thread(client::close));
 
-        final S3BlobRouting.Simple routing = new S3BlobRouting.Simple(UUID.randomUUID().toString(), "test/");
+        final S3BlobStrategy.Simple strategy = new S3BlobStrategy.Simple(UUID.randomUUID().toString(), "test/");
 
-        client.createBucket(CreateBucketRequest.builder().bucket(routing.getBucket()).build()).join();
+        client.createBucket(CreateBucketRequest.builder().bucket(strategy.getBucket()).build()).join();
 
         final Storage storage = S3BlobStorage.builder()
-                .setClient(client).setRouting(routing)
+                .setClient(client).setStrategy(strategy)
                 .build();
 
         writeAll(storage, namespace, data);

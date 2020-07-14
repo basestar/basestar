@@ -31,8 +31,8 @@ import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Permission;
 import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.storage.exception.ObjectExistsException;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import io.basestar.util.Path;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
@@ -71,7 +71,7 @@ public class CreateAction implements Action {
     public Instance after(final Context context, final Instance before) {
 
         if(before != null) {
-            throw new ObjectExistsException(schema.getName(), Instance.getId(before));
+            throw new ObjectExistsException(schema.getQualifiedName(), Instance.getId(before));
         }
 
         final Map<String, Object> data = new HashMap<>();
@@ -118,7 +118,7 @@ public class CreateAction implements Action {
     }
 
     @Override
-    public Set<Path> afterExpand() {
+    public Set<Name> afterExpand() {
 
         return options.getExpand();
     }
@@ -126,13 +126,13 @@ public class CreateAction implements Action {
     @Override
     public Event event(final Instance before, final Instance after) {
 
-        final String schema = Instance.getSchema(after);
+        final Name schema = Instance.getSchema(after);
         final String id = Instance.getId(after);
         return ObjectCreatedEvent.of(schema, id, after);
     }
 
     @Override
-    public Set<Path> paths() {
+    public Set<Name> paths() {
 
         // FIXME: shouldn't have to bind here, need to fix multi-part path constants in parser
         return Nullsafe.option(options.getExpressions()).values().stream()

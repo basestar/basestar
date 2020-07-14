@@ -39,6 +39,7 @@ import io.basestar.storage.dynamodb.DynamoDBLegacyUtils;
 import io.basestar.storage.dynamodb.DynamoDBStorage;
 import io.basestar.storage.dynamodb.DynamoDBUtils;
 import io.basestar.storage.s3.S3Stash;
+import io.basestar.util.Name;
 import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.sns.SnsAsyncClient;
@@ -193,7 +194,7 @@ public class DynamoDBStreamHandler implements RequestHandler<DynamodbEvent, Void
         final StreamRecord streamRecord = record.getDynamodb();
         return checkOversize(DynamoDBLegacyUtils.fromItem(streamRecord.getNewImage()))
                 .thenCompose(after -> {
-                    final String schema = Instance.getSchema(after);
+                    final Name schema = Instance.getSchema(after);
                     final String id = Instance.getId(after);
                     return target.emit(ObjectCreatedEvent.of(schema, id, after));
                 });
@@ -205,7 +206,7 @@ public class DynamoDBStreamHandler implements RequestHandler<DynamodbEvent, Void
         return checkOversize(DynamoDBLegacyUtils.fromItem(streamRecord.getOldImage()))
                 .thenCompose(before -> checkOversize(DynamoDBLegacyUtils.fromItem(streamRecord.getNewImage()))
                         .thenCompose(after -> {
-                            final String schema = Instance.getSchema(before);
+                            final Name schema = Instance.getSchema(before);
                             final String id = Instance.getId(before);
                             final Long version = Instance.getVersion(before);
                             assert version != null;
@@ -218,7 +219,7 @@ public class DynamoDBStreamHandler implements RequestHandler<DynamodbEvent, Void
         final StreamRecord streamRecord = record.getDynamodb();
         return checkOversize(DynamoDBLegacyUtils.fromItem(streamRecord.getOldImage()))
                 .thenCompose(before -> {
-                    final String schema = Instance.getSchema(before);
+                    final Name schema = Instance.getSchema(before);
                     final String id = Instance.getId(before);
                     final Long version = Instance.getVersion(before);
                     assert version != null;

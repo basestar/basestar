@@ -1,8 +1,8 @@
-package io.basestar.storage;
+package io.basestar.storage.cognito;
 
 /*-
  * #%L
- * basestar-storage
+ * basestar-storage-cognito
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -20,5 +20,9 @@ package io.basestar.storage;
  * #L%
  */
 
-public class URLStorageRouting {
+import io.basestar.schema.ObjectSchema;
+
+public interface CognitoGroupStrategy {
+
+    String getUserPoolId(ObjectSchema schema);
 }

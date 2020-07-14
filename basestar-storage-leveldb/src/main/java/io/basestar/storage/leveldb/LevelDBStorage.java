@@ -21,14 +21,11 @@ package io.basestar.storage.leveldb;
  */
 
 import com.google.common.io.BaseEncoding;
-import io.basestar.expression.Expression;
 import io.basestar.schema.*;
 import io.basestar.storage.*;
-import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;
-import io.basestar.storage.util.Pager;
 import io.basestar.util.*;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBIterator;
@@ -39,7 +36,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
-public class LevelDBStorage extends PartitionedStorage {
+public class LevelDBStorage extends PartitionedStorage implements Storage.WithWriteHistory, Storage.WithoutAggregate {
 
     private final DB db;
 
@@ -73,7 +70,7 @@ public class LevelDBStorage extends PartitionedStorage {
     }
 
     @Override
-    protected CompletableFuture<PagedList<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfyResult, final Map<Path, Range<Object>> query, final List<Sort> sort, final int count, final PagingToken paging) {
+    protected CompletableFuture<PagedList<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfyResult, final Map<Name, Range<Object>> query, final List<Sort> sort, final int count, final PagingToken paging) {
 
         return CompletableFuture.supplyAsync(() -> {
             final List<Object> values = new ArrayList<>();
@@ -111,12 +108,6 @@ public class LevelDBStorage extends PartitionedStorage {
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public ReadTransaction read(final Consistency consistency) {
 
         return new Storage.ReadTransaction.Basic(this);
@@ -125,153 +116,155 @@ public class LevelDBStorage extends PartitionedStorage {
     @Override
     public WriteTransaction write(final Consistency consistency) {
 
-        return new PartitionedStorage.WriteTransaction() {
+        return new WriteTransaction();
+    }
 
-            private final List<Consumer<WriteBatch>> writes = new ArrayList<>();
+    protected class WriteTransaction extends PartitionedStorage.WriteTransaction implements WithWriteHistory.WriteTransaction {
 
-            private final Map<String, Consumer<DB>> checks = new HashMap<>();
+        private final List<Consumer<WriteBatch>> writes = new ArrayList<>();
 
-            private final SortedMap<BatchResponse.Key, Map<String, Object>> changes = new TreeMap<>();
+        private final Map<String, Consumer<DB>> checks = new HashMap<>();
 
-            @Override
-            public Storage.WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+        private final SortedMap<BatchResponse.Key, Map<String, Object>> changes = new TreeMap<>();
 
-                writeVersion(schema, id, 0L, after);
-                return createIndexes(schema, id, after);
+        @Override
+        public Storage.WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+
+            writeVersion(schema, id, 0L, after);
+            return createIndexes(schema, id, after);
+        }
+
+        @Override
+        public Storage.WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
+
+            final Long beforeVersion = before == null ? null : Instance.getVersion(before);
+            writeVersion(schema, id, beforeVersion, after);
+            return updateIndexes(schema, id, before, after);
+        }
+
+        @Override
+        public Storage.WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
+
+            final Long beforeVersion = before == null ? null : Instance.getVersion(before);
+            final byte[] key = key(schema, id);
+            if(beforeVersion != null) {
+                checkVersion(schema, id, beforeVersion);
             }
+            writes.add(batch -> batch.delete(key));
+            return deleteIndexes(schema, id, before);
+        }
 
-            @Override
-            public Storage.WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
+        private void writeVersion(final ObjectSchema schema, final String id, final Long beforeVersion, final Map<String, Object> after) {
 
-                final Long beforeVersion = before == null ? null : Instance.getVersion(before);
-                writeVersion(schema, id, beforeVersion, after);
-                return updateIndexes(schema, id, before, after);
+            final long afterVersion = Nullsafe.require(Instance.getVersion(after));
+            final byte[] key = key(schema, id);
+            if(beforeVersion != null) {
+                checkVersion(schema, id, beforeVersion);
             }
+            writes.add(batch -> {
+                final byte[] data = toBytes(schema, afterVersion, after);
+                batch.put(key, data);
+            });
+            createHistory(schema, id, afterVersion, after);
+            changes.put(BatchResponse.Key.version(schema.getQualifiedName(), id, afterVersion), after);
+        }
 
-            @Override
-            public Storage.WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
+        private void checkVersion(final ObjectSchema schema, final String id, final long version) {
 
-                final Long beforeVersion = before == null ? null : Instance.getVersion(before);
-                final byte[] key = key(schema, id);
-                if(beforeVersion != null) {
-                    checkVersion(schema, id, beforeVersion);
-                }
-                writes.add(batch -> batch.delete(key));
-                return deleteIndexes(schema, id, before);
-            }
-
-            private void writeVersion(final ObjectSchema schema, final String id, final Long beforeVersion, final Map<String, Object> after) {
-
-                final long afterVersion = Nullsafe.require(Instance.getVersion(after));
-                final byte[] key = key(schema, id);
-                if(beforeVersion != null) {
-                    checkVersion(schema, id, beforeVersion);
-                }
-                writes.add(batch -> {
-                    final byte[] data = toBytes(schema, afterVersion, after);
-                    batch.put(key, data);
-                });
-                createHistory(schema, id, afterVersion, after);
-                changes.put(new BatchResponse.Key(schema.getName(), id, afterVersion), after);
-            }
-
-            private void checkVersion(final ObjectSchema schema, final String id, final long version) {
-
-                final byte[] key = key(schema, id);
-                check(key, db -> {
-                    final byte[] data = db.get(key);
-                    final long recordVersion = versionFromBytes(data);
-                    if(recordVersion != version) {
-                        if(version == 0L) {
-                            throw new ObjectExistsException(schema.getName(), id);
-                        } else {
-                            throw new VersionMismatchException(schema.getName(), id, version);
-                        }
+            final byte[] key = key(schema, id);
+            check(key, db -> {
+                final byte[] data = db.get(key);
+                final long recordVersion = versionFromBytes(data);
+                if(recordVersion != version) {
+                    if(version == 0L) {
+                        throw new ObjectExistsException(schema.getQualifiedName(), id);
+                    } else {
+                        throw new VersionMismatchException(schema.getQualifiedName(), id, version);
                     }
-                });
-            }
-
-            private void checkVersion(final ObjectSchema schema, final String id, final long version, final byte[] key) {
-
-                check(key, db -> {
-                    final byte[] data = db.get(key);
-                    final long recordVersion = versionFromBytes(data);
-                    if(recordVersion != version) {
-                        throw new VersionMismatchException(schema.getName(), id, version);
-                    }
-                });
-            }
-
-            private void check(final byte[] key, final Consumer<DB> check) {
-
-                final String lock = BaseEncoding.base64().encode(key);
-                if(checks.containsKey(lock)) {
-                    throw new IllegalStateException("Transaction cannot refer to same object twice");
                 }
-                checks.put(lock, check);
+            });
+        }
+
+        private void checkVersion(final ObjectSchema schema, final String id, final long version, final byte[] key) {
+
+            check(key, db -> {
+                final byte[] data = db.get(key);
+                final long recordVersion = versionFromBytes(data);
+                if(recordVersion != version) {
+                    throw new VersionMismatchException(schema.getQualifiedName(), id, version);
+                }
+            });
+        }
+
+        private void check(final byte[] key, final Consumer<DB> check) {
+
+            final String lock = BaseEncoding.base64().encode(key);
+            if(checks.containsKey(lock)) {
+                throw new IllegalStateException("Transaction cannot refer to same object twice");
             }
+            checks.put(lock, check);
+        }
 
-            @Override
-            public Storage.WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+        @Override
+        public WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
 
-                final byte[] indexKey = key(schema, index, key, id);
-                checkVersion(schema, id, version, indexKey);
-                writes.add(batch -> {
-                    final byte[] data = toBytes(schema, version, projection);
-                    batch.put(indexKey, data);
-                });
-                return this;
-            }
+            final byte[] indexKey = key(schema, index, key, id);
+            checkVersion(schema, id, version, indexKey);
+            writes.add(batch -> {
+                final byte[] data = toBytes(schema, version, projection);
+                batch.put(indexKey, data);
+            });
+            return this;
+        }
 
-            @Override
-            public Storage.WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+        @Override
+        public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
 
-                return createIndex(schema, index, id, version, key, projection);
-            }
+            return createIndex(schema, index, id, version, key, projection);
+        }
 
-            @Override
-            public Storage.WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
+        @Override
+        public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
 
-                final byte[] indexKey = key(schema, index, key, id);
-                checkVersion(schema, id, version, indexKey);
-                writes.add(batch -> batch.delete(indexKey));
-                return this;
-            }
+            final byte[] indexKey = key(schema, index, key, id);
+            checkVersion(schema, id, version, indexKey);
+            writes.add(batch -> batch.delete(indexKey));
+            return this;
+        }
 
-            @Override
-            public Storage.WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
+        @Override
+        public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
 
-                final byte[] key = key(schema, id, version);
-                checkVersion(schema, id, 0L, key);
-                writes.add(batch -> {
-                    final byte[] data = toBytes(schema, version, after);
-                    batch.put(key, data);
-                });
-                return this;
-            }
+            final byte[] key = key(schema, id, version);
+            checkVersion(schema, id, 0L, key);
+            writes.add(batch -> {
+                final byte[] data = toBytes(schema, version, after);
+                batch.put(key, data);
+            });
+            return this;
+        }
 
-            @Override
-            public CompletableFuture<BatchResponse> commit() {
+        @Override
+        public CompletableFuture<BatchResponse> write() {
 
-                return CompletableFuture.supplyAsync(() -> {
-                    final Set<String> locks = checks.keySet();
-                    try (final CloseableLock ignored = coordinator.lock(locks)) {
+            return CompletableFuture.supplyAsync(() -> {
+                final Set<String> locks = checks.keySet();
+                try (final CloseableLock ignored = coordinator.lock(locks)) {
 
-                        checks.forEach((k, check) -> {
-                            check.accept(db);
-                        });
+                    checks.forEach((k, check) -> {
+                        check.accept(db);
+                    });
 
-                        final WriteBatch batch = db.createWriteBatch();
+                    final WriteBatch batch = db.createWriteBatch();
 
-                        writes.forEach(write -> write.accept(batch));
+                    writes.forEach(write -> write.accept(batch));
 
-                        db.write(batch);
+                    db.write(batch);
 
-                        return new BatchResponse.Basic(changes);
-                    }
-                });
-            }
-        };
+                    return new BatchResponse.Basic(changes);
+                }
+            });
+        }
     }
 
     @Override
@@ -288,12 +281,12 @@ public class LevelDBStorage extends PartitionedStorage {
 
     private static byte[] key(final ObjectSchema schema, final String id) {
 
-        return PartitionedStorage.binary(Arrays.asList(schema.getName(), null, id));
+        return PartitionedStorage.binary(Arrays.asList(schema.getQualifiedName(), null, id));
     }
 
     private static byte[] key(final ObjectSchema schema, final String id, final long version) {
 
-        return PartitionedStorage.binary(Arrays.asList(schema.getName(), Reserved.PREFIX + Reserved.VERSION, id, invert(version)));
+        return PartitionedStorage.binary(Arrays.asList(schema.getQualifiedName(), Reserved.PREFIX + Reserved.VERSION, id, invert(version)));
     }
 
     private static byte[] key(final ObjectSchema schema, final Index index, final Index.Key key, final String id) {
@@ -308,7 +301,7 @@ public class LevelDBStorage extends PartitionedStorage {
     private static byte[] key(final ObjectSchema schema, final Index index, final List<?> values) {
 
         final List<Object> all = new ArrayList<>();
-        all.add(schema.getName());
+        all.add(schema.getQualifiedName());
         all.add(index.getName());
         all.addAll(values);
         return PartitionedStorage.binary(all);
