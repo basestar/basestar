@@ -25,6 +25,7 @@ import io.basestar.codegen.Codegen;
 import io.basestar.codegen.CodegenSettings;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.Schema;
+import io.basestar.util.Name;
 import lombok.Setter;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -86,7 +87,8 @@ public class CodegenMojo extends AbstractMojo {
             output.mkdirs();
 
             for(final Schema<?> schema : ns.getSchemas().values()) {
-                final File file = new File(output, schema.getQualifiedName() + ".java");
+                final File file = schemaOutputField(output, schema);
+                file.mkdirs();
                 try(final FileOutputStream fos = new FileOutputStream(file);
                     final OutputStreamWriter writer = new OutputStreamWriter(fos, Charsets.UTF_8)) {
                     getLog().info("Writing schema " + schema.getQualifiedName() + " to " + file.getAbsolutePath());
@@ -102,6 +104,18 @@ public class CodegenMojo extends AbstractMojo {
         } catch (final Exception e) {
             getLog().error("Codegen execution failed", e);
             throw new MojoExecutionException("Codegen execution failed", e);
+        }
+    }
+
+    private File schemaOutputField(final File output, final Schema<?> schema) {
+
+        final Name name = schema.getQualifiedName();
+        final String file = name.last() + ".java";
+        if(name.size() > 1) {
+            final Name path = name.withoutLast();
+            return new File(new File(output, path.toString(File.separator)), file);
+        } else {
+            return new File(output, file);
         }
     }
 

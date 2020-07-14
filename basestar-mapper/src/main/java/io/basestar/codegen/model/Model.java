@@ -22,6 +22,7 @@ package io.basestar.codegen.model;
 
 import io.basestar.codegen.CodegenSettings;
 
+@SuppressWarnings("unused")
 public class Model {
 
     private final CodegenSettings settings;

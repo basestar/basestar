@@ -67,6 +67,11 @@
       "sources": {
         "schema": "RefSource",
         "expression": "target.id == this.id"
+      },
+      "source": {
+        "schema": "RefSource",
+        "expression": "target.id == this.id",
+        "single": true
       }
     }
   },

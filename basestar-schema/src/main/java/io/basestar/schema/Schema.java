@@ -63,6 +63,11 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         Schema<T> build();
     }
 
+    default Name getPackageName() {
+
+        return getQualifiedName().withoutLast();
+    }
+
     interface Builder<T> extends Descriptor<T> {
 
     }

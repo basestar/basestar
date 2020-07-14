@@ -22,10 +22,12 @@ package io.basestar.codegen.model;
 
 import io.basestar.codegen.CodegenSettings;
 import io.basestar.schema.Schema;
+import io.basestar.util.Name;
 import io.basestar.util.Text;
 
 import java.util.List;
 
+@SuppressWarnings("unused")
 public abstract class SchemaModel extends Model {
 
     private final Schema<?> schema;
@@ -41,6 +43,11 @@ public abstract class SchemaModel extends Model {
         return Text.upperCamel(getName());
     }
 
+    public String getQualifiedClassName() {
+
+        return Name.parse(getPackageName()).with(getClassName()).toString();
+    }
+
     public String getName() {
 
         return schema.getName();
@@ -49,6 +56,12 @@ public abstract class SchemaModel extends Model {
     public String getDescription() {
 
         return schema.getDescription();
+    }
+
+    public String getPackageName() {
+
+        final String base = super.getPackageName();
+        return Name.parse(base).with(schema.getPackageName()).toString();
     }
 
 //    public String getAnnotationClassName() {

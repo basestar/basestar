@@ -25,6 +25,7 @@ import io.basestar.codegen.CodegenSettings;
 import java.util.Collections;
 import java.util.Map;
 
+@SuppressWarnings("unused")
 public class AnnotationModel extends Model {
 
     private final Class<?> cls;

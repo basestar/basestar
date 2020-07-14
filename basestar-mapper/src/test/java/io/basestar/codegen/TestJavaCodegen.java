@@ -46,6 +46,7 @@ public class TestJavaCodegen {
         codegen.generate(namespace.requireSchema("MyBase"), stringWriter);
         codegen.generate(namespace.requireSchema("MyObject"), stringWriter);
         codegen.generate(namespace.requireSchema("MyView"), stringWriter);
+        codegen.generate(namespace.requireSchema("ns1.ns2.MyObject"), stringWriter);
         System.err.println(stringWriter);
     }
 }

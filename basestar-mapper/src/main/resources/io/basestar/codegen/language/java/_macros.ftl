@@ -9,7 +9,7 @@
     <#case "String">String<#break>
     <#case "Date">java.time.Date<#break>
     <#case "DateTime">java.time.DateTime<#break>
-    <#default>${of.schema.className}<#break>
+    <#default>${of.schema.qualifiedClassName}<#break>
 </#switch></#macro>
 
 <#macro value of><#if of?is_string>"${of?j_string}"<#else>${of}</#if></#macro>

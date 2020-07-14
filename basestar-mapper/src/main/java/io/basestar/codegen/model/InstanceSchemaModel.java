@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-
+@SuppressWarnings("unused")
 public abstract class InstanceSchemaModel extends SchemaModel {
 
     private final InstanceSchema schema;

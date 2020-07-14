@@ -70,6 +70,9 @@ public class Link implements Member {
     private final Expression expression;
 
     @Nonnull
+    private final boolean single;
+
+    @Nonnull
     private final List<Sort> sort;
 
     @Nullable
@@ -84,6 +87,8 @@ public class Link implements Member {
         Name getSchema();
 
         Expression getExpression();
+
+        Boolean getSingle();
 
         List<Sort> getSort();
 
@@ -110,6 +115,9 @@ public class Link implements Member {
         private Expression expression;
 
         @Nullable
+        private Boolean single;
+
+        @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         @JsonDeserialize(using = AbbrevListDeserializer.class)
         private List<Sort> sort;
@@ -127,15 +135,16 @@ public class Link implements Member {
         return new Builder();
     }
 
-    private Link(final Descriptor builder, final Schema.Resolver resolver, final Name qualifiedName) {
+    private Link(final Descriptor descriptor, final Schema.Resolver resolver, final Name qualifiedName) {
 
         this.qualifiedName = qualifiedName;
-        this.description = builder.getDescription();
-        this.schema = resolver.requireObjectSchema(builder.getSchema());
-        this.expression = Nullsafe.require(builder.getExpression());
-        this.sort = Nullsafe.immutableCopy(builder.getSort());
-        this.visibility = builder.getVisibility();
-        this.extensions = Nullsafe.immutableSortedCopy(builder.getExtensions());
+        this.description = descriptor.getDescription();
+        this.schema = resolver.requireObjectSchema(descriptor.getSchema());
+        this.expression = Nullsafe.require(descriptor.getExpression());
+        this.single = Nullsafe.option(descriptor.getSingle());
+        this.sort = Nullsafe.immutableCopy(descriptor.getSort());
+        this.visibility = descriptor.getVisibility();
+        this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
@@ -144,17 +153,39 @@ public class Link implements Member {
     @Override
     public Use<?> getType() {
 
-        return new UseArray<>(new UseObject(schema));
+        if(single) {
+            return new UseObject(schema);
+        } else {
+            return new UseArray<>(new UseObject(schema));
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private PagedList<Instance> toArray(final Object value) {
+
+        if(single) {
+            return value == null ? PagedList.empty() : PagedList.single((Instance)value);
+        } else {
+            return (PagedList<Instance>)value;
+        }
+    }
+
+    private Object fromArray(final PagedList<Instance> value) {
+
+        if(single) {
+            return value == null || value.isEmpty() ? null : value.get(0);
+        } else {
+            return value;
+        }
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public Object expand(final Object value, final Expander expander, final Set<Name> expand) {
 
         if(expand == null) {
             return null;
         } else {
-            return expander.expandLink(this, (PagedList<Instance>)value, expand);
+            return fromArray(expander.expandLink(this, toArray(value), expand));
         }
     }
 
@@ -184,14 +215,14 @@ public class Link implements Member {
     @SuppressWarnings("unchecked")
     public Object applyVisibility(final Context context, final Object value) {
 
-        return transform((PagedList<Instance>)value, before -> schema.applyVisibility(context, before));
+        return transform(value, before -> schema.applyVisibility(context, before));
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public Object evaluateTransients(final Context context, final Object value, final Set<Name> expand) {
 
-        return transform((PagedList<Instance>)value, before -> schema.evaluateTransients(context, before, expand));
+        return transform(value, before -> schema.evaluateTransients(context, before, expand));
     }
 
     @Override
@@ -206,6 +237,11 @@ public class Link implements Member {
 
         // FIXME
         return Collections.emptySet();
+    }
+
+    private Object transform(final Object value, final Function<Instance, Instance> fn) {
+
+        return fromArray(transform(toArray(value), fn));
     }
 
     private PagedList<Instance> transform(final PagedList<Instance> value, final Function<Instance, Instance> fn) {
@@ -282,6 +318,12 @@ public class Link implements Member {
             public Expression getExpression() {
 
                 return expression;
+            }
+
+            @Override
+            public Boolean getSingle() {
+
+                return single;
             }
 
             @Override

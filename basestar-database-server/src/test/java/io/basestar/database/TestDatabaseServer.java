@@ -327,10 +327,12 @@ public class TestDatabaseServer {
         assertEquals(createA, linkA.get(0));
 
         final Map<String, Object> expandLinkA = database.read(caller, ReadOptions.builder().schema(REF_TARGET)
-                .id(refA).expand(Name.parseSet("sources")).build()).get();
-        final PagedList<?> source = (PagedList<?>)expandLinkA.get("sources");
-        assertEquals(1, source.size());
-        assertEquals(createA, source.get(0));
+                .id(refA).expand(Name.parseSet("sources,source")).build()).get();
+        final PagedList<?> sources = (PagedList<?>)expandLinkA.get("sources");
+        final Object source = expandLinkA.get("source");
+        assertEquals(1, sources.size());
+        assertEquals(createA, sources.get(0));
+        assertEquals(createA, source);
 
         final PagedList<Instance> expandQuery = database.query(caller, QueryOptions.builder()
                 .schema(REF_SOURCE)

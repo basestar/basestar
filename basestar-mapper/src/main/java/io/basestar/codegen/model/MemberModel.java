@@ -24,6 +24,7 @@ import io.basestar.codegen.CodegenSettings;
 
 import java.util.List;
 
+@SuppressWarnings("unused")
 public abstract class MemberModel extends Model {
 
     public MemberModel(final CodegenSettings settings) {

@@ -27,6 +27,7 @@ import io.basestar.schema.StructSchema;
 
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class StructSchemaModel extends InstanceSchemaModel {
 
     private final StructSchema schema;

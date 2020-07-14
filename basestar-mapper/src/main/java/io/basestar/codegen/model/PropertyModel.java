@@ -27,6 +27,7 @@ import io.basestar.schema.Property;
 import java.util.ArrayList;
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class PropertyModel extends MemberModel {
 
     private final Property property;

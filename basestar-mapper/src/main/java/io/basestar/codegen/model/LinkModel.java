@@ -27,6 +27,7 @@ import io.basestar.schema.Link;
 
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class LinkModel extends MemberModel {
 
     private final Link link;

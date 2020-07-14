@@ -23,6 +23,7 @@ package io.basestar.codegen.model;
 import io.basestar.codegen.CodegenSettings;
 import io.basestar.schema.use.*;
 
+@SuppressWarnings("unused")
 public interface TypeModel {
 
     String getName();

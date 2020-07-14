@@ -27,6 +27,7 @@ import io.basestar.schema.EnumSchema;
 
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class EnumSchemaModel extends SchemaModel {
 
     private final EnumSchema schema;

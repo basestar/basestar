@@ -20,6 +20,7 @@ package io.basestar.schema;
  * #L%
  */
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.basestar.util.Name;
 
 import javax.annotation.Nonnull;
@@ -27,11 +28,13 @@ import javax.annotation.Nonnull;
 public interface Named {
 
     @Nonnull
+    @JsonIgnore
     default String getName() {
 
         return getQualifiedName().last();
     }
 
     @Nonnull
+    @JsonIgnore
     Name getQualifiedName();
 }

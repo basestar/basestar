@@ -28,6 +28,7 @@ import io.basestar.schema.use.Use;
 
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class MetadataModel extends MemberModel {
 
     private final String name;
