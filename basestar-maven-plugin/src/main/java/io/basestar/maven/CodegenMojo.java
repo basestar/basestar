@@ -83,12 +83,13 @@ public class CodegenMojo extends AbstractMojo {
 
             final Codegen codegen = new Codegen(language, settings);
 
-            final File output = packageOutputDirectory();
-            output.mkdirs();
+            final File base = new File(outputDirectory);
+            base.mkdirs();
 
             for(final Schema<?> schema : ns.getSchemas().values()) {
-                final File file = schemaOutputField(output, schema);
-                file.mkdirs();
+                final File output = packageOutputDirectory(base, schema);
+                output.mkdirs();
+                final File file = new File(output, schema.getName() + ".java");
                 try(final FileOutputStream fos = new FileOutputStream(file);
                     final OutputStreamWriter writer = new OutputStreamWriter(fos, Charsets.UTF_8)) {
                     getLog().info("Writing schema " + schema.getQualifiedName() + " to " + file.getAbsolutePath());
@@ -97,8 +98,8 @@ public class CodegenMojo extends AbstractMojo {
             }
 
             if(addSources && project != null) {
-                getLog().info("Adding source directory " + output.getAbsolutePath());
-                project.addCompileSourceRoot(output.getAbsolutePath());
+                getLog().info("Adding source directory " + base.getAbsolutePath());
+                project.addCompileSourceRoot(base.getAbsolutePath());
             }
 
         } catch (final Exception e) {
@@ -107,21 +108,9 @@ public class CodegenMojo extends AbstractMojo {
         }
     }
 
-    private File schemaOutputField(final File output, final Schema<?> schema) {
+    private File packageOutputDirectory(final File base, final Schema<?> schema) {
 
-        final Name name = schema.getQualifiedName();
-        final String file = name.last() + ".java";
-        if(name.size() > 1) {
-            final Name path = name.withoutLast();
-            return new File(new File(output, path.toString(File.separator)), file);
-        } else {
-            return new File(output, file);
-        }
-    }
-
-    private File packageOutputDirectory() {
-
-        final File base = new File(outputDirectory);
-        return new File(base, packageName.replaceAll("\\.", File.separator));
+        final Name schemaPackageName = Name.parse(packageName).with(schema.getPackageName());
+        return new File(base, schemaPackageName.toString().replaceAll("\\.", File.separator));
     }
 }

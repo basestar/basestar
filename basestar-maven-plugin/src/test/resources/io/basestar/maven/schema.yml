@@ -1,0 +1,23 @@
+Test:
+  type: object
+  properties:
+    a:
+      type: a.Test
+    b:
+      type: b.Test
+
+a.Test:
+  type: object
+  properties:
+    test:
+      type: Test
+    b:
+      type: b.Test
+
+b.Test:
+  type: object
+  properties:
+    test:
+      type: Test
+    a:
+      type: a.Test
