@@ -134,6 +134,28 @@ public class Namespace implements Serializable, Schema.Resolver {
             final JsonSchemaGenerator schemaGen = new JsonSchemaGenerator(objectMapper);
             return schemaGen.generateSchema(Property.Builder.class);
         }
+
+        public static Builder load(final URL... urls) throws IOException {
+
+            final Map<Name, Schema.Descriptor<?>> builders = new HashMap<>();
+            for(final URL url : urls) {
+                final Map<Name, Schema.Descriptor<?>> schemas = objectMapper.readValue(url, new TypeReference<Map<Name, Schema.Descriptor<?>>>(){});
+                builders.putAll(schemas);
+            }
+            return new Builder()
+                    .setSchemas(builders);
+        }
+
+        public static Builder load(final InputStream... iss) throws IOException {
+
+            final Map<Name, Schema.Descriptor<?>> builders = new HashMap<>();
+            for(final InputStream is : iss) {
+                final Map<Name, Schema.Descriptor<?>> schemas = objectMapper.readValue(is, new TypeReference<Map<Name, Schema.Descriptor<?>>>(){});
+                builders.putAll(schemas);
+            }
+            return new Builder()
+                    .setSchemas(builders);
+        }
     }
 
     public static Builder builder() {
@@ -226,26 +248,12 @@ public class Namespace implements Serializable, Schema.Resolver {
 
     public static Namespace load(final URL... urls) throws IOException {
 
-        final Map<Name, Schema.Descriptor<?>> builders = new HashMap<>();
-        for(final URL url : urls) {
-            final Map<Name, Schema.Descriptor<?>> schemas = objectMapper.readValue(url, new TypeReference<Map<Name, Schema.Descriptor<?>>>(){});
-            builders.putAll(schemas);
-        }
-        return new Builder()
-                .setSchemas(builders)
-                .build();
+        return Builder.load(urls).build();
     }
 
     public static Namespace load(final InputStream... iss) throws IOException {
 
-        final Map<Name, Schema.Descriptor<?>> builders = new HashMap<>();
-        for(final InputStream is : iss) {
-            final Map<Name, Schema.Descriptor<?>> schemas = objectMapper.readValue(is, new TypeReference<Map<Name, Schema.Descriptor<?>>>(){});
-            builders.putAll(schemas);
-        }
-        return new Builder()
-                .setSchemas(builders)
-                .build();
+        return Builder.load(iss).build();
     }
 
     public void serialize(final OutputStream os) throws IOException {

@@ -13,9 +13,15 @@
     <properties>
         <maven-project.version>2.2.1</maven-project.version>
         <maven-plugin.version>3.6.0</maven-plugin.version>
+        <guava.version>28.1-jre</guava.version>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>${guava.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>

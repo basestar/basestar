@@ -59,18 +59,23 @@ public class NamespaceMojo extends AbstractMojo {
     private MavenProject project;
 
     @Override
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     public void execute() throws MojoExecutionException {
+
+        execute(null);
+    }
+
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    protected void execute(final ClassLoader classLoader) throws MojoExecutionException {
 
         try {
 
             final Set<Class<?>> classes = new HashSet<>();
             for(final String name : this.classes) {
-                classes.add(Class.forName(name));
+                classes.add(classLoader == null ? Class.forName(name) : Class.forName(name, true, classLoader));
             }
 
-            final File output = new File(outputDirectory);
-            output.mkdirs();
+            final File base = new File(outputDirectory);
+            base.mkdirs();
 
             final MappingContext context = new MappingContext();
 
@@ -78,7 +83,9 @@ public class NamespaceMojo extends AbstractMojo {
             for(final Map.Entry<Name, Schema.Descriptor<?>> entry : all.getSchemas().entrySet()) {
                 final Name name = entry.getKey();
                 final Schema.Descriptor<?> schema = entry.getValue();
-                final File file = new File(output, name + ".yml");
+                final File output = packageOutputDirectory(name);
+                output.mkdirs();
+                final File file = new File(output, name.last() + ".yml");
                 final Namespace.Builder one = Namespace.builder()
                         .setSchema(name, schema);
                 try(final FileOutputStream fos = new FileOutputStream(file);
@@ -89,7 +96,7 @@ public class NamespaceMojo extends AbstractMojo {
             }
 
             if(addResources && project != null) {
-                getLog().info("Adding resource directory " + output.getAbsolutePath());
+                getLog().info("Adding resource directory " + base.getAbsolutePath());
                 final Resource resource = new Resource();
                 resource.setDirectory(outputDirectory);
                 project.addResource(resource);
@@ -99,5 +106,11 @@ public class NamespaceMojo extends AbstractMojo {
             getLog().error("Namespace execution failed", e);
             throw new MojoExecutionException("Namespace execution failed", e);
         }
+    }
+
+    private File packageOutputDirectory(final Name name) {
+
+        final Name schemaPackageName = name.withoutLast();
+        return new File(outputDirectory, schemaPackageName.toString().replaceAll("\\.", File.separator));
     }
 }
