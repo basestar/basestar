@@ -12,7 +12,7 @@
     <#default>${of.schema.qualifiedClassName}<#break>
 </#switch></#macro>
 
-<#macro value of><#if of?is_string>"${of?j_string}"<#else>${of}</#if></#macro>
+<#macro value of><#if of?is_string>"${of?j_string}"<#elseif of?is_boolean>${of?c}<#else>${of}</#if></#macro>
 
 <#macro annotation name values>@${name}<#if values?has_content>(<#list values as k,v>${k} = <@value of=v/><#sep>, </#list>)</#if></#macro>
 

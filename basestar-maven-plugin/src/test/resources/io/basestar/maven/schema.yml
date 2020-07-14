@@ -5,6 +5,19 @@ Test:
       type: a.Test
     b:
       type: b.Test
+    date:
+      type: date
+      required: true
+    datetime:
+      type: datetime
+  links:
+    multi:
+      schema: a.Test
+      expression: true
+    single:
+      schema: a.Test
+      expression: true
+      single: true
 
 a.Test:
   type: object

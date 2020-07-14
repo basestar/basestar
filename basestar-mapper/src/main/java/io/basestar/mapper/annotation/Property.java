@@ -42,6 +42,8 @@ public @interface Property {
 
     String expression() default "";
 
+    boolean required() default false;
+
     @RequiredArgsConstructor
     class Declaration implements MemberDeclaration.Declaration {
 
@@ -52,7 +54,8 @@ public @interface Property {
 
             final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
             final Expression expression = annotation.expression().isEmpty() ? null : Expression.parse(annotation.expression());
-            return new PropertyMapper(context, name, prop, expression);
+            final boolean required = annotation.required();
+            return new PropertyMapper(context, name, prop, expression, required);
         }
     }
 }

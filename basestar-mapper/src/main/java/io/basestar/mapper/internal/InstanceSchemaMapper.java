@@ -67,7 +67,7 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
 
                 if (propAnnotations.size() == 0) {
                     // FIXME
-                    members.add((MemberMapper<B>)new PropertyMapper(context, prop.name(), prop, null));
+                    members.add((MemberMapper<B>)new PropertyMapper(context, prop.name(), prop, null, false));
                 } else if (propAnnotations.size() == 1) {
                     final AnnotationContext<?> annotation = propAnnotations.get(0);
                     final MemberDeclaration memberDeclaration = annotation.type().annotation(MemberDeclaration.class).annotation();

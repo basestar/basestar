@@ -85,9 +85,9 @@ public class Property implements Member {
 
         Use<?> getType();
 
-        boolean isRequired();
+        Boolean getRequired();
 
-        boolean isImmutable();
+        Boolean getImmutable();
 
         Expression getExpression();
 
@@ -110,10 +110,10 @@ public class Property implements Member {
         private String description;
 
         @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-        private boolean required;
+        private Boolean required;
 
         @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-        private boolean immutable;
+        private Boolean immutable;
 
         @JsonInclude(JsonInclude.Include.NON_NULL)
         @JsonSerialize(using = ToStringSerializer.class)
@@ -145,8 +145,8 @@ public class Property implements Member {
         this.qualifiedName = qualifiedName;
         this.description = builder.getDescription();
         this.type = builder.getType().resolve(schemaResolver);
-        this.required = builder.isRequired();
-        this.immutable = builder.isImmutable();
+        this.required = Nullsafe.option(builder.getRequired());
+        this.immutable = Nullsafe.option(builder.getImmutable());
         this.expression = builder.getExpression();
         this.constraints = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getConstraints()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(qualifiedName.with(e.getKey())))));
@@ -327,13 +327,13 @@ public class Property implements Member {
             }
 
             @Override
-            public boolean isRequired() {
+            public Boolean getRequired() {
 
                 return required;
             }
 
             @Override
-            public boolean isImmutable() {
+            public Boolean getImmutable() {
 
                 return immutable;
             }

@@ -46,6 +46,8 @@ public class LinkMapper implements MemberMapper<ObjectSchema.Builder> {
 
     private final TypeMapper.OfCustom itemType;
 
+    private final boolean single;
+
     public LinkMapper(final MappingContext context, final String name, final PropertyContext property, final Expression expression, final List<Sort> sort) {
 
         this.name = name;
@@ -57,9 +59,13 @@ public class LinkMapper implements MemberMapper<ObjectSchema.Builder> {
             final TypeMapper.OfArray array = (TypeMapper.OfArray)type;
             if(array.getValue() instanceof TypeMapper.OfCustom) {
                 itemType = (TypeMapper.OfCustom)array.getValue();
+                single = false;
             } else {
                 throw new IllegalStateException("Cannot create link item mapper for " + array.getValue());
             }
+        } else if(type instanceof TypeMapper.OfCustom) {
+            itemType = (TypeMapper.OfCustom) type;
+            single = true;
         } else {
             throw new IllegalStateException("Cannot create link mapper for " + type);
         }
@@ -78,7 +84,8 @@ public class LinkMapper implements MemberMapper<ObjectSchema.Builder> {
         builder.setLink(name, Link.builder()
                 .setSchema(schema.qualifiedName())
                 .setExpression(expression)
-                .setSort(sort));
+                .setSort(sort.isEmpty() ? null : sort)
+                .setSingle(single ? true : null));
     }
 
     @Override

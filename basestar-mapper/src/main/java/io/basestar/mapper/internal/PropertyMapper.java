@@ -39,12 +39,15 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
 
     private final TypeMapper type;
 
-    public PropertyMapper(final MappingContext context, final String name, final PropertyContext property, final Expression expression) {
+    private final boolean required;
+
+    public PropertyMapper(final MappingContext context, final String name, final PropertyContext property, final Expression expression, final boolean required) {
 
         this.name = name;
         this.property = property;
         this.expression = expression;
         this.type = TypeMapper.from(context, property.type());
+        this.required = required;
     }
 
     @Override
@@ -58,7 +61,8 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
 
         builder.setProperty(name, Property.builder()
                 .setType(type.use())
-                .setExpression(expression));
+                .setExpression(expression)
+                .setRequired(required ? true : null));
     }
 
     @Override
