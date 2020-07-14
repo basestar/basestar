@@ -29,8 +29,8 @@ public class TestCodegenMojo {
 
         mojo.execute();
 
-        assertTrue(new File(outputDirectory, "io/basestar/test/a/Test.java").exists());
-        assertTrue(new File(outputDirectory, "io/basestar/test/b/Test.java").exists());
-        assertTrue(new File(outputDirectory, "io/basestar/test/Test.java").exists());
+        assertTrue(new File(outputDirectory, "io/basestar/maven/test/a/Test.java").exists());
+        assertTrue(new File(outputDirectory, "io/basestar/maven/test/b/Test.java").exists());
+        assertTrue(new File(outputDirectory, "io/basestar/maven/test/Test.java").exists());
     }
 }
