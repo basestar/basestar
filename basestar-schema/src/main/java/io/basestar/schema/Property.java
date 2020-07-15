@@ -130,6 +130,14 @@ public class Property implements Member {
         @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private Map<String, Object> extensions;
+
+        @JsonCreator
+        @SuppressWarnings("unused")
+        public static Builder fromExpression(final String expression) {
+
+            return new Builder()
+                    .setExpression(Expression.parse(expression));
+        }
     }
 
     public static Builder builder() {

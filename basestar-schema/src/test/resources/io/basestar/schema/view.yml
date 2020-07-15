@@ -1,0 +1,12 @@
+
+Base:
+  type: object
+  properties:
+    email:
+      type: string
+
+View:
+  type: view
+  from: Base
+  select:
+    email: email

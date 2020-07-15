@@ -32,6 +32,7 @@ import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Ordering;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.expression.constant.NameConstant;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.jackson.serde.ExpressionDeseriaizer;
 import io.basestar.schema.exception.ReservedNameException;
@@ -53,7 +54,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Getter
-public class ViewSchema implements InstanceSchema, Permission.Resolver {
+public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Resolver {
 
     @Nonnull
     private final Name qualifiedName;
@@ -93,6 +94,9 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver {
     private final SortedMap<String, Permission> declaredPermissions;
 
     @Nonnull
+    private final SortedMap<String, Link> declaredLinks;
+
+    @Nonnull
     private final SortedMap<String, Object> extensions;
 
     @JsonDeserialize(as = Builder.class)
@@ -112,6 +116,8 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver {
         Map<String, Property.Descriptor> getSelect();
 
         Map<String, Property.Descriptor> getGroup();
+
+        Map<String, Link.Descriptor> getLinks();
 
         Expression getWhere();
 
@@ -170,6 +176,10 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver {
         private Map<String, Property.Descriptor> group;
 
         @Nullable
+        @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
+        private Map<String, Link.Descriptor> links;
+
+        @Nullable
         @JsonInclude(JsonInclude.Include.NON_NULL)
         @JsonSerialize(using = ToStringSerializer.class)
         @JsonDeserialize(using = ExpressionDeseriaizer.class)
@@ -206,6 +216,12 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver {
             return this;
         }
 
+        public Builder setLink(final String name, final Link.Builder v) {
+
+            links = Nullsafe.immutableCopyPut(links, name, v);
+            return this;
+        }
+
         // FIXME:
         @Override
         public Builder setProperty(final String name, final Property.Descriptor v) {
@@ -236,12 +252,14 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver {
         this.sort = Nullsafe.immutableCopy(descriptor.getSort());
         this.description = descriptor.getDescription();
         this.select = ImmutableSortedMap.copyOf(Nullsafe.option(descriptor.getSelect()).entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, qualifiedName.with(e.getKey())))));
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> viewPropertyDescriptor(e.getValue(), from).build(resolver, qualifiedName.with(e.getKey())))));
         this.group = ImmutableSortedMap.copyOf(Nullsafe.option(descriptor.getGroup()).entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, qualifiedName.with(e.getKey())))));
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> viewPropertyDescriptor(e.getValue(), from).build(resolver, qualifiedName.with(e.getKey())))));
         this.where = descriptor.getWhere();
         this.declaredProperties = ImmutableSortedMap.<String, Property>orderedBy(Ordering.natural())
                 .putAll(select).putAll(group).build();
+        this.declaredLinks = ImmutableSortedMap.copyOf(Nullsafe.option(descriptor.getLinks()).entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, qualifiedName.with(e.getKey())))));
         this.declaredPermissions = ImmutableSortedMap.copyOf(Nullsafe.option(descriptor.getPermissions()).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(e.getKey()))));
         this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());
@@ -305,15 +323,27 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver {
     }
 
     @Override
+    public Map<String, Link> getLinks() {
+
+        return getDeclaredLinks();
+    }
+
+    @Override
     public Map<String, ? extends Member> getDeclaredMembers() {
 
-        return getDeclaredProperties();
+        return ImmutableMap.<String, Member>builder()
+                .putAll(getDeclaredProperties())
+                .putAll(getDeclaredLinks())
+                .build();
     }
 
     @Override
     public Map<String, ? extends Member> getMembers() {
 
-        return getProperties();
+        return ImmutableMap.<String, Member>builder()
+                .putAll(getProperties())
+                .putAll(getLinks())
+                .build();
     }
 
     @Override
@@ -362,6 +392,74 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver {
         }
     }
 
+    private static Property.Descriptor viewPropertyDescriptor(final Property.Descriptor descriptor, final InstanceSchema from) {
+
+        return (new Property.Descriptor() {
+
+            @Override
+            public Map<String, Object> getExtensions() {
+
+                return descriptor.getExtensions();
+            }
+
+            @Nullable
+            @Override
+            public String getDescription() {
+
+                return descriptor.getDescription();
+            }
+
+            @Override
+            public Visibility getVisibility() {
+
+                return descriptor.getVisibility();
+            }
+
+            @Override
+            public Use<?> getType() {
+
+                if(descriptor.getType() == null && descriptor.getExpression() != null) {
+                    if (descriptor.getExpression() instanceof NameConstant) {
+                        final Name name = ((NameConstant) descriptor.getExpression()).getName();
+                        if(name.size() == 1) {
+                            final Property prop = from.getProperty(name.last(), true);
+                            if(prop != null) {
+                                return prop.getType();
+                            }
+                        }
+                    }
+                    throw new IllegalStateException("Cannot infer type from expression " + descriptor.getExpression());
+                } else {
+                    return descriptor.getType();
+                }
+            }
+
+            @Override
+            public Boolean getRequired() {
+
+                return descriptor.getRequired();
+            }
+
+            @Override
+            public Boolean getImmutable() {
+
+                return descriptor.getImmutable();
+            }
+
+            @Override
+            public Expression getExpression() {
+
+                return descriptor.getExpression();
+            }
+
+            @Override
+            public Map<String, ? extends Constraint.Descriptor> getConstraints() {
+
+                return descriptor.getConstraints();
+            }
+        });
+    }
+
     @Override
     public Descriptor descriptor() {
 
@@ -391,6 +489,15 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver {
             public Map<String, Property.Descriptor> getGroup() {
 
                 return group.entrySet().stream().collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().descriptor()
+                ));
+            }
+
+            @Override
+            public Map<String, Link.Descriptor> getLinks() {
+
+                return declaredLinks.entrySet().stream().collect(Collectors.toMap(
                         Map.Entry::getKey,
                         entry -> entry.getValue().descriptor()
                 ));
