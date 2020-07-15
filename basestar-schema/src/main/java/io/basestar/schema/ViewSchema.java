@@ -422,6 +422,10 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
                     if (descriptor.getExpression() instanceof NameConstant) {
                         final Name name = ((NameConstant) descriptor.getExpression()).getName();
                         if(name.size() == 1) {
+                            final Use<?> metadataType = from.metadataSchema().get(name.last());
+                            if(metadataType != null) {
+                                return metadataType;
+                            }
                             final Property prop = from.getProperty(name.last(), true);
                             if(prop != null) {
                                 return prop.getType();
