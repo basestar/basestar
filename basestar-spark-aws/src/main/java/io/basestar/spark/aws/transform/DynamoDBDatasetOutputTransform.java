@@ -21,6 +21,7 @@ package io.basestar.spark.aws.transform;
  */
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.use.Use;
 import io.basestar.spark.transform.Transform;
@@ -50,7 +51,7 @@ public class DynamoDBDatasetOutputTransform implements Transform<Dataset<Row>, R
     public RDD<Map<String, AttributeValue>> accept(final Dataset<Row> input) {
 
         return input.toJavaRDD().map(row -> {
-            final Map<String, Object> data = SparkSchemaUtils.fromSpark(schema, extraMetadata, row);
+            final Map<String, Object> data = SparkSchemaUtils.fromSpark(schema, ImmutableSet.of(), extraMetadata, row);
             return DynamoDBLegacyUtils.toItem(data);
         }).rdd();
     }

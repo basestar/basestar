@@ -258,7 +258,7 @@ public class PartitionedUpsertSink extends PartitionedUpsertUtils implements Sin
                         if(t._2() != null) {
                             return t._1();
                         } else {
-                            return SparkSchemaUtils.with(t._1(), ImmutableMap.of(STATE_COLUMN, CREATE_STATE));
+                            return SparkSchemaUtils.set(t._1(), ImmutableMap.of(STATE_COLUMN, CREATE_STATE));
                         }
                     } else {
                         return SparkSchemaUtils.conform(t._2(), dataSchema);

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.basestar.util.Name;
 
 import javax.annotation.Nonnull;
+import java.util.Objects;
 
 public interface Named {
 
@@ -37,4 +38,17 @@ public interface Named {
     @Nonnull
     @JsonIgnore
     Name getQualifiedName();
+
+    default boolean qualifiedNameEquals(final Object o) {
+
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        final ObjectSchema that = (ObjectSchema) o;
+        return getQualifiedName().equals(that.getQualifiedName());
+    }
+
+    default int qualifiedNameHashCode() {
+
+        return Objects.hash(getQualifiedName());
+    }
 }

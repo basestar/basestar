@@ -28,8 +28,8 @@ import com.hazelcast.nio.serialization.Portable;
 import com.hazelcast.nio.serialization.PortableReader;
 import com.hazelcast.nio.serialization.PortableWriter;
 import io.basestar.schema.Instance;
+import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Reserved;
-import io.basestar.schema.StructSchema;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseArray;
 
@@ -72,12 +72,12 @@ public interface AttributeType<T> {
         return new EncodedType<>(new UseArray<>(type));
     }
 
-    static StructType struct(final StructSchema schema) {
+    static StructType struct(final InstanceSchema schema) {
 
         return new StructType(schema);
     }
 
-    static StructArrayType structArray(final StructSchema schema) {
+    static StructArrayType structArray(final InstanceSchema schema) {
 
         return new StructArrayType(schema);
     }
@@ -346,9 +346,9 @@ public interface AttributeType<T> {
 
     class StructType implements AttributeType<Instance> {
 
-        private final StructSchema schema;
+        private final InstanceSchema schema;
 
-        public StructType(final StructSchema schema) {
+        public StructType(final InstanceSchema schema) {
 
             this.schema = schema;
         }
@@ -377,9 +377,9 @@ public interface AttributeType<T> {
 
     class StructArrayType implements AttributeType<List<Instance>> {
 
-        private final StructSchema schema;
+        private final InstanceSchema schema;
 
-        public StructArrayType(final StructSchema schema) {
+        public StructArrayType(final InstanceSchema schema) {
 
             this.schema = schema;
         }

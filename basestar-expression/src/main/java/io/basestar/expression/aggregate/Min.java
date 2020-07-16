@@ -23,8 +23,8 @@ package io.basestar.expression.aggregate;
 import com.google.common.collect.Ordering;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.expression.type.Values;
 import io.basestar.expression.exception.InvalidAggregateException;
+import io.basestar.expression.type.Values;
 import lombok.Data;
 
 import java.util.List;

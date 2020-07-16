@@ -42,14 +42,14 @@ public class SparkUtils {
                 Option.apply(format.getHadoopOutputFormat()),
                 Option.apply(format.getHadoopSerde()),
                 true,
-                ScalaUtils.scalaEmptyMap()
+                ScalaUtils.emptyScalaMap()
         );
     }
 
     public static CatalogTablePartition partition(final Map<String, String> spec, final Format format, final URI location) {
 
         final long now = LocalDateTime.now().toEpochSecond(ZoneOffset.UTC);
-        return CatalogTablePartition.apply(ScalaUtils.asScalaMap(spec), storageFormat(format, location), ScalaUtils.scalaEmptyMap(), now, now, Option.empty());
+        return CatalogTablePartition.apply(ScalaUtils.asScalaMap(spec), storageFormat(format, location), ScalaUtils.emptyScalaMap(), now, now, Option.empty());
     }
 
     public static void syncTablePartitions(final ExternalCatalog catalog, final String databaseName, final String tableName, final List<CatalogTablePartition> partitions) {

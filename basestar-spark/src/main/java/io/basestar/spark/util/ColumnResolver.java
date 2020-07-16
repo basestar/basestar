@@ -1,8 +1,8 @@
-package io.basestar.api.exception;
+package io.basestar.spark.util;
 
 /*-
  * #%L
- * basestar-api
+ * basestar-spark
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -20,26 +20,25 @@ package io.basestar.api.exception;
  * #L%
  */
 
-import io.basestar.exception.ExceptionMetadata;
-import io.basestar.exception.HasExceptionMetadata;
+import io.basestar.util.Name;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
 
-public class InvalidBodyException extends RuntimeException implements HasExceptionMetadata {
+public interface ColumnResolver<R> {
 
-    public static final int STATUS = 400;
+    Column resolve(Dataset<R> input, Name name);
 
-    public static final String CODE = "InvalidBody";
+    static Column nestedColumn(final Dataset<?> input, final Name name) {
 
-    public InvalidBodyException(final String message) {
-
-        super(message);
+        return nestedColumn(input.col(name.first()), name.withoutFirst());
     }
 
-    @Override
-    public ExceptionMetadata getMetadata() {
+    static Column nestedColumn(final Column column, final Name name) {
 
-        return new ExceptionMetadata()
-                .setStatus(STATUS)
-                .setCode(CODE)
-                .setMessage(getMessage());
+        if(name.isEmpty()) {
+            return column;
+        } else {
+            return nestedColumn(column.getField(name.first()), name.withoutFirst());
+        }
     }
 }

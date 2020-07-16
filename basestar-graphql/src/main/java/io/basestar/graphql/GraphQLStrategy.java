@@ -395,6 +395,12 @@ public interface GraphQLStrategy {
 
                 return GraphQLUtils.STRING_TYPE;
             }
+
+            @Override
+            public String visitView(final UseView type) {
+
+                return typeName(type.getSchema());
+            }
         };
     }
 }

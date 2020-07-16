@@ -83,9 +83,9 @@ public abstract class PartitionedUpsertUtils {
                 Option.empty(),
                 Option.empty(),
                 Option.empty(),
-                ScalaUtils.scalaEmptySeq(),
+                ScalaUtils.emptyScalaSeq(),
                 true, true,
-                ScalaUtils.scalaEmptyMap()
+                ScalaUtils.emptyScalaMap()
         );
 
         if(catalog.tableExists(databaseName, tableName)) {
@@ -141,7 +141,7 @@ public abstract class PartitionedUpsertUtils {
         }
     }
 
-    private static URI lastUpsert(final FileSystem fs, final Path path) throws IOException {
+    public static URI lastUpsert(final FileSystem fs, final Path path) throws IOException {
 
         URI latest = null;
         for (final FileStatus status : fs.listStatus(path)) {
@@ -155,7 +155,7 @@ public abstract class PartitionedUpsertUtils {
         return latest;
     }
 
-    protected static String extractUpsertId(final URI partitionLocation) {
+    public static String extractUpsertId(final URI partitionLocation) {
 
         final String str = partitionLocation.toString();
         final Pattern pattern = Pattern.compile("^.*" + Pattern.quote(UPSERT_PARTITION) + "=([^/]+)/?$");

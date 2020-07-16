@@ -152,7 +152,7 @@ public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Colu
     }
 
     @Override
-    public Column visitPathConstant(final NameConstant expression) {
+    public Column visitNameConstant(final NameConstant expression) {
 
         return columnResolver.apply(expression.getName());
     }

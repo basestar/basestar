@@ -21,6 +21,8 @@ package io.basestar.spark.util;
  */
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import io.basestar.util.Name;
@@ -30,6 +32,8 @@ import org.apache.spark.sql.types.*;
 import scala.collection.Seq;
 
 import java.util.*;
+import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -212,21 +216,56 @@ public class SparkSchemaUtils {
 
                 return DataTypes.DateType;
             }
+
+            @Override
+            public DataType visitView(final UseView type) {
+
+                return structType(type.getSchema(), expand);
+            }
         });
     }
 
     public static Map<String, Object> fromSpark(final InstanceSchema schema, final Row row) {
 
-       return fromSpark(schema, ImmutableMap.of(), row);
+        return fromSpark(schema, ImmutableSet.of(), ImmutableMap.of(), row);
     }
 
-    public static Map<String, Object> fromSpark(final InstanceSchema schema, final Map<String, Use<?>> extraMetadata, final Row row) {
+    public static Map<String, Object> fromSpark(final InstanceSchema schema, final Set<Name> expand, final Row row) {
 
+       return fromSpark(schema, expand, ImmutableMap.of(), row);
+    }
+
+    public static Map<String, Object> fromSpark(final InstanceSchema schema, final Set<Name> expand, final Map<String, Use<?>> extraMetadata, final Row row) {
+
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         final Map<String, Object> object = new HashMap<>();
-        schema.getProperties().forEach((name, property) -> object.put(name, fromSpark(property.getType(), get(row, name))));
+        schema.getProperties().forEach((name, property) -> object.put(name, fromSpark(property.getType(), branches.get(name), get(row, name))));
         schema.metadataSchema().forEach((name, type) -> object.put(name, fromSpark(type, get(row, name))));
         extraMetadata.forEach((name, type) -> object.put(name, fromSpark(type, get(row, name))));
+        if(schema instanceof Link.Resolver) {
+            ((Link.Resolver)schema).getLinks()
+                    .forEach((name, link) -> {
+                        final Set<Name> branch = branches.get(name);
+                        if(branch != null) {
+                            object.put(name, fromSpark(link, branch, get(row, name)));
+                        }
+                    });
+        }
         return schema.create(object, true, true);
+    }
+
+    protected static Object fromSpark(final Link link, final Set<Name> expand, final Object value) {
+
+        if(link.isSingle()) {
+            return fromSpark(link.getSchema(), expand, (Row)value);
+        } else {
+            final List<Map<String, Object>> results = new ArrayList<>();
+            ((scala.collection.Iterable<?>)value).foreach(ScalaUtils.scalaFunction(v -> {
+                results.add(fromSpark(link.getSchema(), expand, (Row)v));
+                return null;
+            }));
+            return results;
+        }
     }
 
     public static Map<String, Object> refFromSpark(final Row row) {
@@ -238,6 +277,11 @@ public class SparkSchemaUtils {
     }
 
     public static Object fromSpark(final Use<?> type, final Object value) {
+
+        return fromSpark(type, ImmutableSet.of(), value);
+    }
+
+    public static Object fromSpark(final Use<?> type, final Set<Name> expand, final Object value) {
 
         if(value == null) {
             return null;
@@ -360,6 +404,16 @@ public class SparkSchemaUtils {
             public Object visitDateTime(final UseDateTime type) {
 
                 return type.create(value, false, true);
+            }
+
+            @Override
+            public Object visitView(final UseView type) {
+
+                if(value instanceof Row) {
+                    return fromSpark(type.getSchema(), (Row)value);
+                } else {
+                    throw new IllegalStateException();
+                }
             }
         });
     }
@@ -518,6 +572,12 @@ public class SparkSchemaUtils {
 
                 return type.create(value, false, true);
             }
+
+            @Override
+            public Object visitView(final UseView type) {
+
+                throw new UnsupportedOperationException();
+            }
         });
     }
 
@@ -613,20 +673,61 @@ public class SparkSchemaUtils {
         }
     }
 
-    public static Row with(final Row source, final ImmutableMap<String, ?> of) {
+    public static Row transform(final Row source, final BiFunction<StructField, Object, ?> fn) {
 
         final StructType sourceType = source.schema();
         final StructField[] sourceFields = sourceType.fields();
-        final Object[] sourceValues = new Object[sourceFields.length];
+        final Object[] targetValues = new Object[sourceFields.length];
         for (int i = 0; i != sourceFields.length; ++i) {
             final StructField sourceField = sourceFields[i];
-            if(of.containsKey(sourceField.name())) {
-                sourceValues[i] = of.get(sourceField.name());
-            } else {
-                sourceValues[i] = source.get(i);
+            targetValues[i] = fn.apply(sourceField, source.get(i));
+        }
+        return new GenericRowWithSchema(targetValues, sourceType);
+    }
+
+    public static Row remove(final Row source, final String name) {
+
+        return remove(source, (field, value) -> name.equals(field.name()));
+    }
+
+    public static Row remove(final Row source, final BiPredicate<StructField, Object> fn) {
+
+        final StructType sourceType = source.schema();
+        final StructField[] sourceFields = sourceType.fields();
+        final List<StructField> outputFields = new ArrayList<>();
+        final List<Object> outputValues = new ArrayList<>();
+        for (int i = 0; i != sourceFields.length; ++i) {
+            final StructField sourceField = sourceFields[i];
+            final Object sourceValue = source.get(i);
+            if(!fn.test(sourceField, sourceValue)) {
+                outputFields.add(sourceField);
+                outputValues.add(sourceValue);
             }
         }
-        return new GenericRowWithSchema(sourceValues, sourceType);
+        return new GenericRowWithSchema(outputValues.toArray(),
+                DataTypes.createStructType(outputFields.toArray(new StructField[0])));
+    }
+
+    public static Row set(final Row source, final Map<String, ?> of) {
+
+        return transform(source, (field, value) -> {
+            if(of.containsKey(field.name())) {
+                return of.get(field.name());
+            } else {
+                return value;
+            }
+        });
+    }
+
+    public static Row set(final Row source, final String name, final Object newValue) {
+
+        return transform(source, (field, value) -> {
+            if(name.equals(field.name())) {
+                return newValue;
+            } else {
+                return value;
+            }
+        });
     }
 
     // Case insensitive
@@ -641,6 +742,26 @@ public class SparkSchemaUtils {
             }
         }
         return null;
+    }
+
+    public static Row append(final Row source, final StructField field, final Object value) {
+
+        final StructType sourceType = source.schema();
+        final StructField[] sourceFields = sourceType.fields();
+        final StructType outputType = append(sourceType, field);
+        final List<Object> outputValues = new ArrayList<>();
+        for (int i = 0; i != sourceFields.length; ++i) {
+            outputValues.add(source.get(i));
+        }
+        outputValues.add(value);
+        return new GenericRowWithSchema(outputValues.toArray(), outputType);
+    }
+
+    public static StructType append(final StructType sourceType, final StructField field) {
+
+        final List<StructField> fields = Lists.newArrayList(sourceType.fields());
+        fields.add(field);
+        return DataTypes.createStructType(fields.toArray(new StructField[0]));
     }
 
     // Presto in default config wants partition columns after all other columns
@@ -661,4 +782,88 @@ public class SparkSchemaUtils {
         fields.addAll(partition.values());
         return DataTypes.createStructType(fields);
     }
+
+//    public static Encoder<?> encoder(final Use<?> type, final Set<Name> expand) {
+//
+//        return type.visit(new Use.Visitor<Encoder<?>>() {
+//
+//            @Override
+//            public Encoder<?> visitBoolean(final UseBoolean type) {
+//
+//                return Encoders.BOOLEAN();
+//            }
+//
+//            @Override
+//            public Encoder<?> visitInteger(final UseInteger type) {
+//
+//                return Encoders.LONG();
+//            }
+//
+//            @Override
+//            public Encoder<?> visitNumber(final UseNumber type) {
+//
+//                return Encoders.DOUBLE();
+//            }
+//
+//            @Override
+//            public Encoder<?> visitString(final UseString type) {
+//
+//                return Encoders.STRING();
+//            }
+//
+//            @Override
+//            public Encoder<?> visitEnum(final UseEnum type) {
+//
+//                return Encoders.STRING();
+//            }
+//
+//            @Override
+//            public Encoder<?> visitObject(final UseObject type) {
+//
+//                return refType(type.getSchema(), expand);
+//            }
+//
+//            @Override
+//            public <T> Encoder<?> visitArray(final UseArray<T> type) {
+//
+//                return DataTypes.createArrayType(type.getType().visit(this));
+//            }
+//
+//            @Override
+//            public <T> Encoder<?> visitSet(final UseSet<T> type) {
+//
+//                return DataTypes.createArrayType(type.getType().visit(this));
+//            }
+//
+//            @Override
+//            public <T> Encoder<?> visitMap(final UseMap<T> type) {
+//
+//                return DataTypes.createMapType(DataTypes.StringType, type.getType().visit(this));
+//            }
+//
+//            @Override
+//            public Encoder<?> visitStruct(final UseStruct type) {
+//
+//                return structType(type.getSchema(), expand);
+//            }
+//
+//            @Override
+//            public Encoder<?> visitBinary(final UseBinary type) {
+//
+//                return Encoders.BINARY();
+//            }
+//
+//            @Override
+//            public Encoder<?> visitDate(final UseDate type) {
+//
+//                return Encoders.DATE();
+//            }
+//
+//            @Override
+//            public Encoder<?> visitDateTime(final UseDateTime type) {
+//
+//                return Encoders.DATE();
+//            }
+//        });
+//    }
 }

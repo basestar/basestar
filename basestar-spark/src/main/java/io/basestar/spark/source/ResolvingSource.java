@@ -1,8 +1,8 @@
-package io.basestar.api.exception;
+package io.basestar.spark.source;
 
 /*-
  * #%L
- * basestar-api
+ * basestar-spark
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -20,26 +20,14 @@ package io.basestar.api.exception;
  * #L%
  */
 
-import io.basestar.exception.ExceptionMetadata;
-import io.basestar.exception.HasExceptionMetadata;
+import io.basestar.spark.sink.Sink;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 
-public class InvalidBodyException extends RuntimeException implements HasExceptionMetadata {
-
-    public static final int STATUS = 400;
-
-    public static final String CODE = "InvalidBody";
-
-    public InvalidBodyException(final String message) {
-
-        super(message);
-    }
+public class ResolvingSource implements Source<Dataset<Row>> {
 
     @Override
-    public ExceptionMetadata getMetadata() {
+    public void then(final Sink<Dataset<Row>> sink) {
 
-        return new ExceptionMetadata()
-                .setStatus(STATUS)
-                .setCode(CODE)
-                .setMessage(getMessage());
     }
 }

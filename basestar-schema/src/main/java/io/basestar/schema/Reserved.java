@@ -20,6 +20,8 @@ package io.basestar.schema;
  * #L%
  */
 
+import io.basestar.util.Name;
+
 public class Reserved {
 
     public static final String DELIMITER = "/";
@@ -43,6 +45,12 @@ public class Reserved {
     public static final String HASH = "hash";
 
     public static final String THIS = "this";
+
+    public static final String VALUE = "value";
+
+    public static final Name ID_NAME = Name.of(ID);
+
+    public static final Name THIS_NAME = Name.of(THIS);
 
     public static boolean isReserved(final String name) {
 

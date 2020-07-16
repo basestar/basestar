@@ -187,6 +187,18 @@ public class Transient implements Member {
         return Collections.emptySet();
     }
 
+    @Override
+    public Object create(final Object value, final boolean expand, final boolean suppress) {
+
+        if(value == null) {
+            return null;
+        } else if(type == null) {
+            return value;
+        } else {
+            return type.create(value, expand, suppress);
+        }
+    }
+
     //FIXME
     @Override
     @SuppressWarnings("unchecked")

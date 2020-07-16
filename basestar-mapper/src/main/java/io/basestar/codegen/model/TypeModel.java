@@ -183,6 +183,25 @@ public interface TypeModel {
             }
 
             @Override
+            public TypeModel visitView(final UseView type) {
+
+                return new TypeModel() {
+
+                    @Override
+                    public String getName() {
+
+                        return type.getSchema().getQualifiedName().toString();
+                    }
+
+                    @Override
+                    public SchemaModel getSchema() {
+
+                        return new ViewSchemaModel(settings, type.getSchema());
+                    };
+                };
+            }
+
+            @Override
             public TypeModel visitBinary(final UseBinary type) {
 
                 return () -> "Binary";

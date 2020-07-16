@@ -63,11 +63,12 @@ public interface Use<T> extends Serializable {
         ARRAY,
         SET,
         MAP,
-        REF,
+        OBJECT,
         STRUCT,
         BINARY,
         DATE,
-        DATETIME
+        DATETIME,
+        VIEW
     }
 
     <R> R visit(Visitor<R> visitor);
@@ -199,7 +200,7 @@ public interface Use<T> extends Serializable {
         }
     }
 
-    default T deseralize(final DataInput in) throws IOException {
+    default T deserialize(final DataInput in) throws IOException {
 
         final byte ordinal = in.readByte();
         final Code code = Code.values()[ordinal];
@@ -240,7 +241,7 @@ public interface Use<T> extends Serializable {
                 return (T)UseSet.deserializeAnyValue(in);
             case MAP:
                 return (T)UseMap.deserializeAnyValue(in);
-            case REF:
+            case OBJECT:
                 return (T) UseObject.deserializeAnyValue(in);
             case STRUCT:
                 return (T)UseStruct.deserializeAnyValue(in);
@@ -250,6 +251,8 @@ public interface Use<T> extends Serializable {
                 return (T)UseDate.DEFAULT.deserializeValue(in);
             case DATETIME:
                 return (T)UseDateTime.DEFAULT.deserializeValue(in);
+            case VIEW:
+                return (T) UseView.deserializeAnyValue(in);
             default:
                 throw new IllegalStateException();
         }
@@ -282,6 +285,8 @@ public interface Use<T> extends Serializable {
         R visitDate(UseDate type);
 
         R visitDateTime(UseDateTime type);
+
+        R visitView(UseView type);
 
         interface Defaulting<R> extends Visitor<R> {
 
@@ -378,6 +383,12 @@ public interface Use<T> extends Serializable {
             default R visitDateTime(final UseDateTime type) {
 
                 return visitScalar(type);
+            }
+
+            @Override
+            default R visitView(final UseView type) {
+
+                return visitInstance(type);
             }
         }
     }

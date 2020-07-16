@@ -62,7 +62,7 @@ public class KeysetPagingUtils {
             for(final Sort s : sort) {
                 final Name name = s.getName();
                 final Use<Object> type = schema.typeOf(name);
-                final Object value = type.deseralize(dis);
+                final Object value = type.deserialize(dis);
                 values.add(value);
             }
         } catch (final IOException e) {

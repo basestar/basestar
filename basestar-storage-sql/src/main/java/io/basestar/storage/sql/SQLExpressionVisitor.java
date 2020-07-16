@@ -217,7 +217,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     }
 
     @Override
-    public QueryPart visitPathConstant(final NameConstant expression) {
+    public QueryPart visitNameConstant(final NameConstant expression) {
 
         final Name name = expression.getName();
         return DSL.field(DSL.name(name.stream()

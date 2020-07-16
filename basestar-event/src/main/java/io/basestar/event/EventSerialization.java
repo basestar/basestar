@@ -22,6 +22,7 @@ package io.basestar.event;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.undercouch.bson4jackson.BsonFactory;
+import io.basestar.jackson.BasestarModule;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -44,7 +45,8 @@ public interface EventSerialization {
 
         public static final EventSerialization INSTANCE = new GzipBson();
 
-        private static final ObjectMapper objectMapper = new ObjectMapper(new BsonFactory());
+        private static final ObjectMapper objectMapper = new ObjectMapper(new BsonFactory())
+                .registerModule(new BasestarModule());
 
         @Override
         public byte[] serialize(final Event event) {

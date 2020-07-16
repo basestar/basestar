@@ -482,6 +482,13 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
                 result.put(entry.getKey(), entry.getValue());
             }
         }
+        if(expand) {
+            Stream.of(links, transients).forEach(members -> members.forEach((name, link) -> {
+                if(value.containsKey(name)) {
+                    result.put(name, link.create(value.get(name), true, suppress));
+                }
+            }));
+        }
         return new Instance(result);
     }
 
@@ -707,5 +714,17 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
                 return extensions;
             }
         };
+    }
+
+    @Override
+    public boolean equals(final Object other) {
+
+        return qualifiedNameEquals(other);
+    }
+
+    @Override
+    public int hashCode() {
+
+        return qualifiedNameHashCode();
     }
 }

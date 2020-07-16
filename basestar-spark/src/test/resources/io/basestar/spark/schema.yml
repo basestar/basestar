@@ -3,17 +3,41 @@ A:
   properties:
     ref:
       type: B
+    arrayRef:
+      type:
+        array: B
+    mapRef:
+      type:
+        map: B
+    structRef:
+      type: E
+  links:
+    multi:
+      schema: C
+      expression: this.id == owner.id
 
 B:
   type: object
   properties:
     key:
-      type: A
+      type: D
     value:
       type: integer
 
 C:
   type: object
+  properties:
+    owner:
+      type: A
+
+D:
+  type: object
+
+E:
+  type: struct
+  properties:
+    ref:
+      type: B
 
 AggView:
   type: view

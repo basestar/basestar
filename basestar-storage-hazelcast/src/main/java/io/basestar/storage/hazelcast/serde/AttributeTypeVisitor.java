@@ -104,6 +104,12 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
         return AttributeType.STRING;
     }
 
+    @Override
+    public AttributeType<?> visitView(final UseView type) {
+
+        return AttributeType.struct(type.getSchema());
+    }
+
     public static class ForArray implements Use.Visitor<AttributeType<?>> {
 
         public static final ForArray INSTANCE = new ForArray();
@@ -184,6 +190,12 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
         public AttributeType<?> visitDateTime(final UseDateTime type) {
 
             return AttributeType.STRING_ARRAY;
+        }
+
+        @Override
+        public AttributeType<?> visitView(final UseView type) {
+
+            return AttributeType.structArray(type.getSchema());
         }
     }
 }

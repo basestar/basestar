@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
@@ -48,6 +49,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Link
@@ -160,6 +162,22 @@ public class Link implements Member {
         }
     }
 
+    public List<Sort> getEffectiveSort() {
+
+        if(sort.isEmpty()) {
+            return ImmutableList.of(Sort.asc(Reserved.ID_NAME));
+        } else {
+            final Sort last = sort.get(sort.size() - 1);
+            if(last.getName().equals(Reserved.ID_NAME)) {
+                return sort;
+            } else {
+                return ImmutableList.<Sort>builder().addAll(sort)
+                        .add(Sort.asc(Reserved.ID_NAME))
+                        .build();
+            }
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private PagedList<Instance> toArray(final Object value) {
 
@@ -188,6 +206,21 @@ public class Link implements Member {
             return fromArray(expander.expandLink(this, toArray(value), expand));
         }
     }
+
+    @Override
+    public Object create(final Object value, final boolean expand, final boolean suppress) {
+
+        if(value == null) {
+            return null;
+        } else if(single) {
+            return schema.create(value, expand, suppress);
+        } else {
+            return ((Collection<?>)value).stream()
+                    .map(v -> schema.create(v, expand, suppress))
+                    .collect(Collectors.toList());
+        }
+    }
+
 
     @Override
     public Set<Name> requiredExpand(final Set<Name> names) {

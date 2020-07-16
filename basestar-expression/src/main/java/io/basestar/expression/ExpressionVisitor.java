@@ -86,7 +86,7 @@ public interface ExpressionVisitor<T> {
 
     T visitConstant(Constant expression);
 
-    T visitPathConstant(NameConstant expression);
+    T visitNameConstant(NameConstant expression);
 
     T visitCoalesce(Coalesce expression);
 
@@ -267,7 +267,7 @@ public interface ExpressionVisitor<T> {
         }
 
         @Override
-        default T visitPathConstant(final NameConstant expression) {
+        default T visitNameConstant(final NameConstant expression) {
             
             return visitDefault(expression);
         }

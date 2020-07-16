@@ -21,6 +21,7 @@ package io.basestar.util;
  */
 
 import com.google.common.base.Splitter;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -31,6 +32,7 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 
 @Data
+@AllArgsConstructor
 public class Sort implements Serializable {
 
     public static final String DELIMITER = ":";
@@ -41,9 +43,16 @@ public class Sort implements Serializable {
 
     private final Order order;
 
+    private final Nulls nulls;
+
+    public Sort(final Name name, final Order order) {
+
+        this(name, order, Nulls.FIRST);
+    }
+
     public Sort reverse() {
 
-        return new Sort(name, order.reverse());
+        return new Sort(name, order.reverse(), nulls.reverse());
     }
 
     public static Sort asc(final Name name) {
@@ -117,6 +126,17 @@ public class Sort implements Serializable {
         public Order reverse() {
 
             return this == ASC ? DESC : ASC;
+        }
+    }
+
+    public enum Nulls {
+
+        FIRST,
+        LAST;
+
+        public Nulls reverse() {
+
+            return this == FIRST ? LAST : FIRST;
         }
     }
 }

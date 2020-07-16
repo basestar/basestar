@@ -27,8 +27,6 @@ import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.IndexedRecord;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -159,6 +157,12 @@ public class AvroUtils {
 
                 return Schema.create(Schema.Type.STRING);
             }
+
+            @Override
+            public Schema visitView(final UseView type) {
+
+                return schema(type.getSchema());
+            }
         });
     }
 
@@ -194,34 +198,10 @@ public class AvroUtils {
     @SuppressWarnings("unchecked")
     private static Object encode(final Use<?> use, final Schema schema, final Object value) {
 
-        return use.visit(new Use.Visitor<Object>() {
+        return use.visit(new Use.Visitor.Defaulting<Object>() {
 
             @Override
-            public Boolean visitBoolean(final UseBoolean type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public Long visitInteger(final UseInteger type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public Double visitNumber(final UseNumber type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public String visitString(final UseString type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public String visitEnum(final UseEnum type) {
+            public Object visitDefault(final Use<?> type) {
 
                 return type.create(value);
             }
@@ -233,20 +213,13 @@ public class AvroUtils {
             }
 
             @Override
-            public <T> List<?> visitArray(final UseArray<T> type) {
+            public GenericRecord visitInstance(final UseInstance type) {
 
-                if(value == null) {
-                    return null;
-                } else {
-                    final Collection<?> arr = (Collection<?>)value;
-                    return arr.stream()
-                            .map(v -> encode(type.getType(), schema.getElementType(), v))
-                            .collect(Collectors.toList());
-                }
+                return value == null ? null : encode(type.getSchema(), schema, (Map<String, Object>)value);
             }
 
             @Override
-            public <T> List<?> visitSet(final UseSet<T> type) {
+            public <T> List<?> visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
 
                 if(value == null) {
                     return null;
@@ -271,18 +244,6 @@ public class AvroUtils {
                                     e -> encode(type.getType(), schema.getValueType(), e.getValue())
                             ));
                 }
-            }
-
-            @Override
-            public GenericRecord visitStruct(final UseStruct type) {
-
-                return value == null ? null : encode(type.getSchema(), schema, (Map<String, Object>)value);
-            }
-
-            @Override
-            public byte[] visitBinary(final UseBinary type) {
-
-                return type.create(value);
             }
 
             @Override
@@ -325,34 +286,10 @@ public class AvroUtils {
 
     private static Object decode(final Use<?> use, final Schema schema, final Object value) {
 
-        return use.visit(new Use.Visitor<Object>() {
+        return use.visit(new Use.Visitor.Defaulting<Object>() {
 
             @Override
-            public Boolean visitBoolean(final UseBoolean type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public Long visitInteger(final UseInteger type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public Double visitNumber(final UseNumber type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public String visitString(final UseString type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public String visitEnum(final UseEnum type) {
+            public Object visitDefault(final Use<?> type) {
 
                 return type.create(value);
             }
@@ -364,20 +301,7 @@ public class AvroUtils {
             }
 
             @Override
-            public <T> List<?> visitArray(final UseArray<T> type) {
-
-                if(value == null) {
-                    return null;
-                } else {
-                    final Collection<?> arr = (Collection<?>)value;
-                    return arr.stream()
-                            .map(v -> decode(type.getType(), schema.getElementType(), v))
-                            .collect(Collectors.toList());
-                }
-            }
-
-            @Override
-            public <T> List<?> visitSet(final UseSet<T> type) {
+            public <T> List<?> visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
 
                 if(value == null) {
                     return null;
@@ -405,27 +329,9 @@ public class AvroUtils {
             }
 
             @Override
-            public Map<String, Object> visitStruct(final UseStruct type) {
+            public Map<String, Object> visitInstance(final UseInstance type) {
 
                 return value == null ? null : decode(type.getSchema(), schema, (IndexedRecord)value);
-            }
-
-            @Override
-            public byte[] visitBinary(final UseBinary type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public LocalDate visitDate(final UseDate type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public LocalDateTime visitDateTime(final UseDateTime type) {
-
-                return type.create(value);
             }
         });
     }

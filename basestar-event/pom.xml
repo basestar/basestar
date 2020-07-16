@@ -44,6 +44,11 @@
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-core</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.basestar</groupId>
+            <artifactId>basestar-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
 </project>

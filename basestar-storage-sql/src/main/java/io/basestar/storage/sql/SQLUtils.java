@@ -130,6 +130,12 @@ public class SQLUtils {
 
                 return SQLDataType.LOCALDATETIME;
             }
+
+            @Override
+            public DataType<?> visitView(final UseView type) {
+
+                return SQLDataType.LONGVARCHAR;//JSONB;
+            }
         });
     }
 
@@ -231,6 +237,12 @@ public class SQLUtils {
             public Object visitDateTime(final UseDateTime type) {
 
                 return type.create(value);
+            }
+
+            @Override
+            public Object visitView(final UseView type) {
+
+                return toJson(value);
             }
         });
     }
@@ -350,6 +362,12 @@ public class SQLUtils {
             public LocalDateTime visitDateTime(final UseDateTime type) {
 
                 return type.create(value);
+            }
+
+            @Override
+            public Object visitView(final UseView type) {
+
+                return type.create(fromJson(value, new TypeReference<Map<String, Object>>() {}));
             }
         });
     }

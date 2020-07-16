@@ -174,6 +174,12 @@ public class Mappings {
 
                         return FieldType.DATETIME;
                     }
+
+                    @Override
+                    public FieldType visitView(final UseView type) {
+
+                        return new FieldType.NestedType(properties(type.getSchema(), expand));
+                    }
                 });
             }
         }

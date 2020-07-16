@@ -332,4 +332,16 @@ public class StructSchema implements InstanceSchema {
             }
         };
     }
+
+    @Override
+    public boolean equals(final Object other) {
+
+        return qualifiedNameEquals(other);
+    }
+
+    @Override
+    public int hashCode() {
+
+        return qualifiedNameHashCode();
+    }
 }

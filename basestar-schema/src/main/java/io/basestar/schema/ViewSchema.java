@@ -27,9 +27,7 @@ import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Ordering;
+import com.google.common.collect.*;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
@@ -47,6 +45,9 @@ import lombok.experimental.Accessors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -283,6 +284,16 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
         return new Instance(readProperties(value, expand, suppress));
     }
 
+    public void serialize(final Map<String, Object> object, final DataOutput out) throws IOException {
+
+        serializeProperties(object, out);
+    }
+
+    public static Instance deserialize(final DataInput in) throws IOException {
+
+        return new Instance(InstanceSchema.deserializeProperties(in));
+    }
+
     @Override
     public Set<Constraint.Violation> validate(final Context context, final Name name, final Instance after) {
 
@@ -349,34 +360,13 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
         return getProperty(name, inherited);
     }
 
-//    private static class TypeValidator implements Use.Visitor.Defaulting<Void> {
-//
-//        private static final TypeValidator INSTANCE = new TypeValidator();
-//
-//        @Override
-//        public Void visitDefault(final Use<?> type) {
-//
-//            return null;
-//        }
-//
-//        @Override
-//        public Void visitRef(final UseObject type) {
-//
-//            throw new SchemaValidationException("View properties cannot use references");
-//        }
-//
-//        @Override
-//        public <T> Void visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
-//
-//            return type.getType().visit(this);
-//        }
-//
-//        @Override
-//        public <T> Void visitMap(final UseMap<T> type) {
-//
-//            return type.getType().visit(this);
-//        }
-//    }
+    public Multimap<Name, Instance> refs(final Instance object) {
+
+        final Multimap<Name, Instance> results = HashMultimap.create();
+        getProperties().forEach((k, v) -> v.links(object.get(k)).forEach((k2, v2) ->
+                results.put(Name.of(v.getName()).with(k2), v2)));
+        return results;
+    }
 
     @Override
     public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
@@ -538,5 +528,17 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
                 return extensions;
             }
         };
+    }
+
+    @Override
+    public boolean equals(final Object other) {
+
+        return qualifiedNameEquals(other);
+    }
+
+    @Override
+    public int hashCode() {
+
+        return qualifiedNameHashCode();
     }
 }

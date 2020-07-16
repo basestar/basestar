@@ -541,6 +541,12 @@ public class SchemaAdaptor {
 
                 return new TypeName(GraphQLUtils.STRING_TYPE);
             }
+
+            @Override
+            public Type<?> visitView(final UseView type) {
+
+                return new TypeName(namingStrategy.typeName(type.getSchema()));
+            }
         });
     }
 
@@ -624,6 +630,12 @@ public class SchemaAdaptor {
             public Type<?> visitDateTime(final UseDateTime type) {
 
                 return new TypeName(GraphQLUtils.STRING_TYPE);
+            }
+
+            @Override
+            public Type<?> visitView(final UseView type) {
+
+                return new TypeName(namingStrategy.inputTypeName(type.getSchema()));
             }
         });
     }
@@ -712,6 +724,12 @@ public class SchemaAdaptor {
 
                 @Override
                 public Void visitDateTime(final UseDateTime type) {
+
+                    return null;
+                }
+
+                @Override
+                public Void visitView(final UseView type) {
 
                     return null;
                 }

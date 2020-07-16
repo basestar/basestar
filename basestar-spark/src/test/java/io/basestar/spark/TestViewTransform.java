@@ -24,9 +24,6 @@ import com.google.common.collect.ImmutableList;
 import io.basestar.schema.Namespace;
 import io.basestar.spark.source.Source;
 import io.basestar.spark.transform.ViewTransform;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
@@ -39,38 +36,10 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class TestViewTransform {
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class A {
-
-        private String id;
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class B {
-
-        private A key;
-
-        private int value;
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class AggView {
-
-        private String key;
-
-        private long agg;
-    }
+public class TestViewTransform extends AbstractSparkTest {
 
     @Test
-    public void testView() throws IOException {
+    public void testViewTransform() throws IOException {
 
         final SparkSession session = SparkSession.builder()
             .master("local[*]")
@@ -78,11 +47,12 @@ public class TestViewTransform {
 
         final Namespace namespace = Namespace.load(TestViewTransform.class.getResourceAsStream("schema.yml"));
 
-        final A a = new A("a");
-        final A b = new A("b");
+        final D a = new D("a");
+        final D b = new D("b");
 
         final Source<Dataset<Row>> sourceB = (Source<Dataset<Row>>) sink -> sink.accept(session.createDataset(ImmutableList.of(
-                new B(a, 1), new B(a, 2), new B(a, 3), new B(b, 2), new B(b, 4), new B(b, 6)
+                new B("1", a, 1L), new B("2", a, 2L), new B("3", a, 3L),
+                new B("4", b, 2L), new B("5", b, 4L), new B("6", b, 6L)
         ), Encoders.bean(B.class)).toDF());
 
         final ViewTransform view = ViewTransform.builder()

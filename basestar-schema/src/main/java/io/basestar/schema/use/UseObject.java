@@ -53,8 +53,6 @@ import java.util.*;
 @Data
 public class UseObject implements UseInstance {
 
-    public static final String NAME = "object";
-
     private final ObjectSchema schema;
 
     @Override
@@ -109,7 +107,7 @@ public class UseObject implements UseInstance {
     @Override
     public Code code() {
 
-        return Code.REF;
+        return Code.OBJECT;
     }
 
     @Override
