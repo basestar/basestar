@@ -21,8 +21,8 @@
  */
 //
 //
-//import io.basestar.spark.BucketFunction;
-//import io.basestar.spark.BucketTransform;
+//import io.basestar.spark.util.BucketFunction;
+//import io.basestar.spark.transform.BucketTransform;
 //import io.basestar.spark.PartitionedUpsertSink;
 //import io.basestar.spark.PartitionedUpsertSource;
 //import lombok.Data;

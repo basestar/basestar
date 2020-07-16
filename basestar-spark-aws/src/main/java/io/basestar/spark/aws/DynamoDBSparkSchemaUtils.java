@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Index;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
-import io.basestar.spark.SparkSchemaUtils;
+import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.storage.dynamodb.DynamoDBLegacyUtils;
 import io.basestar.storage.dynamodb.DynamoDBStorage;
 import io.basestar.storage.dynamodb.DynamoDBStrategy;

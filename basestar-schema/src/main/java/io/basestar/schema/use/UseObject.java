@@ -60,7 +60,7 @@ public class UseObject implements UseInstance {
     @Override
     public <R> R visit(final Visitor<R> visitor) {
 
-        return visitor.visitRef(this);
+        return visitor.visitObject(this);
     }
 
     public static UseObject from(final ObjectSchema schema, final Object config) {

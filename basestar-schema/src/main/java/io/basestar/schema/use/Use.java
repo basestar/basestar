@@ -267,7 +267,7 @@ public interface Use<T> extends Serializable {
 
         R visitEnum(UseEnum type);
 
-        R visitRef(UseObject type);
+        R visitObject(UseObject type);
 
         <T> R visitArray(UseArray<T> type);
 
@@ -293,6 +293,11 @@ public interface Use<T> extends Serializable {
             }
 
             default <T> R visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
+
+                return visitDefault(type);
+            }
+
+            default R visitInstance(final UseInstance type) {
 
                 return visitDefault(type);
             }
@@ -328,9 +333,9 @@ public interface Use<T> extends Serializable {
             }
 
             @Override
-            default R visitRef(final UseObject type) {
+            default R visitObject(final UseObject type) {
 
-                return visitDefault(type);
+                return visitInstance(type);
             }
 
             @Override
@@ -354,7 +359,7 @@ public interface Use<T> extends Serializable {
             @Override
             default R visitStruct(final UseStruct type) {
 
-                return visitDefault(type);
+                return visitInstance(type);
             }
 
             @Override

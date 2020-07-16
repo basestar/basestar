@@ -57,7 +57,7 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
     }
 
     @Override
-    public AttributeType<?> visitRef(final UseObject type) {
+    public AttributeType<?> visitObject(final UseObject type) {
 
         return AttributeType.REF;
     }
@@ -139,7 +139,7 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
         }
 
         @Override
-        public AttributeType<?> visitRef(final UseObject type) {
+        public AttributeType<?> visitObject(final UseObject type) {
 
             return AttributeType.REF_ARRAY;
         }

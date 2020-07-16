@@ -282,7 +282,7 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
             }
 
             @Override
-            public Map<Name, String> visitRef(final UseObject type) {
+            public Map<Name, String> visitObject(final UseObject type) {
 
                 final Instance instance = type.create(value);
                 if(instance != null) {
@@ -377,7 +377,7 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
             }
 
             @Override
-            public Map<String, Object> visitRef(final UseObject type) {
+            public Map<String, Object> visitObject(final UseObject type) {
 
                 final String id = attrs.get(path.with(Reserved.ID));
                 return id == null ? null : ObjectSchema.ref(id);

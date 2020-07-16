@@ -38,9 +38,6 @@ import io.basestar.jackson.serde.ExpressionDeseriaizer;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.use.Use;
-import io.basestar.schema.use.UseCollection;
-import io.basestar.schema.use.UseMap;
-import io.basestar.schema.use.UseObject;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Sort;
@@ -277,7 +274,7 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
         if(property.getExpression() == null) {
             throw new SchemaValidationException("Every view property must have an expression (" + name + ")");
         }
-        property.getType().visit(TypeValidator.INSTANCE);
+//        property.getType().visit(TypeValidator.INSTANCE);
     }
 
     @Override
@@ -352,34 +349,34 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
         return getProperty(name, inherited);
     }
 
-    private static class TypeValidator implements Use.Visitor.Defaulting<Void> {
-
-        private static final TypeValidator INSTANCE = new TypeValidator();
-
-        @Override
-        public Void visitDefault(final Use<?> type) {
-
-            return null;
-        }
-
-        @Override
-        public Void visitRef(final UseObject type) {
-
-            throw new SchemaValidationException("View properties cannot use references");
-        }
-
-        @Override
-        public <T> Void visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
-
-            return type.getType().visit(this);
-        }
-
-        @Override
-        public <T> Void visitMap(final UseMap<T> type) {
-
-            return type.getType().visit(this);
-        }
-    }
+//    private static class TypeValidator implements Use.Visitor.Defaulting<Void> {
+//
+//        private static final TypeValidator INSTANCE = new TypeValidator();
+//
+//        @Override
+//        public Void visitDefault(final Use<?> type) {
+//
+//            return null;
+//        }
+//
+//        @Override
+//        public Void visitRef(final UseObject type) {
+//
+//            throw new SchemaValidationException("View properties cannot use references");
+//        }
+//
+//        @Override
+//        public <T> Void visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
+//
+//            return type.getType().visit(this);
+//        }
+//
+//        @Override
+//        public <T> Void visitMap(final UseMap<T> type) {
+//
+//            return type.getType().visit(this);
+//        }
+//    }
 
     @Override
     public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {

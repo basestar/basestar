@@ -121,7 +121,7 @@ public class GraphQLUtils {
             }
 
             @Override
-            public Set<Name> visitRef(final UseObject type) {
+            public Set<Name> visitObject(final UseObject type) {
 
                 return paths(type.getSchema(), selections).stream()
                         .map(parent::with).collect(Collectors.toSet());
@@ -234,7 +234,7 @@ public class GraphQLUtils {
                 }
 
                 @Override
-                public Object visitRef(final UseObject type) {
+                public Object visitObject(final UseObject type) {
 
                     return type.create(value);
                 }
@@ -356,7 +356,7 @@ public class GraphQLUtils {
 
                 @Override
                 @SuppressWarnings("unchecked")
-                public Object visitRef(final UseObject type) {
+                public Object visitObject(final UseObject type) {
 
                     return toResponse(type.getSchema(), (Map<String, Object>)value);
                 }
@@ -498,7 +498,7 @@ public class GraphQLUtils {
                 }
 
                 @Override
-                public Object visitRef(final UseObject type) {
+                public Object visitObject(final UseObject type) {
 
                     if(value instanceof ObjectValue) {
                         final String id = fromInput(context, UseString.DEFAULT, get((ObjectValue)value, Reserved.ID));
@@ -644,7 +644,7 @@ public class GraphQLUtils {
 
                 @Override
                 @SuppressWarnings("unchecked")
-                public Object visitRef(final UseObject type) {
+                public Object visitObject(final UseObject type) {
 
                     if(value instanceof Map) {
                         return ObjectSchema.ref(Instance.getId((Map<String, Object>) value));
@@ -801,7 +801,7 @@ public class GraphQLUtils {
 
                 @Override
                 @SuppressWarnings("unchecked")
-                public Object visitRef(final UseObject type) {
+                public Object visitObject(final UseObject type) {
 
                     return toResponse(type.getSchema(), selections, (Map<String, Object>)value);
                 }

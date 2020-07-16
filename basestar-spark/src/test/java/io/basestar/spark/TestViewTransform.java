@@ -22,6 +22,8 @@ package io.basestar.spark;
 
 import com.google.common.collect.ImmutableList;
 import io.basestar.schema.Namespace;
+import io.basestar.spark.source.Source;
+import io.basestar.spark.transform.ViewTransform;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

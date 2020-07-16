@@ -110,7 +110,7 @@ public class AvroUtils {
             }
 
             @Override
-            public Schema visitRef(final UseObject type) {
+            public Schema visitObject(final UseObject type) {
 
                 return refSchema(type.getSchema());
             }
@@ -227,7 +227,7 @@ public class AvroUtils {
             }
 
             @Override
-            public GenericRecord visitRef(final UseObject type) {
+            public GenericRecord visitObject(final UseObject type) {
 
                 return value == null ? null : encodeRef(schema, (Map<String, Object>)value);
             }
@@ -358,7 +358,7 @@ public class AvroUtils {
             }
 
             @Override
-            public Map<String, Object> visitRef(final UseObject type) {
+            public Map<String, Object> visitObject(final UseObject type) {
 
                 return value == null ? null : decodeRef(schema, (IndexedRecord)value);
             }

@@ -23,7 +23,7 @@ package io.basestar.storage.spark;
 import com.google.common.collect.Multimap;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.spark.SparkSchemaUtils;
+import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.storage.Storage;
 import io.basestar.storage.TestStorage;
 import io.basestar.util.Nullsafe;

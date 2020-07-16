@@ -258,7 +258,7 @@ public class Transient implements Member {
         }
 
         @Override
-        public Void visitRef(final UseObject type) {
+        public Void visitObject(final UseObject type) {
 
             throw new SchemaValidationException("Transients cannot use references");
         }

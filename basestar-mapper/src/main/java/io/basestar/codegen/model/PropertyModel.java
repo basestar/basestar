@@ -50,7 +50,9 @@ public class PropertyModel extends MemberModel {
 
         final List<AnnotationModel> annotations = new ArrayList<>();
         annotations.add(new AnnotationModel(getSettings(), io.basestar.mapper.annotation.Property.class, ImmutableMap.of("name", property.getName(), "required", property.isRequired())));
-        annotations.add(new AnnotationModel(getSettings(), javax.validation.constraints.NotNull.class, ImmutableMap.of()));
+        if(property.isRequired()) {
+            annotations.add(new AnnotationModel(getSettings(), javax.validation.constraints.NotNull.class, ImmutableMap.of()));
+        }
         return annotations;
     }
 
