@@ -51,5 +51,23 @@ public @interface StructSchema {
             final String name = annotation.name().equals(INFER_NAME) ? type.simpleName() : annotation.name();
             return new StructSchemaMapper<>(context, Name.parse(name), type);
         }
+
+        public static StructSchema from(final io.basestar.schema.StructSchema schema) {
+
+            return new StructSchema() {
+
+                @Override
+                public Class<? extends Annotation> annotationType() {
+
+                    return StructSchema.class;
+                }
+
+                @Override
+                public String name() {
+
+                    return schema.getQualifiedName().toString();
+                }
+            };
+        }
     }
 }

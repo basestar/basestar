@@ -23,11 +23,13 @@ package io.basestar.mapper.internal;
 import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.SchemaMapper;
 import io.basestar.mapper.internal.annotation.MemberDeclaration;
+import io.basestar.mapper.internal.annotation.MemberModifier;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Link;
 import io.basestar.schema.Property;
 import io.basestar.schema.Transient;
 import io.basestar.type.AnnotationContext;
+import io.basestar.type.PropertyContext;
 import io.basestar.type.TypeContext;
 import io.basestar.type.has.HasType;
 import io.basestar.util.Name;
@@ -41,23 +43,24 @@ import java.util.stream.Collectors;
 
 public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> implements SchemaMapper<T, Map<String, Object>> {
 
-    private final Name name;
+    protected final Name name;
 
-    private final TypeContext type;
+    protected final TypeContext type;
 
-    private final List<MemberMapper<B>> members;
+    protected final List<MemberMapper<B>> members;
+
+    protected InstanceSchemaMapper(final InstanceSchemaMapper<T, B> copy) {
+
+        this.name = copy.name;
+        this.type = copy.type;
+        this.members = copy.members;
+    }
 
     @SuppressWarnings("unchecked")
-    public InstanceSchemaMapper(final MappingContext context, final Name name, final TypeContext type, final Class<B> builderType) {
+    protected InstanceSchemaMapper(final MappingContext context, final Name name, final TypeContext type, final Class<B> builderType) {
 
         this.name = name;
         this.type = type;
-
-//        TypeContext superclass = type.superclass();
-//        while(!superclass.erasedType().equals(Object.class)) {
-//            if()
-//            superclass = superclass.superclass();
-//        }
 
         final List<MemberMapper<B>> members = new ArrayList<>();
         type.properties().forEach(prop -> {
@@ -70,7 +73,7 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
 
                 if (propAnnotations.size() == 0) {
                     // FIXME
-                    members.add((MemberMapper<B>)new PropertyMapper(context, prop.name(), prop, Property.builder()));
+                    members.add((MemberMapper<B>)new PropertyMapper(context, prop.name(), prop));
                 } else if (propAnnotations.size() == 1) {
                     final AnnotationContext<?> annotation = propAnnotations.get(0);
                     final MemberDeclaration memberDeclaration = annotation.type().annotation(MemberDeclaration.class).annotation();
@@ -80,7 +83,7 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
                     final TypeContext mapperType = TypeContext.from(member.getClass());
                     final Class<?> memberBuilderType = mapperType.find(MemberMapper.class).typeParameters().get(0).type().erasedType();
                     if(memberBuilderType.isAssignableFrom(builderType)) {
-                        members.add((MemberMapper<B>)member);
+                        members.add(applyModifiers(prop, (MemberMapper<B>)member));
                     } else {
                         throw new IllegalStateException("Member " + member.getClass() + " not supported on " + this.getClass());
                     }
@@ -96,6 +99,30 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
         });
 
         this.members = members;
+    }
+
+    private MemberMapper<B> applyModifiers(final PropertyContext prop, final MemberMapper<B> input) throws IllegalAccessException, InstantiationException, InvocationTargetException {
+
+        final List<AnnotationContext<?>> modAnnotations = prop.annotations().stream()
+                .filter(a -> a.type().annotations().stream()
+                        .anyMatch(HasType.match(MemberModifier.class)))
+                .collect(Collectors.toList());
+
+        MemberMapper<B> output = input;
+
+        for(final AnnotationContext<?> annotation : modAnnotations) {
+            final MemberModifier memberModifier = annotation.type().annotation(MemberModifier.class).annotation();
+            final TypeContext modType = TypeContext.from(memberModifier.value());
+            final Class<?> modMapperType = modType.find(MemberModifier.Modifier.class).typeParameters().get(0).type().erasedType();
+            if(modMapperType.isAssignableFrom(output.getClass())) {
+                final MemberModifier.Modifier<MemberMapper<B>> mod = modType.declaredConstructors().get(0).newInstance(annotation.annotation());
+                output = mod.modify(output);
+            } else {
+                throw new IllegalStateException("Modifier " + modType.erasedType() + " not supported on " + output.getClass());
+            }
+        }
+
+        return output;
     }
 
     @Override

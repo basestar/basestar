@@ -22,11 +22,12 @@ package io.basestar.codegen.model;
 
 import com.google.common.collect.ImmutableList;
 import io.basestar.codegen.CodegenSettings;
+import io.basestar.mapper.annotation.Group;
+import io.basestar.mapper.annotation.Where;
 import io.basestar.schema.ViewSchema;
 
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 @SuppressWarnings("unused")
 public class ViewSchemaModel extends InstanceSchemaModel {
@@ -40,25 +41,18 @@ public class ViewSchemaModel extends InstanceSchemaModel {
     }
 
     @Override
-    public List<AnnotationModel> getAnnotations() {
+    public List<AnnotationModel<?>> getAnnotations() {
 
-        final Map<String, Object> values = new HashMap<>();
-        values.put("name", schema.getQualifiedName());
-        final ViewSchema.From from = schema.getFrom();
-        values.put("from", from.getSchema().getQualifiedName());
-        if(!from.getExpand().isEmpty()) {
-            values.put("expand", from.getExpand());
+        final ImmutableList.Builder<AnnotationModel<?>> annotations = ImmutableList.builder();
+        annotations.add(new AnnotationModel<>(getSettings(), VALID));
+        annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.ViewSchema.Declaration.from(schema)));
+        if(!schema.getGroup().isEmpty()) {
+            annotations.add(new AnnotationModel<>(getSettings(), Group.Modifier.from(new ArrayList<>(schema.getGroup().keySet()))));
         }
         if(schema.getWhere() != null) {
-            values.put("where", schema.getWhere().toString());
+            annotations.add(new AnnotationModel<>(getSettings(), Where.Modifier.from(schema.getWhere())));
         }
-        if(!schema.getGroup().isEmpty()) {
-            values.put("group", schema.getGroup().keySet());
-        }
-        return ImmutableList.of(
-                new AnnotationModel(getSettings(), javax.validation.Valid.class),
-                new AnnotationModel(getSettings(), io.basestar.mapper.annotation.ViewSchema.class, values)
-        );
+        return annotations.build();
     }
 
     @Override

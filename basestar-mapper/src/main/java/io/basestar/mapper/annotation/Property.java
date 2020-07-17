@@ -20,7 +20,6 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
-import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.MemberMapper;
 import io.basestar.mapper.internal.PropertyMapper;
@@ -40,12 +39,6 @@ public @interface Property {
 
     String name() default INFER_NAME;
 
-    String expression() default "";
-
-    boolean required() default false;
-
-    boolean immutable() default false;
-
     @RequiredArgsConstructor
     class Declaration implements MemberDeclaration.Declaration {
 
@@ -55,14 +48,25 @@ public @interface Property {
         public MemberMapper<?> mapper(final MappingContext context, final PropertyContext prop) {
 
             final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
-            final Expression expression = annotation.expression().isEmpty() ? null : Expression.parse(annotation.expression());
-            final boolean required = annotation.required();
-            final boolean immutable = annotation.immutable();
+            return new PropertyMapper(context, name, prop);
+        }
 
-            return new PropertyMapper(context, name, prop, io.basestar.schema.Property.builder()
-                    .setExpression(expression)
-                    .setRequired(required ? true : null)
-                    .setImmutable(immutable ? true : null));
+        public static Property from(final io.basestar.schema.Property property) {
+
+            return new Property() {
+
+                @Override
+                public Class<? extends Annotation> annotationType() {
+
+                    return Property.class;
+                }
+
+                @Override
+                public String name() {
+
+                    return property.getName();
+                }
+            };
         }
     }
 }

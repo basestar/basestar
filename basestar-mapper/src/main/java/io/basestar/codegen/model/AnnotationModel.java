@@ -20,37 +20,39 @@ package io.basestar.codegen.model;
  * #L%
  */
 
+import com.google.common.collect.ImmutableSet;
 import io.basestar.codegen.CodegenSettings;
+import io.basestar.type.AnnotationContext;
 
-import java.util.Collections;
+import java.lang.annotation.Annotation;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @SuppressWarnings("unused")
-public class AnnotationModel extends Model {
+public class AnnotationModel<A extends Annotation> extends Model {
 
-    private final Class<?> cls;
+    private static final Set<String> SKIP_NAMES = ImmutableSet.of("payload", "groups");
 
-    private final Map<String, Object> values;
+    private final A annotation;
 
-    public AnnotationModel(final CodegenSettings settings, final Class<?> cls, final Map<String, Object> values) {
+    public AnnotationModel(final CodegenSettings settings, final A annotation) {
 
         super(settings);
-        this.cls = cls;
-        this.values = values;
-    }
-
-    public AnnotationModel(final CodegenSettings settings, final Class<?> cls) {
-
-        this(settings, cls, Collections.emptyMap());
+        this.annotation = annotation;
     }
 
     public String getClassName() {
 
-        return cls.getName();
+        return annotation.annotationType().getName();
     }
 
     public Map<String, Object> getValues() {
 
-        return values;
+        final AnnotationContext<A> context =  new AnnotationContext<>(annotation);
+        final Map<String, Object> values = context.nonDefaultValues();
+
+        return values.entrySet().stream().filter(e -> e.getValue() != null && !SKIP_NAMES.contains(e.getKey()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 }

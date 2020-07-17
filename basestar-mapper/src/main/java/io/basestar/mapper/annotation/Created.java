@@ -32,12 +32,22 @@ import java.lang.annotation.*;
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.METHOD})
-@MemberDeclaration(Created.Binder.class)
+@MemberDeclaration(Created.Declaration.class)
 public @interface Created {
 
-    @RequiredArgsConstructor
-    class Binder implements MemberDeclaration.Declaration {
+    Created INSTANCE = new Created(){
 
+        @Override
+        public Class<? extends Annotation> annotationType() {
+
+            return Created.class;
+        }
+    };
+
+    @RequiredArgsConstructor
+    class Declaration implements MemberDeclaration.Declaration {
+
+        @SuppressWarnings("unused")
         private final Created annotation;
 
         @Override

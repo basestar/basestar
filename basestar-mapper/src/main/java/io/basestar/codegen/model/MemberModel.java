@@ -39,7 +39,7 @@ public abstract class MemberModel extends Model {
         return getName();
     }
 
-    public abstract List<AnnotationModel> getAnnotations();
+    public abstract List<AnnotationModel<?>> getAnnotations();
 
     public abstract TypeModel getType();
 

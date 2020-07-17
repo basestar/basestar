@@ -33,6 +33,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Collections;
 import java.util.List;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -85,14 +86,23 @@ public class TestCodegenMojo {
 
         namespace.execute(classLoader);
 
-        assertEquals(Namespace.Builder.load(
+        final Namespace.Builder original = Namespace.Builder.load(
                 new URI("classpath:/io/basestar/maven/schema.yml").toURL()
-        ), Namespace.Builder.load(
+        );
+
+        final Namespace.Builder generated = Namespace.Builder.load(
                 new File(namespaceDirectory, "a/Test.yml").toURI().toURL(),
                 new File(namespaceDirectory, "b/Test.yml").toURI().toURL(),
                 new File(namespaceDirectory, "c/Test.yml").toURI().toURL(),
                 new File(namespaceDirectory, "Test.yml").toURI().toURL()
-        ));
+        );
+
+//        original.json(System.out);
+//        System.out.println();
+//        generated.json(System.out);
+
+        // Sort so differences are easier to see
+        assertEquals(new TreeMap<>(original.getSchemas()), new TreeMap<>(generated.getSchemas()));
     }
 
     private File verifyFile(final String name) {

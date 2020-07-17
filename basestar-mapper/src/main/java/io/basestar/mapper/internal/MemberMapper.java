@@ -20,6 +20,7 @@ package io.basestar.mapper.internal;
  * #L%
  */
 
+import io.basestar.expression.Expression;
 import io.basestar.schema.InstanceSchema;
 
 import java.lang.reflect.InvocationTargetException;
@@ -35,6 +36,8 @@ public interface MemberMapper<B extends InstanceSchema.Builder> {
     void unmarshall(Object source, Map<String, Object> target) throws InvocationTargetException, IllegalAccessException;
 
     void marshall(Map<String, Object> source, Object target) throws InvocationTargetException, IllegalAccessException;
+
+    MemberMapper<B> withExpression(Expression expression);
 
     default Set<Class<?>> dependencies() {
 

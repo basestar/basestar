@@ -23,6 +23,7 @@ package io.basestar.schema;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -102,8 +103,9 @@ public class Namespace implements Serializable, Schema.Resolver {
     }
 
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper(new BasestarFactory())
-           .registerModule(new BasestarModule())
-            .setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL);
+            .registerModule(new BasestarModule())
+            .setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)
+            .configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
 
     private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new BasestarFactory(new YAMLFactory()
             .configure(YAMLGenerator.Feature.USE_NATIVE_TYPE_ID, false)
@@ -111,7 +113,8 @@ public class Namespace implements Serializable, Schema.Resolver {
             .configure(YAMLGenerator.Feature.SPLIT_LINES, false)))
             .registerModule(new BasestarModule())
             .configure(JsonParser.Feature.ALLOW_COMMENTS, true)
-            .setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL);
+            .setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)
+            .configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
 
     private final SortedMap<Name, Schema<?>> schemas;
 

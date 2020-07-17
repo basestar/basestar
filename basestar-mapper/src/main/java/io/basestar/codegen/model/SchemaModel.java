@@ -64,17 +64,5 @@ public abstract class SchemaModel extends Model {
         return Name.parse(base).with(schema.getQualifiedPackageName()).toString();
     }
 
-//    public String getAnnotationClassName() {
-//
-//        return getAnnotationClass().getName();
-//    }
-//
-//    protected abstract Class<?> getAnnotationClass();
-//
-//    public Map<String, Object> getAnnotationValues() {
-//
-//        return ImmutableMap.of("name", schema.getName());
-//    }
-
-    public abstract List<AnnotationModel> getAnnotations();
+    public abstract List<AnnotationModel<?>> getAnnotations();
 }

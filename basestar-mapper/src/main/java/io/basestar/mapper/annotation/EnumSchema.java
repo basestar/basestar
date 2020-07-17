@@ -51,5 +51,23 @@ public @interface EnumSchema {
             final String name = annotation.name().equals(INFER_NAME) ? type.simpleName() : annotation.name();
             return new EnumSchemaMapper<>(context, Name.parse(name), type);
         }
+
+        public static EnumSchema from(final io.basestar.schema.EnumSchema schema) {
+
+            return new EnumSchema() {
+
+                @Override
+                public Class<? extends Annotation> annotationType() {
+
+                    return EnumSchema.class;
+                }
+
+                @Override
+                public String name() {
+
+                    return schema.getQualifiedName().toString();
+                }
+            };
+        }
     }
 }

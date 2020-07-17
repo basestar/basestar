@@ -35,9 +35,19 @@ import java.lang.annotation.*;
 @MemberDeclaration(Updated.Declaration.class)
 public @interface Updated {
 
+    Updated INSTANCE = new Updated(){
+
+        @Override
+        public Class<? extends Annotation> annotationType() {
+
+            return Updated.class;
+        }
+    };
+
     @RequiredArgsConstructor
     class Declaration implements MemberDeclaration.Declaration {
 
+        @SuppressWarnings("unused")
         private final Updated annotation;
 
         @Override

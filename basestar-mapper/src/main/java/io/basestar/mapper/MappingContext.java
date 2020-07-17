@@ -23,6 +23,7 @@ package io.basestar.mapper;
 import io.basestar.mapper.internal.EnumSchemaMapper;
 import io.basestar.mapper.internal.StructSchemaMapper;
 import io.basestar.mapper.internal.annotation.SchemaDeclaration;
+import io.basestar.mapper.internal.annotation.SchemaModifier;
 import io.basestar.schema.Namespace;
 import io.basestar.type.AnnotationContext;
 import io.basestar.type.TypeContext;
@@ -76,32 +77,56 @@ public class MappingContext {
 
         final TypeContext type = TypeContext.from(cls);
 
-        final List<AnnotationContext<?>> schemaAnnotations = type.annotations().stream()
+        final List<AnnotationContext<?>> declAnnotations = type.annotations().stream()
                 .filter(a -> a.type().annotations().stream()
                         .anyMatch(HasType.match(SchemaDeclaration.class)))
                 .collect(Collectors.toList());
 
-        if (schemaAnnotations.size() == 0) {
+        if (declAnnotations.size() == 0) {
             final Name name = Name.of(type.simpleName());
             if (type.isEnum()) {
                 return (SchemaMapper<T, O>) new EnumSchemaMapper<>(this, name, type);
             } else {
                 return (SchemaMapper<T, O>) new StructSchemaMapper<>(this, name, type);
             }
-        } else if (schemaAnnotations.size() == 1) {
+        } else if (declAnnotations.size() == 1) {
             try {
-                final AnnotationContext<?> annotation = schemaAnnotations.get(0);
+                final AnnotationContext<?> annotation = declAnnotations.get(0);
                 final SchemaDeclaration schemaDeclaration = annotation.type().annotation(SchemaDeclaration.class).annotation();
                 final TypeContext declType = TypeContext.from(schemaDeclaration.value());
                 final SchemaDeclaration.Declaration decl = declType.declaredConstructors().get(0).newInstance(annotation.annotation());
-                return (SchemaMapper<T, O>) decl.mapper(this, type);
+                return applyModifiers(type, (SchemaMapper<T, O>) decl.mapper(this, type));
             } catch (final IllegalAccessException | InstantiationException | InvocationTargetException e) {
                 throw new IllegalStateException(e);
             }
         } else {
-            final String names = schemaAnnotations.stream().map(v -> v.type().simpleName())
+            final String names = declAnnotations.stream().map(v -> v.type().simpleName())
                     .collect(Collectors.joining(", "));
             throw new IllegalStateException("Annotations " + names + " are not allowed on the same type");
         }
+    }
+
+    private <T, O> SchemaMapper<T, O> applyModifiers(final TypeContext type, final SchemaMapper<T, O> input) throws IllegalAccessException, InstantiationException, InvocationTargetException {
+
+        final List<AnnotationContext<?>> modAnnotations = type.annotations().stream()
+                .filter(a -> a.type().annotations().stream()
+                        .anyMatch(HasType.match(SchemaModifier.class)))
+                .collect(Collectors.toList());
+
+        SchemaMapper<T, O> output = input;
+
+        for(final AnnotationContext<?> annotation : modAnnotations) {
+            final SchemaModifier schemaModifier = annotation.type().annotation(SchemaModifier.class).annotation();
+            final TypeContext modType = TypeContext.from(schemaModifier.value());
+            final Class<?> modMapperType = modType.find(SchemaModifier.Modifier.class).typeParameters().get(0).type().erasedType();
+            if(modMapperType.isAssignableFrom(output.getClass())) {
+                final SchemaModifier.Modifier<SchemaMapper<T, O>> mod = modType.declaredConstructors().get(0).newInstance(annotation.annotation());
+                output = mod.modify(output);
+            } else {
+                throw new IllegalStateException("Modifier " + modType.erasedType() + " not supported on " + output.getClass());
+            }
+        }
+
+        return output;
     }
 }

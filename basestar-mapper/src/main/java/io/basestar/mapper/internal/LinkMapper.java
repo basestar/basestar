@@ -20,12 +20,15 @@ package io.basestar.mapper.internal;
  * #L%
  */
 
+import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Link;
 import io.basestar.type.PropertyContext;
+import io.basestar.util.Sort;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.List;
 import java.util.Map;
 
 public class LinkMapper implements MemberMapper<InstanceSchema.Builder> {
@@ -38,27 +41,55 @@ public class LinkMapper implements MemberMapper<InstanceSchema.Builder> {
 
     private final TypeMapper.OfCustom itemType;
 
-    private final Link.Builder config;
+    private final boolean single;
 
-    public LinkMapper(final MappingContext context, final String name, final PropertyContext property, final Link.Builder config) {
+    private final Expression expression;
+
+    private final List<Sort> sort;
+
+    public LinkMapper(final MappingContext context, final String name, final PropertyContext property) {
 
         this.name = name;
         this.property = property;
-        this.config = config;
         this.type = TypeMapper.from(context, property.type());
         if(type instanceof TypeMapper.OfArray) {
             final TypeMapper.OfArray array = (TypeMapper.OfArray)type;
             if(array.getValue() instanceof TypeMapper.OfCustom) {
                 itemType = (TypeMapper.OfCustom)array.getValue();
+                single = false;
             } else {
                 throw new IllegalStateException("Cannot create link item mapper for " + array.getValue());
             }
         } else if(type instanceof TypeMapper.OfCustom) {
             itemType = (TypeMapper.OfCustom) type;
-            config.setSingle(true);
+            single = true;
         } else {
             throw new IllegalStateException("Cannot create link mapper for " + type);
         }
+        this.expression = null;
+        this.sort = null;
+    }
+
+    private LinkMapper(final LinkMapper copy, final Expression expression, final List<Sort> sort) {
+
+        this.name = copy.name;
+        this.property = copy.property;
+        this.type = copy.type;
+        this.itemType = copy.itemType;
+        this.single = copy.single;
+        this.expression = expression;
+        this.sort = sort;
+    }
+
+    @Override
+    public MemberMapper<InstanceSchema.Builder> withExpression(final Expression expression) {
+
+        return new LinkMapper(this, expression, sort);
+    }
+
+    public LinkMapper withSort(final List<Sort> sort) {
+
+        return new LinkMapper(this, expression, sort);
     }
 
     @Override
@@ -70,7 +101,11 @@ public class LinkMapper implements MemberMapper<InstanceSchema.Builder> {
     @Override
     public void addToSchema(final InstanceSchemaMapper<?, InstanceSchema.Builder> mapper, final InstanceSchema.Builder builder) {
 
-        mapper.addLink(builder, name, config.setSchema(itemType.getMapper().qualifiedName()));
+        mapper.addLink(builder, name, Link.builder()
+                .setExpression(expression)
+                .setSingle(single ? true : null)
+                .setSchema(itemType.getMapper().qualifiedName())
+                .setSort(sort == null ? null : (sort.isEmpty() ? null : sort)));
     }
 
     @Override

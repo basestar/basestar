@@ -20,6 +20,7 @@ package io.basestar.mapper.internal;
  * #L%
  */
 
+import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Property;
@@ -34,16 +35,48 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
 
     private final PropertyContext property;
 
-    private final Property.Builder config;
-
     private final TypeMapper type;
 
-    public PropertyMapper(final MappingContext context, final String name, final PropertyContext property, final Property.Builder config) {
+    private final Expression expression;
+
+    private final boolean required;
+
+    private final boolean immutable;
+
+    public PropertyMapper(final MappingContext context, final String name, final PropertyContext property) {
 
         this.name = name;
         this.property = property;
-        this.config = config;
         this.type = TypeMapper.from(context, property.type());
+        this.expression = null;
+        this.required = false;
+        this.immutable = false;
+    }
+
+    private PropertyMapper(final PropertyMapper copy, final Expression expression, final boolean required, final boolean immutable) {
+
+        this.name = copy.name;
+        this.property = copy.property;
+        this.type = copy.type;
+        this.expression = expression;
+        this.required = required;
+        this.immutable = immutable;
+    }
+
+    @Override
+    public PropertyMapper withExpression(final Expression expression) {
+
+        return new PropertyMapper(this, expression, required, immutable);
+    }
+
+    public PropertyMapper withRequired(final boolean required) {
+
+        return new PropertyMapper(this, expression, required, immutable);
+    }
+
+    public PropertyMapper withImmutable(final boolean immutable) {
+
+        return new PropertyMapper(this, expression, required, immutable);
     }
 
     @Override
@@ -55,7 +88,12 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
     @Override
     public void addToSchema(final InstanceSchemaMapper<?, InstanceSchema.Builder> mapper, final InstanceSchema.Builder builder) {
 
-        mapper.addProperty(builder, name, config.setType(this.type.use()));
+        mapper.addProperty(builder, name, Property.builder()
+                .setExpression(expression)
+                .setImmutable(immutable ? true : null)
+                .setRequired(required ? true : null)
+                .setRequired(required ? true : null)
+                .setType(this.type.use()));
     }
 
     @Override

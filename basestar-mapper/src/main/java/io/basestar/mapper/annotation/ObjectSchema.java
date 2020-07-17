@@ -51,5 +51,23 @@ public @interface ObjectSchema {
             final String name = annotation.name().equals(INFER_NAME) ? type.simpleName() : annotation.name();
             return new ObjectSchemaMapper<>(context, Name.parse(name), type);
         }
+
+        public static ObjectSchema from(final io.basestar.schema.ObjectSchema schema) {
+
+            return new ObjectSchema() {
+
+                @Override
+                public Class<? extends Annotation> annotationType() {
+
+                    return ObjectSchema.class;
+                }
+
+                @Override
+                public String name() {
+
+                    return schema.getQualifiedName().toString();
+                }
+            };
+        }
     }
 }

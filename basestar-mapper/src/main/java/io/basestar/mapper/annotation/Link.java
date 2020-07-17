@@ -20,19 +20,14 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
-import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.LinkMapper;
 import io.basestar.mapper.internal.MemberMapper;
 import io.basestar.mapper.internal.annotation.MemberDeclaration;
 import io.basestar.type.PropertyContext;
-import io.basestar.util.Sort;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.annotation.*;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
@@ -44,11 +39,6 @@ public @interface Link {
 
     String name() default INFER_NAME;
 
-    String expression();
-
-    String[] sort() default {};
-
-
     @RequiredArgsConstructor
     class Declaration implements MemberDeclaration.Declaration {
 
@@ -58,11 +48,25 @@ public @interface Link {
         public MemberMapper<?> mapper(final MappingContext context, final PropertyContext prop) {
 
             final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
-            final Expression expression = Expression.parse(annotation.expression());
-            final List<Sort> sort = Arrays.stream(annotation.sort()).map(Sort::parse).collect(Collectors.toList());
-            return new LinkMapper(context, name, prop, io.basestar.schema.Link.builder()
-                    .setExpression(expression)
-                    .setSort(sort.isEmpty() ? null : sort));
+            return new LinkMapper(context, name, prop);
+        }
+
+        public static Link from(final io.basestar.schema.Link link) {
+
+            return new Link() {
+
+                @Override
+                public Class<? extends Annotation> annotationType() {
+
+                    return Link.class;
+                }
+
+                @Override
+                public String name() {
+
+                    return link.getName();
+                }
+            };
         }
     }
 }

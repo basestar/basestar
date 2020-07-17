@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableSortedMap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.ExpressionDeseriaizer;
+import io.basestar.schema.use.UseString;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.Data;
@@ -126,7 +127,7 @@ public class Id implements Serializable {
             for(final Map.Entry<String, Constraint> entry : constraints.entrySet()) {
                 final String name = entry.getKey();
                 final Constraint constraint = entry.getValue();
-                violations.addAll(constraint.violations(newContext, qualifiedName, name, after));
+                violations.addAll(constraint.violations(UseString.DEFAULT, newContext, qualifiedName, name, after));
             }
         }
         return violations;

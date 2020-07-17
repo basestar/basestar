@@ -35,9 +35,19 @@ import java.lang.annotation.*;
 @MemberDeclaration(Version.Declaration.class)
 public @interface Version {
 
+    Version INSTANCE = new Version(){
+
+        @Override
+        public Class<? extends Annotation> annotationType() {
+
+            return Version.class;
+        }
+    };
+
     @RequiredArgsConstructor
     class Declaration implements MemberDeclaration.Declaration {
 
+        @SuppressWarnings("unused")
         private final Version annotation;
 
         @Override

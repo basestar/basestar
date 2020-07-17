@@ -20,6 +20,7 @@ package io.basestar.mapper.internal;
  * #L%
  */
 
+import io.basestar.expression.Expression;
 import io.basestar.expression.type.Coercion;
 import io.basestar.mapper.MappingContext;
 import io.basestar.schema.Instance;
@@ -72,6 +73,12 @@ public class MetadataMapper implements MemberMapper<ObjectSchema.Builder> {
             final Object value = name.marshall(type, source);
             property.set(target, value);
         }
+    }
+
+    @Override
+    public MemberMapper<ObjectSchema.Builder> withExpression(final Expression expression) {
+
+        throw new UnsupportedOperationException("Cannot apply expression to " + name.name().toLowerCase());
     }
 
     public enum Name {

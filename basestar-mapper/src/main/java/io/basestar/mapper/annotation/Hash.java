@@ -35,9 +35,19 @@ import java.lang.annotation.*;
 @MemberDeclaration(Hash.Declaration.class)
 public @interface Hash {
 
+    Hash INSTANCE = new Hash(){
+
+        @Override
+        public Class<? extends Annotation> annotationType() {
+
+            return Hash.class;
+        }
+    };
+
     @RequiredArgsConstructor
     class Declaration implements MemberDeclaration.Declaration {
 
+        @SuppressWarnings("unused")
         private final Hash annotation;
 
         @Override

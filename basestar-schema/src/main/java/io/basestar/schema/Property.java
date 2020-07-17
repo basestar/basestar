@@ -280,7 +280,7 @@ public class Property implements Member {
                 for (final Map.Entry<String, Constraint> entry : constraints.entrySet()) {
                     final String name = entry.getKey();
                     final Constraint constraint = entry.getValue();
-                    violations.addAll(constraint.violations(newContext, qualifiedName, name, after));
+                    violations.addAll(constraint.violations(type, newContext, qualifiedName, name, after));
                 }
             }
         }

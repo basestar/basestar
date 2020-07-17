@@ -20,11 +20,12 @@ package io.basestar.codegen.model;
  * #L%
  */
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import io.basestar.codegen.CodegenSettings;
+import io.basestar.mapper.annotation.Expression;
+import io.basestar.mapper.annotation.Sort;
 import io.basestar.schema.Link;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @SuppressWarnings("unused")
@@ -46,14 +47,16 @@ public class LinkModel extends MemberModel {
     }
 
     @Override
-    public List<AnnotationModel> getAnnotations() {
+    public List<AnnotationModel<?>> getAnnotations() {
 
-        return ImmutableList.of(
-                new AnnotationModel(getSettings(), io.basestar.mapper.annotation.Link.class, ImmutableMap.of(
-                        "name", link.getName(),
-                        "expression", link.getExpression()
-                ))
-        );
+        final List<AnnotationModel<?>> annotations = new ArrayList<>();
+        annotations.add(new AnnotationModel<>(getSettings(), VALID));
+        annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.Link.Declaration.from(link)));
+        annotations.add(new AnnotationModel<>(getSettings(), Expression.Modifier.from(link.getExpression())));
+        if(!link.getSort().isEmpty()) {
+            annotations.add(new AnnotationModel<>(getSettings(), Sort.Modifier.from(link.getSort())));
+        }
+        return annotations;
     }
 
     @Override

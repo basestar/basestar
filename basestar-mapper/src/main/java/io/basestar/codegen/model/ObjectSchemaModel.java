@@ -20,7 +20,6 @@ package io.basestar.codegen.model;
  * #L%
  */
 
-import com.google.common.collect.ImmutableMap;
 import io.basestar.codegen.CodegenSettings;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.ObjectSchema;
@@ -43,23 +42,12 @@ public class ObjectSchemaModel extends InstanceSchemaModel {
     }
 
     @Override
-    public List<AnnotationModel> getAnnotations() {
+    public List<AnnotationModel<?>> getAnnotations() {
 
-        final List<AnnotationModel> annotations = new ArrayList<>();
-        annotations.add(new AnnotationModel(getSettings(), javax.validation.Valid.class));
-        annotations.add(new AnnotationModel(getSettings(), io.basestar.mapper.annotation.ObjectSchema.class, ImmutableMap.of("name", schema.getQualifiedName())));
-//        schema.getIndexes().forEach((name, index) -> {
-//            final List<String> partition = index.getPartition().stream().map(AbstractPath::toString).collect(Collectors.toList());
-//            final List<String> sort = index.getSort().stream().map(Sort::toString).collect(Collectors.toList());
-//            final Map<String, Object> values = new HashMap<>();
-//            if(!partition.isEmpty()) {
-//                values.put("partition", partition);
-//            }
-//            if(!sort.isEmpty()) {
-//                values.put("sort", sort);
-//            }
-//            annotations.add(new AnnotationModel(getSettings(), io.basestar.mapper.annotation.Index.class, values));
-//        });
+        final List<AnnotationModel<?>> annotations = new ArrayList<>();
+        annotations.add(new AnnotationModel<>(getSettings(), VALID));
+        annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.ObjectSchema.Declaration.from(schema)));
+
         return annotations;
     }
 

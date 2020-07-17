@@ -20,6 +20,7 @@ package io.basestar.mapper.internal;
  * #L%
  */
 
+import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
 import io.basestar.schema.Property;
@@ -36,17 +37,40 @@ public class ViewSchemaMapper<T> extends InstanceSchemaMapper<T, ViewSchema.Buil
 
     private final Set<Name> fromExpand;
 
+    private final boolean materialized;
+
     private final List<String> group;
 
     private final Expression where;
 
-    public ViewSchemaMapper(final MappingContext context, final Name name, final TypeContext type, final Name fromSchema, final Set<Name> fromExpand, final List<String> group, final Expression where) {
+    public ViewSchemaMapper(final MappingContext context, final Name name, final TypeContext type, final Name fromSchema, final Set<Name> fromExpand, final boolean materialized) {
 
         super(context, name, type, ViewSchema.Builder.class);
         this.fromSchema = fromSchema;
         this.fromExpand = fromExpand;
+        this.materialized = materialized;
+        this.group = ImmutableList.of();
+        this.where = null;
+    }
+
+    private ViewSchemaMapper(final ViewSchemaMapper<T> copy, final List<String> group, final Expression where) {
+
+        super(copy);
+        this.fromSchema = copy.fromSchema;
+        this.fromExpand = copy.fromExpand;
+        this.materialized = copy.materialized;
         this.group = group;
         this.where = where;
+    }
+
+    public ViewSchemaMapper<T> withWhere(final Expression where) {
+
+        return new ViewSchemaMapper<>(this, group, where);
+    }
+
+    public ViewSchemaMapper<T> withGroup(final List<String> group) {
+
+        return new ViewSchemaMapper<>(this, group, where);
     }
 
     @Override

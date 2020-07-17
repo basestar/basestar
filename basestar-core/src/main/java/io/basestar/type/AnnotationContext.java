@@ -20,6 +20,7 @@ package io.basestar.type;
  * #L%
  */
 
+import com.google.common.collect.ImmutableSet;
 import io.basestar.type.has.HasType;
 import io.leangen.geantyref.GenericTypeReflector;
 import lombok.Getter;
@@ -29,10 +30,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.InvocationTargetException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -40,9 +38,14 @@ import java.util.stream.Collectors;
 @Accessors(fluent = true)
 public class AnnotationContext<A extends Annotation> implements HasType {
 
+    // Methods that are not annotation values
+    private static final Set<String> NOT_VALUES = ImmutableSet.of("hashCode", "annotationType", "toString");
+
     private final A annotation;
 
     private final Supplier<Map<String, Object>> values;
+
+    private final Supplier<Map<String, Object>> defaultValues;
 
     // FIXME: should be private
     public AnnotationContext(final A annotation) {
@@ -52,10 +55,22 @@ public class AnnotationContext<A extends Annotation> implements HasType {
             final Map<String, Object> values = new HashMap<>();
             final TypeContext context = type();
             context.methods().forEach(m -> {
-                try {
-                    values.put(m.name(), m.invoke(annotation));
-                } catch (final InvocationTargetException | IllegalAccessException e) {
-                    throw new IllegalStateException(e);
+                if(m.parameters().size() == 0 && !m.isStatic() && !NOT_VALUES.contains(m.name())) {
+                    try {
+                        values.put(m.name(), m.invoke(annotation));
+                    } catch (final InvocationTargetException | IllegalAccessException | IllegalArgumentException e) {
+                        throw new IllegalStateException(e);
+                    }
+                }
+            });
+            return values;
+        };
+        this.defaultValues = () -> {
+            final Map<String, Object> values = new HashMap<>();
+            final TypeContext context = type();
+            context.methods().forEach(m -> {
+                if(m.parameters().size() == 0 && !m.isStatic() && !NOT_VALUES.contains(m.name())) {
+                    values.put(m.name(), m.method().getDefaultValue());
                 }
             });
             return values;
@@ -65,6 +80,20 @@ public class AnnotationContext<A extends Annotation> implements HasType {
     public Map<String, Object> values() {
 
         return values.get();
+    }
+
+    public Map<String, Object> defaultValues() {
+
+        return defaultValues.get();
+    }
+
+    public Map<String, Object> nonDefaultValues() {
+
+        final Map<String, Object> defaultValues = defaultValues();
+        return values().entrySet().stream()
+                .filter(e -> e.getValue() != null)
+                .filter(e -> !Objects.deepEquals(e.getValue(), defaultValues.get(e.getKey())))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     @Override

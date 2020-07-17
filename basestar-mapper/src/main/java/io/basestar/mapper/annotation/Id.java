@@ -20,7 +20,6 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
-import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.IdMapper;
 import io.basestar.mapper.internal.MemberMapper;
@@ -36,24 +35,25 @@ import java.lang.annotation.*;
 @MemberDeclaration(Id.Declaration.class)
 public @interface Id {
 
-    String expression() default "";
+    Id INSTANCE = new Id(){
+
+        @Override
+        public Class<? extends Annotation> annotationType() {
+
+            return Id.class;
+        }
+    };
 
     @RequiredArgsConstructor
     class Declaration implements MemberDeclaration.Declaration {
 
+        @SuppressWarnings("unused")
         private final Id annotation;
 
         @Override
         public MemberMapper<?> mapper(final MappingContext context, final PropertyContext prop) {
 
-            final Expression expression;
-            if(annotation.expression().isEmpty()) {
-                expression = null;
-            } else {
-                expression = Expression.parse(annotation.expression());
-            }
-            return new IdMapper(context, prop, io.basestar.schema.Id.builder()
-                    .setExpression(expression));
+            return new IdMapper(context, prop);
         }
     }
 }

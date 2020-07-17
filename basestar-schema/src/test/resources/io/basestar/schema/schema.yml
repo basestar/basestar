@@ -1,5 +1,4 @@
 
-# path: x
 Post:
   properties:
     string:
@@ -7,7 +6,6 @@ Post:
     ref:
       type: Post
 
-# path: x/comments/y
 Comment:
   properties:
     string:
@@ -27,7 +25,4 @@ User:
     email:
       type: string
 
-#  links:
-                     ##    link:
-                     ##      schema: Simple
 

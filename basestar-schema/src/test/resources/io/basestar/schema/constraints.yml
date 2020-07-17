@@ -13,12 +13,10 @@ Constrained:
           regex:
             pattern: "[\\w\\d]+"
         shortRegex:
-          regex: "[\\w\\d]+"
+          regex: "[\\w\\d]*"
         longRange:
           range:
-            lt: 1
-            gt: 2
-            gte: 3
-            lte: 4
+            lt: 3
+            gt: 1
         custom:
           expression: "false"

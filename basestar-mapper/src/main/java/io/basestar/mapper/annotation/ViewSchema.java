@@ -20,18 +20,16 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
-import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.SchemaMapper;
 import io.basestar.mapper.internal.ViewSchemaMapper;
 import io.basestar.mapper.internal.annotation.SchemaDeclaration;
 import io.basestar.type.TypeContext;
+import io.basestar.util.AbstractPath;
 import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.annotation.*;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Set;
 
 @Documented
@@ -46,13 +44,9 @@ public @interface ViewSchema {
 
     String from();
 
-    boolean materialized() default false;
-
     String[] expand() default {};
 
-    String[] group() default {};
-
-    String where() default "";
+    boolean materialized() default false;
 
     @RequiredArgsConstructor
     class Declaration implements SchemaDeclaration.Declaration {
@@ -64,10 +58,48 @@ public @interface ViewSchema {
 
             final String name = annotation.name().equals(INFER_NAME) ? type.simpleName() : annotation.name();
             final Name fromSchema = Name.parse(annotation.from());
+            final boolean materialized = annotation.materialized();
             final Set<Name> fromExpand = Name.parseSet(annotation.expand());
-            final Expression where = annotation.where().isEmpty() ? null : Expression.parse(annotation.where());
-            final List<String> group = Arrays.asList(annotation.group());
-            return new ViewSchemaMapper<>(context, Name.parse(name), type, fromSchema, fromExpand, group, where);
+//            final Expression where = annotation.where().isEmpty() ? null : Expression.parse(annotation.where());
+//            final List<String> group = Arrays.asList(annotation.group());
+            return new ViewSchemaMapper<>(context, Name.parse(name), type, fromSchema, fromExpand, materialized);
+        }
+
+        public static ViewSchema from(final io.basestar.schema.ViewSchema schema) {
+
+            return new ViewSchema() {
+
+                @Override
+                public Class<? extends Annotation> annotationType() {
+
+                    return ViewSchema.class;
+                }
+
+                @Override
+                public String name() {
+
+                    return schema.getQualifiedName().toString();
+                }
+
+                @Override
+                public String from() {
+
+                    return schema.getFrom().getSchema().getQualifiedName().toString();
+                }
+
+                @Override
+                public String[] expand() {
+
+                    // FIXME
+                    return schema.getFrom().getExpand().isEmpty() ? null : schema.getFrom().getExpand().stream().map(AbstractPath::toString).toArray(String[]::new);
+                }
+
+                @Override
+                public boolean materialized() {
+
+                    return schema.isMaterialized();
+                }
+            };
         }
     }
 }

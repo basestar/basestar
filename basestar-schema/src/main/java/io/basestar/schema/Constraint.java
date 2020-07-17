@@ -30,6 +30,7 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Context;
 import io.basestar.schema.exception.SchemaValidationException;
+import io.basestar.schema.use.Use;
 import io.basestar.schema.validator.*;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -149,11 +150,11 @@ public class Constraint implements Named, Described, Serializable {
         }
     }
 
-    public List<Violation> violations(final Context context, final Name name, final String constraint, final Object value) {
+    public List<Violation> violations(final Use<?> type, final Context context, final Name name, final String constraint, final Object value) {
 
         final List<Violation> violations = new ArrayList<>();
         for(final Validator validator : validators) {
-            if(!validator.validate(context, value)) {
+            if(!validator.validate(type, context, value)) {
                 violations.add(new Violation(name, constraint, message(validator, message)));
             }
         }

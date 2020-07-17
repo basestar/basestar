@@ -44,7 +44,9 @@ public class TestMappingContext {
         @Id
         private String id;
 
-        @Link(expression = "target.id == this.id", sort = "blah:desc")
+        @Link
+        @Sort("blah:desc")
+        @Expression("target.id == this.id")
         private List<Comment> comments;
 
         @Created
@@ -79,9 +81,16 @@ public class TestMappingContext {
 
             private Comment comment;
 
-            @Link(expression = "target.id == this.id")
+            @Link
+            @Expression("target.id == this.id")
             private List<Comment> comments;
         }
+    }
+
+    @ViewSchema(from = "Post")
+    @Where("x == 1")
+    public static class PostView {
+
     }
 
     @Test
@@ -115,5 +124,17 @@ public class TestMappingContext {
         final Namespace.Builder ns = mappingContext.namespace(Post.class);
 
         System.err.println(ns);
+    }
+
+    @Test
+    public void testViewSchema() {
+
+        final MappingContext mappingContext = new MappingContext();
+
+        final SchemaMapper<PostView, Instance> schemaMapper = mappingContext.schemaMapper(PostView.class);
+        final Schema.Builder<?> schema = schemaMapper.schema();
+
+        System.err.println(schema);
+
     }
 }

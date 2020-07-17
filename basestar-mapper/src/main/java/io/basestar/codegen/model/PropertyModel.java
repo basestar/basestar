@@ -20,8 +20,10 @@ package io.basestar.codegen.model;
  * #L%
  */
 
-import com.google.common.collect.ImmutableMap;
 import io.basestar.codegen.CodegenSettings;
+import io.basestar.mapper.annotation.Expression;
+import io.basestar.mapper.annotation.Immutable;
+import io.basestar.mapper.annotation.Required;
 import io.basestar.schema.Property;
 
 import java.util.ArrayList;
@@ -46,23 +48,19 @@ public class PropertyModel extends MemberModel {
     }
 
     @Override
-    public List<AnnotationModel> getAnnotations() {
+    public List<AnnotationModel<?>> getAnnotations() {
 
-        final List<AnnotationModel> annotations = new ArrayList<>();
-        final ImmutableMap.Builder<String, Object> values = ImmutableMap.builder();
-        values.put("name", property.getName());
+        final List<AnnotationModel<?>> annotations = new ArrayList<>();
+        annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.Property.Declaration.from(property)));
+        if(property.getExpression() != null) {
+            annotations.add(new AnnotationModel<>(getSettings(), Expression.Modifier.from(property.getExpression())));
+        }
         if(property.isRequired()) {
-            values.put("required", true);
+            annotations.add(new AnnotationModel<>(getSettings(), NOT_NULL));
+            annotations.add(new AnnotationModel<>(getSettings(), Required.Modifier.from(true)));
         }
         if(property.isImmutable()) {
-            values.put("immutable", true);
-        }
-        if(property.getExpression() != null) {
-            values.put("expression", property.getExpression().toString());
-        }
-        annotations.add(new AnnotationModel(getSettings(), io.basestar.mapper.annotation.Property.class, values.build()));
-        if(property.isRequired()) {
-            annotations.add(new AnnotationModel(getSettings(), javax.validation.constraints.NotNull.class, ImmutableMap.of()));
+            annotations.add(new AnnotationModel<>(getSettings(), Immutable.Modifier.from(true)));
         }
         return annotations;
     }

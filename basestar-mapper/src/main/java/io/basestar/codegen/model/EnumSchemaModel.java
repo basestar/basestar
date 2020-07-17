@@ -21,7 +21,6 @@ package io.basestar.codegen.model;
  */
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import io.basestar.codegen.CodegenSettings;
 import io.basestar.schema.EnumSchema;
 
@@ -44,10 +43,10 @@ public class EnumSchemaModel extends SchemaModel {
     }
 
     @Override
-    public List<AnnotationModel> getAnnotations() {
+    public List<AnnotationModel<?>> getAnnotations() {
 
         return ImmutableList.of(
-                new AnnotationModel(getSettings(), io.basestar.mapper.annotation.EnumSchema.class, ImmutableMap.of("name", schema.getQualifiedName()))
+                new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.EnumSchema.Declaration.from(schema))
         );
     }
 }

@@ -22,6 +22,11 @@ package io.basestar.codegen.model;
 
 import io.basestar.codegen.CodegenSettings;
 
+import javax.validation.Payload;
+import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
+import java.lang.annotation.Annotation;
+
 @SuppressWarnings("unused")
 public class Model {
 
@@ -41,4 +46,39 @@ public class Model {
 
         return settings.getPackageName();
     }
+
+    protected static final Valid VALID = new Valid() {
+
+        @Override
+        public Class<? extends Annotation> annotationType() {
+
+            return Valid.class;
+        }
+    };
+
+    protected static final NotNull NOT_NULL = new NotNull() {
+
+        @Override
+        public String message() {
+            return null;
+        }
+
+        @Override
+        public Class<?>[] groups() {
+            return new Class[0];
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public Class<? extends Payload>[] payload() {
+
+            return new Class[0];
+        }
+
+        @Override
+        public Class<? extends Annotation> annotationType() {
+
+            return NotNull.class;
+        }
+    };
 }

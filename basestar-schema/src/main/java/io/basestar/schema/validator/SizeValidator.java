@@ -3,9 +3,16 @@ package io.basestar.schema.validator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
+import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
+import io.basestar.schema.use.Use;
 import lombok.Builder;
 import lombok.Data;
+
+import javax.validation.Payload;
+import javax.validation.constraints.Size;
+import java.lang.annotation.Annotation;
+import java.util.List;
 
 @Data
 @Builder(builderClassName = "Builder", setterPrefix = "set")
@@ -53,8 +60,51 @@ public class SizeValidator implements Validator {
     }
 
     @Override
-    public boolean validate(final Context context, final Object value) {
+    public boolean validate(final Use<?> type, final Context context, final Object value) {
 
         return true;
+    }
+
+    @Override
+    public List<? extends Annotation> jsr380(final Use<?> type, final String message, final Class<?>[] groups, final Class<? extends Payload>[] payload) {
+
+        return ImmutableList.of(new Size() {
+
+            @Override
+            public Class<? extends Annotation> annotationType() {
+
+                return Size.class;
+            }
+
+            @Override
+            public int min() {
+
+                return min == null ? 0 : min.intValue();
+            }
+
+            @Override
+            public int max() {
+
+                return max == null ? Integer.MAX_VALUE : max.intValue();
+            }
+
+            @Override
+            public String message() {
+
+                return message;
+            }
+
+            @Override
+            public Class<?>[] groups() {
+
+                return groups;
+            }
+
+            @Override
+            public Class<? extends Payload>[] payload() {
+
+                return payload;
+            }
+        });
     }
 }
