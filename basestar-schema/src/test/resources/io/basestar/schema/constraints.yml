@@ -1,0 +1,24 @@
+Constrained:
+  properties:
+    name:
+      type: string
+      constraints:
+        longSize:
+          size:
+            min: 1
+            max: 10
+        exactSize:
+          size: 50
+        longRegex:
+          regex:
+            pattern: "[\\w\\d]+"
+        shortRegex:
+          regex: "[\\w\\d]+"
+        longRange:
+          range:
+            lt: 1
+            gt: 2
+            gte: 3
+            lte: 4
+        custom:
+          expression: "false"

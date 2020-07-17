@@ -561,8 +561,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             });
             final Map<String, Aggregate> aggregates = visitor.getAggregates();
 
-            // FIXME: should we support nested aggregates?
-            final ObjectSchema objectSchema = (ObjectSchema) viewSchema.getFrom();
+            // FIXME: nested aggregates
+            final ObjectSchema objectSchema = (ObjectSchema) viewSchema.getFrom().getSchema();
 
             final Map<String, Expression> group = new HashMap<>();
             viewSchema.getGroup().forEach((name, prop) -> {

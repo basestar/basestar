@@ -136,7 +136,7 @@ public class RuntimeWiringFactory {
         return (env) -> {
 
             final Caller caller = GraphQLUtils.caller(env.getContext());
-            final ObjectSchema linkSchema = link.getSchema();
+            final InstanceSchema linkSchema = link.getSchema();
             final Set<Name> names = Name.children(paths(env), strategy.pageItemsFieldName());
             final Set<Name> expand = linkSchema.requiredExpand(names);
             final String id = env.getArgument(Reserved.ID);

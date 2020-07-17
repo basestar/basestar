@@ -49,7 +49,18 @@ public class PropertyModel extends MemberModel {
     public List<AnnotationModel> getAnnotations() {
 
         final List<AnnotationModel> annotations = new ArrayList<>();
-        annotations.add(new AnnotationModel(getSettings(), io.basestar.mapper.annotation.Property.class, ImmutableMap.of("name", property.getName(), "required", property.isRequired())));
+        final ImmutableMap.Builder<String, Object> values = ImmutableMap.builder();
+        values.put("name", property.getName());
+        if(property.isRequired()) {
+            values.put("required", true);
+        }
+        if(property.isImmutable()) {
+            values.put("immutable", true);
+        }
+        if(property.getExpression() != null) {
+            values.put("expression", property.getExpression().toString());
+        }
+        annotations.add(new AnnotationModel(getSettings(), io.basestar.mapper.annotation.Property.class, values.build()));
         if(property.isRequired()) {
             annotations.add(new AnnotationModel(getSettings(), javax.validation.constraints.NotNull.class, ImmutableMap.of()));
         }

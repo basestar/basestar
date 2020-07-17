@@ -20,52 +20,42 @@ package io.basestar.mapper.internal;
  * #L%
  */
 
-import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
-import io.basestar.mapper.SchemaMapper;
+import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Link;
-import io.basestar.schema.ObjectSchema;
 import io.basestar.type.PropertyContext;
-import io.basestar.util.Sort;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.List;
 import java.util.Map;
 
-public class LinkMapper implements MemberMapper<ObjectSchema.Builder> {
+public class LinkMapper implements MemberMapper<InstanceSchema.Builder> {
 
     private final String name;
 
     private final PropertyContext property;
 
-    private final Expression expression;
-
-    private final List<Sort> sort;
-
     private final TypeMapper type;
 
     private final TypeMapper.OfCustom itemType;
 
-    private final boolean single;
+    private final Link.Builder config;
 
-    public LinkMapper(final MappingContext context, final String name, final PropertyContext property, final Expression expression, final List<Sort> sort) {
+    public LinkMapper(final MappingContext context, final String name, final PropertyContext property, final Link.Builder config) {
 
         this.name = name;
         this.property = property;
-        this.expression = expression;
-        this.sort = sort;
+        this.config = config;
         this.type = TypeMapper.from(context, property.type());
         if(type instanceof TypeMapper.OfArray) {
             final TypeMapper.OfArray array = (TypeMapper.OfArray)type;
             if(array.getValue() instanceof TypeMapper.OfCustom) {
                 itemType = (TypeMapper.OfCustom)array.getValue();
-                single = false;
             } else {
                 throw new IllegalStateException("Cannot create link item mapper for " + array.getValue());
             }
         } else if(type instanceof TypeMapper.OfCustom) {
             itemType = (TypeMapper.OfCustom) type;
-            single = true;
+            config.setSingle(true);
         } else {
             throw new IllegalStateException("Cannot create link mapper for " + type);
         }
@@ -78,14 +68,9 @@ public class LinkMapper implements MemberMapper<ObjectSchema.Builder> {
     }
 
     @Override
-    public void addToSchema(final ObjectSchema.Builder builder) {
+    public void addToSchema(final InstanceSchemaMapper<?, InstanceSchema.Builder> mapper, final InstanceSchema.Builder builder) {
 
-        final SchemaMapper<?, ?> schema = itemType.getMapper();
-        builder.setLink(name, Link.builder()
-                .setSchema(schema.qualifiedName())
-                .setExpression(expression)
-                .setSort(sort.isEmpty() ? null : sort)
-                .setSingle(single ? true : null));
+        mapper.addLink(builder, name, config.setSchema(itemType.getMapper().qualifiedName()));
     }
 
     @Override

@@ -20,9 +20,12 @@ package io.basestar.schema;
  * #L%
  */
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import java.util.Map;
 
 public interface Extendable {
 
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     Map<String, Object> getExtensions();
 }

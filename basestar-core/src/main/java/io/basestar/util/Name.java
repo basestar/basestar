@@ -22,10 +22,7 @@ package io.basestar.util;
 
 import lombok.EqualsAndHashCode;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -84,16 +81,36 @@ public class Name extends AbstractPath<Name> implements Comparable<Name> {
         return new Name(splitter(DELIMITER).splitToList(str));
     }
 
+    public static Set<Name> parseSet(final Collection<String> strs) {
+
+        return strs.stream().map(Name::parse)
+                .collect(Collectors.toSet());
+    }
+
+    public static Set<Name> parseSet(final String ... strs) {
+
+        return parseSet(Arrays.asList(strs));
+    }
+
     public static Set<Name> parseSet(final String str) {
 
-        return splitter(MULTIPLE_DELIMITER).splitToList(str).stream().map(Name::parse)
-                .collect(Collectors.toSet());
+        return parseSet(splitter(MULTIPLE_DELIMITER).splitToList(str));
+    }
+
+    public static List<Name> parseList(final Collection<String> strs) {
+
+        return strs.stream().map(Name::parse)
+                .collect(Collectors.toList());
+    }
+
+    public static List<Name> parseList(final String ... strs) {
+
+        return parseList(Arrays.asList(strs));
     }
 
     public static List<Name> parseList(final String str) {
 
-        return splitter(MULTIPLE_DELIMITER).splitToList(str).stream().map(Name::parse)
-                .collect(Collectors.toList());
+        return parseList(splitter(MULTIPLE_DELIMITER).splitToList(str));
     }
 
     public static Name of(final String ... parts) {

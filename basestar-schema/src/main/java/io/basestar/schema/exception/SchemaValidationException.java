@@ -20,10 +20,12 @@ package io.basestar.schema.exception;
  * #L%
  */
 
+import io.basestar.util.Name;
+
 public class SchemaValidationException extends RuntimeException {
 
-    public SchemaValidationException(final String reason) {
+    public SchemaValidationException(final Name qualifiedName, final String reason) {
 
-        super(reason);
+        super(reason + " (in: " + qualifiedName + ")");
     }
 }

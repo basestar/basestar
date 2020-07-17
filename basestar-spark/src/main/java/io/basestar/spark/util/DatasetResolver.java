@@ -88,8 +88,8 @@ public interface DatasetResolver extends Serializable {
                 final ViewSchema viewSchema = (ViewSchema)schema;
                 final ViewTransform viewTransform = ViewTransform.builder().schema(viewSchema).build();
                 final ExpandTransform expandTransform = ExpandTransform.builder().resolver(this).schema(schema).expand(expand).build();
-                // FIXME: view has an implied internal expand which must be passed here
-                final Dataset<Row> base = resolve(viewSchema.getFrom(), ImmutableSet.of());
+                final ViewSchema.From from = viewSchema.getFrom();
+                final Dataset<Row> base = resolve(from.getSchema(), from.getExpand());
                 return viewTransform.then(expandTransform).accept(base);
 
             } else {

@@ -32,7 +32,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class TestViewSchema {
 
     @Test
-    @Deprecated
     public void testShorthandProperties() throws IOException {
 
         final Namespace namespace = Namespace.load(TestViewSchema.class.getResource("view.yml"));

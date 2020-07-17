@@ -60,7 +60,9 @@ public @interface Link {
             final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
             final Expression expression = Expression.parse(annotation.expression());
             final List<Sort> sort = Arrays.stream(annotation.sort()).map(Sort::parse).collect(Collectors.toList());
-            return new LinkMapper(context, name, prop, expression, sort);
+            return new LinkMapper(context, name, prop, io.basestar.schema.Link.builder()
+                    .setExpression(expression)
+                    .setSort(sort.isEmpty() ? null : sort));
         }
     }
 }

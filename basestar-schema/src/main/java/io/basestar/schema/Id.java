@@ -118,17 +118,15 @@ public class Id implements Serializable {
     public Set<Constraint.Violation> validate(final Name path, final Object after, final Context context) {
 
         final Set<Constraint.Violation> violations = new HashSet<>();
-        final Name newName = path.with(Reserved.ID);
+        final Name qualifiedName = path.with(Reserved.ID);
         if(after == null) {
-            violations.add(new Constraint.Violation(newName, Constraint.REQUIRED));
+            violations.add(new Constraint.Violation(qualifiedName, Constraint.REQUIRED, null));
         } else if(!constraints.isEmpty()) {
             final Context newContext = context.with(VAR_VALUE, after);
             for(final Map.Entry<String, Constraint> entry : constraints.entrySet()) {
                 final String name = entry.getKey();
                 final Constraint constraint = entry.getValue();
-                if(!constraint.getExpression().evaluatePredicate(newContext)) {
-                    violations.add(new Constraint.Violation(newName, name));
-                }
+                violations.addAll(constraint.violations(newContext, qualifiedName, name, after));
             }
         }
         return violations;

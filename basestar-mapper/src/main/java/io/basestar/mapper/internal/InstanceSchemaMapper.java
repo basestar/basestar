@@ -24,6 +24,9 @@ import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.SchemaMapper;
 import io.basestar.mapper.internal.annotation.MemberDeclaration;
 import io.basestar.schema.InstanceSchema;
+import io.basestar.schema.Link;
+import io.basestar.schema.Property;
+import io.basestar.schema.Transient;
 import io.basestar.type.AnnotationContext;
 import io.basestar.type.TypeContext;
 import io.basestar.type.has.HasType;
@@ -67,7 +70,7 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
 
                 if (propAnnotations.size() == 0) {
                     // FIXME
-                    members.add((MemberMapper<B>)new PropertyMapper(context, prop.name(), prop, null, false));
+                    members.add((MemberMapper<B>)new PropertyMapper(context, prop.name(), prop, Property.builder()));
                 } else if (propAnnotations.size() == 1) {
                     final AnnotationContext<?> annotation = propAnnotations.get(0);
                     final MemberDeclaration memberDeclaration = annotation.type().annotation(MemberDeclaration.class).annotation();
@@ -100,8 +103,31 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
 
     protected B addMembers(final B builder) {
 
-        members.forEach(m -> m.addToSchema(builder));
+        members.forEach(m -> m.addToSchema(this, builder));
         return builder;
+    }
+
+    protected void addProperty(final B builder, final String name, final Property.Builder property) {
+
+        builder.setProperty(name, property);
+    }
+
+    protected void addLink(final B builder, final String name, final Link.Builder link) {
+
+        if(builder instanceof Link.Resolver.Builder) {
+            ((Link.Resolver.Builder)builder).setLink(name, link);
+        } else {
+            throw new IllegalStateException("Cannot add link to " + builder.type());
+        }
+    }
+
+    protected void addTransient(final B builder, final String name, final Transient.Builder trans) {
+
+        if(builder instanceof Transient.Resolver.Builder) {
+            ((Transient.Resolver.Builder)builder).setTransient(name, trans);
+        } else {
+            throw new IllegalStateException("Cannot add link to " + builder.type());
+        }
     }
 
     @Override

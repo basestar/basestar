@@ -20,22 +20,35 @@ package io.basestar.schema;
  * #L%
  */
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import io.basestar.expression.Expression;
-import io.basestar.jackson.serde.ExpressionDeseriaizer;
+import com.google.common.collect.ImmutableMap;
+import io.basestar.expression.Context;
+import io.basestar.schema.exception.SchemaValidationException;
+import io.basestar.schema.validator.*;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.Data;
 import lombok.Getter;
 import lombok.experimental.Accessors;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+@Slf4j
 @Getter
 public class Constraint implements Named, Described, Serializable {
 
@@ -49,13 +62,28 @@ public class Constraint implements Named, Described, Serializable {
     @Nullable
     private final String description;
 
+    @Nullable
+    private final String message;
+
     @Nonnull
-    private final Expression expression;
+    private final List<Validator> validators;
 
     @JsonDeserialize(as = Builder.class)
     public interface Descriptor extends Described {
 
-        Expression getExpression();
+        String getMessage();
+
+        @JsonIgnore
+        List<Validator> getValidators();
+
+        @JsonAnyGetter
+        @SuppressWarnings("unused")
+        default Map<String, Validator> getValidatorMap() {
+
+            return getValidators().stream().collect(Collectors.toMap(
+                    Validator::type, v -> v
+            ));
+        }
 
         default Constraint build(final Name qualifiedName) {
 
@@ -72,9 +100,37 @@ public class Constraint implements Named, Described, Serializable {
         private String description;
 
         @Nullable
-        @JsonSerialize(using = ToStringSerializer.class)
-        @JsonDeserialize(using = ExpressionDeseriaizer.class)
-        private Expression expression;
+        private String message;
+
+        @Nullable
+        @JsonProperty(RangeValidator.TYPE)
+        private RangeValidator range;
+
+        @Nullable
+        @JsonProperty(SizeValidator.TYPE)
+        private SizeValidator size;
+
+        @Nullable
+        @JsonProperty(RegexValidator.TYPE)
+        private RegexValidator regex;
+
+        @Nullable
+        @JsonProperty(ExpressionValidator.TYPE)
+        private ExpressionValidator expression;
+
+        @Override
+        public Map<String, Validator> getValidatorMap() {
+
+            return ImmutableMap.of();
+        }
+
+        @Override
+        public List<Validator> getValidators() {
+
+            return Stream.of(range, size, regex, expression)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+        }
     }
 
     public static Builder builder() {
@@ -86,7 +142,31 @@ public class Constraint implements Named, Described, Serializable {
 
         this.qualifiedName = qualifiedName;
         this.description = descriptor.getDescription();
-        this.expression = Nullsafe.require(descriptor.getExpression());
+        this.validators = Nullsafe.immutableCopy(descriptor.getValidators());
+        this.message = descriptor.getMessage();
+        if(validators.isEmpty()) {
+            throw new SchemaValidationException(qualifiedName, "Constraint must have at least one validator");
+        }
+    }
+
+    public List<Violation> violations(final Context context, final Name name, final String constraint, final Object value) {
+
+        final List<Violation> violations = new ArrayList<>();
+        for(final Validator validator : validators) {
+            if(!validator.validate(context, value)) {
+                violations.add(new Violation(name, constraint, message(validator, message)));
+            }
+        }
+        return violations;
+    }
+
+    protected static String message(final Validator validator, final String message) {
+
+        if(message != null) {
+            return message;
+        } else {
+            return validator.defaultMessage();
+        }
     }
 
     @Data
@@ -96,15 +176,24 @@ public class Constraint implements Named, Described, Serializable {
         private final Name name;
 
         private final String constraint;
+
+        @Nullable
+        private final String message;
     }
 
     public Descriptor descriptor() {
 
         return new Descriptor() {
             @Override
-            public Expression getExpression() {
+            public String getMessage() {
 
-                return expression;
+                return message;
+            }
+
+            @Override
+            public List<Validator> getValidators() {
+
+                return validators;
             }
 
             @Nullable

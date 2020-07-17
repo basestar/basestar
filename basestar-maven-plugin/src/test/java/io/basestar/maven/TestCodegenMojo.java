@@ -63,6 +63,7 @@ public class TestCodegenMojo {
         final List<String> classes = ImmutableList.of(
                 "io.basestar.maven.test.a.Test",
                 "io.basestar.maven.test.b.Test",
+                "io.basestar.maven.test.c.Test",
                 "io.basestar.maven.test.Test"
         );
 
@@ -89,6 +90,7 @@ public class TestCodegenMojo {
         ), Namespace.Builder.load(
                 new File(namespaceDirectory, "a/Test.yml").toURI().toURL(),
                 new File(namespaceDirectory, "b/Test.yml").toURI().toURL(),
+                new File(namespaceDirectory, "c/Test.yml").toURI().toURL(),
                 new File(namespaceDirectory, "Test.yml").toURI().toURL()
         ));
     }

@@ -31,10 +31,7 @@ import com.google.common.io.BaseEncoding;
 import io.basestar.expression.Context;
 import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
-import io.basestar.schema.use.Use;
-import io.basestar.schema.use.UseDateTime;
-import io.basestar.schema.use.UseInteger;
-import io.basestar.schema.use.UseString;
+import io.basestar.schema.use.*;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.Data;
@@ -183,14 +180,19 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
 
         History getHistory();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Map<String, Transient.Descriptor> getTransients();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Map<String, Link.Descriptor> getLinks();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Map<String, Index.Descriptor> getIndexes();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Map<String, Permission.Descriptor> getPermissions();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Set<Name> getExpand();
 
         @Override
@@ -210,7 +212,7 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonPropertyOrder({"type", "description", "version", "extend", "concrete", "id", "history", "properties", "transients", "links", "indexes", "permissions", "extensions"})
-    public static class Builder implements InstanceSchema.Builder, Descriptor {
+    public static class Builder implements InstanceSchema.Builder, Descriptor, Link.Resolver.Builder, Transient.Resolver.Builder {
 
         private Long version;
 
@@ -255,7 +257,6 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         private Set<Name> expand;
 
         @Nullable
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private Map<String, Object> extensions;
 
         public String getType() {
@@ -263,18 +264,21 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
             return TYPE;
         }
 
+        @Override
         public Builder setProperty(final String name, final Property.Descriptor v) {
 
             properties = Nullsafe.immutableCopyPut(properties, name, v);
             return this;
         }
 
+        @Override
         public Builder setTransient(final String name, final Transient.Descriptor v) {
 
             transients = Nullsafe.immutableCopyPut(transients, name, v);
             return this;
         }
 
+        @Override
         public Builder setLink(final String name, final Link.Descriptor v) {
 
             links = Nullsafe.immutableCopyPut(links, name, v);
@@ -407,6 +411,12 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
     public SortedMap<String, Use<?>> metadataSchema() {
 
         return METADATA_SCHEMA;
+    }
+
+    @Override
+    public UseObject use() {
+
+        return new UseObject(this);
     }
 
     @Override

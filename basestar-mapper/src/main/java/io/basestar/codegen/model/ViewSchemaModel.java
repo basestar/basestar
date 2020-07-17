@@ -44,9 +44,16 @@ public class ViewSchemaModel extends InstanceSchemaModel {
 
         final Map<String, Object> values = new HashMap<>();
         values.put("name", schema.getQualifiedName());
-        values.put("from", schema.getFrom().getQualifiedName());
+        final ViewSchema.From from = schema.getFrom();
+        values.put("from", from.getSchema().getQualifiedName());
+        if(!from.getExpand().isEmpty()) {
+            values.put("expand", from.getExpand());
+        }
         if(schema.getWhere() != null) {
             values.put("where", schema.getWhere().toString());
+        }
+        if(!schema.getGroup().isEmpty()) {
+            values.put("group", schema.getGroup().keySet());
         }
         return ImmutableList.of(
                 new AnnotationModel(getSettings(), javax.validation.Valid.class),

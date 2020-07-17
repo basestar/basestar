@@ -44,6 +44,8 @@ public @interface Property {
 
     boolean required() default false;
 
+    boolean immutable() default false;
+
     @RequiredArgsConstructor
     class Declaration implements MemberDeclaration.Declaration {
 
@@ -55,7 +57,12 @@ public @interface Property {
             final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
             final Expression expression = annotation.expression().isEmpty() ? null : Expression.parse(annotation.expression());
             final boolean required = annotation.required();
-            return new PropertyMapper(context, name, prop, expression, required);
+            final boolean immutable = annotation.immutable();
+
+            return new PropertyMapper(context, name, prop, io.basestar.schema.Property.builder()
+                    .setExpression(expression)
+                    .setRequired(required ? true : null)
+                    .setImmutable(immutable ? true : null));
         }
     }
 }

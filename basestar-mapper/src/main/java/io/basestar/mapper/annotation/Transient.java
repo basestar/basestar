@@ -44,8 +44,6 @@ public @interface Transient {
 
     String[] expand() default {};
 
-    boolean required() default false;
-
     @RequiredArgsConstructor
     class Declaration implements MemberDeclaration.Declaration {
 
@@ -57,8 +55,8 @@ public @interface Transient {
             //FIXME
             final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
             final Expression expression = annotation.expression().isEmpty() ? null : Expression.parse(annotation.expression());
-            final boolean required = annotation.required();
-            return new PropertyMapper(context, name, prop, expression, required);
+            return new PropertyMapper(context, name, prop, io.basestar.schema.Property.builder()
+                    .setExpression(expression));
         }
     }
 }

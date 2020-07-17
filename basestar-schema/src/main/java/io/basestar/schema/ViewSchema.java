@@ -20,10 +20,7 @@ package io.basestar.schema;
  * #L%
  */
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.fasterxml.jackson.annotation.JsonSetter;
-import com.fasterxml.jackson.annotation.Nulls;
+import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
@@ -36,11 +33,13 @@ import io.basestar.jackson.serde.ExpressionDeseriaizer;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseView;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Sort;
 import lombok.Data;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
 
 import javax.annotation.Nonnull;
@@ -54,6 +53,66 @@ import java.util.stream.Collectors;
 @Getter
 public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Resolver {
 
+    @Getter
+    @RequiredArgsConstructor
+    public static class From {
+
+        @Nonnull
+        private final InstanceSchema schema;
+
+        @Nonnull
+        private final Set<Name> expand;
+
+        public Descriptor.From descriptor() {
+
+            return new Descriptor.From() {
+                @Override
+                public Name getSchema() {
+
+                    return schema.getQualifiedName();
+                }
+
+                @Override
+                public Set<Name> getExpand() {
+
+                    return expand;
+                }
+            };
+        }
+
+        @Data
+        @Accessors(chain = true)
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        @JsonPropertyOrder({"schema", "expand"})
+        public static class Builder implements Descriptor.From {
+
+            @Nullable
+            private Name schema;
+
+            @Nullable
+            @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
+            @JsonDeserialize(using = AbbrevListDeserializer.class)
+            private Set<Name> expand;
+
+            @JsonCreator
+            @SuppressWarnings("unused")
+            public static Builder fromSchema(final String schema) {
+
+                return fromSchema(Name.parse(schema.toString()));
+            }
+
+            public static Builder fromSchema(final Name schema) {
+
+                return new Builder().setSchema(schema);
+            }
+        }
+
+        public static Builder builder() {
+
+            return new Builder();
+        }
+    }
+
     @Nonnull
     private final Name qualifiedName;
 
@@ -66,7 +125,9 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
     private final long version;
 
     @Nonnull
-    private final InstanceSchema from;
+    private final From from;
+
+    private final boolean materialized;
 
     @Nonnull
     private final List<Sort> sort;
@@ -102,12 +163,22 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
 
         String TYPE = "view";
 
+        @JsonDeserialize(as = ViewSchema.From.Builder.class)
+        interface From {
+
+            Name getSchema();
+
+            Set<Name> getExpand();
+        }
+
         default String type() {
 
             return TYPE;
         }
 
-        Name getFrom();
+        Boolean getMaterialized();
+
+        From getFrom();
 
         List<Sort> getSort();
 
@@ -124,10 +195,7 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
         @Override
         default Map<String, Property.Descriptor> getProperties() {
 
-            return ImmutableMap.<String, Property.Descriptor>builder()
-                    .putAll(Nullsafe.option(getSelect()))
-                    .putAll(Nullsafe.option(getGroup()))
-                    .build();
+            return null;
         }
 
         @Override
@@ -146,10 +214,8 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
     @Data
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    @JsonPropertyOrder({"type", "description", "version", "from", "select", "group", "permissions", "extensions"})
-    public static class Builder implements InstanceSchema.Builder, Descriptor {
-
-        public static final String TYPE = "view";
+    @JsonPropertyOrder({"type", "description", "version", "materialized", "from", "select", "group", "permissions", "extensions"})
+    public static class Builder implements InstanceSchema.Builder, Descriptor, Link.Resolver.Builder {
 
         @Nullable
         private Long version;
@@ -158,7 +224,10 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
         private String description;
 
         @Nullable
-        private Name from;
+        private Boolean materialized;
+
+        @Nullable
+        private From from;
 
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
@@ -214,7 +283,8 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
             return this;
         }
 
-        public Builder setLink(final String name, final Link.Builder v) {
+        @Override
+        public Link.Resolver.Builder setLink(final String name, final Link.Descriptor v) {
 
             links = Nullsafe.immutableCopyPut(links, name, v);
             return this;
@@ -246,13 +316,15 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
         this.qualifiedName = qualifiedName;
         this.slot = slot;
         this.version = Nullsafe.option(descriptor.getVersion(), 1L);
-        this.from = resolver.requireInstanceSchema(descriptor.getFrom());
+        this.materialized = Nullsafe.option(descriptor.getMaterialized());
+        final Descriptor.From from = Nullsafe.require(descriptor.getFrom());
+        this.from = new From(resolver.requireInstanceSchema(from.getSchema()), Nullsafe.option(from.getExpand()));
         this.sort = Nullsafe.immutableCopy(descriptor.getSort());
         this.description = descriptor.getDescription();
         this.select = ImmutableSortedMap.copyOf(Nullsafe.option(descriptor.getSelect()).entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> viewPropertyDescriptor(e.getValue(), from).build(resolver, qualifiedName.with(e.getKey())))));
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> viewPropertyDescriptor(e.getValue(), this.from).build(resolver, qualifiedName.with(e.getKey())))));
         this.group = ImmutableSortedMap.copyOf(Nullsafe.option(descriptor.getGroup()).entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> viewPropertyDescriptor(e.getValue(), from).build(resolver, qualifiedName.with(e.getKey())))));
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> viewPropertyDescriptor(e.getValue(), this.from).build(resolver, qualifiedName.with(e.getKey())))));
         this.where = descriptor.getWhere();
         this.declaredProperties = ImmutableSortedMap.<String, Property>orderedBy(Ordering.natural())
                 .putAll(select).putAll(group).build();
@@ -264,18 +336,14 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName.toString());
         }
-        this.declaredProperties.forEach(ViewSchema::validateProperty);
+        this.declaredProperties.values().forEach(ViewSchema::validateProperty);
     }
 
-    private static void validateProperty(final String name, final Property property) {
+    private static void validateProperty(final Property property) {
 
-        if(!property.getConstraints().isEmpty()) {
-            throw new SchemaValidationException("View properties cannot have constraints (" + name + ")");
-        }
         if(property.getExpression() == null) {
-            throw new SchemaValidationException("Every view property must have an expression (" + name + ")");
+            throw new SchemaValidationException(property.getQualifiedName(), "Every view property must have an expression)");
         }
-//        property.getType().visit(TypeValidator.INSTANCE);
     }
 
     @Override
@@ -316,6 +384,12 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
     public SortedMap<String, Use<?>> metadataSchema() {
 
         return ImmutableSortedMap.of();
+    }
+
+    @Override
+    public UseView use() {
+
+        return new UseView(this);
     }
 
     @Override
@@ -373,14 +447,15 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
 
         if(!out.containsKey(qualifiedName)) {
             out.put(qualifiedName, this);
-            from.collectDependencies(expand, out);
+            from.getSchema().collectDependencies(expand, out);
             select.forEach((k, v) -> v.collectDependencies(expand, out));
             group.forEach((k, v) -> v.collectDependencies(expand, out));
         }
     }
 
-    private static Property.Descriptor viewPropertyDescriptor(final Property.Descriptor descriptor, final InstanceSchema from) {
+    private static Property.Descriptor viewPropertyDescriptor(final Property.Descriptor descriptor, final From from) {
 
+        final InstanceSchema fromSchema = from.getSchema();
         return (new Property.Descriptor() {
 
             @Override
@@ -409,11 +484,11 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
                     if (descriptor.getExpression() instanceof NameConstant) {
                         final Name name = ((NameConstant) descriptor.getExpression()).getName();
                         if(name.size() == 1) {
-                            final Use<?> metadataType = from.metadataSchema().get(name.last());
+                            final Use<?> metadataType = fromSchema.metadataSchema().get(name.last());
                             if(metadataType != null) {
                                 return metadataType;
                             }
-                            final Property prop = from.getProperty(name.last(), true);
+                            final Property prop = fromSchema.getProperty(name.last(), true);
                             if(prop != null) {
                                 return prop.getType();
                             }
@@ -455,10 +530,17 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
     public Descriptor descriptor() {
 
         return new Descriptor() {
-            @Override
-            public Name getFrom() {
 
-                return from.getQualifiedName();
+            @Override
+            public Boolean getMaterialized() {
+
+                return materialized;
+            }
+
+            @Override
+            public From getFrom() {
+
+                return from.descriptor();
             }
 
             @Override

@@ -21,6 +21,7 @@ package io.basestar.schema;
  */
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.exception.MissingMemberException;
@@ -38,6 +39,7 @@ public interface Member extends Named, Described, Serializable, Extendable {
 
     interface Descriptor extends Described, Extendable {
 
+        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         Visibility getVisibility();
     }
 

@@ -35,7 +35,6 @@ import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseArray;
-import io.basestar.schema.use.UseObject;
 import io.basestar.schema.util.Expander;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -66,7 +65,7 @@ public class Link implements Member {
     private final String description;
 
     @Nonnull
-    private final ObjectSchema schema;
+    private final InstanceSchema schema;
 
     @Nonnull
     private final Expression expression;
@@ -156,9 +155,9 @@ public class Link implements Member {
     public Use<?> getType() {
 
         if(single) {
-            return new UseObject(schema);
+            return schema.use();
         } else {
-            return new UseArray<>(new UseObject(schema));
+            return new UseArray<>(schema.use());
         }
     }
 
@@ -220,7 +219,6 @@ public class Link implements Member {
                     .collect(Collectors.toList());
         }
     }
-
 
     @Override
     public Set<Name> requiredExpand(final Set<Name> names) {
@@ -298,6 +296,13 @@ public class Link implements Member {
     }
 
     public interface Resolver {
+
+        interface Builder {
+
+            Builder setLink(String name, Link.Descriptor v);
+
+            Builder setLinks(Map<String, Link.Descriptor> vs);
+        }
 
         Map<String, Link> getDeclaredLinks();
 

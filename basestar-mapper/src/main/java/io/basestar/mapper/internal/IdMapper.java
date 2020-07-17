@@ -20,7 +20,6 @@ package io.basestar.mapper.internal;
  * #L%
  */
 
-import io.basestar.expression.Expression;
 import io.basestar.expression.type.Coercion;
 import io.basestar.mapper.MappingContext;
 import io.basestar.schema.Id;
@@ -37,14 +36,14 @@ public class IdMapper implements MemberMapper<ObjectSchema.Builder> {
 
     private final PropertyContext property;
 
-    private final Expression expression;
-
     private final TypeMapper type;
 
-    public IdMapper(final MappingContext context, final PropertyContext property, final Expression expression) {
+    private final Id.Builder config;
+
+    public IdMapper(final MappingContext context, final PropertyContext property, final Id.Builder config) {
 
         this.property = property;
-        this.expression = expression;
+        this.config = config;
         this.type = TypeMapper.from(context, property.type());
     }
 
@@ -55,11 +54,10 @@ public class IdMapper implements MemberMapper<ObjectSchema.Builder> {
     }
 
     @Override
-    public void addToSchema(final ObjectSchema.Builder builder) {
+    public void addToSchema(final InstanceSchemaMapper<?, ObjectSchema.Builder> mapper, final ObjectSchema.Builder builder) {
 
-        if(expression != null) {
-            builder.setId(Id.builder()
-                    .setExpression(expression));
+        if(config.getExpression() != null || (config.getConstraints() != null && !config.getConstraints().isEmpty())) {
+            builder.setId(config);
         }
     }
 

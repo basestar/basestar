@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.basestar.expression.Context;
 import io.basestar.schema.exception.MissingSchemaException;
+import io.basestar.schema.use.Use;
 import io.basestar.util.Name;
 
 import javax.annotation.Nonnull;
@@ -117,6 +118,8 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
     io.swagger.v3.oas.models.media.Schema<?> openApi();
 
     Descriptor<T> descriptor();
+
+    Use<T> use();
 
     default Map<Name, Schema<?>> dependencies() {
 

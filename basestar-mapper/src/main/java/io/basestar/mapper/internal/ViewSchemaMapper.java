@@ -22,26 +22,51 @@ package io.basestar.mapper.internal;
 
 import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
+import io.basestar.schema.Property;
 import io.basestar.schema.ViewSchema;
 import io.basestar.type.TypeContext;
 import io.basestar.util.Name;
 
+import java.util.List;
+import java.util.Set;
+
 public class ViewSchemaMapper<T> extends InstanceSchemaMapper<T, ViewSchema.Builder> {
 
-    private final Name from;
+    private final Name fromSchema;
+
+    private final Set<Name> fromExpand;
+
+    private final List<String> group;
 
     private final Expression where;
 
-    public ViewSchemaMapper(final MappingContext context, final Name name, final TypeContext type, final Name from, final Expression where) {
+    public ViewSchemaMapper(final MappingContext context, final Name name, final TypeContext type, final Name fromSchema, final Set<Name> fromExpand, final List<String> group, final Expression where) {
 
         super(context, name, type, ViewSchema.Builder.class);
-        this.from = from;
+        this.fromSchema = fromSchema;
+        this.fromExpand = fromExpand;
+        this.group = group;
         this.where = where;
     }
 
     @Override
     public ViewSchema.Builder schema() {
 
-        return addMembers(ViewSchema.builder().setFrom(from).setWhere(where));
+        final ViewSchema.From.Builder from = ViewSchema.From.builder()
+                .setSchema(fromSchema)
+                .setExpand(fromExpand.isEmpty() ? null : fromExpand);
+
+        return addMembers(ViewSchema.builder()
+                .setFrom(from)
+                .setWhere(where));
+    }
+
+    protected void addProperty(final ViewSchema.Builder builder, final String name, final Property.Builder property) {
+
+        if(group.contains(name)) {
+            builder.setGroup(name, property);
+        } else {
+            builder.setSelect(name, property);
+        }
     }
 }

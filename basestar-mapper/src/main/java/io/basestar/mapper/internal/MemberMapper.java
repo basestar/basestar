@@ -30,7 +30,7 @@ public interface MemberMapper<B extends InstanceSchema.Builder> {
 
     TypeMapper getType();
 
-    void addToSchema(B builder);
+    void addToSchema(InstanceSchemaMapper<?, B> mapper, B builder);
 
     void unmarshall(Object source, Map<String, Object> target) throws InvocationTargetException, IllegalAccessException;
 

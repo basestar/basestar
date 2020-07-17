@@ -30,6 +30,9 @@ import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.annotation.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
 
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
@@ -43,6 +46,12 @@ public @interface ViewSchema {
 
     String from();
 
+    boolean materialized() default false;
+
+    String[] expand() default {};
+
+    String[] group() default {};
+
     String where() default "";
 
     @RequiredArgsConstructor
@@ -54,9 +63,11 @@ public @interface ViewSchema {
         public SchemaMapper<?, ?> mapper(final MappingContext context, final TypeContext type) {
 
             final String name = annotation.name().equals(INFER_NAME) ? type.simpleName() : annotation.name();
-            final String from = annotation.from();
+            final Name fromSchema = Name.parse(annotation.from());
+            final Set<Name> fromExpand = Name.parseSet(annotation.expand());
             final Expression where = annotation.where().isEmpty() ? null : Expression.parse(annotation.where());
-            return new ViewSchemaMapper<>(context, Name.parse(name), type, Name.parse(from), where);
+            final List<String> group = Arrays.asList(annotation.group());
+            return new ViewSchemaMapper<>(context, Name.parse(name), type, fromSchema, fromExpand, group, where);
         }
     }
 }

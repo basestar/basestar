@@ -32,6 +32,7 @@ import io.basestar.expression.Context;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseStruct;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.Data;
@@ -194,13 +195,13 @@ public class StructSchema implements InstanceSchema {
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, qualifiedName.with(e.getKey())))));
         this.declaredProperties.forEach((k, v) -> {
             if(v.isImmutable()) {
-                throw new SchemaValidationException("Struct types cannot have immutable properties");
+                throw new SchemaValidationException(qualifiedName, "Struct types cannot have immutable properties");
             }
             if(v.getExpression() != null) {
-                throw new SchemaValidationException("Struct types cannot have properties with expressions");
+                throw new SchemaValidationException(qualifiedName,"Struct types cannot have properties with expressions");
             }
             if(v.getVisibility() != null) {
-                throw new SchemaValidationException("Struct types cannot have properties with custom visibility");
+                throw new SchemaValidationException(qualifiedName,"Struct types cannot have properties with custom visibility");
             }
         });
         this.concrete = Nullsafe.option(descriptor.getConcrete(), Boolean.TRUE);
@@ -222,6 +223,12 @@ public class StructSchema implements InstanceSchema {
     public SortedMap<String, Use<?>> metadataSchema() {
 
         return ImmutableSortedMap.of();
+    }
+
+    @Override
+    public UseStruct use() {
+
+        return new UseStruct(this);
     }
 
     @Override

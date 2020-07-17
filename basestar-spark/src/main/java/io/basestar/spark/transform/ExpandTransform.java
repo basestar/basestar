@@ -22,7 +22,10 @@ package io.basestar.spark.transform;
 
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
-import io.basestar.schema.*;
+import io.basestar.schema.InstanceSchema;
+import io.basestar.schema.Link;
+import io.basestar.schema.Property;
+import io.basestar.schema.Reserved;
 import io.basestar.schema.use.*;
 import io.basestar.spark.expression.SparkExpressionVisitor;
 import io.basestar.spark.util.ColumnResolver;
@@ -89,7 +92,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
         final String linkName = link.getName();
 
-        final ObjectSchema linkSchema = link.getSchema();
+        final InstanceSchema linkSchema = link.getSchema();
 
         final Dataset<Row> linkInput = resolver.resolveAndConform(linkSchema, expand);
 

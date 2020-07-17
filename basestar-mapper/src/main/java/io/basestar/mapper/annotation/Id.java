@@ -52,7 +52,8 @@ public @interface Id {
             } else {
                 expression = Expression.parse(annotation.expression());
             }
-            return new IdMapper(context, prop, expression);
+            return new IdMapper(context, prop, io.basestar.schema.Id.builder()
+                    .setExpression(expression));
         }
     }
 }

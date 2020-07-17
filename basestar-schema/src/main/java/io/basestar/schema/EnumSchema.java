@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.basestar.expression.Context;
 import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.schema.exception.ReservedNameException;
+import io.basestar.schema.use.UseEnum;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.swagger.v3.oas.models.media.StringSchema;
@@ -178,6 +179,12 @@ public class EnumSchema implements Schema<String> {
     @Override
     public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
+    }
+
+    @Override
+    public UseEnum use() {
+
+        return new UseEnum(this);
     }
 
     @Override

@@ -105,7 +105,8 @@ public class ReadProcessor {
                         Reserved.THIS, owner
                 )));
 
-        final ObjectSchema linkSchema = link.getSchema();
+        //FIXME: must support views
+        final ObjectSchema linkSchema = (ObjectSchema)link.getSchema();
         return queryImpl(context, linkSchema, expression, link.getSort(), count, paging);
     }
 

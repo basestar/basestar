@@ -20,10 +20,12 @@ package io.basestar.schema;
  * #L%
  */
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseInstance;
 import io.basestar.schema.use.UseString;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
@@ -42,6 +44,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
 
     interface Descriptor extends Schema.Descriptor<Instance> {
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Map<String, Property.Descriptor> getProperties();
 
         @Override
@@ -51,16 +54,16 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         InstanceSchema build();
     }
 
-    interface Builder extends Schema.Builder<Instance>, Descriptor {
+    interface Builder extends Schema.Builder<Instance>, Descriptor, Property.Resolver.Builder {
 
-        Builder setProperty(String name, Property.Descriptor v);
-
-        Builder setProperties(Map<String, Property.Descriptor> vs);
     }
 
     SortedMap<String, Use<?>> metadataSchema();
 
     InstanceSchema getExtend();
+
+    @Override
+    UseInstance use();
 
     default boolean hasMutableProperties() {
 

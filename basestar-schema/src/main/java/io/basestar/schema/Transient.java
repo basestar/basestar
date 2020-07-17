@@ -43,6 +43,7 @@ import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.Data;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
 
 import javax.annotation.Nonnull;
@@ -141,7 +142,7 @@ public class Transient implements Member {
             throw new ReservedNameException(qualifiedName);
         }
         if(type != null) {
-            type.visit(TypeValidator.INSTANCE);
+            type.visit(new TypeValidator(qualifiedName));
         }
         this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());
     }
@@ -235,6 +236,13 @@ public class Transient implements Member {
 
     public interface Resolver {
 
+        interface Builder {
+
+            Builder setTransient(String name, Transient.Descriptor v);
+
+            Builder setTransients(Map<String, Transient.Descriptor> vs);
+        }
+
         Map<String, Transient> getDeclaredTransients();
 
         Map<String, Transient> getTransients();
@@ -259,9 +267,10 @@ public class Transient implements Member {
         }
     }
 
+    @RequiredArgsConstructor
     private static class TypeValidator implements Use.Visitor.Defaulting<Void> {
 
-        private static final TypeValidator INSTANCE = new TypeValidator();
+        private final Name qualifiedName;
 
         @Override
         public Void visitDefault(final Use<?> type) {
@@ -272,7 +281,7 @@ public class Transient implements Member {
         @Override
         public Void visitObject(final UseObject type) {
 
-            throw new SchemaValidationException("Transients cannot use references");
+            throw new SchemaValidationException(qualifiedName,  "Transients cannot use references");
         }
 
         @Override

@@ -24,7 +24,9 @@ import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.annotation.Index;
 import io.basestar.mapper.annotation.Permission;
+import io.basestar.schema.Link;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.Transient;
 import io.basestar.type.AnnotationContext;
 import io.basestar.type.TypeContext;
 import io.basestar.util.Name;
@@ -94,5 +96,17 @@ public class ObjectSchemaMapper<T> extends InstanceSchemaMapper<T, ObjectSchema.
 
         return addMembers(ObjectSchema.builder()
                 .setIndexes(indexes.isEmpty() ? null : indexes));
+    }
+
+    @Override
+    public void addLink(final ObjectSchema.Builder builder, final String name, final Link.Builder link) {
+
+        builder.setLink(name, link);
+    }
+
+    @Override
+    public void addTransient(final ObjectSchema.Builder builder, final String name, final Transient.Builder trans) {
+
+        builder.setTransient(name, trans);
     }
 }

@@ -21,6 +21,7 @@ package io.basestar.schema.util;
  */
 
 import io.basestar.schema.Instance;
+import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Link;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.util.Name;
@@ -49,7 +50,7 @@ public interface Expander {
                 if(value == null) {
                     return null;
                 } else {
-                    final ObjectSchema schema = link.getSchema();
+                    final InstanceSchema schema = link.getSchema();
                     return value.map(v -> v == null ? null : schema.expand(v, this, expand));
                 }
             }

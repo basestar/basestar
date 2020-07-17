@@ -21,6 +21,7 @@ package io.basestar.schema;
  */
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -66,18 +67,57 @@ import java.util.stream.Collectors;
 @EqualsAndHashCode
 public class Namespace implements Serializable, Schema.Resolver {
 
-   private static final ObjectMapper objectMapper = new ObjectMapper(new BasestarFactory(new YAMLFactory()
-           .configure(YAMLGenerator.Feature.USE_NATIVE_TYPE_ID, false)
-           .configure(YAMLGenerator.Feature.WRITE_DOC_START_MARKER, false)
-           .configure(YAMLGenerator.Feature.SPLIT_LINES, false)))
+    public interface Descriptor {
+
+        Map<Name, Schema.Descriptor<?>> getSchemas();
+
+        @JsonValue
+        default Map<String, Schema.Descriptor<?>> jsonValue() {
+
+            return getSchemas().entrySet().stream().collect(Collectors.toMap(
+                    e -> e.getKey().toString(),
+                    Map.Entry::getValue
+            ));
+        }
+
+        default void yaml(final OutputStream os) throws IOException {
+
+            YAML_MAPPER.writeValue(os, jsonValue());
+        }
+
+        default void yaml(final Writer os) throws IOException {
+
+            YAML_MAPPER.writeValue(os, jsonValue());
+        }
+
+        default void json(final OutputStream os) throws IOException {
+
+            JSON_MAPPER.writeValue(os, jsonValue());
+        }
+
+        default void json(final Writer os) throws IOException {
+
+            JSON_MAPPER.writeValue(os, jsonValue());
+        }
+    }
+
+    private static final ObjectMapper JSON_MAPPER = new ObjectMapper(new BasestarFactory())
            .registerModule(new BasestarModule())
-           .configure(JsonParser.Feature.ALLOW_COMMENTS, true);
+            .setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL);
+
+    private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new BasestarFactory(new YAMLFactory()
+            .configure(YAMLGenerator.Feature.USE_NATIVE_TYPE_ID, false)
+            .configure(YAMLGenerator.Feature.WRITE_DOC_START_MARKER, false)
+            .configure(YAMLGenerator.Feature.SPLIT_LINES, false)))
+            .registerModule(new BasestarModule())
+            .configure(JsonParser.Feature.ALLOW_COMMENTS, true)
+            .setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL);
 
     private final SortedMap<Name, Schema<?>> schemas;
 
     @Data
     @Accessors(chain = true)
-    public static class Builder {
+    public static class Builder implements Descriptor {
 
         private Map<Name, Schema.Descriptor<?>> schemas;
 
@@ -91,15 +131,6 @@ public class Namespace implements Serializable, Schema.Resolver {
         public Builder setSchema(final String name, final Schema.Descriptor<?> schema) {
 
             return setSchema(Name.parseNonEmpty(name), schema);
-        }
-
-        @JsonValue
-        public Map<String, Schema.Descriptor<?>> jsonValue() {
-
-            return schemas.entrySet().stream().collect(Collectors.toMap(
-                    e -> e.getKey().toString(),
-                    Map.Entry::getValue
-            ));
         }
 
         public Namespace build() {
@@ -117,27 +148,11 @@ public class Namespace implements Serializable, Schema.Resolver {
             return new Namespace(this, renaming);
         }
 
-        public void yaml(final OutputStream os) throws IOException {
-
-            objectMapper.writeValue(os, jsonValue());
-        }
-
-        public void yaml(final Writer os) throws IOException {
-
-            objectMapper.writeValue(os, jsonValue());
-        }
-
-//        public static JsonSchema jsonSchema() throws IOException {
-//
-//            final JsonSchemaGenerator schemaGen = new JsonSchemaGenerator(objectMapper);
-//            return schemaGen.generateSchema(Schema.Builder.class);
-//        }
-
         public static Builder load(final URL... urls) throws IOException {
 
             final Map<Name, Schema.Descriptor<?>> builders = new HashMap<>();
             for(final URL url : urls) {
-                final Map<Name, Schema.Descriptor<?>> schemas = objectMapper.readValue(url, new TypeReference<Map<Name, Schema.Descriptor<?>>>(){});
+                final Map<Name, Schema.Descriptor<?>> schemas = YAML_MAPPER.readValue(url, new TypeReference<Map<Name, Schema.Descriptor<?>>>(){});
                 builders.putAll(schemas);
             }
             return new Builder()
@@ -148,7 +163,7 @@ public class Namespace implements Serializable, Schema.Resolver {
 
             final Map<Name, Schema.Descriptor<?>> builders = new HashMap<>();
             for(final InputStream is : iss) {
-                final Map<Name, Schema.Descriptor<?>> schemas = objectMapper.readValue(is, new TypeReference<Map<Name, Schema.Descriptor<?>>>(){});
+                final Map<Name, Schema.Descriptor<?>> schemas = YAML_MAPPER.readValue(is, new TypeReference<Map<Name, Schema.Descriptor<?>>>(){});
                 builders.putAll(schemas);
             }
             return new Builder()
@@ -173,7 +188,7 @@ public class Namespace implements Serializable, Schema.Resolver {
         descriptors.keySet().forEach(name -> {
             final Name rename = renaming.apply(name);
             if(!seen.add(rename)) {
-                throw new SchemaValidationException("Cannot apply renaming, it will duplicate the name: " + rename);
+                throw new SchemaValidationException(rename, "Cannot apply renaming, it will duplicate the name: " + rename);
             }
         });
         final Map<Name, Schema<?>> out = new HashMap<>();
@@ -302,5 +317,12 @@ public class Namespace implements Serializable, Schema.Resolver {
                 fn.accept(k, (ObjectSchema)v);
             }
         });
+    }
+
+    public Descriptor descriptor() {
+
+        return () -> schemas.entrySet().stream().collect(Collectors.toMap(
+                Map.Entry::getKey,
+                e -> e.getValue().descriptor()));
     }
 }

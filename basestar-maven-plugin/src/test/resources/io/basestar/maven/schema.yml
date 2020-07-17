@@ -34,3 +34,17 @@ b.Test:
       type: Test
     a:
       type: a.Test
+
+c.Test:
+  type: view
+  from:
+    schema: a.Test
+  select:
+    a:
+      type: a.Test
+      expression: a
+  group:
+    b:
+      type: b.Test
+      expression: b
+  where: "false"

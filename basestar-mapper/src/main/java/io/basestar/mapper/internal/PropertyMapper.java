@@ -20,7 +20,6 @@ package io.basestar.mapper.internal;
  * #L%
  */
 
-import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Property;
@@ -35,19 +34,16 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
 
     private final PropertyContext property;
 
-    private final Expression expression;
+    private final Property.Builder config;
 
     private final TypeMapper type;
 
-    private final boolean required;
-
-    public PropertyMapper(final MappingContext context, final String name, final PropertyContext property, final Expression expression, final boolean required) {
+    public PropertyMapper(final MappingContext context, final String name, final PropertyContext property, final Property.Builder config) {
 
         this.name = name;
         this.property = property;
-        this.expression = expression;
+        this.config = config;
         this.type = TypeMapper.from(context, property.type());
-        this.required = required;
     }
 
     @Override
@@ -57,12 +53,9 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
     }
 
     @Override
-    public void addToSchema(final InstanceSchema.Builder builder) {
+    public void addToSchema(final InstanceSchemaMapper<?, InstanceSchema.Builder> mapper, final InstanceSchema.Builder builder) {
 
-        builder.setProperty(name, Property.builder()
-                .setType(type.use())
-                .setExpression(expression)
-                .setRequired(required ? true : null));
+        mapper.addProperty(builder, name, config.setType(this.type.use()));
     }
 
     @Override

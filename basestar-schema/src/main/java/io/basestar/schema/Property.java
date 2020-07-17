@@ -85,12 +85,15 @@ public class Property implements Member {
 
         Use<?> getType();
 
+        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         Boolean getRequired();
 
+        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         Boolean getImmutable();
 
         Expression getExpression();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Map<String, ? extends Constraint.Descriptor> getConstraints();
 
         default Property build(final Schema.Resolver resolver, final Name qualifiedName) {
@@ -106,29 +109,22 @@ public class Property implements Member {
 
         private Use<?> type;
 
-        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         private String description;
 
-        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         private Boolean required;
 
-        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         private Boolean immutable;
 
-        @JsonInclude(JsonInclude.Include.NON_NULL)
         @JsonSerialize(using = ToStringSerializer.class)
         @JsonDeserialize(using = ExpressionDeseriaizer.class)
         private Expression expression;
 
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         private Map<String, ? extends Constraint.Descriptor> constraints;
 
-        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         private Visibility visibility;
 
         @Nullable
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private Map<String, Object> extensions;
 
         @JsonCreator
@@ -272,21 +268,19 @@ public class Property implements Member {
     public Set<Constraint.Violation> validate(final Context context, final Name path, final Object before, final Object after) {
 
         final Set<Constraint.Violation> violations = new HashSet<>();
-        final Name newName = path.with(getName());
+        final Name qualifiedName = path.with(getName());
         if(after == null && required) {
-            violations.add(new Constraint.Violation(newName, Constraint.REQUIRED));
+            violations.add(new Constraint.Violation(qualifiedName, Constraint.REQUIRED, null));
         } else if(immutable && !Objects.equals(before, after)) {
-            violations.add(new Constraint.Violation(newName, Constraint.IMMUTABLE));
+            violations.add(new Constraint.Violation(qualifiedName, Constraint.IMMUTABLE, null));
         } else {
-            violations.addAll(((Use<Object>)type).validate(context, newName, after));
+            violations.addAll(((Use<Object>)type).validate(context, qualifiedName, after));
             if (!constraints.isEmpty()) {
                 final Context newContext = context.with(VAR_VALUE, after);
                 for (final Map.Entry<String, Constraint> entry : constraints.entrySet()) {
                     final String name = entry.getKey();
                     final Constraint constraint = entry.getValue();
-                    if (!constraint.getExpression().evaluatePredicate(newContext)) {
-                        violations.add(new Constraint.Violation(newName, name));
-                    }
+                    violations.addAll(constraint.violations(newContext, qualifiedName, name, after));
                 }
             }
         }
@@ -294,6 +288,13 @@ public class Property implements Member {
     }
 
     public interface Resolver {
+
+        interface Builder {
+
+            Builder setProperty(String name, Property.Descriptor v);
+
+            Builder setProperties(Map<String, Property.Descriptor> vs);
+        }
 
         Map<String, Property> getDeclaredProperties();
 
