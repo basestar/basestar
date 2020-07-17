@@ -28,7 +28,7 @@ public interface ColumnResolver<R> {
 
     Column resolve(Dataset<R> input, Name name);
 
-    static Column nestedColumn(final Dataset<?> input, final Name name) {
+    static <T> Column nestedColumn(final Dataset<T> input, final Name name) {
 
         return nestedColumn(input.col(name.first()), name.withoutFirst());
     }

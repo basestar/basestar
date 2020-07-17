@@ -55,9 +55,19 @@ public class Sort implements Serializable {
         return new Sort(name, order.reverse(), nulls.reverse());
     }
 
+    public static Sort asc(final String name) {
+
+        return asc(Name.parseNonEmpty(name));
+    }
+
     public static Sort asc(final Name name) {
 
         return new Sort(name, Order.ASC);
+    }
+
+    public static Sort desc(final String name) {
+
+        return desc(Name.parseNonEmpty(name));
     }
 
     public static Sort desc(final Name name) {

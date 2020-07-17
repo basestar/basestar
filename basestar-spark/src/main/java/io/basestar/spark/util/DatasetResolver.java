@@ -35,7 +35,12 @@ import org.apache.spark.sql.types.StructType;
 import java.io.Serializable;
 import java.util.Set;
 
-public interface InstanceResolver extends Serializable {
+public interface DatasetResolver extends Serializable {
+
+    default Dataset<Row> resolve(final InstanceSchema schema) {
+
+        return resolve(schema, ImmutableSet.of());
+    }
 
     Dataset<Row> resolve(InstanceSchema schema, Set<Name> expand);
 
@@ -51,13 +56,13 @@ public interface InstanceResolver extends Serializable {
         return conformTransform.accept(input);
     }
 
-    static InstanceResolver.Automatic automatic(final Automatic.Resolver resolver) {
+    static DatasetResolver.Automatic automatic(final Automatic.Resolver resolver) {
 
         return new Automatic(resolver);
     }
 
     @RequiredArgsConstructor
-    class Automatic implements InstanceResolver {
+    class Automatic implements DatasetResolver {
 
         public interface Resolver extends Serializable {
 

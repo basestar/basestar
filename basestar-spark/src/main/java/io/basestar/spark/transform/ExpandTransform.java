@@ -26,7 +26,7 @@ import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import io.basestar.spark.expression.SparkExpressionVisitor;
 import io.basestar.spark.util.ColumnResolver;
-import io.basestar.spark.util.InstanceResolver;
+import io.basestar.spark.util.DatasetResolver;
 import io.basestar.spark.util.ScalaUtils;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.util.Name;
@@ -51,7 +51,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
     private static final String REF_ID_COLUMN = Reserved.PREFIX + Reserved.ID;
 
     @NonNull
-    private final InstanceResolver resolver;
+    private final DatasetResolver resolver;
 
     @NonNull
     private final InstanceSchema schema;

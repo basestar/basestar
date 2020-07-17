@@ -21,17 +21,19 @@ package io.basestar.spark;
  */
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Namespace;
-import io.basestar.spark.source.Source;
-import io.basestar.spark.transform.ViewTransform;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Encoders;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
+import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ViewSchema;
+import io.basestar.spark.transform.ConformTransform;
+import io.basestar.spark.util.DatasetResolver;
+import io.basestar.util.Name;
+import org.apache.spark.sql.*;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -47,24 +49,31 @@ public class TestViewTransform extends AbstractSparkTest {
 
         final Namespace namespace = Namespace.load(TestViewTransform.class.getResourceAsStream("schema.yml"));
 
-        final D a = new D("a");
-        final D b = new D("b");
+        final D d1 = new D("a");
+        final D d2 = new D("b");
 
-        final Source<Dataset<Row>> sourceB = (Source<Dataset<Row>>) sink -> sink.accept(session.createDataset(ImmutableList.of(
-                new B("1", a, 1L), new B("2", a, 2L), new B("3", a, 3L),
-                new B("4", b, 2L), new B("5", b, 4L), new B("6", b, 6L)
-        ), Encoders.bean(B.class)).toDF());
+        final ObjectSchema b = namespace.requireObjectSchema("B");
+        final ViewSchema agg = namespace.requireViewSchema("AggView");
 
-        final ViewTransform view = ViewTransform.builder()
-                .schema(namespace.requireViewSchema("AggView"))
-                .build();
+        final Dataset<Row> datasetB = session.createDataset(ImmutableList.of(
+                new B("1", d1, 1L), new B("2", d1, 2L), new B("3", d1, 3L),
+                new B("4", d2, 2L), new B("5", d2, 4L), new B("6", d2, 6L)
+        ), Encoders.bean(B.class)).toDF();
 
-        sourceB.then(view).then(dataset -> {
+        final Map<Name, Dataset<Row>> datasets = ImmutableMap.of(
+                b.getQualifiedName(), datasetB
+        );
 
-            final List<AggView> rows = dataset.as(Encoders.bean(AggView.class)).collectAsList();
-            assertEquals(2, rows.size());
-            assertTrue(rows.contains(new AggView("a", 8)));
-            assertTrue(rows.contains(new AggView("b", 14)));
-        });
+        final DatasetResolver resolver = DatasetResolver.automatic((schema) -> datasets.get(schema.getQualifiedName()));
+
+        final Dataset<Row> dataset = resolver.resolve(agg);
+
+        final Encoder<AggView> encoder = Encoders.bean(AggView.class);
+        final ConformTransform conform = ConformTransform.builder().structType(encoder.schema()).build();
+
+        final List<AggView> rows = conform.accept(dataset).as(encoder).collectAsList();
+        assertEquals(2, rows.size());
+        assertTrue(rows.contains(new AggView("a", 8)));
+        assertTrue(rows.contains(new AggView("b", 14)));
     }
 }

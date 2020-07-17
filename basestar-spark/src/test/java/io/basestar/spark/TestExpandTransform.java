@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.spark.transform.ConformTransform;
-import io.basestar.spark.util.InstanceResolver;
+import io.basestar.spark.util.DatasetResolver;
 import io.basestar.util.Name;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -111,13 +111,11 @@ public class TestExpandTransform extends AbstractSparkTest {
 
         final Set<Name> expand = Name.parseSet("ref,single,multi,structRef.ref,arrayRef,mapRef.*");
 
-        final InstanceResolver resolver = InstanceResolver.automatic((schema) -> datasets.get(schema.getQualifiedName()));
+        final DatasetResolver resolver = DatasetResolver.automatic((schema) -> datasets.get(schema.getQualifiedName()));
 
         final Dataset<Row> dataset = resolver.resolve(a, expand);
 
         final Encoder<ExpandedA> encoder = Encoders.bean(ExpandedA.class);
-
-        // Map refs seem to work fine at the dataset level, but break the bean encoder unless conform is used
         final ConformTransform conform = ConformTransform.builder().structType(encoder.schema()).build();
 
         final List<ExpandedA> rows = conform.accept(dataset).as(encoder).collectAsList();

@@ -27,8 +27,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
-import com.fasterxml.jackson.module.jsonSchema.JsonSchema;
-import com.fasterxml.jackson.module.jsonSchema.JsonSchemaGenerator;
 import com.google.common.collect.ImmutableSortedMap;
 import io.basestar.expression.Renaming;
 import io.basestar.jackson.BasestarFactory;
@@ -129,11 +127,11 @@ public class Namespace implements Serializable, Schema.Resolver {
             objectMapper.writeValue(os, jsonValue());
         }
 
-        public static JsonSchema jsonSchema() throws IOException {
-
-            final JsonSchemaGenerator schemaGen = new JsonSchemaGenerator(objectMapper);
-            return schemaGen.generateSchema(Property.Builder.class);
-        }
+//        public static JsonSchema jsonSchema() throws IOException {
+//
+//            final JsonSchemaGenerator schemaGen = new JsonSchemaGenerator(objectMapper);
+//            return schemaGen.generateSchema(Schema.Builder.class);
+//        }
 
         public static Builder load(final URL... urls) throws IOException {
 
