@@ -110,7 +110,7 @@ public class CodegenMojo extends AbstractMojo {
 
     private File packageOutputDirectory(final File base, final Schema<?> schema) {
 
-        final Name schemaPackageName = Name.parse(packageName).with(schema.getPackageName());
+        final Name schemaPackageName = Name.parse(packageName).with(schema.getQualifiedPackageName());
         return new File(base, schemaPackageName.toString().replaceAll("\\.", File.separator));
     }
 }

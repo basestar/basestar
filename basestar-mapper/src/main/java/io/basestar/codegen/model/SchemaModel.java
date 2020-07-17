@@ -61,7 +61,7 @@ public abstract class SchemaModel extends Model {
     public String getPackageName() {
 
         final String base = super.getPackageName();
-        return Name.parse(base).with(schema.getPackageName()).toString();
+        return Name.parse(base).with(schema.getQualifiedPackageName()).toString();
     }
 
 //    public String getAnnotationClassName() {

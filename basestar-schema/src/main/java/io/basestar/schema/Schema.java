@@ -63,9 +63,20 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         Schema<T> build();
     }
 
-    default Name getPackageName() {
+    default Name getQualifiedPackageName() {
 
         return getQualifiedName().withoutLast();
+    }
+
+    default String getPackageName() {
+
+        return getPackageName(Character.toString(Name.DELIMITER));
+    }
+
+    default String getPackageName(final String delimiter) {
+
+        final Name qualifiedName = getQualifiedPackageName();
+        return qualifiedName.isEmpty() ? null : qualifiedName.toString(delimiter);
     }
 
     interface Builder<T> extends Descriptor<T> {
