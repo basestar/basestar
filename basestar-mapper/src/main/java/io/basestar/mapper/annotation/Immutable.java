@@ -1,7 +1,9 @@
 package io.basestar.mapper.annotation;
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.internal.PropertyMapper;
 import io.basestar.mapper.internal.annotation.MemberModifier;
+import io.basestar.type.AnnotationContext;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.annotation.*;
@@ -25,22 +27,9 @@ public @interface Immutable {
             return mapper.withImmutable(annotation.value());
         }
 
-        public static Immutable from(final boolean immutable) {
+        public static Immutable annotation(final boolean immutable) {
 
-            return new Immutable() {
-
-                @Override
-                public Class<? extends Annotation> annotationType() {
-
-                    return Immutable.class;
-                }
-
-                @Override
-                public boolean value() {
-
-                    return immutable;
-                }
-            };
+            return new AnnotationContext<>(Immutable.class, ImmutableMap.of("value", immutable)).annotation();
         }
     }
 }

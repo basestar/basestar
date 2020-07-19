@@ -97,9 +97,9 @@ public class TestCodegenMojo {
                 new File(namespaceDirectory, "Test.yml").toURI().toURL()
         );
 
-//        original.json(System.out);
-//        System.out.println();
-//        generated.json(System.out);
+        original.json(System.out);
+        System.out.println();
+        generated.json(System.out);
 
         // Sort so differences are easier to see
         assertEquals(new TreeMap<>(original.getSchemas()), new TreeMap<>(generated.getSchemas()));

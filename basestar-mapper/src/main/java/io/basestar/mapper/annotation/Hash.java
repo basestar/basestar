@@ -20,10 +20,12 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.MemberMapper;
 import io.basestar.mapper.internal.MetadataMapper;
 import io.basestar.mapper.internal.annotation.MemberDeclaration;
+import io.basestar.type.AnnotationContext;
 import io.basestar.type.PropertyContext;
 import lombok.RequiredArgsConstructor;
 
@@ -35,15 +37,6 @@ import java.lang.annotation.*;
 @MemberDeclaration(Hash.Declaration.class)
 public @interface Hash {
 
-    Hash INSTANCE = new Hash(){
-
-        @Override
-        public Class<? extends Annotation> annotationType() {
-
-            return Hash.class;
-        }
-    };
-
     @RequiredArgsConstructor
     class Declaration implements MemberDeclaration.Declaration {
 
@@ -54,6 +47,11 @@ public @interface Hash {
         public MemberMapper<?> mapper(final MappingContext context, final PropertyContext prop) {
 
             return new MetadataMapper(context, MetadataMapper.Name.HASH, prop);
+        }
+
+        public static Hash annotation() {
+
+            return new AnnotationContext<>(Hash.class, ImmutableMap.of()).annotation();
         }
     }
 }

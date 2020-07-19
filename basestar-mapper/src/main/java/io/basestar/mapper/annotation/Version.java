@@ -20,10 +20,12 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.MemberMapper;
 import io.basestar.mapper.internal.MetadataMapper;
 import io.basestar.mapper.internal.annotation.MemberDeclaration;
+import io.basestar.type.AnnotationContext;
 import io.basestar.type.PropertyContext;
 import lombok.RequiredArgsConstructor;
 
@@ -35,15 +37,6 @@ import java.lang.annotation.*;
 @MemberDeclaration(Version.Declaration.class)
 public @interface Version {
 
-    Version INSTANCE = new Version(){
-
-        @Override
-        public Class<? extends Annotation> annotationType() {
-
-            return Version.class;
-        }
-    };
-
     @RequiredArgsConstructor
     class Declaration implements MemberDeclaration.Declaration {
 
@@ -54,6 +47,11 @@ public @interface Version {
         public MemberMapper<?> mapper(final MappingContext context, final PropertyContext prop) {
 
             return new MetadataMapper(context, MetadataMapper.Name.VERSION, prop);
+        }
+
+        public static Version annotation() {
+
+            return new AnnotationContext<>(Version.class, ImmutableMap.of()).annotation();
         }
     }
 }

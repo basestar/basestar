@@ -1,7 +1,10 @@
 package io.basestar.mapper.annotation;
 
+import com.google.common.collect.ImmutableMap;
+import io.basestar.mapper.internal.AnnotationUtils;
 import io.basestar.mapper.internal.ViewSchemaMapper;
 import io.basestar.mapper.internal.annotation.SchemaModifier;
+import io.basestar.type.AnnotationContext;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.annotation.*;
@@ -28,22 +31,11 @@ public @interface Group {
             return mapper.withGroup(group);
         }
 
-        public static Group from(final List<String> group) {
+        public static Group annotation(final List<String> group) {
 
-            return new Group() {
-
-                @Override
-                public Class<? extends Annotation> annotationType() {
-
-                    return Group.class;
-                }
-
-                @Override
-                public String[] value() {
-
-                    return group.toArray(new String[0]);
-                }
-            };
+            return new AnnotationContext<>(Group.class, ImmutableMap.<String, Object>builder()
+                    .put("value", AnnotationUtils.stringArray(group))
+                    .build()).annotation();
         }
     }
 }

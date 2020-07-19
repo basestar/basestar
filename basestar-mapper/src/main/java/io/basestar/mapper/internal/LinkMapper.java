@@ -47,7 +47,7 @@ public class LinkMapper implements MemberMapper<InstanceSchema.Builder> {
 
     private final List<Sort> sort;
 
-    public LinkMapper(final MappingContext context, final String name, final PropertyContext property) {
+    public LinkMapper(final MappingContext context, final String name, final PropertyContext property, final Expression expression, final List<Sort> sort) {
 
         this.name = name;
         this.property = property;
@@ -66,30 +66,8 @@ public class LinkMapper implements MemberMapper<InstanceSchema.Builder> {
         } else {
             throw new IllegalStateException("Cannot create link mapper for " + type);
         }
-        this.expression = null;
-        this.sort = null;
-    }
-
-    private LinkMapper(final LinkMapper copy, final Expression expression, final List<Sort> sort) {
-
-        this.name = copy.name;
-        this.property = copy.property;
-        this.type = copy.type;
-        this.itemType = copy.itemType;
-        this.single = copy.single;
         this.expression = expression;
         this.sort = sort;
-    }
-
-    @Override
-    public MemberMapper<InstanceSchema.Builder> withExpression(final Expression expression) {
-
-        return new LinkMapper(this, expression, sort);
-    }
-
-    public LinkMapper withSort(final List<Sort> sort) {
-
-        return new LinkMapper(this, expression, sort);
     }
 
     @Override
@@ -99,12 +77,18 @@ public class LinkMapper implements MemberMapper<InstanceSchema.Builder> {
     }
 
     @Override
+    public String memberType() {
+
+        return "link";
+    }
+
+    @Override
     public void addToSchema(final InstanceSchemaMapper<?, InstanceSchema.Builder> mapper, final InstanceSchema.Builder builder) {
 
         mapper.addLink(builder, name, Link.builder()
                 .setExpression(expression)
                 .setSingle(single ? true : null)
-                .setSchema(itemType.getMapper().qualifiedName())
+                .setSchema(itemType.getQualifiedName())
                 .setSort(sort == null ? null : (sort.isEmpty() ? null : sort)));
     }
 

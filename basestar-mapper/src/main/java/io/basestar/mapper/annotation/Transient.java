@@ -20,10 +20,12 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.MemberMapper;
 import io.basestar.mapper.internal.PropertyMapper;
 import io.basestar.mapper.internal.annotation.MemberDeclaration;
+import io.basestar.type.AnnotationContext;
 import io.basestar.type.PropertyContext;
 import lombok.RequiredArgsConstructor;
 
@@ -50,6 +52,13 @@ public @interface Transient {
             //FIXME
             final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
             return new PropertyMapper(context, name, prop);
+        }
+
+        public static Transient annotation(final io.basestar.schema.Transient trans) {
+
+            return new AnnotationContext<>(Transient.class, ImmutableMap.<String, Object>builder()
+                    .put("name", trans.getQualifiedName().toString())
+                    .build()).annotation();
         }
     }
 }

@@ -8,11 +8,11 @@ import io.basestar.schema.Reserved;
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 
-public class IfConstraintValidator implements ConstraintValidator<If, Object> {
+public class AssertConstraintValidator implements ConstraintValidator<Assert, Object> {
 
     private Expression expression;
 
-    public void initialize(final If annotation) {
+    public void initialize(final Assert annotation) {
 
         this.expression = Expression.parse(annotation.value()).bind(Context.init());
     }

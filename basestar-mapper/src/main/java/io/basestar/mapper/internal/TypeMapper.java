@@ -28,6 +28,7 @@ import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.SchemaMapper;
 import io.basestar.schema.use.*;
 import io.basestar.type.TypeContext;
+import io.basestar.util.Name;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -43,6 +44,8 @@ public interface TypeMapper {
     Object unmarshall(Object value);
 
     Object marshall(Object value);
+
+    Class<?> rawType();
 
     static TypeMapper from(final MappingContext context, final TypeContext type) {
 
@@ -112,6 +115,12 @@ public interface TypeMapper {
         }
 
         @Override
+        public Class<?> rawType() {
+
+            return Boolean.class;
+        }
+
+        @Override
         public Set<Class<?>> dependencies() {
 
             return Collections.emptySet();
@@ -140,6 +149,12 @@ public interface TypeMapper {
 
             final Long v = Coercion.toLong(value);
             return Numbers.coerce(v, context.erasedType());
+        }
+
+        @Override
+        public Class<?> rawType() {
+
+            return Long.class;
         }
 
         @Override
@@ -174,6 +189,12 @@ public interface TypeMapper {
         }
 
         @Override
+        public Class<?> rawType() {
+
+            return Double.class;
+        }
+
+        @Override
         public Set<Class<?>> dependencies() {
 
             return Collections.emptySet();
@@ -201,6 +222,12 @@ public interface TypeMapper {
         public Object marshall(final Object value) {
 
             return Coercion.toString(value);
+        }
+
+        @Override
+        public Class<?> rawType() {
+
+            return String.class;
         }
 
         @Override
@@ -237,6 +264,12 @@ public interface TypeMapper {
         }
 
         @Override
+        public Class<?> rawType() {
+
+            return List.class;
+        }
+
+        @Override
         public Set<Class<?>> dependencies() {
 
             return value.dependencies();
@@ -267,6 +300,12 @@ public interface TypeMapper {
         public Object marshall(final Object value) {
 
             return Coercion.toSet(value, context.erasedType(), this.value::marshall);
+        }
+
+        @Override
+        public Class<?> rawType() {
+
+            return Set.class;
         }
 
         @Override
@@ -303,6 +342,12 @@ public interface TypeMapper {
         }
 
         @Override
+        public Class<?> rawType() {
+
+            return Map.class;
+        }
+
+        @Override
         public Set<Class<?>> dependencies() {
 
             return value.dependencies();
@@ -314,17 +359,25 @@ public interface TypeMapper {
 
         private final TypeContext context;
 
+        private final Supplier<Name> qualifiedName;
+
         private final Supplier<SchemaMapper<?, ?>> mapper;
 
         public OfCustom(final MappingContext mappingContext, final TypeContext context) {
 
             this.context = context;
+            this.qualifiedName = Suppliers.memoize(() -> mappingContext.schemaName(context.erasedType()));
             this.mapper =  Suppliers.memoize(() -> mappingContext.schemaMapper(context.erasedType()));
         }
 
         public SchemaMapper<?, ?> getMapper() {
 
             return mapper.get();
+        }
+
+        public Name getQualifiedName() {
+
+            return qualifiedName.get();
         }
 
         @Override
@@ -344,6 +397,12 @@ public interface TypeMapper {
         public Object marshall(final Object value) {
 
             return mapper.get().marshall(value);
+        }
+
+        @Override
+        public Class<?> rawType() {
+
+            return context.erasedType();
         }
 
         @Override
@@ -377,6 +436,12 @@ public interface TypeMapper {
         }
 
         @Override
+        public Class<?> rawType() {
+
+            return LocalDate.class;
+        }
+
+        @Override
         public Set<Class<?>> dependencies() {
 
             return Collections.emptySet();
@@ -407,6 +472,12 @@ public interface TypeMapper {
         }
 
         @Override
+        public Class<?> rawType() {
+
+            return LocalDateTime.class;
+        }
+
+        @Override
         public Set<Class<?>> dependencies() {
 
             return Collections.emptySet();
@@ -434,6 +505,12 @@ public interface TypeMapper {
         public Object marshall(final Object value) {
 
             return Coercion.toBinary(value);
+        }
+
+        @Override
+        public Class<?> rawType() {
+
+            return byte[].class;
         }
 
         @Override

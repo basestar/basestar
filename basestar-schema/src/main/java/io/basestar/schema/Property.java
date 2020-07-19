@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
@@ -45,7 +44,6 @@ import javax.annotation.Nullable;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Property
@@ -72,7 +70,7 @@ public class Property implements Member {
     private final Expression expression;
 
     @Nonnull
-    private final SortedMap<String, Constraint> constraints;
+    private final List<Constraint> constraints;
 
     @Nullable
     private final Visibility visibility;
@@ -94,7 +92,7 @@ public class Property implements Member {
         Expression getExpression();
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        Map<String, ? extends Constraint.Descriptor> getConstraints();
+        List<? extends Constraint> getConstraints();
 
         default Property build(final Schema.Resolver resolver, final Name qualifiedName) {
 
@@ -120,7 +118,7 @@ public class Property implements Member {
         private Expression expression;
 
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
-        private Map<String, ? extends Constraint.Descriptor> constraints;
+        private List<? extends Constraint> constraints;
 
         private Visibility visibility;
 
@@ -152,8 +150,7 @@ public class Property implements Member {
         this.required = Nullsafe.option(builder.getRequired());
         this.immutable = Nullsafe.option(builder.getImmutable());
         this.expression = builder.getExpression();
-        this.constraints = ImmutableSortedMap.copyOf(Nullsafe.option(builder.getConstraints()).entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(qualifiedName.with(e.getKey())))));
+        this.constraints = Nullsafe.immutableCopy(builder.getConstraints());
         this.visibility = builder.getVisibility();
         this.extensions = Nullsafe.immutableSortedCopy(builder.getExtensions());
     }
@@ -261,7 +258,9 @@ public class Property implements Member {
 
         return validate(context, name, after, after);
     }
+/*
 
+ */
     // FIXME: immutability check should be implemented differently
 
     @SuppressWarnings("unchecked")
@@ -274,15 +273,13 @@ public class Property implements Member {
         } else if(immutable && !Objects.equals(before, after)) {
             violations.add(new Constraint.Violation(qualifiedName, Constraint.IMMUTABLE, null));
         } else {
-            violations.addAll(((Use<Object>)type).validate(context, qualifiedName, after));
-            if (!constraints.isEmpty()) {
-                final Context newContext = context.with(VAR_VALUE, after);
-                for (final Map.Entry<String, Constraint> entry : constraints.entrySet()) {
-                    final String name = entry.getKey();
-                    final Constraint constraint = entry.getValue();
-                    violations.addAll(constraint.violations(type, newContext, qualifiedName, name, after));
-                }
-            }
+//            violations.addAll(((Use<Object>)type).validate(context, qualifiedName, after));
+//            if (!constraints.isEmpty()) {
+//                final Context newContext = context.with(VAR_VALUE, after);
+//                for (final Constraint constraint : constraints) {
+//                    violations.addAll(constraint.violations(type, newContext, qualifiedName, after));
+//                }
+//            }
         }
         return violations;
     }
@@ -355,12 +352,9 @@ public class Property implements Member {
             }
 
             @Override
-            public Map<String, ? extends Constraint.Descriptor> getConstraints() {
+            public List<? extends Constraint> getConstraints() {
 
-                return constraints.entrySet().stream().collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> entry.getValue().descriptor()
-                ));
+                return constraints;
             }
 
             @Override

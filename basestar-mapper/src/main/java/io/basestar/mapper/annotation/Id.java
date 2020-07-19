@@ -20,10 +20,12 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.IdMapper;
 import io.basestar.mapper.internal.MemberMapper;
 import io.basestar.mapper.internal.annotation.MemberDeclaration;
+import io.basestar.type.AnnotationContext;
 import io.basestar.type.PropertyContext;
 import lombok.RequiredArgsConstructor;
 
@@ -35,15 +37,6 @@ import java.lang.annotation.*;
 @MemberDeclaration(Id.Declaration.class)
 public @interface Id {
 
-    Id INSTANCE = new Id(){
-
-        @Override
-        public Class<? extends Annotation> annotationType() {
-
-            return Id.class;
-        }
-    };
-
     @RequiredArgsConstructor
     class Declaration implements MemberDeclaration.Declaration {
 
@@ -54,6 +47,11 @@ public @interface Id {
         public MemberMapper<?> mapper(final MappingContext context, final PropertyContext prop) {
 
             return new IdMapper(context, prop);
+        }
+
+        public static Id annotation() {
+
+            return new AnnotationContext<>(Id.class, ImmutableMap.of()).annotation();
         }
     }
 }

@@ -41,6 +41,10 @@
             <artifactId>swagger-models</artifactId>
         </dependency>
         <dependency>
+            <groupId>javax.validation</groupId>
+            <artifactId>validation-api</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.basestar</groupId>
             <artifactId>basestar-test</artifactId>
             <scope>test</scope>

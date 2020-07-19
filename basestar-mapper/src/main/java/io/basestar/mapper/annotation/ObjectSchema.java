@@ -20,10 +20,12 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.SchemaMapper;
 import io.basestar.mapper.internal.ObjectSchemaMapper;
 import io.basestar.mapper.internal.annotation.SchemaDeclaration;
+import io.basestar.type.AnnotationContext;
 import io.basestar.type.TypeContext;
 import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
@@ -46,28 +48,22 @@ public @interface ObjectSchema {
         private final ObjectSchema annotation;
 
         @Override
-        public SchemaMapper<?, ?> mapper(final MappingContext context, final TypeContext type) {
+        public Name getQualifiedName(final TypeContext type) {
 
-            final String name = annotation.name().equals(INFER_NAME) ? type.simpleName() : annotation.name();
-            return new ObjectSchemaMapper<>(context, Name.parse(name), type);
+            return Name.parse(annotation.name().equals(INFER_NAME) ? type.simpleName() : annotation.name());
         }
 
-        public static ObjectSchema from(final io.basestar.schema.ObjectSchema schema) {
+        @Override
+        public SchemaMapper<?, ?> mapper(final MappingContext context, final TypeContext type) {
 
-            return new ObjectSchema() {
+            return new ObjectSchemaMapper<>(context, getQualifiedName(type), type);
+        }
 
-                @Override
-                public Class<? extends Annotation> annotationType() {
+        public static ObjectSchema annotation(final io.basestar.schema.ObjectSchema schema) {
 
-                    return ObjectSchema.class;
-                }
-
-                @Override
-                public String name() {
-
-                    return schema.getQualifiedName().toString();
-                }
-            };
+            return new AnnotationContext<>(ObjectSchema.class, ImmutableMap.<String, Object>builder()
+                    .put("name", schema.getQualifiedName().toString())
+                    .build()).annotation();
         }
     }
 }

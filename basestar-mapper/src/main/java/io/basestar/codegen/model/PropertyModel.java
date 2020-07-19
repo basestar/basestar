@@ -51,17 +51,18 @@ public class PropertyModel extends MemberModel {
     public List<AnnotationModel<?>> getAnnotations() {
 
         final List<AnnotationModel<?>> annotations = new ArrayList<>();
-        annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.Property.Declaration.from(property)));
+        annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.Property.Declaration.annotation(property)));
         if(property.getExpression() != null) {
-            annotations.add(new AnnotationModel<>(getSettings(), Expression.Modifier.from(property.getExpression())));
+            annotations.add(new AnnotationModel<>(getSettings(), Expression.Modifier.annotation(property.getExpression())));
         }
         if(property.isRequired()) {
             annotations.add(new AnnotationModel<>(getSettings(), NOT_NULL));
-            annotations.add(new AnnotationModel<>(getSettings(), Required.Modifier.from(true)));
+            annotations.add(new AnnotationModel<>(getSettings(), Required.Modifier.annotation(true)));
         }
         if(property.isImmutable()) {
-            annotations.add(new AnnotationModel<>(getSettings(), Immutable.Modifier.from(true)));
+            annotations.add(new AnnotationModel<>(getSettings(), Immutable.Modifier.annotation(true)));
         }
+        property.getConstraints().forEach(constraint -> annotations.add(new AnnotationModel<>(getSettings(), constraint.toJsr380(property.getType()))));
         return annotations;
     }
 

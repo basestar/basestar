@@ -9,9 +9,9 @@ package io.basestar.schema;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,155 +20,92 @@ package io.basestar.schema;
  * #L%
  */
 
-import com.fasterxml.jackson.annotation.JsonAnyGetter;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Context;
-import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.use.Use;
-import io.basestar.schema.validator.*;
+import io.basestar.schema.validation.Validation;
 import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
 import lombok.Data;
-import lombok.Getter;
-import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.validation.Payload;
+import java.io.IOException;
 import java.io.Serializable;
-import java.util.ArrayList;
+import java.lang.annotation.Annotation;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.Optional;
 
+@Data
 @Slf4j
-@Getter
-public class Constraint implements Named, Described, Serializable {
+@JsonSerialize(using = Constraint.Serializer.class)
+@JsonDeserialize(using = Constraint.Deserializer.class)
+public class Constraint implements Serializable {
 
     public static final String REQUIRED = "required";
 
     public static final String IMMUTABLE = "immutable";
 
     @Nonnull
-    private final Name qualifiedName;
-
-    @Nullable
-    private final String description;
+    private final Validation.Validator validator;
 
     @Nullable
     private final String message;
 
-    @Nonnull
-    private final List<Validator> validators;
+    private Constraint(final Validation.Validator validator, final String message) {
 
-    @JsonDeserialize(as = Builder.class)
-    public interface Descriptor extends Described {
-
-        String getMessage();
-
-        @JsonIgnore
-        List<Validator> getValidators();
-
-        @JsonAnyGetter
-        @SuppressWarnings("unused")
-        default Map<String, Validator> getValidatorMap() {
-
-            return getValidators().stream().collect(Collectors.toMap(
-                    Validator::type, v -> v
-            ));
-        }
-
-        default Constraint build(final Name qualifiedName) {
-
-            return new Constraint(this, qualifiedName);
-        }
+        this.validator = validator;
+        this.message = message;
     }
 
-    @Data
-    @Accessors(chain = true)
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    public static class Builder implements Descriptor {
+    public List<Violation> violations(final Use<?> type, final Context context, final Name name, final Object value) {
 
-        @Nullable
-        private String description;
-
-        @Nullable
-        private String message;
-
-        @Nullable
-        @JsonProperty(RangeValidator.TYPE)
-        private RangeValidator range;
-
-        @Nullable
-        @JsonProperty(SizeValidator.TYPE)
-        private SizeValidator size;
-
-        @Nullable
-        @JsonProperty(RegexValidator.TYPE)
-        private RegexValidator regex;
-
-        @Nullable
-        @JsonProperty(ExpressionValidator.TYPE)
-        private ExpressionValidator expression;
-
-        @Override
-        public Map<String, Validator> getValidatorMap() {
-
-            return ImmutableMap.of();
-        }
-
-        @Override
-        public List<Validator> getValidators() {
-
-            return Stream.of(range, size, regex, expression)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toList());
-        }
-    }
-
-    public static Builder builder() {
-
-        return new Builder();
-    }
-
-    private Constraint(final Descriptor descriptor, final Name qualifiedName) {
-
-        this.qualifiedName = qualifiedName;
-        this.description = descriptor.getDescription();
-        this.validators = Nullsafe.immutableCopy(descriptor.getValidators());
-        this.message = descriptor.getMessage();
-        if(validators.isEmpty()) {
-            throw new SchemaValidationException(qualifiedName, "Constraint must have at least one validator");
-        }
-    }
-
-    public List<Violation> violations(final Use<?> type, final Context context, final Name name, final String constraint, final Object value) {
-
-        final List<Violation> violations = new ArrayList<>();
-        for(final Validator validator : validators) {
-            if(!validator.validate(type, context, value)) {
-                violations.add(new Violation(name, constraint, message(validator, message)));
-            }
-        }
-        return violations;
-    }
-
-    protected static String message(final Validator validator, final String message) {
-
-        if(message != null) {
-            return message;
+        if(validator.validate(type, context, value)) {
+            return ImmutableList.of();
         } else {
-            return validator.defaultMessage();
+            return ImmutableList.of(new Violation(name, validator.type(), message));
         }
     }
+
+    public Annotation toJsr380(final Use<?> type) {
+
+        return toJsr380(type, getMessage());
+    }
+
+    @SuppressWarnings("unchecked")
+    public Annotation toJsr380(final Use<?> type, final String message) {
+
+        return toJsr380(type, message, null, null);
+    }
+
+    public Annotation toJsr380(final Use<?> type, final String message, final Class<?>[] groups, final Class<? extends Payload>[] payload) {
+
+        final ImmutableMap.Builder<String, Object> values = ImmutableMap.builder();
+        if(message != null) {
+            values.put("message", message);
+        }
+        if(groups != null) {
+            values.put("groups", groups);
+        }
+        if(payload != null) {
+            values.put("payload", payload);
+        }
+        return validator.toJsr380(type, values.build());
+    }
+
 
     @Data
     public static class Violation {
@@ -176,33 +113,74 @@ public class Constraint implements Named, Described, Serializable {
         @JsonSerialize(using = ToStringSerializer.class)
         private final Name name;
 
-        private final String constraint;
+        private final String type;
 
         @Nullable
         private final String message;
     }
 
-    public Descriptor descriptor() {
+    public static Constraint of(final Validation.Validator validator) {
 
-        return new Descriptor() {
-            @Override
-            public String getMessage() {
+        return of(validator, null);
+    }
 
-                return message;
+    public static Constraint of(final Validation.Validator validator, final String message) {
+
+        return new Constraint(validator, message);
+    }
+
+    public static Optional<Constraint> fromJsr380(final Use<?> type, final Annotation annotation, final String message) {
+
+        return Validation.createJsr380Validator(type, annotation).map(validator -> of(validator, message));
+    }
+
+    public static class Serializer extends JsonSerializer<Constraint> {
+
+        @Override
+        public void serialize(final Constraint constraint, final JsonGenerator generator, final SerializerProvider serializerProvider) throws IOException {
+
+            final String message = constraint.getMessage();
+            final Validation.Validator validator = constraint.getValidator();
+            generator.writeStartObject();
+            generator.writeObjectField(validator.type(), validator.shorthand());
+            if(message != null) {
+                generator.writeStringField("message", message);
             }
+            generator.writeEndObject();
+        }
+    }
 
-            @Override
-            public List<Validator> getValidators() {
+    public static class Deserializer extends JsonDeserializer<Constraint> {
 
-                return validators;
+        @Override
+        public Constraint deserialize(final JsonParser parser, final DeserializationContext context) throws IOException {
+
+            String message = null;
+            Validation.Validator validator = null;
+
+            if(parser.getCurrentToken() != JsonToken.START_OBJECT) {
+                throw context.wrongTokenException(parser, Constraint.class, JsonToken.START_OBJECT, null);
             }
-
-            @Nullable
-            @Override
-            public String getDescription() {
-
-                return description;
+            while(parser.nextToken() == JsonToken.FIELD_NAME) {
+                final String name = parser.currentName();
+                parser.nextToken();
+                if ("message".equals(name)) {
+                    message = parser.getText();
+                } else if(validator == null) {
+                    final Validation validation = Validation.forType(name);
+                    validator = parser.readValueAs(validation.validatorClass());
+                } else {
+                    throw new IllegalStateException("Already have a validator of type " + validator.type() + " cannot add " + name);
+                }
             }
-        };
+            if(parser.getCurrentToken() != JsonToken.END_OBJECT) {
+                throw context.wrongTokenException(parser, Constraint.class, JsonToken.END_OBJECT, null);
+            }
+            if(validator != null) {
+                return Constraint.of(validator, message);
+            } else {
+                throw new JsonParseException(parser, "Constraint must have one of: " + Validation.types());
+            }
+        }
     }
 }

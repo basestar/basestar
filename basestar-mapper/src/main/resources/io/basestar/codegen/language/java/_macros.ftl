@@ -13,7 +13,8 @@
 </#switch></#macro>
 
 <#macro values of>{<#list of as v><@value of=v/><#sep>, </#list>}</#macro>
-<#macro value of><#if of?is_string>"${of?j_string}"<#elseif of?is_boolean>${of?c}<#elseif of?is_sequence><@values of=of/><#else>${of}</#if></#macro>
+<#macro value of><#if of?is_hash><@object of=of/><#elseif of?is_string>"${of?j_string}"<#elseif of?is_boolean>${of?c}<#elseif of?is_sequence><@values of=of/><#else>${of}</#if></#macro>
 
+<#macro object of><#if of.className??><@annotation name=of.className values=of.values/><#else>${of}</#if></#macro>
 <#macro annotation name values>@${name}<#if values?has_content>(<#list values as k,v>${k} = <@value of=v/><#sep>, </#list>)</#if></#macro>
 

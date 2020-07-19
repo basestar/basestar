@@ -26,6 +26,7 @@ import io.basestar.mapper.MappingContext;
 import io.basestar.schema.Id;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.Reserved;
 import io.basestar.type.PropertyContext;
 
 import java.lang.reflect.InvocationTargetException;
@@ -65,6 +66,12 @@ public class IdMapper implements MemberMapper<ObjectSchema.Builder> {
     public TypeMapper getType() {
 
         return type;
+    }
+
+    @Override
+    public String memberType() {
+
+        return Reserved.ID;
     }
 
     @Override

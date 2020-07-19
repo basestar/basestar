@@ -1,8 +1,10 @@
 package io.basestar.mapper.annotation;
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Expression;
 import io.basestar.mapper.internal.ViewSchemaMapper;
 import io.basestar.mapper.internal.annotation.SchemaModifier;
+import io.basestar.type.AnnotationContext;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.annotation.*;
@@ -27,22 +29,11 @@ public @interface Where {
             return mapper.withWhere(where);
         }
 
-        public static Where from(final Expression where) {
+        public static Where annotation(final io.basestar.expression.Expression expression) {
 
-            return new Where() {
-
-                @Override
-                public Class<? extends Annotation> annotationType() {
-
-                    return Where.class;
-                }
-
-                @Override
-                public String value() {
-
-                    return where.toString();
-                }
-            };
+            return new AnnotationContext<>(Where.class, ImmutableMap.<String, Object>builder()
+                    .put("value", expression.toString())
+                    .build()).annotation();
         }
     }
 }

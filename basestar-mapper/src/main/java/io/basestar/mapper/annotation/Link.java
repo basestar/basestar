@@ -20,14 +20,19 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.MappingContext;
+import io.basestar.mapper.internal.AnnotationUtils;
 import io.basestar.mapper.internal.LinkMapper;
 import io.basestar.mapper.internal.MemberMapper;
 import io.basestar.mapper.internal.annotation.MemberDeclaration;
+import io.basestar.type.AnnotationContext;
 import io.basestar.type.PropertyContext;
+import io.basestar.util.Sort;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.annotation.*;
+import java.util.List;
 
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
@@ -39,6 +44,10 @@ public @interface Link {
 
     String name() default INFER_NAME;
 
+    String expression();
+
+    String[] sort() default {};
+
     @RequiredArgsConstructor
     class Declaration implements MemberDeclaration.Declaration {
 
@@ -48,25 +57,18 @@ public @interface Link {
         public MemberMapper<?> mapper(final MappingContext context, final PropertyContext prop) {
 
             final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
-            return new LinkMapper(context, name, prop);
+            final io.basestar.expression.Expression expression = io.basestar.expression.Expression.parse(annotation.expression());
+            final List<Sort> sort = Sort.parseList(annotation.sort());
+            return new LinkMapper(context, name, prop, expression, sort);
         }
 
-        public static Link from(final io.basestar.schema.Link link) {
+        public static Link annotation(final io.basestar.schema.Link link) {
 
-            return new Link() {
-
-                @Override
-                public Class<? extends Annotation> annotationType() {
-
-                    return Link.class;
-                }
-
-                @Override
-                public String name() {
-
-                    return link.getName();
-                }
-            };
+            return new AnnotationContext<>(Link.class, ImmutableMap.<String, Object>builder()
+                    .put("name", link.getName())
+                    .put("expression", link.getExpression().toString())
+                    .put("sort", AnnotationUtils.stringArray(link.getSort()))
+                    .build()).annotation();
         }
     }
 }

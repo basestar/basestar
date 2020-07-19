@@ -42,7 +42,7 @@ public class StructSchemaModel extends InstanceSchemaModel {
 
         return ImmutableList.of(
                 new AnnotationModel<>(getSettings(), VALID),
-                new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.StructSchema.Declaration.from(schema))
+                new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.StructSchema.Declaration.annotation(schema))
         );
     }
 

@@ -22,7 +22,10 @@ package io.basestar.mapper.internal.annotation;
 
 import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.SchemaMapper;
+import io.basestar.mapper.internal.EnumSchemaMapper;
+import io.basestar.mapper.internal.StructSchemaMapper;
 import io.basestar.type.TypeContext;
+import io.basestar.util.Name;
 
 import java.lang.annotation.*;
 
@@ -35,6 +38,30 @@ public @interface SchemaDeclaration {
 
     interface Declaration {
 
+        Name getQualifiedName(TypeContext type);
+
         SchemaMapper<?, ?> mapper(MappingContext context, TypeContext type);
+
+        class Basic implements Declaration {
+
+            public static final Basic INSTANCE = new Basic();
+
+            @Override
+            public Name getQualifiedName(final TypeContext type) {
+
+                return Name.of(type.simpleName());
+            }
+
+            @Override
+            public SchemaMapper<?, ?> mapper(final MappingContext context, final TypeContext type) {
+
+                final Name name = getQualifiedName(type);
+                if (type.isEnum()) {
+                    return new EnumSchemaMapper<>(context, name, type);
+                } else {
+                    return new StructSchemaMapper<>(context, name, type);
+                }
+            }
+        }
     }
 }

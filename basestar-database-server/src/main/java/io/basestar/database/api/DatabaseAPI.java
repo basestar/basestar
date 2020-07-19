@@ -321,10 +321,9 @@ public class DatabaseAPI implements API {
     private List<Sort> parseSort(final APIRequest request) {
 
         try {
-            final String expand = request.getFirstQuery(PARAM_SORT);
-            if(expand != null) {
-                return Splitter.on(",").omitEmptyStrings().trimResults().splitToList(expand).stream()
-                        .map(Sort::parse).collect(Collectors.toList());
+            final String sort = request.getFirstQuery(PARAM_SORT);
+            if(sort != null) {
+                return Sort.parseList(sort);
             } else {
                 return null;
             }

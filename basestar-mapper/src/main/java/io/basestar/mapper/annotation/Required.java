@@ -1,7 +1,9 @@
 package io.basestar.mapper.annotation;
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.internal.PropertyMapper;
 import io.basestar.mapper.internal.annotation.MemberModifier;
+import io.basestar.type.AnnotationContext;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.annotation.*;
@@ -25,22 +27,9 @@ public @interface Required {
             return mapper.withRequired(annotation.value());
         }
 
-        public static Required from(final boolean required) {
+        public static Required annotation(final boolean required) {
 
-            return new Required() {
-
-                @Override
-                public Class<? extends Annotation> annotationType() {
-
-                    return Required.class;
-                }
-
-                @Override
-                public boolean value() {
-
-                    return required;
-                }
-            };
+            return new AnnotationContext<>(Required.class, ImmutableMap.of("value", required)).annotation();
         }
     }
 }

@@ -519,7 +519,7 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
             }
 
             @Override
-            public Map<String, ? extends Constraint.Descriptor> getConstraints() {
+            public List<? extends Constraint> getConstraints() {
 
                 return descriptor.getConstraints();
             }

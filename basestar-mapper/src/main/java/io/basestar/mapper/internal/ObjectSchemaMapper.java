@@ -20,75 +20,50 @@ package io.basestar.mapper.internal;
  * #L%
  */
 
-import io.basestar.expression.Expression;
+import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.MappingContext;
-import io.basestar.mapper.annotation.Index;
-import io.basestar.mapper.annotation.Permission;
-import io.basestar.schema.Link;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.Transient;
-import io.basestar.type.AnnotationContext;
+import io.basestar.schema.*;
 import io.basestar.type.TypeContext;
 import io.basestar.util.Name;
-import io.basestar.util.Sort;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Map;
 
 public class ObjectSchemaMapper<T> extends InstanceSchemaMapper<T, ObjectSchema.Builder> {
 
-    private final Map<String, io.basestar.schema.Index.Descriptor> indexes = new HashMap<>();
+    private final Map<String, Index.Descriptor> indexes;
 
-    private final Map<String, io.basestar.schema.Permission.Descriptor> permissions = new HashMap<>();
+    private final Map<String, Permission.Descriptor> permissions;
 
     public ObjectSchemaMapper(final MappingContext context, final Name name, final TypeContext type) {
 
         super(context, name, type, ObjectSchema.Builder.class);
-        for(final AnnotationContext<Index> annot : type.annotations(Index.class)) {
-            final Index index = annot.annotation();
-            indexes.put(index.name(), new io.basestar.schema.Index.Builder()
-                    .setPartition(partition(index.partition()))
-                    .setSort(sort(index.sort()))
-                    .setProjection(projection(index.projection()))
-                    .setUnique(index.unique())
-                    .setConsistency(index.consistency())
-                    .setOver(over(index.over())));
-        }
-        for(final AnnotationContext<Permission> annot : type.annotations(Permission.class)) {
-            final Permission perm = annot.annotation();
-            permissions.put(perm.on(), new io.basestar.schema.Permission.Builder()
-                    .setAnonymous(perm.anon())
-                    .setExpression(Expression.parse(perm.expression()))
-                    .setExpand(expand(perm.expand())));
-        }
+        this.indexes = ImmutableMap.of();
+        this.permissions = ImmutableMap.of();
+
+//        for(final AnnotationContext<Permission> annot : type.annotations(Permission.class)) {
+//            final Permission perm = annot.annotation();
+//            permissions.put(perm.on(), new io.basestar.schema.Permission.Builder()
+//                    .setAnonymous(perm.anon())
+//                    .setExpression(Expression.parse(perm.expression()))
+//                    .setExpand(expand(perm.expand())));
+//        }
     }
 
-    private Map<String, Name> over(final Index.Over[] over) {
+    private ObjectSchemaMapper(final ObjectSchemaMapper<T> copy, final Map<String, Index.Descriptor> indexes, final Map<String, Permission.Descriptor> permissions) {
 
-        return Arrays.stream(over).collect(Collectors.toMap(
-                Index.Over::as,
-                v -> Name.parse(v.path())
-        ));
+        super(copy);
+        this.indexes = indexes;
+        this.permissions = permissions;
     }
 
-    private Set<Name> expand(final String[] partition) {
+    public ObjectSchemaMapper<T> withIndexes(final Map<String, Index.Descriptor> indexes) {
 
-        return Arrays.stream(partition).map(Name::parse).collect(Collectors.toSet());
+        return new ObjectSchemaMapper<>(this, ImmutableMap.<String, Index.Descriptor>builder().putAll(this.indexes).putAll(indexes).build(), permissions);
     }
 
-    private Set<String> projection(final String[] projection) {
+    public ObjectSchemaMapper<T> withPermissions(final Map<String, Permission.Descriptor> permissions) {
 
-        return new HashSet<>(Arrays.asList(projection));
-    }
-
-    private List<Sort> sort(final String[] sort) {
-
-        return Arrays.stream(sort).map(Sort::parse).collect(Collectors.toList());
-    }
-
-    private List<Name> partition(final String[] partition) {
-
-        return Arrays.stream(partition).map(Name::parse).collect(Collectors.toList());
+        return new ObjectSchemaMapper<>(this, indexes, ImmutableMap.<String, Permission.Descriptor>builder().putAll(this.permissions).putAll(permissions).build());
     }
 
     @Override

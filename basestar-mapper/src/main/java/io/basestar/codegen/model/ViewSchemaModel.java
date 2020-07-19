@@ -28,6 +28,7 @@ import io.basestar.schema.ViewSchema;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @SuppressWarnings("unused")
 public class ViewSchemaModel extends InstanceSchemaModel {
@@ -45,12 +46,13 @@ public class ViewSchemaModel extends InstanceSchemaModel {
 
         final ImmutableList.Builder<AnnotationModel<?>> annotations = ImmutableList.builder();
         annotations.add(new AnnotationModel<>(getSettings(), VALID));
-        annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.ViewSchema.Declaration.from(schema)));
+
+        annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.ViewSchema.Declaration.annotation(schema)));
         if(!schema.getGroup().isEmpty()) {
-            annotations.add(new AnnotationModel<>(getSettings(), Group.Modifier.from(new ArrayList<>(schema.getGroup().keySet()))));
+            annotations.add(new AnnotationModel<>(getSettings(), Group.Modifier.annotation(new ArrayList<>(schema.getGroup().keySet()))));
         }
         if(schema.getWhere() != null) {
-            annotations.add(new AnnotationModel<>(getSettings(), Where.Modifier.from(schema.getWhere())));
+            annotations.add(new AnnotationModel<>(getSettings(), Where.Modifier.annotation(schema.getWhere())));
         }
         return annotations.build();
     }
@@ -59,5 +61,12 @@ public class ViewSchemaModel extends InstanceSchemaModel {
     public InstanceSchemaModel getExtend() {
 
         return null;
+    }
+
+    @Override
+    public List<MemberModel> getAdditionalMembers() {
+
+        return schema.getDeclaredLinks().values().stream()
+                .map(v -> new LinkModel(getSettings(), v)).collect(Collectors.toList());
     }
 }

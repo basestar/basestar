@@ -31,13 +31,18 @@ public interface MemberMapper<B extends InstanceSchema.Builder> {
 
     TypeMapper getType();
 
+    String memberType();
+
     void addToSchema(InstanceSchemaMapper<?, B> mapper, B builder);
 
     void unmarshall(Object source, Map<String, Object> target) throws InvocationTargetException, IllegalAccessException;
 
     void marshall(Map<String, Object> source, Object target) throws InvocationTargetException, IllegalAccessException;
 
-    MemberMapper<B> withExpression(Expression expression);
+    default MemberMapper<B> withExpression(final Expression expression) {
+
+        throw new UnsupportedOperationException("Cannot apply expression to " + memberType());
+    }
 
     default Set<Class<?>> dependencies() {
 

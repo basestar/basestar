@@ -325,6 +325,17 @@ public class TypeContext implements HasName, HasModifiers, HasAnnotations,
         return erasedType.isPrimitive();
     }
 
+    public boolean isArray() {
+
+        return erasedType.isArray();
+    }
+
+    public TypeContext arrayComponentType() {
+
+        // FIXME: TypeContext (on class) annotations break unless we unwrap the annotated type here
+        return TypeContext.from(GenericTypeReflector.getArrayComponentType(annotatedType.getType()));
+    }
+
     public TypeContext box() {
 
         return TypeContext.from(GenericTypeReflector.box(erasedType));

@@ -22,12 +22,19 @@ package io.basestar.mapper.internal;
 
 import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
+import io.basestar.schema.Constraint;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Property;
+import io.basestar.type.AnnotationContext;
 import io.basestar.type.PropertyContext;
+import io.basestar.type.has.HasType;
 
+import javax.validation.constraints.NotNull;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
 
@@ -36,6 +43,8 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
     private final PropertyContext property;
 
     private final TypeMapper type;
+
+    private final List<Constraint> constraints;
 
     private final Expression expression;
 
@@ -48,8 +57,9 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
         this.name = name;
         this.property = property;
         this.type = TypeMapper.from(context, property.type());
+        this.constraints = constraints(property);
         this.expression = null;
-        this.required = false;
+        this.required = required(property);
         this.immutable = false;
     }
 
@@ -58,6 +68,7 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
         this.name = copy.name;
         this.property = copy.property;
         this.type = copy.type;
+        this.constraints = copy.constraints;
         this.expression = expression;
         this.required = required;
         this.immutable = immutable;
@@ -79,10 +90,36 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
         return new PropertyMapper(this, expression, required, immutable);
     }
 
+    private boolean required(final PropertyContext property) {
+
+        return !property.annotations(NotNull.class).isEmpty();
+    }
+
+    private List<Constraint> constraints(final PropertyContext property) {
+
+        final List<AnnotationContext<?>> constraintAnnotations = property.allAnnotations().stream()
+                .filter(a -> a.type().annotations().stream()
+                        .anyMatch(HasType.match(javax.validation.Constraint.class)))
+                .collect(Collectors.toList());
+
+        final List<Constraint> constraints = new ArrayList<>();
+        constraintAnnotations.forEach(annot -> {
+            final String message = annot.<String>nonDefaultValue("message").orElse(null);
+            Constraint.fromJsr380(null, annot.annotation(), message).ifPresent(constraints::add);
+        });
+        return constraints;
+    }
+
     @Override
     public TypeMapper getType() {
 
         return type;
+    }
+
+    @Override
+    public String memberType() {
+
+        return "property";
     }
 
     @Override
@@ -92,8 +129,8 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
                 .setExpression(expression)
                 .setImmutable(immutable ? true : null)
                 .setRequired(required ? true : null)
-                .setRequired(required ? true : null)
-                .setType(this.type.use()));
+                .setType(this.type.use())
+                .setConstraints(constraints.isEmpty() ? null : constraints));
     }
 
     @Override

@@ -20,8 +20,6 @@ package io.basestar.mapper;
  * #L%
  */
 
-import io.basestar.mapper.internal.EnumSchemaMapper;
-import io.basestar.mapper.internal.StructSchemaMapper;
 import io.basestar.mapper.internal.annotation.SchemaDeclaration;
 import io.basestar.mapper.internal.annotation.SchemaModifier;
 import io.basestar.schema.Namespace;
@@ -66,6 +64,18 @@ public class MappingContext {
         return builder;
     }
 
+    public Name schemaName(final Class<?> cls) {
+
+        final SchemaMapper<?, ?>  mapper = this.mappers.get(cls);
+        if(mapper != null) {
+            return mapper.qualifiedName();
+        } else {
+            final TypeContext type = TypeContext.from(cls);
+            final SchemaDeclaration.Declaration decl = declaration(type);
+            return decl.getQualifiedName(type);
+        }
+    }
+
     @SuppressWarnings("unchecked")
     public <T, O> SchemaMapper<T, O> schemaMapper(final Class<T> cls) {
 
@@ -76,6 +86,11 @@ public class MappingContext {
     private <T, O> SchemaMapper<T, O> newSchemaMapper(final Class<T> cls) {
 
         final TypeContext type = TypeContext.from(cls);
+        final SchemaDeclaration.Declaration decl = declaration(type);
+        return applyModifiers(type, (SchemaMapper<T, O>) decl.mapper(this, type));
+    }
+
+    private SchemaDeclaration.Declaration declaration(final TypeContext type) {
 
         final List<AnnotationContext<?>> declAnnotations = type.annotations().stream()
                 .filter(a -> a.type().annotations().stream()
@@ -83,19 +98,13 @@ public class MappingContext {
                 .collect(Collectors.toList());
 
         if (declAnnotations.size() == 0) {
-            final Name name = Name.of(type.simpleName());
-            if (type.isEnum()) {
-                return (SchemaMapper<T, O>) new EnumSchemaMapper<>(this, name, type);
-            } else {
-                return (SchemaMapper<T, O>) new StructSchemaMapper<>(this, name, type);
-            }
+            return SchemaDeclaration.Declaration.Basic.INSTANCE;
         } else if (declAnnotations.size() == 1) {
             try {
                 final AnnotationContext<?> annotation = declAnnotations.get(0);
                 final SchemaDeclaration schemaDeclaration = annotation.type().annotation(SchemaDeclaration.class).annotation();
                 final TypeContext declType = TypeContext.from(schemaDeclaration.value());
-                final SchemaDeclaration.Declaration decl = declType.declaredConstructors().get(0).newInstance(annotation.annotation());
-                return applyModifiers(type, (SchemaMapper<T, O>) decl.mapper(this, type));
+                return declType.declaredConstructors().get(0).newInstance(annotation.annotation());
             } catch (final IllegalAccessException | InstantiationException | InvocationTargetException e) {
                 throw new IllegalStateException(e);
             }
@@ -106,7 +115,7 @@ public class MappingContext {
         }
     }
 
-    private <T, O> SchemaMapper<T, O> applyModifiers(final TypeContext type, final SchemaMapper<T, O> input) throws IllegalAccessException, InstantiationException, InvocationTargetException {
+    private <T, O> SchemaMapper<T, O> applyModifiers(final TypeContext type, final SchemaMapper<T, O> input) {
 
         final List<AnnotationContext<?>> modAnnotations = type.annotations().stream()
                 .filter(a -> a.type().annotations().stream()
@@ -116,14 +125,18 @@ public class MappingContext {
         SchemaMapper<T, O> output = input;
 
         for(final AnnotationContext<?> annotation : modAnnotations) {
-            final SchemaModifier schemaModifier = annotation.type().annotation(SchemaModifier.class).annotation();
-            final TypeContext modType = TypeContext.from(schemaModifier.value());
-            final Class<?> modMapperType = modType.find(SchemaModifier.Modifier.class).typeParameters().get(0).type().erasedType();
-            if(modMapperType.isAssignableFrom(output.getClass())) {
-                final SchemaModifier.Modifier<SchemaMapper<T, O>> mod = modType.declaredConstructors().get(0).newInstance(annotation.annotation());
-                output = mod.modify(output);
-            } else {
-                throw new IllegalStateException("Modifier " + modType.erasedType() + " not supported on " + output.getClass());
+            try {
+                final SchemaModifier schemaModifier = annotation.type().annotation(SchemaModifier.class).annotation();
+                final TypeContext modType = TypeContext.from(schemaModifier.value());
+                final Class<?> modMapperType = modType.find(SchemaModifier.Modifier.class).typeParameters().get(0).type().erasedType();
+                if(modMapperType.isAssignableFrom(output.getClass())) {
+                    final SchemaModifier.Modifier<SchemaMapper<T, O>> mod = modType.declaredConstructors().get(0).newInstance(annotation.annotation());
+                    output = mod.modify(output);
+                } else {
+                    throw new IllegalStateException("Modifier " + modType.erasedType() + " not supported on " + output.getClass());
+                }
+            } catch (final IllegalAccessException | InstantiationException | InvocationTargetException e) {
+                throw new IllegalStateException(e);
             }
         }
 

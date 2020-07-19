@@ -1,16 +1,15 @@
 package io.basestar.schema;
 
-import com.google.common.collect.ImmutableList;
-import io.basestar.expression.Expression;
-import io.basestar.schema.validator.ExpressionValidator;
-import io.basestar.schema.validator.RangeValidator;
-import io.basestar.schema.validator.RegexValidator;
-import io.basestar.schema.validator.SizeValidator;
+import com.google.common.collect.ImmutableSet;
+import io.basestar.schema.validation.*;
 import org.junit.jupiter.api.Test;
 
+import javax.validation.constraints.Pattern;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestConstraints {
 
@@ -23,22 +22,16 @@ public class TestConstraints {
 
         final Property property = schema.getProperties().get("name");
 
-        final Constraint longSize = property.getConstraints().get("longSize");
-        assertEquals(ImmutableList.of(SizeValidator.builder().setMin(1L).setMax(10L).build()), longSize.getValidators());
-
-        final Constraint exactSize = property.getConstraints().get("exactSize");
-        assertEquals(ImmutableList.of(SizeValidator.builder().setMin(50L).setMax(50L).build()), exactSize.getValidators());
-
-        final Constraint longRegex = property.getConstraints().get("longRegex");
-        assertEquals(ImmutableList.of(RegexValidator.builder().setPattern("[\\w\\d]+").build()), longRegex.getValidators());
-
-        final Constraint shortRegex = property.getConstraints().get("shortRegex");
-        assertEquals(ImmutableList.of(RegexValidator.builder().setPattern("[\\w\\d]*").build()), shortRegex.getValidators());
-
-        final Constraint longRange = property.getConstraints().get("longRange");
-        assertEquals(ImmutableList.of(RangeValidator.builder().setLt(3).setGt(1).build()), longRange.getValidators());
-
-        final Constraint custom = property.getConstraints().get("custom");
-        assertEquals(ImmutableList.of(ExpressionValidator.from(Expression.parse("false"))), custom.getValidators());
+        final List<Constraint> constraints = property.getConstraints();
+        assertTrue(constraints.contains(Constraint.of(new SizeValidation.Validator(1, 10), "full size")));
+        assertTrue(constraints.contains(Constraint.of(new SizeValidation.Validator(50), "short size")));
+        assertTrue(constraints.contains(Constraint.of(new AssertValidation.Validator("value != 1"), "full assert")));
+        assertTrue(constraints.contains(Constraint.of(new AssertValidation.Validator("value != 2"), "short assert")));
+        assertTrue(constraints.contains(Constraint.of(new MinValidation.Validator(BigDecimal.valueOf(20), true), "full min")));
+        assertTrue(constraints.contains(Constraint.of(new MinValidation.Validator(BigDecimal.valueOf(10), false), "short min")));
+        assertTrue(constraints.contains(Constraint.of(new MaxValidation.Validator(BigDecimal.valueOf(200), true), "full max")));
+        assertTrue(constraints.contains(Constraint.of(new MaxValidation.Validator(BigDecimal.valueOf(100), false), "short max")));
+        assertTrue(constraints.contains(Constraint.of(new PatternValidation.Validator("[\\w\\d]+", ImmutableSet.of(Pattern.Flag.CASE_INSENSITIVE)), "full pattern")));
+        assertTrue(constraints.contains(Constraint.of(new PatternValidation.Validator("[\\w\\d]*"), "short pattern")));
     }
 }

@@ -1,7 +1,9 @@
 package io.basestar.mapper.annotation;
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.internal.MemberMapper;
 import io.basestar.mapper.internal.annotation.MemberModifier;
+import io.basestar.type.AnnotationContext;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.annotation.*;
@@ -26,22 +28,11 @@ public @interface Expression {
             return mapper.withExpression(where);
         }
 
-        public static Expression from(final io.basestar.expression.Expression expression) {
+        public static Expression annotation(final io.basestar.expression.Expression expression) {
 
-            return new Expression() {
-
-                @Override
-                public Class<? extends Annotation> annotationType() {
-
-                    return Expression.class;
-                }
-
-                @Override
-                public String value() {
-
-                    return expression.toString();
-                }
-            };
+            return new AnnotationContext<>(Expression.class, ImmutableMap.<String, Object>builder()
+                    .put("value", expression.toString())
+                    .build()).annotation();
         }
     }
 }

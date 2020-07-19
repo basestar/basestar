@@ -29,6 +29,7 @@
         <hazelcast.version>4.0</hazelcast.version>
         <swagger.version>2.1.2</swagger.version>
         <okhttp.version>3.14.4</okhttp.version>
+        <jsr380.version>2.0.1.Final</jsr380.version>
     </properties>
 
     <dependencyManagement>
@@ -368,6 +369,11 @@
                 <groupId>com.squareup.okhttp3</groupId>
                 <artifactId>okhttp</artifactId>
                 <version>${okhttp.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>javax.validation</groupId>
+                <artifactId>validation-api</artifactId>
+                <version>${jsr380.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

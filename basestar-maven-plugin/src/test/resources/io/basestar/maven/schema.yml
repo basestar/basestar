@@ -8,6 +8,16 @@ Test:
     date:
       type: date
       required: true
+      constraints:
+        - size: 10
+        - size:
+            min: 2
+            max: 10
+          message: "Test"
+        - pattern: "hello"
+        - max: 10
+        - min: 10
+        - assert: "test"
     datetime:
       type: datetime
   links:
@@ -26,6 +36,17 @@ a.Test:
       type: Test
     b:
       type: b.Test
+  indexes:
+    forward:
+      partition:
+        - test.id
+      sort:
+        - b.id
+    backward:
+      partition:
+        - test.id
+      sort:
+        - b.id
 
 b.Test:
   type: object

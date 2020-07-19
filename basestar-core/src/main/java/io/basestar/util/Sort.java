@@ -25,17 +25,17 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.io.Serializable;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 
 @Data
 @AllArgsConstructor
 public class Sort implements Serializable {
 
     public static final String DELIMITER = ":";
+
+    public static final char MULTIPLE_DELIMITER = ',';
 
     private static final Splitter SPLITTER = Splitter.on(DELIMITER).trimResults().omitEmptyStrings().limit(2);
 
@@ -48,6 +48,23 @@ public class Sort implements Serializable {
     public Sort(final Name name, final Order order) {
 
         this(name, order, Nulls.FIRST);
+    }
+
+    public static List<Sort> parseList(final Collection<String> strs) {
+
+        return strs.stream().map(Sort::parse)
+                .collect(Collectors.toList());
+    }
+
+    public static List<Sort> parseList(final String ... strs) {
+
+        return parseList(Arrays.asList(strs));
+    }
+
+    public static List<Sort> parseList(final String str) {
+
+        return Splitter.on(MULTIPLE_DELIMITER).omitEmptyStrings().trimResults().splitToList(str).stream()
+                .map(Sort::parse).collect(Collectors.toList());
     }
 
     public Sort reverse() {

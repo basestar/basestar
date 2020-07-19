@@ -27,9 +27,11 @@ import io.basestar.schema.Instance;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.Reserved;
 import io.basestar.schema.Schema;
+import io.basestar.schema.jsr380.Assert;
 import lombok.Data;
 import org.junit.jupiter.api.Test;
 
+import javax.validation.constraints.Size;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -44,9 +46,7 @@ public class TestMappingContext {
         @Id
         private String id;
 
-        @Link
-        @Sort("blah:desc")
-        @Expression("target.id == this.id")
+        @Link(expression = "target.id == this.id", sort = "blah:desc")
         private List<Comment> comments;
 
         @Created
@@ -58,9 +58,11 @@ public class TestMappingContext {
         @Hash
         private String hash;
 
+        @Size(min = 10, max = 100)
         private double value;
 
         @Version
+        @Assert("x == 1")
         private Long version;
 
         @Property
@@ -81,13 +83,12 @@ public class TestMappingContext {
 
             private Comment comment;
 
-            @Link
-            @Expression("target.id == this.id")
+            @Link(expression = "target.id == this.id")
             private List<Comment> comments;
         }
     }
 
-    @ViewSchema(from = "Post")
+    @ViewSchema(from = @ViewSchema.From(Post.class))
     @Where("x == 1")
     public static class PostView {
 

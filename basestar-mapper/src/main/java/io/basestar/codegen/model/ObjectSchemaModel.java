@@ -21,6 +21,7 @@ package io.basestar.codegen.model;
  */
 
 import io.basestar.codegen.CodegenSettings;
+import io.basestar.schema.Index;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.StructSchema;
@@ -28,7 +29,6 @@ import io.basestar.schema.StructSchema;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @SuppressWarnings("unused")
 public class ObjectSchemaModel extends InstanceSchemaModel {
@@ -46,8 +46,10 @@ public class ObjectSchemaModel extends InstanceSchemaModel {
 
         final List<AnnotationModel<?>> annotations = new ArrayList<>();
         annotations.add(new AnnotationModel<>(getSettings(), VALID));
-        annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.ObjectSchema.Declaration.from(schema)));
-
+        annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.ObjectSchema.Declaration.annotation(schema)));
+        for(final Index index : schema.getIndexes().values()) {
+            annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.Index.Modifier.annotation(index)));
+        }
         return annotations;
     }
 
@@ -65,12 +67,9 @@ public class ObjectSchemaModel extends InstanceSchemaModel {
     }
 
     @Override
-    public List<MemberModel> getMembers() {
+    public List<MemberModel> getAdditionalMembers() {
 
-        return Stream.concat(
-                super.getMembers().stream(),
-                schema.getDeclaredLinks().values().stream()
-                        .map(v -> new LinkModel(getSettings(), v))
-        ).collect(Collectors.toList());
+        return schema.getDeclaredLinks().values().stream()
+                        .map(v -> new LinkModel(getSettings(), v)).collect(Collectors.toList());
     }
 }

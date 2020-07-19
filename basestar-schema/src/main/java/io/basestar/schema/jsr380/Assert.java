@@ -6,17 +6,18 @@ import java.lang.annotation.*;
 
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
-@Repeatable(If.List.class)
-@Constraint(validatedBy = IfConstraintValidator.class)
+@Repeatable(Assert.List.class)
+@Constraint(validatedBy = AssertConstraintValidator.class)
 @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.ANNOTATION_TYPE, ElementType.TYPE_USE})
-public @interface If {
+public @interface Assert {
 
     String value();
 
-    String message() default "{io.basestar.schema.jsr380.If.message}";
+    String message() default "{io.basestar.schema.jsr380.Assert.message}";
 
     Class<?>[] groups() default { };
 
+    @SuppressWarnings("unused")
     Class<? extends Payload>[] payload() default { };
 
     @Documented
@@ -24,6 +25,6 @@ public @interface If {
     @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.ANNOTATION_TYPE})
     @interface List {
 
-        If[] value();
+        Assert[] value();
     }
 }

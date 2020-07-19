@@ -53,15 +53,15 @@ public class MetadataModel extends MemberModel {
 
         switch (name) {
             case Reserved.ID:
-                return Id.INSTANCE;
+                return Id.Declaration.annotation();
             case Reserved.VERSION:
-                return Version.INSTANCE;
+                return Version.Declaration.annotation();
             case Reserved.CREATED:
-                return Created.INSTANCE;
+                return Created.Declaration.annotation();
             case Reserved.UPDATED:
-                return Updated.INSTANCE;
+                return Updated.Declaration.annotation();
             case Reserved.HASH:
-                return Hash.INSTANCE;
+                return Hash.Declaration.annotation();
             default:
                 throw new UnsupportedOperationException("Invalid metadata " + name);
         }

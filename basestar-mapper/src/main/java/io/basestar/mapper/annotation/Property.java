@@ -20,10 +20,12 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.MemberMapper;
 import io.basestar.mapper.internal.PropertyMapper;
 import io.basestar.mapper.internal.annotation.MemberDeclaration;
+import io.basestar.type.AnnotationContext;
 import io.basestar.type.PropertyContext;
 import lombok.RequiredArgsConstructor;
 
@@ -51,22 +53,11 @@ public @interface Property {
             return new PropertyMapper(context, name, prop);
         }
 
-        public static Property from(final io.basestar.schema.Property property) {
+        public static Property annotation(final io.basestar.schema.Property property) {
 
-            return new Property() {
-
-                @Override
-                public Class<? extends Annotation> annotationType() {
-
-                    return Property.class;
-                }
-
-                @Override
-                public String name() {
-
-                    return property.getName();
-                }
-            };
+            return new AnnotationContext<>(Property.class, ImmutableMap.<String, Object>builder()
+                    .put("name", property.getName())
+                    .build()).annotation();
         }
     }
 }

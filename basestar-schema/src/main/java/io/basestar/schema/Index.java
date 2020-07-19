@@ -97,20 +97,27 @@ public class Index implements Named, Described, Serializable, Extendable {
 
         Long getVersion();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         List<Name> getPartition();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         List<Sort> getSort();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Set<String> getProjection();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Map<String, Name> getOver();
 
         Consistency getConsistency();
 
+        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         Boolean getUnique();
 
+        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         Boolean getSparse();
 
+        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         Integer getMax();
 
         default Index build(final Name qualifiedName) {
@@ -129,29 +136,24 @@ public class Index implements Named, Described, Serializable, Extendable {
 
         private String description;
 
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         @JsonSerialize(contentUsing = ToStringSerializer.class)
         @JsonDeserialize(using = AbbrevListDeserializer.class)
         private List<Name> partition;
 
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         @JsonSerialize(contentUsing = ToStringSerializer.class)
         @JsonDeserialize(using = AbbrevListDeserializer.class)
         private List<Sort> sort;
 
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         @JsonDeserialize(using = AbbrevSetDeserializer.class)
         private Set<String> projection;
 
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonSerialize(contentUsing = ToStringSerializer.class)
         @JsonDeserialize(contentUsing = NameDeserializer.class)
         private Map<String, Name> over;
 
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private Map<String, Object> extensions;
 
         private Consistency consistency;

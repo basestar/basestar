@@ -20,9 +20,14 @@ package io.basestar.type;
  * #L%
  */
 
+import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.basestar.type.has.HasMethods;
 import io.basestar.type.has.HasType;
+import io.leangen.geantyref.AnnotationFormatException;
 import io.leangen.geantyref.GenericTypeReflector;
+import io.leangen.geantyref.TypeFactory;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 
@@ -36,22 +41,42 @@ import java.util.stream.Collectors;
 
 @Getter
 @Accessors(fluent = true)
-public class AnnotationContext<A extends Annotation> implements HasType {
+public class AnnotationContext<A extends Annotation> implements HasType, HasMethods {
+
+    String VALUE = "value";
 
     // Methods that are not annotation values
     private static final Set<String> NOT_VALUES = ImmutableSet.of("hashCode", "annotationType", "toString");
 
-    private final A annotation;
+    private final Class<A> annotationType;
+
+    private final Supplier<A> annotation;
 
     private final Supplier<Map<String, Object>> values;
 
     private final Supplier<Map<String, Object>> defaultValues;
 
-    // FIXME: should be private
+    public AnnotationContext(final Class<A> annotationType, final Map<String, Object> values) {
+
+        this.annotationType = annotationType;
+        final Map<String, Object> valuesCopy = ImmutableMap.copyOf(values);
+        this.annotation = Suppliers.memoize(() -> {
+            try {
+                return TypeFactory.annotation(annotationType, values);
+            } catch (final AnnotationFormatException e) {
+                throw new IllegalStateException(e);
+            }
+        });
+        this.values = () -> valuesCopy;
+        this.defaultValues = Suppliers.memoize(() -> defaultValues(type()));
+    }
+
+    @SuppressWarnings("unchecked")
     public AnnotationContext(final A annotation) {
 
-        this.annotation = annotation;
-        this.values = () -> {
+        this.annotationType = (Class<A>)annotation.annotationType();
+        this.annotation = () -> annotation;
+        this.values = Suppliers.memoize(() -> {
             final Map<String, Object> values = new HashMap<>();
             final TypeContext context = type();
             context.methods().forEach(m -> {
@@ -64,17 +89,60 @@ public class AnnotationContext<A extends Annotation> implements HasType {
                 }
             });
             return values;
-        };
-        this.defaultValues = () -> {
-            final Map<String, Object> values = new HashMap<>();
-            final TypeContext context = type();
-            context.methods().forEach(m -> {
-                if(m.parameters().size() == 0 && !m.isStatic() && !NOT_VALUES.contains(m.name())) {
-                    values.put(m.name(), m.method().getDefaultValue());
-                }
-            });
-            return values;
-        };
+        });
+        this.defaultValues = Suppliers.memoize(() -> defaultValues(type()));
+    }
+
+    private static Map<String, Object> defaultValues(final TypeContext context) {
+
+        final Map<String, Object> values = new HashMap<>();
+        context.methods().forEach(m -> {
+            if(m.parameters().size() == 0 && !m.isStatic() && !NOT_VALUES.contains(m.name())) {
+                values.put(m.name(), m.method().getDefaultValue());
+            }
+        });
+        return values;
+    }
+
+    public A annotation() {
+
+        return annotation.get();
+    }
+
+    public <T> T value() {
+
+        return value(VALUE);
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T value(final String name) {
+
+        return (T)values.get().get(name);
+    }
+
+    public Optional<TypeContext> valueType() {
+
+        return valueType(VALUE);
+    }
+
+    public Optional<TypeContext> valueType(final String name) {
+
+        return type().method(name).map(HasType::type);
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> Optional<T> nonDefaultValue(final String name) {
+
+        final Map<String, Object> values = values();
+        final Map<String, Object> defaults = defaultValues();
+        if(values.containsKey(name)) {
+            final T value = (T)values.get(name);
+            final Object def = defaults.get(name);
+            if(!Objects.deepEquals(value, def)) {
+                return Optional.of(value);
+            }
+        }
+        return Optional.empty();
     }
 
     public Map<String, Object> values() {
@@ -100,7 +168,7 @@ public class AnnotationContext<A extends Annotation> implements HasType {
     @SuppressWarnings("unchecked")
     public <V> Class<V> erasedType() {
 
-        return (Class<V>)annotation.annotationType();
+        return (Class<V>)annotationType;
     }
 
     @Override
@@ -114,5 +182,17 @@ public class AnnotationContext<A extends Annotation> implements HasType {
         return Arrays.stream(element.getAnnotations())
                 .map(AnnotationContext::new)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<MethodContext> declaredMethods() {
+
+        return type().declaredMethods();
+    }
+
+    @Override
+    public List<MethodContext> methods() {
+
+        return type().methods();
     }
 }

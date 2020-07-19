@@ -52,6 +52,8 @@ public class Reserved {
 
     public static final Name THIS_NAME = Name.of(THIS);
 
+    public static final Name VALUE_NAME = Name.of(VALUE);
+
     public static boolean isReserved(final String name) {
 
         if(name.startsWith(PREFIX) || (name.indexOf('\0') != -1)) {

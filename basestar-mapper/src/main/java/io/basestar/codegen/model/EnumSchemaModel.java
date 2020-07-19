@@ -46,7 +46,7 @@ public class EnumSchemaModel extends SchemaModel {
     public List<AnnotationModel<?>> getAnnotations() {
 
         return ImmutableList.of(
-                new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.EnumSchema.Declaration.from(schema))
+                new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.EnumSchema.Declaration.annotation(schema))
         );
     }
 }
