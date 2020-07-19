@@ -22,6 +22,7 @@ package io.basestar.codegen.model;
 
 import com.google.common.collect.ImmutableList;
 import io.basestar.codegen.CodegenSettings;
+import io.basestar.mapper.annotation.Description;
 import io.basestar.schema.StructSchema;
 
 import java.util.List;
@@ -40,10 +41,13 @@ public class StructSchemaModel extends InstanceSchemaModel {
     @Override
     public List<AnnotationModel<?>> getAnnotations() {
 
-        return ImmutableList.of(
-                new AnnotationModel<>(getSettings(), VALID),
-                new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.StructSchema.Declaration.annotation(schema))
-        );
+        final ImmutableList.Builder<AnnotationModel<?>> annotations = ImmutableList.builder();
+        annotations.add(new AnnotationModel<>(getSettings(), VALID));
+        annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.StructSchema.Declaration.annotation(schema)));
+        if(schema.getDescription() != null) {
+            annotations.add(new AnnotationModel<>(getSettings(), Description.Modifier.annotation(schema.getDescription())));
+        }
+        return annotations.build();
     }
 
     @Override

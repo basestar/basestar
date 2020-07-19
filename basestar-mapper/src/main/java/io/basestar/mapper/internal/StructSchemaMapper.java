@@ -21,20 +21,34 @@ package io.basestar.mapper.internal;
  */
 
 import io.basestar.mapper.MappingContext;
+import io.basestar.mapper.SchemaMapper;
 import io.basestar.schema.StructSchema;
 import io.basestar.type.TypeContext;
 import io.basestar.util.Name;
+
+import java.util.Map;
 
 public class StructSchemaMapper<T> extends InstanceSchemaMapper<T, StructSchema.Builder> {
 
     public StructSchemaMapper(final MappingContext context, final Name name, final TypeContext type) {
 
-        super(context, name, type, StructSchema.Builder.class);
+        super(StructSchema.Builder.class, context, name, type);
+    }
+
+    public StructSchemaMapper(final StructSchemaMapper<T> copy, final String desscription) {
+
+        super(copy, desscription);
     }
 
     @Override
     public StructSchema.Builder schema() {
 
         return addMembers(StructSchema.builder());
+    }
+
+    @Override
+    public SchemaMapper<T, Map<String, Object>> withDescription(final String description) {
+
+        return new StructSchemaMapper<>(this, description);
     }
 }

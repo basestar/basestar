@@ -21,6 +21,7 @@ package io.basestar.codegen.model;
  */
 
 import io.basestar.codegen.CodegenSettings;
+import io.basestar.mapper.annotation.Description;
 import io.basestar.schema.Link;
 
 import java.util.ArrayList;
@@ -50,6 +51,9 @@ public class LinkModel extends MemberModel {
         final List<AnnotationModel<?>> annotations = new ArrayList<>();
         annotations.add(new AnnotationModel<>(getSettings(), VALID));
         annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.Link.Declaration.annotation(link)));
+        if(link.getDescription() != null) {
+            annotations.add(new AnnotationModel<>(getSettings(), Description.Modifier.annotation(link.getDescription())));
+        }
         return annotations;
     }
 

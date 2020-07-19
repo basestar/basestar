@@ -40,26 +40,36 @@ public class IdMapper implements MemberMapper<ObjectSchema.Builder> {
 
     private final TypeMapper type;
 
+    private final String description;
+
     private final Expression expression;
 
     public IdMapper(final MappingContext context, final PropertyContext property) {
 
         this.property = property;
         this.type = TypeMapper.from(context, property.type());
+        this.description = null;
         this.expression = null;
     }
 
-    public IdMapper(final IdMapper copy, final Expression expression) {
+    public IdMapper(final IdMapper copy, final String description, final Expression expression) {
 
         this.property = copy.property;
         this.type = copy.type;
+        this.description = description;
         this.expression = expression;
     }
 
     @Override
     public IdMapper withExpression(final Expression expression) {
 
-        return new IdMapper(this, expression);
+        return new IdMapper(this, description, expression);
+    }
+
+    @Override
+    public IdMapper withDescription(final String description) {
+
+        return new IdMapper(this, description, expression);
     }
 
     @Override

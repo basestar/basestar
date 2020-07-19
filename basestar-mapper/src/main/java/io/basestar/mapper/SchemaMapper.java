@@ -41,4 +41,6 @@ public interface SchemaMapper<T, O> {
     O unmarshall(T value);
 
     Set<Class<?>> dependencies();
+
+    SchemaMapper<T, O> withDescription(String description);
 }

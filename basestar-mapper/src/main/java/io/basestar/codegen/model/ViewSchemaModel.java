@@ -22,6 +22,7 @@ package io.basestar.codegen.model;
 
 import com.google.common.collect.ImmutableList;
 import io.basestar.codegen.CodegenSettings;
+import io.basestar.mapper.annotation.Description;
 import io.basestar.mapper.annotation.Group;
 import io.basestar.mapper.annotation.Where;
 import io.basestar.schema.ViewSchema;
@@ -46,13 +47,15 @@ public class ViewSchemaModel extends InstanceSchemaModel {
 
         final ImmutableList.Builder<AnnotationModel<?>> annotations = ImmutableList.builder();
         annotations.add(new AnnotationModel<>(getSettings(), VALID));
-
         annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.ViewSchema.Declaration.annotation(schema)));
         if(!schema.getGroup().isEmpty()) {
             annotations.add(new AnnotationModel<>(getSettings(), Group.Modifier.annotation(new ArrayList<>(schema.getGroup().keySet()))));
         }
         if(schema.getWhere() != null) {
             annotations.add(new AnnotationModel<>(getSettings(), Where.Modifier.annotation(schema.getWhere())));
+        }
+        if(schema.getDescription() != null) {
+            annotations.add(new AnnotationModel<>(getSettings(), Description.Modifier.annotation(schema.getDescription())));
         }
         return annotations.build();
     }

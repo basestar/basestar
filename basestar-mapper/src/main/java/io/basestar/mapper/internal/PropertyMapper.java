@@ -46,6 +46,8 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
 
     private final List<Constraint> constraints;
 
+    private final String description;
+
     private final Expression expression;
 
     private final boolean required;
@@ -58,17 +60,19 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
         this.property = property;
         this.type = TypeMapper.from(context, property.type());
         this.constraints = constraints(property);
+        this.description = null;
         this.expression = null;
         this.required = required(property);
         this.immutable = false;
     }
 
-    private PropertyMapper(final PropertyMapper copy, final Expression expression, final boolean required, final boolean immutable) {
+    private PropertyMapper(final PropertyMapper copy, final String description, final Expression expression, final boolean required, final boolean immutable) {
 
         this.name = copy.name;
         this.property = copy.property;
         this.type = copy.type;
         this.constraints = copy.constraints;
+        this.description = description;
         this.expression = expression;
         this.required = required;
         this.immutable = immutable;
@@ -77,17 +81,23 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
     @Override
     public PropertyMapper withExpression(final Expression expression) {
 
-        return new PropertyMapper(this, expression, required, immutable);
+        return new PropertyMapper(this, description, expression, required, immutable);
+    }
+
+    @Override
+    public PropertyMapper withDescription(final String description) {
+
+        return new PropertyMapper(this, description, expression, required, immutable);
     }
 
     public PropertyMapper withRequired(final boolean required) {
 
-        return new PropertyMapper(this, expression, required, immutable);
+        return new PropertyMapper(this, description, expression, required, immutable);
     }
 
     public PropertyMapper withImmutable(final boolean immutable) {
 
-        return new PropertyMapper(this, expression, required, immutable);
+        return new PropertyMapper(this, description, expression, required, immutable);
     }
 
     private boolean required(final PropertyContext property) {
@@ -129,6 +139,7 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
                 .setExpression(expression)
                 .setImmutable(immutable ? true : null)
                 .setRequired(required ? true : null)
+                .setDescription(description)
                 .setType(this.type.use())
                 .setConstraints(constraints.isEmpty() ? null : constraints));
     }

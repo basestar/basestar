@@ -12,10 +12,7 @@ import io.basestar.util.Nullsafe;
 import lombok.Data;
 
 import java.lang.annotation.Annotation;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -124,6 +121,24 @@ public class PatternValidation implements Validation {
         public Object shorthand() {
 
             return regex.flags() == 0 ? getRegex() : this;
+        }
+
+        // Pattern does not implement equals/hash code properly
+
+        @Override
+        public boolean equals(final Object o) {
+
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            final Validator validator = (Validator) o;
+            return Objects.equals(regex.toString(), validator.regex.toString())
+                    && Objects.equals(regex.flags(), validator.regex.flags());
+        }
+
+        @Override
+        public int hashCode() {
+
+            return Objects.hash(regex.toString(), regex.flags());
         }
     }
 }

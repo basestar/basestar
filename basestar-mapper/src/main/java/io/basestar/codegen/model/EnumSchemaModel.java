@@ -20,10 +20,11 @@ package io.basestar.codegen.model;
  * #L%
  */
 
-import com.google.common.collect.ImmutableList;
 import io.basestar.codegen.CodegenSettings;
+import io.basestar.mapper.annotation.Description;
 import io.basestar.schema.EnumSchema;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @SuppressWarnings("unused")
@@ -45,8 +46,11 @@ public class EnumSchemaModel extends SchemaModel {
     @Override
     public List<AnnotationModel<?>> getAnnotations() {
 
-        return ImmutableList.of(
-                new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.EnumSchema.Declaration.annotation(schema))
-        );
+        final List<AnnotationModel<?>> annotations = new ArrayList<>();
+        annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.EnumSchema.Declaration.annotation(schema)));
+        if(schema.getDescription() != null) {
+            annotations.add(new AnnotationModel<>(getSettings(), Description.Modifier.annotation(schema.getDescription())));
+        }
+        return annotations;
     }
 }

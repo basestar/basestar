@@ -36,7 +36,7 @@ public class ObjectSchemaMapper<T> extends InstanceSchemaMapper<T, ObjectSchema.
 
     public ObjectSchemaMapper(final MappingContext context, final Name name, final TypeContext type) {
 
-        super(context, name, type, ObjectSchema.Builder.class);
+        super(ObjectSchema.Builder.class, context, name, type);
         this.indexes = ImmutableMap.of();
         this.permissions = ImmutableMap.of();
 
@@ -49,21 +49,27 @@ public class ObjectSchemaMapper<T> extends InstanceSchemaMapper<T, ObjectSchema.
 //        }
     }
 
-    private ObjectSchemaMapper(final ObjectSchemaMapper<T> copy, final Map<String, Index.Descriptor> indexes, final Map<String, Permission.Descriptor> permissions) {
+    private ObjectSchemaMapper(final ObjectSchemaMapper<T> copy, final String description, final Map<String, Index.Descriptor> indexes, final Map<String, Permission.Descriptor> permissions) {
 
-        super(copy);
+        super(copy, description);
         this.indexes = indexes;
         this.permissions = permissions;
     }
 
     public ObjectSchemaMapper<T> withIndexes(final Map<String, Index.Descriptor> indexes) {
 
-        return new ObjectSchemaMapper<>(this, ImmutableMap.<String, Index.Descriptor>builder().putAll(this.indexes).putAll(indexes).build(), permissions);
+        return new ObjectSchemaMapper<>(this, description, ImmutableMap.<String, Index.Descriptor>builder().putAll(this.indexes).putAll(indexes).build(), permissions);
     }
 
     public ObjectSchemaMapper<T> withPermissions(final Map<String, Permission.Descriptor> permissions) {
 
-        return new ObjectSchemaMapper<>(this, indexes, ImmutableMap.<String, Permission.Descriptor>builder().putAll(this.permissions).putAll(permissions).build());
+        return new ObjectSchemaMapper<>(this, description, indexes, ImmutableMap.<String, Permission.Descriptor>builder().putAll(this.permissions).putAll(permissions).build());
+    }
+
+    @Override
+    public ObjectSchemaMapper<T> withDescription(final String description) {
+
+        return new ObjectSchemaMapper<>(this, description, indexes, permissions);
     }
 
     @Override

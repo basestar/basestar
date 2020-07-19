@@ -71,7 +71,7 @@ public interface HasAnnotations {
                 .collect(Collectors.toList());
     }
 
-    // Get all annotations, included repeatable annotations
+    // Get all annotations, including repeated annotations
 
     default List<AnnotationContext<?>> allAnnotations() {
 
@@ -81,7 +81,7 @@ public interface HasAnnotations {
                         final TypeContext componentType = valueType.arrayComponentType();
                         final AnnotationContext<Repeatable> rep = componentType.annotation(Repeatable.class);
                         if (rep != null && rep.value().equals(annotation.annotationType())) {
-                            final Annotation[] repeated = (Annotation[])annotation.value();
+                            final Annotation[] repeated = annotation.value();
                             return Arrays.stream(repeated).map(AnnotationContext::new);
                         }
                     }

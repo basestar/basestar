@@ -1,7 +1,9 @@
 Test:
+  description: A schema description
   type: object
   properties:
     a:
+      description: A property description
       type: a.Test
     b:
       type: b.Test
@@ -22,6 +24,7 @@ Test:
       type: datetime
   links:
     multi:
+      description: A link description
       schema: a.Test
       expression: true
     single:
@@ -58,6 +61,7 @@ b.Test:
 
 c.Test:
   type: view
+  description: A view description
   from:
     schema: a.Test
   select:

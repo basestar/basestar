@@ -45,7 +45,7 @@ public class ViewSchemaMapper<T> extends InstanceSchemaMapper<T, ViewSchema.Buil
 
     public ViewSchemaMapper(final MappingContext context, final Name name, final TypeContext type, final Name fromSchema, final Set<Name> fromExpand, final boolean materialized) {
 
-        super(context, name, type, ViewSchema.Builder.class);
+        super(ViewSchema.Builder.class, context, name, type);
         this.fromSchema = fromSchema;
         this.fromExpand = fromExpand;
         this.materialized = materialized;
@@ -53,9 +53,9 @@ public class ViewSchemaMapper<T> extends InstanceSchemaMapper<T, ViewSchema.Buil
         this.where = null;
     }
 
-    private ViewSchemaMapper(final ViewSchemaMapper<T> copy, final List<String> group, final Expression where) {
+    private ViewSchemaMapper(final ViewSchemaMapper<T> copy, final String description, final List<String> group, final Expression where) {
 
-        super(copy);
+        super(copy, description);
         this.fromSchema = copy.fromSchema;
         this.fromExpand = copy.fromExpand;
         this.materialized = copy.materialized;
@@ -65,12 +65,18 @@ public class ViewSchemaMapper<T> extends InstanceSchemaMapper<T, ViewSchema.Buil
 
     public ViewSchemaMapper<T> withWhere(final Expression where) {
 
-        return new ViewSchemaMapper<>(this, group, where);
+        return new ViewSchemaMapper<>(this, null, group, where);
     }
 
     public ViewSchemaMapper<T> withGroup(final List<String> group) {
 
-        return new ViewSchemaMapper<>(this, group, where);
+        return new ViewSchemaMapper<>(this, null, group, where);
+    }
+
+    @Override
+    public ViewSchemaMapper<T> withDescription(final String description) {
+
+        return new ViewSchemaMapper<>(this, description, group, where);
     }
 
     @Override

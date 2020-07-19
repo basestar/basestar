@@ -47,20 +47,16 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
 
     protected final TypeContext type;
 
+    protected final String description;
+
     protected final List<MemberMapper<B>> members;
 
-    protected InstanceSchemaMapper(final InstanceSchemaMapper<T, B> copy) {
-
-        this.name = copy.name;
-        this.type = copy.type;
-        this.members = copy.members;
-    }
-
     @SuppressWarnings("unchecked")
-    protected InstanceSchemaMapper(final MappingContext context, final Name name, final TypeContext type, final Class<B> builderType) {
+    protected InstanceSchemaMapper(final Class<B> builderType, final MappingContext context, final Name name, final TypeContext type) {
 
         this.name = name;
         this.type = type;
+        this.description = null;
 
         final List<MemberMapper<B>> members = new ArrayList<>();
         type.properties().forEach(prop -> {
@@ -101,6 +97,14 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
         this.members = members;
     }
 
+    protected InstanceSchemaMapper(final InstanceSchemaMapper<T, B> copy, final String description) {
+
+        this.name = copy.name;
+        this.type = copy.type;
+        this.members = copy.members;
+        this.description = description;
+    }
+
     private MemberMapper<B> applyModifiers(final PropertyContext prop, final MemberMapper<B> input) throws IllegalAccessException, InstantiationException, InvocationTargetException {
 
         final List<AnnotationContext<?>> modAnnotations = prop.annotations().stream()
@@ -131,6 +135,7 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
     protected B addMembers(final B builder) {
 
         members.forEach(m -> m.addToSchema(this, builder));
+        builder.setDescription(description);
         return builder;
     }
 

@@ -21,13 +21,15 @@ package io.basestar.codegen.model;
  */
 
 import io.basestar.codegen.CodegenSettings;
+import io.basestar.mapper.annotation.Description;
 import io.basestar.mapper.annotation.Expression;
 import io.basestar.mapper.annotation.Immutable;
-import io.basestar.mapper.annotation.Required;
 import io.basestar.schema.Property;
 
 import java.util.ArrayList;
 import java.util.List;
+
+//import io.basestar.mapper.annotation.Required;
 
 @SuppressWarnings("unused")
 public class PropertyModel extends MemberModel {
@@ -57,12 +59,15 @@ public class PropertyModel extends MemberModel {
         }
         if(property.isRequired()) {
             annotations.add(new AnnotationModel<>(getSettings(), NOT_NULL));
-            annotations.add(new AnnotationModel<>(getSettings(), Required.Modifier.annotation(true)));
+//            annotations.add(new AnnotationModel<>(getSettings(), Required.Modifier.annotation(true)));
         }
         if(property.isImmutable()) {
             annotations.add(new AnnotationModel<>(getSettings(), Immutable.Modifier.annotation(true)));
         }
         property.getConstraints().forEach(constraint -> annotations.add(new AnnotationModel<>(getSettings(), constraint.toJsr380(property.getType()))));
+        if(property.getDescription() != null) {
+            annotations.add(new AnnotationModel<>(getSettings(), Description.Modifier.annotation(property.getDescription())));
+        }
         return annotations;
     }
 

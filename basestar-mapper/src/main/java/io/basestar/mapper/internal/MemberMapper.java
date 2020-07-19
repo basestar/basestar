@@ -44,6 +44,11 @@ public interface MemberMapper<B extends InstanceSchema.Builder> {
         throw new UnsupportedOperationException("Cannot apply expression to " + memberType());
     }
 
+    default MemberMapper<B> withDescription(final String description) {
+
+        throw new UnsupportedOperationException("Cannot apply description to " + memberType());
+    }
+
     default Set<Class<?>> dependencies() {
 
         return getType().dependencies();

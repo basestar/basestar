@@ -47,6 +47,8 @@ public class LinkMapper implements MemberMapper<InstanceSchema.Builder> {
 
     private final List<Sort> sort;
 
+    private final String description;
+
     public LinkMapper(final MappingContext context, final String name, final PropertyContext property, final Expression expression, final List<Sort> sort) {
 
         this.name = name;
@@ -68,6 +70,25 @@ public class LinkMapper implements MemberMapper<InstanceSchema.Builder> {
         }
         this.expression = expression;
         this.sort = sort;
+        this.description = null;
+    }
+
+    public LinkMapper(final LinkMapper copy, final String description) {
+
+        this.name = copy.name;
+        this.property = copy.property;
+        this.type = copy.type;
+        this.itemType = copy.itemType;
+        this.single = copy.single;
+        this.expression = copy.expression;
+        this.sort = copy.sort;
+        this.description = description;
+    }
+
+    @Override
+    public LinkMapper withDescription(final String description) {
+
+        return new LinkMapper(this, description);
     }
 
     @Override
@@ -89,7 +110,8 @@ public class LinkMapper implements MemberMapper<InstanceSchema.Builder> {
                 .setExpression(expression)
                 .setSingle(single ? true : null)
                 .setSchema(itemType.getQualifiedName())
-                .setSort(sort == null ? null : (sort.isEmpty() ? null : sort)));
+                .setSort(sort == null ? null : (sort.isEmpty() ? null : sort))
+                .setDescription(description));
     }
 
     @Override

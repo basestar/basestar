@@ -21,6 +21,7 @@ package io.basestar.codegen.model;
  */
 
 import io.basestar.codegen.CodegenSettings;
+import io.basestar.mapper.annotation.Description;
 import io.basestar.schema.Index;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.ObjectSchema;
@@ -49,6 +50,9 @@ public class ObjectSchemaModel extends InstanceSchemaModel {
         annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.ObjectSchema.Declaration.annotation(schema)));
         for(final Index index : schema.getIndexes().values()) {
             annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.Index.Modifier.annotation(index)));
+        }
+        if(schema.getDescription() != null) {
+            annotations.add(new AnnotationModel<>(getSettings(), Description.Modifier.annotation(schema.getDescription())));
         }
         return annotations;
     }
