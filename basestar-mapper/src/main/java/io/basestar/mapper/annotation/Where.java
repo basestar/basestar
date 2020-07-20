@@ -2,6 +2,7 @@ package io.basestar.mapper.annotation;
 
 import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Expression;
+import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.ViewSchemaMapper;
 import io.basestar.mapper.internal.annotation.SchemaModifier;
 import io.basestar.type.AnnotationContext;
@@ -23,7 +24,7 @@ public @interface Where {
         private final Where annotation;
 
         @Override
-        public ViewSchemaMapper<?> modify(final ViewSchemaMapper<?> mapper) {
+        public ViewSchemaMapper<?> modify(final MappingContext context, final ViewSchemaMapper<?> mapper) {
 
             final Expression where = Expression.parse(annotation.value());
             return mapper.withWhere(where);

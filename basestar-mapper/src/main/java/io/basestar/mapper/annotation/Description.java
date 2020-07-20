@@ -1,6 +1,7 @@
 package io.basestar.mapper.annotation;
 
 import com.google.common.collect.ImmutableMap;
+import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.SchemaMapper;
 import io.basestar.mapper.internal.MemberMapper;
 import io.basestar.mapper.internal.annotation.MemberModifier;
@@ -25,13 +26,13 @@ public @interface Description {
         private final Description annotation;
 
         @Override
-        public SchemaMapper<?, ?> modify(final SchemaMapper<?, ?> mapper) {
+        public SchemaMapper<?, ?> modify(final MappingContext context, final SchemaMapper<?, ?> mapper) {
 
             return mapper.withDescription(annotation.value());
         }
 
         @Override
-        public MemberMapper<?> modify(final MemberMapper<?> mapper) {
+        public MemberMapper<?> modify(final MappingContext context, final MemberMapper<?> mapper) {
 
             return mapper.withDescription(annotation.value());
         }

@@ -1,6 +1,7 @@
 package io.basestar.mapper.annotation;
 
 import com.google.common.collect.ImmutableMap;
+import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.MemberMapper;
 import io.basestar.mapper.internal.annotation.MemberModifier;
 import io.basestar.type.AnnotationContext;
@@ -22,7 +23,7 @@ public @interface Expression {
         private final Expression annotation;
 
         @Override
-        public MemberMapper<?> modify(final MemberMapper<?> mapper) {
+        public MemberMapper<?> modify(final MappingContext context, final MemberMapper<?> mapper) {
 
             final io.basestar.expression.Expression where = io.basestar.expression.Expression.parse(annotation.value());
             return mapper.withExpression(where);

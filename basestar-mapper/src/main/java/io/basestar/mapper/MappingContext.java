@@ -131,7 +131,7 @@ public class MappingContext {
                 final Class<?> modMapperType = modType.find(SchemaModifier.Modifier.class).typeParameters().get(0).type().erasedType();
                 if(modMapperType.isAssignableFrom(output.getClass())) {
                     final SchemaModifier.Modifier<SchemaMapper<T, O>> mod = modType.declaredConstructors().get(0).newInstance(annotation.annotation());
-                    output = mod.modify(output);
+                    output = mod.modify(this, output);
                 } else {
                     throw new IllegalStateException("Modifier " + modType.erasedType() + " not supported on " + output.getClass());
                 }

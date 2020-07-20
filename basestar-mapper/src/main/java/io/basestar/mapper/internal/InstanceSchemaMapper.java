@@ -79,7 +79,7 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
                     final TypeContext mapperType = TypeContext.from(member.getClass());
                     final Class<?> memberBuilderType = mapperType.find(MemberMapper.class).typeParameters().get(0).type().erasedType();
                     if(memberBuilderType.isAssignableFrom(builderType)) {
-                        members.add(applyModifiers(prop, (MemberMapper<B>)member));
+                        members.add(applyModifiers(context, prop, (MemberMapper<B>)member));
                     } else {
                         throw new IllegalStateException("Member " + member.getClass() + " not supported on " + this.getClass());
                     }
@@ -105,7 +105,7 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
         this.description = description;
     }
 
-    private MemberMapper<B> applyModifiers(final PropertyContext prop, final MemberMapper<B> input) throws IllegalAccessException, InstantiationException, InvocationTargetException {
+    private MemberMapper<B> applyModifiers(final MappingContext context, final PropertyContext prop, final MemberMapper<B> input) throws IllegalAccessException, InstantiationException, InvocationTargetException {
 
         final List<AnnotationContext<?>> modAnnotations = prop.annotations().stream()
                 .filter(a -> a.type().annotations().stream()
@@ -120,7 +120,7 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
             final Class<?> modMapperType = modType.find(MemberModifier.Modifier.class).typeParameters().get(0).type().erasedType();
             if(modMapperType.isAssignableFrom(output.getClass())) {
                 final MemberModifier.Modifier<MemberMapper<B>> mod = modType.declaredConstructors().get(0).newInstance(annotation.annotation());
-                output = mod.modify(output);
+                output = mod.modify(context, output);
             } else {
                 throw new IllegalStateException("Modifier " + modType.erasedType() + " not supported on " + output.getClass());
             }

@@ -1,6 +1,7 @@
 package io.basestar.mapper.annotation;
 
 import com.google.common.collect.ImmutableMap;
+import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.PropertyMapper;
 import io.basestar.mapper.internal.annotation.MemberModifier;
 import io.basestar.type.AnnotationContext;
@@ -22,7 +23,7 @@ public @interface Immutable {
         private final Immutable annotation;
 
         @Override
-        public PropertyMapper modify(final PropertyMapper mapper) {
+        public PropertyMapper modify(final MappingContext context, final PropertyMapper mapper) {
 
             return mapper.withImmutable(annotation.value());
         }

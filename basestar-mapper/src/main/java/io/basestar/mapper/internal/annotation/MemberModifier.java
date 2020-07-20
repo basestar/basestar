@@ -1,5 +1,6 @@
 package io.basestar.mapper.internal.annotation;
 
+import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.MemberMapper;
 
 import java.lang.annotation.*;
@@ -13,6 +14,6 @@ public @interface MemberModifier {
 
     interface Modifier<M extends MemberMapper<?>> {
 
-        M modify(M mapper);
+        M modify(MappingContext context, M mapper);
     }
 }

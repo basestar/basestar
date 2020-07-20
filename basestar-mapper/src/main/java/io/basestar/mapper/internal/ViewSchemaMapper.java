@@ -32,50 +32,56 @@ import java.util.Set;
 
 public class ViewSchemaMapper<T> extends InstanceSchemaMapper<T, ViewSchema.Builder> {
 
+    private final boolean materialized;
+
     private final Name fromSchema;
 
     private final Set<Name> fromExpand;
-
-    private final boolean materialized;
 
     private final List<String> group;
 
     private final Expression where;
 
-    public ViewSchemaMapper(final MappingContext context, final Name name, final TypeContext type, final Name fromSchema, final Set<Name> fromExpand, final boolean materialized) {
+    public ViewSchemaMapper(final MappingContext context, final Name name, final TypeContext type, final boolean materialized) {
 
         super(ViewSchema.Builder.class, context, name, type);
-        this.fromSchema = fromSchema;
-        this.fromExpand = fromExpand;
         this.materialized = materialized;
+        this.fromSchema = null;
+        this.fromExpand = null;
         this.group = ImmutableList.of();
         this.where = null;
     }
 
-    private ViewSchemaMapper(final ViewSchemaMapper<T> copy, final String description, final List<String> group, final Expression where) {
+    private ViewSchemaMapper(final ViewSchemaMapper<T> copy, final String description, final Name fromSchema,
+                             final Set<Name> fromExpand, final List<String> group, final Expression where) {
 
         super(copy, description);
-        this.fromSchema = copy.fromSchema;
-        this.fromExpand = copy.fromExpand;
         this.materialized = copy.materialized;
+        this.fromSchema = fromSchema;
+        this.fromExpand = fromExpand;
         this.group = group;
         this.where = where;
     }
 
+    public ViewSchemaMapper<T> withFrom(final Name fromSchema, final Set<Name> fromExpand) {
+
+        return new ViewSchemaMapper<>(this, description, fromSchema, fromExpand, group, where);
+    }
+
     public ViewSchemaMapper<T> withWhere(final Expression where) {
 
-        return new ViewSchemaMapper<>(this, description, group, where);
+        return new ViewSchemaMapper<>(this, description, fromSchema, fromExpand, group, where);
     }
 
     public ViewSchemaMapper<T> withGroup(final List<String> group) {
 
-        return new ViewSchemaMapper<>(this, description, group, where);
+        return new ViewSchemaMapper<>(this, description, fromSchema, fromExpand, group, where);
     }
 
     @Override
     public ViewSchemaMapper<T> withDescription(final String description) {
 
-        return new ViewSchemaMapper<>(this, description, group, where);
+        return new ViewSchemaMapper<>(this, description, fromSchema, fromExpand, group, where);
     }
 
     @Override

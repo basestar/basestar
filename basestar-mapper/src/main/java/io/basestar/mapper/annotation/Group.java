@@ -1,6 +1,7 @@
 package io.basestar.mapper.annotation;
 
 import com.google.common.collect.ImmutableMap;
+import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.AnnotationUtils;
 import io.basestar.mapper.internal.ViewSchemaMapper;
 import io.basestar.mapper.internal.annotation.SchemaModifier;
@@ -25,7 +26,7 @@ public @interface Group {
         private final Group annotation;
 
         @Override
-        public ViewSchemaMapper<?> modify(final ViewSchemaMapper<?> mapper) {
+        public ViewSchemaMapper<?> modify(final MappingContext context, final ViewSchemaMapper<?> mapper) {
 
             final List<String> group = Arrays.asList(annotation.value());
             return mapper.withGroup(group);

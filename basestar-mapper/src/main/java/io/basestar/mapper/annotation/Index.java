@@ -22,6 +22,7 @@ package io.basestar.mapper.annotation;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.AnnotationUtils;
 import io.basestar.mapper.internal.ObjectSchemaMapper;
 import io.basestar.mapper.internal.annotation.SchemaModifier;
@@ -72,7 +73,7 @@ public @interface Index {
             private final Multi annotation;
 
             @Override
-            public ObjectSchemaMapper<?> modify(final ObjectSchemaMapper<?> mapper) {
+            public ObjectSchemaMapper<?> modify(final MappingContext context, final ObjectSchemaMapper<?> mapper) {
 
                 return Index.Modifier.modify(mapper, annotation.value());
             }
@@ -94,7 +95,7 @@ public @interface Index {
         private final Index annotation;
 
         @Override
-        public ObjectSchemaMapper<?> modify(final ObjectSchemaMapper<?> mapper) {
+        public ObjectSchemaMapper<?> modify(final MappingContext context, final ObjectSchemaMapper<?> mapper) {
 
            return modify(mapper, annotation);
         }

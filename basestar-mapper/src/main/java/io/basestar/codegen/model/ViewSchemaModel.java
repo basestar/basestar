@@ -47,6 +47,7 @@ public class ViewSchemaModel extends InstanceSchemaModel {
         final ImmutableList.Builder<AnnotationModel<?>> annotations = ImmutableList.builder();
         annotations.add(new AnnotationModel<>(getSettings(), VALID));
         annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.ViewSchema.Declaration.annotation(schema)));
+        annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.From.Modifier.annotation(schema.getFrom())));
         if(!schema.getGroup().isEmpty()) {
             annotations.add(new AnnotationModel<>(getSettings(), Group.Modifier.annotation(schema.getGroup())));
         }

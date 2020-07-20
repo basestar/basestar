@@ -88,7 +88,8 @@ public class TestMappingContext {
         }
     }
 
-    @ViewSchema(from = @ViewSchema.From(Post.class))
+    @ViewSchema
+    @From(Post.class)
     @Where("x == 1")
     public static class PostView {
 
