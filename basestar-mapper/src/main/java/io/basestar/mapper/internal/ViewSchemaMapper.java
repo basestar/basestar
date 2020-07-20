@@ -23,7 +23,6 @@ package io.basestar.mapper.internal;
 import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
-import io.basestar.schema.Property;
 import io.basestar.schema.ViewSchema;
 import io.basestar.type.TypeContext;
 import io.basestar.util.Name;
@@ -65,12 +64,12 @@ public class ViewSchemaMapper<T> extends InstanceSchemaMapper<T, ViewSchema.Buil
 
     public ViewSchemaMapper<T> withWhere(final Expression where) {
 
-        return new ViewSchemaMapper<>(this, null, group, where);
+        return new ViewSchemaMapper<>(this, description, group, where);
     }
 
     public ViewSchemaMapper<T> withGroup(final List<String> group) {
 
-        return new ViewSchemaMapper<>(this, null, group, where);
+        return new ViewSchemaMapper<>(this, description, group, where);
     }
 
     @Override
@@ -88,15 +87,16 @@ public class ViewSchemaMapper<T> extends InstanceSchemaMapper<T, ViewSchema.Buil
 
         return addMembers(ViewSchema.builder()
                 .setFrom(from)
+                .setGroup(group)
                 .setWhere(where));
     }
 
-    protected void addProperty(final ViewSchema.Builder builder, final String name, final Property.Builder property) {
-
-        if(group.contains(name)) {
-            builder.setGroup(name, property);
-        } else {
-            builder.setSelect(name, property);
-        }
-    }
+//    protected void addProperty(final ViewSchema.Builder builder, final String name, final Property.Builder property) {
+//
+//        if(group.contains(name)) {
+//            builder.setGroup(name, property);
+//        } else {
+//            builder.setSelect(name, property);
+//        }
+//    }
 }

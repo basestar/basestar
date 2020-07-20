@@ -8,5 +8,5 @@ Base:
 View:
   type: view
   from: Base
-  select:
+  properties:
     email: email

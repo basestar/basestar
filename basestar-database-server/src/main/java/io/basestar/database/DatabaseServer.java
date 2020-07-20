@@ -555,7 +555,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
             final AggregateExtractingVisitor visitor = new AggregateExtractingVisitor();
             final Map<String, Expression> columns = new HashMap<>();
-            viewSchema.getSelect().forEach((name, prop) -> {
+            viewSchema.getSelectProperties().forEach((name, prop) -> {
                 final Expression expr = Nullsafe.require(prop.getExpression()).bind(context);
                 columns.put(name, visitor.visit(expr));
             });
@@ -565,7 +565,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             final ObjectSchema objectSchema = (ObjectSchema) viewSchema.getFrom().getSchema();
 
             final Map<String, Expression> group = new HashMap<>();
-            viewSchema.getGroup().forEach((name, prop) -> {
+            viewSchema.getGroupProperties().forEach((name, prop) -> {
                 final Expression expr = Nullsafe.require(prop.getExpression()).bind(context);
                 group.put(name, expr);
             });

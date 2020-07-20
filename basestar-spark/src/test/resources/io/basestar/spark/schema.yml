@@ -41,12 +41,12 @@ E:
 
 AggView:
   type: view
-  select:
+  properties:
     agg:
       type: string
       expression: sum(value) + 2
-  from: B
-  group:
     key:
       type: string
       expression: key.id
+  from: B
+  group: key

@@ -111,14 +111,15 @@ TeamMemberStats:
   type: view
 
   from: TeamMember
-  select:
+  properties:
     count:
       type: integer
       expression: count()
-  group:
     team:
       type: string
       expression: team.id
+  group:
+    - team
   where: accepted
 
   permissions:

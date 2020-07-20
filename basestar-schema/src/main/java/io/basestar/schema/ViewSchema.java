@@ -24,7 +24,10 @@ import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.google.common.collect.*;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
@@ -138,10 +141,7 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
     private final String description;
 
     @Nonnull
-    private final SortedMap<String, Property> select;
-
-    @Nonnull
-    private final SortedMap<String, Property> group;
+    private final List<String> group;
 
     @Nullable
     private final Expression where;
@@ -182,21 +182,13 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
 
         List<Sort> getSort();
 
-        Map<String, Property.Descriptor> getSelect();
-
-        Map<String, Property.Descriptor> getGroup();
+        List<String> getGroup();
 
         Map<String, Link.Descriptor> getLinks();
 
         Expression getWhere();
 
         Map<String, Permission.Descriptor> getPermissions();
-
-        @Override
-        default Map<String, Property.Descriptor> getProperties() {
-
-            return null;
-        }
 
         @Override
         default ViewSchema build(final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
@@ -236,11 +228,12 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
 
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
-        private Map<String, Property.Descriptor> select;
+        private Map<String, Property.Descriptor> properties;
 
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
-        private Map<String, Property.Descriptor> group;
+        @JsonDeserialize(using = AbbrevListDeserializer.class)
+        private List<String> group;
 
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
@@ -265,15 +258,9 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
             return TYPE;
         }
 
-        public Builder setSelect(final String name, final Property.Builder v) {
+        public Builder addGroup(final String name) {
 
-            select = Nullsafe.immutableCopyPut(select, name, v);
-            return this;
-        }
-
-        public Builder setGroup(final String name, final Property.Builder v) {
-
-            group = Nullsafe.immutableCopyPut(group, name, v);
+            group = Nullsafe.immutableCopyAdd(group, name);
             return this;
         }
 
@@ -290,18 +277,11 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
             return this;
         }
 
-        // FIXME:
         @Override
         public Builder setProperty(final String name, final Property.Descriptor v) {
 
-            throw new UnsupportedOperationException();
-        }
-
-        // FIXME:
-        @Override
-        public Builder setProperties(final Map<String, Property.Descriptor> vs) {
-
-            throw new UnsupportedOperationException();
+            properties = Nullsafe.immutableCopyPut(properties, name, v);
+            return this;
         }
     }
 
@@ -321,17 +301,12 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
         this.from = new From(resolver.requireInstanceSchema(from.getSchema()), Nullsafe.option(from.getExpand()));
         this.sort = Nullsafe.immutableCopy(descriptor.getSort());
         this.description = descriptor.getDescription();
-        this.select = ImmutableSortedMap.copyOf(Nullsafe.option(descriptor.getSelect()).entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> viewPropertyDescriptor(e.getValue(), this.from).build(resolver, qualifiedName.with(e.getKey())))));
-        this.group = ImmutableSortedMap.copyOf(Nullsafe.option(descriptor.getGroup()).entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> viewPropertyDescriptor(e.getValue(), this.from).build(resolver, qualifiedName.with(e.getKey())))));
+        this.group = Nullsafe.immutableCopy(descriptor.getGroup());
         this.where = descriptor.getWhere();
-        this.declaredProperties = ImmutableSortedMap.<String, Property>orderedBy(Ordering.natural())
-                .putAll(select).putAll(group).build();
-        this.declaredLinks = ImmutableSortedMap.copyOf(Nullsafe.option(descriptor.getLinks()).entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, qualifiedName.with(e.getKey())))));
-        this.declaredPermissions = ImmutableSortedMap.copyOf(Nullsafe.option(descriptor.getPermissions()).entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(e.getKey()))));
+        this.declaredProperties = Nullsafe.immutableSortedCopy(descriptor.getProperties(),
+                (k, v) -> viewPropertyDescriptor(v, this.from).build(resolver, qualifiedName.with(k)));
+        this.declaredLinks = Nullsafe.immutableSortedCopy(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
+        this.declaredPermissions = Nullsafe.immutableSortedCopy(descriptor.getPermissions(), (k, v) -> v.build(k));
         this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName.toString());
@@ -372,6 +347,18 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
     public Map<String, Property> getProperties() {
 
         return declaredProperties;
+    }
+
+    public Map<String, Property> getSelectProperties() {
+
+        return declaredProperties.entrySet().stream().filter(e -> !group.contains(e.getKey()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    public Map<String, Property> getGroupProperties() {
+
+        return declaredProperties.entrySet().stream().filter(e -> group.contains(e.getKey()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     @Override
@@ -448,8 +435,7 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
         if(!out.containsKey(qualifiedName)) {
             out.put(qualifiedName, this);
             from.getSchema().collectDependencies(expand, out);
-            select.forEach((k, v) -> v.collectDependencies(expand, out));
-            group.forEach((k, v) -> v.collectDependencies(expand, out));
+            declaredProperties.forEach((k, v) -> v.collectDependencies(expand, out));
         }
     }
 
@@ -550,18 +536,15 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
             }
 
             @Override
-            public Map<String, Property.Descriptor> getSelect() {
+            public List<String> getGroup() {
 
-                return select.entrySet().stream().collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> entry.getValue().descriptor()
-                ));
+                return group;
             }
 
             @Override
-            public Map<String, Property.Descriptor> getGroup() {
+            public Map<String, Property.Descriptor> getProperties() {
 
-                return group.entrySet().stream().collect(Collectors.toMap(
+                return declaredProperties.entrySet().stream().collect(Collectors.toMap(
                         Map.Entry::getKey,
                         entry -> entry.getValue().descriptor()
                 ));

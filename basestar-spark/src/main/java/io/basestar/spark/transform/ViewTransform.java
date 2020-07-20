@@ -68,7 +68,7 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
         final AggregateExtractingVisitor visitor = new AggregateExtractingVisitor();
         final Map<String, Expression> columns = new HashMap<>();
-        schema.getSelect().forEach((name, prop) -> {
+        schema.getSelectProperties().forEach((name, prop) -> {
             final Expression expr = Nullsafe.require(prop.getExpression()).bind(context);
             columns.put(name, visitor.visit(expr));
         });
@@ -79,7 +79,7 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         if(!(aggregates.isEmpty() && schema.getGroup().isEmpty())) {
 
             final List<Column> groupColumns = new ArrayList<>();
-            for(final Map.Entry<String, Property> entry : schema.getGroup().entrySet()) {
+            for(final Map.Entry<String, Property> entry : schema.getGroupProperties().entrySet()) {
                 final String name = entry.getKey();
                 final Property prop = entry.getValue();
                 final Expression expr = Nullsafe.require(prop.getExpression()).bind(context);
@@ -98,7 +98,7 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
             final Column[] rest = aggColumns.subList(1, aggColumns.size()).toArray(new Column[0]);
             output = groupedOutput.agg(first, rest);
 
-            for(final String key : schema.getGroup().keySet()) {
+            for(final String key : schema.getGroup()) {
                 selectColumns.add(output.col(key).as(key));
             }
         }

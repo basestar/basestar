@@ -37,7 +37,7 @@ public class TestViewSchema {
         final Namespace namespace = Namespace.load(TestViewSchema.class.getResource("view.yml"));
 
         final ViewSchema schema = namespace.requireViewSchema("View");
-        final Property emailProp = schema.getSelect().get("email");
+        final Property emailProp = schema.getProperties().get("email");
 
         assertTrue(emailProp.getType() instanceof UseString);
         assertEquals(Expression.parse("email"), emailProp.getExpression());

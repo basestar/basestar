@@ -27,7 +27,6 @@ import io.basestar.mapper.annotation.Group;
 import io.basestar.mapper.annotation.Where;
 import io.basestar.schema.ViewSchema;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -49,7 +48,7 @@ public class ViewSchemaModel extends InstanceSchemaModel {
         annotations.add(new AnnotationModel<>(getSettings(), VALID));
         annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.ViewSchema.Declaration.annotation(schema)));
         if(!schema.getGroup().isEmpty()) {
-            annotations.add(new AnnotationModel<>(getSettings(), Group.Modifier.annotation(new ArrayList<>(schema.getGroup().keySet()))));
+            annotations.add(new AnnotationModel<>(getSettings(), Group.Modifier.annotation(schema.getGroup())));
         }
         if(schema.getWhere() != null) {
             annotations.add(new AnnotationModel<>(getSettings(), Where.Modifier.annotation(schema.getWhere())));
