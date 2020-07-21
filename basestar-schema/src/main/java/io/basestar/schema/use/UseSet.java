@@ -65,7 +65,7 @@ public class UseSet<T> implements UseCollection<T, Set<T>> {
     }
 
     @Override
-    public Object toJson() {
+    public Object toConfig() {
 
         return ImmutableMap.of(
                 NAME, type

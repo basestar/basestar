@@ -78,7 +78,7 @@ public class UseMap<T> implements Use<Map<String, T>> {
     }
 
     @Override
-    public Object toJson() {
+    public Object toConfig() {
 
         return ImmutableMap.of(
                 NAME, type

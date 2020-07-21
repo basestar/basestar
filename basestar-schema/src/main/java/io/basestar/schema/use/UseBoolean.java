@@ -56,7 +56,7 @@ public class UseBoolean implements UseScalar<Boolean> {
     }
 
     @Override
-    public Object toJson() {
+    public Object toConfig() {
 
         return NAME;
     }

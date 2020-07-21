@@ -77,7 +77,7 @@ public class UseDate implements UseScalar<LocalDate> {
     }
 
     @Override
-    public Object toJson() {
+    public Object toConfig() {
 
         return NAME;
     }

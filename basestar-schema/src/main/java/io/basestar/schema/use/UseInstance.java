@@ -33,8 +33,7 @@ public interface UseInstance extends UseNamed<Instance> {
 
     InstanceSchema getSchema();
 
-    @Override
-    default Name getQualifiedName() {
+    default Name getName() {
 
         return getSchema().getQualifiedName();
     }
@@ -78,6 +77,12 @@ public interface UseInstance extends UseNamed<Instance> {
     @Override
     default void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
-        getSchema().collectDependencies(expand, out);
+        final Schema<?> schema = getSchema();
+        // FIXME:?
+        if(expand == null || expand.isEmpty()) {
+            out.put(schema.getQualifiedName(), schema);
+        } else {
+            schema.collectDependencies(expand, out);
+        }
     }
 }

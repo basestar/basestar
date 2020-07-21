@@ -20,21 +20,36 @@ package io.basestar.codegen;
  * #L%
  */
 
-import freemarker.template.Version;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableMap;
 import freemarker.template.*;
-import io.basestar.codegen.model.EnumSchemaModel;
-import io.basestar.codegen.model.ObjectSchemaModel;
-import io.basestar.codegen.model.StructSchemaModel;
-import io.basestar.codegen.model.ViewSchemaModel;
-import io.basestar.schema.*;
+import io.basestar.codegen.model.SchemaModel;
+import io.basestar.jackson.BasestarModule;
+import io.basestar.schema.Namespace;
+import io.basestar.schema.Schema;
+import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
+import io.basestar.util.Path;
+import io.basestar.util.Text;
+import lombok.extern.slf4j.Slf4j;
 
-import java.io.IOException;
-import java.io.Writer;
+import java.io.*;
+import java.util.Collections;
 import java.util.Locale;
+import java.util.Map;
 
+@Slf4j
 public class Codegen {
 
+    private static final ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory()).registerModule(new BasestarModule());
+
     private final Configuration cfg;
+
+    private final String language;
+
+    private final LanguageConfig languageConfig;
 
     private final CodegenSettings settings;
 
@@ -49,29 +64,102 @@ public class Codegen {
         cfg.setTemplateExceptionHandler(TemplateExceptionHandler.RETHROW_HANDLER);
 
         this.cfg = cfg;
+        this.language = language;
+        try {
+            this.languageConfig = objectMapper.readValue(getClass().getResource("language/" + language + "/config.yml"), LanguageConfig.class);
+        } catch (final IOException e) {
+            throw new IllegalStateException(e);
+        }
         this.settings = settings;
     }
 
-    public void generate(final Schema<?> schema, final Writer writer) throws IOException {
+    private void generate(final SchemaModel model, final String qualifier, final Writer writer) throws IOException {
 
         try {
-            if(schema instanceof EnumSchema) {
-                final Template template = cfg.getTemplate("EnumSchema.java.ftl");
-                template.process(new EnumSchemaModel(settings, (EnumSchema) schema), writer);
-            } else if(schema instanceof ObjectSchema) {
-                final Template template = cfg.getTemplate("ObjectSchema.java.ftl");
-                template.process(new ObjectSchemaModel(settings, (ObjectSchema) schema), writer);
-            } else if(schema instanceof StructSchema) {
-                final Template template = cfg.getTemplate("StructSchema.java.ftl");
-                template.process(new StructSchemaModel(settings, (StructSchema) schema), writer);
-            } else if(schema instanceof ViewSchema) {
-                final Template template = cfg.getTemplate("ViewSchema.java.ftl");
-                template.process(new ViewSchemaModel(settings, (ViewSchema) schema), writer);
-            } else {
-                throw new IllegalStateException("Cannot process schema " + schema.getClass());
-            }
+            final String schemaType = model.getSchemaType();
+            final String templateName = Text.upperCamel(schemaType) + "Schema." + qualifier + ".ftl";
+            final Template template = cfg.getTemplate(templateName);
+            template.process(model, writer);
         } catch (final TemplateException e) {
             throw new IOException(e);
         }
+    }
+
+    public void generate(final Namespace namespace, final File base) throws IOException {
+
+        generate(namespace, base, new Log() {
+
+            @Override
+            public void info(final String message) {
+
+                log.info("{}", message);
+            }
+
+            @Override
+            public void error(final String message, final Throwable error) {
+
+                log.error("{}", message, error);
+            }
+        });
+    }
+
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    public void generate(final Namespace namespace, final File base, final Log log) throws IOException {
+
+        for(final Map.Entry<String, LanguageConfig.Qualifier> entry : languageConfig.getQualifiers().entrySet()) {
+
+            final String qualifierName = entry.getKey();
+            final LanguageConfig.Qualifier qualifierConfig = entry.getValue();
+
+            for(final Schema<?> schema : namespace.getSchemas().values()) {
+
+                final Name relativePackage = schema.getQualifiedPackageName();
+                final CodegenContext context = CodegenContext.builder()
+                        .rootPackage(Name.parse(settings.getPackageName()))
+                        .relativePackage(relativePackage)
+                        .codebehind(Nullsafe.option(settings.getCodebehind(), Collections.emptyMap()))
+                        .codebehindPath(Nullsafe.option(settings.getCodebehindPath(), Path.of("codebehind")))
+                        .build();
+                final SchemaModel model = SchemaModel.from(context, schema);
+                if(model.generate()) {
+                    final String outputName = outputName(qualifierName, qualifierConfig, schema);
+                    final File file = new File(base, outputName);
+                    new File(file.getParent()).mkdirs();
+                    try (final FileOutputStream fos = new FileOutputStream(file);
+                         final OutputStreamWriter writer = new OutputStreamWriter(fos, Charsets.UTF_8)) {
+                        log.info("Writing schema " + schema.getQualifiedName() + " to " + file.getAbsolutePath());
+                        generate(model, qualifierName, writer);
+                    }
+                }
+            }
+        }
+    }
+
+    private String path(final Name name) {
+
+        return (name == null || name.isEmpty()) ? "" : name.toString(File.separator) + File.separator;
+    }
+
+    private String outputName(final String qualifierName, final LanguageConfig.Qualifier qualifierConfig, final Schema<?> schema) {
+
+        final String pattern = qualifierConfig.getOutput();
+        final Map<String, String> replacements = ImmutableMap.<String, String>builder()
+                .put("qualifier", qualifierName)
+                .put("settings.package.path", path(Name.parse(settings.getPackageName())))
+                .put("schema.package.path", path(schema.getQualifiedPackageName()))
+                .put("schema.name", schema.getName())
+                .build();
+        String result = pattern;
+        for(final Map.Entry<String, String> entry : replacements.entrySet()) {
+            result = result.replaceAll("\\{" + entry.getKey() + "}", entry.getValue());
+        }
+        return result;
+    }
+
+    public interface Log {
+
+        void info(String message);
+
+        void error(String message, Throwable error);
     }
 }

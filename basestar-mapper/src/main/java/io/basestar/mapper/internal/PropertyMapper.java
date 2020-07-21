@@ -27,6 +27,7 @@ import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Property;
 import io.basestar.type.AnnotationContext;
 import io.basestar.type.PropertyContext;
+import io.basestar.type.SerializableAccessor;
 import io.basestar.type.has.HasType;
 
 import javax.validation.constraints.NotNull;
@@ -40,7 +41,7 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
 
     private final String name;
 
-    private final PropertyContext property;
+    private final SerializableAccessor property;
 
     private final TypeMapper type;
 
@@ -57,8 +58,8 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
     public PropertyMapper(final MappingContext context, final String name, final PropertyContext property) {
 
         this.name = name;
-        this.property = property;
-        this.type = TypeMapper.from(context, property.type());
+        this.property = property.serializableAccessor();
+        this.type = context.typeMapper(property.type());
         this.constraints = constraints(property);
         this.description = null;
         this.expression = null;

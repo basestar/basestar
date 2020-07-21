@@ -23,11 +23,12 @@ package io.basestar.mapper.internal;
 import io.basestar.expression.Expression;
 import io.basestar.schema.InstanceSchema;
 
+import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 import java.util.Set;
 
-public interface MemberMapper<B extends InstanceSchema.Builder> {
+public interface MemberMapper<B extends InstanceSchema.Builder> extends Serializable {
 
     TypeMapper getType();
 

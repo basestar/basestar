@@ -22,6 +22,7 @@ package io.basestar.mapper.annotation;
 
 import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.MappingContext;
+import io.basestar.mapper.MappingStrategy;
 import io.basestar.mapper.SchemaMapper;
 import io.basestar.mapper.internal.EnumSchemaMapper;
 import io.basestar.mapper.internal.annotation.SchemaDeclaration;
@@ -38,9 +39,7 @@ import java.lang.annotation.*;
 @SchemaDeclaration(EnumSchema.Declaration.class)
 public @interface EnumSchema {
 
-    String INFER_NAME = "";
-
-    String name() default INFER_NAME;
+    String name() default MappingStrategy.INFER_NAME;
 
     @RequiredArgsConstructor
     class Declaration implements SchemaDeclaration.Declaration {
@@ -48,15 +47,15 @@ public @interface EnumSchema {
         private final EnumSchema annotation;
 
         @Override
-        public Name getQualifiedName(final TypeContext type) {
+        public Name getQualifiedName(final MappingContext context, final TypeContext type) {
 
-            return Name.parse(annotation.name().equals(INFER_NAME) ? type.simpleName() : annotation.name());
+            return context.strategy().schemaName(context, annotation.name(), type);
         }
 
         @Override
         public SchemaMapper<?, ?> mapper(final MappingContext context, final TypeContext type) {
 
-            return new EnumSchemaMapper<>(context, getQualifiedName(type), type);
+            return new EnumSchemaMapper<>(context, getQualifiedName(context, type), type);
         }
 
         public static EnumSchema annotation(final io.basestar.schema.EnumSchema schema) {

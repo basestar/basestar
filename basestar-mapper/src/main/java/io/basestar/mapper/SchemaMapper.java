@@ -23,9 +23,14 @@ package io.basestar.mapper;
 import io.basestar.schema.Schema;
 import io.basestar.util.Name;
 
+import java.io.Serializable;
 import java.util.Set;
 
-public interface SchemaMapper<T, O> {
+public interface SchemaMapper<T, O> extends Serializable {
+
+    Class<T> marshalledType();
+
+    Class<O> unmarshalledType();
 
     Name qualifiedName();
 
@@ -34,7 +39,7 @@ public interface SchemaMapper<T, O> {
         return qualifiedName().toString();
     }
 
-    Schema.Builder<? extends O> schema();
+    Schema.Builder<? extends O> schemaBuilder();
 
     T marshall(Object value);
 

@@ -59,7 +59,7 @@ public class UseBinary implements UseScalar<byte[]> {
     }
 
     @Override
-    public Object toJson() {
+    public Object toConfig() {
 
         return NAME;
     }

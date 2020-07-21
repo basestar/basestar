@@ -20,12 +20,9 @@ package io.basestar.maven;
  * #L%
  */
 
-import com.google.common.base.Charsets;
 import io.basestar.codegen.Codegen;
 import io.basestar.codegen.CodegenSettings;
 import io.basestar.schema.Namespace;
-import io.basestar.schema.Schema;
-import io.basestar.util.Name;
 import lombok.Setter;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -35,8 +32,6 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStreamWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
@@ -84,18 +79,20 @@ public class CodegenMojo extends AbstractMojo {
             final Codegen codegen = new Codegen(language, settings);
 
             final File base = new File(outputDirectory);
-            base.mkdirs();
 
-            for(final Schema<?> schema : ns.getSchemas().values()) {
-                final File output = packageOutputDirectory(base, schema);
-                output.mkdirs();
-                final File file = new File(output, schema.getName() + ".java");
-                try(final FileOutputStream fos = new FileOutputStream(file);
-                    final OutputStreamWriter writer = new OutputStreamWriter(fos, Charsets.UTF_8)) {
-                    getLog().info("Writing schema " + schema.getQualifiedName() + " to " + file.getAbsolutePath());
-                    codegen.generate(schema, writer);
+            codegen.generate(ns, base, new Codegen.Log() {
+                @Override
+                public void info(final String message) {
+
+                    getLog().info(message);
                 }
-            }
+
+                @Override
+                public void error(final String message, final Throwable error) {
+
+                    getLog().error(message, error);
+                }
+            });
 
             if(addSources && project != null) {
                 getLog().info("Adding source directory " + base.getAbsolutePath());
@@ -106,11 +103,5 @@ public class CodegenMojo extends AbstractMojo {
             getLog().error("Codegen execution failed", e);
             throw new MojoExecutionException("Codegen execution failed", e);
         }
-    }
-
-    private File packageOutputDirectory(final File base, final Schema<?> schema) {
-
-        final Name schemaPackageName = Name.parse(packageName).with(schema.getQualifiedPackageName());
-        return new File(base, schemaPackageName.toString().replaceAll("\\.", File.separator));
     }
 }

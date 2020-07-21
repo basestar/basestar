@@ -21,7 +21,7 @@ package io.basestar.codegen.model;
  */
 
 import com.google.common.collect.ImmutableMap;
-import io.basestar.codegen.CodegenSettings;
+import io.basestar.codegen.CodegenContext;
 import io.basestar.type.AnnotationContext;
 import io.basestar.util.Name;
 
@@ -37,14 +37,14 @@ public class AnnotationModel<A extends Annotation> extends Model {
 
     private final Map<String, Object> override;
 
-    public AnnotationModel(final CodegenSettings settings, final A annotation) {
+    public AnnotationModel(final CodegenContext context, final A annotation) {
 
-        this(settings, annotation, ImmutableMap.of());
+        this(context, annotation, ImmutableMap.of());
     }
 
-    public AnnotationModel(final CodegenSettings settings, final A annotation, final Map<String, Object> override) {
+    public AnnotationModel(final CodegenContext context, final A annotation, final Map<String, Object> override) {
 
-        super(settings);
+        super(context);
         this.annotation = annotation;
         this.override = override;
     }
@@ -64,7 +64,7 @@ public class AnnotationModel<A extends Annotation> extends Model {
                 .collect(Collectors.toMap(Map.Entry::getKey, entry -> {
                     final Object value = entry.getValue();
                     if(value instanceof Annotation) {
-                        return new AnnotationModel<>(getSettings(), (Annotation)value);
+                        return new AnnotationModel<>(getContext(), (Annotation)value);
                     } else if(value instanceof Class<?>) {
                         return wrapClassName((Class<?>)value);
                     } else {

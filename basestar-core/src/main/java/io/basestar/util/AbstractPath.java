@@ -22,10 +22,7 @@ package io.basestar.util;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Multimap;
+import com.google.common.collect.*;
 import lombok.Data;
 
 import javax.annotation.Nonnull;
@@ -39,6 +36,10 @@ import java.util.stream.StreamSupport;
 
 @Data
 public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements Iterable<String>, Comparable<SELF>, Serializable {
+
+    public static final String SELF = ".";
+
+    public static final String UP = "..";
 
     private final List<String> parts;
 
@@ -154,6 +155,11 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
     public String toString() {
 
         return joiner(delimiter()).join(parts);
+    }
+
+    public String toString(final char delimiter) {
+
+        return joiner(delimiter).join(parts);
     }
 
     public String toString(final String delimiter) {
@@ -304,5 +310,54 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
     public SELF transform(final Function<String, String> fn) {
 
         return create(parts.stream().map(fn).collect(Collectors.toList()));
+    }
+
+    public SELF relative(final SELF other) {
+
+        final int thisSize = size();
+        final int otherSize = other.size();
+        int i = 0;
+        while(i < thisSize && i < otherSize) {
+            final String part = get(i);
+            if(part.equals(other.get(i))) {
+                ++i;
+            } else {
+                break;
+            }
+        }
+        final List<String> parts = new ArrayList<>();
+        for(int j = i; j != thisSize; ++j) {
+            parts.add("..");
+        }
+        for(int j = i; j != otherSize; ++j) {
+            parts.add(other.get(j));
+        }
+        return create(parts);
+    }
+
+    public SELF canonical() {
+
+        final LinkedList<String> parts = new LinkedList<>();
+        for(final String part : this.parts) {
+            if(part.equals(UP)) {
+                if(parts.isEmpty()) {
+                    parts.add(UP);
+                } else {
+                    parts.pop();
+                }
+            } else if(!part.equals(SELF)) {
+                parts.add(part);
+            }
+        }
+        return create(parts);
+    }
+
+    public SELF up(final int count) {
+
+        final List<String> parts = Lists.newArrayList(this.parts);
+        for(int i = 0; i != count; ++i) {
+            parts.add(UP);
+        }
+        return create(parts);
     }
 }

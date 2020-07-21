@@ -65,7 +65,7 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
     }
 
     @Override
-    public Object toJson() {
+    public Object toConfig() {
 
         return ImmutableMap.of(
                 NAME, type

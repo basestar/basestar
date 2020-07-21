@@ -20,12 +20,10 @@ package io.basestar.codegen.model;
  * #L%
  */
 
-import io.basestar.codegen.CodegenSettings;
+import io.basestar.codegen.CodegenContext;
 import io.basestar.mapper.annotation.Description;
 import io.basestar.schema.Index;
-import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.StructSchema;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,44 +34,37 @@ public class ObjectSchemaModel extends InstanceSchemaModel {
 
     private final ObjectSchema schema;
 
-    public ObjectSchemaModel(final CodegenSettings settings, final ObjectSchema schema) {
+    public ObjectSchemaModel(final CodegenContext context, final ObjectSchema schema) {
 
-        super(settings, schema);
+        super(context, schema);
         this.schema = schema;
+    }
+
+    @Override
+    public String getSchemaType() {
+
+        return ObjectSchema.Descriptor.TYPE;
     }
 
     @Override
     public List<AnnotationModel<?>> getAnnotations() {
 
         final List<AnnotationModel<?>> annotations = new ArrayList<>();
-        annotations.add(new AnnotationModel<>(getSettings(), VALID));
-        annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.ObjectSchema.Declaration.annotation(schema)));
+        annotations.add(new AnnotationModel<>(getContext(), VALID));
+        annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.ObjectSchema.Declaration.annotation(schema)));
         for(final Index index : schema.getIndexes().values()) {
-            annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.Index.Modifier.annotation(index)));
+            annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.Index.Modifier.annotation(index)));
         }
         if(schema.getDescription() != null) {
-            annotations.add(new AnnotationModel<>(getSettings(), Description.Modifier.annotation(schema.getDescription())));
+            annotations.add(new AnnotationModel<>(getContext(), Description.Modifier.annotation(schema.getDescription())));
         }
         return annotations;
-    }
-
-    @Override
-    public InstanceSchemaModel getExtend() {
-
-        final InstanceSchema extend = schema.getExtend();
-        if(extend instanceof ObjectSchema) {
-            return new ObjectSchemaModel(getSettings(), (ObjectSchema) extend);
-        } else if(extend instanceof StructSchema) {
-            return new StructSchemaModel(getSettings(), (StructSchema) extend);
-        } else {
-            return null;
-        }
     }
 
     @Override
     public List<MemberModel> getAdditionalMembers() {
 
         return schema.getDeclaredLinks().values().stream()
-                        .map(v -> new LinkModel(getSettings(), v)).collect(Collectors.toList());
+                        .map(v -> new LinkModel(getContext(), v)).collect(Collectors.toList());
     }
 }

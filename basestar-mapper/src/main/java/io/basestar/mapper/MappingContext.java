@@ -20,6 +20,7 @@ package io.basestar.mapper;
  * #L%
  */
 
+import io.basestar.mapper.internal.TypeMapper;
 import io.basestar.mapper.internal.annotation.SchemaDeclaration;
 import io.basestar.mapper.internal.annotation.SchemaModifier;
 import io.basestar.schema.Namespace;
@@ -27,16 +28,29 @@ import io.basestar.type.AnnotationContext;
 import io.basestar.type.TypeContext;
 import io.basestar.type.has.HasType;
 import io.basestar.util.Name;
+import lombok.RequiredArgsConstructor;
 
+import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
-public class MappingContext {
+@RequiredArgsConstructor
+public class MappingContext implements Serializable {
 
-    private final ConcurrentMap<Class<?>, SchemaMapper<?, ?>> mappers = new ConcurrentHashMap<>();
+    private final MappingStrategy strategy;
+
+    private final Map<Class<?>, SchemaMapper<?, ?>> mappers = new HashMap<>();
+
+    public MappingContext() {
+
+        this(MappingStrategy.DEFAULT);
+    }
+
+    public MappingStrategy strategy() {
+
+        return strategy;
+    }
 
     public Namespace.Builder namespace(final Class<?> ... classes) {
 
@@ -60,7 +74,7 @@ public class MappingContext {
             dependencies.addAll(next);
         }
         final Namespace.Builder builder = Namespace.builder();
-        all.forEach((cls, schemaMapper) -> builder.setSchema(schemaMapper.name(), schemaMapper.schema()));
+        all.forEach((cls, schemaMapper) -> builder.setSchema(schemaMapper.name(), schemaMapper.schemaBuilder()));
         return builder;
     }
 
@@ -72,8 +86,13 @@ public class MappingContext {
         } else {
             final TypeContext type = TypeContext.from(cls);
             final SchemaDeclaration.Declaration decl = declaration(type);
-            return decl.getQualifiedName(type);
+            return decl.getQualifiedName(this, type);
         }
+    }
+
+    public TypeMapper typeMapper(final TypeContext type) {
+
+        return strategy.typeMapper(this, type);
     }
 
     @SuppressWarnings("unchecked")

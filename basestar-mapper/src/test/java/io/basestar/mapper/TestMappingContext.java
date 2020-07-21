@@ -23,15 +23,19 @@ package io.basestar.mapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.annotation.*;
+import io.basestar.mapper.internal.TypeMapper;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.Reserved;
 import io.basestar.schema.Schema;
 import io.basestar.schema.jsr380.Assert;
+import io.basestar.type.TypeContext;
+import io.basestar.util.Name;
 import lombok.Data;
 import org.junit.jupiter.api.Test;
 
 import javax.validation.constraints.Size;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -101,7 +105,7 @@ public class TestMappingContext {
         final MappingContext mappingContext = new MappingContext();
 
         final SchemaMapper<Post, Instance> schemaMapper = mappingContext.schemaMapper(Post.class);
-        final Schema.Builder<?> schema = schemaMapper.schema();
+        final Schema.Builder<?> schema = schemaMapper.schemaBuilder();
 
         final Post post = schemaMapper.marshall(new Instance(ImmutableMap.of(
                 Reserved.ID, "test",
@@ -134,9 +138,45 @@ public class TestMappingContext {
         final MappingContext mappingContext = new MappingContext();
 
         final SchemaMapper<PostView, Instance> schemaMapper = mappingContext.schemaMapper(PostView.class);
-        final Schema.Builder<?> schema = schemaMapper.schema();
+        final Schema.Builder<?> schema = schemaMapper.schemaBuilder();
 
         System.err.println(schema);
 
+    }
+
+    @Test
+    public void testSchemaOfSchema() throws IOException {
+
+        final MappingContext mappingContext = new MappingContext(new MappingStrategy() {
+            @Override
+            public Name schemaName(final MappingContext context, final TypeContext type) {
+
+                final String simpleName = type.simpleName();
+                if("Descriptor".equals(type.simpleName())) {
+                    return Name.of(type.enclosing().simpleName());
+                } else {
+                    return Name.of(simpleName);
+                }
+            }
+
+            @Override
+            public TypeMapper typeMapper(final MappingContext context, final TypeContext type) {
+
+                if(type.simpleName().equals("Name")) {
+                    return new TypeMapper.OfString();
+                } else {
+                    return TypeMapper.fromDefault(context, type);
+                }
+            }
+        });
+
+        final Namespace.Builder builder = mappingContext.namespace(
+                io.basestar.schema.ObjectSchema.Descriptor.class,
+                io.basestar.schema.StructSchema.Descriptor.class,
+                io.basestar.schema.EnumSchema.Descriptor.class,
+                io.basestar.schema.ViewSchema.Descriptor.class
+        );
+
+        builder.yaml(System.out);
     }
 }

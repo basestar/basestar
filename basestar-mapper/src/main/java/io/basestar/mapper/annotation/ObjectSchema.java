@@ -22,6 +22,7 @@ package io.basestar.mapper.annotation;
 
 import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.MappingContext;
+import io.basestar.mapper.MappingStrategy;
 import io.basestar.mapper.SchemaMapper;
 import io.basestar.mapper.internal.ObjectSchemaMapper;
 import io.basestar.mapper.internal.annotation.SchemaDeclaration;
@@ -38,9 +39,7 @@ import java.lang.annotation.*;
 @SchemaDeclaration(ObjectSchema.Declaration.class)
 public @interface ObjectSchema {
 
-    String INFER_NAME = "";
-
-    String name() default INFER_NAME;
+    String name() default MappingStrategy.INFER_NAME;
 
     @RequiredArgsConstructor
     class Declaration implements SchemaDeclaration.Declaration {
@@ -48,15 +47,15 @@ public @interface ObjectSchema {
         private final ObjectSchema annotation;
 
         @Override
-        public Name getQualifiedName(final TypeContext type) {
+        public Name getQualifiedName(final MappingContext context, final TypeContext type) {
 
-            return Name.parse(annotation.name().equals(INFER_NAME) ? type.simpleName() : annotation.name());
+            return context.strategy().schemaName(context, annotation.name(), type);
         }
 
         @Override
         public SchemaMapper<?, ?> mapper(final MappingContext context, final TypeContext type) {
 
-            return new ObjectSchemaMapper<>(context, getQualifiedName(type), type);
+            return new ObjectSchemaMapper<>(context, getQualifiedName(context, type), type);
         }
 
         public static ObjectSchema annotation(final io.basestar.schema.ObjectSchema schema) {

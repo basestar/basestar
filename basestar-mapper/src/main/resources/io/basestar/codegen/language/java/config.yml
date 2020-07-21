@@ -1,0 +1,4 @@
+---
+qualifiers:
+  java:
+    output: "{settings.package.path}{schema.package.path}{schema.name}.java"

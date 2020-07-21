@@ -43,8 +43,8 @@ import java.util.stream.Stream;
 
 @Getter
 @Accessors(fluent = true)
-public class TypeContext implements HasName, HasModifiers, HasAnnotations,
-        HasTypeParameters, HasType, HasConstructors, HasMethods, HasFields {
+public class TypeContext implements HasName, HasModifiers, HasAnnotations, HasTypeParameters, HasType, HasConstructors,
+        HasMethods, HasFields, HasProperties {
 
     private static final ConcurrentMap<AnnotatedType, TypeContext> CACHE = new ConcurrentHashMap<>();
 
@@ -289,6 +289,11 @@ public class TypeContext implements HasName, HasModifiers, HasAnnotations,
     public List<AnnotationContext<?>> annotations() {
 
         return annotations.get();
+    }
+
+    public TypeContext enclosing() {
+
+        return TypeContext.from(erasedType.getEnclosingClass());
     }
 
     @Override

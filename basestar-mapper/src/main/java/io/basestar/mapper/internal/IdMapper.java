@@ -28,6 +28,7 @@ import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.type.PropertyContext;
+import io.basestar.type.SerializableAccessor;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collections;
@@ -36,7 +37,7 @@ import java.util.Set;
 
 public class IdMapper implements MemberMapper<ObjectSchema.Builder> {
 
-    private final PropertyContext property;
+    private final SerializableAccessor property;
 
     private final TypeMapper type;
 
@@ -46,8 +47,8 @@ public class IdMapper implements MemberMapper<ObjectSchema.Builder> {
 
     public IdMapper(final MappingContext context, final PropertyContext property) {
 
-        this.property = property;
-        this.type = TypeMapper.from(context, property.type());
+        this.property = property.serializableAccessor();
+        this.type = context.typeMapper(property.type());
         this.description = null;
         this.expression = null;
     }

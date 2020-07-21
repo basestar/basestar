@@ -7,7 +7,6 @@ import io.basestar.mapper.internal.TypeMapper;
 import io.basestar.mapper.internal.ViewSchemaMapper;
 import io.basestar.mapper.internal.annotation.SchemaModifier;
 import io.basestar.type.AnnotationContext;
-import io.basestar.type.TypeContext;
 import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
 
@@ -38,7 +37,7 @@ public @interface From {
             if(!annotation.schema().isEmpty()) {
                 fromSchema = Name.parse(annotation.schema());
             } else {
-                final TypeMapper.OfCustom tmp = new TypeMapper.OfCustom(context, TypeContext.from(annotation.value()));
+                final TypeMapper.OfCustom tmp = new TypeMapper.OfCustom(context, annotation.value());
                 fromSchema = tmp.getQualifiedName();
             }
             final Set<Name> fromExpand = Name.parseSet(annotation.expand());

@@ -73,6 +73,32 @@ public class MethodContext implements HasName, HasModifiers, HasAnnotations, Has
         return (V)method.invoke(target, args);
     }
 
+    public SerializableInvoker serializableInvoker() {
+
+        final Class<?>[] erasedParameters = parameters.get().stream()
+                .map(ParameterContext::erasedType).toArray(Class<?>[]::new);
+        return serializableInvoker(method.getDeclaringClass(), name(), erasedParameters);
+    }
+
+    private static SerializableInvoker serializableInvoker(final Class<?> erasedOwner, final String name, final Class<?>[] erasedParameters) {
+
+        return new SerializableInvoker() {
+
+            @Override
+            @SuppressWarnings("unchecked")
+            public <T, V> V invoke(final T target, final Object... args) throws InvocationTargetException, IllegalAccessException {
+
+                try {
+                    final Method method = erasedOwner.getDeclaredMethod(name, erasedParameters);
+                    method.setAccessible(true);
+                    return (V) method.invoke(target, args);
+                } catch (final NoSuchMethodException e) {
+                    throw new IllegalStateException(e);
+                }
+            }
+        };
+    }
+
     @Override
     public AnnotatedType annotatedType() {
 

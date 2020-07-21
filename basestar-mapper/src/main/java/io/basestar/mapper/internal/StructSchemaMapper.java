@@ -41,9 +41,11 @@ public class StructSchemaMapper<T> extends InstanceSchemaMapper<T, StructSchema.
     }
 
     @Override
-    public StructSchema.Builder schema() {
+    public StructSchema.Builder schemaBuilder() {
 
-        return addMembers(StructSchema.builder());
+        return addMembers(StructSchema.builder()
+                .setConcrete(concrete ? null : false)
+                .setExtend(extend));
     }
 
     @Override

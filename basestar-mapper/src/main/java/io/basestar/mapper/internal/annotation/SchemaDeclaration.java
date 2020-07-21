@@ -38,7 +38,7 @@ public @interface SchemaDeclaration {
 
     interface Declaration {
 
-        Name getQualifiedName(TypeContext type);
+        Name getQualifiedName(MappingContext context, TypeContext type);
 
         SchemaMapper<?, ?> mapper(MappingContext context, TypeContext type);
 
@@ -47,15 +47,15 @@ public @interface SchemaDeclaration {
             public static final Basic INSTANCE = new Basic();
 
             @Override
-            public Name getQualifiedName(final TypeContext type) {
+            public Name getQualifiedName(final MappingContext context, final TypeContext type) {
 
-                return Name.of(type.simpleName());
+                return context.strategy().schemaName(context, type);
             }
 
             @Override
             public SchemaMapper<?, ?> mapper(final MappingContext context, final TypeContext type) {
 
-                final Name name = getQualifiedName(type);
+                final Name name = getQualifiedName(context, type);
                 if (type.isEnum()) {
                     return new EnumSchemaMapper<>(context, name, type);
                 } else {

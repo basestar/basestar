@@ -25,6 +25,7 @@ import io.basestar.mapper.MappingContext;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Link;
 import io.basestar.type.PropertyContext;
+import io.basestar.type.SerializableAccessor;
 import io.basestar.util.Sort;
 
 import java.lang.reflect.InvocationTargetException;
@@ -35,7 +36,7 @@ public class LinkMapper implements MemberMapper<InstanceSchema.Builder> {
 
     private final String name;
 
-    private final PropertyContext property;
+    private final SerializableAccessor property;
 
     private final TypeMapper type;
 
@@ -52,8 +53,8 @@ public class LinkMapper implements MemberMapper<InstanceSchema.Builder> {
     public LinkMapper(final MappingContext context, final String name, final PropertyContext property, final Expression expression, final List<Sort> sort) {
 
         this.name = name;
-        this.property = property;
-        this.type = TypeMapper.from(context, property.type());
+        this.property = property.serializableAccessor();
+        this.type = context.typeMapper(property.type());
         if(type instanceof TypeMapper.OfArray) {
             final TypeMapper.OfArray array = (TypeMapper.OfArray)type;
             if(array.getValue() instanceof TypeMapper.OfCustom) {

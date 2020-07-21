@@ -20,7 +20,7 @@ package io.basestar.codegen.model;
  * #L%
  */
 
-import io.basestar.codegen.CodegenSettings;
+import io.basestar.codegen.CodegenContext;
 import io.basestar.schema.use.*;
 
 @SuppressWarnings("unused")
@@ -40,7 +40,7 @@ public interface TypeModel {
         throw new UnsupportedOperationException();
     }
 
-    static TypeModel from(final CodegenSettings settings, final Use<?> use) {
+    static TypeModel from(final CodegenContext context, final Use<?> use) {
 
         return use.visit(new Use.Visitor<TypeModel>() {
 
@@ -82,7 +82,7 @@ public interface TypeModel {
                     @Override
                     public SchemaModel getSchema() {
 
-                        return new EnumSchemaModel(settings, type.getSchema());
+                        return new EnumSchemaModel(context, type.getSchema());
                     };
                 };
             }
@@ -101,7 +101,7 @@ public interface TypeModel {
                     @Override
                     public SchemaModel getSchema() {
 
-                        return new ObjectSchemaModel(settings, type.getSchema());
+                        return new ObjectSchemaModel(context, type.getSchema());
                     };
                 };
             }
@@ -120,7 +120,7 @@ public interface TypeModel {
                     @Override
                     public TypeModel getType() {
 
-                        return TypeModel.from(settings, type.getType());
+                        return TypeModel.from(context, type.getType());
                     };
                 };
             }
@@ -139,7 +139,7 @@ public interface TypeModel {
                     @Override
                     public TypeModel getType() {
 
-                        return TypeModel.from(settings, type.getType());
+                        return TypeModel.from(context, type.getType());
                     };
                 };
             }
@@ -158,7 +158,7 @@ public interface TypeModel {
                     @Override
                     public TypeModel getType() {
 
-                        return TypeModel.from(settings, type.getType());
+                        return TypeModel.from(context, type.getType());
                     };
                 };
             }
@@ -177,7 +177,7 @@ public interface TypeModel {
                     @Override
                     public SchemaModel getSchema() {
 
-                        return new StructSchemaModel(settings, type.getSchema());
+                        return new StructSchemaModel(context, type.getSchema());
                     };
                 };
             }
@@ -196,9 +196,15 @@ public interface TypeModel {
                     @Override
                     public SchemaModel getSchema() {
 
-                        return new ViewSchemaModel(settings, type.getSchema());
+                        return new ViewSchemaModel(context, type.getSchema());
                     };
                 };
+            }
+
+            @Override
+            public TypeModel visitAny(final UseAny useAny) {
+
+                return () -> "Any";
             }
 
             @Override

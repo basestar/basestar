@@ -4,7 +4,7 @@ package ${packageName};
 <#list annotations as annot>
 <@macros.annotation name=annot.className values=annot.values/><#nt>
 </#list>
-public class ${className} <#if extend??>extends ${extend.className}</#if> {
+public class ${className} <#if extend??>extends ${extend.fullyQualifiedClassName}</#if> {
 
 <#list members as member>
     <#list member.annotations as annot>

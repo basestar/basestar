@@ -58,7 +58,7 @@ public class UseNumber implements UseScalar<Double> {
     }
 
     @Override
-    public Object toJson() {
+    public Object toConfig() {
 
         return NAME;
     }

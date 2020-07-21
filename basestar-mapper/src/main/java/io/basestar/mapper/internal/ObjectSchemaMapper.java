@@ -73,9 +73,11 @@ public class ObjectSchemaMapper<T> extends InstanceSchemaMapper<T, ObjectSchema.
     }
 
     @Override
-    public ObjectSchema.Builder schema() {
+    public ObjectSchema.Builder schemaBuilder() {
 
         return addMembers(ObjectSchema.builder()
+                .setConcrete(concrete ? null : false)
+                .setExtend(extend)
                 .setIndexes(indexes.isEmpty() ? null : indexes));
     }
 

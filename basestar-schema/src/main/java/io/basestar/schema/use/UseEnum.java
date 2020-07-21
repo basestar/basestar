@@ -31,6 +31,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -47,8 +48,7 @@ public class UseEnum implements UseScalar<String>, UseNamed<String> {
 
     private final EnumSchema schema;
 
-    @Override
-    public Name getQualifiedName() {
+    public Name getName() {
 
         return schema.getQualifiedName();
     }
@@ -122,6 +122,13 @@ public class UseEnum implements UseScalar<String>, UseNamed<String> {
         } else {
             return schema.validate(context, name, value);
         }
+    }
+
+    @Override
+    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+
+        final Schema<?> schema = getSchema();
+        out.put(schema.getQualifiedName(), schema);
     }
 
 //    @Override

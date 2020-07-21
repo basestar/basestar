@@ -58,7 +58,7 @@ public class UseInteger implements UseScalar<Long> {
     }
 
     @Override
-    public Object toJson() {
+    public Object toConfig() {
 
         return NAME;
     }

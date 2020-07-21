@@ -111,6 +111,57 @@ public class PropertyContext implements AccessorContext {
     }
 
     @Override
+    public SerializableAccessor serializableAccessor() {
+
+        final SerializableAccessor field = this.field != null ? this.field.serializableAccessor() : null;
+        final SerializableInvoker getter = this.getter != null ? this.getter.serializableInvoker() : null;
+        final SerializableInvoker setter = this.setter != null ? this.setter.serializableInvoker() : null;
+        return serializableAccessor(field, getter, setter);
+    }
+
+    private static SerializableAccessor serializableAccessor(final SerializableAccessor field,
+                                                             final SerializableInvoker getter,
+                                                             final SerializableInvoker setter) {
+        return new SerializableAccessor() {
+            @Override
+            public boolean canGet() {
+
+                return getter != null || field != null;
+            }
+
+            @Override
+            public boolean canSet() {
+
+                return setter != null || (field != null && field.canSet());
+            }
+
+            @Override
+            public <T, V> V get(final T target) throws IllegalAccessException, InvocationTargetException {
+
+                if(getter != null) {
+                    return getter.invoke(target);
+                } else if(field != null) {
+                    return field.get(target);
+                } else {
+                    throw new IllegalAccessException();
+                }
+            }
+
+            @Override
+            public <T, V> void set(final T target, final V value) throws IllegalAccessException, InvocationTargetException {
+
+                if(setter != null) {
+                    setter.invoke(target, value);
+                } else if(field != null) {
+                    field.set(target, value);
+                } else {
+                    throw new IllegalAccessException();
+                }
+            }
+        };
+    }
+
+    @Override
     public int modifiers() {
 
         //FIXME

@@ -88,6 +88,54 @@ public class FieldContext implements HasModifiers, AccessorContext {
     }
 
     @Override
+    public SerializableAccessor serializableAccessor() {
+
+        return serializableAccessor(field.getDeclaringClass(), name(), canSet());
+    }
+
+    private static SerializableAccessor serializableAccessor(final Class<?> erasedOwner, final String name, final boolean canSet) {
+
+        return new SerializableAccessor() {
+            @Override
+            public boolean canGet() {
+
+                return true;
+            }
+
+            @Override
+            public boolean canSet() {
+
+                return canSet;
+            }
+
+            @Override
+            @SuppressWarnings("unchecked")
+            public <T, V> V get(final T target) throws IllegalAccessException {
+
+                try {
+                    final Field field = erasedOwner.getDeclaredField(name);
+                    field.setAccessible(true);
+                    return (V) field.get(target);
+                } catch (final NoSuchFieldException e) {
+                    throw new IllegalStateException(e);
+                }
+            }
+
+            @Override
+            public <T, V> void set(final T target, final V value) throws IllegalAccessException {
+
+                try {
+                    final Field field = erasedOwner.getDeclaredField(name);
+                    field.setAccessible(true);
+                    field.set(target, value);
+                } catch (final NoSuchFieldException e) {
+                    throw new IllegalStateException(e);
+                }
+            }
+        };
+    }
+
+    @Override
     public AnnotatedType annotatedType() {
 
         return GenericTypeReflector.getFieldType(field, owner.annotatedType());

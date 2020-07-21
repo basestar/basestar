@@ -38,7 +38,7 @@ import java.util.Set;
 
 public interface UseNamed<T> extends Use<T> {
 
-    Name getQualifiedName();
+    Name getName();
 
     static Lazy from(final String name) {
 
@@ -51,21 +51,21 @@ public interface UseNamed<T> extends Use<T> {
     }
 
     @Override
-    default Object toJson() {
+    default Object toConfig() {
 
-        return getQualifiedName().toString();
+        return getName().toString();
     }
 
     @Override
     default io.swagger.v3.oas.models.media.Schema<?> openApi() {
 
-        return new io.swagger.v3.oas.models.media.ObjectSchema().$ref(getQualifiedName().toString());
+        return new io.swagger.v3.oas.models.media.ObjectSchema().$ref(getName().toString());
     }
 
     @Data
     class Lazy implements UseNamed<Object> {
 
-        private final Name qualifiedName;
+        private final Name name;
 
         private final Object config;
 
@@ -78,7 +78,7 @@ public interface UseNamed<T> extends Use<T> {
         @Override
         public Use<?> resolve(final Schema.Resolver resolver) {
 
-            final Schema<?> schema = resolver.requireSchema(qualifiedName);
+            final Schema<?> schema = resolver.requireSchema(name);
             if(schema instanceof EnumSchema) {
                 return UseEnum.from((EnumSchema) schema, config);
             } else if(schema instanceof StructSchema) {
@@ -86,7 +86,7 @@ public interface UseNamed<T> extends Use<T> {
             } else if(schema instanceof ObjectSchema) {
                 return UseObject.from((ObjectSchema) schema, config);
             } else {
-                throw new MissingSchemaException(qualifiedName);
+                throw new MissingSchemaException(name);
             }
         }
 
@@ -155,7 +155,7 @@ public interface UseNamed<T> extends Use<T> {
         @Override
         public String toString() {
 
-            return qualifiedName.toString();
+            return name.toString();
         }
 
         @Override
@@ -173,7 +173,7 @@ public interface UseNamed<T> extends Use<T> {
         @Override
         public io.swagger.v3.oas.models.media.Schema<?> openApi() {
 
-            return new io.swagger.v3.oas.models.media.ObjectSchema().$ref(qualifiedName.toString());
+            return new io.swagger.v3.oas.models.media.ObjectSchema().$ref(name.toString());
         }
 
         @Override

@@ -45,7 +45,11 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
 
     protected final Name name;
 
-    protected final TypeContext type;
+    protected final Name extend;
+
+    protected final boolean concrete;
+
+    protected final Class<T> erasedType;
 
     protected final String description;
 
@@ -55,43 +59,54 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
     protected InstanceSchemaMapper(final Class<B> builderType, final MappingContext context, final Name name, final TypeContext type) {
 
         this.name = name;
-        this.type = type;
+        this.extend = context.strategy().extend(type).map(e -> context.schemaName(e.erasedType())).orElse(null);
+        this.concrete = context.strategy().concrete(type);
+        this.erasedType = type.erasedType();
         this.description = null;
+
+        // Filter out properties that appear in base types
+        final Set<String> skipNames = context.strategy().extend(type)
+                .map(extend -> extend.properties().stream().map(PropertyContext::name).collect(Collectors.toSet()))
+                .orElse(Collections.emptySet());
 
         final List<MemberMapper<B>> members = new ArrayList<>();
         type.properties().forEach(prop -> {
 
-            try {
-                final List<AnnotationContext<?>> propAnnotations = prop.annotations().stream()
-                        .filter(a -> a.type().annotations().stream()
-                                .anyMatch(HasType.match(MemberDeclaration.class)))
-                        .collect(Collectors.toList());
+            if(!skipNames.contains(prop.name())) {
 
-                if (propAnnotations.size() == 0) {
-                    // FIXME
-                    members.add((MemberMapper<B>)new PropertyMapper(context, prop.name(), prop));
-                } else if (propAnnotations.size() == 1) {
-                    final AnnotationContext<?> annotation = propAnnotations.get(0);
-                    final MemberDeclaration memberDeclaration = annotation.type().annotation(MemberDeclaration.class).annotation();
-                    final TypeContext declType = TypeContext.from(memberDeclaration.value());
-                    final MemberDeclaration.Declaration decl = member(declType, annotation.annotation());
-                    final MemberMapper<?> member = decl.mapper(context, prop);
-                    final TypeContext mapperType = TypeContext.from(member.getClass());
-                    final Class<?> memberBuilderType = mapperType.find(MemberMapper.class).typeParameters().get(0).type().erasedType();
-                    if(memberBuilderType.isAssignableFrom(builderType)) {
-                        members.add(applyModifiers(context, prop, (MemberMapper<B>)member));
+                try {
+                    final List<AnnotationContext<?>> propAnnotations = prop.annotations().stream()
+                            .filter(a -> a.type().annotations().stream()
+                                    .anyMatch(HasType.match(MemberDeclaration.class)))
+                            .collect(Collectors.toList());
+
+                    if (propAnnotations.size() == 0) {
+                        // FIXME
+                        members.add((MemberMapper<B>) new PropertyMapper(context, prop.name(), prop));
+                    } else if (propAnnotations.size() == 1) {
+                        final AnnotationContext<?> annotation = propAnnotations.get(0);
+                        final MemberDeclaration memberDeclaration = annotation.type().annotation(MemberDeclaration.class).annotation();
+                        final TypeContext declType = TypeContext.from(memberDeclaration.value());
+                        final MemberDeclaration.Declaration decl = member(declType, annotation.annotation());
+                        final MemberMapper<?> member = decl.mapper(context, prop);
+                        final TypeContext mapperType = TypeContext.from(member.getClass());
+                        final Class<?> memberBuilderType = mapperType.find(MemberMapper.class).typeParameters().get(0).type().erasedType();
+                        if (memberBuilderType.isAssignableFrom(builderType)) {
+                            members.add(applyModifiers(context, prop, (MemberMapper<B>) member));
+                        } else {
+                            throw new IllegalStateException("Member " + member.getClass() + " not supported on " + this.getClass());
+                        }
                     } else {
-                        throw new IllegalStateException("Member " + member.getClass() + " not supported on " + this.getClass());
+                        final String names = propAnnotations.stream().map(v -> v.type().simpleName())
+                                .collect(Collectors.joining(", "));
+                        throw new IllegalStateException("Annotations " + names + " are not allowed on the same property");
                     }
-                } else {
-                    final String names = propAnnotations.stream().map(v -> v.type().simpleName())
-                            .collect(Collectors.joining(", "));
-                    throw new IllegalStateException("Annotations " + names + " are not allowed on the same property");
-                }
 
-            } catch (final Exception e) {
-                throw new IllegalStateException("Failed to map property", e);
+                } catch (final Exception e) {
+                    throw new IllegalStateException("Failed to map property", e);
+                }
             }
+
         });
 
         this.members = members;
@@ -100,7 +115,9 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
     protected InstanceSchemaMapper(final InstanceSchemaMapper<T, B> copy, final String description) {
 
         this.name = copy.name;
-        this.type = copy.type;
+        this.concrete = copy.concrete;
+        this.extend = copy.extend;
+        this.erasedType = copy.erasedType;
         this.members = copy.members;
         this.description = description;
     }
@@ -130,7 +147,7 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
     }
 
     @Override
-    public abstract B schema();
+    public abstract B schemaBuilder();
 
     protected B addMembers(final B builder) {
 
@@ -163,6 +180,19 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
     }
 
     @Override
+    @SuppressWarnings("unchecked")
+    public Class<Map<String, Object>> unmarshalledType() {
+
+        return (Class<Map<String, Object>>)(Class<?>)Map.class;
+    }
+
+    @Override
+    public Class<T> marshalledType() {
+
+        return erasedType;
+    }
+
+    @Override
     public Name qualifiedName() {
 
         return name;
@@ -177,7 +207,7 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
         } else if(source instanceof Map<?, ?>) {
             final Map<String, Object> value = (Map<String, Object>)source;
             try {
-                final T target = (T) type.erasedType().newInstance();
+                final T target = erasedType.newInstance();
                 for (final MemberMapper<B> member : members) {
                     member.marshall(value, target);
                 }

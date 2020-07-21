@@ -20,7 +20,7 @@ package io.basestar.codegen.model;
  * #L%
  */
 
-import io.basestar.codegen.CodegenSettings;
+import io.basestar.codegen.CodegenContext;
 import io.basestar.mapper.annotation.Description;
 import io.basestar.schema.Link;
 
@@ -32,9 +32,9 @@ public class LinkModel extends MemberModel {
 
     private final Link link;
 
-    public LinkModel(final CodegenSettings settings, final Link link) {
+    public LinkModel(final CodegenContext context, final Link link) {
 
-        super(settings);
+        super(context);
 
         this.link = link;
     }
@@ -49,10 +49,10 @@ public class LinkModel extends MemberModel {
     public List<AnnotationModel<?>> getAnnotations() {
 
         final List<AnnotationModel<?>> annotations = new ArrayList<>();
-        annotations.add(new AnnotationModel<>(getSettings(), VALID));
-        annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.Link.Declaration.annotation(link)));
+        annotations.add(new AnnotationModel<>(getContext(), VALID));
+        annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.Link.Declaration.annotation(link)));
         if(link.getDescription() != null) {
-            annotations.add(new AnnotationModel<>(getSettings(), Description.Modifier.annotation(link.getDescription())));
+            annotations.add(new AnnotationModel<>(getContext(), Description.Modifier.annotation(link.getDescription())));
         }
         return annotations;
     }
@@ -60,7 +60,7 @@ public class LinkModel extends MemberModel {
     @Override
     public TypeModel getType() {
 
-        return TypeModel.from(getSettings(), link.getType());
+        return TypeModel.from(getContext(), link.getType());
     }
 
     @Override

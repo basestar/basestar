@@ -21,7 +21,7 @@ package io.basestar.codegen.model;
  */
 
 import com.google.common.collect.ImmutableList;
-import io.basestar.codegen.CodegenSettings;
+import io.basestar.codegen.CodegenContext;
 import io.basestar.mapper.annotation.*;
 import io.basestar.schema.Reserved;
 import io.basestar.schema.use.Use;
@@ -36,9 +36,9 @@ public class MetadataModel extends MemberModel {
 
     private final Use<?> type;
 
-    public MetadataModel(final CodegenSettings settings, final String name, final Use<?> type) {
+    public MetadataModel(final CodegenContext context, final String name, final Use<?> type) {
 
-        super(settings);
+        super(context);
         this.name = name;
         this.type = type;
     }
@@ -72,14 +72,14 @@ public class MetadataModel extends MemberModel {
     public List<AnnotationModel<?>> getAnnotations() {
 
         return ImmutableList.of(
-                new AnnotationModel<>(getSettings(), getAnnotation())
+                new AnnotationModel<>(getContext(), getAnnotation())
         );
     }
 
     @Override
     public TypeModel getType() {
 
-        return TypeModel.from(getSettings(), type);
+        return TypeModel.from(getContext(), type);
     }
 
     @Override

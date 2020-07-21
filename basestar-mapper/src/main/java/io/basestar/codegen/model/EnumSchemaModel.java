@@ -20,7 +20,7 @@ package io.basestar.codegen.model;
  * #L%
  */
 
-import io.basestar.codegen.CodegenSettings;
+import io.basestar.codegen.CodegenContext;
 import io.basestar.mapper.annotation.Description;
 import io.basestar.schema.EnumSchema;
 
@@ -32,10 +32,16 @@ public class EnumSchemaModel extends SchemaModel {
 
     private final EnumSchema schema;
 
-    public EnumSchemaModel(final CodegenSettings settings, final EnumSchema schema) {
+    public EnumSchemaModel(final CodegenContext context, final EnumSchema schema) {
 
-        super(settings, schema);
+        super(context, schema);
         this.schema = schema;
+    }
+
+    @Override
+    public String getSchemaType() {
+
+        return EnumSchema.Descriptor.TYPE;
     }
 
     public List<String> getValues() {
@@ -47,9 +53,9 @@ public class EnumSchemaModel extends SchemaModel {
     public List<AnnotationModel<?>> getAnnotations() {
 
         final List<AnnotationModel<?>> annotations = new ArrayList<>();
-        annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.EnumSchema.Declaration.annotation(schema)));
+        annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.EnumSchema.Declaration.annotation(schema)));
         if(schema.getDescription() != null) {
-            annotations.add(new AnnotationModel<>(getSettings(), Description.Modifier.annotation(schema.getDescription())));
+            annotations.add(new AnnotationModel<>(getContext(), Description.Modifier.annotation(schema.getDescription())));
         }
         return annotations;
     }

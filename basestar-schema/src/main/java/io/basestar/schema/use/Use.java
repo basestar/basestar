@@ -55,6 +55,7 @@ public interface Use<T> extends Serializable {
     enum Code {
 
         NULL,
+        ANY,
         BOOLEAN,
         INTEGER,
         NUMBER,
@@ -99,7 +100,7 @@ public interface Use<T> extends Serializable {
     Multimap<Name, Instance> refs(T value);
 
     @JsonValue
-    Object toJson();
+    Object toConfig();
 
     String toString();
 
@@ -287,6 +288,12 @@ public interface Use<T> extends Serializable {
         R visitDateTime(UseDateTime type);
 
         R visitView(UseView type);
+
+        default R visitAny(UseAny useAny) {
+
+            // Until properly implemented
+            throw new UnsupportedOperationException();
+        }
 
         interface Defaulting<R> extends Visitor<R> {
 

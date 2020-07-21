@@ -85,7 +85,7 @@ public class ViewSchemaMapper<T> extends InstanceSchemaMapper<T, ViewSchema.Buil
     }
 
     @Override
-    public ViewSchema.Builder schema() {
+    public ViewSchema.Builder schemaBuilder() {
 
         final ViewSchema.From.Builder from = ViewSchema.From.builder()
                 .setSchema(fromSchema)

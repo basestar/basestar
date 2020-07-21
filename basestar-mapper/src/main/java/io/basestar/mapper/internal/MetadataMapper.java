@@ -41,7 +41,7 @@ public class MetadataMapper implements MemberMapper<ObjectSchema.Builder> {
 
         this.name = name;
         this.property = property;
-        this.type = TypeMapper.from(context, property.type());
+        this.type = context.typeMapper(property.type());
     }
 
     @Override

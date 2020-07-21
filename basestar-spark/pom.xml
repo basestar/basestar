@@ -33,6 +33,10 @@
             <artifactId>basestar-schema</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.basestar</groupId>
+            <artifactId>basestar-mapper</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-sql_2.11</artifactId>
             <scope>provided</scope>

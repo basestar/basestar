@@ -9,7 +9,8 @@
     <#case "String">String<#break>
     <#case "Date">java.time.LocalDate<#break>
     <#case "DateTime">java.time.LocalDateTime<#break>
-    <#default>${of.schema.qualifiedClassName}<#break>
+    <#case "Any">Object<#break>
+    <#default>${of.schema.fullyQualifiedClassName}<#break>
 </#switch></#macro>
 
 <#macro values of>{<#list of as v><@value of=v/><#sep>, </#list>}</#macro>

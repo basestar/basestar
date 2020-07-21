@@ -4,12 +4,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import io.basestar.expression.Expression;
+import io.basestar.mapper.MappingContext;
 import io.basestar.spark.transform.ConformTransform;
+import io.basestar.spark.transform.MarshallTransform;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoder;
-import org.apache.spark.sql.Encoders;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -59,8 +60,14 @@ public interface QueryChain<T> {
         return (expand, query, sort) -> conform.accept(self.query(expand, query, sort).toDF()).as(encoder);
     }
 
-    default <T2> QueryChain<T2> as(final Class<T2> beanClass) {
+    default <T2> QueryChain<T2> as(final Class<T2> marshallAs) {
 
-        return as(Encoders.bean(beanClass));
+        return as(new MappingContext(), marshallAs);
+    }
+
+    default <T2> QueryChain<T2> as(final MappingContext context, final Class<T2> marshallAs) {
+
+        final QueryChain<T> self = this;
+        return (expand, query, sort) -> new MarshallTransform<>(context, marshallAs).accept(self.query(expand, query, sort));
     }
 }

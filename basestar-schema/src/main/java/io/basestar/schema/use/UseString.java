@@ -75,7 +75,7 @@ public class UseString implements UseScalar<String> {
     }
 
     @Override
-    public Object toJson() {
+    public Object toConfig() {
 
         return NAME;
     }

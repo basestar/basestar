@@ -20,7 +20,7 @@ package io.basestar.codegen.model;
  * #L%
  */
 
-import io.basestar.codegen.CodegenSettings;
+import io.basestar.codegen.CodegenContext;
 
 import javax.validation.Payload;
 import javax.validation.Valid;
@@ -30,21 +30,21 @@ import java.lang.annotation.Annotation;
 @SuppressWarnings("unused")
 public class Model {
 
-    private final CodegenSettings settings;
+    private final CodegenContext context;
 
-    public Model(final CodegenSettings settings) {
+    public Model(final CodegenContext context) {
 
-        this.settings = settings;
+        this.context = context;
     }
 
-    protected CodegenSettings getSettings() {
+    protected CodegenContext getContext() {
 
-        return settings;
+        return context;
     }
 
     public String getPackageName() {
 
-        return settings.getPackageName();
+        return context.getRootPackage().toString();
     }
 
     protected static final Valid VALID = new Valid() {

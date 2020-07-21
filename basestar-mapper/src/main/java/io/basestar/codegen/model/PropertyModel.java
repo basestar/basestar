@@ -20,7 +20,7 @@ package io.basestar.codegen.model;
  * #L%
  */
 
-import io.basestar.codegen.CodegenSettings;
+import io.basestar.codegen.CodegenContext;
 import io.basestar.mapper.annotation.Description;
 import io.basestar.mapper.annotation.Expression;
 import io.basestar.mapper.annotation.Immutable;
@@ -36,9 +36,9 @@ public class PropertyModel extends MemberModel {
 
     private final Property property;
 
-    public PropertyModel(final CodegenSettings settings, final Property property) {
+    public PropertyModel(final CodegenContext context, final Property property) {
 
-        super(settings);
+        super(context);
 
         this.property = property;
     }
@@ -53,20 +53,20 @@ public class PropertyModel extends MemberModel {
     public List<AnnotationModel<?>> getAnnotations() {
 
         final List<AnnotationModel<?>> annotations = new ArrayList<>();
-        annotations.add(new AnnotationModel<>(getSettings(), io.basestar.mapper.annotation.Property.Declaration.annotation(property)));
+        annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.Property.Declaration.annotation(property)));
         if(property.getExpression() != null) {
-            annotations.add(new AnnotationModel<>(getSettings(), Expression.Modifier.annotation(property.getExpression())));
+            annotations.add(new AnnotationModel<>(getContext(), Expression.Modifier.annotation(property.getExpression())));
         }
         if(property.isRequired()) {
-            annotations.add(new AnnotationModel<>(getSettings(), NOT_NULL));
+            annotations.add(new AnnotationModel<>(getContext(), NOT_NULL));
 //            annotations.add(new AnnotationModel<>(getSettings(), Required.Modifier.annotation(true)));
         }
         if(property.isImmutable()) {
-            annotations.add(new AnnotationModel<>(getSettings(), Immutable.Modifier.annotation(true)));
+            annotations.add(new AnnotationModel<>(getContext(), Immutable.Modifier.annotation(true)));
         }
-        property.getConstraints().forEach(constraint -> annotations.add(new AnnotationModel<>(getSettings(), constraint.toJsr380(property.getType()))));
+        property.getConstraints().forEach(constraint -> annotations.add(new AnnotationModel<>(getContext(), constraint.toJsr380(property.getType()))));
         if(property.getDescription() != null) {
-            annotations.add(new AnnotationModel<>(getSettings(), Description.Modifier.annotation(property.getDescription())));
+            annotations.add(new AnnotationModel<>(getContext(), Description.Modifier.annotation(property.getDescription())));
         }
         return annotations;
     }
@@ -74,7 +74,7 @@ public class PropertyModel extends MemberModel {
     @Override
     public TypeModel getType() {
 
-        return TypeModel.from(getSettings(), property.getType());
+        return TypeModel.from(getContext(), property.getType());
     }
 
     @Override
