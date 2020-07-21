@@ -21,6 +21,7 @@ package io.basestar.util;
  */
 
 import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -50,9 +51,9 @@ public class Sort implements Serializable {
         this(name, order, Nulls.FIRST);
     }
 
-    public static List<Sort> parseList(final Collection<String> strs) {
+    public static List<Sort> parseList(final Iterable<String> strs) {
 
-        return strs.stream().map(Sort::parse)
+        return Streams.stream(strs).map(Sort::parse)
                 .collect(Collectors.toList());
     }
 
@@ -63,8 +64,7 @@ public class Sort implements Serializable {
 
     public static List<Sort> parseList(final String str) {
 
-        return Splitter.on(MULTIPLE_DELIMITER).omitEmptyStrings().trimResults().splitToList(str).stream()
-                .map(Sort::parse).collect(Collectors.toList());
+        return parseList(Splitter.on(MULTIPLE_DELIMITER).omitEmptyStrings().trimResults().split(str));
     }
 
     public Sort reverse() {
@@ -95,7 +95,7 @@ public class Sort implements Serializable {
 //    @JsonCreator
     public static Sort parse(final String v) {
 
-        final List<String> parts = SPLITTER.splitToList(v);
+        final List<String> parts = Lists.newArrayList(SPLITTER.split(v));
         if(parts.size() < 1) {
             throw new IllegalStateException();
         } else {

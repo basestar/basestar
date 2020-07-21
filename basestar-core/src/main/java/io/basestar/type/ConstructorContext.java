@@ -20,6 +20,7 @@ package io.basestar.type;
  * #L%
  */
 
+import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import io.basestar.type.has.HasAnnotations;
 import io.basestar.type.has.HasModifiers;
@@ -30,10 +31,10 @@ import lombok.experimental.Accessors;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
-import java.util.function.Supplier;
 
 @Getter
 @Accessors(fluent = true)
+@SuppressWarnings("Guava")
 public class ConstructorContext implements HasModifiers, HasAnnotations, HasParameters {
 
     private final TypeContext owner;

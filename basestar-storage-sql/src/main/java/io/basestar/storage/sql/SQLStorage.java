@@ -20,7 +20,6 @@ package io.basestar.storage.sql;
  * #L%
  */
 
-import com.google.common.base.MoreObjects;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
@@ -37,7 +36,7 @@ import io.basestar.storage.query.Range;
 import io.basestar.storage.query.RangeVisitor;
 import io.basestar.storage.util.KeysetPagingUtils;
 import io.basestar.storage.util.Pager;
-import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
 import io.basestar.util.PagedList;
 import io.basestar.util.PagingToken;
 import io.basestar.util.Sort;
@@ -73,7 +72,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         this.dataSource = builder.dataSource;
         this.dialect = builder.dialect;
         this.strategy = builder.strategy;
-        this.eventStrategy = MoreObjects.firstNonNull(builder.eventStrategy, EventStrategy.EMIT);
+        this.eventStrategy = Nullsafe.option(builder.eventStrategy, EventStrategy.EMIT);
     }
 
     public static Builder builder() {
@@ -135,13 +134,13 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         final List<Pager.Source<Map<String, Object>>> sources = new ArrayList<>();
 
         for(final Expression conjunction : disjunction) {
-            final Map<Name, Range<Object>> ranges = conjunction.visit(new RangeVisitor());
+            final Map<io.basestar.util.Name, Range<Object>> ranges = conjunction.visit(new RangeVisitor());
 
             Index best = null;
             // Only multi-value indexes need to be matched
             for(final Index index : schema.getIndexes().values()) {
                 if(index.isMultiValue()) {
-                    final Set<Name> names = index.getMultiValuePaths();
+                    final Set<io.basestar.util.Name> names = index.getMultiValuePaths();
                     if (ranges.keySet().containsAll(names)) {
                         best = index;
                     }
@@ -568,11 +567,11 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         index.projectionSchema(schema).forEach((k, v) ->
                 result.put(DSL.field(DSL.name(k)), SQLUtils.toSQLValue(v, object.get(k))));
 
-        final List<Name> partitionNames = index.resolvePartitionPaths();
+        final List<io.basestar.util.Name> partitionNames = index.resolvePartitionPaths();
         final List<Object> partition = key.getPartition();
         assert partitionNames.size() == partition.size();
         for(int i = 0; i != partition.size(); ++i) {
-            final Name name = partitionNames.get(i);
+            final io.basestar.util.Name name = partitionNames.get(i);
             final Object value = partition.get(i);
             final Use<?> type = schema.typeOf(name);
             result.put(DSL.field(SQLUtils.columnName(name)), SQLUtils.toSQLValue(type, value));
@@ -581,7 +580,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         final List<Object> sort = key.getSort();
         assert sortPaths.size() == sort.size();
         for(int i = 0; i != sort.size(); ++i) {
-            final Name name = sortPaths.get(i).getName();
+            final io.basestar.util.Name name = sortPaths.get(i).getName();
             final Object value = sort.get(i);
             final Use<?> type = schema.typeOf(name);
             result.put(DSL.field(SQLUtils.columnName(name)), SQLUtils.toSQLValue(type, value));

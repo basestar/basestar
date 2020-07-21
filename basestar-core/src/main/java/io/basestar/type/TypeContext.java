@@ -20,6 +20,7 @@ package io.basestar.type;
  * #L%
  */
 
+import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import io.basestar.type.has.*;
 import io.basestar.util.Text;
@@ -36,13 +37,13 @@ import java.lang.reflect.Type;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Getter
 @Accessors(fluent = true)
+@SuppressWarnings("Guava")
 public class TypeContext implements HasName, HasModifiers, HasAnnotations, HasTypeParameters, HasType, HasConstructors,
         HasMethods, HasFields, HasProperties {
 

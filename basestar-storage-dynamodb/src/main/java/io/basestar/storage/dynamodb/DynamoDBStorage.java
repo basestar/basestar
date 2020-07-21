@@ -21,7 +21,6 @@ package io.basestar.storage.dynamodb;
  */
 
 import com.google.common.base.Joiner;
-import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.basestar.schema.*;
@@ -31,10 +30,7 @@ import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.UniqueIndexViolationException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;
-import io.basestar.util.Name;
-import io.basestar.util.PagedList;
-import io.basestar.util.PagingToken;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -72,7 +68,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
         this.client = builder.client;
         this.strategy = builder.strategy;
         this.oversizeStash = builder.oversizeStash;
-        this.eventStrategy = MoreObjects.firstNonNull(builder.eventStrategy, EventStrategy.EMIT);
+        this.eventStrategy = Nullsafe.option(builder.eventStrategy, EventStrategy.EMIT);
     }
 
     public static Builder builder() {

@@ -20,6 +20,7 @@ package io.basestar.type;
  * #L%
  */
 
+import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import io.basestar.type.has.HasModifiers;
 import io.leangen.geantyref.GenericTypeReflector;
@@ -30,10 +31,10 @@ import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.List;
-import java.util.function.Supplier;
 
 @Getter
 @Accessors(fluent = true)
+@SuppressWarnings("Guava")
 public class FieldContext implements HasModifiers, AccessorContext {
 
     private final TypeContext owner;

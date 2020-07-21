@@ -298,6 +298,9 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
         this.version = Nullsafe.option(descriptor.getVersion(), 1L);
         this.materialized = Nullsafe.option(descriptor.getMaterialized());
         final Descriptor.From from = Nullsafe.require(descriptor.getFrom());
+        if(from.getSchema() == null) {
+            throw new SchemaValidationException(qualifiedName, "View must specify from.schema");
+        }
         this.from = new From(resolver.requireInstanceSchema(from.getSchema()), Nullsafe.option(from.getExpand()));
         this.sort = Nullsafe.immutableCopy(descriptor.getSort());
         this.description = descriptor.getDescription();
@@ -424,8 +427,8 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
     public Multimap<Name, Instance> refs(final Instance object) {
 
         final Multimap<Name, Instance> results = HashMultimap.create();
-        getProperties().forEach((k, v) -> v.links(object.get(k)).forEach((k2, v2) ->
-                results.put(Name.of(v.getName()).with(k2), v2)));
+        getProperties().forEach((k, v) -> v.links(object.get(k)).entries().forEach(e ->
+                results.put(Name.of(v.getName()).with(e.getKey()), e.getValue())));
         return results;
     }
 

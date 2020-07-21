@@ -87,7 +87,8 @@ public class TestCodegenMojo {
         namespace.execute(classLoader);
 
         final Namespace.Builder original = Namespace.Builder.load(
-                new URI("classpath:/io/basestar/maven/schema.yml").toURL()
+                new URI("classpath:/io/basestar/maven/schema.yml").toURL(),
+                new URI("classpath:/io/basestar/maven/existing.yml").toURL()
         );
 
         final Namespace.Builder generated = Namespace.Builder.load(

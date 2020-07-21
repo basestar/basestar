@@ -118,7 +118,7 @@ public class UndertowHandler implements HttpHandler {
 
             final HeaderMap exchangeResponseHeaders = exchange.getResponseHeaders();
             exchange.setStatusCode(responseCode);
-            responseHeaders.forEach((k, v) -> exchangeResponseHeaders.put(HttpString.tryFromString(k), v));
+            responseHeaders.entries().forEach(e -> exchangeResponseHeaders.put(HttpString.tryFromString(e.getKey()), e.getValue()));
 //            final Collection<String> encodings = requestHeaders.get("accept-encoding");
 
             final ByteBuffer buffer;

@@ -20,9 +20,13 @@ package io.basestar.util;
  * #L%
  */
 
+import com.google.common.base.Splitter;
 import lombok.EqualsAndHashCode;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -43,7 +47,7 @@ public class Name extends AbstractPath<Name> implements Comparable<Name> {
         super(parts);
     }
 
-    protected Name(final List<String> parts) {
+    protected Name(final Iterable<String> parts) {
 
         super(parts);
     }
@@ -78,12 +82,12 @@ public class Name extends AbstractPath<Name> implements Comparable<Name> {
 
     public static Name parse(final String str) {
 
-        return new Name(splitter(DELIMITER).splitToList(str));
+        return new Name(splitter(DELIMITER).split(str));
     }
 
-    public static Set<Name> parseSet(final Collection<String> strs) {
+    public static Set<Name> parseSet(final Iterable<String> strs) {
 
-        return strs.stream().map(Name::parse)
+        return Streams.stream(strs).map(Name::parse)
                 .collect(Collectors.toSet());
     }
 
@@ -94,12 +98,12 @@ public class Name extends AbstractPath<Name> implements Comparable<Name> {
 
     public static Set<Name> parseSet(final String str) {
 
-        return parseSet(splitter(MULTIPLE_DELIMITER).splitToList(str));
+        return parseSet(splitter(MULTIPLE_DELIMITER).split(str));
     }
 
-    public static List<Name> parseList(final Collection<String> strs) {
+    public static List<Name> parseList(final Iterable<String> strs) {
 
-        return strs.stream().map(Name::parse)
+        return Streams.stream(strs).map(Name::parse)
                 .collect(Collectors.toList());
     }
 
@@ -110,7 +114,7 @@ public class Name extends AbstractPath<Name> implements Comparable<Name> {
 
     public static List<Name> parseList(final String str) {
 
-        return parseList(splitter(MULTIPLE_DELIMITER).splitToList(str));
+        return parseList(splitter(MULTIPLE_DELIMITER).split(str));
     }
 
     public static Name of(final String ... parts) {
@@ -128,6 +132,11 @@ public class Name extends AbstractPath<Name> implements Comparable<Name> {
     public static Name empty() {
 
         return new Name(Collections.emptyList());
+    }
+
+    protected static Splitter splitter(final char delimiter) {
+
+        return Splitter.on(delimiter).omitEmptyStrings().trimResults();
     }
 
     public boolean equalsSingle(final String path) {

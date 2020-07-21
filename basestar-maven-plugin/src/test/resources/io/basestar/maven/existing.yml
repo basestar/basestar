@@ -1,0 +1,5 @@
+existing.Test:
+  type: object
+  properties:
+    a:
+      type: string

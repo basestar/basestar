@@ -143,7 +143,7 @@ public interface UseCollection<V, T extends Collection<V>> extends Use<T> {
 
         final Multimap<Name, Instance> result = HashMultimap.create();
         if(value != null) {
-            value.forEach(v -> getType().refs(v).forEach(result::put));
+            value.forEach(v -> getType().refs(v).entries().forEach(e -> result.put(e.getKey(), e.getValue())));
         }
         return result;
     }

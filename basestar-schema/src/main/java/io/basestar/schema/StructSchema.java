@@ -276,8 +276,8 @@ public class StructSchema implements InstanceSchema {
     public Multimap<Name, Instance> refs(final Map<String, Object> object) {
 
         final Multimap<Name, Instance> results = HashMultimap.create();
-        properties.forEach((k, v) -> v.links(object.get(k)).forEach((k2, v2) ->
-                results.put(Name.of(v.getName()).with(k2), v2)));
+        properties.forEach((k, v) -> v.links(object.get(k)).entries().forEach(e ->
+                results.put(Name.of(v.getName()).with(e.getKey()), e.getValue())));
         return results;
     }
 

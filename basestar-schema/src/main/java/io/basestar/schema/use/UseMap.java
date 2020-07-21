@@ -347,8 +347,8 @@ public class UseMap<T> implements Use<Map<String, T>> {
 
         final Multimap<Name, Instance> result = HashMultimap.create();
         if(value != null) {
-            value.forEach((k, v) -> type.refs(v).forEach((k2, v2) ->
-                    result.put(Name.of(k).with(k2), v2)));
+            value.forEach((k, v) -> type.refs(v).entries().forEach(e ->
+                    result.put(Name.of(k).with(e.getKey()), e.getValue())));
         }
         return result;
     }

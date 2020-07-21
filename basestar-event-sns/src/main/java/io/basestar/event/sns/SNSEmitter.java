@@ -21,12 +21,12 @@ package io.basestar.event.sns;
  */
 
 import com.google.common.base.Charsets;
-import com.google.common.base.MoreObjects;
 import com.google.common.io.BaseEncoding;
 import io.basestar.event.Emitter;
 import io.basestar.event.Event;
 import io.basestar.event.EventSerialization;
 import io.basestar.storage.Stash;
+import io.basestar.util.Nullsafe;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
@@ -65,7 +65,7 @@ public class SNSEmitter implements Emitter {
 
         this.client = builder.client;
         this.topicArn = builder.topicArn;
-        this.serialization = MoreObjects.firstNonNull(builder.serialization, EventSerialization.gzipBson());
+        this.serialization = Nullsafe.option(builder.serialization, EventSerialization.gzipBson());
         this.oversizeStash = builder.oversizeStash;
     }
 

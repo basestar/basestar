@@ -20,13 +20,13 @@ package io.basestar.event.sqs;
  * #L%
  */
 
-import com.google.common.base.MoreObjects;
 import com.google.common.io.BaseEncoding;
 import io.basestar.event.Event;
 import io.basestar.event.EventSerialization;
 import io.basestar.event.Handler;
 import io.basestar.event.Receiver;
 import io.basestar.storage.Stash;
+import io.basestar.util.Nullsafe;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
@@ -64,7 +64,7 @@ public class SQSReceiver implements Receiver {
 
         this.client = builder.client;
         this.queueUrl = builder.queueUrl;
-        this.serialization = MoreObjects.firstNonNull(builder.serialization, EventSerialization.gzipBson());
+        this.serialization = Nullsafe.option(builder.serialization, EventSerialization.gzipBson());
         this.oversizeStash = builder.oversizeStash;
     }
 

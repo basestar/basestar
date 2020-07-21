@@ -20,7 +20,6 @@ package io.basestar.database;
  * #L%
  */
 
-import com.google.common.base.MoreObjects;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -35,10 +34,7 @@ import io.basestar.schema.*;
 import io.basestar.schema.util.Expander;
 import io.basestar.storage.Storage;
 import io.basestar.storage.util.Pager;
-import io.basestar.util.Name;
-import io.basestar.util.PagedList;
-import io.basestar.util.PagingToken;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -369,7 +365,7 @@ public class ReadProcessor {
 
                 return data.map(v -> {
                     final RefKey key = RefKey.from(v);
-                    final Map<String, Object> result = MoreObjects.firstNonNull(mapped.get(key), v);
+                    final Map<String, Object> result = Nullsafe.option(mapped.get(key), v);
                     final ObjectSchema schema = objectSchema(Instance.getSchema(result));
                     return schema.create(result, true, true);
                 });
@@ -413,7 +409,7 @@ public class ReadProcessor {
                 final Map<ExpandKey<RefKey>, Instance> remapped = new HashMap<>();
                 data.forEach((k, v) ->  {
                     final RefKey key = RefKey.from(v);
-                    final Map<String, Object> result = MoreObjects.firstNonNull(mapped.get(key), v);
+                    final Map<String, Object> result = Nullsafe.option(mapped.get(key), v);
                     final ObjectSchema schema = objectSchema(Instance.getSchema(result));
                     final Instance instance = schema.create(result);
                     remapped.put(k, instance);

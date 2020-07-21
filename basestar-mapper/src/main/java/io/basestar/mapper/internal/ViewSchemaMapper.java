@@ -21,6 +21,7 @@ package io.basestar.mapper.internal;
  */
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
 import io.basestar.schema.ViewSchema;
@@ -47,7 +48,7 @@ public class ViewSchemaMapper<T> extends InstanceSchemaMapper<T, ViewSchema.Buil
         super(ViewSchema.Builder.class, context, name, type);
         this.materialized = materialized;
         this.fromSchema = null;
-        this.fromExpand = null;
+        this.fromExpand = ImmutableSet.of();
         this.group = ImmutableList.of();
         this.where = null;
     }

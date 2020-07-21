@@ -20,6 +20,7 @@ package io.basestar.mapper.internal;
  * #L%
  */
 
+import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
@@ -39,7 +40,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 // Make generic TypeMapper<I, O> (but have to make consistent with weird SchemaMapper<T, O> generic order)
 
@@ -365,6 +365,7 @@ public interface TypeMapper extends Serializable {
     }
 
     @RequiredArgsConstructor
+    @SuppressWarnings("Guava")
     class OfCustom implements TypeMapper {
 
         private final Class<?> erasedType;

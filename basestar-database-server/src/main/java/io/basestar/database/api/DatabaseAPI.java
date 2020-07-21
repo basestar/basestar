@@ -20,12 +20,8 @@ package io.basestar.database.api;
  * #L%
  */
 
-import com.google.common.base.MoreObjects;
 import com.google.common.base.Splitter;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Multimap;
+import com.google.common.collect.*;
 import io.basestar.BuildMetadata;
 import io.basestar.api.API;
 import io.basestar.api.APIFormat;
@@ -42,10 +38,7 @@ import io.basestar.expression.Expression;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.*;
 import io.basestar.storage.exception.ObjectMissingException;
-import io.basestar.util.Name;
-import io.basestar.util.PagedList;
-import io.basestar.util.PagingToken;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 import io.swagger.v3.oas.models.*;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.media.*;
@@ -113,7 +106,7 @@ public class DatabaseAPI implements API {
             if(request.getPath().equals("/")) {
                 path = Collections.emptyList();
             } else {
-                path = PATH_SPLITTER.splitToList(request.getPath());
+                path = Lists.newArrayList(PATH_SPLITTER.split(request.getPath()));
             }
 
             final APIRequest.Method method = request.getMethod();
@@ -232,7 +225,7 @@ public class DatabaseAPI implements API {
         final UpdateOptions options = UpdateOptions.builder()
                 .schema(schema).id(id).data(data)
                 .expand(parseExpand(request))
-                .mode(MoreObjects.firstNonNull(parseUpdateMode(request), mode))
+                .mode(Nullsafe.option(parseUpdateMode(request), mode))
                 .version(parseVersion(request))
                 .build();
 

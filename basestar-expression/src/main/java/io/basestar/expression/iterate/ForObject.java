@@ -23,7 +23,6 @@ package io.basestar.expression.iterate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import com.google.common.collect.Streams;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
@@ -31,6 +30,7 @@ import io.basestar.expression.Renaming;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.function.IfElse;
 import io.basestar.util.Name;
+import io.basestar.util.Streams;
 import lombok.Data;
 
 import java.util.*;

@@ -39,6 +39,8 @@ a.Test:
       type: Test
     b:
       type: b.Test
+    existing:
+      type: existing.Test
   indexes:
     forward:
       partition:

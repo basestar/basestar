@@ -29,7 +29,6 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 public class Text {
 
@@ -148,13 +147,13 @@ public class Text {
             return Stream.empty();
         } else if(str.contains(" ")) {
             // Probably sentence case
-            return StreamSupport.stream(Splitter.on(Pattern.compile("[^A-Za-z0-9]+")).omitEmptyStrings().split(str).spliterator(), false);
+            return Streams.stream(Splitter.on(Pattern.compile("[^A-Za-z0-9]+")).omitEmptyStrings().split(str));
         } else if(str.contains("-")) {
             // Probably kebab-case
-            return StreamSupport.stream(Splitter.on("-").omitEmptyStrings().split(str).spliterator(), false);
+            return Streams.stream(Splitter.on("-").omitEmptyStrings().split(str));
         } else if(str.contains("_")) {
             // Probably snake-case
-            return StreamSupport.stream(Splitter.on("_").omitEmptyStrings().split(str).spliterator(), false);
+            return Streams.stream(Splitter.on("_").omitEmptyStrings().split(str));
         } else {
             // Probably some version of camelCase
             return Arrays.stream(str.split("(?<!(^|[A-Z]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])"));

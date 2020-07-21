@@ -20,13 +20,14 @@ package io.basestar.api;
  * #L%
  */
 
+import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import io.basestar.util.Nullsafe;
 import io.swagger.v3.oas.models.OpenAPI;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Supplier;
 
+@SuppressWarnings("Guava")
 public class DiscoverableAPI implements API {
 
     private final API api;

@@ -20,7 +20,6 @@ package io.basestar.storage.elasticsearch;
  * #L%
  */
 
-import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
@@ -35,10 +34,7 @@ import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.util.KeysetPagingUtils;
 import io.basestar.storage.util.Pager;
-import io.basestar.util.Name;
-import io.basestar.util.PagedList;
-import io.basestar.util.PagingToken;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
@@ -98,7 +94,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
 
         this.client = builder.client;
         this.strategy = builder.strategy;
-        this.eventStrategy = MoreObjects.firstNonNull(builder.eventStrategy, EventStrategy.EMIT);
+        this.eventStrategy = Nullsafe.option(builder.eventStrategy, EventStrategy.EMIT);
         this.createdIndices = new ConcurrentSkipListSet<>();
     }
 

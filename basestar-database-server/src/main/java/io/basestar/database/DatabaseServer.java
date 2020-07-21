@@ -20,7 +20,6 @@ package io.basestar.database;
  * #L%
  */
 
-import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
@@ -509,7 +508,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         throw new ObjectMissingException(ownerSchema.getQualifiedName(), ownerId);
                     }
 
-                    final int count = MoreObjects.firstNonNull(options.getCount(), QueryLinkOptions.DEFAULT_COUNT);
+                    final int count = Nullsafe.option(options.getCount(), QueryLinkOptions.DEFAULT_COUNT);
                     if(count > QueryLinkOptions.MAX_COUNT) {
                         throw new IllegalStateException("Count too high (max " +  QueryLinkOptions.MAX_COUNT + ")");
                     }
@@ -527,7 +526,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         final InstanceSchema schema = namespace.requireInstanceSchema(options.getSchema());
 
-        final int count = MoreObjects.firstNonNull(options.getCount(), QueryOptions.DEFAULT_COUNT);
+        final int count = Nullsafe.option(options.getCount(), QueryOptions.DEFAULT_COUNT);
         if (count > QueryOptions.MAX_COUNT) {
             throw new IllegalStateException("Count too high (max " + QueryLinkOptions.MAX_COUNT + ")");
         }
@@ -579,7 +578,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
                 //FIXME: should de-duplicate sort keys, also need to deal with empty case
                 final List<Sort> sort = ImmutableList.<Sort>builder()
-                        .addAll(MoreObjects.firstNonNull(options.getSort(), viewSchema.getSort()))
+                        .addAll(Nullsafe.option(options.getSort(), viewSchema.getSort()))
                         .addAll(group.keySet().stream().map(k -> Sort.asc(Name.of(k))).collect(Collectors.toList()))
                         .build();
 
@@ -623,7 +622,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
             final Expression bound = merged.bind(context);
 
-            final List<Sort> sort = MoreObjects.firstNonNull(options.getSort(), Collections.emptyList());
+            final List<Sort> sort = Nullsafe.option(options.getSort(), Collections.emptyList());
             final Expression unrooted = bound.bind(Context.init(), Renaming.removeExpectedPrefix(Name.of(Reserved.THIS)));
 
             return queryImpl(context, objectSchema, unrooted, sort, count, paging)

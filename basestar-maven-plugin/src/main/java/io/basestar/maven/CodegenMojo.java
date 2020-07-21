@@ -22,7 +22,11 @@ package io.basestar.maven;
 
 import io.basestar.codegen.Codegen;
 import io.basestar.codegen.CodegenSettings;
+import io.basestar.mapper.MappingContext;
 import io.basestar.schema.Namespace;
+import io.basestar.schema.Schema;
+import io.basestar.util.Name;
+import io.basestar.util.URLs;
 import lombok.Setter;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -31,8 +35,8 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
+import javax.annotation.Nullable;
 import java.io.File;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 
@@ -64,13 +68,9 @@ public class CodegenMojo extends AbstractMojo {
 
         System.setProperty("java.protocol.handler.pkgs", "io.basestar.protocol");
         try {
-            final Namespace ns = Namespace.load(schemaUrls.stream().map(v -> {
-                try {
-                    return new URL(v);
-                } catch (final MalformedURLException e) {
-                    throw new IllegalStateException(e);
-                }
-            }).toArray(URL[]::new));
+
+            final Schema.Resolver resolver = new ClassLoadingResolver(packageName);
+            final Namespace ns = Namespace.load(resolver, schemaUrls.stream().map(URLs::toURLUnchecked).toArray(URL[]::new));
 
             final CodegenSettings settings = CodegenSettings.builder()
                     .packageName(packageName)
@@ -102,6 +102,30 @@ public class CodegenMojo extends AbstractMojo {
         } catch (final Exception e) {
             getLog().error("Codegen execution failed", e);
             throw new MojoExecutionException("Codegen execution failed", e);
+        }
+    }
+
+    private static class ClassLoadingResolver implements Schema.Resolver {
+
+        private final MappingContext mappingContext = new MappingContext();
+
+        private final Name packageName;
+
+        public ClassLoadingResolver(final String packageName) {
+
+            this.packageName = Name.parse(packageName);
+        }
+
+        @Nullable
+        @Override
+        public Schema<?> getSchema(final Name name) {
+
+            try {
+                final Class<?> cls = Class.forName(packageName.with(name).toString());
+                return mappingContext.schema(this, cls);
+            } catch (final ClassNotFoundException e) {
+                return null;
+            }
         }
     }
 }

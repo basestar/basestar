@@ -21,7 +21,6 @@ package io.basestar.util;
  */
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Splitter;
 import com.google.common.collect.*;
 import lombok.Data;
 
@@ -32,7 +31,6 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 @Data
 public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements Iterable<String>, Comparable<SELF>, Serializable {
@@ -48,14 +46,14 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
         this.parts = ImmutableList.copyOf(parts);
     }
 
-    protected AbstractPath(final List<String> parts) {
+    protected AbstractPath(final Iterable<String> parts) {
 
         this.parts = ImmutableList.copyOf(parts);
     }
 
     public Stream<String> stream() {
 
-        return StreamSupport.stream(this.spliterator(), false);
+        return Streams.stream(this);
     }
 
     protected abstract char delimiter();
@@ -290,11 +288,6 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
     public int compareTo(@Nonnull final SELF other) {
 
         return toString().compareTo(other.toString());
-    }
-
-    protected static Splitter splitter(final char delimiter) {
-
-        return Splitter.on(delimiter).omitEmptyStrings().trimResults();
     }
 
     protected static Joiner joiner(final char delimiter) {

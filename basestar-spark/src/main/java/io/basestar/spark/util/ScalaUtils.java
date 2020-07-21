@@ -20,7 +20,7 @@ package io.basestar.spark.util;
  * #L%
  */
 
-import com.google.common.collect.Streams;
+import io.basestar.util.Streams;
 import lombok.RequiredArgsConstructor;
 import scala.Predef;
 import scala.Serializable;

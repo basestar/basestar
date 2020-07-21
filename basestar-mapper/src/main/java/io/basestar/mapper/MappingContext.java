@@ -24,6 +24,7 @@ import io.basestar.mapper.internal.TypeMapper;
 import io.basestar.mapper.internal.annotation.SchemaDeclaration;
 import io.basestar.mapper.internal.annotation.SchemaModifier;
 import io.basestar.schema.Namespace;
+import io.basestar.schema.Schema;
 import io.basestar.type.AnnotationContext;
 import io.basestar.type.TypeContext;
 import io.basestar.type.has.HasType;
@@ -88,6 +89,18 @@ public class MappingContext implements Serializable {
             final SchemaDeclaration.Declaration decl = declaration(type);
             return decl.getQualifiedName(this, type);
         }
+    }
+
+    public Schema<?> schema(final Class<?> cls) {
+
+        final Name name = schemaName(cls);
+        return namespace(cls).build().requireSchema(name);
+    }
+    
+    public Schema<?> schema(final Schema.Resolver resolver, final Class<?> cls) {
+
+        final Name name = schemaName(cls);
+        return namespace(cls).build(resolver).requireSchema(name);
     }
 
     public TypeMapper typeMapper(final TypeContext type) {
