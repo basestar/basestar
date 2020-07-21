@@ -230,7 +230,7 @@ MyEnum:
 
   
 
-- `constraints` **map of [Constraint](#constraint)**
+- `constraints` **array of [Constraint](#constraint)**
 
   
 
@@ -292,11 +292,15 @@ MyEnum:
 
   
 
-- `schema` **io.basestar.schema.ObjectSchema**
+- `schema` **string (name)**
 
   
 
 - `expression` **Expression**
+
+  
+
+- `single` **boolean**
 
   
 
@@ -493,6 +497,10 @@ type: MyStruct
 type: MyEnum
 </pre>
 
+### 
+
+
+
 ### Map Type
 
 
@@ -502,15 +510,9 @@ type:
   map: string
 </pre>
 
-### Object Type
+### 
 
 
-Stores a reference to the object.
-
-<strong>Example</strong>
-<pre>
-type: MyObject
-</pre>
 
 ### 
 
