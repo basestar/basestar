@@ -78,4 +78,9 @@ public class TestSQLStorage extends TestStorage {
 
         return storage;
     }
+
+    protected boolean supportsLike() {
+
+        return true;
+    }
 }

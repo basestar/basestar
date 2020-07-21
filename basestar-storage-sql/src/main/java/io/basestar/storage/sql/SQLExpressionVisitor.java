@@ -36,7 +36,9 @@ import io.basestar.expression.iterate.Of;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
+import io.basestar.expression.text.Like;
 import io.basestar.util.Name;
+import lombok.RequiredArgsConstructor;
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.QueryPart;
@@ -44,8 +46,12 @@ import org.jooq.impl.DSL;
 
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.function.Function;
 
+@RequiredArgsConstructor
 public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryPart> {
+
+    private final Function<Name, QueryPart> columnResolver;
 
     @Override
     public QueryPart visitDefault(final Expression expression) {
@@ -220,8 +226,9 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     public QueryPart visitNameConstant(final NameConstant expression) {
 
         final Name name = expression.getName();
-        return DSL.field(DSL.name(name.stream()
-                .map(DSL::name).toArray(org.jooq.Name[]::new)));
+        return columnResolver.apply(name);
+//        DSL.field(DSL.name(name.stream()
+//                .map(DSL::name).toArray(org.jooq.Name[]::new)));
     }
 
     @Override
@@ -230,6 +237,14 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
         final Field<Object> lhs = field(expression.getLhs().visit(this), Object.class);
         final Field<Object> rhs = field(expression.getRhs().visit(this), Object.class);
         return (lhs != null && rhs != null) ? DSL.coalesce(lhs, rhs) : null;
+    }
+
+    @Override
+    public QueryPart visitLike(final Like expression) {
+
+        final Field<Object> lhs = field(expression.getLhs().visit(this), Object.class);
+        final Field<String> rhs = field(expression.getRhs().visit(this), String.class);
+        return (lhs != null && rhs != null) ? (expression.isCaseSensitive() ? lhs.like(rhs) : lhs.likeIgnoreCase(rhs)) : null;
     }
 
     @Override
@@ -260,7 +275,9 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
                     final String first = of.getValue();
                     final Expression bound = lhs.bind(Context.init(), path -> {
                         if(first.equals(path.first())) {
-                            return SQLUtils.columnPath(rhsName.with(path.withoutFirst()));
+                            return rhsName.with(path.withoutFirst());
+//                            return columnResolver.apply(name);
+//                            return SQLUtils.columnPath(rhsName.with(path.withoutFirst()));
                         } else {
                             return path;
                         }

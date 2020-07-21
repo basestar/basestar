@@ -26,6 +26,8 @@ import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Index;
 import io.basestar.schema.*;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseObject;
+import io.basestar.schema.use.UseStruct;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
@@ -109,7 +111,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
     public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
 
         return withContext(context -> context.select(selectFields(schema))
-                .from(objectTableName(schema))
+                .from(DSL.table(objectTableName(schema)))
                 .where(idField(schema).eq(id))
                 .limit(1).fetchAsync().thenApply(result -> first(schema, result)));
     }
@@ -118,7 +120,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
     public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
 
         return withContext(context -> context.select(selectFields(schema))
-                    .from(historyTableName(schema))
+                    .from(DSL.table(historyTableName(schema)))
                     .where(idField(schema).eq(id)
                             .and(versionField(schema).eq(version)))
                     .limit(1).fetchAsync().thenApply(result -> first(schema, result)));
@@ -147,8 +149,6 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                 }
             }
 
-            final Condition condition = new SQLExpressionVisitor().condition(conjunction);
-
             final List<OrderField<?>> orderFields = sort.stream()
                     .map(v -> {
                         final Field<?> field = DSL.field(SQLUtils.columnName(v.getName()));
@@ -160,9 +160,19 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
             sources.add((count, token, stats) ->
                     withContext(context -> {
 
+                        final Table<Record> table;
+                        final Function<io.basestar.util.Name, QueryPart> columnResolver;
+                        if(index == null) {
+                            table = DSL.table(objectTableName(schema));
+                            columnResolver = objectColumnResolver(context, schema);
+                        } else {
+                            table = DSL.table(indexTableName(schema, index));
+                            columnResolver = indexColumnResolver(context, schema, index);
+                        }
+                        final Condition condition = new SQLExpressionVisitor(columnResolver).condition(conjunction);
+
                         final SelectSeekStepN<Record> select = context.select(selectFields(schema))
-                                .from(index == null ? objectTableName(schema) : indexTableName(schema, index))
-                                .where(condition).orderBy(orderFields);
+                                .from(table).where(condition).orderBy(orderFields);
 
                         final SelectForUpdateStep<Record> seek;
                         if(token == null) {
@@ -191,6 +201,50 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         }
 
         return sources;
+    }
+
+    private Function<io.basestar.util.Name, QueryPart> objectColumnResolver(final DSLContext context, final ObjectSchema schema) {
+
+        return name -> {
+
+            final Property prop = schema.requireProperty(name.first(), true);
+            final io.basestar.util.Name rest = name.withoutFirst();
+            if(rest.isEmpty()) {
+                return DSL.field(DSL.name(name.first()));
+            } else {
+                return prop.getType().visit(new Use.Visitor.Defaulting<QueryPart>() {
+                    @Override
+                    public QueryPart visitDefault(final Use<?> type) {
+
+                        throw new UnsupportedOperationException("Query of this type is not supported");
+                    }
+
+                    @Override
+                    public QueryPart visitStruct(final UseStruct type) {
+
+                        // FIXME
+                        return DSL.field(SQLUtils.columnName(name));
+                    }
+
+                    @Override
+                    public QueryPart visitObject(final UseObject type) {
+
+                        final Field<String> sourceId = DSL.field(DSL.name(name.first()), String.class);
+                        if(rest.equals(Reserved.ID_NAME)) {
+                            return sourceId;
+                        } else {
+                            throw new UnsupportedOperationException("Query of this type is not supported");
+                        }
+                    }
+                });
+            }
+        };
+    }
+
+    private Function<io.basestar.util.Name, QueryPart> indexColumnResolver(final DSLContext context, final ObjectSchema schema, final Index index) {
+
+        // FIXME
+        return name -> DSL.field(SQLUtils.columnName(name));
     }
 
     @Override
