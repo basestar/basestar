@@ -45,7 +45,7 @@ import java.util.stream.Collectors;
 @Data
 public class Lambda implements Expression {
 
-    public static final String TOKEN = "->";
+    public static final String TOKEN = "=>";
 
     public static final int PRECEDENCE = Of.PRECEDENCE + 1;
 

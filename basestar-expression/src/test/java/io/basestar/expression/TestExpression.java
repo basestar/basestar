@@ -236,9 +236,9 @@ public class TestExpression {
     @Test
     public void testLambda() {
 
-        check("(x -> x + x)(1)", 2);
-        check("((x, y) -> x * y)(2, 4)", 8);
-        check("((x, y) -> z -> z * x + y)(2, 4)(6)", 16);
+        check("(x => x + x)(1)", 2);
+        check("((x, y) => x * y)(2, 4)", 8);
+        check("((x, y) => z => z * x + y)(2, 4)(6)", 16);
     }
 
     @Test
@@ -298,7 +298,7 @@ public class TestExpression {
     @Test
     public void testComplex() {
 
-        final String expr = "this.owner.id == caller.id && this.users.anyMatch(u -> u.id == caller.id)";
+        final String expr = "this.owner.id == caller.id && this.users.anyMatch(u => u.id == caller.id)";
         check(expr, true, context(ImmutableMap.of(
                 "caller", ImmutableMap.of(
                         "id", "test"
@@ -320,11 +320,11 @@ public class TestExpression {
     @Disabled
     public void testLambdaBind() {
 
-        final Expression unbound = Expression.parse("[1].map(v -> a)").bind(context());
+        final Expression unbound = Expression.parse("[1].map(v => a)").bind(context());
         assertTrue(unbound instanceof LambdaCall);
-        final Expression bound = Expression.parse("[1].map(v -> v)").bind(context());
+        final Expression bound = Expression.parse("[1].map(v => v)").bind(context());
         assertTrue(bound instanceof Constant);
-        final Expression chained = Expression.parse("x.map(v -> v.y.map(v2 -> v2))").bind(context(ImmutableMap.of(
+        final Expression chained = Expression.parse("x.map(v => v.y.map(v2 => v2))").bind(context(ImmutableMap.of(
                 "x", ImmutableList.of(
                         ImmutableMap.of(
                                 "y", ImmutableList.of(1)
@@ -333,7 +333,7 @@ public class TestExpression {
         )));
         assertTrue(chained instanceof Constant);
 
-        final String str = "this.owner.id == caller.id || this.id in caller.projects.map(p -> p.id) || this.id in caller.teams.flatMap(t -> t.projects.map(p -> p.id))";
+        final String str = "this.owner.id == caller.id || this.id in caller.projects.map(p => p.id) || this.id in caller.teams.flatMap(t => t.projects.map(p => p.id))";
         final Expression example = Expression.parse(str).bind(context(ImmutableMap.of())).bind(context(ImmutableMap.of(
                 "this", ImmutableMap.of(
                         "id", "a",
