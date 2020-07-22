@@ -27,7 +27,7 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.jackson.serde.ExpressionDeseriaizer;
+import io.basestar.jackson.serde.ExpressionDeserializer;
 import io.basestar.schema.exception.MissingPropertyException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
@@ -35,8 +35,10 @@ import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
+import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.experimental.Accessors;
 
 import javax.annotation.Nonnull;
@@ -67,6 +69,9 @@ public class Property implements Member {
     private final boolean immutable;
 
     @Nullable
+    private final Object defaultValue;
+
+    @Nullable
     private final Expression expression;
 
     @Nonnull
@@ -91,6 +96,8 @@ public class Property implements Member {
 
         Expression getExpression();
 
+        Object getDefault();
+
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         List<? extends Constraint> getConstraints();
 
@@ -113,8 +120,12 @@ public class Property implements Member {
 
         private Boolean immutable;
 
+        @Getter(AccessLevel.NONE)
+        @Setter(AccessLevel.NONE)
+        private Object defaultValue;
+
         @JsonSerialize(using = ToStringSerializer.class)
-        @JsonDeserialize(using = ExpressionDeseriaizer.class)
+        @JsonDeserialize(using = ExpressionDeserializer.class)
         private Expression expression;
 
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
@@ -124,6 +135,16 @@ public class Property implements Member {
 
         @Nullable
         private Map<String, Object> extensions;
+
+        public Object getDefault() {
+
+            return defaultValue;
+        }
+
+        public void setDefault(final Object value) {
+
+            this.defaultValue = value;
+        }
 
         @JsonCreator
         @SuppressWarnings("unused")
@@ -148,6 +169,7 @@ public class Property implements Member {
         this.description = builder.getDescription();
         this.type = builder.getType().resolve(schemaResolver);
         this.required = Nullsafe.option(builder.getRequired());
+        this.defaultValue = builder.getDefault();
         this.immutable = Nullsafe.option(builder.getImmutable());
         this.expression = builder.getExpression();
         this.constraints = Nullsafe.immutableCopy(builder.getConstraints());
@@ -349,6 +371,12 @@ public class Property implements Member {
             public Expression getExpression() {
 
                 return expression;
+            }
+
+            @Override
+            public Object getDefault() {
+
+                return defaultValue;
             }
 
             @Override

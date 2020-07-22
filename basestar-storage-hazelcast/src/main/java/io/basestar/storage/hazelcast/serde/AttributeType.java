@@ -36,6 +36,7 @@ import io.basestar.schema.use.UseArray;
 import java.io.*;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public interface AttributeType<T> {
@@ -344,7 +345,7 @@ public interface AttributeType<T> {
         }
     }
 
-    class StructType implements AttributeType<Instance> {
+    class StructType implements AttributeType<Map<String, Object>> {
 
         private final InstanceSchema schema;
 
@@ -361,7 +362,7 @@ public interface AttributeType<T> {
         }
 
         @Override
-        public void writeValue(final PortableSchemaFactory factory, final PortableWriter writer, final String name, final Instance value) throws IOException {
+        public void writeValue(final PortableSchemaFactory factory, final PortableWriter writer, final String name, final Map<String, Object> value) throws IOException {
 
             final CustomPortable portable = factory.create(schema);
             portable.setData(value);
@@ -375,7 +376,7 @@ public interface AttributeType<T> {
         }
     }
 
-    class StructArrayType implements AttributeType<List<Instance>> {
+    class StructArrayType implements AttributeType<List<Map<String, Object>>> {
 
         private final InstanceSchema schema;
 
@@ -385,7 +386,7 @@ public interface AttributeType<T> {
         }
 
         @Override
-        public List<Instance> readValue(final PortableReader reader, final String name) throws IOException {
+        public List<Map<String, Object>> readValue(final PortableReader reader, final String name) throws IOException {
 
             final Portable[] portables = reader.readPortableArray(name);
             return Arrays.stream(portables).map(v -> {
@@ -395,7 +396,7 @@ public interface AttributeType<T> {
         }
 
         @Override
-        public void writeValue(final PortableSchemaFactory factory, final PortableWriter writer, final String name, final List<Instance> value) throws IOException {
+        public void writeValue(final PortableSchemaFactory factory, final PortableWriter writer, final String name, final List<Map<String, Object>> value) throws IOException {
 
             final Portable[] portables = value.stream().map(v -> {
                 final CustomPortable portable = factory.create(schema);
@@ -412,17 +413,17 @@ public interface AttributeType<T> {
         }
     }
 
-    class RefType implements AttributeType<Instance> {
+    class RefType implements AttributeType<Map<String, Object>> {
 
         @Override
-        public Instance readValue(final PortableReader reader, final String name) throws IOException {
+        public Map<String, Object> readValue(final PortableReader reader, final String name) throws IOException {
 
             final CustomPortable portable = reader.readPortable(name);
             return new Instance(portable.getData());
         }
 
         @Override
-        public void writeValue(final PortableSchemaFactory factory, final PortableWriter writer, final String name, final Instance value) throws IOException {
+        public void writeValue(final PortableSchemaFactory factory, final PortableWriter writer, final String name, final Map<String, Object> value) throws IOException {
 
             final CustomPortable portable = factory.createRef();
             portable.setData(value);
@@ -436,10 +437,10 @@ public interface AttributeType<T> {
         }
     }
 
-    class RefArrayType implements AttributeType<List<Instance>> {
+    class RefArrayType implements AttributeType<List<Map<String, Object>>> {
 
         @Override
-        public List<Instance> readValue(final PortableReader reader, final String name) throws IOException {
+        public List<Map<String, Object>> readValue(final PortableReader reader, final String name) throws IOException {
 
             final Portable[] portables = reader.readPortableArray(name);
             return Arrays.stream(portables).map(v -> {
@@ -449,7 +450,7 @@ public interface AttributeType<T> {
         }
 
         @Override
-        public void writeValue(final PortableSchemaFactory factory, final PortableWriter writer, final String name, final List<Instance> value) throws IOException {
+        public void writeValue(final PortableSchemaFactory factory, final PortableWriter writer, final String name, final List<Map<String, Object>> value) throws IOException {
 
             final Portable[] portables = value.stream().map(v -> {
                 final CustomPortable portable = factory.createRef();

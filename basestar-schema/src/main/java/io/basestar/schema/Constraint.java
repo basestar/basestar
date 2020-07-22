@@ -20,6 +20,7 @@ package io.basestar.schema;
  * #L%
  */
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
@@ -34,9 +35,11 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Context;
+import io.basestar.expression.Expression;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.validation.Validation;
 import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
@@ -46,6 +49,7 @@ import javax.validation.Payload;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.annotation.Annotation;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -55,6 +59,10 @@ import java.util.Optional;
 @JsonDeserialize(using = Constraint.Deserializer.class)
 public class Constraint implements Serializable {
 
+    private static final String MESSAGE = "message";
+
+    private static final String CONDITIONS = "when";
+
     public static final String REQUIRED = "required";
 
     public static final String IMMUTABLE = "immutable";
@@ -63,12 +71,18 @@ public class Constraint implements Serializable {
     private final Validation.Validator validator;
 
     @Nullable
+    @JsonProperty(MESSAGE)
     private final String message;
 
-    private Constraint(final Validation.Validator validator, final String message) {
+    @Nonnull
+    @JsonProperty(CONDITIONS)
+    private final List<Expression> when;
+
+    private Constraint(final Validation.Validator validator, final String message, final List<Expression> when) {
 
         this.validator = validator;
         this.message = message;
+        this.when = Nullsafe.immutableCopy(when);
     }
 
     public List<Violation> violations(final Use<?> type, final Context context, final Name name, final Object value) {
@@ -126,7 +140,12 @@ public class Constraint implements Serializable {
 
     public static Constraint of(final Validation.Validator validator, final String message) {
 
-        return new Constraint(validator, message);
+        return new Constraint(validator, message, null);
+    }
+
+    public static Constraint of(final Validation.Validator validator, final String message, final List<Expression> conditions) {
+
+        return new Constraint(validator, message, conditions);
     }
 
     public static Optional<Constraint> fromJsr380(final Use<?> type, final Annotation annotation, final String message) {
@@ -141,10 +160,22 @@ public class Constraint implements Serializable {
 
             final String message = constraint.getMessage();
             final Validation.Validator validator = constraint.getValidator();
+            final List<Expression> when = constraint.getWhen();
             generator.writeStartObject();
             generator.writeObjectField(validator.type(), validator.shorthand());
             if(message != null) {
-                generator.writeStringField("message", message);
+                generator.writeStringField(MESSAGE, message);
+            }
+            if(!when.isEmpty()) {
+                if(when.size() == 1) {
+                    generator.writeStringField(CONDITIONS, when.get(0).toString());
+                } else {
+                    generator.writeArrayFieldStart(CONDITIONS);
+                    for(final Expression entry : when) {
+                        generator.writeString(entry.toString());
+                    }
+                    generator.writeEndObject();
+                }
             }
             generator.writeEndObject();
         }
@@ -157,6 +188,7 @@ public class Constraint implements Serializable {
 
             String message = null;
             Validation.Validator validator = null;
+            final List<Expression> when = new ArrayList<>();
 
             if(parser.getCurrentToken() != JsonToken.START_OBJECT) {
                 throw context.wrongTokenException(parser, Constraint.class, JsonToken.START_OBJECT, null);
@@ -164,8 +196,19 @@ public class Constraint implements Serializable {
             while(parser.nextToken() == JsonToken.FIELD_NAME) {
                 final String name = parser.currentName();
                 parser.nextToken();
-                if ("message".equals(name)) {
+                if (MESSAGE.equals(name)) {
                     message = parser.getText();
+                } else if(CONDITIONS.equals(name)) {
+                    if(parser.getCurrentToken() == JsonToken.START_OBJECT) {
+                        while(parser.nextToken() != JsonToken.END_ARRAY) {
+                            when.add(parser.readValueAs(Expression.class));
+                        }
+                        if(parser.getCurrentToken() != JsonToken.END_OBJECT) {
+                            throw context.wrongTokenException(parser, Constraint.class, JsonToken.END_OBJECT, null);
+                        }
+                    } else {
+                        when.add(parser.readValueAs(Expression.class));
+                    }
                 } else if(validator == null) {
                     final Validation validation = Validation.forType(name);
                     validator = parser.readValueAs(validation.validatorClass());
@@ -177,7 +220,7 @@ public class Constraint implements Serializable {
                 throw context.wrongTokenException(parser, Constraint.class, JsonToken.END_OBJECT, null);
             }
             if(validator != null) {
-                return Constraint.of(validator, message);
+                return Constraint.of(validator, message, when);
             } else {
                 throw new JsonParseException(parser, "Constraint must have one of: " + Validation.types());
             }

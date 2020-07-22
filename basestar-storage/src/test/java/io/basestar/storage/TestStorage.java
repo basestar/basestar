@@ -22,6 +22,7 @@ package io.basestar.storage;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.*;
+import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Count;
 import io.basestar.expression.type.Values;
@@ -53,6 +54,10 @@ public abstract class TestStorage {
     private static final String SIMPLE = "Simple";
 
     private static final String POINTSET = "Pointset";
+
+    private static final String REF_TARGET = "RefTarget";
+
+    private static final String REF_SOURCE = "RefSource";
 
     private final Namespace namespace;
 
@@ -627,14 +632,6 @@ public abstract class TestStorage {
         assertEquals(1, page(storage, schema, Expression.parse("country == 'United Kingdom' && city LIKE 'L\\\\*n_on'"), sort, 10).size());
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private PagedList<Map<String, Object>> page(final Storage storage, final ObjectSchema schema, final Expression expression, final List<Sort> sort, final int count) {
-
-        final Comparator<Map<String, Object>> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
-        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expression, sort);
-        return new Pager<>(comparator, sources, null).page(count).join();
-    }
-
     protected boolean supportsLike() {
 
         return false;
@@ -661,7 +658,36 @@ public abstract class TestStorage {
         //assertEquals(?, results.size());
     }
 
-    private void createComplete(final Storage storage, final ObjectSchema schema, final Map<String, Object> data) {
+    @Test
+    public void testRefIndex() {
+
+        final Storage storage = storage(namespace);
+
+        final ObjectSchema target = namespace.requireObjectSchema(REF_TARGET);
+        final ObjectSchema source = namespace.requireObjectSchema(REF_SOURCE);
+
+        assumeConcurrentObjectWrite(storage, target);
+        assumeConcurrentObjectWrite(storage, source);
+
+        final String targetId = createComplete(storage, target, ImmutableMap.of());
+        createComplete(storage, source, ImmutableMap.of(
+                "target", new Instance(ImmutableMap.of(Reserved.ID, targetId))
+        ));
+
+        final List<Sort> sort = Sort.parseList("id");
+        final PagedList<Map<String, Object>> page = page(storage, source, Expression.parse("target.id == '" + targetId + "'"), sort, 10);
+        assertEquals(1, page.size());
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private PagedList<Map<String, Object>> page(final Storage storage, final ObjectSchema schema, final Expression expression, final List<Sort> sort, final int count) {
+
+        final Comparator<Map<String, Object>> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
+        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expression.bind(Context.init()), sort);
+        return new Pager<>(comparator, sources, null).page(count).join();
+    }
+
+    private String createComplete(final Storage storage, final ObjectSchema schema, final Map<String, Object> data) {
 
         final StorageTraits traits = storage.storageTraits(schema);
         final Map<String, Object> instance = new HashMap<>(data);
@@ -680,6 +706,7 @@ public abstract class TestStorage {
         }
 
         write.write().join();
+        return id;
     }
 
     private Instance instance(final ObjectSchema schema, final String id, final long version) {

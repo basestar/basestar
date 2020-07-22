@@ -37,7 +37,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class ExpressionDeseriaizer extends JsonDeserializer<Expression> {
+public class ExpressionDeserializer extends JsonDeserializer<Expression> {
 
     @Override
     public Expression deserialize(final JsonParser jsonParser, final DeserializationContext deserializationContext) throws IOException {

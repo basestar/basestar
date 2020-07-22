@@ -41,6 +41,21 @@ public class UseDate implements UseScalar<LocalDate> {
 
     public static final String NAME = "date";
 
+//    public static final DateTimeFormatter[] FORMATS = {
+//            DateTimeFormatter.ofPattern("yyyy"),
+//            DateTimeFormatter.ofPattern("yyyy-MM-dd"),
+//            DateTimeFormatter.ofPattern("yyyyMMdd"),
+//            DateTimeFormatter.ofPattern("yyyy-MM"),
+//            DateTimeFormatter.ofPattern("-MM-dd"),
+//            DateTimeFormatter.ofPattern("-MMdd"),
+//            DateTimeFormatter.ofPattern("yyyy-'W'ww"),
+//            DateTimeFormatter.ofPattern("yyyy'W'ww"),
+//            DateTimeFormatter.ofPattern("yyyy-'W'ww-D"),
+//            DateTimeFormatter.ofPattern("yyyy'W'ww-D"),
+//            DateTimeFormatter.ofPattern("yyyy-DDD"),
+//            DateTimeFormatter.ofPattern("yyyyDDD")
+//    };
+
     @Override
     public <R> R visit(final Visitor<R> visitor) {
 

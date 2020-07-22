@@ -29,7 +29,7 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.jackson.serde.ExpressionDeseriaizer;
+import io.basestar.jackson.serde.ExpressionDeserializer;
 import io.basestar.schema.use.UseString;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -85,7 +85,7 @@ public class Id implements Serializable {
 
         @JsonInclude(JsonInclude.Include.NON_NULL)
         @JsonSerialize(using = ToStringSerializer.class)
-        @JsonDeserialize(using = ExpressionDeseriaizer.class)
+        @JsonDeserialize(using = ExpressionDeserializer.class)
         private Expression expression;
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)

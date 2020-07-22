@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.basestar.event.Event;
 import io.basestar.expression.Expression;
-import io.basestar.jackson.serde.ExpressionDeseriaizer;
+import io.basestar.jackson.serde.ExpressionDeserializer;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
 import io.basestar.util.PagingToken;
@@ -42,7 +42,7 @@ public class RefQueryEvent implements RefEvent {
     private Name schema;
 
     @JsonSerialize(using = ToStringSerializer.class)
-    @JsonDeserialize(using = ExpressionDeseriaizer.class)
+    @JsonDeserialize(using = ExpressionDeserializer.class)
     private Expression expression;
 
     private PagingToken paging;

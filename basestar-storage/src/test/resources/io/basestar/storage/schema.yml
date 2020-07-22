@@ -103,3 +103,17 @@ Pointset:
       partition:
         - p.x
         - p.y
+
+RefTarget:
+  type: object
+
+RefSource:
+  type: object
+  properties:
+    target:
+      type: RefTarget
+  indexes:
+    target:
+      partition:
+        - target.id
+

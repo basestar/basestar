@@ -45,6 +45,7 @@ import io.basestar.util.Sort;
 import lombok.Data;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import lombok.extern.slf4j.Slf4j;
 import org.jooq.*;
 import org.jooq.exception.DataAccessException;
 import org.jooq.exception.SQLStateClass;
@@ -59,6 +60,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@Slf4j
 public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHistory {
 
     private final DataSource dataSource;
@@ -170,6 +172,8 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                             columnResolver = indexColumnResolver(context, schema, index);
                         }
                         final Condition condition = new SQLExpressionVisitor(columnResolver).condition(conjunction);
+
+                        log.info("SQL condition {}", condition);
 
                         final SelectSeekStepN<Record> select = context.select(selectFields(schema))
                                 .from(table).where(condition).orderBy(orderFields);

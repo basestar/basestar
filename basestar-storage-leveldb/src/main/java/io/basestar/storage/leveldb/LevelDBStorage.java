@@ -281,12 +281,12 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
 
     private static byte[] key(final ObjectSchema schema, final String id) {
 
-        return PartitionedStorage.binary(Arrays.asList(schema.getQualifiedName(), null, id));
+        return PartitionedStorage.binary(Arrays.asList(schema.getQualifiedName().toString(), null, id));
     }
 
     private static byte[] key(final ObjectSchema schema, final String id, final long version) {
 
-        return PartitionedStorage.binary(Arrays.asList(schema.getQualifiedName(), Reserved.PREFIX + Reserved.VERSION, id, invert(version)));
+        return PartitionedStorage.binary(Arrays.asList(schema.getQualifiedName().toString(), Reserved.PREFIX + Reserved.VERSION, id, invert(version)));
     }
 
     private static byte[] key(final ObjectSchema schema, final Index index, final Index.Key key, final String id) {
@@ -301,7 +301,7 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
     private static byte[] key(final ObjectSchema schema, final Index index, final List<?> values) {
 
         final List<Object> all = new ArrayList<>();
-        all.add(schema.getQualifiedName());
+        all.add(schema.getQualifiedName().toString());
         all.add(index.getName());
         all.addAll(values);
         return PartitionedStorage.binary(all);

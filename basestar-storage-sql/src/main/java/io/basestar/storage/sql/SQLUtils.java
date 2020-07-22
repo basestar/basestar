@@ -397,13 +397,23 @@ public class SQLUtils {
 //        ).collect(Collectors.toList());
 //    }
 
-    public static List<OrderField<?>> indexKeys(final Index index) {
+    public static List<OrderField<?>> indexKeys(final ObjectSchema schema, final Index index) {
 
         return Stream.concat(
-                index.getPartition().stream().map(v -> DSL.field(DSL.name(v.toString()))),
-                index.getSort().stream().map(v -> DSL.field(DSL.name(v.getName().toString()))
+                index.getPartition().stream().map(v -> indexField(schema, index, v)),
+                index.getSort().stream().map(v -> indexField(schema, index, v.getName())
                         .sort(sort(v.getOrder())))
         ).collect(Collectors.toList());
+    }
+
+    private static Field<Object> indexField(final ObjectSchema schema, final Index index, final Name name) {
+
+        // FIXME: BUG: hacky heuristic
+        if(Reserved.ID.equals(name.last())) {
+            return DSL.field(DSL.name(name.withoutLast().toString()));
+        } else {
+            return DSL.field(DSL.name(name.toString()));
+        }
     }
 
     public static List<Field<?>> fields(final ObjectSchema schema, final Index index) {

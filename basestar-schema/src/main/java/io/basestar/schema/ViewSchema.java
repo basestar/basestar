@@ -32,7 +32,7 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
-import io.basestar.jackson.serde.ExpressionDeseriaizer;
+import io.basestar.jackson.serde.ExpressionDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.use.Use;
@@ -242,7 +242,7 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
         @Nullable
         @JsonInclude(JsonInclude.Include.NON_NULL)
         @JsonSerialize(using = ToStringSerializer.class)
-        @JsonDeserialize(using = ExpressionDeseriaizer.class)
+        @JsonDeserialize(using = ExpressionDeserializer.class)
         private Expression where;
 
         @Nullable
@@ -505,6 +505,12 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
             public Expression getExpression() {
 
                 return descriptor.getExpression();
+            }
+
+            @Override
+            public Object getDefault() {
+
+                return descriptor.getDefault();
             }
 
             @Override
