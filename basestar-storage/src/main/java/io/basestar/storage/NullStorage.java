@@ -26,35 +26,33 @@ import io.basestar.schema.Concurrency;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.storage.util.Pager;
+import io.basestar.util.Name;
 import io.basestar.util.PagedList;
 import io.basestar.util.Sort;
 import lombok.RequiredArgsConstructor;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 @RequiredArgsConstructor
-public class NullStorage implements Storage.WithoutWriteIndex, Storage.WithoutWriteHistory {
+public class NullStorage implements Storage.WithoutWriteIndex, Storage.WithoutWriteHistory, Storage.WithoutExpand {
 
     private final EventStrategy eventStrategy;
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
+    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
         return CompletableFuture.completedFuture(null);
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
         return CompletableFuture.completedFuture(null);
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
+    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         return Collections.singletonList((count, pagingToken, stats) -> CompletableFuture.completedFuture(PagedList.empty()));
     }

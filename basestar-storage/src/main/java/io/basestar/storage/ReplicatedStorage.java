@@ -20,6 +20,7 @@ package io.basestar.storage;
  * #L%
  */
 
+import com.google.common.collect.Sets;
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Consistency;
@@ -96,23 +97,23 @@ public class ReplicatedStorage implements Storage {
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
+    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
-        return replica().readObject(schema, id)
-                .thenCompose(result -> result == null ? primary().readObject(schema, id) : CompletableFuture.completedFuture(result));
+        return replica().readObject(schema, id, expand)
+                .thenCompose(result -> result == null ? primary().readObject(schema, id, expand) : CompletableFuture.completedFuture(result));
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
-        return replica().readObjectVersion(schema, id, version)
-                .thenCompose(result -> result == null ? primary().readObjectVersion(schema, id, version) : CompletableFuture.completedFuture(result));
+        return replica().readObjectVersion(schema, id, version, expand)
+                .thenCompose(result -> result == null ? primary().readObjectVersion(schema, id, version, expand) : CompletableFuture.completedFuture(result));
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
+    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        return replica().query(schema, query, sort);
+        return replica().query(schema, query, sort, expand);
     }
 
     @Override
@@ -137,6 +138,12 @@ public class ReplicatedStorage implements Storage {
     public StorageTraits storageTraits(final ObjectSchema schema) {
 
         return primary().storageTraits(schema);
+    }
+
+    @Override
+    public Set<Name> supportedExpand(final ObjectSchema schema, final Set<Name> expand) {
+
+        return replica().supportedExpand(schema, expand);
     }
 
     @Override
@@ -173,25 +180,30 @@ public class ReplicatedStorage implements Storage {
         final ReadTransaction delegate = replica().read(consistency);
         return new ReadTransaction() {
 
-            private final Set<BatchResponse.Key> keys = new HashSet<>();
+            private final Map<BatchResponse.Key, Set<Name>> keys = new HashMap<>();
 
             private final Map<Name, ObjectSchema> schemas = new HashMap<>();
 
             @Override
-            public ReadTransaction readObject(final ObjectSchema schema, final String id) {
+            public ReadTransaction readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
-                keys.add(BatchResponse.Key.latest(schema.getQualifiedName(), id));
+                putKey(BatchResponse.Key.latest(schema.getQualifiedName(), id), expand);
                 schemas.put(schema.getQualifiedName(), schema);
-                delegate.readObject(schema, id);
+                delegate.readObject(schema, id, expand);
                 return this;
             }
 
-            @Override
-            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+            private void putKey(final BatchResponse.Key key, final Set<Name> expand) {
 
-                keys.add(BatchResponse.Key.version(schema.getQualifiedName(), id, version));
+                keys.put(key, Sets.union(keys.getOrDefault(key, Collections.emptySet()), expand));
+            }
+
+            @Override
+            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+
+                putKey(BatchResponse.Key.version(schema.getQualifiedName(), id, version), expand);
                 schemas.put(schema.getQualifiedName(), schema);
-                delegate.readObjectVersion(schema, id, version);
+                delegate.readObjectVersion(schema, id, version, expand);
                 return this;
             }
 
@@ -202,7 +214,7 @@ public class ReplicatedStorage implements Storage {
                         .thenCompose(replicaResponse -> {
 
                             final Set<BatchResponse.Key> missing = new HashSet<>();
-                            for(final BatchResponse.Key key : keys) {
+                            for(final BatchResponse.Key key : keys.keySet()) {
                                 if(!replicaResponse.containsKey(key)) {
                                     missing.add(key);
                                 }
@@ -211,13 +223,13 @@ public class ReplicatedStorage implements Storage {
                                 return CompletableFuture.completedFuture(replicaResponse);
                             } else {
                                 final ReadTransaction next = primary().read(consistency);
-                                keys.forEach(k -> {
+                                keys.forEach((k, expand) -> {
                                     final ObjectSchema schema = schemas.get(k.getSchema());
                                     assert schema != null;
                                     if(k.getVersion() == null) {
-                                        next.readObject(schema, k.getId());
+                                        next.readObject(schema, k.getId(), expand);
                                     } else {
-                                        next.readObjectVersion(schema, k.getId(), k.getVersion());
+                                        next.readObjectVersion(schema, k.getId(), k.getVersion(), expand);
                                     }
                                 });
                                 return next.read().thenApply(primaryResponse ->

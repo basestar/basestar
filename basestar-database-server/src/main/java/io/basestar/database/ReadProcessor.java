@@ -35,6 +35,7 @@ import io.basestar.schema.util.Expander;
 import io.basestar.storage.Storage;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.*;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -62,19 +63,19 @@ public class ReadProcessor {
         return namespace.requireObjectSchema(schema);
     }
 
-    protected CompletableFuture<Instance> readImpl(final ObjectSchema objectSchema, final String id, final Long version) {
+    protected CompletableFuture<Instance> readImpl(final ObjectSchema objectSchema, final String id, final Long version, final Set<Name> expand) {
 
         // Will make 2 reads if the request schema doesn't match result schema
 
-        return readRaw(objectSchema, id, version).thenCompose(raw -> cast(objectSchema, raw));
+        return readRaw(objectSchema, id, version, expand).thenCompose(raw -> cast(objectSchema, raw, expand));
     }
 
-    private CompletableFuture<Map<String, Object>> readRaw(final ObjectSchema objectSchema, final String id, final Long version) {
+    private CompletableFuture<Map<String, Object>> readRaw(final ObjectSchema objectSchema, final String id, final Long version, final Set<Name> expand) {
 
         if (version == null) {
-            return storage.readObject(objectSchema, id);
+            return storage.readObject(objectSchema, id, expand);
         } else {
-            return storage.readObject(objectSchema, id)
+            return storage.readObject(objectSchema, id, expand)
                     .thenCompose(current -> {
                         if (current == null) {
                             return CompletableFuture.completedFuture(null);
@@ -86,7 +87,7 @@ public class ReadProcessor {
                             } else if (version > currentVersion) {
                                 return CompletableFuture.completedFuture(null);
                             } else {
-                                return storage.readObjectVersion(objectSchema, id, version);
+                                return storage.readObjectVersion(objectSchema, id, version, expand);
                             }
                         }
                     });
@@ -94,7 +95,7 @@ public class ReadProcessor {
     }
 
     protected CompletableFuture<PagedList<Instance>> queryLinkImpl(final Context context, final Link link, final Instance owner,
-                                                                   final int count, final PagingToken paging) {
+                                                                   final Set<Name> expand, final int count, final PagingToken paging) {
 
         final Expression expression = link.getExpression()
                 .bind(context.with(ImmutableMap.of(
@@ -103,20 +104,20 @@ public class ReadProcessor {
 
         //FIXME: must support views
         final ObjectSchema linkSchema = (ObjectSchema)link.getSchema();
-        return queryImpl(context, linkSchema, expression, link.getSort(), count, paging);
+        return queryImpl(context, linkSchema, expression, link.getSort(), expand, count, paging);
     }
 
     protected CompletableFuture<PagedList<Instance>> queryImpl(final Context context, final ObjectSchema objectSchema, final Expression expression,
-                                                               final List<Sort> sort, final int count, final PagingToken paging) {
+                                                               final List<Sort> sort, final Set<Name> expand, final int count, final PagingToken paging) {
 
         final List<Sort> pageSort = ImmutableList.<Sort>builder()
                 .addAll(sort)
                 .add(Sort.asc(Name.of(Reserved.ID)))
                 .build();
 
-        final List<Pager.Source<Instance>> sources = storage.query(objectSchema, expression, sort).stream()
+        final List<Pager.Source<Instance>> sources = storage.query(objectSchema, expression, sort, expand).stream()
                 .map(source -> (Pager.Source<Instance>) (c, t, stats) -> source.page(c, t, stats)
-                        .thenCompose(data -> cast(objectSchema, data)))
+                        .thenCompose(data -> cast(objectSchema, data, expand)))
                 .collect(Collectors.toList());
 
         return pageImpl(context, sources, expression, pageSort, count, paging);
@@ -226,7 +227,7 @@ public class ReadProcessor {
                         final ExpandKey<LinkKey> linkKey = ExpandKey.from(LinkKey.from(refKey, link.getName()), expand);
                         log.debug("Expanding link: {}", linkKey);
                         // FIXME: do we need to pre-expand here? original implementation did
-                        links.put(linkKey, queryLinkImpl(context, link, object, EXPAND_LINK_SIZE, null)
+                        links.put(linkKey, queryLinkImpl(context, link, object, linkKey.getExpand(), EXPAND_LINK_SIZE, null)
                                 .thenCompose(results -> expand(context, results, expand)));
                         return null;
                     }
@@ -250,7 +251,7 @@ public class ReadProcessor {
                 refs.forEach(ref -> {
                     final RefKey refKey = ref.getKey();
                     final ObjectSchema objectSchema = objectSchema(refKey.getSchema());
-                    readTransaction.readObject(objectSchema, refKey.getId());
+                    readTransaction.readObject(objectSchema, refKey.getId(), ref.getExpand());
                 });
 
                 return readTransaction.read().thenCompose(results -> {
@@ -316,7 +317,7 @@ public class ReadProcessor {
         }
     }
 
-    protected CompletableFuture<Instance> cast(final ObjectSchema baseSchema, final Map<String, Object> data) {
+    protected CompletableFuture<Instance> cast(final ObjectSchema baseSchema, final Map<String, Object> data, final Set<Name> expand) {
 
         if(data == null) {
             return CompletableFuture.completedFuture(null);
@@ -328,12 +329,12 @@ public class ReadProcessor {
             final String id = Instance.getId(data);
             final Long version = Instance.getVersion(data);
             final ObjectSchema castSchema = objectSchema(castSchemaName);
-            return readRaw(castSchema, id, version)
+            return readRaw(castSchema, id, version, expand)
                     .thenApply(castSchema::create);
         }
     }
 
-    protected CompletableFuture<PagedList<Instance>> cast(final ObjectSchema baseSchema, final PagedList<? extends Map<String, Object>> data) {
+    protected CompletableFuture<PagedList<Instance>> cast(final ObjectSchema baseSchema, final PagedList<? extends Map<String, Object>> data, final Set<Name> expand) {
 
         final Multimap<Name, Map<String, Object>> needed = ArrayListMultimap.create();
         data.forEach(v -> {
@@ -355,7 +356,7 @@ public class ReadProcessor {
                     final String id = Instance.getId(item);
                     final Long version = Instance.getVersion(item);
                     assert version != null;
-                    readTransaction.readObjectVersion(schema, id, version);
+                    readTransaction.readObjectVersion(schema, id, version, expand);
                 });
             });
             return readTransaction.read().thenApply(results -> {
@@ -373,13 +374,21 @@ public class ReadProcessor {
         }
     }
 
+    @Data
+    private static class InstanceExpand {
+
+        private final Map<String, Object> instance;
+
+        private final Set<Name> expand;
+    }
+
     protected CompletableFuture<Map<ExpandKey<RefKey>, Instance>> cast(final Map<ExpandKey<RefKey>, ? extends Map<String, Object>> data) {
 
-        final Multimap<Name, Map<String, Object>> needed = ArrayListMultimap.create();
+        final Multimap<Name, InstanceExpand> needed = ArrayListMultimap.create();
         data.forEach((k, v) -> {
             final Name actualSchema = Instance.getSchema(v);
             if(!k.getKey().getSchema().equals(actualSchema)) {
-                needed.put(actualSchema, v);
+                needed.put(actualSchema, new InstanceExpand(v, k.getExpand()));
             }
         });
         if(needed.isEmpty()) {
@@ -395,10 +404,12 @@ public class ReadProcessor {
             needed.asMap().forEach((schemaName, items) -> {
                 final ObjectSchema schema = objectSchema(schemaName);
                 items.forEach(item -> {
-                    final String id = Instance.getId(item);
-                    final Long version = Instance.getVersion(item);
+                    final Map<String, Object> instance = item.getInstance();
+                    final Set<Name> expand = item.getExpand();
+                    final String id = Instance.getId(instance);
+                    final Long version = Instance.getVersion(instance);
                     assert version != null;
-                    readTransaction.readObjectVersion(schema, id, version);
+                    readTransaction.readObjectVersion(schema, id, version, expand);
                 });
             });
             return readTransaction.read().thenApply(results -> {
@@ -438,7 +449,7 @@ public class ReadProcessor {
                 if(caller.getSchema() != null) {
                     final Schema<?> schema = namespace.getSchema(caller.getSchema());
                     if(schema instanceof ObjectSchema) {
-                        return readImpl((ObjectSchema)schema, caller.getId(), null)
+                        return readImpl((ObjectSchema)schema, caller.getId(), null, expand)
                                 .thenCompose(unexpanded -> expand(context, unexpanded, expand))
                                 .thenApply(result -> new ExpandedCaller(caller, result));
                     }

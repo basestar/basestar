@@ -372,16 +372,16 @@ public class SQLUtils {
         });
     }
 
-    public static List<Field<?>> fields(final ObjectSchema schema) {
-
-        return Stream.concat(
-                ObjectSchema.METADATA_SCHEMA.entrySet().stream()
-                        .map(e -> DSL.field(DSL.name(e.getKey()), dataType(e.getValue()))),
-                schema.getProperties().entrySet().stream()
-                        .map(e -> DSL.field(DSL.name(e.getKey()),
-                                dataType(e.getValue().getType()).nullable(!e.getValue().isRequired())))
-        ).collect(Collectors.toList());
-    }
+//    public static List<Field<?>> fields(final ObjectSchema schema) {
+//
+//        return Stream.concat(
+//                ObjectSchema.METADATA_SCHEMA.entrySet().stream()
+//                        .map(e -> DSL.field(DSL.name(e.getKey()), dataType(e.getValue()))),
+//                schema.getProperties().entrySet().stream()
+//                        .map(e -> DSL.field(DSL.name(e.getKey()),
+//                                dataType(e.getValue().getType()).nullable(!e.getValue().isRequired())))
+//        ).collect(Collectors.toList());
+//    }
 
     private static SortOrder sort(final Sort.Order order) {
 

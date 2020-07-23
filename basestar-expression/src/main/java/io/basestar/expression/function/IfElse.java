@@ -108,12 +108,12 @@ public class IfElse implements Expression {
 //    }
 
     @Override
-    public Set<Name> paths() {
+    public Set<Name> names() {
 
         return ImmutableSet.<Name>builder()
-                .addAll(predicate.paths())
-                .addAll(then.paths())
-                .addAll(otherwise.paths())
+                .addAll(predicate.names())
+                .addAll(then.names())
+                .addAll(otherwise.names())
                 .build();
     }
 

@@ -36,7 +36,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
-public class LevelDBStorage extends PartitionedStorage implements Storage.WithWriteHistory, Storage.WithoutAggregate {
+public class LevelDBStorage extends PartitionedStorage implements Storage.WithWriteHistory, Storage.WithoutAggregate, Storage.WithoutExpand {
 
     private final DB db;
 
@@ -50,7 +50,7 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
+    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
         return CompletableFuture.supplyAsync(() -> {
             final byte[] key = key(schema, id);
@@ -60,7 +60,7 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
         return CompletableFuture.supplyAsync(() -> {
             final byte[] key = key(schema, id, version);
@@ -70,7 +70,9 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
     }
 
     @Override
-    protected CompletableFuture<PagedList<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfyResult, final Map<Name, Range<Object>> query, final List<Sort> sort, final int count, final PagingToken paging) {
+    protected CompletableFuture<PagedList<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfyResult,
+                                                                           final Map<Name, Range<Object>> query, final List<Sort> sort, final Set<Name> expand,
+                                                                           final int count, final PagingToken paging) {
 
         return CompletableFuture.supplyAsync(() -> {
             final List<Object> values = new ArrayList<>();

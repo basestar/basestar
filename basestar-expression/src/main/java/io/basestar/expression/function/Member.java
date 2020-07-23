@@ -90,9 +90,9 @@ public class Member implements Expression {
     }
 
     @Override
-    public Set<Name> paths() {
+    public Set<Name> names() {
 
-        return with.paths();
+        return with.names();
     }
 
 //    @Override

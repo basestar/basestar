@@ -49,7 +49,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Slf4j
-public class DynamoDBStorage extends PartitionedStorage implements Storage.WithoutWriteHistory {
+public class DynamoDBStorage extends PartitionedStorage implements Storage.WithoutWriteHistory, Storage.WithoutExpand {
 
     private static final int WRITE_BATCH = 25;
 
@@ -105,7 +105,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
+    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
         final GetItemRequest request = GetItemRequest.builder()
                 .tableName(strategy.objectTableName(schema))
@@ -124,7 +124,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
         final GetItemRequest request = GetItemRequest.builder()
                 .tableName(strategy.historyTableName(schema))
@@ -223,7 +223,9 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
     }
 
     @Override
-    protected CompletableFuture<PagedList<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfy, final Map<Name, Range<Object>> query, final List<Sort> sort, final int count, final PagingToken paging) {
+    protected CompletableFuture<PagedList<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfy,
+                                                                           final Map<Name, Range<Object>> query, final List<Sort> sort, final Set<Name> expand,
+                                                                           final int count, final PagingToken paging) {
 
         final List<Object> mergePartitions = new ArrayList<>();
         mergePartitions.add(strategy.indexPartitionPrefix(schema, index));
@@ -310,7 +312,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
             private final Map<Map<String, AttributeValue>, ObjectSchema> keyToSchema = new HashMap<>();
 
             @Override
-            public ReadTransaction readObject(final ObjectSchema schema, final String id) {
+            public ReadTransaction readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
                 final String tableName = strategy.objectTableName(schema);
                 final Map<String, AttributeValue> key = objectKey(strategy, schema, id);
@@ -320,7 +322,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
             }
 
             @Override
-            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
                 final String tableName = strategy.historyTableName(schema);
                 final Map<String, AttributeValue> key = historyKey(strategy, schema, id, version);

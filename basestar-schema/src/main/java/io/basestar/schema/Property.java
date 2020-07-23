@@ -169,7 +169,7 @@ public class Property implements Member {
         this.description = builder.getDescription();
         this.type = builder.getType().resolve(schemaResolver);
         this.required = Nullsafe.option(builder.getRequired());
-        this.defaultValue = builder.getDefault();
+        this.defaultValue = type.create(builder.getDefault());
         this.immutable = Nullsafe.option(builder.getImmutable());
         this.expression = builder.getExpression();
         this.constraints = Nullsafe.immutableCopy(builder.getConstraints());

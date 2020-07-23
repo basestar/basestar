@@ -142,9 +142,9 @@ public class Of implements Expression {
     }
 
     @Override
-    public Set<Name> paths() {
+    public Set<Name> names() {
 
-        return expr.paths();
+        return expr.names();
     }
 
 //    @Override

@@ -99,6 +99,11 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
         }
     }
 
+    public SELF withFirst() {
+
+        return parts.isEmpty() ? self() : create(parts.subList(0, 1));
+    }
+
     public String last() {
 
         if(parts.isEmpty()) {
@@ -115,6 +120,11 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
         } else {
             return create(parts.subList(0, parts.size() - 1));
         }
+    }
+
+    public SELF withLast() {
+
+        return parts.isEmpty() ? self() : create(parts.subList(parts.size() - 2, parts.size() - 1));
     }
 
     public SELF with(final SELF tail) {
@@ -352,5 +362,10 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
             parts.add(UP);
         }
         return create(parts);
+    }
+
+    public String[] toArray() {
+
+        return parts.toArray(new String[0]);
     }
 }

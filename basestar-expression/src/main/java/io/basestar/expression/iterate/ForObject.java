@@ -113,12 +113,12 @@ public class ForObject implements Expression {
     }
 
     @Override
-    public Set<Name> paths() {
+    public Set<Name> names() {
 
         return ImmutableSet.<Name>builder()
-                .addAll(yieldKey.paths())
-                .addAll(yieldValue.paths())
-                .addAll(iter.paths())
+                .addAll(yieldKey.names())
+                .addAll(yieldValue.names())
+                .addAll(iter.names())
                 .build();
     }
 

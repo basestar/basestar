@@ -37,11 +37,11 @@ public interface Binary extends Expression {
     Expression create(Expression lhs, Expression rhs);
 
     @Override
-    default Set<Name> paths() {
+    default Set<Name> names() {
 
         return ImmutableSet.<Name>builder()
-                .addAll(getLhs().paths())
-                .addAll(getRhs().paths())
+                .addAll(getLhs().names())
+                .addAll(getRhs().names())
                 .build();
     }
 

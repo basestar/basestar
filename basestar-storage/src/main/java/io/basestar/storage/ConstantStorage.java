@@ -36,7 +36,7 @@ import io.basestar.util.Sort;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
-public class ConstantStorage implements Storage.WithoutAggregate, Storage.WithoutWrite, Storage.WithoutHistory {
+public class ConstantStorage implements Storage.WithoutAggregate, Storage.WithoutWrite, Storage.WithoutHistory, Storage.WithoutExpand {
 
     private final Map<Name, Map<String, Map<String, Object>>> data;
 
@@ -64,7 +64,7 @@ public class ConstantStorage implements Storage.WithoutAggregate, Storage.Withou
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
+    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
         final Map<String, Object> object = get(schema.getQualifiedName(), id);
         return CompletableFuture.completedFuture(object);
@@ -72,7 +72,7 @@ public class ConstantStorage implements Storage.WithoutAggregate, Storage.Withou
 
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
+    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         // Add a source that will emit matching results
 

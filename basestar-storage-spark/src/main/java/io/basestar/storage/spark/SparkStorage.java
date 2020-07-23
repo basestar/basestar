@@ -31,6 +31,7 @@ import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
 import io.basestar.storage.util.Pager;
+import io.basestar.util.Name;
 import io.basestar.util.PagedList;
 import io.basestar.util.Sort;
 import lombok.Setter;
@@ -43,6 +44,7 @@ import org.apache.spark.sql.SparkSession;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -50,7 +52,7 @@ import java.util.stream.Collectors;
 
 
 @Slf4j
-public class SparkStorage implements Storage.WithoutWrite {
+public class SparkStorage implements Storage.WithoutWrite, /* FIXME */ Storage.WithoutExpand {
 
     private final SparkSession session;
 
@@ -85,7 +87,7 @@ public class SparkStorage implements Storage.WithoutWrite {
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
+    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
         return CompletableFuture.supplyAsync(() -> {
 
@@ -98,7 +100,7 @@ public class SparkStorage implements Storage.WithoutWrite {
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
         return CompletableFuture.supplyAsync(() -> {
 
@@ -112,7 +114,7 @@ public class SparkStorage implements Storage.WithoutWrite {
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
+    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         return ImmutableList.of((count, paging, stats) -> CompletableFuture.supplyAsync(() -> {
 

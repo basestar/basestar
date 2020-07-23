@@ -65,7 +65,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Function;
 
 @Slf4j
-public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.WithoutWriteIndex {
+public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.WithoutWriteIndex, Storage.WithoutExpand {
 
     private static final String PRIMARY_TERM_KEY = "@primaryTerm";
 
@@ -120,7 +120,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
+    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
         final String index = strategy.objectIndex(schema);
         return getIndex(index, schema).thenCompose(ignored -> {
@@ -131,7 +131,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
         if (!strategy.historyEnabled(schema)) {
             throw new UnsupportedOperationException("History not enabled");
@@ -146,7 +146,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
+    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         final Expression bound = query.bind(Context.init());
         final String index = strategy.objectIndex(schema);
@@ -250,7 +250,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
             private final Map<String, ObjectSchema> indexToSchema = new HashMap<>();
 
             @Override
-            public ReadTransaction readObject(final ObjectSchema schema, final String id) {
+            public ReadTransaction readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
                 final String index = strategy.objectIndex(schema);
                 indexToSchema.put(index, schema);
@@ -259,7 +259,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
             }
 
             @Override
-            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
                 if (!strategy.historyEnabled(schema)) {
                     throw new UnsupportedOperationException("History not enabled");

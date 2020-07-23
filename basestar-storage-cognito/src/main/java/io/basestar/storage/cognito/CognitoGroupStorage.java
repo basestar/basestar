@@ -30,6 +30,7 @@ import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
 import io.basestar.storage.util.Pager;
+import io.basestar.util.Name;
 import io.basestar.util.PagedList;
 import io.basestar.util.PagingToken;
 import io.basestar.util.Sort;
@@ -41,11 +42,12 @@ import software.amazon.awssdk.services.cognitoidentityprovider.model.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.WithoutHistory, Storage.WithoutAggregate {
+public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.WithoutHistory, Storage.WithoutAggregate, Storage.WithoutExpand {
 
     private static final String DESCRIPTION_KEY = "description";
 
@@ -79,7 +81,7 @@ public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.W
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
+    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
         final String userPoolId = strategy.getUserPoolId(schema);
         return client.getGroup(GetGroupRequest.builder()
@@ -90,7 +92,7 @@ public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.W
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
+    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         return ImmutableList.of(
                 (count, token, stats) -> {

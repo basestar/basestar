@@ -106,12 +106,19 @@ Pointset:
 
 RefTarget:
   type: object
+  properties:
+    source:
+      type: RefSource
+    hello:
+      type: string
 
 RefSource:
   type: object
   properties:
     target:
       type: RefTarget
+    hello:
+      type: string
   indexes:
     target:
       partition:

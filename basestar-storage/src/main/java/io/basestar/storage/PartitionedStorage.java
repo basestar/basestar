@@ -48,7 +48,7 @@ import java.util.stream.Collectors;
 
 public abstract class PartitionedStorage implements Storage.WithWriteIndex {
 
-    protected abstract CompletableFuture<PagedList<Map<String, Object>>> queryIndex(ObjectSchema schema, Index index, SatisfyResult satisfyResult, Map<Name, Range<Object>> query, List<Sort> sort, int count, PagingToken paging);
+    protected abstract CompletableFuture<PagedList<Map<String, Object>>> queryIndex(ObjectSchema schema, Index index, SatisfyResult satisfyResult, Map<Name, Range<Object>> query, List<Sort> sort, Set<Name> expand, int count, PagingToken paging);
 
     @Override
     public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
@@ -57,7 +57,7 @@ public abstract class PartitionedStorage implements Storage.WithWriteIndex {
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression expression, final List<Sort> sort) {
+    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression expression, final List<Sort> sort, final Set<Name> expand) {
 
         final Expression bound = expression.bind(Context.init());
         final Set<Expression> disjunction = bound.visit(new DisjunctionVisitor());
@@ -77,7 +77,7 @@ public abstract class PartitionedStorage implements Storage.WithWriteIndex {
             final Optional<String> optId = constantId(query);
             if(optId.isPresent()) {
 
-                queries.add((c, p, stats) -> readObject(schema, optId.get()).thenApply(object -> {
+                queries.add((c, p, stats) -> readObject(schema, optId.get(), expand).thenApply(object -> {
                     if(object != null) {
                         return new PagedList<>(ImmutableList.of(object), null);
                     } else {
@@ -97,7 +97,7 @@ public abstract class PartitionedStorage implements Storage.WithWriteIndex {
                         indexSort = index.getSort();
                     }
 
-                    queries.add((c, p, stats) -> queryIndex(schema, index, satisfy, query, sort, c, p));
+                    queries.add((c, p, stats) -> queryIndex(schema, index, satisfy, query, sort, expand, c, p));
 
                 } else {
                     throw new UnsupportedQueryException(schema.getQualifiedName(), expression, "no index");

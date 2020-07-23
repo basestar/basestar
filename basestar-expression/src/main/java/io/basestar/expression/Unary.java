@@ -34,9 +34,9 @@ public interface Unary extends Expression {
     Expression create(Expression operand);
 
     @Override
-    default Set<Name> paths() {
+    default Set<Name> names() {
 
-        return getOperand().paths();
+        return getOperand().names();
     }
 
     @Override

@@ -136,7 +136,7 @@ public class CreateAction implements Action {
 
         // FIXME: shouldn't have to bind here, need to fix multi-part path constants in parser
         return Nullsafe.option(options.getExpressions()).values().stream()
-                .flatMap(e -> e.bind(Context.init()).paths().stream())
+                .flatMap(e -> e.bind(Context.init()).names().stream())
                 .collect(Collectors.toSet());
     }
 }

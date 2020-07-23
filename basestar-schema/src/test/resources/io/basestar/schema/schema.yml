@@ -12,6 +12,7 @@ Comment:
       type: string
     post:
       type: Post
+      default: {}
   indexes:
     parent:
       over:

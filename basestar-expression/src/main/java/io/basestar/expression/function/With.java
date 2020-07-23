@@ -92,10 +92,10 @@ public class With implements Expression {
     }
 
     @Override
-    public Set<Name> paths() {
+    public Set<Name> names() {
 
         return Stream.concat(Stream.of(yield), with.values().stream())
-                .flatMap(v -> v.paths().stream())
+                .flatMap(v -> v.names().stream())
                 .collect(Collectors.toSet());
     }
 
