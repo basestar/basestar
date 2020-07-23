@@ -33,6 +33,7 @@ import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -51,6 +52,7 @@ import java.util.*;
  */
 
 @Data
+@Slf4j
 public class UseObject implements UseInstance {
 
     private final ObjectSchema schema;
@@ -88,17 +90,20 @@ public class UseObject implements UseInstance {
         if(value == null) {
             return null;
         } else if(value instanceof Map) {
-            final Map<String, Object> map = (Map<String, Object>)value;
+            final Map<String, Object> map = (Map<String, Object>) value;
             final String id = Instance.getId(map);
-            if(id == null) {
+            if (id == null) {
                 return null;
             } else {
-                if(expand) {
+                if (expand) {
                     return schema.create(map, true, suppress);
                 } else {
                     return ObjectSchema.ref(id);
                 }
             }
+        } else if(suppress) {
+            log.warn("Suppressed conversion error (invalid type: " + value.getClass() + ")");
+            return null;
         } else {
             throw new InvalidTypeException();
         }

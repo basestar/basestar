@@ -33,6 +33,7 @@ import io.basestar.spark.util.DatasetResolver;
 import io.basestar.spark.util.ScalaUtils;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NonNull;
@@ -46,6 +47,7 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import scala.Tuple2;
 
+import javax.annotation.Nullable;
 import java.util.*;
 
 @Builder(builderClassName = "Builder")
@@ -57,10 +59,23 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
     private final DatasetResolver resolver;
 
     @NonNull
+    private final ColumnResolver<Row> columnResolver;
+
+    @NonNull
     private final InstanceSchema schema;
 
     @NonNull
     private final Set<Name> expand;
+
+    @lombok.Builder(builderClassName = "Builder")
+    ExpandTransform(@NonNull final DatasetResolver resolver, @Nullable final ColumnResolver<Row> columnResolver,
+                    @NonNull final InstanceSchema schema, @NonNull final Set<Name> expand) {
+
+        this.resolver = Nullsafe.require(resolver);
+        this.columnResolver = Nullsafe.option(columnResolver, ColumnResolver::nested);
+        this.schema = Nullsafe.require(schema);
+        this.expand = Nullsafe.immutableCopy(expand);
+    }
 
     @Override
     public Dataset<Row> accept(final Dataset<Row> input) {
@@ -94,15 +109,15 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
         final InstanceSchema linkSchema = link.getSchema();
 
-        final Dataset<Row> linkInput = resolver.resolveAndConform(linkSchema, expand);
+        final Dataset<Row> linkInput = resolver.resolveAndConform(linkSchema, columnResolver, expand);
 
         final Expression expression = link.getExpression();
         final Column joinCondition = expression.visit(new SparkExpressionVisitor(name -> {
             if (Reserved.THIS.equals(name.first())) {
                 final Name next = name.withoutFirst();
-                return ColumnResolver.nestedColumn(input, next);
+                return columnResolver.resolve(input, next);
             } else {
-                return ColumnResolver.nestedColumn(linkInput, name);
+                return columnResolver.resolve(linkInput, name);
             }
         }));
 
@@ -110,7 +125,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
         final SortTransform<Tuple2<Row, Row>> sortTransform = SortTransform.<Tuple2<Row, Row>>builder()
                 .sort(link.getEffectiveSort())
-                .columnResolver((d, name) -> ColumnResolver.nestedColumn(d.col("_2"), name))
+                .columnResolver((d, name) -> ColumnResolver.nested(d.col("_2"), name))
                 .build();
 
         final Dataset<Tuple2<Row, Row>> sorted = sortTransform.accept(joined);
@@ -159,7 +174,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         Dataset<Row> output = input;
         for (final RequiredRef requiredRef : requiredRefs) {
 
-            final Dataset<Row> refInput = cache(resolver.resolveAndConform(requiredRef.getSchema(), requiredRef.getExpand()));
+            final Dataset<Row> refInput = cache(resolver.resolveAndConform(requiredRef.getSchema(), columnResolver, requiredRef.getExpand()));
 
             final StructField refIdField = SparkSchemaUtils.field(REF_ID_COLUMN, DataTypes.StringType);
 

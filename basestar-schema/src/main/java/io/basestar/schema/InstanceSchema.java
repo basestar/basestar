@@ -78,7 +78,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         if(value == null) {
             return null;
         } else if(value instanceof Map) {
-            return create((Map<String, Object>)value, expand, suppress);
+            return create((Map<String, Object>) value, expand, suppress);
         } else {
             throw new InvalidTypeException();
         }

@@ -29,7 +29,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 import java.util.Date;
@@ -76,8 +76,10 @@ public class UseDate implements UseScalar<LocalDate> {
             return LocalDate.parse((String)value, DateTimeFormatter.ISO_LOCAL_DATE);
         } else if(value instanceof TemporalAccessor) {
             return LocalDate.from((TemporalAccessor) value);
+        } else if(value instanceof java.sql.Date) {
+            return ((java.sql.Date) value).toLocalDate();
         } else if(value instanceof Date) {
-            return ((Date) value).toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            return ((Date) value).toInstant().atZone(ZoneOffset.UTC).toLocalDate();
         } else if(suppress) {
             return null;
         } else {

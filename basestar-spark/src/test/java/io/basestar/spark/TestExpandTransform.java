@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.spark.transform.ConformTransform;
+import io.basestar.spark.util.ColumnResolver;
 import io.basestar.spark.util.DatasetResolver;
 import io.basestar.util.Name;
 import lombok.AllArgsConstructor;
@@ -113,7 +114,7 @@ public class TestExpandTransform extends AbstractSparkTest {
 
         final DatasetResolver resolver = DatasetResolver.automatic((schema) -> datasets.get(schema.getQualifiedName()));
 
-        final Dataset<Row> dataset = resolver.resolve(a, expand);
+        final Dataset<Row> dataset = resolver.resolve(a, ColumnResolver::nested, expand);
 
         final Encoder<ExpandedA> encoder = Encoders.bean(ExpandedA.class);
         final ConformTransform conform = ConformTransform.builder().structType(encoder.schema()).build();

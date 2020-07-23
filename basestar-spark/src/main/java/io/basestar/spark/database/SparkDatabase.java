@@ -19,13 +19,16 @@ public class SparkDatabase {
 
     private final DatasetResolver resolver;
 
+    private final ColumnResolver<Row> columnResolver;
+
     @Nullable
     private final Namespace namespace;
 
     @lombok.Builder(builderClassName = "Builder")
-    SparkDatabase(final DatasetResolver resolver, @Nullable final Namespace namespace) {
+    SparkDatabase(final DatasetResolver resolver, final ColumnResolver<Row> columnResolver, @Nullable final Namespace namespace) {
 
         this.resolver = Nullsafe.require(resolver);
+        this.columnResolver = Nullsafe.option(columnResolver, ColumnResolver::nested);
         this.namespace = namespace;
     }
 
@@ -43,18 +46,19 @@ public class SparkDatabase {
 
         return (query, sort, expand) -> {
 
-            final Dataset<Row> input = resolver.resolve(schema, expand);
+            final Dataset<Row> input = resolver.resolve(schema, columnResolver, expand);
             Dataset<Row> output = input;
             if(query != null) {
                 final Expression bound = query.bind(Context.init());
                 final SparkExpressionVisitor visitor = new SparkExpressionVisitor(
-                        name -> ColumnResolver.nestedColumn(input, name)
+                        name -> columnResolver.resolve(input, name)
                 );
+                output = output.filter(bound.visit(visitor));
                 output = output.filter(bound.visit(visitor));
             }
             if(!sort.isEmpty()) {
                 final SortTransform<Row> transform = SortTransform.<Row>builder()
-                        .columnResolver(ColumnResolver::nestedColumn)
+                        .columnResolver(columnResolver)
                         .sort(sort)
                         .build();
                 output = transform.accept(output);

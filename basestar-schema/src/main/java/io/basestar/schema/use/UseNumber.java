@@ -23,6 +23,7 @@ package io.basestar.schema.use;
 import io.basestar.schema.exception.InvalidTypeException;
 import io.swagger.v3.oas.models.media.NumberSchema;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -40,6 +41,7 @@ import java.io.IOException;
  */
 
 @Data
+@Slf4j
 public class UseNumber implements UseScalar<Double> {
 
     public static final UseNumber DEFAULT = new UseNumber();
@@ -77,12 +79,14 @@ public class UseNumber implements UseScalar<Double> {
                 return Double.parseDouble((String)value);
             } catch (final NumberFormatException e) {
                 if(suppress) {
+                    log.warn("Suppressed conversion error", e);
                     return null;
                 } else {
                     throw e;
                 }
             }
         } else if(suppress) {
+            log.warn("Suppressed conversion error (invalid type: " + value.getClass() + ")");
             return null;
         } else {
             throw new InvalidTypeException();

@@ -24,6 +24,7 @@ import com.google.common.io.BaseEncoding;
 import io.basestar.schema.exception.InvalidTypeException;
 import io.swagger.v3.oas.models.media.BinarySchema;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -41,6 +42,7 @@ import java.io.IOException;
  */
 
 @Data
+@Slf4j
 public class UseBinary implements UseScalar<byte[]> {
 
     public static final UseBinary DEFAULT = new UseBinary();
@@ -74,6 +76,7 @@ public class UseBinary implements UseScalar<byte[]> {
         } else if(value instanceof String) {
             return BaseEncoding.base64().decode((String)value);
         } else if(suppress) {
+            log.warn("Suppressed conversion error (invalid type: " + value.getClass() + ")");
             return null;
         } else {
             throw new InvalidTypeException();

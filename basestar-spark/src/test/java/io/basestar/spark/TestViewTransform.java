@@ -26,6 +26,7 @@ import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.ViewSchema;
 import io.basestar.spark.transform.ConformTransform;
+import io.basestar.spark.util.ColumnResolver;
 import io.basestar.spark.util.DatasetResolver;
 import io.basestar.util.Name;
 import org.apache.spark.sql.*;
@@ -66,7 +67,7 @@ public class TestViewTransform extends AbstractSparkTest {
 
         final DatasetResolver resolver = DatasetResolver.automatic((schema) -> datasets.get(schema.getQualifiedName()));
 
-        final Dataset<Row> dataset = resolver.resolve(agg);
+        final Dataset<Row> dataset = resolver.resolve(agg, ColumnResolver::nested);
 
         final Encoder<AggView> encoder = Encoders.bean(AggView.class);
         final ConformTransform conform = ConformTransform.builder().structType(encoder.schema()).build();

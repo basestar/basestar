@@ -56,7 +56,7 @@ public class Reserved {
 
     public static boolean isReserved(final String name) {
 
-        if(name.startsWith(PREFIX) || (name.indexOf('\0') != -1)) {
+        if(name.contains(PREFIX) || (name.indexOf('\0') != -1)) {
             return true;
         } else {
             switch (name) {

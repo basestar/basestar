@@ -68,6 +68,7 @@ public interface QueryChain<T> {
     default <T2> QueryChain<T2> as(final MappingContext context, final Class<T2> marshallAs) {
 
         final QueryChain<T> self = this;
-        return (expand, query, sort) -> new MarshallTransform<>(context, marshallAs).accept(self.query(expand, query, sort));
+        final MarshallTransform<T2> marshall = MarshallTransform.<T2>builder().context(context).targetType(marshallAs).build();
+        return (expand, query, sort) -> marshall.accept(self.query(expand, query, sort).toDF());
     }
 }

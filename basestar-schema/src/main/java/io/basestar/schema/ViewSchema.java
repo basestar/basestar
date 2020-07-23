@@ -32,6 +32,7 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
+import io.basestar.jackson.serde.AbbrevSetDeserializer;
 import io.basestar.jackson.serde.ExpressionDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
@@ -94,7 +95,8 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
 
             @Nullable
             @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
-            @JsonDeserialize(using = AbbrevListDeserializer.class)
+            @JsonSerialize(contentUsing = ToStringSerializer.class)
+            @JsonDeserialize(using = AbbrevSetDeserializer.class)
             private Set<Name> expand;
 
             @JsonCreator

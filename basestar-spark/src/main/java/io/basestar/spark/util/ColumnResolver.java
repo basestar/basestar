@@ -24,21 +24,33 @@ import io.basestar.util.Name;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 
-public interface ColumnResolver<R> {
+import java.io.Serializable;
+
+public interface ColumnResolver<R> extends Serializable {
 
     Column resolve(Dataset<R> input, Name name);
 
-    static <T> Column nestedColumn(final Dataset<T> input, final Name name) {
+    static <T> ColumnResolver<T> lowercase(final ColumnResolver<T> delegate) {
 
-        return nestedColumn(input.col(name.first()), name.withoutFirst());
+        return (input, name) -> delegate.resolve(input, name.toLowerCase());
     }
 
-    static Column nestedColumn(final Column column, final Name name) {
+    static <T> ColumnResolver<T> uppercase(final ColumnResolver<T> delegate) {
+
+        return (input, name) -> delegate.resolve(input, name.toLowerCase());
+    }
+
+    static <T> Column nested(final Dataset<T> input, final Name name) {
+
+        return nested(input.col(name.first()), name.withoutFirst());
+    }
+
+    static Column nested(final Column column, final Name name) {
 
         if(name.isEmpty()) {
             return column;
         } else {
-            return nestedColumn(column.getField(name.first()), name.withoutFirst());
+            return nested(column.getField(name.first()), name.withoutFirst());
         }
     }
 }

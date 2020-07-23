@@ -1,12 +1,25 @@
 
 Base:
   type: object
+  expand:
+    - test
   properties:
     email:
       type: string
 
 View:
   type: view
-  from: Base
+  from:
+    schema: Base
+    expand:
+      - test
+  properties:
+    email: email
+
+WithCompactExpand:
+  type: view
+  from:
+    schema: Base
+    expand: test
   properties:
     email: email

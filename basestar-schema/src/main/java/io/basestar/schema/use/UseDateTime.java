@@ -27,7 +27,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 import java.util.Date;
@@ -59,7 +59,7 @@ public class UseDateTime implements UseScalar<LocalDateTime> {
         } else if(value instanceof TemporalAccessor) {
             return LocalDateTime.from((TemporalAccessor)value);
         } else if(value instanceof Date) {
-            return ((Date) value).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+            return ((Date) value).toInstant().atZone(ZoneOffset.UTC).toLocalDateTime();
         } else if(suppress) {
             return null;
         } else {

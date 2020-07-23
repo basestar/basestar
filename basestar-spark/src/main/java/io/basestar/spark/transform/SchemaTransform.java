@@ -25,6 +25,7 @@ import io.basestar.schema.use.Use;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -38,6 +39,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+@Slf4j
 public class SchemaTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
     private final InstanceSchema schema;
@@ -69,7 +71,7 @@ public class SchemaTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         final StructType schema = input.schema();
 
         return SparkSchemaUtils.findField(schema, name)
-                .map(field -> column(input.col(field.name()), field.dataType(), type).as(name))
+                .map(field -> column(input.col(field.name()), name, field.dataType(), type).as(name))
                 .orElseGet(() -> nullColumn(type).as(name));
     }
 
@@ -78,22 +80,23 @@ public class SchemaTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         return functions.lit(null).cast(SparkSchemaUtils.type(type, null));
     }
 
-    private Column column(final Column source, final DataType sourceDataType, final Use<?> type) {
+    private Column column(final Column source, final String name, final DataType sourceDataType, final Use<?> type) {
 
         final DataType targetDataType = SparkSchemaUtils.type(type, expand);
-        if(targetDataType.equals(sourceDataType)) {
-            return source;
-        } else {
-            final Use<?> sourceType = SparkSchemaUtils.type(sourceDataType);
+//        if(targetDataType.equals(sourceDataType)) {
+//            return source;
+//        } else {
+        final Use<?> sourceType = SparkSchemaUtils.type(sourceDataType);
 
-            final UserDefinedFunction udf = functions.udf(
-                    (Object sourceValue) -> {
-                        final Object targetValue = type.create(SparkSchemaUtils.fromSpark(sourceType, sourceValue));
-                        return SparkSchemaUtils.toSpark(type, targetDataType, targetValue);
-                    },
-                    targetDataType
-            );
-            return udf.apply(source);
-        }
+        final UserDefinedFunction udf = functions.udf(
+                (Object sourceValue) -> {
+                    log.info("Transforming column {}.{}", schema.getQualifiedName(), name);
+                    final Object targetValue = type.create(SparkSchemaUtils.fromSpark(sourceType, sourceValue), false, true);
+                    return SparkSchemaUtils.toSpark(type, targetDataType, targetValue);
+                },
+                targetDataType
+        );
+        return udf.apply(source);
+//        }
     }
 }

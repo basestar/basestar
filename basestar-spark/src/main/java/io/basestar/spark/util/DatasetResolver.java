@@ -37,16 +37,16 @@ import java.util.Set;
 
 public interface DatasetResolver extends Serializable {
 
-    default Dataset<Row> resolve(final InstanceSchema schema) {
+    default Dataset<Row> resolve(final InstanceSchema schema, final ColumnResolver<Row> columnResolver) {
 
-        return resolve(schema, ImmutableSet.of());
+        return resolve(schema, columnResolver, ImmutableSet.of());
     }
 
-    Dataset<Row> resolve(InstanceSchema schema, Set<Name> expand);
+    Dataset<Row> resolve(InstanceSchema schema, ColumnResolver<Row> columnResolver, Set<Name> expand);
 
-    default Dataset<Row> resolveAndConform(final InstanceSchema schema, final Set<Name> expand) {
+    default Dataset<Row> resolveAndConform(final InstanceSchema schema, final ColumnResolver<Row> columnResolver, final Set<Name> expand) {
 
-        return conform(schema, expand, resolve(schema, expand));
+        return conform(schema, expand, resolve(schema, columnResolver, expand));
     }
 
     default Dataset<Row> conform(final InstanceSchema schema, final Set<Name> expand, final Dataset<Row> input) {
@@ -72,14 +72,14 @@ public interface DatasetResolver extends Serializable {
         private final Resolver resolver;
 
         @Override
-        public Dataset<Row> resolve(final InstanceSchema schema, final Set<Name> expand) {
+        public Dataset<Row> resolve(final InstanceSchema schema, final ColumnResolver<Row> columnResolver, final Set<Name> expand) {
 
             if(schema instanceof ObjectSchema) {
 
                 final ObjectSchema objectSchema = (ObjectSchema)schema;
                 final ExpressionTransform expressionTransform = ExpressionTransform.builder().schema(objectSchema).expand(expand).build();
                 final SchemaTransform schemaTransform = SchemaTransform.builder().schema(schema).build();
-                final ExpandTransform expandTransform = ExpandTransform.builder().resolver(this).schema(schema).expand(expand).build();
+                final ExpandTransform expandTransform = ExpandTransform.builder().resolver(this).columnResolver(columnResolver).schema(schema).expand(expand).build();
                 final Dataset<Row> base = Nullsafe.require(resolver.resolve(schema));
                 return schemaTransform.then(expressionTransform).then(expandTransform).accept(base);
 
@@ -87,9 +87,9 @@ public interface DatasetResolver extends Serializable {
 
                 final ViewSchema viewSchema = (ViewSchema)schema;
                 final ViewTransform viewTransform = ViewTransform.builder().schema(viewSchema).build();
-                final ExpandTransform expandTransform = ExpandTransform.builder().resolver(this).schema(schema).expand(expand).build();
+                final ExpandTransform expandTransform = ExpandTransform.builder().resolver(this).columnResolver(columnResolver).schema(schema).expand(expand).build();
                 final ViewSchema.From from = viewSchema.getFrom();
-                final Dataset<Row> base = resolve(from.getSchema(), from.getExpand());
+                final Dataset<Row> base = resolve(from.getSchema(), columnResolver, from.getExpand());
                 return viewTransform.then(expandTransform).accept(base);
 
             } else {

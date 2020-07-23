@@ -31,6 +31,9 @@ import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.*;
 import scala.collection.Seq;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -214,7 +217,7 @@ public class SparkSchemaUtils {
             @Override
             public DataType visitDateTime(final UseDateTime type) {
 
-                return DataTypes.DateType;
+                return DataTypes.TimestampType;
             }
 
             @Override
@@ -466,19 +469,25 @@ public class SparkSchemaUtils {
             @Override
             public Object visitBoolean(final UseBoolean type) {
 
-                return scala.Boolean.box(type.create(value, false, true));
+                final Boolean result = type.create(value, false, true);
+                return result;
+//                return result == null ? null : scala.Boolean.box(result);
             }
 
             @Override
             public Object visitInteger(final UseInteger type) {
 
-                return scala.Long.box(type.create(value, false, true));
+                final Long result = type.create(value, false, true);
+                return result;
+//                return result == null ? null : scala.Long.box(result);
             }
 
             @Override
             public Object visitNumber(final UseNumber type) {
 
-                return scala.Double.box(type.create(value, false, true));
+                final Double result = type.create(value, false, true);
+                return result;
+//                return result == null ? null : scala.Double.box(result);
             }
 
             @Override
@@ -564,13 +573,15 @@ public class SparkSchemaUtils {
             @Override
             public Object visitDate(final UseDate type) {
 
-                return type.create(value, false, true);
+                final LocalDate converted = type.create(value, false, true);
+                return new java.sql.Date(converted.atStartOfDay().toEpochSecond(ZoneOffset.UTC) * 1000);
             }
 
             @Override
             public Object visitDateTime(final UseDateTime type) {
 
-                return type.create(value, false, true);
+                final LocalDateTime converted = type.create(value, false, true);
+                return new java.sql.Timestamp(converted.toEpochSecond(ZoneOffset.UTC) * 1000);
             }
 
             @Override
@@ -605,7 +616,8 @@ public class SparkSchemaUtils {
                 | dataType instanceof LongType) {
             return UseInteger.DEFAULT;
         } else if(dataType instanceof FloatType
-                | dataType instanceof DoubleType) {
+                | dataType instanceof DoubleType
+                | dataType instanceof DecimalType) {
             return UseNumber.DEFAULT;
         } else if(dataType instanceof StringType) {
             return UseString.DEFAULT;
@@ -617,6 +629,12 @@ public class SparkSchemaUtils {
             return new UseMap<>(type(((MapType) dataType).valueType()));
         } else if(dataType instanceof StructType) {
             return new UseStruct(structSchema(dataType));
+        } else if(dataType instanceof ObjectType) {
+            return new UseStruct(structSchema(dataType));
+        } else if(dataType instanceof DateType) {
+            return new UseDate();
+        } else if(dataType instanceof TimestampType) {
+            return new UseDateTime();
         } else {
             throw new UnsupportedOperationException("Cannot understand " + dataType);
         }
