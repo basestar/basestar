@@ -25,10 +25,8 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Multimap;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import io.basestar.expression.Context;
@@ -71,7 +69,7 @@ import java.util.stream.Stream;
 
 @Getter
 @Accessors(chain = true)
-public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolver, Transient.Resolver, Permission.Resolver {
+public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.Resolver, Permission.Resolver {
 
     @Nonnull
     private final Name qualifiedName;
@@ -164,7 +162,7 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
     private final SortedMap<String, Object> extensions;
 
     @JsonDeserialize(as = Builder.class)
-    public interface Descriptor extends InstanceSchema.Descriptor {
+    public interface Descriptor extends LinkableSchema.Descriptor {
 
         String TYPE = "object";
 
@@ -187,16 +185,7 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         Map<String, Transient.Descriptor> getTransients();
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        Map<String, Link.Descriptor> getLinks();
-
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Map<String, Index.Descriptor> getIndexes();
-
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        Map<String, Permission.Descriptor> getPermissions();
-
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        Set<Name> getExpand();
 
         @Override
         default ObjectSchema build(final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
@@ -460,15 +449,6 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
             }
         });
         return Collections.unmodifiableMap(result);
-    }
-
-    @Deprecated
-    public Multimap<Name, Instance> refs(final Map<String, Object> object) {
-
-        final Multimap<Name, Instance> results = HashMultimap.create();
-        properties.forEach((k, v) -> v.links(object.get(k)).entries().forEach(e ->
-                results.put(Name.of(v.getName()).with(e.getKey()), e.getValue())));
-        return results;
     }
 
     @Override

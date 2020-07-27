@@ -547,6 +547,12 @@ public class SchemaAdaptor {
 
                 return new TypeName(namingStrategy.typeName(type.getSchema()));
             }
+
+            @Override
+            public <T> Type<?> visitNullable(final UseNullable<T> type) {
+
+                return type.getType().visit(this);
+            }
         });
     }
 
@@ -636,6 +642,12 @@ public class SchemaAdaptor {
             public Type<?> visitView(final UseView type) {
 
                 return new TypeName(namingStrategy.inputTypeName(type.getSchema()));
+            }
+
+            @Override
+            public <T> Type<?> visitNullable(final UseNullable<T> type) {
+
+                return type.getType().visit(this);
             }
         });
     }
@@ -732,6 +744,12 @@ public class SchemaAdaptor {
                 public Void visitView(final UseView type) {
 
                     return null;
+                }
+
+                @Override
+                public <T> Void visitNullable(final UseNullable<T> type) {
+
+                    return type.getType().visit(this);
                 }
             });
         });

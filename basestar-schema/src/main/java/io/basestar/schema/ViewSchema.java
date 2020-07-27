@@ -24,10 +24,8 @@ import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
@@ -54,7 +52,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Getter
-public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Resolver {
+public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Resolver {
 
     @Getter
     @RequiredArgsConstructor
@@ -116,50 +114,8 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
         }
     }
 
-    @Nonnull
-    private final Name qualifiedName;
-
-    private final int slot;
-
-    /**
-     * Current version of the schema, defaults to 1
-     */
-
-    private final long version;
-
-    @Nonnull
-    private final From from;
-
-    private final boolean materialized;
-
-    @Nonnull
-    private final List<Sort> sort;
-
-    /** Description of the schema */
-
-    @Nullable
-    private final String description;
-
-    @Nonnull
-    private final List<String> group;
-
-    @Nullable
-    private final Expression where;
-
-    @Nonnull
-    private final SortedMap<String, Property> declaredProperties;
-
-    @Nonnull
-    private final SortedMap<String, Permission> declaredPermissions;
-
-    @Nonnull
-    private final SortedMap<String, Link> declaredLinks;
-
-    @Nonnull
-    private final SortedMap<String, Object> extensions;
-
     @JsonDeserialize(as = Builder.class)
-    public interface Descriptor extends InstanceSchema.Descriptor {
+    public interface Descriptor extends LinkableSchema.Descriptor {
 
         String TYPE = "view";
 
@@ -184,11 +140,7 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
 
         List<String> getGroup();
 
-        Map<String, Link.Descriptor> getLinks();
-
         Expression getWhere();
-
-        Map<String, Permission.Descriptor> getPermissions();
 
         @Override
         default ViewSchema build(final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
@@ -253,6 +205,11 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private Map<String, Object> extensions;
 
+        @Nullable
+        @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
+        @JsonDeserialize(using = AbbrevListDeserializer.class)
+        private Set<Name> expand;
+
         public String getType() {
 
             return TYPE;
@@ -285,6 +242,51 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
         }
     }
 
+    @Nonnull
+    private final Name qualifiedName;
+
+    private final int slot;
+
+    /**
+     * Current version of the schema, defaults to 1
+     */
+
+    private final long version;
+
+    @Nonnull
+    private final From from;
+
+    private final boolean materialized;
+
+    @Nonnull
+    private final List<Sort> sort;
+
+    /** Description of the schema */
+
+    @Nullable
+    private final String description;
+
+    @Nonnull
+    private final List<String> group;
+
+    @Nullable
+    private final Expression where;
+
+    @Nonnull
+    private final SortedMap<String, Property> declaredProperties;
+
+    @Nonnull
+    private final SortedMap<String, Permission> declaredPermissions;
+
+    @Nonnull
+    private final SortedMap<String, Link> declaredLinks;
+
+    @Nonnull
+    private final SortedSet<Name> declaredExpand;
+
+    @Nonnull
+    private final SortedMap<String, Object> extensions;
+
     public static Builder builder() {
 
         return new Builder();
@@ -310,6 +312,7 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
                 (k, v) -> viewPropertyDescriptor(v, this.from).build(resolver, qualifiedName.with(k)));
         this.declaredLinks = Nullsafe.immutableSortedCopy(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
         this.declaredPermissions = Nullsafe.immutableSortedCopy(descriptor.getPermissions(), (k, v) -> v.build(k));
+        this.declaredExpand = Nullsafe.immutableSortedCopy(descriptor.getExpand());
         this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName.toString());
@@ -371,6 +374,12 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
     }
 
     @Override
+    public Set<Name> getExpand() {
+
+        return declaredExpand;
+    }
+
+    @Override
     public SortedMap<String, Use<?>> metadataSchema() {
 
         return ImmutableSortedMap.of();
@@ -422,14 +431,6 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
     public Member getMember(final String name, final boolean inherited) {
 
         return getProperty(name, inherited);
-    }
-
-    public Multimap<Name, Instance> refs(final Instance object) {
-
-        final Multimap<Name, Instance> results = HashMultimap.create();
-        getProperties().forEach((k, v) -> v.links(object.get(k)).entries().forEach(e ->
-                results.put(Name.of(v.getName()).with(e.getKey()), e.getValue())));
-        return results;
     }
 
     @Override
@@ -548,6 +549,12 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
             public List<String> getGroup() {
 
                 return group;
+            }
+
+            @Override
+            public Set<Name> getExpand() {
+
+                return declaredExpand;
             }
 
             @Override

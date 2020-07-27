@@ -222,6 +222,12 @@ public class SparkSchemaUtils {
 
                 return structType(type.getSchema(), expand);
             }
+
+            @Override
+            public <T> DataType visitNullable(final UseNullable<T> type) {
+
+                return type.getType().visit(this);
+            }
         });
     }
 
@@ -415,6 +421,12 @@ public class SparkSchemaUtils {
                     throw new IllegalStateException();
                 }
             }
+
+            @Override
+            public <T> Object visitNullable(final UseNullable<T> type) {
+
+                return type.getType().visit(this);
+            }
         });
     }
 
@@ -577,6 +589,12 @@ public class SparkSchemaUtils {
             public Object visitView(final UseView type) {
 
                 throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public <T> Object visitNullable(final UseNullable<T> type) {
+
+                return type.getType().visit(this);
             }
         });
     }

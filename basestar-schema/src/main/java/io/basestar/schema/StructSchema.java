@@ -25,9 +25,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
@@ -231,6 +229,12 @@ public class StructSchema implements InstanceSchema {
     }
 
     @Override
+    public SortedMap<String, Use<?>> layout() {
+
+        return layout(Collections.emptySet());
+    }
+
+    @Override
     public Map<String, ? extends Member> getDeclaredMembers() {
 
         return declaredProperties;
@@ -270,15 +274,6 @@ public class StructSchema implements InstanceSchema {
     public static Instance deserialize(final DataInput in) throws IOException {
 
         return new Instance(InstanceSchema.deserializeProperties(in));
-    }
-
-    @Deprecated
-    public Multimap<Name, Instance> refs(final Map<String, Object> object) {
-
-        final Multimap<Name, Instance> results = HashMultimap.create();
-        properties.forEach((k, v) -> v.links(object.get(k)).entries().forEach(e ->
-                results.put(Name.of(v.getName()).with(e.getKey()), e.getValue())));
-        return results;
     }
 
     @Override

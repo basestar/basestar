@@ -1,0 +1,15 @@
+Base:
+  type: object
+  properties:
+    a:
+      type:
+        nullable:
+          array: string
+    b:
+      type:
+        nullable:
+          map: integer
+    c:
+      type:
+        set: boolean
+      required: true

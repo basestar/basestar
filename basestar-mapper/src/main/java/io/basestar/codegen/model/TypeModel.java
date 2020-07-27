@@ -208,6 +208,12 @@ public interface TypeModel {
             }
 
             @Override
+            public <T> TypeModel visitNullable(final UseNullable<T> type) {
+
+                return type.getType().visit(this);
+            }
+
+            @Override
             public TypeModel visitBinary(final UseBinary type) {
 
                 return () -> "Binary";

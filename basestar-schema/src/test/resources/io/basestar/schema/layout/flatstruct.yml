@@ -1,0 +1,28 @@
+Base:
+  properties:
+    a:
+      type: A
+
+A:
+  type: struct
+  properties:
+    b1:
+      required: true
+      type: B
+    b2:
+      type: B
+
+B:
+  type: struct
+  properties:
+    c:
+      type: C
+
+C:
+  type: struct
+  properties:
+    d:
+      type: string
+    e:
+      type: string
+

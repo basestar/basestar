@@ -20,15 +20,12 @@ package io.basestar.schema.use;
  * #L%
  */
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.iterate.ForAny;
 import io.basestar.expression.iterate.Of;
 import io.basestar.schema.Constraint;
-import io.basestar.schema.Instance;
 import io.basestar.schema.Schema;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
@@ -135,17 +132,6 @@ public interface UseCollection<V, T extends Collection<V>> extends Use<T> {
     default Set<Name> requiredExpand(final Set<Name> names) {
 
         return getType().requiredExpand(names);
-    }
-
-    @Override
-    @Deprecated
-    default Multimap<Name, Instance> refs(final T value) {
-
-        final Multimap<Name, Instance> result = HashMultimap.create();
-        if(value != null) {
-            value.forEach(v -> getType().refs(v).entries().forEach(e -> result.put(e.getKey(), e.getValue())));
-        }
-        return result;
     }
 
     @Override

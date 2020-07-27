@@ -20,8 +20,6 @@ package io.basestar.schema.use;
  * #L%
  */
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Constraint;
@@ -42,7 +40,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Data
-public class UseView implements UseInstance {
+public class UseView implements UseLinkable {
 
     private final ViewSchema schema;
 
@@ -155,17 +153,6 @@ public class UseView implements UseInstance {
     public Set<Name> requiredExpand(final Set<Name> names) {
 
         return schema.requiredExpand(names);
-    }
-
-    @Override
-    @Deprecated
-    public Multimap<Name, Instance> refs(final Instance value) {
-
-        if(value != null) {
-            return schema.refs(value);
-        } else {
-            return HashMultimap.create();
-        }
     }
 
     @Override

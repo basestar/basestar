@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.ExpressionDeserializer;
@@ -64,6 +63,8 @@ public class Property implements Member {
     @Nonnull
     private final Use<?> type;
 
+    // Replaced with nullable on Use<T>
+    @Deprecated
     private final boolean required;
 
     private final boolean immutable;
@@ -88,6 +89,7 @@ public class Property implements Member {
 
         Use<?> getType();
 
+        @Deprecated
         @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         Boolean getRequired();
 
@@ -105,6 +107,49 @@ public class Property implements Member {
 
             return new Property(this, resolver, qualifiedName);
         }
+
+        interface Delegating extends Descriptor, Member.Descriptor.Delegating {
+
+            @Override
+            Descriptor delegate();
+
+            @Override
+            default Use<?> getType() {
+
+                return delegate().getType();
+            }
+
+            @Override
+            @Deprecated
+            default Boolean getRequired() {
+
+                return delegate().getRequired();
+            }
+
+            @Override
+            default Boolean getImmutable() {
+
+                return delegate().getImmutable();
+            }
+
+            @Override
+            default Expression getExpression() {
+
+                return delegate().getExpression();
+            }
+
+            @Override
+            default Object getDefault() {
+
+                return delegate().getDefault();
+            }
+
+            @Override
+            default List<? extends Constraint> getConstraints() {
+
+                return delegate().getConstraints();
+            }
+        }
     }
 
     @Data
@@ -116,6 +161,7 @@ public class Property implements Member {
 
         private String description;
 
+        @Deprecated
         private Boolean required;
 
         private Boolean immutable;
@@ -175,6 +221,12 @@ public class Property implements Member {
         this.constraints = Nullsafe.immutableCopy(builder.getConstraints());
         this.visibility = builder.getVisibility();
         this.extensions = Nullsafe.immutableSortedCopy(builder.getExtensions());
+    }
+
+    @Override
+    public Optional<Use<?>> layout(final Set<Name> expand) {
+
+        return Optional.of(getType().nullable(!required));
     }
 
     @Override
@@ -245,13 +297,6 @@ public class Property implements Member {
     public <T> T cast(final Object o, final Class<T> as) {
 
         return type.cast(o, as);
-    }
-
-    @Deprecated
-    @SuppressWarnings("unchecked")
-    public Multimap<Name, Instance> links(final Object value) {
-
-        return ((Use<Object>)type).refs(value);
     }
 
     @SuppressWarnings("unchecked")
@@ -356,6 +401,7 @@ public class Property implements Member {
             }
 
             @Override
+            @Deprecated
             public Boolean getRequired() {
 
                 return required;

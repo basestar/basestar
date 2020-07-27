@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.schema.layout.Layout;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseInstance;
 import io.basestar.schema.use.UseString;
@@ -38,7 +39,7 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
-public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Property.Resolver {
+public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolver, Property.Resolver {
 
     Instance create(Map<String, Object> value, boolean expand, boolean suppress);
 
@@ -60,6 +61,32 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
     }
 
     SortedMap<String, Use<?>> metadataSchema();
+
+    SortedMap<String, Use<?>> layout();
+
+    default SortedMap<String, Use<?>> layout(final Set<Name> expand) {
+
+        final SortedMap<String, Use<?>> result = new TreeMap<>();
+        metadataSchema().forEach(result::put);
+        final Map<String, Set<Name>> branches = Name.branch(expand);
+        getMembers().forEach((name, member) -> {
+            final Set<Name> branch = branches.get(name);
+            member.layout(branch).ifPresent(memberLayout -> result.put(name, memberLayout));
+        });
+        return result;
+    }
+
+    @Override
+    default Map<String, Object> applyLayout(final Map<String, Object> object) {
+
+        return object;
+    }
+
+    @Override
+    default Map<String, Object> unapplyLayout(final Map<String, Object> object) {
+
+        return object;
+    }
 
     InstanceSchema getExtend();
 

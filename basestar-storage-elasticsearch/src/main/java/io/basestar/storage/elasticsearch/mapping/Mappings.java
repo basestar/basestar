@@ -180,6 +180,12 @@ public class Mappings {
 
                         return new FieldType.NestedType(properties(type.getSchema(), expand));
                     }
+
+                    @Override
+                    public <T> FieldType visitNullable(final UseNullable<T> type) {
+
+                        return type.getType().visit(this);
+                    }
                 });
             }
         }

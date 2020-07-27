@@ -190,6 +190,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                         if(index == null) {
                             rootTable = DSL.table(objectTableName(schema));
                             columnResolver = rowMapper::resolve;
+
                         } else {
                             rootTable = DSL.table(indexTableName(schema, index));
                             columnResolver = indexColumnResolver(context, schema, index);

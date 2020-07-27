@@ -22,11 +22,9 @@ package io.basestar.schema.use;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Constraint;
-import io.basestar.schema.Instance;
 import io.basestar.schema.Schema;
 import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.schema.util.Expander;
@@ -69,7 +67,8 @@ public interface Use<T> extends Serializable {
         BINARY,
         DATE,
         DATETIME,
-        VIEW
+        VIEW,
+        NULLABLE
     }
 
     <R> R visit(Visitor<R> visitor);
@@ -95,9 +94,6 @@ public interface Use<T> extends Serializable {
     T expand(T value, Expander expander, Set<Name> expand);
 
     Set<Name> requiredExpand(Set<Name> names);
-
-    @Deprecated
-    Multimap<Name, Instance> refs(T value);
 
     @JsonValue
     Object toConfig();
@@ -125,6 +121,21 @@ public interface Use<T> extends Serializable {
     Map<Ref, Long> refVersions(T value);
 
     void collectDependencies(Set<Name> expand, Map<Name, Schema<?>> out);
+
+    default boolean isNullable() {
+
+        return false;
+    }
+
+    default Use<T> nullable(final boolean nullable) {
+
+        // Inverse implemented in UseNullable
+        if(nullable) {
+            return new UseNullable<>(this);
+        } else {
+            return this;
+        }
+    }
 
     @JsonCreator
     @SuppressWarnings("unchecked")
@@ -163,6 +174,8 @@ public interface Use<T> extends Serializable {
                 return UseDate.from(config);
             case UseDateTime.NAME:
                 return UseDateTime.from(config);
+            case UseNullable.NAME:
+                return UseNullable.from(config);
             default:
                 return UseNamed.from(type, config);
         }
@@ -295,6 +308,8 @@ public interface Use<T> extends Serializable {
             throw new UnsupportedOperationException();
         }
 
+        <T> R visitNullable(UseNullable<T> type);
+
         interface Defaulting<R> extends Visitor<R> {
 
             R visitDefault(Use<?> type);
@@ -310,6 +325,11 @@ public interface Use<T> extends Serializable {
             }
 
             default R visitInstance(final UseInstance type) {
+
+                return visitDefault(type);
+            }
+
+            default R visitLinkable(final UseLinkable type) {
 
                 return visitDefault(type);
             }
@@ -347,7 +367,7 @@ public interface Use<T> extends Serializable {
             @Override
             default R visitObject(final UseObject type) {
 
-                return visitInstance(type);
+                return visitLinkable(type);
             }
 
             @Override
@@ -395,7 +415,13 @@ public interface Use<T> extends Serializable {
             @Override
             default R visitView(final UseView type) {
 
-                return visitInstance(type);
+                return visitLinkable(type);
+            }
+
+            @Override
+            default <T> R visitNullable(final UseNullable<T> type) {
+
+                return type.getType().visit(this);
             }
         }
     }

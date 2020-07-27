@@ -1,11 +1,8 @@
 package io.basestar.schema.use;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Constraint;
-import io.basestar.schema.Instance;
 import io.basestar.schema.Schema;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
@@ -151,13 +148,6 @@ public class UseAny implements Use<Object> {
     public Set<Name> requiredExpand(final Set<Name> names) {
 
         return Collections.emptySet();
-    }
-
-    @Override
-    @Deprecated
-    public Multimap<Name, Instance> refs(final Object value) {
-
-        return HashMultimap.create();
     }
 
     @Override

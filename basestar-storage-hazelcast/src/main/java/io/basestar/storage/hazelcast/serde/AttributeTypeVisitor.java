@@ -110,6 +110,12 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
         return AttributeType.struct(type.getSchema());
     }
 
+    @Override
+    public <T> AttributeType<?> visitNullable(final UseNullable<T> type) {
+
+        return type.getType().visit(this);
+    }
+
     public static class ForArray implements Use.Visitor<AttributeType<?>> {
 
         public static final ForArray INSTANCE = new ForArray();
@@ -196,6 +202,12 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
         public AttributeType<?> visitView(final UseView type) {
 
             return AttributeType.structArray(type.getSchema());
+        }
+
+        @Override
+        public <T> AttributeType<?> visitNullable(final UseNullable<T> type) {
+
+            return type.getType().visit(this);
         }
     }
 }

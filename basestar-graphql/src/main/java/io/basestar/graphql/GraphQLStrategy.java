@@ -401,6 +401,12 @@ public interface GraphQLStrategy {
 
                 return typeName(type.getSchema());
             }
+
+            @Override
+            public <T> String visitNullable(final UseNullable<T> type) {
+
+                return type.getType().visit(this);
+            }
         };
     }
 }

@@ -163,6 +163,12 @@ public class AvroUtils {
 
                 return schema(type.getSchema());
             }
+
+            @Override
+            public <T> Schema visitNullable(final UseNullable<T> type) {
+
+                return type.getType().visit(this);
+            }
         });
     }
 
