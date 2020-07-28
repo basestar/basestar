@@ -7,9 +7,6 @@ Project:
     name:
       type: string
       required: true
-      constraints:
-        length:
-          expression: value.size() > 2
     description:
       type: string
       required: true
@@ -41,16 +38,16 @@ Project:
   permissions:
     read:
       expression: this.owner.id == caller.id
-        || this.id in caller.projects.map(p -> p.id)
-        || this.id in caller.teams.flatMap(t -> t.projects.map(p -> p.id))
+        || this.id in caller.projects.map(p => p.id)
+        || this.id in caller.teams.flatMap(t => t.projects.map(p => p.id))
       expand:
         - caller.projects
         - caller.teams
         - caller.teams.projects
     update:
       expression: (before.owner.id == caller.id && after.owner.id == before.owner.id)
-        || before.users.anyMatch(u -> u.id == caller.id && u.permissions.contains("UPDATE"))
-        || before.teams.anyMatch(t -> t.permissions.contains("UPDATE") && t.users.anyMatch(u -> u.id == caller.id))
+        || before.users.anyMatch(u => u.id == caller.id && u.permissions.contains("UPDATE"))
+        || before.teams.anyMatch(t => t.permissions.contains("UPDATE") && t.users.anyMatch(u => u.id == caller.id))
       expand:
         - before.users
         - before.teams

@@ -120,10 +120,10 @@ public class GraphQLWebsocketAPI implements API {
 
     private CompletableFuture<APIResponse> query(final APIRequest request, final String id, final ExecutionInput input) {
 
-        log.info("GraphQL request {}", input);
+        log.debug("GraphQL request {}", input);
         return graphQL.executeAsync(input)
                 .thenApply(response -> {
-                    log.info("GraphQL response {}", response);
+                    log.debug("GraphQL response {}", response);
                     return response(request, "data", id, GraphQLAPI.ResponseBody.from(response));
                 });
     }

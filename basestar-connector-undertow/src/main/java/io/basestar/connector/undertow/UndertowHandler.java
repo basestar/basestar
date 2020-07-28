@@ -38,7 +38,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.util.concurrent.ExecutionException;
 
 @Data
 @Slf4j
@@ -49,6 +48,10 @@ public class UndertowHandler implements HttpHandler {
     @Override
     public void handleRequest(final HttpServerExchange exchange) {
 
+        if(exchange.isInIoThread()) {
+            exchange.dispatch(this);
+            return;
+        }
         exchange.getRequestReceiver().receiveFullBytes(this::handleBody, this::handleException);
     }
 
@@ -64,7 +67,7 @@ public class UndertowHandler implements HttpHandler {
             exchange.getRequestHeaders()
                     .forEach(vs -> requestHeaders.putAll(vs.getHeaderName().toString().toLowerCase(), vs));
 
-            log.info("Handling HTTP request (method:{} path:{} query:{} headers:{})", method, path, query, requestHeaders);
+            log.debug("Handling HTTP request (method:{} path:{} query:{} headers:{})", method, path, query, requestHeaders);
 
             final APIRequest request = new APIRequest() {
 
@@ -105,34 +108,38 @@ public class UndertowHandler implements HttpHandler {
                 }
             };
 
-            final APIResponse response = api.handle(request).exceptionally(e -> {
+            api.handle(request).exceptionally(e -> {
                 log.error("Uncaught", e);
                 return APIResponse.error(request, e);
-            }).get();
+            }).thenApply(response -> {
 
+                final int responseCode = response.getStatusCode();
+                final Multimap<String, String> responseHeaders = response.getHeaders();
 
-            final int responseCode = response.getStatusCode();
-            final Multimap<String, String> responseHeaders = response.getHeaders();
+                log.debug("Response (method:{} path:{} status: {} headers: {})", method, path, responseCode, responseHeaders);
 
-            log.info("Response (method:{} path:{} status: {} headers: {})", method, path, responseCode, responseHeaders);
+                final HeaderMap exchangeResponseHeaders = exchange.getResponseHeaders();
+                exchange.setStatusCode(responseCode);
+                responseHeaders.entries().forEach(e -> exchangeResponseHeaders.put(HttpString.tryFromString(e.getKey()), e.getValue()));
 
-            final HeaderMap exchangeResponseHeaders = exchange.getResponseHeaders();
-            exchange.setStatusCode(responseCode);
-            responseHeaders.entries().forEach(e -> exchangeResponseHeaders.put(HttpString.tryFromString(e.getKey()), e.getValue()));
-//            final Collection<String> encodings = requestHeaders.get("accept-encoding");
+                try {
+                    final ByteBuffer buffer;
+                    try (final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                        response.writeTo(baos);
+                        baos.flush();
+                        buffer = ByteBuffer.wrap(baos.toByteArray());
+                    }
+                    exchange.getResponseSender().send(buffer);
+                    exchange.getResponseSender().close();
+                } catch (final IOException e) {
+                    log.warn("Exception caught during response buffering", e);
+                    exchange.getResponseSender().close();
+                }
 
-            final ByteBuffer buffer;
-            try (final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-                response.writeTo(baos);
-                baos.flush();
-                buffer = ByteBuffer.wrap(baos.toByteArray());
-            }
-            exchange.getResponseSender().send(buffer);
+                return null;
+            });
 
-        } catch (final InterruptedException e) {
-            log.warn("Interrupted during request handling", e);
-            Thread.currentThread().interrupt();
-        } catch (final IOException | ExecutionException e) {
+        } catch (final IOException e) {
             log.warn("Exception caught during request handling", e);
             throw new IllegalStateException(e);
         } catch (final Throwable e) {
@@ -143,19 +150,6 @@ public class UndertowHandler implements HttpHandler {
 
     private void handleException(final HttpServerExchange exchange, final Exception e) {
 
-        e.printStackTrace(System.err);
+        log.error("Exception in HTTP exchange", e);
     }
-
-//    private OutputStream compressedStream(final OutputStream os, final Collection<String> encodings) throws IOException {
-//
-//        if(encodings.contains("*")) {
-//            return new GZIPOutputStream(os);
-//        } else if(encodings.stream().anyMatch("gzip"::equalsIgnoreCase)) {
-//            return new GZIPOutputStream(os);
-//        } else if(encodings.stream().anyMatch("deflate"::equalsIgnoreCase)) {
-//            return new DeflaterOutputStream(os);
-//        } else {
-//            return os;
-//        }
-//    }
 }

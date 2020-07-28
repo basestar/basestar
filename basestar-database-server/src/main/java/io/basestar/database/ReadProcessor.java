@@ -141,7 +141,7 @@ public class ReadProcessor {
                                 return expression.evaluatePredicate(context.with(instance));
                             } catch (final Exception e) {
                                 // FIXME:
-                                log.info("Failed to evaluate predicate", e);
+                                log.warn("Failed to evaluate predicate", e);
                                 return false;
                             }
                         });

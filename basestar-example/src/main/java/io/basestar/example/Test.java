@@ -269,7 +269,7 @@ public class Test {
 //        final OpenAPI openAPI = api.openApi();
         final API api = new AuthenticatingAPI(authenticator, DiscoverableAPI.builder().api(new DatabaseAPI(database)).build());
         //System.err.println(new ObjectMapper().setDefaultPropertyInclusion(JsonInclude.Include.NON_EMPTY).writerWithDefaultPrettyPrinter().writeValueAsString(openAPI));
-        final UndertowConnector connector = new UndertowConnector(api,"localhost", 5004);
+        final UndertowConnector connector = UndertowConnector.builder().api(api).host("localhost").port(5004).build();
         connector.start();
     }
 }

@@ -52,7 +52,7 @@ public class AuthenticatingAPI implements API {
         if(authenticator.canAuthenticate(authorization)) {
             return authenticator.authenticate(authorization).thenCompose(caller -> {
 
-                log.info("Authenticated as {} (anon: {}, super: {})", caller.getId(), caller.isAnon(), caller.isSuper());
+                log.debug("Authenticated as {} (anon: {}, super: {})", caller.getId(), caller.isAnon(), caller.isSuper());
 
                 return api.handleUnchecked(new APIRequest.Delegating(request) {
 

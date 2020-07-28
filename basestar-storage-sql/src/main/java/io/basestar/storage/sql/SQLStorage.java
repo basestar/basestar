@@ -173,7 +173,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                         }
                         final Condition condition = new SQLExpressionVisitor(columnResolver).condition(conjunction);
 
-                        log.info("SQL condition {}", condition);
+                        log.debug("SQL condition {}", condition);
 
                         final SelectSeekStepN<Record> select = context.select(selectFields(schema))
                                 .from(table).where(condition).orderBy(orderFields);

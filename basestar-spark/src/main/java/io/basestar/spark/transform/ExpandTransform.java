@@ -187,6 +187,10 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
                         ids.addAll(refIds(property.getType(), branch, SparkSchemaUtils.get(row, name)));
                     }
                 });
+                // Make sure we always have at least one output row else this will act like an inner join
+                if(ids.isEmpty()) {
+                    ids.add(null);
+                }
 
                 return ids.stream().map(id -> SparkSchemaUtils.append(row, refIdField, id)).iterator();
             };

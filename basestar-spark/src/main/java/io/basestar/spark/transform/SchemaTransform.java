@@ -90,7 +90,7 @@ public class SchemaTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
         final UserDefinedFunction udf = functions.udf(
                 (Object sourceValue) -> {
-                    log.info("Transforming column {}.{}", schema.getQualifiedName(), name);
+                    log.debug("Transforming column {}.{}", schema.getQualifiedName(), name);
                     final Object targetValue = type.create(SparkSchemaUtils.fromSpark(sourceType, sourceValue), false, true);
                     return SparkSchemaUtils.toSpark(type, targetDataType, targetValue);
                 },
