@@ -41,7 +41,6 @@ public class SchemaAdaptor {
 
     public SchemaAdaptor(final Namespace namespace, final GraphQLStrategy namingStrategy) {
 
-
         this.namespace = namespace;
         this.namingStrategy = namingStrategy;
     }
@@ -71,6 +70,7 @@ public class SchemaAdaptor {
         });
         registry.add(queryDefinition());
         registry.add(mutationDefinition());
+        registry.add(subscriptionDefinition());
         registry.add(transactionTypeDefinition());
         registry.add(InputObjectTypeDefinition.newInputObjectDefinition()
                 .name(namingStrategy.inputRefTypeName())
@@ -242,6 +242,26 @@ public class SchemaAdaptor {
                 .name(Reserved.ID).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(Reserved.VERSION).type(new TypeName(GraphQLUtils.INT_TYPE)).build());
+        return builder.build();
+    }
+
+    private ObjectTypeDefinition subscriptionDefinition() {
+
+        final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
+        builder.name(GraphQLUtils.SUBSCRIPTION_TYPE);
+        namespace.forEachObjectSchema((schemaName, schema) -> {
+            builder.fieldDefinition(subscribeDefinition(schema));
+        });
+        return builder.build();
+    }
+
+    public FieldDefinition subscribeDefinition(final ObjectSchema schema) {
+
+        final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
+        builder.name(namingStrategy.subscribeMethodName(schema));
+        builder.type(new TypeName(namingStrategy.typeName(schema)));
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name(Reserved.ID).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build());
         return builder.build();
     }
 

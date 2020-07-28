@@ -20,6 +20,7 @@ package io.basestar.auth;
  * #L%
  */
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.AccessLevel;
@@ -53,6 +54,7 @@ public interface Caller {
 
     @Setter
     @Accessors(chain = true)
+    @JsonIgnoreProperties(ignoreUnknown = true)
     class Builder {
 
         private Name schema;

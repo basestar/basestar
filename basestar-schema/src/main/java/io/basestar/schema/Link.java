@@ -140,7 +140,7 @@ public class Link implements Member {
 
         this.qualifiedName = qualifiedName;
         this.description = descriptor.getDescription();
-        this.schema = resolver.requireObjectSchema(descriptor.getSchema());
+        this.schema = resolver.requireInstanceSchema(descriptor.getSchema());
         this.expression = Nullsafe.require(descriptor.getExpression());
         this.single = Nullsafe.option(descriptor.getSingle());
         this.sort = Nullsafe.immutableCopy(descriptor.getSort());

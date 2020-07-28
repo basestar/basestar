@@ -342,7 +342,11 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
 
         final Mappings mappings = strategy.mappings(schema);
         final Settings settings = strategy.settings(schema);
-        return ElasticsearchUtils.syncIndex(client, name, mappings, settings);
+        return ElasticsearchUtils.syncIndex(client, name, mappings, settings)
+                .exceptionally(e -> {
+                    log.error("Failed to sync index, continuing anyway", e);
+                    return null;
+                });
     }
 
     @Override

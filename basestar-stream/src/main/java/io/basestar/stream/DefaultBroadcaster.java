@@ -30,7 +30,6 @@ import io.basestar.database.event.ObjectUpdatedEvent;
 import io.basestar.database.options.ReadOptions;
 import io.basestar.event.Emitter;
 import io.basestar.event.Event;
-import io.basestar.event.Handler;
 import io.basestar.event.Handlers;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
@@ -40,6 +39,7 @@ import io.basestar.storage.exception.UnsupportedQueryException;
 import io.basestar.storage.query.DisjunctionVisitor;
 import io.basestar.storage.query.Range;
 import io.basestar.storage.query.RangeVisitor;
+import io.basestar.storage.util.Pager;
 import io.basestar.stream.event.SubscriptionPublishEvent;
 import io.basestar.stream.event.SubscriptionQueryEvent;
 import io.basestar.util.Name;
@@ -47,16 +47,16 @@ import io.basestar.util.Name;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
-public class DefaultNexus implements Nexus, Handler<Event> {
+public class DefaultBroadcaster implements Broadcaster {
 
     private static final int SUBSCRIPTION_PAGE_SIZE = 50;
 
-    private static final Handlers<DefaultNexus> HANDLERS = Handlers.<DefaultNexus>builder()
-            .on(ObjectCreatedEvent.class, DefaultNexus::onObjectCreated)
-            .on(ObjectUpdatedEvent.class, DefaultNexus::onObjectUpdated)
-            .on(ObjectDeletedEvent.class, DefaultNexus::onObjectDeleted)
-            .on(SubscriptionQueryEvent.class, DefaultNexus::onSubscriptionQuery)
-            .on(SubscriptionPublishEvent.class, DefaultNexus::onSubscriptionPublish)
+    private static final Handlers<DefaultBroadcaster> HANDLERS = Handlers.<DefaultBroadcaster>builder()
+            .on(ObjectCreatedEvent.class, DefaultBroadcaster::onObjectCreated)
+            .on(ObjectUpdatedEvent.class, DefaultBroadcaster::onObjectUpdated)
+            .on(ObjectDeletedEvent.class, DefaultBroadcaster::onObjectDeleted)
+            .on(SubscriptionQueryEvent.class, DefaultBroadcaster::onSubscriptionQuery)
+            .on(SubscriptionPublishEvent.class, DefaultBroadcaster::onSubscriptionPublish)
             .build();
 
     private final Subscriber subscriber;
@@ -70,9 +70,9 @@ public class DefaultNexus implements Nexus, Handler<Event> {
     private final Emitter emitter;
 
     @lombok.Builder(builderClassName = "Builder")
-    DefaultNexus(final Subscriber subscriber, final Publisher publisher,
-                 final Database database, final Namespace namespace,
-                 final Emitter emitter) {
+    DefaultBroadcaster(final Subscriber subscriber, final Publisher publisher,
+                       final Database database, final Namespace namespace,
+                       final Emitter emitter) {
 
         this.subscriber = subscriber;
         this.publisher = publisher;
@@ -94,27 +94,17 @@ public class DefaultNexus implements Nexus, Handler<Event> {
 
         final Expression bound = expression.bind(Context.init());
         final Set<Subscription.Key> keys = keys(schema, expression);
-        return subscriber.create(caller, sub, channel, bound, keys, expand);
+        return subscriber.subscribe(caller, sub, channel, keys, bound, expand);
     }
 
     @Override
     public CompletableFuture<?> unsubscribe(final Caller caller, final String sub, final String channel) {
 
-        throw new UnsupportedOperationException();
-//
-//        return subscriber.listBySubAndChannel(sub, channel, null).page(SUBSCRIPTION_PAGE_SIZE).thenCompose(sources -> {
-//
-//        });
-    }
-
-    @Override
-    public CompletableFuture<?> unsubscribeAll(final Caller caller, final String sub) {
-
-        throw new UnsupportedOperationException();
-//
-//        return subscriber.listBySub(sub, null).page(SUBSCRIPTION_PAGE_SIZE).thenCompose(sources -> {
-//
-//        });
+        if(channel == null) {
+            return subscriber.unsubscribeAll(sub);
+        } else {
+            return subscriber.unsubscribe(sub, channel);
+        }
     }
 
     private CompletableFuture<?> onObjectCreated(final ObjectCreatedEvent event) {
@@ -146,7 +136,9 @@ public class DefaultNexus implements Nexus, Handler<Event> {
 
         final ObjectSchema schema = namespace.requireObjectSchema(event.getSchema());
         final Set<Subscription.Key> keys = event.getKeys();
-        return subscriber.listByKeys(keys, event.getPaging()).page(SUBSCRIPTION_PAGE_SIZE).thenCompose(results -> {
+        final Comparator<Subscription> comparator = Subscription.COMPARATOR;
+        final Pager<Subscription> pager = new Pager<>(comparator, subscriber.query(keys), event.getPaging());
+        return pager.page(SUBSCRIPTION_PAGE_SIZE).thenCompose(results -> {
             final List<Event> events = new ArrayList<>();
 
             results.forEach(result -> {

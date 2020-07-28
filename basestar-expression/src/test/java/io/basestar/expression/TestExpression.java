@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.call.LambdaCall;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.NameConstant;
+import io.basestar.expression.exception.BadExpressionException;
 import io.basestar.expression.function.With;
 import io.basestar.expression.iterate.ForAll;
 import io.basestar.expression.iterate.ForAny;
@@ -45,8 +46,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
 public class TestExpression {
@@ -478,6 +478,12 @@ public class TestExpression {
 
         final Expression expression = Expression.parse("'abc' like 'a%'");
         final Expression bound = expression.bind(Context.init());
+    }
+
+    @Test
+    public void testThrowOnSingleEquals() {
+
+        assertThrows(BadExpressionException.class, () -> Expression.parse("x = y"));
     }
 
 //    @Test

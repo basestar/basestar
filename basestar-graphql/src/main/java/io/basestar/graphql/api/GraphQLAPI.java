@@ -32,7 +32,7 @@ import io.swagger.v3.oas.models.OpenAPI;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.InputStream;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -44,45 +44,32 @@ public class GraphQLAPI implements API {
 
     private final GraphQL graphQL;
 
+    @lombok.Builder(builderClassName = "Builder")
     public GraphQLAPI(final GraphQL graphQL) {
 
         this.graphQL = graphQL;
     }
 
     @Override
-    public CompletableFuture<APIResponse> handle(final APIRequest request) {
+    public CompletableFuture<APIResponse> handle(final APIRequest request) throws IOException {
 
-        try {
 
             final Caller caller = request.getCaller();
 
-//            if(request.getPath().isEmpty()) {
-                switch(request.getMethod()) {
-                    case HEAD:
-                    case OPTIONS:
-                        return CompletableFuture.completedFuture(APIResponse.success(request));
-                    case GET:
-                        final String query = request.getFirstQuery("query");
-                        return query(request, ExecutionInput.newExecutionInput(query).build());
-                    case POST:
-                        final Request req;
-                        try(final InputStream is = request.readBody()) {
-                             req = request.getContentType().getMapper().readValue(is, Request.class);
-                        }
-                        return query(request, req.toInput(caller));
-                    default:
-                        return CompletableFuture.completedFuture(APIResponse.error(request, ExceptionMetadata.notFound()));
-                }
+            switch(request.getMethod()) {
+                case HEAD:
+                case OPTIONS:
+                    return CompletableFuture.completedFuture(APIResponse.success(request));
+                case GET:
+                    final String query = request.getFirstQuery("query");
+                    return query(request, ExecutionInput.newExecutionInput(query).build());
+                case POST:
+                    final RequestBody body = request.readBody(RequestBody.class);
+                    return query(request, body.toInput(caller));
+                default:
+                    return CompletableFuture.completedFuture(APIResponse.error(request, ExceptionMetadata.notFound()));
+            }
 
-//            } else {
-//                return CompletableFuture.completedFuture(APIResponse.error(request, ExceptionMetadata.notFound()));
-//            }
-
-        } catch (final Exception e) {
-
-            log.error("GraphQL query failed", e);
-            return CompletableFuture.completedFuture(APIResponse.error(request, e));
-        }
     }
 
     @Override
@@ -97,12 +84,12 @@ public class GraphQLAPI implements API {
         return graphQL.executeAsync(input)
                 .thenApply(response -> {
                     log.info("GraphQL response {}", response);
-                    return APIResponse.success(request, Response.from(response));
+                    return APIResponse.success(request, ResponseBody.from(response));
                 });
     }
 
     @Data
-    private static class Request {
+    public static class RequestBody {
 
         private String operationName;
 
@@ -122,7 +109,7 @@ public class GraphQLAPI implements API {
     }
 
     @Data
-    private static class Response {
+    public static class ResponseBody {
 
         @JsonInclude(JsonInclude.Include.NON_NULL)
         private final Object data;
@@ -133,12 +120,12 @@ public class GraphQLAPI implements API {
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private final Map<Object, Object> extensions;
 
-        public static Response from(final ExecutionResult response) {
+        public static ResponseBody from(final ExecutionResult response) {
 
             final List<ResponseError> errors = Optional.ofNullable(response.getErrors())
                     .map(errs -> errs.stream().map(ResponseError::from).collect(Collectors.toList()))
                     .orElse(null);
-            return new Response(response.getData(), errors, response.getExtensions());
+            return new ResponseBody(response.getData(), errors, response.getExtensions());
         }
     }
 

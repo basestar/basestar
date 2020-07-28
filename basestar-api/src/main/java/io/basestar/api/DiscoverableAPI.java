@@ -25,6 +25,7 @@ import com.google.common.base.Suppliers;
 import io.basestar.util.Nullsafe;
 import io.swagger.v3.oas.models.OpenAPI;
 
+import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
 @SuppressWarnings("Guava")
@@ -44,7 +45,7 @@ public class DiscoverableAPI implements API {
     }
 
     @Override
-    public CompletableFuture<APIResponse> handle(final APIRequest request) {
+    public CompletableFuture<APIResponse> handle(final APIRequest request) throws IOException {
 
         if(request.getPath().equals(path)) {
             return openApi().thenApply(v -> APIResponse.success(request, v));

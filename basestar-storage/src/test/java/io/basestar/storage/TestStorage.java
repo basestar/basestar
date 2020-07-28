@@ -59,6 +59,8 @@ public abstract class TestStorage {
 
     private static final String REF_SOURCE = "RefSource";
 
+    private static final String DATE_SORT = "DateSort";
+
     private final Namespace namespace;
 
     public TestStorage() {
@@ -624,7 +626,7 @@ public abstract class TestStorage {
                 Sort.asc(Name.of("zip"))
         );
 
-//        assertEquals(6, page(storage, schema, Expression.parse("country == 'United Kingdom' && city ILIKE 'l%'"), sort, 10).size());
+        assertEquals(6, page(storage, schema, Expression.parse("country == 'United Kingdom' && city ILIKE 'l%'"), sort, 10).size());
         assertEquals(3, page(storage, schema, Expression.parse("country == 'United Kingdom' && city LIKE 'l%'"), sort, 10).size());
         assertEquals(1, page(storage, schema, Expression.parse("country == 'United Kingdom' && city LIKE 'l\\\\%n_on'"), sort, 10).size());
         assertEquals(1, page(storage, schema, Expression.parse("country == 'United Kingdom' && city LIKE 'L\\\\_n_on'"), sort, 10).size());
@@ -679,6 +681,24 @@ public abstract class TestStorage {
         assertEquals(1, page.size());
     }
 
+    @Test
+    public void testDateSort() {
+
+        final Storage storage = storage(namespace);
+
+        final ObjectSchema dateSort = namespace.requireObjectSchema(DATE_SORT);
+
+        assumeConcurrentObjectWrite(storage, dateSort);
+
+        createComplete(storage, dateSort, ImmutableMap.of(
+                "group", "test"
+        ));
+
+        final List<Sort> sort = Sort.parseList("created", "id");
+        final PagedList<Map<String, Object>> page = page(storage, dateSort, Expression.parse("group == 'test'"), sort, 10);
+        assertEquals(1, page.size());
+    }
+
     @SuppressWarnings({"rawtypes", "unchecked"})
     private PagedList<Map<String, Object>> page(final Storage storage, final ObjectSchema schema, final Expression expression, final List<Sort> sort, final int count) {
 
@@ -689,12 +709,15 @@ public abstract class TestStorage {
 
     private String createComplete(final Storage storage, final ObjectSchema schema, final Map<String, Object> data) {
 
+        final LocalDateTime now = LocalDateTime.now();
         final StorageTraits traits = storage.storageTraits(schema);
         final Map<String, Object> instance = new HashMap<>(data);
         final String id = UUID.randomUUID().toString();
         Instance.setId(instance, id);
         Instance.setVersion(instance, 1L);
         Instance.setSchema(instance, schema.getQualifiedName());
+        Instance.setCreated(instance, now);
+        Instance.setUpdated(instance, now);
         final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC);
         write.createObject(schema, id, instance);
         for(final Index index : schema.getIndexes().values()) {

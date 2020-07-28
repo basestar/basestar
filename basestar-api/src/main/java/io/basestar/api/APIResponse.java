@@ -61,8 +61,13 @@ public interface APIResponse {
 
     static APIResponse error(final APIRequest request, final Throwable e) {
 
+        return error(request, 500, e);
+    }
+
+    static APIResponse error(final APIRequest request, final int defaultStatus, final Throwable e) {
+
         e.printStackTrace(System.err);
-        final ExceptionMetadata metadata = exceptionMetadata(e);
+        final ExceptionMetadata metadata = exceptionMetadata(e, defaultStatus);
         return error(request, metadata);
     }
 
@@ -75,14 +80,14 @@ public interface APIResponse {
         return response(request, e.getStatus(), e.getHeaders(), data);
     }
 
-    static ExceptionMetadata exceptionMetadata(final Throwable e) {
+    static ExceptionMetadata exceptionMetadata(final Throwable e, final int defaultStatus) {
 
         if(e instanceof HasExceptionMetadata) {
             return ((HasExceptionMetadata)e).getMetadata();
         } else if(e.getCause() != null) {
-            return exceptionMetadata(e.getCause());
+            return exceptionMetadata(e.getCause(), defaultStatus);
         } else {
-            return new ExceptionMetadata().setStatus(500).setCode("UnknownError").setMessage(e.getMessage());
+            return new ExceptionMetadata().setStatus(defaultStatus).setCode("UnknownError").setMessage(e.getMessage());
         }
     }
 

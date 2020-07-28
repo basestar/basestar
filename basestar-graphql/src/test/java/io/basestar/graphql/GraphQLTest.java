@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import graphql.ExecutionInput;
 import graphql.GraphQL;
+import graphql.GraphQLContext;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.basestar.auth.Caller;
@@ -77,8 +78,7 @@ public class GraphQLTest {
                 ))
                 .build()).get();
 
-        return new GraphQLAdaptor(databaseServer, namespace)
-                .graphQL();
+        return GraphQLAdaptor.builder().database(databaseServer).namespace(namespace).build().graphQL();
     }
 
     @Test
@@ -112,6 +112,7 @@ public class GraphQLTest {
                         "    }\n" +
                         "  }\n" +
                         "}")
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
                 .build()).getData();
         assertEquals(Collections.singletonMap(
                 "readTest1", ImmutableMap.of(
@@ -157,6 +158,7 @@ public class GraphQLTest {
                         "    updated\n" +
                         "  }\n" +
                         "}")
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
                 .build()).getData();
         assertEquals(4, create.get("createTest1").size());
 
@@ -166,6 +168,7 @@ public class GraphQLTest {
                         "    id\n" +
                         "  }\n" +
                         "}")
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
                 .build()).getData();
         assertEquals(ImmutableMap.of("readTest1", ImmutableMap.of("id", "x")), get);
     }
@@ -184,6 +187,7 @@ public class GraphQLTest {
                         "    id\n" +
                         "  }\n" +
                         "}")
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
                 .build()).getData();
         assertEquals(ImmutableMap.of(
                 "a", ImmutableMap.of("id", "x"),

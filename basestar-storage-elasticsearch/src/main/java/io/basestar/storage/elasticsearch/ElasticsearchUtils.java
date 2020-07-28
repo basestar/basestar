@@ -85,7 +85,7 @@ public class ElasticsearchUtils {
                     if(statusException.map(s -> s.getDetailedMessage().contains("resource_already_exists_exception")).orElse(false)) {
                         return null;
                     } else {
-                        throw Throwables.runtimeCause(e).orElseGet(() -> new CompletionException(e));
+                        throw Throwables.findRuntimeCause(e).orElseGet(() -> new CompletionException(e));
                     }
                 }).thenCompose(v -> {
                     if(v == null) {

@@ -43,6 +43,13 @@ public interface APIRequest {
 
     InputStream readBody() throws IOException;
 
+    default <T> T readBody(final Class<T> as) throws IOException {
+
+        try(final InputStream is = readBody()) {
+            return getContentType().getMapper().readValue(is, as);
+        }
+    }
+
     default String getFirstHeader(final String key) {
 
         final Collection<String> result = getHeaders().get(key.toLowerCase());

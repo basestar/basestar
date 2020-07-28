@@ -70,6 +70,8 @@ public interface GraphQLStrategy {
 
     String readMethodName(ObjectSchema type);
 
+    String subscribeMethodName(ObjectSchema type);
+
     String queryMethodName(ObjectSchema type);
 
     String queryLinkMethodName(ObjectSchema type, Link link);
@@ -230,6 +232,12 @@ public interface GraphQLStrategy {
         public String readMethodName(final ObjectSchema type) {
 
             return "read" + typeName(type);
+        }
+
+        @Override
+        public String subscribeMethodName(final ObjectSchema type) {
+
+            return "subscribe" + typeName(type);
         }
 
         @Override

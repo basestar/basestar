@@ -88,6 +88,11 @@ public class PagedList<T> extends AbstractList<T> implements Serializable {
         return new PagedList<>(Collections.singletonList(value), null, Stats.UNKNOWN);
     }
 
+    public static <T> PagedList<T> from(final List<T> page) {
+
+        return new PagedList<>(page, null, Stats.UNKNOWN);
+    }
+
     public boolean hasPaging() {
 
         return getPaging() != null;
