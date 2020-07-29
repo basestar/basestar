@@ -34,6 +34,7 @@ import io.basestar.expression.constant.NameConstant;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.jackson.serde.AbbrevSetDeserializer;
 import io.basestar.jackson.serde.ExpressionDeserializer;
+import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.use.Use;
@@ -158,6 +159,9 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
     private final SortedMap<String, Link> declaredLinks;
 
     @Nonnull
+    private final SortedSet<Name> declaredExpand;
+
+    @Nonnull
     private final SortedMap<String, Object> extensions;
 
     @JsonDeserialize(as = Builder.class)
@@ -170,6 +174,7 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
 
             Name getSchema();
 
+            @JsonInclude(JsonInclude.Include.NON_EMPTY)
             Set<Name> getExpand();
         }
 
@@ -182,15 +187,22 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
 
         From getFrom();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         List<Sort> getSort();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         List<String> getGroup();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Map<String, Link.Descriptor> getLinks();
 
         Expression getWhere();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Map<String, Permission.Descriptor> getPermissions();
+
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        Set<Name> getExpand();
 
         @Override
         default ViewSchema build(final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
@@ -242,7 +254,11 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
         private Map<String, Link.Descriptor> links;
 
         @Nullable
-        @JsonInclude(JsonInclude.Include.NON_NULL)
+        @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
+        @JsonDeserialize(contentUsing = NameDeserializer.class)
+        private Set<Name> expand;
+
+        @Nullable
         @JsonSerialize(using = ToStringSerializer.class)
         @JsonDeserialize(using = ExpressionDeserializer.class)
         private Expression where;
@@ -312,6 +328,7 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
                 (k, v) -> viewPropertyDescriptor(v, this.from).build(resolver, qualifiedName.with(k)));
         this.declaredLinks = Nullsafe.immutableSortedCopy(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
         this.declaredPermissions = Nullsafe.immutableSortedCopy(descriptor.getPermissions(), (k, v) -> v.build(k));
+        this.declaredExpand = Nullsafe.immutableSortedCopy(descriptor.getExpand());
         this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName.toString());
@@ -418,6 +435,11 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
                 .putAll(getProperties())
                 .putAll(getLinks())
                 .build();
+    }
+
+    public Set<Name> getExpand() {
+
+        return declaredExpand;
     }
 
     @Override
@@ -583,6 +605,12 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
                         Map.Entry::getKey,
                         entry -> entry.getValue().descriptor()
                 ));
+            }
+
+            @Override
+            public Set<Name> getExpand() {
+
+                return declaredExpand;
             }
 
             @Override

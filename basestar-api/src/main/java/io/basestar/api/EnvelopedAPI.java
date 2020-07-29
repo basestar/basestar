@@ -32,6 +32,7 @@ public class EnvelopedAPI implements API {
     public CompletableFuture<APIResponse> handle(final APIRequest request) throws IOException {
 
         final RequestBody body = request.readBody(RequestBody.class);
+        final byte[] bytes = request.getContentType().getMapper().writeValueAsBytes(body.getBody());
         return api.handle(new APIRequest() {
             @Override
             public Caller getCaller() {
@@ -55,14 +56,10 @@ public class EnvelopedAPI implements API {
             public Multimap<String, String> getQuery() {
 
                 final Multimap<String, String> result = HashMultimap.create();
+                request.getQuery().forEach(result::put);
                 if (body.getQuery() != null) {
                     body.getQuery().forEach(result::put);
                 }
-                request.getQuery().asMap().forEach((k, vs) -> {
-                    if(!result.containsKey(k)) {
-                        result.putAll(k, vs);
-                    }
-                });
                 return result;
             }
 
@@ -70,21 +67,31 @@ public class EnvelopedAPI implements API {
             public Multimap<String, String> getHeaders() {
 
                 final Multimap<String, String> result = HashMultimap.create();
-                if (body.getHeaders() != null) {
-                    body.getHeaders().forEach(result::put);
-                }
+                result.put("content-type", request.getContentType().getContentType());
+                result.put("content-length", Integer.toString(bytes.length));
                 request.getHeaders().asMap().forEach((k, vs) -> {
-                    if(!result.containsKey(k)) {
-                        result.putAll(k, vs);
+                    final String name = k.toLowerCase();
+                    if (!result.containsKey(name)) {
+                        result.putAll(name, vs);
                     }
                 });
+                // For security and consistency purposes, do not allow overriding any existing request header params
+                if (body.getHeaders() != null) {
+                    body.getHeaders().forEach((k, v) -> {
+                        final String name = k.toLowerCase();
+                        if (!result.containsKey(name)) {
+                            result.put(name, v);
+                        } else {
+                            log.warn("Skipping enveloped header {} because it appears at request level", name);
+                        }
+                    });
+                }
                 return result;
             }
 
             @Override
-            public InputStream readBody() throws IOException {
+            public InputStream readBody() {
 
-                final byte[] bytes = request.getContentType().getMapper().writeValueAsBytes(body.getBody());
                 return new ByteArrayInputStream(bytes);
             }
         });

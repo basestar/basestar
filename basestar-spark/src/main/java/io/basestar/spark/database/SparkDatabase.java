@@ -54,7 +54,6 @@ public class SparkDatabase {
                         name -> columnResolver.resolve(input, name)
                 );
                 output = output.filter(bound.visit(visitor));
-                output = output.filter(bound.visit(visitor));
             }
             if(!sort.isEmpty()) {
                 final SortTransform<Row> transform = SortTransform.<Row>builder()
