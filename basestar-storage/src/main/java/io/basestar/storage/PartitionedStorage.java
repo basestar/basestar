@@ -42,6 +42,9 @@ import javax.annotation.Nonnull;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -221,7 +224,9 @@ public abstract class PartitionedStorage implements Storage.WithWriteIndex {
         final byte T_TRUE = 3;
         final byte T_INT = 4;
         final byte T_STRING = 5;
-        final byte T_BYTES = 6;
+        final byte T_DATE = 6;
+        final byte T_DATETIME = 7;
+        final byte T_BYTES = 8;
 
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
@@ -232,9 +237,7 @@ public abstract class PartitionedStorage implements Storage.WithWriteIndex {
                 } else if(v instanceof Boolean) {
                     baos.write(((Boolean)v) ? T_TRUE : T_FALSE);
                 } else if(v instanceof Integer || v instanceof Long) {
-                    final ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
-                    buffer.putLong(((Number)v).longValue());
-                    final byte[] bytes = buffer.array();
+                    final byte[] bytes = longBytes((Number)v);
                     baos.write(T_INT);
                     baos.write(bytes);
                 } else if(v instanceof String) {
@@ -244,6 +247,14 @@ public abstract class PartitionedStorage implements Storage.WithWriteIndex {
                         throw new IllegalStateException("String used in index cannot contain NULL byte");
                     }
                     baos.write(str.getBytes(Charsets.UTF_8));
+                } else if(v instanceof LocalDate) {
+                    final byte[] bytes = datetimeBytes(((LocalDate)v).atStartOfDay());
+                    baos.write(T_DATE);
+                    baos.write(bytes);
+                } else if(v instanceof LocalDateTime) {
+                    final byte[] bytes = datetimeBytes((LocalDateTime)v);
+                    baos.write(T_DATETIME);
+                    baos.write(bytes);
                 } else if(v instanceof byte[]) {
                     baos.write(T_BYTES);
                     baos.write(((byte[]) v));
@@ -261,6 +272,18 @@ public abstract class PartitionedStorage implements Storage.WithWriteIndex {
         }
 
         return baos.toByteArray();
+    }
+
+    private static byte[] datetimeBytes(final LocalDateTime v) {
+
+        return longBytes(v.atZone(ZoneOffset.UTC).toInstant().toEpochMilli());
+    }
+
+    private static byte[] longBytes(final Number v) {
+
+        final ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+        buffer.putLong(v.longValue());
+        return buffer.array();
     }
 
     @Data

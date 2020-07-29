@@ -324,7 +324,9 @@ public class SparkSchemaUtils {
             @Override
             public Object visitObject(final UseObject type) {
 
-                if(value instanceof Row) {
+                if(value instanceof String) {
+                    return ObjectSchema.ref((String)value);
+                } else if(value instanceof Row) {
                     return refFromSpark((Row)value);
                 } else {
                     throw new IllegalStateException();

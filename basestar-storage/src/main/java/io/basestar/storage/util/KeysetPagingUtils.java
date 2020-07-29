@@ -79,8 +79,8 @@ public class KeysetPagingUtils {
             final DataOutputStream dos = new DataOutputStream(baos)) {
             for (final Sort s : sort) {
                 final Name name = s.getName();
-                final Object value = name.apply(object);
                 final Use<Object> type = schema.typeOf(name);
+                final Object value = name.apply(object);
                 type.serialize(value, dos);
             }
             dos.flush();

@@ -187,24 +187,22 @@ public class Instance extends AbstractMap<String, Object> implements Serializabl
 
     public static LocalDateTime getCreated(final Map<String, Object> object) {
 
-        final String str = (String)object.get(Reserved.CREATED);
-        return str == null ? null : LocalDateTime.parse(str);
+        return (LocalDateTime)object.get(Reserved.CREATED);
     }
 
     public static void setCreated(final Map<String, Object> object, final LocalDateTime created) {
 
-        object.put(Reserved.CREATED, created == null ? null : created.toString());
+        object.put(Reserved.CREATED, created);
     }
 
     public static LocalDateTime getUpdated(final Map<String, Object> object) {
 
-        final String str = (String)object.get(Reserved.UPDATED);
-        return str == null ? null : LocalDateTime.parse(str);
+        return (LocalDateTime)object.get(Reserved.UPDATED);
     }
 
     public static void setUpdated(final Map<String, Object> object, final LocalDateTime updated) {
 
-        object.put(Reserved.UPDATED, updated == null ? null : updated.toString());
+        object.put(Reserved.UPDATED, updated);
     }
 
     @SuppressWarnings("unchecked")

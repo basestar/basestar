@@ -42,7 +42,7 @@ public class EnvelopedAPI implements API {
             @Override
             public Method getMethod() {
 
-                return body.getMethod();
+                return Nullsafe.option(body.getMethod(), request.getMethod());
             }
 
             @Override
@@ -58,6 +58,11 @@ public class EnvelopedAPI implements API {
                 if (body.getQuery() != null) {
                     body.getQuery().forEach(result::put);
                 }
+                request.getQuery().asMap().forEach((k, vs) -> {
+                    if(!result.containsKey(k)) {
+                        result.putAll(k, vs);
+                    }
+                });
                 return result;
             }
 
@@ -68,6 +73,11 @@ public class EnvelopedAPI implements API {
                 if (body.getHeaders() != null) {
                     body.getHeaders().forEach(result::put);
                 }
+                request.getHeaders().asMap().forEach((k, vs) -> {
+                    if(!result.containsKey(k)) {
+                        result.putAll(k, vs);
+                    }
+                });
                 return result;
             }
 
