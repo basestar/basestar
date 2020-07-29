@@ -80,7 +80,7 @@ public class KeysetPagingUtils {
             for (final Sort s : sort) {
                 final Name name = s.getName();
                 final Use<Object> type = schema.typeOf(name);
-                final Object value = name.apply(object);
+                final Object value = type.create(name.apply(object));
                 type.serialize(value, dos);
             }
             dos.flush();

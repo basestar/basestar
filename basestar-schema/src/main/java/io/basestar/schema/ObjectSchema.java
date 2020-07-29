@@ -454,9 +454,9 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
     public static Map<String, Object> readMeta(final Map<String, Object> object) {
 
         final HashMap<String, Object> result = new HashMap<>();
-        METADATA_SCHEMA.keySet().forEach(k -> {
+        METADATA_SCHEMA.forEach((k, v) -> {
             if(object.containsKey(k)) {
-                result.put(k, object.get(k));
+                result.put(k, v.create(object.get(k)));
             }
         });
         return Collections.unmodifiableMap(result);
@@ -572,8 +572,8 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         UseString.DEFAULT.serialize(schema == null ? null : schema.toString(), out);
         UseString.DEFAULT.serialize(id, out);
         UseInteger.DEFAULT.serialize(version, out);
-        UseString.DEFAULT.serialize(created == null ? null : created.toString(), out);
-        UseString.DEFAULT.serialize(updated == null ? null : updated.toString(), out);
+        UseDateTime.DEFAULT.serialize(created, out);
+        UseDateTime.DEFAULT.serialize(updated, out);
         UseString.DEFAULT.serialize(hash, out);
         serializeProperties(object, out);
     }
@@ -583,16 +583,16 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         final String schema = Use.deserializeAny(in);
         final String id = Use.deserializeAny(in);
         final Long version = Use.deserializeAny(in);
-        final String created = Use.deserializeAny(in);
-        final String updated = Use.deserializeAny(in);
+        final LocalDateTime created = Use.deserializeAny(in);
+        final LocalDateTime updated = Use.deserializeAny(in);
         final String hash = Use.deserializeAny(in);
 
         final Map<String, Object> data = new HashMap<>(InstanceSchema.deserializeProperties(in));
         Instance.setSchema(data, schema == null ? null : Name.parse(schema));
         Instance.setId(data, id);
         Instance.setVersion(data, version);
-        Instance.setCreated(data, created == null ? null : LocalDateTime.parse(created));
-        Instance.setUpdated(data, updated == null ? null : LocalDateTime.parse(updated));
+        Instance.setCreated(data, created);
+        Instance.setUpdated(data, updated);
         Instance.setHash(data, hash);
         return data;
     }

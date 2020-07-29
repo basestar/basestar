@@ -690,13 +690,15 @@ public abstract class TestStorage {
 
         assumeConcurrentObjectWrite(storage, dateSort);
 
-        createComplete(storage, dateSort, ImmutableMap.of(
-                "group", "test"
-        ));
+        for(int i = 0; i != 10; ++i) {
+            createComplete(storage, dateSort, ImmutableMap.of(
+                    "group", "test"
+            ));
+        }
 
         final List<Sort> sort = Sort.parseList("created", "id");
-        final PagedList<Map<String, Object>> page = page(storage, dateSort, Expression.parse("group == 'test'"), sort, 10);
-        assertEquals(1, page.size());
+        final PagedList<Map<String, Object>> page = page(storage, dateSort, Expression.parse("group == 'test'"), sort, 5);
+        assertEquals(5, page.size());
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})

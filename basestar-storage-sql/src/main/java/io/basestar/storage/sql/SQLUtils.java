@@ -23,6 +23,7 @@ package io.basestar.storage.sql;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
+import io.basestar.jackson.BasestarModule;
 import io.basestar.schema.Index;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
@@ -47,7 +48,7 @@ import java.util.stream.Stream;
 
 public class SQLUtils {
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper objectMapper = new ObjectMapper().registerModule(BasestarModule.INSTANCE);
 
     public static DataType<?> dataType(final Use<?> type) {
 
