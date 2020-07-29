@@ -89,6 +89,8 @@ public class UseObject implements UseInstance {
 
         if(value == null) {
             return null;
+        } else if(value instanceof String) {
+            return ObjectSchema.ref((String)value);
         } else if(value instanceof Map) {
             final Map<String, Object> map = (Map<String, Object>) value;
             final String id = Instance.getId(map);

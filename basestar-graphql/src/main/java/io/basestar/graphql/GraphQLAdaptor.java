@@ -21,7 +21,7 @@ package io.basestar.graphql;
  */
 
 import graphql.GraphQL;
-import graphql.execution.SubscriptionExecutionStrategy;
+import graphql.execution.AsyncExecutionStrategy;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.GraphQLSchema;
@@ -71,7 +71,7 @@ public class GraphQLAdaptor {
         final GraphQLSchema schema = generator.makeExecutableSchema(registry, wiring);
 
         return GraphQL.newGraphQL(schema)
-                .subscriptionExecutionStrategy(new SubscriptionExecutionStrategy())
+                .subscriptionExecutionStrategy(new AsyncExecutionStrategy())
                 .build();
     }
 

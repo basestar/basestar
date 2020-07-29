@@ -25,7 +25,7 @@ public class MemorySubscriber implements Subscriber {
     public CompletableFuture<?> subscribe(final Caller caller, final String sub, final String channel, final Set<Subscription.Key> keys, final Expression expression, final Set<Name> expand) {
 
         final Subscription subscription = new Subscription();
-        subscription.setCaller(caller);
+        subscription.setCallerId(caller.getId());
         subscription.setSub(sub);
         subscription.setChannel(channel);
         subscription.setExpression(expression);

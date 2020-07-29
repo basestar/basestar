@@ -23,7 +23,6 @@ package io.basestar.stream;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import io.basestar.auth.Caller;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.ExpressionDeserializer;
 import io.basestar.jackson.serde.NameDeserializer;
@@ -45,8 +44,7 @@ public class Subscription {
 
     private String channel;
 
-    @JsonDeserialize(builder = Caller.Builder.class)
-    private Caller caller;
+    private String callerId;
 
     @JsonDeserialize(using = ExpressionDeserializer.class)
     @JsonSerialize(using = ToStringSerializer.class)

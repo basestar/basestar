@@ -52,11 +52,6 @@ public class TestEventSerialization {
 
             return this;
         }
-
-        public String getEventGroup() {
-            
-            return "database";
-        }
     }
 
     @Test

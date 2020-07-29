@@ -157,7 +157,8 @@ public class DefaultBroadcaster implements Broadcaster {
         final ObjectSchema schema = namespace.requireObjectSchema(event.getSchema());
         final String id = event.getId();
         final Subscription subscription = event.getSubscription();
-        final Caller caller = subscription.getCaller();
+        //FIXME:
+        final Caller caller = Caller.SUPER;//builder().setId(id).build();
         final Expression expression = subscription.getExpression();
         final Set<Name> expand = subscription.getExpand();
         final CompletableFuture<Instance> beforeFuture = load(caller, schema, id, event.getBefore(), expand);

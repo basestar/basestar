@@ -26,6 +26,8 @@ import io.basestar.api.API;
 import io.basestar.api.APIRequest;
 import io.basestar.api.APIResponse;
 import io.basestar.auth.Caller;
+import io.undertow.io.IoCallback;
+import io.undertow.io.Sender;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
@@ -38,6 +40,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.concurrent.ExecutionException;
 
 @Data
 @Slf4j
@@ -108,42 +111,48 @@ public class UndertowHandler implements HttpHandler {
                 }
             };
 
-            api.handle(request).exceptionally(e -> {
+            final APIResponse response = api.handle(request).exceptionally(e -> {
                 log.error("Uncaught", e);
                 return APIResponse.error(request, e);
-            }).thenApply(response -> {
+            }).get();
 
-                final int responseCode = response.getStatusCode();
-                final Multimap<String, String> responseHeaders = response.getHeaders();
+            final int responseCode = response.getStatusCode();
+            final Multimap<String, String> responseHeaders = response.getHeaders();
 
-                log.debug("Response (method:{} path:{} status: {} headers: {})", method, path, responseCode, responseHeaders);
+            log.debug("Response (method:{} path:{} status: {} headers: {})", method, path, responseCode, responseHeaders);
 
-                final HeaderMap exchangeResponseHeaders = exchange.getResponseHeaders();
-                exchange.setStatusCode(responseCode);
-                responseHeaders.entries().forEach(e -> exchangeResponseHeaders.put(HttpString.tryFromString(e.getKey()), e.getValue()));
+            final HeaderMap exchangeResponseHeaders = exchange.getResponseHeaders();
+            exchange.setStatusCode(responseCode);
+            responseHeaders.entries().forEach(e -> exchangeResponseHeaders.put(HttpString.tryFromString(e.getKey()), e.getValue()));
 
-                try {
-                    final ByteBuffer buffer;
-                    try (final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-                        response.writeTo(baos);
-                        baos.flush();
-                        buffer = ByteBuffer.wrap(baos.toByteArray());
-                    }
-                    exchange.getResponseSender().send(buffer);
-                    exchange.getResponseSender().close();
-                } catch (final IOException e) {
-                    log.warn("Exception caught during response buffering", e);
-                    exchange.getResponseSender().close();
+            final ByteBuffer buffer;
+            try (final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                response.writeTo(baos);
+                baos.flush();
+                buffer = ByteBuffer.wrap(baos.toByteArray());
+            }
+            exchange.getResponseSender().send(buffer, new IoCallback() {
+                @Override
+                public void onComplete(final HttpServerExchange httpServerExchange, final Sender sender) {
+
+                    httpServerExchange.endExchange();
                 }
 
-                return null;
+                @Override
+                public void onException(final HttpServerExchange httpServerExchange, final Sender sender, final IOException e) {
+
+                    log.warn("Exception caught while writing a response", e);
+                    httpServerExchange.endExchange();
+                }
             });
 
-        } catch (final IOException e) {
+        } catch (final InterruptedException | ExecutionException | IOException e) {
             log.warn("Exception caught during request handling", e);
+            exchange.endExchange();
             throw new IllegalStateException(e);
         } catch (final Throwable e) {
             log.warn("Runtime exception caught during request handling", e);
+            exchange.endExchange();
             throw e;
         }
     }
