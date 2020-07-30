@@ -20,9 +20,12 @@ package io.basestar.stream;
  * #L%
  */
 
+import io.basestar.auth.Caller;
+import io.basestar.schema.ObjectSchema;
+
 import java.util.concurrent.CompletableFuture;
 
 public interface Publisher {
 
-    CompletableFuture<?> publish(String sub, String channel, Change change);
+    CompletableFuture<?> publish(Caller caller, ObjectSchema schema, String sub, String channel, SubscriptionInfo info, Change change);
 }

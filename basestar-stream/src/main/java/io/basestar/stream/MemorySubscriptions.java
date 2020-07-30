@@ -5,13 +5,12 @@ import com.google.common.collect.Multimap;
 import io.basestar.auth.Caller;
 import io.basestar.expression.Expression;
 import io.basestar.storage.util.Pager;
-import io.basestar.util.Name;
 import io.basestar.util.PagedList;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
-public class MemorySubscriber implements Subscriber {
+public class MemorySubscriptions implements Subscriptions {
 
     private final Map<Subscription.Id, Subscription> subscriptions = new HashMap<>();
 
@@ -22,14 +21,14 @@ public class MemorySubscriber implements Subscriber {
     private final Object lock = new Object();
 
     @Override
-    public CompletableFuture<?> subscribe(final Caller caller, final String sub, final String channel, final Set<Subscription.Key> keys, final Expression expression, final Set<Name> expand) {
+    public CompletableFuture<?> subscribe(final Caller caller, final String sub, final String channel, final Set<Subscription.Key> keys, final Expression expression, final SubscriptionInfo info) {
 
         final Subscription subscription = new Subscription();
-        subscription.setCallerId(caller.getId());
+        subscription.setCaller(caller);
         subscription.setSub(sub);
         subscription.setChannel(channel);
         subscription.setExpression(expression);
-        subscription.setExpand(expand);
+        subscription.setInfo(info);
         synchronized (lock) {
             final Subscription.Id id = new Subscription.Id(sub, channel);
             subscriptions.put(id, subscription);

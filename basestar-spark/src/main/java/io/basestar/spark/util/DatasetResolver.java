@@ -37,7 +37,7 @@ import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 
-public interface DatasetResolver extends Serializable {
+public interface DatasetResolver {
 
     default Dataset<Row> resolve(final InstanceSchema schema, final ColumnResolver<Row> columnResolver) {
 

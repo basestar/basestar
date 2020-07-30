@@ -23,6 +23,7 @@ package io.basestar.stream;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import io.basestar.auth.Caller;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.ExpressionDeserializer;
 import io.basestar.jackson.serde.NameDeserializer;
@@ -33,9 +34,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Subscription {
 
     public static final Comparator<Subscription> COMPARATOR = Comparator.comparing(Subscription::getSub).thenComparing(Subscription::getChannel);
@@ -44,15 +46,13 @@ public class Subscription {
 
     private String channel;
 
-    private String callerId;
+    private Caller caller;
 
     @JsonDeserialize(using = ExpressionDeserializer.class)
     @JsonSerialize(using = ToStringSerializer.class)
     private Expression expression;
 
-    @JsonDeserialize(contentUsing = NameDeserializer.class)
-    @JsonSerialize(contentUsing = ToStringSerializer.class)
-    private Set<Name> expand;
+    private SubscriptionInfo info;
 
     @Data
     public static class Id {

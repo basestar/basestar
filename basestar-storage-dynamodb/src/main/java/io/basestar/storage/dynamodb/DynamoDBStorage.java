@@ -686,7 +686,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
 
         private CompletableFuture<BatchResponse> writeImpl() {
 
-            if(consistency == Consistency.NONE) {
+            if(consistency != Consistency.ATOMIC) {
 
                 return CompletableFuture.allOf(Lists.partition(items, WRITE_BATCH).stream()
                         .map(part -> {

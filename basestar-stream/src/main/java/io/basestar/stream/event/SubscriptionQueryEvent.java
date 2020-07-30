@@ -29,6 +29,7 @@ import io.basestar.util.PagingToken;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
+import java.util.Map;
 import java.util.Set;
 
 @Data
@@ -41,20 +42,20 @@ public class SubscriptionQueryEvent implements ObjectEvent {
 
     private Change.Event event;
 
-    private Long before;
+    private Map<String, Object> before;
 
-    private Long after;
+    private Map<String, Object> after;
 
     private Set<Subscription.Key> keys;
 
     private PagingToken paging;
 
-    public static SubscriptionQueryEvent of(final Name schema, final String id, final Change.Event event, final Long before, final Long after, final Set<Subscription.Key> keys) {
+    public static SubscriptionQueryEvent of(final Name schema, final String id, final Change.Event event, final Map<String, Object> before, final Map<String, Object> after, final Set<Subscription.Key> keys) {
 
         return of(schema, id, event, before, after, keys, null);
     }
 
-    public static SubscriptionQueryEvent of(final Name schema, final String id, final Change.Event event, final Long before, final Long after, final Set<Subscription.Key> keys, final PagingToken paging) {
+    public static SubscriptionQueryEvent of(final Name schema, final String id, final Change.Event event, final Map<String, Object> before, final Map<String, Object> after, final Set<Subscription.Key> keys, final PagingToken paging) {
 
         return new SubscriptionQueryEvent().setSchema(schema).setId(id).setEvent(event).setBefore(before).setAfter(after).setKeys(keys).setPaging(paging);
     }

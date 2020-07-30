@@ -252,7 +252,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         private final Set<Name> expand;
     }
 
-    private Set<RequiredRef> requiredRefs(final Use<?> type, final Set<Name> expand) {
+    private static Set<RequiredRef> requiredRefs(final Use<?> type, final Set<Name> expand) {
 
         return type.visit(new Use.Visitor.Defaulting<Set<RequiredRef>>() {
 
@@ -382,7 +382,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         }
     }
 
-    private Object applyRefs(final Use<?> type, final Set<Name> expand, final Object input, final Map<String, Row> lookup) {
+    private static Object applyRefs(final Use<?> type, final Set<Name> expand, final Object input, final Map<String, Row> lookup) {
 
         if (input == null) {
             return null;

@@ -28,6 +28,8 @@ import io.basestar.util.Name;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
+import java.util.Map;
+
 @Data
 @Accessors(chain = true)
 public class SubscriptionPublishEvent implements ObjectEvent {
@@ -38,13 +40,13 @@ public class SubscriptionPublishEvent implements ObjectEvent {
 
     private Change.Event event;
 
-    private Long before;
+    private Map<String, Object> before;
 
-    private Long after;
+    private Map<String, Object> after;
 
     private Subscription subscription;
 
-    public static SubscriptionPublishEvent of(final Name schema, final String id, final Change.Event event, final Long before, final Long after, final Subscription subscription) {
+    public static SubscriptionPublishEvent of(final Name schema, final String id, final Change.Event event, final Map<String, Object> before, final Map<String, Object> after, final Subscription subscription) {
 
         return new SubscriptionPublishEvent().setSchema(schema).setId(id).setEvent(event).setBefore(before).setAfter(after).setSubscription(subscription);
     }

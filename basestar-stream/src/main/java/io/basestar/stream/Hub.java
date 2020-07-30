@@ -20,22 +20,9 @@ package io.basestar.stream;
  * #L%
  */
 
-import io.basestar.auth.Caller;
-import io.basestar.expression.Expression;
-import io.basestar.storage.util.Pager;
-import io.basestar.util.Name;
+import io.basestar.event.Event;
+import io.basestar.event.Handler;
 
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
+public interface Hub extends Subscribable, Handler<Event> {
 
-public interface Subscriber {
-
-    CompletableFuture<?> subscribe(Caller caller, String sub, String channel, Set<Subscription.Key> keys, Expression expression, Set<Name> expand);
-
-    List<Pager.Source<Subscription>> query(Set<Subscription.Key> keys);
-
-    CompletableFuture<?> unsubscribe(String sub, String channel);
-
-    CompletableFuture<?> unsubscribeAll(String sub);
 }

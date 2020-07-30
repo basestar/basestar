@@ -21,22 +21,20 @@ package io.basestar.stream;
  */
 
 import io.basestar.auth.Caller;
-import io.basestar.event.Event;
-import io.basestar.event.Handler;
 import io.basestar.expression.Expression;
-import io.basestar.util.Name;
+import io.basestar.storage.util.Pager;
 
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-public interface Broadcaster extends Handler<Event> {
+public interface Subscriptions {
 
-    CompletableFuture<?> subscribe(Caller caller, String sub, String channel, String schema, Expression expression, Set<Name> expand);
+    CompletableFuture<?> subscribe(Caller caller, String sub, String channel, Set<Subscription.Key> keys, Expression expression, SubscriptionInfo info);
 
-    CompletableFuture<?> unsubscribe(Caller caller, String sub, String channel);
+    List<Pager.Source<Subscription>> query(Set<Subscription.Key> keys);
 
-    default CompletableFuture<?> unsubscribeAll(Caller caller, String sub) {
+    CompletableFuture<?> unsubscribe(String sub, String channel);
 
-        return unsubscribe(caller, sub, null);
-    }
+    CompletableFuture<?> unsubscribeAll(String sub);
 }

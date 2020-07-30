@@ -37,6 +37,11 @@
             <artifactId>basestar-api</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.basestar</groupId>
+            <artifactId>basestar-stream</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>com.graphql-java</groupId>
             <artifactId>graphql-java</artifactId>
             <version>2020-04-04T07-05-23-9eae9c1</version>

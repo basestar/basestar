@@ -96,9 +96,13 @@ public interface GraphQLStrategy {
 
     String expressionsArgumentName();
 
-    String transactionMethodName();
+    String consistencyArgumentName();
 
-    String transactionTypeName();
+    String consistencyTypeName();
+
+    String batchMethodName();
+
+    String batchTypeName();
 
     class Default implements GraphQLStrategy {
 
@@ -313,15 +317,27 @@ public interface GraphQLStrategy {
         }
 
         @Override
-        public String transactionMethodName() {
+        public String consistencyArgumentName() {
 
-            return "transaction";
+            return "consistency";
         }
 
         @Override
-        public String transactionTypeName() {
+        public String consistencyTypeName() {
 
-            return "Transaction";
+            return "BatchConsistency";
+        }
+
+        @Override
+        public String batchMethodName() {
+
+            return "batch";
+        }
+
+        @Override
+        public String batchTypeName() {
+
+            return "Batch";
         }
 
         protected final Use.Visitor<String> TYPE_NAME_VISITOR = new Use.Visitor<String>() {

@@ -52,19 +52,29 @@ public class Pager<T> {
     // Aggressive trimming
     private static final int TRIM_BUFFER = DEFAULT_BUFFER;
 
-    private final Comparator<T> comparator;
+    private final Comparator<? super T> comparator;
 
     private List<State<T>> states;
 
-    public Pager(final Comparator<T> comparator, final List<Source<T>> sources, final PagingToken paging) {
+    public Pager(final Comparator<? super T> comparator, final List<Source<T>> sources, final PagingToken paging) {
 
         this(comparator, sources, EnumSet.noneOf(PagedList.Stat.class), paging);
     }
 
-    public Pager(final Comparator<T> comparator, final List<Source<T>> sources, final Set<PagedList.Stat> stats, final PagingToken paging) {
+    public Pager(final Comparator<? super T> comparator, final List<Source<T>> sources, final Set<PagedList.Stat> stats, final PagingToken paging) {
 
         this.comparator = Nullsafe.require(comparator);
         this.states = decodeStates(sources, EnumSet.copyOf(stats), paging);
+    }
+
+    public static <T> List<Source<T>> filter(final List<Source<T>> sources, final Predicate<T> fn) {
+
+        return sources.stream().map(source -> source.filter(fn)).collect(Collectors.toList());
+    }
+
+    public static <T, U> List<Source<U>> map(final List<Source<T>> sources, final Function<T, U> fn) {
+
+        return sources.stream().map(source -> source.map(fn)).collect(Collectors.toList());
     }
 
     public interface Source<T> {
@@ -224,7 +234,7 @@ public class Pager<T> {
             return paging;
         }
 
-        public CompletableFuture<State<T>> trim(final Comparator<T> comparator, final T value) {
+        public CompletableFuture<State<T>> trim(final Comparator<? super T> comparator, final T value) {
 
             if (page != null) {
                 int offset = paging.getOffset();

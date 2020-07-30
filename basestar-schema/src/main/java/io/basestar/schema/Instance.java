@@ -20,15 +20,14 @@ package io.basestar.schema;
  * #L%
  */
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import io.basestar.util.Name;
+import io.basestar.util.Sort;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.AbstractMap;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class Instance extends AbstractMap<String, Object> implements Serializable {
 
@@ -47,6 +46,22 @@ public class Instance extends AbstractMap<String, Object> implements Serializabl
     public Instance(final Instance copy) {
 
         this.backing = Maps.newHashMap(copy.backing);
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public static Comparator<Map<String, Object>> comparator(final List<Sort> sort) {
+
+        return Sort.comparator(sort, (t, name) -> (Comparable)name.apply(t));
+    }
+
+    public static Comparator<Map<String, Object>> comparator(final Sort sort) {
+
+        return comparator(ImmutableList.of(sort));
+    }
+
+    public static Comparator<Map<String, Object>> idComparator() {
+
+        return comparator(Sort.asc(Reserved.ID_NAME));
     }
 
     public Name getSchema() {

@@ -14,10 +14,6 @@ import java.io.InputStream;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-/**
- *
- */
-
 @Slf4j
 public class EnvelopedAPI implements API {
 

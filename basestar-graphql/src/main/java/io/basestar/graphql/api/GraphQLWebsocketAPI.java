@@ -10,9 +10,15 @@ import io.basestar.api.API;
 import io.basestar.api.APIRequest;
 import io.basestar.api.APIResponse;
 import io.basestar.auth.Caller;
-import io.basestar.graphql.subscription.SubscribeHandler;
-import io.basestar.graphql.subscription.UnsubscribeHandler;
-import io.basestar.graphql.wiring.Subscriber;
+import io.basestar.expression.Expression;
+import io.basestar.expression.compare.Eq;
+import io.basestar.expression.constant.Constant;
+import io.basestar.expression.constant.NameConstant;
+import io.basestar.graphql.subscription.GraphQLSubscriptionInfo;
+import io.basestar.graphql.subscription.SubscriberContext;
+import io.basestar.graphql.subscription.SubscriberIdSource;
+import io.basestar.schema.Reserved;
+import io.basestar.stream.Subscribable;
 import io.basestar.util.Nullsafe;
 import io.swagger.v3.oas.models.OpenAPI;
 import lombok.Data;
@@ -23,38 +29,19 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 public class GraphQLWebsocketAPI implements API {
 
-    public interface SubscriptionResolver {
-
-        CompletableFuture<String> resolveSub(APIRequest request);
-
-        static SubscriptionResolver fromHeader(final String headerName) {
-
-            return request -> {
-                final String value = request.getFirstHeader(headerName);
-                if(value == null) {
-                    throw new IllegalStateException("Subscription request header missing");
-                }
-                return CompletableFuture.completedFuture(value);
-            };
-        }
-    }
-
     private final GraphQL graphQL;
 
-    private final SubscriptionResolver subscriptionResolver;
+    private final SubscriberIdSource subscriberIdSource;
 
-    private final SubscribeHandler subscribeHandler;
-
-    private final UnsubscribeHandler unsubscribeHandler;
+    private final Subscribable subscribable;
 
     @lombok.Builder(builderClassName = "Builder")
-    GraphQLWebsocketAPI(final GraphQL graphQL, final SubscriptionResolver subscriptionResolver,
-                        final SubscribeHandler subscribeHandler, final UnsubscribeHandler unsubscribeHandler) {
+    GraphQLWebsocketAPI(final GraphQL graphQL, final SubscriberIdSource subscriberIdSource,
+                        final Subscribable subscribable) {
 
         this.graphQL = Nullsafe.require(graphQL);
-        this.subscriptionResolver = Nullsafe.require(subscriptionResolver);
-        this.subscribeHandler = Nullsafe.require(subscribeHandler);
-        this.unsubscribeHandler = Nullsafe.require(unsubscribeHandler);
+        this.subscriberIdSource = Nullsafe.require(subscriberIdSource);
+        this.subscribable = Nullsafe.require(subscribable);
     }
 
     @Override
@@ -86,26 +73,26 @@ public class GraphQLWebsocketAPI implements API {
                     return CompletableFuture.completedFuture(response(request, "connection_ack"));
                 }
                 case "connection_terminate": {
-                    return subscriptionResolver.resolveSub(request).thenCompose(sub -> {
+                    return subscriberIdSource.subscriberId(request).thenCompose(sub -> {
                         Nullsafe.require(sub);
                         final Caller caller = request.getCaller();
-                        return unsubscribeHandler.unsubscribeAll(caller, sub)
+                        return subscribable.unsubscribeAll(caller, sub)
                                 .thenApply(ignored -> APIResponse.success(request));
                     });
                 }
                 case "start": {
-                    return subscriptionResolver.resolveSub(request).thenCompose(sub -> {
+                    return subscriberIdSource.subscriberId(request).thenCompose(sub -> {
                         Nullsafe.require(sub);
                         final Caller caller = request.getCaller();
-                        final ExecutionInput input = requestBody.toInput(subscribeHandler, caller, sub);
+                        final ExecutionInput input = requestBody.toInput(subscribable, caller, sub);
                         return query(request, requestBody.getId(), input);
                     });
                 }
                 case "stop": {
-                    return subscriptionResolver.resolveSub(request).thenCompose(sub -> {
+                    return subscriberIdSource.subscriberId(request).thenCompose(sub -> {
                         Nullsafe.require(sub);
                         final Caller caller = request.getCaller();
-                        return unsubscribeHandler.unsubscribe(caller, sub, requestBody.getId())
+                        return subscribable.unsubscribe(caller, sub, requestBody.getId())
                                 .thenApply(ignored -> APIResponse.success(request));
                     });
                 }
@@ -153,15 +140,19 @@ public class GraphQLWebsocketAPI implements API {
 
         private GraphQLAPI.RequestBody payload;
 
-        public ExecutionInput toInput(final SubscribeHandler subscribeHandler, final Caller caller, final String sub) {
+        public ExecutionInput toInput(final Subscribable subscribable, final Caller caller, final String sub) {
 
-            final Subscriber subscriber = (schema, expression, expand) -> subscribeHandler.subscribe(caller, sub, id, schema.getQualifiedName().toString(), expression, expand);
+            final SubscriberContext subscriberContext = (schema, id, alias, names) -> {
+                final Expression expression = new Eq(new NameConstant(Reserved.ID_NAME), new Constant(id));
+                final GraphQLSubscriptionInfo info = new GraphQLSubscriptionInfo(alias, names);
+                return subscribable.subscribe(caller, sub, id, schema.getQualifiedName().toString(), expression, info);
+            };
 
             return ExecutionInput.newExecutionInput()
                     .operationName(payload.getOperationName())
                     .query(payload.getQuery())
                     .variables(Nullsafe.option(payload.getVariables()))
-                    .context(GraphQLContext.newContext().of("caller", caller, "subscriber", subscriber).build())
+                    .context(GraphQLContext.newContext().of("caller", caller, "subscriber", subscriberContext).build())
                     .build();
         }
     }

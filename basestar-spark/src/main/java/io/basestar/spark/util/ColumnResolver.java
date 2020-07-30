@@ -24,9 +24,7 @@ import io.basestar.util.Name;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 
-import java.io.Serializable;
-
-public interface ColumnResolver<R> extends Serializable {
+public interface ColumnResolver<R> {
 
     Column resolve(Dataset<R> input, Name name);
 

@@ -175,7 +175,8 @@ public class ElasticsearchExpressionVisitor implements ExpressionVisitor.Default
     @Override
     public QueryBuilder visitIn(final In expression) {
 
-        throw new UnsupportedOperationException();
+        // FIXME
+        return visitEqImpl(expression.getLhs(), expression.getRhs());
     }
 
     @Override

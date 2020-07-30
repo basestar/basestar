@@ -52,6 +52,7 @@ import javax.annotation.Nullable;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -60,7 +61,7 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
 
     @Getter
     @RequiredArgsConstructor
-    public static class From {
+    public static class From implements Serializable {
 
         @Nonnull
         private final InstanceSchema schema;

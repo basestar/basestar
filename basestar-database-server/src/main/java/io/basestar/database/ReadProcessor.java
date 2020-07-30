@@ -122,7 +122,6 @@ public class ReadProcessor {
         return pageImpl(context, sources, expression, pageSort, count, paging);
     }
 
-    @SuppressWarnings("rawtypes")
     protected CompletableFuture<PagedList<Instance>> pageImpl(final Context context, final List<Pager.Source<Instance>> sources, final Expression expression,
                                                               final List<Sort> sort, final int count, final PagingToken paging) {
 
@@ -130,8 +129,7 @@ public class ReadProcessor {
             throw new IllegalStateException("Query not supported");
         } else {
 
-            @SuppressWarnings("unchecked")
-            final Comparator<Instance> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
+            final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
             final Pager<Instance> pager = new Pager<>(comparator, sources, paging);
             return pager.page(count)
                     .thenApply(results -> {

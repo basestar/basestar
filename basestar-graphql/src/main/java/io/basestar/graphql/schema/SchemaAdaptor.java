@@ -28,10 +28,7 @@ import io.basestar.graphql.GraphQLUtils;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class SchemaAdaptor {
 
@@ -71,12 +68,13 @@ public class SchemaAdaptor {
         registry.add(queryDefinition());
         registry.add(mutationDefinition());
         registry.add(subscriptionDefinition());
-        registry.add(transactionTypeDefinition());
+        registry.add(batchTypeDefinition());
         registry.add(InputObjectTypeDefinition.newInputObjectDefinition()
                 .name(namingStrategy.inputRefTypeName())
                 .inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                         .name(Reserved.ID).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build())
                 .build());
+        registry.add(consistencyTypeDefinition());
         mapTypes.forEach((k, v) -> {
             registry.add(mapEntryTypeDefinition(v));
             registry.add(inputMapEntryTypeDefinition(v));
@@ -166,22 +164,25 @@ public class SchemaAdaptor {
             }
             builder.fieldDefinition(deleteDefinition(v));
         });
-        builder.fieldDefinition(transactionDefinition());
+        builder.fieldDefinition(batchDefinition());
         return builder.build();
     }
 
-    private FieldDefinition transactionDefinition() {
+    private FieldDefinition batchDefinition() {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
-        builder.name(namingStrategy.transactionMethodName());
-        builder.type(new TypeName(namingStrategy.transactionTypeName()));
+        builder.name(namingStrategy.batchMethodName());
+        builder.type(new TypeName(namingStrategy.batchTypeName()));
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name(namingStrategy.consistencyArgumentName())
+                .type(new TypeName(namingStrategy.consistencyTypeName())).build());
         return builder.build();
     }
 
-    private ObjectTypeDefinition transactionTypeDefinition() {
+    private ObjectTypeDefinition batchTypeDefinition() {
 
         final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
-        builder.name(namingStrategy.transactionTypeName());
+        builder.name(namingStrategy.batchTypeName());
         namespace.forEachObjectSchema((k, v) -> {
             builder.fieldDefinition(createDefinition(v));
             if(v.hasMutableProperties()) {
@@ -189,6 +190,18 @@ public class SchemaAdaptor {
                 builder.fieldDefinition(patchDefinition(v));
             }
             builder.fieldDefinition(deleteDefinition(v));
+        });
+        return builder.build();
+    }
+
+    private EnumTypeDefinition consistencyTypeDefinition() {
+
+        final EnumTypeDefinition.Builder builder = EnumTypeDefinition.newEnumTypeDefinition();
+        builder.name(namingStrategy.consistencyTypeName());
+        Arrays.stream(Consistency.values()).forEach(v -> {
+            if(v != Consistency.NONE) {
+                builder.enumValueDefinition(EnumValueDefinition.newEnumValueDefinition().name(v.name()).build());
+            }
         });
         return builder.build();
     }

@@ -86,7 +86,7 @@ public class ConstantStorage implements Storage.WithoutAggregate, Storage.Withou
             });
 
             // Must be sorted
-            final Comparator<Map<String, Object>> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
+            final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
             page.sort(comparator);
 
             return CompletableFuture.completedFuture(new PagedList<>(page, null));

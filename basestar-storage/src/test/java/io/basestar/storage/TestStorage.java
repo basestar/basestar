@@ -84,7 +84,7 @@ public abstract class TestStorage {
     protected void writeAll(final Storage storage, final Namespace namespace, final Multimap<String, Map<String, Object>> data) {
 
         if(!data.isEmpty()) {
-            final Storage.WriteTransaction write = storage.write(Consistency.NONE);
+            final Storage.WriteTransaction write = storage.write(Consistency.QUORUM);
 
             data.asMap().forEach((k, vs) -> {
                 final ObjectSchema schema = namespace.requireObjectSchema(k);
@@ -128,7 +128,6 @@ public abstract class TestStorage {
     }
 
     @Test
-    @SuppressWarnings({"unchecked", "rawtypes"})
     public void testIndexes() throws IOException {
 
         final Storage storage = storage(namespace, loadAddresses());
@@ -144,7 +143,7 @@ public abstract class TestStorage {
 
         final Expression expr = Expression.parse("country == 'United Kingdom' || state == 'Victoria'");
         final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, Collections.emptyList());
-        final Comparator<Map<String, Object>> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
+        final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
         final PagedList<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
         assertEquals(8, results.size());
     }
@@ -152,7 +151,6 @@ public abstract class TestStorage {
     // FIXME: needs to cover non-trivial case(s)
 
     @Test
-    @SuppressWarnings({"unchecked", "rawtypes"})
     public void testSortAndPaging() {
 
         final LocalDateTime now = LocalDateTime.now();
@@ -189,7 +187,7 @@ public abstract class TestStorage {
 
         final Expression expr = Expression.parse("country == '" + country + "'");
         final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, sort);
-        final Comparator<Map<String, Object>> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
+        final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
 
         final List<Map<String, Object>> results = new ArrayList<>();
         PagingToken paging = null;
@@ -516,7 +514,6 @@ public abstract class TestStorage {
     }
 
     @Test
-    @SuppressWarnings({"unchecked", "rawtypes"})
     public void testMultiValueIndex() {
 
         final Storage storage = storage(namespace);
@@ -542,7 +539,7 @@ public abstract class TestStorage {
         final List<Sort> sort = ImmutableList.of(Sort.asc(Name.of(Reserved.ID)));
         final Expression expr = Expression.parse("p.x == 10 && p.y == 100 for any p of points");
         final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, Collections.emptyList());
-        final Comparator<Map<String, Object>> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
+        final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
         final PagedList<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
         assertEquals(1, results.size());
     }
@@ -640,7 +637,6 @@ public abstract class TestStorage {
     }
 
     @Test
-    @SuppressWarnings({"unchecked", "rawtypes"})
     public void testAggregation() throws IOException {
 
         final Storage storage = storage(namespace, loadAddresses());
@@ -654,7 +650,7 @@ public abstract class TestStorage {
         final List<Pager.Source<Map<String, Object>>> sources = storage.aggregate(schema, Expression.parse("true"),
                 ImmutableMap.of("country", Expression.parse("country")),
                 ImmutableMap.of("count", new Count()));
-        final Comparator<Map<String, Object>> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
+        final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
 
         final PagedList<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
         //assertEquals(?, results.size());
@@ -701,10 +697,9 @@ public abstract class TestStorage {
         assertEquals(5, page.size());
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
     private PagedList<Map<String, Object>> page(final Storage storage, final ObjectSchema schema, final Expression expression, final List<Sort> sort, final int count) {
 
-        final Comparator<Map<String, Object>> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
+        final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
         final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expression.bind(Context.init()), sort);
         return new Pager<>(comparator, sources, null).page(count).join();
     }

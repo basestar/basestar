@@ -25,6 +25,7 @@ import graphql.execution.AsyncExecutionStrategy;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.GraphQLSchema;
+import graphql.schema.SelectedField;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.TypeDefinitionRegistry;
@@ -33,12 +34,10 @@ import io.basestar.auth.Caller;
 import io.basestar.database.Database;
 import io.basestar.database.options.*;
 import io.basestar.expression.Expression;
-import io.basestar.expression.compare.Eq;
 import io.basestar.expression.constant.Constant;
-import io.basestar.expression.constant.NameConstant;
 import io.basestar.graphql.schema.SchemaAdaptor;
+import io.basestar.graphql.subscription.SubscriberContext;
 import io.basestar.graphql.wiring.InterfaceResolver;
-import io.basestar.graphql.wiring.Subscriber;
 import io.basestar.schema.*;
 import io.basestar.util.*;
 
@@ -202,7 +201,8 @@ public class GraphQLAdaptor {
                 results.put(strategy.updateMethodName(objectSchema), updateFetcher(objectSchema));
                 results.put(strategy.patchMethodName(objectSchema), patchFetcher(objectSchema));
                 results.put(strategy.deleteMethodName(objectSchema), deleteFetcher(objectSchema));
-                results.put(strategy.transactionMethodName(), transactionFetcher());
+                results.put("batch/" + strategy.updateMethodName(objectSchema), updateFetcher(objectSchema));
+                results.put(strategy.batchMethodName(), batchFetcher());
             }
         });
         return results;
@@ -225,6 +225,28 @@ public class GraphQLAdaptor {
             return database.create(caller, options)
                     .thenApply(object -> GraphQLUtils.toResponse(schema, object));
         };
+    }
+
+    private UpdateOptions updateOptions(final ObjectSchema schema, final UpdateOptions.Mode mode, final SelectedField field) {
+
+        final Set<Name> names = paths(field);
+        final Set<Name> expand = schema.requiredExpand(names);
+        final String id = argument(field, Reserved.ID);
+        final Long version = version(field);
+        final Map<String, Object> data = GraphQLUtils.fromRequest(schema, argument(field, strategy.dataArgumentName()));
+        final Map<String, Expression> expressions = parseExpressions(argument(field, strategy.expressionsArgumentName()));
+        return UpdateOptions.builder()
+                .schema(schema.getQualifiedName()).id(id)
+                .mode(mode)
+                .data(data).version(version)
+                .expressions(expressions)
+                .expand(expand)
+                .build();
+    }
+
+    private <T> T argument(final SelectedField field, final String name) {
+
+        return field.getArguments() == null ? null : (T)field.getArguments().get(name);
     }
 
     private DataFetcher<CompletableFuture<?>> updateFetcher(final ObjectSchema schema, final UpdateOptions.Mode mode) {
@@ -274,9 +296,40 @@ public class GraphQLAdaptor {
         };
     }
 
-    private DataFetcher<CompletableFuture<?>> transactionFetcher() {
+    private interface BatchHandler {
 
+        ActionOptions actionOptions(DataFetchingEnvironment env, SelectedField field);
+    }
+
+    private BatchHandler updateBatchFetcher(final ObjectSchema schema) {
+
+        return (env, field) -> updateOptions(schema, UpdateOptions.Mode.REPLACE, field);
+    }
+
+    private DataFetcher<CompletableFuture<?>> batchFetcher() {
+
+        final Map<String, BatchHandler> handlers = new HashMap<>();
+        namespace.getSchemas().forEach((k, schema) -> {
+            if(schema instanceof ObjectSchema) {
+                final ObjectSchema objectSchema = (ObjectSchema)schema;
+//                results.put(strategy.createMethodName(objectSchema), createBatchFetcher(objectSchema));
+                handlers.put(strategy.updateMethodName(objectSchema), updateBatchFetcher(objectSchema));
+//                results.put(strategy.patchMethodName(objectSchema), patchBatchFetcher(objectSchema));
+//                results.put(strategy.deleteMethodName(objectSchema), deleteBatchFetcher(objectSchema));
+            }
+        });
         return (env) -> {
+            final Caller caller = GraphQLUtils.caller(env.getContext());
+            final String consistencyStr = env.getArgument(strategy.consistencyArgumentName());
+            final Consistency consistency = consistencyStr == null ? Consistency.ATOMIC : Consistency.valueOf(consistencyStr);
+
+            final TransactionOptions.Builder builder = TransactionOptions.builder();
+            env.getSelectionSet().getFields().forEach(field -> {
+                if(!field.getQualifiedName().contains("/")) {
+                    final BatchHandler handler = handlers.get(field.getName());
+                    builder.action(field.getQualifiedName(), handler.actionOptions(env, field));
+                }
+            });
             return null;
         };
     }
@@ -295,14 +348,12 @@ public class GraphQLAdaptor {
 
         return (env) -> {
             final Caller caller = GraphQLUtils.caller(env.getContext());
-            final Subscriber subscriber = GraphQLUtils.subscriber(env.getContext());
+            final SubscriberContext subscriberContext = GraphQLUtils.subscriber(env.getContext());
             final Set<Name> names = paths(env);
             final Set<Name> expand = schema.requiredExpand(names);
-//            final String query = env.getArgument(strategy.queryArgumentName());
-//            final Expression expression = query == null ? Constant.TRUE : Expression.parse(query);
+            final String alias = env.getField().getAlias();
             final String id = env.getArgument(Reserved.ID);
-            final Expression expression = new Eq(new NameConstant(Reserved.ID_NAME), new Constant(id));
-            return subscriber.subscribe(schema, expression, expand)
+            return subscriberContext.subscribe(schema, id, alias, names)
                     .thenCompose(ignored -> read(caller, schema, id, null, expand));
         };
     }
@@ -321,7 +372,17 @@ public class GraphQLAdaptor {
 
     private static Set<Name> paths(final DataFetchingEnvironment env) {
 
-        return env.getSelectionSet().getFields().stream()
+        return paths(env.getSelectionSet().getFields());
+    }
+
+    private static Set<Name> paths(final SelectedField field) {
+
+        return paths(field.getSelectionSet().getFields());
+    }
+
+    private static Set<Name> paths(final List<SelectedField> fields) {
+
+        return fields.stream()
                 .map(v -> path(v.getQualifiedName()))
                 .collect(Collectors.toSet());
     }
@@ -338,6 +399,16 @@ public class GraphQLAdaptor {
                     }
                 }).filter(v -> !v.startsWith(Reserved.PREFIX))
                 .toArray(String[]::new));
+    }
+
+    private Long version(final SelectedField field) {
+
+        final Number value = argument(field, Reserved.VERSION);
+        if(value == null) {
+            return null;
+        } else {
+            return value.longValue();
+        }
     }
 
     private Long version(final DataFetchingEnvironment env) {

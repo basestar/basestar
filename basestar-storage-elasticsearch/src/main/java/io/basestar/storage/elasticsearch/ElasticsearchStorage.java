@@ -352,19 +352,29 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
     @Override
     public WriteTransaction write(final Consistency consistency) {
 
-        return new WriteTransaction();
+        return new WriteTransaction(consistency);
     }
 
     protected class WriteTransaction implements WithWriteHistory.WriteTransaction {
 
-        private final WriteRequest.RefreshPolicy refreshPolicy = WriteRequest.RefreshPolicy.WAIT_UNTIL;
+        private final WriteRequest.RefreshPolicy refreshPolicy;
 
-        final BulkRequest request = new BulkRequest()
-                .setRefreshPolicy(refreshPolicy);
+        final BulkRequest request;
 
         final List<Function<BulkItemResponse, BatchResponse>> responders = new ArrayList<>();
 
         final Map<String, ObjectSchema> indices = new HashMap<>();
+
+        public WriteTransaction(final Consistency consistency) {
+
+            if(consistency.isStrongerOrEqual(Consistency.QUORUM)) {
+                this.refreshPolicy = WriteRequest.RefreshPolicy.WAIT_UNTIL;
+            } else {
+                this.refreshPolicy = WriteRequest.RefreshPolicy.NONE;
+            }
+            this.request = new BulkRequest()
+                    .setRefreshPolicy(refreshPolicy);
+        }
 
         @Override
         public Storage.WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
