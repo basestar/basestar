@@ -21,7 +21,7 @@ package io.basestar.spark.transform;
  */
 
 import com.google.common.collect.ImmutableList;
-import io.basestar.schema.Reserved;
+import io.basestar.schema.ObjectSchema;
 import io.basestar.spark.util.BucketFunction;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -37,7 +37,7 @@ import java.util.List;
 
 public class BucketTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
-    private static final List<Name> DEFAULT_INPUT_NAMES = ImmutableList.of(Name.of(Reserved.ID));
+    private static final List<Name> DEFAULT_INPUT_NAMES = ImmutableList.of(ObjectSchema.ID_NAME);
 
     private final List<Name> inputNames;
 

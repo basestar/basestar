@@ -34,7 +34,7 @@ import io.basestar.event.Pump;
 import io.basestar.event.sns.SNSEmitter;
 import io.basestar.event.sqs.SQSReceiver;
 import io.basestar.schema.Namespace;
-import io.basestar.schema.Reserved;
+import io.basestar.schema.ObjectSchema;
 import io.basestar.storage.Storage;
 import io.basestar.storage.dynamodb.DynamoDBStorage;
 import io.basestar.storage.dynamodb.DynamoDBStrategy;
@@ -187,14 +187,14 @@ public class FullStackTest {
 
         final APIResponse createGroup1 = api.handle(TestRequests.put("Group/group1", HashMultimap.create(), headers, ImmutableMap.of(
                 "owner", ImmutableMap.of(
-                        Reserved.ID, "user1"
+                        ObjectSchema.ID, "user1"
                 ),
                 "members", ImmutableList.of(
                         ImmutableMap.of(
-                                Reserved.ID, "user1"
+                                ObjectSchema.ID, "user1"
                         ),
                         ImmutableMap.of(
-                                Reserved.ID, "user2"
+                                ObjectSchema.ID, "user2"
                         )
                 )
         ))).join();
@@ -208,7 +208,7 @@ public class FullStackTest {
         // Cannot create this group because caller != owner
         final APIResponse createGroup2 = api.handle(TestRequests.put("Group/group2", HashMultimap.create(), headers, ImmutableMap.of(
                 "owner", ImmutableMap.of(
-                        Reserved.ID, "user2"
+                        ObjectSchema.ID, "user2"
                 )
         ))).join();
         assertEquals(403, createGroup2.getStatusCode());
@@ -223,7 +223,7 @@ public class FullStackTest {
 
         final APIResponse createProject1 = api.handle(TestRequests.put("Project/project1", HashMultimap.create(), headers, ImmutableMap.of(
                 "owner", ImmutableMap.of(
-                        Reserved.ID, "group1"
+                        ObjectSchema.ID, "group1"
                 )
         ))).join();
         assertEquals(201, createProject1.getStatusCode());

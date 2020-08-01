@@ -48,6 +48,6 @@ public class ObjectCreatedEvent implements ObjectEvent {
         return new ObjectCreatedEvent()
                 .setSchema(schema)
                 .setId(id)
-                .setAfter(ObjectSchema.readMeta(after));
+                .setAfter(ObjectSchema.copyMeta(after));
     }
 }

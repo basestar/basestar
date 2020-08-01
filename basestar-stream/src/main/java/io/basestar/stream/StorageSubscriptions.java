@@ -14,8 +14,8 @@ import io.basestar.schema.*;
 import io.basestar.schema.use.UseArray;
 import io.basestar.schema.use.UseBinary;
 import io.basestar.schema.use.UseString;
-import io.basestar.storage.PartitionedStorage;
 import io.basestar.storage.Storage;
+import io.basestar.storage.Versioning;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.Name;
 import io.basestar.util.PagingToken;
@@ -101,7 +101,7 @@ public class StorageSubscriptions implements Subscriptions {
             object.put("keys", keys.stream().map(StorageSubscriptions::binaryKey).collect(Collectors.toList()));
 
             final Instance instance = SCHEMA.create(object);
-            final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC)
+            final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                     .createObject(SCHEMA, id, instance);
 
             return write.write();
@@ -118,7 +118,7 @@ public class StorageSubscriptions implements Subscriptions {
         keys.add(key.getIndex());
         keys.addAll(key.getPartition());
 
-        return PartitionedStorage.binary(keys);
+        return UseBinary.binaryKey(keys);
     }
 
     private static Expression keyExpression(final Subscription.Key key) {
@@ -133,7 +133,7 @@ public class StorageSubscriptions implements Subscriptions {
 
     private static List<Sort> sort() {
 
-        return ImmutableList.of(Sort.asc(Reserved.ID_NAME));
+        return ImmutableList.of(Sort.asc(ObjectSchema.ID_NAME));
     }
 
     @Override
@@ -169,7 +169,7 @@ public class StorageSubscriptions implements Subscriptions {
 
         final String id = id(sub, channel);
         return storage.readObject(SCHEMA, id).thenCompose(before -> {
-            final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC);
+            final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC, Versioning.CHECKED);
             write.deleteObject(SCHEMA, id(sub, channel), before);
             return write.write();
         });
@@ -190,7 +190,7 @@ public class StorageSubscriptions implements Subscriptions {
         final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
         return new Pager<>(comparator, sources, token).page(UNSUBSCRIBE_PAGE_SIZE).thenCompose(page -> {
 
-            final Storage.WriteTransaction write = storage.write(Consistency.NONE);
+            final Storage.WriteTransaction write = storage.write(Consistency.NONE, Versioning.CHECKED);
             page.forEach(object -> write.deleteObject(SCHEMA, Instance.getId(object), object));
 
             if(page.hasPaging()) {

@@ -23,7 +23,6 @@ package io.basestar.storage.dynamodb;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.Reserved;
 import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.core.BytesWrapper;
 import software.amazon.awssdk.core.SdkBytes;
@@ -232,16 +231,16 @@ public class DynamoDBUtils {
 
     public static String id(final Map<String, AttributeValue> values) {
 
-        return (String)fromAttributeValue(values.get(Reserved.ID));
+        return (String)fromAttributeValue(values.get(ObjectSchema.ID));
     }
 
     public static Long version(final Map<String, AttributeValue> values) {
 
-        return (Long)fromAttributeValue(values.get(Reserved.VERSION));
+        return (Long)fromAttributeValue(values.get(ObjectSchema.VERSION));
     }
 
     public static String schema(final Map<String, AttributeValue> values) {
 
-        return (String)fromAttributeValue(values.get(Reserved.SCHEMA));
+        return (String)fromAttributeValue(values.get(ObjectSchema.SCHEMA));
     }
 }

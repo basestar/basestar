@@ -111,7 +111,7 @@ public class ReadProcessor {
 
         final List<Sort> pageSort = ImmutableList.<Sort>builder()
                 .addAll(sort)
-                .add(Sort.asc(Name.of(Reserved.ID)))
+                .add(Sort.asc(Name.of(ObjectSchema.ID)))
                 .build();
 
         final List<Pager.Source<Instance>> sources = storage.query(objectSchema, expression, sort).stream()
@@ -465,8 +465,8 @@ public class ReadProcessor {
                 }
             }
             final HashMap<String, Object> object = new HashMap<>();
-            object.put(Reserved.ID, caller.getId());
-            object.put(Reserved.SCHEMA, caller.getSchema());
+            object.put(ObjectSchema.ID, caller.getId());
+            object.put(ObjectSchema.SCHEMA, caller.getSchema());
             return new Instance(object);
         }
 

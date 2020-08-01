@@ -20,6 +20,7 @@ package io.basestar.spark.transform;
  * #L%
  */
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
@@ -28,16 +29,17 @@ import io.basestar.expression.aggregate.AggregateExtractingVisitor;
 import io.basestar.schema.Property;
 import io.basestar.schema.ViewSchema;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseBinary;
 import io.basestar.schema.use.UseBoolean;
 import io.basestar.spark.expression.SparkAggregateVisitor;
 import io.basestar.spark.expression.SparkExpressionVisitor;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.RelationalGroupedDataset;
-import org.apache.spark.sql.Row;
+import org.apache.spark.sql.*;
+import org.apache.spark.sql.api.java.UDF1;
+import org.apache.spark.sql.expressions.UserDefinedFunction;
+import org.apache.spark.sql.types.DataTypes;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -48,12 +50,29 @@ import java.util.function.Function;
 
 public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
-    final ViewSchema schema;
+    private final ViewSchema schema;
+
+    private final UserDefinedFunction keyFunction;
+
+    private final List<String> keyColumnNames;
 
     @lombok.Builder(builderClassName = "Builder")
     ViewTransform(final ViewSchema schema) {
 
         this.schema = schema;
+        final List<String> keyColumnNames = new ArrayList<>(schema.getGroup());
+        if(keyColumnNames.isEmpty()) {
+            keyColumnNames.add(schema.getFrom().getSchema().id());
+        }
+        this.keyFunction = functions.udf(
+                (UDF1<Row, byte[]>) row -> {
+                    final List<Object> values = new ArrayList<>();
+                    keyColumnNames.forEach(key -> values.add(SparkSchemaUtils.get(row, key)));
+                    return UseBinary.binaryKey(values);
+                },
+                DataTypes.BinaryType
+        );
+        this.keyColumnNames = ImmutableList.copyOf(keyColumnNames);
     }
 
     @Override
@@ -103,11 +122,18 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
             }
         }
 
+        final Dataset<Row> finalOutput = output;
+        final Column[] keyColumns = keyColumnNames.stream().map(finalOutput::col).toArray(Column[]::new);
+
+        // FIXME: creating struct is wasteful, UDF could be defined to take key columns as args
+        output = output.withColumn(ViewSchema.KEY, keyFunction.apply(functions.struct(keyColumns)));
+
         for(final Map.Entry<String, Expression> entry : columns.entrySet()) {
             final String name = entry.getKey();
             final Expression expression = entry.getValue();
             selectColumns.add(apply(output, expression).as(name));
         }
+        selectColumns.add(output.col(ViewSchema.KEY));
 
         return output.select(selectColumns.toArray(new Column[0]));
     }

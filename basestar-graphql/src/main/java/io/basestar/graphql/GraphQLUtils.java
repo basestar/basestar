@@ -386,7 +386,7 @@ public class GraphQLUtils {
                 public Object visitObject(final UseObject type) {
 
                     if(value instanceof ObjectValue) {
-                        final String id = fromInput(context, UseString.DEFAULT, get((ObjectValue)value, Reserved.ID));
+                        final String id = fromInput(context, UseString.DEFAULT, get((ObjectValue)value, ObjectSchema.ID));
                         return ObjectSchema.ref(id);
                     } else {
                         throw new IllegalStateException();

@@ -55,7 +55,7 @@ public class ObjectUpdatedEvent implements ObjectEvent {
                 .setSchema(schema)
                 .setId(id)
                 .setVersion(version)
-                .setBefore(ObjectSchema.readMeta(before))
-                .setBefore(ObjectSchema.readMeta(after));
+                .setBefore(ObjectSchema.copyMeta(before))
+                .setBefore(ObjectSchema.copyMeta(after));
     }
 }

@@ -100,7 +100,7 @@ public interface Database {
         return queryLink(caller, QueryLinkOptions.builder().schema(schema).id(id).link(link).build());
     }
 
-    CompletableFuture<Map<String, Instance>> transaction(Caller caller, TransactionOptions options);
+    CompletableFuture<Map<String, Instance>> batch(Caller caller, BatchOptions options);
 
     default CompletableFuture<Instance> expand(Caller caller, Map<String, Object> instance, Set<Name> expand) {
 

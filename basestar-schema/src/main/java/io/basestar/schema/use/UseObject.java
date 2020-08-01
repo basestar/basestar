@@ -143,7 +143,7 @@ public class UseObject implements UseInstance {
             if(expand == null) {
                 // If non-expanded, strip back to just a ref, this is needed because expand is also used to
                 // reset after expansion for permission evaluation
-                if(value.size() == 1 && value.containsKey(Reserved.ID)) {
+                if(value.size() == 1 && value.containsKey(ObjectSchema.ID)) {
                     return value;
                 } else {
                     return ObjectSchema.ref(Instance.getId(value));
@@ -168,8 +168,8 @@ public class UseObject implements UseInstance {
     public Set<Name> requiredExpand(final Set<Name> names) {
 
         final Set<Name> copy = Sets.newHashSet(names);
-        copy.remove(Name.of(Reserved.SCHEMA));
-        copy.remove(Name.of(Reserved.ID));
+        copy.remove(Name.of(ObjectSchema.SCHEMA));
+        copy.remove(Name.of(ObjectSchema.ID));
 
         if(!copy.isEmpty()) {
             final Set<Name> result = Sets.newHashSet();
@@ -201,7 +201,7 @@ public class UseObject implements UseInstance {
 
         final Set<Expression> queries = new HashSet<>();
         if(schema.getQualifiedName().equals(otherTypeName)) {
-            queries.add(new Eq(new NameConstant(name.with(Reserved.ID)), new NameConstant(Name.of(Reserved.THIS, Reserved.ID))));
+            queries.add(new Eq(new NameConstant(name.with(ObjectSchema.ID)), new NameConstant(Name.of(Reserved.THIS, ObjectSchema.ID))));
         }
         if(expand != null && !expand.isEmpty()) {
             queries.addAll(schema.refQueries(otherTypeName, expand, name));

@@ -22,6 +22,7 @@ package io.basestar.storage.leveldb;
 
 import com.google.common.io.BaseEncoding;
 import io.basestar.schema.*;
+import io.basestar.schema.use.UseBinary;
 import io.basestar.storage.*;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
@@ -114,7 +115,7 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
     }
 
     @Override
-    public WriteTransaction write(final Consistency consistency) {
+    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
         return new WriteTransaction();
     }
@@ -281,12 +282,12 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
 
     private static byte[] key(final ObjectSchema schema, final String id) {
 
-        return PartitionedStorage.binary(Arrays.asList(schema.getQualifiedName().toString(), null, id));
+        return UseBinary.binaryKey(Arrays.asList(schema.getQualifiedName().toString(), null, id));
     }
 
     private static byte[] key(final ObjectSchema schema, final String id, final long version) {
 
-        return PartitionedStorage.binary(Arrays.asList(schema.getQualifiedName().toString(), Reserved.PREFIX + Reserved.VERSION, id, invert(version)));
+        return UseBinary.binaryKey(Arrays.asList(schema.getQualifiedName().toString(), Reserved.PREFIX + ObjectSchema.VERSION, id, invert(version)));
     }
 
     private static byte[] key(final ObjectSchema schema, final Index index, final Index.Key key, final String id) {
@@ -304,7 +305,7 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
         all.add(schema.getQualifiedName().toString());
         all.add(index.getName());
         all.addAll(values);
-        return PartitionedStorage.binary(all);
+        return UseBinary.binaryKey(all);
     }
 
     private static long invert(final long version) {

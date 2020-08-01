@@ -40,4 +40,10 @@ public class CompletableFutures {
         future.completeExceptionally(err);
         return future;
     }
+
+//    public static <A, B, C> CompletableFuture<C> anyOf(final CompletableFuture<A> a, final CompletableFuture<B> b, final BiFunction<A, B, C> reduce) {
+//
+//        CompletableFuture.
+//        a.
+//    }
 }

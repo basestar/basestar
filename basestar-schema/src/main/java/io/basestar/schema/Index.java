@@ -272,9 +272,9 @@ public class Index implements Named, Described, Serializable, Extendable {
                     .forEach((name, property) -> result.put(name, property.getType()));
             result.putAll(ObjectSchema.METADATA_SCHEMA);
         } else {
-            result.put(Reserved.SCHEMA, UseString.DEFAULT);
-            result.put(Reserved.ID, UseString.DEFAULT);
-            result.put(Reserved.VERSION, UseInteger.DEFAULT);
+            result.put(ObjectSchema.SCHEMA, UseString.DEFAULT);
+            result.put(ObjectSchema.ID, UseString.DEFAULT);
+            result.put(ObjectSchema.VERSION, UseInteger.DEFAULT);
         }
         return result;
     }
@@ -311,9 +311,9 @@ public class Index implements Named, Described, Serializable, Extendable {
         } else {
             // These properties must be projected
             final Set<String> fullProjection = new HashSet<>(projection);
-            fullProjection.add(Reserved.SCHEMA);
-            fullProjection.add(Reserved.ID);
-            fullProjection.add(Reserved.VERSION);
+            fullProjection.add(ObjectSchema.SCHEMA);
+            fullProjection.add(ObjectSchema.ID);
+            fullProjection.add(ObjectSchema.VERSION);
             partition.forEach(v -> fullProjection.add(v.first()));
             sort.forEach(v -> fullProjection.add(v.getName().first()));
             final Map<String, Object> result = new HashMap<>();

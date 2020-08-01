@@ -57,7 +57,7 @@ public class ExpressionTransform implements Transform<Dataset<Row>, Dataset<Row>
         final Id id = schema.getId();
         if(id != null && id.getExpression() != null) {
             final Column col = apply(input, id.getExpression(), UseString.DEFAULT);
-            output = output.withColumn(Reserved.ID, col);
+            output = output.withColumn(ObjectSchema.ID, col);
         }
         for(final Property property : schema.getProperties().values()) {
             if(property.getExpression() != null) {

@@ -45,8 +45,8 @@ public class DynamoDBSparkSchemaUtils {
 
         final StructType type = SparkSchemaUtils.structType(schema, null);
         final List<StructField> fields = new ArrayList<>();
-        fields.add(SparkSchemaUtils.field(Reserved.SCHEMA, DataTypes.StringType));
-        fields.add(SparkSchemaUtils.field(Reserved.ID, DataTypes.StringType));
+        fields.add(SparkSchemaUtils.field(ObjectSchema.SCHEMA, DataTypes.StringType));
+        fields.add(SparkSchemaUtils.field(ObjectSchema.ID, DataTypes.StringType));
         fields.add(SparkSchemaUtils.field("eventName", DataTypes.StringType));
         fields.add(SparkSchemaUtils.field("sequenceNumber", DataTypes.StringType));
         fields.add(SparkSchemaUtils.field("oldImage", type));
@@ -90,9 +90,9 @@ public class DynamoDBSparkSchemaUtils {
         final Long version = DynamoDBLegacyUtils.version(before);
         assert schema != null && id != null && version != null;
         return ImmutableMap.of(
-                Reserved.SCHEMA, new AttributeValue().withS(schema),
-                Reserved.ID, new AttributeValue().withS(id),
-                Reserved.VERSION, new AttributeValue().withN(Long.toString(version + 1)),
+                ObjectSchema.SCHEMA, new AttributeValue().withS(schema),
+                ObjectSchema.ID, new AttributeValue().withS(id),
+                ObjectSchema.VERSION, new AttributeValue().withN(Long.toString(version + 1)),
                 Reserved.DELETED, new AttributeValue().withBOOL(true)
         );
     }

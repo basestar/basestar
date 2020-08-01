@@ -22,7 +22,7 @@ package io.basestar.storage.dynamodb;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.google.common.collect.ImmutableSet;
-import io.basestar.schema.Reserved;
+import io.basestar.schema.ObjectSchema;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.ByteBuffer;
@@ -107,16 +107,16 @@ public class DynamoDBLegacyUtils {
 
     public static String id(final Map<String, AttributeValue> values) {
 
-        return (String)fromAttributeValue(values.get(Reserved.ID));
+        return (String)fromAttributeValue(values.get(ObjectSchema.ID));
     }
 
     public static Long version(final Map<String, AttributeValue> values) {
 
-        return (Long)fromAttributeValue(values.get(Reserved.VERSION));
+        return (Long)fromAttributeValue(values.get(ObjectSchema.VERSION));
     }
 
     public static String schema(final Map<String, AttributeValue> values) {
 
-        return (String)fromAttributeValue(values.get(Reserved.SCHEMA));
+        return (String)fromAttributeValue(values.get(ObjectSchema.SCHEMA));
     }
 }

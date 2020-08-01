@@ -25,9 +25,7 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.*;
-import io.basestar.storage.BatchResponse;
-import io.basestar.storage.Storage;
-import io.basestar.storage.StorageTraits;
+import io.basestar.storage.*;
 import io.basestar.storage.elasticsearch.mapping.Mappings;
 import io.basestar.storage.elasticsearch.mapping.Settings;
 import io.basestar.storage.exception.ObjectExistsException;
@@ -151,7 +149,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
         final Expression bound = query.bind(Context.init());
         final String index = strategy.objectIndex(schema);
 
-        final List<Sort> normalizedSort = KeysetPagingUtils.normalizeSort(sort);
+        final List<Sort> normalizedSort = KeysetPagingUtils.normalizeSort(schema, sort);
 
         return ImmutableList.of(
                 (count, token, stats) -> getIndex(index, schema).thenCompose(ignored -> {
@@ -300,22 +298,11 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
 
         if (item.isExists()) {
             final Map<String, Object> result = new HashMap<>(fromSource(schema, item.getSourceAsMap()));
-            result.put(PRIMARY_TERM_KEY, item.getPrimaryTerm());
-            result.put(SEQ_NO_KEY, item.getSeqNo());
+            result.put(Reserved.META, new ElasticsearchMetadata(item.getPrimaryTerm(), item.getSeqNo()));
             return result;
         } else {
             return null;
         }
-    }
-
-    private Long getPrimaryTerm(final Map<String, Object> object) {
-
-        return (Long) object.get(PRIMARY_TERM_KEY);
-    }
-
-    private Long getSeqNo(final Map<String, Object> object) {
-
-        return (Long) object.get(SEQ_NO_KEY);
     }
 
     private CompletableFuture<?> getIndex(final String name, final ObjectSchema schema) {
@@ -350,28 +337,31 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
     }
 
     @Override
-    public WriteTransaction write(final Consistency consistency) {
+    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
-        return new WriteTransaction(consistency);
+        return new WriteTransaction(consistency, versioning);
     }
 
     protected class WriteTransaction implements WithWriteHistory.WriteTransaction {
 
         private final WriteRequest.RefreshPolicy refreshPolicy;
 
-        final BulkRequest request;
+        private final Versioning versioning;
 
-        final List<Function<BulkItemResponse, BatchResponse>> responders = new ArrayList<>();
+        private final BulkRequest request;
 
-        final Map<String, ObjectSchema> indices = new HashMap<>();
+        private final List<Function<BulkItemResponse, BatchResponse>> responders = new ArrayList<>();
 
-        public WriteTransaction(final Consistency consistency) {
+        private final Map<String, ObjectSchema> indices = new HashMap<>();
+
+        public WriteTransaction(final Consistency consistency, final Versioning versioning) {
 
             if(consistency.isStrongerOrEqual(Consistency.QUORUM)) {
                 this.refreshPolicy = WriteRequest.RefreshPolicy.WAIT_UNTIL;
             } else {
                 this.refreshPolicy = WriteRequest.RefreshPolicy.NONE;
             }
+            this.versioning = versioning;
             this.request = new BulkRequest()
                     .setRefreshPolicy(refreshPolicy);
         }
@@ -407,6 +397,27 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
             }
         }
 
+        private Long version(final Map<String, Object> before, final DocWriteRequest<?> req) {
+
+            final Long version;
+            if (before != null) {
+                version = Instance.getVersion(before);
+                if (version != null) {
+                    final ElasticsearchMetadata meta = Metadata.readFrom(before, ElasticsearchMetadata.class);
+                    // FIXME: should be read if not present
+                    if(meta != null) {
+                        req.setIfSeqNo(meta.getSeqNo());
+                        req.setIfPrimaryTerm(meta.getPrimaryTerm());
+                    } else {
+                        log.warn("No seqNo/primaryTerm in before state");
+                    }
+                }
+            } else {
+                version = null;
+            }
+            return version;
+        }
+
         @Override
         public Storage.WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
@@ -416,21 +427,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
             final IndexRequest req = new IndexRequest().id(id)
                     .index(index).source(toSource(schema, after));
 
-            final Long version;
-            if (before != null) {
-                version = Instance.getVersion(before);
-                if (version != null) {
-                    final Long primaryTerm = getPrimaryTerm(before);
-                    final Long seqNo = getSeqNo(before);
-                    // FIXME: should be required
-                    if(primaryTerm != null && seqNo != null) {
-                        req.setIfSeqNo(seqNo);
-                        req.setIfPrimaryTerm(primaryTerm);
-                    }
-                }
-            } else {
-                version = null;
-            }
+            final Long version = version(before, req);
 
             request.add(req);
             responders.add(response -> {
@@ -456,21 +453,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
             final DeleteRequest req = new DeleteRequest().id(id)
                     .index(index);
 
-            final Long version;
-            if (before != null) {
-                version = Instance.getVersion(before);
-                if (version != null) {
-                    final Long primaryTerm = getPrimaryTerm(before);
-                    final Long seqNo = getSeqNo(before);
-                    // FIXME: should be required
-                    if(primaryTerm != null && seqNo != null) {
-                        req.setIfSeqNo(seqNo);
-                        req.setIfPrimaryTerm(primaryTerm);
-                    }
-                }
-            } else {
-                version = null;
-            }
+            final Long version = version(before, req);
 
             request.add(req);
             responders.add(response -> {

@@ -61,6 +61,6 @@ public class AsyncIndexCreatedEvent implements ObjectEvent {
                 .setId(id)
                 .setVersion(version)
                 .setKey(key)
-                .setProjection(ObjectSchema.readMeta(projection));
+                .setProjection(ObjectSchema.copyMeta(projection));
     }
 }

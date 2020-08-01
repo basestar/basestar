@@ -26,7 +26,6 @@ import io.basestar.mapper.annotation.*;
 import io.basestar.mapper.internal.TypeMapper;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Namespace;
-import io.basestar.schema.Reserved;
 import io.basestar.schema.Schema;
 import io.basestar.schema.jsr380.Assert;
 import io.basestar.type.TypeContext;
@@ -108,14 +107,14 @@ public class TestMappingContext {
         final Schema.Builder<?> schema = schemaMapper.schemaBuilder();
 
         final Post post = schemaMapper.marshall(new Instance(ImmutableMap.of(
-                Reserved.ID, "test",
+                io.basestar.schema.ObjectSchema.ID, "test",
 //                Reserved.VERSION, 1L,
                 "date", "2020-01-01",
                 "comments", ImmutableList.of(ImmutableMap.of(
-                        Reserved.ID, "c1"
+                        io.basestar.schema.ObjectSchema.ID, "c1"
                 )),
                 "comment", ImmutableMap.of(
-                        Reserved.ID, "c1"
+                        io.basestar.schema.ObjectSchema.ID, "c1"
                 ),
                 "value", (byte) 12
         )));

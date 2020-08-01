@@ -91,7 +91,7 @@ public interface SQLStrategy {
                 log.info("Creating table {}", objectTableName);
                 try(final CreateTableFinalStep create = context.createTableIfNotExists(objectTableName)
                         .columns(SQLUtils.fields(schema))
-                        .constraint(DSL.primaryKey(Reserved.ID))) {
+                        .constraint(DSL.primaryKey(ObjectSchema.ID))) {
                     create.execute();
                 }
 
@@ -122,7 +122,7 @@ public interface SQLStrategy {
                 log.info("Creating table {}", historyTableName);
                 try(final CreateTableFinalStep create = context.createTableIfNotExists(historyTableName)
                         .columns(SQLUtils.fields(schema))
-                        .constraint(DSL.primaryKey(Reserved.ID, Reserved.VERSION))) {
+                        .constraint(DSL.primaryKey(ObjectSchema.ID, ObjectSchema.VERSION))) {
                     create.execute();
                 }
             }

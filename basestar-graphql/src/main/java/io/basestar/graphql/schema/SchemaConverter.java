@@ -76,7 +76,7 @@ public class SchemaConverter {
     private InstanceSchema.Builder instanceSchema(final ObjectTypeDefinition def) {
 
         // Heuristic
-        if(def.getFieldDefinitions().stream().anyMatch(fieldDef -> Reserved.ID.equals(fieldDef.getName()))) {
+        if(def.getFieldDefinitions().stream().anyMatch(fieldDef -> ObjectSchema.ID.equals(fieldDef.getName()))) {
             return objectSchema(def);
         } else {
             return structSchema(def);
@@ -86,7 +86,7 @@ public class SchemaConverter {
     private InstanceSchema.Builder interfaceSchema(final InterfaceTypeDefinition def) {
 
         // Heuristic
-        if(def.getFieldDefinitions().stream().anyMatch(fieldDef -> Reserved.ID.equals(fieldDef.getName()))) {
+        if(def.getFieldDefinitions().stream().anyMatch(fieldDef -> ObjectSchema.ID.equals(fieldDef.getName()))) {
             final StructSchema.Builder builder = StructSchema.builder();
             builder.setProperties(instanceProperties(def.getFieldDefinitions(), Collections.emptySet()));
             return builder;

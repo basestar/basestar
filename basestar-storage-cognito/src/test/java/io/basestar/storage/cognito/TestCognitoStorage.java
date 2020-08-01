@@ -26,6 +26,7 @@ import io.basestar.schema.*;
 import io.basestar.schema.use.UseNamed;
 import io.basestar.schema.use.UseString;
 import io.basestar.storage.Storage;
+import io.basestar.storage.Versioning;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.regions.Region;
@@ -80,7 +81,7 @@ public class TestCognitoStorage {
         final Instance before = schema.create(data);
 
 
-        storage.write(Consistency.ATOMIC)
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .createObject(schema, id, before)
                 .write().join();
 
@@ -93,7 +94,7 @@ public class TestCognitoStorage {
         ));
         final Instance after = schema.create(data);
 
-        storage.write(Consistency.ATOMIC)
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .updateObject(schema, id, before, after)
                 .write().join();
 

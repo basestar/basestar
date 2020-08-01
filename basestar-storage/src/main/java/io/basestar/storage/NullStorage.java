@@ -72,7 +72,7 @@ public class NullStorage implements Storage.WithoutWriteIndex, Storage.WithoutWr
     }
 
     @Override
-    public WriteTransaction write(final Consistency consistency) {
+    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
         return new WriteTransaction() {
 

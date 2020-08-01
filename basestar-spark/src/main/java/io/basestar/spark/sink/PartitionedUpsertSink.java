@@ -22,6 +22,7 @@ package io.basestar.spark.sink;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.spark.util.*;
 import io.basestar.util.Nullsafe;
@@ -89,7 +90,7 @@ public class PartitionedUpsertSink extends PartitionedUpsertUtils implements Sin
 
         this.databaseName = databaseName;
         this.tableName = tableName;
-        this.idColumns = Nullsafe.option(idColumns, ImmutableList.of(Reserved.ID));
+        this.idColumns = Nullsafe.option(idColumns, ImmutableList.of(ObjectSchema.ID));
         this.upsertId = Nullsafe.option(upsertId, PartitionedUpsertSink::defaultUpsertId);
         this.format = Nullsafe.option(format, Format.PARQUET);
         this.deletedColumn = Nullsafe.option(deletedColumn, Reserved.DELETED);

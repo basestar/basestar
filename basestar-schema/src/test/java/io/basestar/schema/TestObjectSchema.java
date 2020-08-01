@@ -65,12 +65,12 @@ public class TestObjectSchema {
         final String id = UUID.randomUUID().toString();
         final Instance initial = schema.create(ImmutableMap.of(
                 "ref", ImmutableMap.of(
-                        Reserved.ID, id
+                        ObjectSchema.ID, id
                 )
         ));
 
         final Instance refValue = schema.create(ImmutableMap.of(
-                Reserved.ID, UUID.randomUUID().toString()
+                ObjectSchema.ID, UUID.randomUUID().toString()
         ));
 
         final Instance instance = schema.expand(initial, new Expander() {
@@ -89,13 +89,13 @@ public class TestObjectSchema {
 
         final Instance expanded = schema.expand(instance, Expander.noop(), ImmutableSet.of(Name.of("ref")));
         final Map expandedRef = (Map)expanded.get("ref");
-        assertNotNull(expandedRef.get(Reserved.SCHEMA));
-        assertNotNull(expandedRef.get(Reserved.ID));
+        assertNotNull(expandedRef.get(ObjectSchema.SCHEMA));
+        assertNotNull(expandedRef.get(ObjectSchema.ID));
 
         final Instance collapsed = schema.expand(instance, Expander.noop(), ImmutableSet.of());
         final Map collapsedRef = (Map)collapsed.get("ref");
-        assertNull(collapsedRef.get(Reserved.SCHEMA));
-        assertNotNull(collapsedRef.get(Reserved.ID));
+        assertNull(collapsedRef.get(ObjectSchema.SCHEMA));
+        assertNotNull(collapsedRef.get(ObjectSchema.ID));
     }
 
     @Test
@@ -106,7 +106,7 @@ public class TestObjectSchema {
         final ObjectSchema schema = namespace.requireObjectSchema("Post");
 
         final Set<Expression> queries = schema.refQueries(Name.of("Post"), ImmutableSet.of(Name.of("ref")));
-        assertEquals(ImmutableSet.of(new Eq(new NameConstant(Name.of("ref", "id")), new NameConstant(Name.of(Reserved.THIS, Reserved.ID)))), queries);
+        assertEquals(ImmutableSet.of(new Eq(new NameConstant(Name.of("ref", "id")), new NameConstant(Name.of(Reserved.THIS, ObjectSchema.ID)))), queries);
 
         final Set<Expression> nonQueries = schema.refQueries(Name.of("Post"), ImmutableSet.of());
         assertEquals(ImmutableSet.of(), nonQueries);

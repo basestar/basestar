@@ -23,7 +23,10 @@ package io.basestar.codegen.model;
 import com.google.common.collect.ImmutableList;
 import io.basestar.codegen.Codebehind;
 import io.basestar.codegen.CodegenContext;
-import io.basestar.schema.*;
+import io.basestar.schema.InstanceSchema;
+import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.StructSchema;
+import io.basestar.schema.ViewSchema;
 
 import java.util.Comparator;
 import java.util.List;
@@ -45,7 +48,7 @@ public abstract class InstanceSchemaModel extends SchemaModel {
 
         return Stream.concat(Stream.concat(
                 schema.getExtend() != null ? Stream.<MemberModel>empty() : schema.metadataSchema().entrySet().stream()
-                        .filter(entry -> !Reserved.SCHEMA.equals(entry.getKey()))
+                        .filter(entry -> !ObjectSchema.SCHEMA.equals(entry.getKey()))
                         .map(entry -> new MetadataModel(getContext(), entry.getKey(), entry.getValue())),
                 schema.getDeclaredProperties().values().stream()
                         .map(v -> new PropertyModel(getContext(), v))

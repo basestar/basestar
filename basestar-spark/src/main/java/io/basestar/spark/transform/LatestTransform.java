@@ -21,7 +21,7 @@ package io.basestar.spark.transform;
  */
 
 import com.google.common.collect.ImmutableList;
-import io.basestar.schema.Reserved;
+import io.basestar.schema.ObjectSchema;
 import io.basestar.util.Nullsafe;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -44,8 +44,8 @@ public class LatestTransform implements Transform<Dataset<Row>, Dataset<Row>> {
     @lombok.Builder(builderClassName = "Builder")
     LatestTransform(final List<String> idColumns, final String versionColumn, final Boolean dropVersionColumn)  {
 
-        this.idColumns = Nullsafe.option(idColumns, ImmutableList.of(Reserved.ID));
-        this.versionColumn = Nullsafe.option(versionColumn, Reserved.VERSION);
+        this.idColumns = Nullsafe.option(idColumns, ImmutableList.of(ObjectSchema.ID));
+        this.versionColumn = Nullsafe.option(versionColumn, ObjectSchema.VERSION);
         this.dropVersionColumn = Nullsafe.option(dropVersionColumn, false);
     }
 

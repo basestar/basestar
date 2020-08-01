@@ -25,10 +25,10 @@ import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.Reserved;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
+import io.basestar.storage.Versioning;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.PagedList;
 import io.basestar.util.PagingToken;
@@ -125,7 +125,7 @@ public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.W
     }
 
     @Override
-    public WriteTransaction write(final Consistency consistency) {
+    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
         return new WriteTransaction() {
 
@@ -205,7 +205,7 @@ public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.W
     private Map<String, Object> fromGroup(final GroupType group) {
 
         return ImmutableMap.of(
-                Reserved.ID, group.groupName(),
+                ObjectSchema.ID, group.groupName(),
                 DESCRIPTION_KEY, group.description()
         );
     }

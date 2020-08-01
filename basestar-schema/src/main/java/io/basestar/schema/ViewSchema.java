@@ -38,6 +38,7 @@ import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseBinary;
 import io.basestar.schema.use.UseView;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -58,6 +59,12 @@ import java.util.stream.Collectors;
 
 @Getter
 public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Resolver {
+
+    public static String KEY = Reserved.PREFIX + "key";
+
+    public static final SortedMap<String, Use<?>> METADATA_SCHEMA = ImmutableSortedMap.<String, Use<?>>orderedBy(Comparator.naturalOrder())
+            .put(KEY, UseBinary.DEFAULT)
+            .build();
 
     @Getter
     @RequiredArgsConstructor
@@ -347,7 +354,23 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
     @Override
     public Instance create(final Map<String, Object> value, final boolean expand, final boolean suppress) {
 
-        return new Instance(readProperties(value, expand, suppress));
+        final Map<String, Object> result = new HashMap<>(readProperties(value, expand, suppress));
+        result.putAll(readMeta(value, suppress));
+        if(Instance.getSchema(result) == null) {
+            Instance.setSchema(result, this.getQualifiedName());
+        }
+        return new Instance(result);
+    }
+
+    public byte[] key(final Map<String, Object> value) {
+
+        final List<Object> key = new ArrayList<>();
+        if(group.isEmpty()) {
+            key.add(value.get(from.getSchema().id()));
+        } else {
+            group.forEach(name -> key.add(value.get(name)));
+        }
+        return UseBinary.binaryKey(key);
     }
 
     public void serialize(final Map<String, Object> object, final DataOutput out) throws IOException {
@@ -393,13 +416,19 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
     @Override
     public SortedMap<String, Use<?>> metadataSchema() {
 
-        return ImmutableSortedMap.of();
+        return METADATA_SCHEMA;
     }
 
     @Override
     public UseView use() {
 
         return new UseView(this);
+    }
+
+    @Override
+    public String id() {
+
+        return KEY;
     }
 
     @Override

@@ -1,4 +1,4 @@
-package io.basestar.storage;
+package io.basestar.storage.overlay;
 
 /*-
  * #%L
@@ -23,6 +23,10 @@ package io.basestar.storage;
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.*;
+import io.basestar.storage.BatchResponse;
+import io.basestar.storage.Storage;
+import io.basestar.storage.StorageTraits;
+import io.basestar.storage.Versioning;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Sort;
@@ -61,7 +65,8 @@ public class OverlayStorage implements Storage {
         final CompletableFuture<Map<String, Object>> futOver = overlay.readObject(schema, id);
         return CompletableFuture.allOf(futBase, futOver).thenApply(ignored -> {
             final Map<String, Object> over = futOver.getNow(null);
-            return over != null ? over : futBase.getNow(null);
+            final Map<String, Object> base = futBase.getNow(null);
+            return OverlayMetadata.wrap(base, over).applyTo(over != null ? over : base);
         });
     }
 
@@ -73,8 +78,10 @@ public class OverlayStorage implements Storage {
         final CompletableFuture<Map<String, Object>> futCheck = overlay.readObject(schema, id);
         return CompletableFuture.allOf(futBase, futOver, futCheck).thenApply(ignored -> {
             final Map<String, Object> over = futOver.getNow(null);
+            final Map<String, Object> base = futOver.getNow(null);
+            final OverlayMetadata meta = OverlayMetadata.wrap(base, over);
             if (over != null) {
-                return over;
+                return meta.applyTo(over);
             } else {
                 // Cannot return a version greater than the latest in the overlay
                 final Map<String, Object> check = futCheck.getNow(null);
@@ -84,42 +91,20 @@ public class OverlayStorage implements Storage {
                         return null;
                     }
                 }
-                return futBase.getNow(null);
+                return meta.applyTo(base);
             }
         });
     }
 
     @Override
-//    @SuppressWarnings({"unchecked", "rawtypes"})
     public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
 
         final List<Pager.Source<Map<String, Object>>> sources = new ArrayList<>();
 
         // FIXME: relies on stable impl of Stream.min() in Pager
         // Overlay entries appear first, so they will be chosen
-        sources.addAll(overlay.query(schema, query, sort));
-        sources.addAll(baseline.query(schema, query, sort));
-
-//        baseline.query(schema, query, sort).forEach(source -> sources.add((count, token) -> source.page(count, token)
-//                .thenApply(page -> page.filter(instance -> get(instance) == null))));
-
-        // Add a source that will emit matching results
-
-//        sources.add((count, token) -> {
-//            // Don't do any paging, just return all matches
-//            final List<Map<String, Object>> page = new ArrayList<>();
-//            Nullsafe.option(data.get(schema.getName())).forEach((id, item) -> {
-//                if(query.evaluatePredicate(Context.init(item))) {
-//                    page.add(item);
-//                }
-//            });
-//
-//            // Must be sorted
-//            final Comparator<Map<String, Object>> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
-//            page.sort(comparator);
-//
-//            return CompletableFuture.completedFuture(new PagedList<>(page, null));
-//        });
+        sources.addAll(Pager.map(overlay.query(schema, query, sort), v -> OverlayMetadata.wrap(null, v).applyTo(v)));
+        sources.addAll(Pager.map(baseline.query(schema, query, sort), v -> OverlayMetadata.wrap(v, null).applyTo(v)));
 
         return sources;
     }
@@ -134,48 +119,6 @@ public class OverlayStorage implements Storage {
     public ReadTransaction read(final Consistency consistency) {
 
         return new ReadTransaction.Basic(this);
-//        final ReadTransaction fromBaseline = baseline.read(consistency);
-//        final ReadTransaction fromOverlay = overlay.read(consistency);
-//        return new ReadTransaction() {
-//
-//            private final Map<BatchResponse.Key, Map<String, Object>> results = new HashMap<>();
-//
-//            @Override
-//            public ReadTransaction readObject(final ObjectSchema schema, final String id) {
-//
-//                final Map<String, Object> object = get(schema.getName(), id);
-//                if(object != null) {
-//                    results.put(new BatchResponse.Key(schema.getName(), id), object);
-//                    return this;
-//                } else {
-//                    transaction.readObject(schema, id);
-//                    return this;
-//                }
-//            }
-//
-//            @Override
-//            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version) {
-//
-//                final Map<String, Object> object = get(schema.getName(), id);
-//                if(object != null && Long.valueOf(version).equals(Instance.getVersion(object))) {
-//                    results.put(new BatchResponse.Key(schema.getName(), id, version), object);
-//                    return this;
-//                } else {
-//                    transaction.readObjectVersion(schema, id, version);
-//                    return this;
-//                }
-//            }
-//
-//            @Override
-//            public CompletableFuture<BatchResponse> read() {
-//
-//                return transaction.read().thenApply(response -> {
-//                    final Map<BatchResponse.Key, Map<String, Object>> merged = new HashMap<>(response);
-//                    merged.putAll(results);
-//                    return new BatchResponse.Basic(merged);
-//                });
-//            }
-//        };
     }
 
     @Override
@@ -207,14 +150,14 @@ public class OverlayStorage implements Storage {
     }
 
     @Override
-    public WriteTransaction write(final Consistency consistency) {
+    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
-        final WriteTransaction overlayWrite = overlay.write(consistency);
+        final WriteTransaction overlayWrite = overlay.write(consistency, versioning);
         return new WriteTransaction() {
             @Override
             public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
-                overlayWrite.createObject(schema, id, after);
+                overlayWrite.createObject(schema, id, OverlayMetadata.unwrapOverlay(after));
                 return this;
             }
 
@@ -222,7 +165,7 @@ public class OverlayStorage implements Storage {
             public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
                 // FIXME: need to know if overlay has the value already for correct versioning
-                overlayWrite.updateObject(schema, id, before, after);
+                overlayWrite.updateObject(schema, id, OverlayMetadata.unwrapOverlay(before), OverlayMetadata.unwrapOverlay(after));
                 return this;
             }
 
@@ -231,7 +174,7 @@ public class OverlayStorage implements Storage {
 
                 // FIXME: need to know if overlay has the value already for correct versioning
                 final Map<String, Object> tombstone = tombstone(schema, id, before);
-                overlayWrite.updateObject(schema, id, before, tombstone);
+                overlayWrite.updateObject(schema, id, OverlayMetadata.unwrapOverlay(before), tombstone);
                 return this;
             }
             
@@ -240,9 +183,9 @@ public class OverlayStorage implements Storage {
                 final Map<String, Object> tombstone = new HashMap<>();
                 Instance.setSchema(tombstone, schema.getQualifiedName());
                 Instance.setId(tombstone, id);
-                Instance.setCreated(tombstone, Instance.getCreated(before));
+                Instance.setCreated(tombstone, before == null ? null : Instance.getCreated(before));
                 Instance.setUpdated(tombstone, LocalDateTime.now());
-                Instance.setVersion(tombstone, Nullsafe.option(Instance.getVersion(before)) + 1);
+                Instance.setVersion(tombstone, before == null ? null : Nullsafe.option(Instance.getVersion(before)) + 1);
                 Instance.setHash(tombstone, schema.hash(tombstone));
                 tombstone.put(TOMBSTONE_KEY, true);
                 return tombstone;
@@ -267,4 +210,5 @@ public class OverlayStorage implements Storage {
 
         return overlay.storageTraits(schema);
     }
+
 }

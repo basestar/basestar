@@ -24,11 +24,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
-import io.basestar.schema.*;
+import io.basestar.schema.Consistency;
+import io.basestar.schema.Instance;
+import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.Property;
 import io.basestar.schema.use.*;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
+import io.basestar.storage.Versioning;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.Name;
 import io.basestar.util.PagedList;
@@ -145,7 +149,7 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
     }
 
     @Override
-    public WriteTransaction write(final Consistency consistency) {
+    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
         return new WriteTransaction() {
 
@@ -222,7 +226,7 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
         final List<AttributeType> result = new ArrayList<>();
         final Long version = Instance.getVersion(after);
         if(version != null) {
-            result.add(AttributeType.builder().name(CUSTOM_ATTR_PREFIX + Reserved.VERSION).value(Long.toString(version)).build());
+            result.add(AttributeType.builder().name(CUSTOM_ATTR_PREFIX + ObjectSchema.VERSION).value(Long.toString(version)).build());
         }
         for(final Map.Entry<String, Property> entry : schema.getProperties().entrySet()) {
             final String name = entry.getKey();
@@ -286,7 +290,7 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
 
                 final Instance instance = type.create(value);
                 if(instance != null) {
-                    return ImmutableMap.of(path.with(Reserved.ID), Instance.getId(instance));
+                    return ImmutableMap.of(path.with(ObjectSchema.ID), Instance.getId(instance));
                 } else {
                     return ImmutableMap.of();
                 }
@@ -329,7 +333,7 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
             }
             attrs.put(Name.parse(name), attr.value());
         });
-        final String version = attrs.get(Name.of(Reserved.VERSION));
+        final String version = attrs.get(Name.of(ObjectSchema.VERSION));
         if(version == null) {
             Instance.setVersion(result, 1L);
         } else {
@@ -379,7 +383,7 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
             @Override
             public Map<String, Object> visitObject(final UseObject type) {
 
-                final String id = attrs.get(path.with(Reserved.ID));
+                final String id = attrs.get(path.with(ObjectSchema.ID));
                 return id == null ? null : ObjectSchema.ref(id);
             }
         });

@@ -30,7 +30,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
         @JsonSubTypes.Type(name = UpdateOptions.TYPE, value = UpdateOptions.class),
         @JsonSubTypes.Type(name = DeleteOptions.TYPE, value = DeleteOptions.class),
         @JsonSubTypes.Type(name = QueryOptions.TYPE, value = QueryOptions.class),
-        @JsonSubTypes.Type(name = TransactionOptions.TYPE, value = TransactionOptions.class)
+        @JsonSubTypes.Type(name = BatchOptions.TYPE, value = BatchOptions.class)
 })
 public interface Options {
 

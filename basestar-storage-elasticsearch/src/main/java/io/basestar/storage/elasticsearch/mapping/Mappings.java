@@ -23,7 +23,6 @@ package io.basestar.storage.elasticsearch.mapping;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.Reserved;
 import io.basestar.schema.use.*;
 import io.basestar.util.Name;
 import lombok.Data;
@@ -69,12 +68,12 @@ public class Mappings {
 
                 if(schema instanceof ObjectSchema) {
                     switch (name) {
-                        case Reserved.ID:
-                        case Reserved.SCHEMA:
+                        case ObjectSchema.ID:
+                        case ObjectSchema.SCHEMA:
                             return FieldType.KEYWORD;
-                        case Reserved.CREATED:
-                        case Reserved.UPDATED:
-                            return FieldType.DATE;
+                        case ObjectSchema.CREATED:
+                        case ObjectSchema.UPDATED:
+                            return FieldType.DATETIME;
                         default:
                             return fieldType(use, expand);
                     }

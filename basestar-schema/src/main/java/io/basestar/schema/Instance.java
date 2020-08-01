@@ -61,7 +61,7 @@ public class Instance extends AbstractMap<String, Object> implements Serializabl
 
     public static Comparator<Map<String, Object>> idComparator() {
 
-        return comparator(Sort.asc(Reserved.ID_NAME));
+        return comparator(Sort.asc(ObjectSchema.ID_NAME));
     }
 
     public Name getSchema() {
@@ -138,19 +138,14 @@ public class Instance extends AbstractMap<String, Object> implements Serializabl
 
     public <T> T get(final String name, final Class<T> as) {
 
-        return as.cast(backing.get(name));
+        final Object value = backing.get(name);
+        return value == null ? null : as.cast(value);
     }
 
-//    public <T> T getProperty(final String name, final Class<T> cls) {
-//
-//        return schema.getProperty(backing, name, cls);
-//    }
-//
-//    public <T> Instance setProperty(final String name, final T v) {
-//
-//        schema.setProperty(backing, name, v);
-//        return this;
-//    }
+    public Instance with(final String name, final Object value) {
+
+        return new Instance(with(backing, name, value));
+    }
 
     @Override
     public Set<Entry<String, Object>> entrySet() {
@@ -160,70 +155,95 @@ public class Instance extends AbstractMap<String, Object> implements Serializabl
 
     public static Name getSchema(final Map<String, Object> data) {
 
-        final String qualifiedName = (String)data.get(Reserved.SCHEMA);
+        final String qualifiedName = (String)data.get(ObjectSchema.SCHEMA);
         return qualifiedName == null ? null : Name.parse(qualifiedName);
     }
 
     public static void setSchema(final Map<String, Object> object, final Name qualifiedName) {
 
-        object.put(Reserved.SCHEMA, qualifiedName == null ? null : qualifiedName.toString());
+        object.put(ObjectSchema.SCHEMA, qualifiedName == null ? null : qualifiedName.toString());
     }
 
     public static String getId(final Map<String, Object> object) {
 
-        return (String)object.get(Reserved.ID);
+        return (String)object.get(ObjectSchema.ID);
     }
 
     public static void setId(final Map<String, Object> object, final String id) {
 
-        object.put(Reserved.ID, id);
+        object.put(ObjectSchema.ID, id);
     }
 
     public static Long getVersion(final Map<String, Object> object) {
 
-        final Number number = (Number)object.get(Reserved.VERSION);
+        final Number number = (Number)object.get(ObjectSchema.VERSION);
         return number == null ? null : number.longValue();
     }
 
     public static void setVersion(final Map<String, Object> object, final Long version) {
 
-        object.put(Reserved.VERSION, version);
+        object.put(ObjectSchema.VERSION, version);
     }
 
     public static String getHash(final Map<String, Object> object) {
 
-        return (String)object.get(Reserved.HASH);
+        return (String)object.get(ObjectSchema.HASH);
     }
 
     public static void setHash(final Map<String, Object> object, final String hash) {
 
-        object.put(Reserved.HASH, hash);
+        object.put(ObjectSchema.HASH, hash);
     }
 
     public static LocalDateTime getCreated(final Map<String, Object> object) {
 
-        return (LocalDateTime)object.get(Reserved.CREATED);
+        return (LocalDateTime)object.get(ObjectSchema.CREATED);
     }
 
     public static void setCreated(final Map<String, Object> object, final LocalDateTime created) {
 
-        object.put(Reserved.CREATED, created);
+        object.put(ObjectSchema.CREATED, created);
     }
 
     public static LocalDateTime getUpdated(final Map<String, Object> object) {
 
-        return (LocalDateTime)object.get(Reserved.UPDATED);
+        return (LocalDateTime)object.get(ObjectSchema.UPDATED);
     }
 
     public static void setUpdated(final Map<String, Object> object, final LocalDateTime updated) {
 
-        object.put(Reserved.UPDATED, updated);
+        object.put(ObjectSchema.UPDATED, updated);
+    }
+
+    public static <T> T get(final Map<String, Object> object, final String name, final Class<T> as) {
+
+        final Object value = object.get(name);
+        return value == null ? null : as.cast(value);
+    }
+
+    public static void set(final Map<String, Object> object, final String name, final Object value) {
+
+        object.put(name, value);
     }
 
     @SuppressWarnings("unchecked")
     public static Collection<? extends Map<String, Object>> getLink(final Map<String, Object> data, final String link) {
 
         return (Collection<? extends Map<String, Object>>)data.get(link);
+    }
+
+    public static Map<String, Object> with(final Map<String, Object> object, final String name, final Object value) {
+
+        final Map<String, Object> copy = new HashMap<>(object);
+        copy.put(name, value);
+        return copy;
+    }
+
+    public static Map<String, Object> without(final Map<String, Object> object, final String name) {
+
+        final Map<String, Object> copy = new HashMap<>(object);
+        copy.remove(name);
+        return copy;
     }
 }
 

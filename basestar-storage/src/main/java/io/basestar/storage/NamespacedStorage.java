@@ -252,7 +252,7 @@ public interface NamespacedStorage extends Storage {
     }
 
     @Override
-    default Storage.WriteTransaction write(final Consistency consistency) {
+    default Storage.WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
         final IdentityHashMap<Storage, Map<Name, Storage.WriteTransaction>> transactions = new IdentityHashMap<>();
         return new Storage.WriteTransaction() {
@@ -262,7 +262,7 @@ public interface NamespacedStorage extends Storage {
                 final Storage storage = storage(namespace, relativeSchema);
                 return transactions.computeIfAbsent(storage, ignored -> new HashMap<>())
                         .computeIfAbsent(namespace, ignored -> {
-                            final Storage.WriteTransaction delegate = storage.write(consistency);
+                            final Storage.WriteTransaction delegate = storage.write(consistency, versioning);
                             return new Storage.WriteTransaction() {
 
                                 @Override

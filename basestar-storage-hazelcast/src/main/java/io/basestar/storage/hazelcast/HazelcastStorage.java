@@ -35,6 +35,7 @@ import io.basestar.schema.*;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
+import io.basestar.storage.Versioning;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.hazelcast.serde.CustomPortable;
@@ -357,7 +358,7 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
     }
 
     @Override
-    public WriteTransaction write(final Consistency consistency) {
+    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
         return new WriteTransaction();
     }

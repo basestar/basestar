@@ -410,7 +410,7 @@ public class SQLUtils {
     private static Field<Object> indexField(final ObjectSchema schema, final Index index, final Name name) {
 
         // FIXME: BUG: hacky heuristic
-        if(Reserved.ID.equals(name.last())) {
+        if(ObjectSchema.ID.equals(name.last())) {
             return DSL.field(DSL.name(name.withoutLast().toString()));
         } else {
             return DSL.field(DSL.name(name.toString()));

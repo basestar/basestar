@@ -178,7 +178,7 @@ public class DefaultHub implements Hub {
 
     private static Subscription.Key idKey(final ObjectSchema schema, final String id) {
 
-        return new Subscription.Key(schema.getQualifiedName(), Reserved.PREFIX + Reserved.ID, ImmutableList.of(id));
+        return new Subscription.Key(schema.getQualifiedName(), Reserved.PREFIX + ObjectSchema.ID, ImmutableList.of(id));
     }
 
     private static Set<Subscription.Key> keys(final ObjectSchema schema, final Expression expression) {

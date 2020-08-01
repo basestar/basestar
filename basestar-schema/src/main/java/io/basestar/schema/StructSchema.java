@@ -231,6 +231,12 @@ public class StructSchema implements InstanceSchema {
     }
 
     @Override
+    public String id() {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public Map<String, ? extends Member> getDeclaredMembers() {
 
         return declaredProperties;

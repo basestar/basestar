@@ -17,7 +17,7 @@ import io.basestar.expression.constant.NameConstant;
 import io.basestar.graphql.subscription.GraphQLSubscriptionInfo;
 import io.basestar.graphql.subscription.SubscriberContext;
 import io.basestar.graphql.subscription.SubscriberIdSource;
-import io.basestar.schema.Reserved;
+import io.basestar.schema.ObjectSchema;
 import io.basestar.stream.Subscribable;
 import io.basestar.util.Nullsafe;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -143,7 +143,7 @@ public class GraphQLWebsocketAPI implements API {
         public ExecutionInput toInput(final Subscribable subscribable, final Caller caller, final String sub) {
 
             final SubscriberContext subscriberContext = (schema, id, alias, names) -> {
-                final Expression expression = new Eq(new NameConstant(Reserved.ID_NAME), new Constant(id));
+                final Expression expression = new Eq(new NameConstant(ObjectSchema.ID_NAME), new Constant(id));
                 final GraphQLSubscriptionInfo info = new GraphQLSubscriptionInfo(alias, names);
                 return subscribable.subscribe(caller, sub, id, schema.getQualifiedName().toString(), expression, info);
             };

@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableSet;
 import io.basestar.auth.Caller;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.Name;
@@ -25,7 +26,7 @@ public abstract class TestSubscriptions {
 
         final Subscriptions subscriptions = subscriber();
 
-        final Set<Subscription.Key> keys = ImmutableSet.of(new Subscription.Key(Name.of("Test"), Reserved.PREFIX + Reserved.ID, ImmutableList.of("id")));
+        final Set<Subscription.Key> keys = ImmutableSet.of(new Subscription.Key(Name.of("Test"), Reserved.PREFIX + ObjectSchema.ID, ImmutableList.of("id")));
         final SubscriptionInfo info = new TestSubscriptionInfo();
 
         final Expression expression = Expression.parseAndBind(Context.init(), "id == 'x'");

@@ -104,6 +104,10 @@ public interface GraphQLStrategy {
 
     String batchTypeName();
 
+    String idArgumentName();
+
+    String versionArgumentName();
+
     class Default implements GraphQLStrategy {
 
         protected String delimiter() {
@@ -338,6 +342,18 @@ public interface GraphQLStrategy {
         public String batchTypeName() {
 
             return "Batch";
+        }
+
+        @Override
+        public String idArgumentName() {
+
+            return ObjectSchema.ID;
+        }
+
+        @Override
+        public String versionArgumentName() {
+
+            return ObjectSchema.VERSION;
         }
 
         protected final Use.Visitor<String> TYPE_NAME_VISITOR = new Use.Visitor<String>() {

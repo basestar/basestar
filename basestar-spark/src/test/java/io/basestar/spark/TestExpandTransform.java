@@ -92,7 +92,9 @@ public class TestExpandTransform extends AbstractSparkTest {
         final Dataset<Row> datasetA = session.createDataset(ImmutableList.of(
                 new A("a:1", new B("b:1"), ImmutableList.of(new B("b:3"), new B("b:4")), ImmutableMap.of("x", new B("b:5")), new E(new B("b:1"))),
                 new A("a:2", new B("b:2"), ImmutableList.of(), ImmutableMap.of(), null),
-                new A("a:3", null, ImmutableList.of(), ImmutableMap.of(), null)
+                new A("a:3", null, ImmutableList.of(), ImmutableMap.of(), null),
+                new A("a:4", null, ImmutableList.of(), ImmutableMap.of(), null),
+                new A("a:5", new B("b:2"), ImmutableList.of(), ImmutableMap.of(), null)
         ), Encoders.bean(A.class)).toDF();
 
         final Dataset<Row> datasetB = session.createDataset(ImmutableList.of(
@@ -121,7 +123,7 @@ public class TestExpandTransform extends AbstractSparkTest {
         final ConformTransform conform = ConformTransform.builder().structType(encoder.schema()).build();
 
         final List<ExpandedA> rows = conform.accept(dataset).as(encoder).collectAsList();
-        assertEquals(3, rows.size());
+        assertEquals(5, rows.size());
         assertTrue(rows.contains(new ExpandedA("a:1", b1, ImmutableList.of(b3, b4), ImmutableMap.of("x", b5), new E(b1), ImmutableList.of(
                 new CollapsedC("c:1"),
                 new CollapsedC("c:2")
@@ -130,5 +132,7 @@ public class TestExpandTransform extends AbstractSparkTest {
                 new CollapsedC("c:3")
         ))));
         assertTrue(rows.contains(new ExpandedA("a:3", null, ImmutableList.of(), ImmutableMap.of(), null, ImmutableList.of())));
+        assertTrue(rows.contains(new ExpandedA("a:4", null, ImmutableList.of(), ImmutableMap.of(), null, ImmutableList.of())));
+        assertTrue(rows.contains(new ExpandedA("a:5", b2, ImmutableList.of(), ImmutableMap.of(), null, ImmutableList.of())));
     }
 }

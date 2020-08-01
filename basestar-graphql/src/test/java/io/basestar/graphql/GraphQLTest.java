@@ -181,7 +181,7 @@ public class GraphQLTest {
     }
 
     @Test
-    public void testBatchMutate() throws Exception {
+    public void testMultiMutate() throws Exception {
 
         final Namespace namespace = namespace();
         final GraphQL graphQL = graphQL(namespace);
@@ -246,9 +246,10 @@ public class GraphQLTest {
         final GraphQL graphQL = graphQL(namespace);
 
         final ExecutionResult result = graphQL.execute(ExecutionInput.newExecutionInput()
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
                 .query("mutation {\n" +
                         "  batch {\n" +
-                        "    a: updateTest1(id:\"x\", data:{x:\"x\"}) {\n" +
+                        "    a:createTest1(id:\"x\", data:{x:\"x\"}) {\n" +
                         "      id\n" +
                         "    }\n" +
                         "  }\n" +
@@ -256,5 +257,6 @@ public class GraphQLTest {
                 .build());
 
         System.err.println((Object)result.getData());
+        System.err.println(result.getErrors());
     }
 }

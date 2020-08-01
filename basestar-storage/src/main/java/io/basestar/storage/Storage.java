@@ -82,7 +82,7 @@ public interface Storage {
 
     ReadTransaction read(Consistency consistency);
 
-    WriteTransaction write(Consistency consistency);
+    WriteTransaction write(Consistency consistency, Versioning versioning);
 
     EventStrategy eventStrategy(ObjectSchema schema);
 
@@ -156,7 +156,8 @@ public interface Storage {
 
     interface WithoutWrite extends WithoutWriteIndex, WithoutWriteHistory {
 
-        default WriteTransaction write(final Consistency consistency) {
+        @Override
+        default WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
             throw new UnsupportedOperationException();
         }
@@ -164,6 +165,7 @@ public interface Storage {
 
     interface WithoutAggregate extends Storage {
 
+        @Override
         default List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
 
             throw new UnsupportedQueryException(schema.getQualifiedName(), query);
@@ -172,6 +174,7 @@ public interface Storage {
 
     interface WithoutQuery extends WithoutAggregate {
 
+        @Override
         default List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
 
             throw new UnsupportedQueryException(schema.getQualifiedName(), query);
@@ -180,6 +183,7 @@ public interface Storage {
 
     interface WithoutHistory extends WithoutWriteHistory {
 
+        @Override
         default CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
 
             return readObject(schema, id).thenApply(object -> {
@@ -194,6 +198,7 @@ public interface Storage {
 
     interface WithoutWriteHistory extends Storage {
 
+        @Override
         default CompletableFuture<?> asyncHistoryCreated(final ObjectSchema schema, String id, final long version, Map<String, Object> after) {
 
             throw new UnsupportedOperationException();
@@ -202,16 +207,19 @@ public interface Storage {
 
     interface WithoutWriteIndex extends Storage {
 
+        @Override
         default CompletableFuture<?> asyncIndexCreated(final ObjectSchema schema, final Index index, String id, final long version, final Index.Key key, final Map<String, Object> projection) {
 
             throw new UnsupportedOperationException();
         }
 
+        @Override
         default CompletableFuture<?> asyncIndexUpdated(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
 
             throw new UnsupportedOperationException();
         }
 
+        @Override
         default CompletableFuture<?> asyncIndexDeleted(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
 
             throw new UnsupportedOperationException();
@@ -220,11 +228,13 @@ public interface Storage {
 
     interface WithWriteHistory extends Storage {
 
-        WriteTransaction write(Consistency consistency);
+        @Override
+        WriteTransaction write(Consistency consistency, Versioning versioning);
 
+        @Override
         default CompletableFuture<?> asyncHistoryCreated(final ObjectSchema schema, String id, final long version, Map<String, Object> after) {
 
-            final WriteTransaction write = write(Consistency.ASYNC);
+            final WriteTransaction write = write(Consistency.ASYNC, Versioning.CHECKED);
             write.createHistory(schema, id, version, after);
             return write.write();
         }
@@ -237,25 +247,29 @@ public interface Storage {
 
     interface WithWriteIndex extends Storage {
 
-        WriteTransaction write(Consistency consistency);
+        @Override
+        WriteTransaction write(Consistency consistency, Versioning versioning);
 
+        @Override
         default CompletableFuture<?> asyncIndexCreated(final ObjectSchema schema, final Index index, String id, final long version, final Index.Key key, final Map<String, Object> projection) {
 
-            final WriteTransaction write = write(Consistency.ASYNC);
+            final WriteTransaction write = write(Consistency.ASYNC, Versioning.CHECKED);
             write.createIndex(schema, index, id, version, key, projection);
             return write.write();
         }
 
+        @Override
         default CompletableFuture<?> asyncIndexUpdated(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
 
-            final WriteTransaction write = write(Consistency.ASYNC);
+            final WriteTransaction write = write(Consistency.ASYNC, Versioning.CHECKED);
             write.updateIndex(schema, index, id, version, key, projection);
             return write.write();
         }
 
+        @Override
         default CompletableFuture<?> asyncIndexDeleted(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
 
-            final WriteTransaction write = write(Consistency.ASYNC);
+            final WriteTransaction write = write(Consistency.ASYNC, Versioning.CHECKED);
             write.deleteIndex(schema, index, id, version, key);
             return write.write();
         }

@@ -26,7 +26,10 @@ import com.google.common.collect.Lists;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import io.basestar.util.Name;
+import org.apache.spark.sql.Encoder;
+import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.catalyst.encoders.RowEncoder;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.*;
 import scala.collection.Seq;
@@ -803,87 +806,93 @@ public class SparkSchemaUtils {
         return DataTypes.createStructType(fields);
     }
 
-//    public static Encoder<?> encoder(final Use<?> type, final Set<Name> expand) {
-//
-//        return type.visit(new Use.Visitor<Encoder<?>>() {
-//
-//            @Override
-//            public Encoder<?> visitBoolean(final UseBoolean type) {
-//
-//                return Encoders.BOOLEAN();
-//            }
-//
-//            @Override
-//            public Encoder<?> visitInteger(final UseInteger type) {
-//
-//                return Encoders.LONG();
-//            }
-//
-//            @Override
-//            public Encoder<?> visitNumber(final UseNumber type) {
-//
-//                return Encoders.DOUBLE();
-//            }
-//
-//            @Override
-//            public Encoder<?> visitString(final UseString type) {
-//
-//                return Encoders.STRING();
-//            }
-//
-//            @Override
-//            public Encoder<?> visitEnum(final UseEnum type) {
-//
-//                return Encoders.STRING();
-//            }
-//
-//            @Override
-//            public Encoder<?> visitObject(final UseObject type) {
-//
-//                return refType(type.getSchema(), expand);
-//            }
-//
-//            @Override
-//            public <T> Encoder<?> visitArray(final UseArray<T> type) {
-//
-//                return DataTypes.createArrayType(type.getType().visit(this));
-//            }
-//
-//            @Override
-//            public <T> Encoder<?> visitSet(final UseSet<T> type) {
-//
-//                return DataTypes.createArrayType(type.getType().visit(this));
-//            }
-//
-//            @Override
-//            public <T> Encoder<?> visitMap(final UseMap<T> type) {
-//
-//                return DataTypes.createMapType(DataTypes.StringType, type.getType().visit(this));
-//            }
-//
-//            @Override
-//            public Encoder<?> visitStruct(final UseStruct type) {
-//
-//                return structType(type.getSchema(), expand);
-//            }
-//
-//            @Override
-//            public Encoder<?> visitBinary(final UseBinary type) {
-//
-//                return Encoders.BINARY();
-//            }
-//
-//            @Override
-//            public Encoder<?> visitDate(final UseDate type) {
-//
-//                return Encoders.DATE();
-//            }
-//
-//            @Override
-//            public Encoder<?> visitDateTime(final UseDateTime type) {
-//
-//                return Encoders.DATE();
-//            }
-//        });
-//    }
+    public static Encoder<?> encoder(final Use<?> type) {
+
+        return type.visit(new Use.Visitor<Encoder<?>>() {
+
+            @Override
+            public Encoder<Boolean> visitBoolean(final UseBoolean type) {
+
+                return Encoders.BOOLEAN();
+            }
+
+            @Override
+            public Encoder<Long> visitInteger(final UseInteger type) {
+
+                return Encoders.LONG();
+            }
+
+            @Override
+            public Encoder<?> visitNumber(final UseNumber type) {
+
+                return Encoders.DOUBLE();
+            }
+
+            @Override
+            public Encoder<String> visitString(final UseString type) {
+
+                return Encoders.STRING();
+            }
+
+            @Override
+            public Encoder<String> visitEnum(final UseEnum type) {
+
+                return Encoders.STRING();
+            }
+
+            @Override
+            public Encoder<?> visitObject(final UseObject type) {
+
+                return RowEncoder.apply(refType());
+            }
+
+            @Override
+            public <V> Encoder<?> visitArray(final UseArray<V> type) {
+
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public <V> Encoder<?> visitSet(final UseSet<V> type) {
+
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public <V> Encoder<?> visitMap(final UseMap<V> type) {
+
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public Encoder<Row> visitStruct(final UseStruct type) {
+
+                return RowEncoder.apply(structType(type.getSchema(), Collections.emptySet()));
+            }
+
+            @Override
+            public Encoder<byte[]> visitBinary(final UseBinary type) {
+
+                return Encoders.BINARY();
+            }
+
+            @Override
+            public Encoder<java.sql.Date> visitDate(final UseDate type) {
+
+                return Encoders.DATE();
+            }
+
+            @Override
+            public Encoder<java.sql.Timestamp> visitDateTime(final UseDateTime type) {
+
+                return Encoders.TIMESTAMP();
+            }
+
+            @Override
+            public Encoder<?> visitView(final UseView type) {
+
+                throw new UnsupportedOperationException();
+            }
+        });
+    }
 }

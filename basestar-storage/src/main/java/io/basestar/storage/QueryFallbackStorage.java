@@ -22,7 +22,9 @@ package io.basestar.storage;
 
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
+import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.Reserved;
 import io.basestar.storage.exception.UnsupportedQueryException;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.Nullsafe;
@@ -52,7 +54,7 @@ public class QueryFallbackStorage implements DelegatingStorage {
     @Override
     public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
 
-        return tryQuery(storage, schema, query, sort);
+        return tryQuery(0, schema, query, sort);
     }
 
     @Override
@@ -61,15 +63,20 @@ public class QueryFallbackStorage implements DelegatingStorage {
         throw new UnsupportedOperationException();
     }
 
-    public List<Pager.Source<Map<String, Object>>> tryQuery(final List<Storage> storage, final ObjectSchema schema, final Expression query, final List<Sort> sort) {
+    protected List<Pager.Source<Map<String, Object>>> tryQuery(final int offset, final ObjectSchema schema, final Expression query, final List<Sort> sort) {
 
-        if (storage.isEmpty()) {
+        if (offset >= storage.size()) {
             throw new UnsupportedQueryException(schema.getQualifiedName(), query);
         } else {
             try {
-                return storage.get(0).query(schema, query, sort);
+                final List<Pager.Source<Map<String, Object>>> result = storage.get(offset).query(schema, query, sort);
+                if(offset != 0) {
+                    return Pager.map(result, v -> Instance.without(v, Reserved.META));
+                } else {
+                    return result;
+                }
             } catch (final UnsupportedQueryException e) {
-                return tryQuery(storage.subList(1, storage.size()), schema, query, sort);
+                return tryQuery(offset + 1, schema, query, sort);
             }
         }
     }
