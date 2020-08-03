@@ -21,7 +21,9 @@ package io.basestar.schema.use;
  */
 
 import com.google.common.base.Charsets;
-import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.schema.exception.TypeSyntaxException;
+import io.basestar.schema.exception.UnexpectedTypeException;
+import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.StringSchema;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +32,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * String Type
@@ -64,7 +67,7 @@ public class UseString implements UseScalar<String> {
         } else if(config instanceof Map) {
             return new UseString((String)((Map<?, ?>)config).get("pattern"));
         } else {
-            throw new InvalidTypeException();
+            throw new TypeSyntaxException();
         }
     }
 
@@ -81,18 +84,16 @@ public class UseString implements UseScalar<String> {
     }
 
     @Override
-    public String create(final Object value, final boolean expand, final boolean suppress) {
+    public String create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        if(value == null) {
-            return null;
-        } else if(value instanceof Boolean || value instanceof Number) {
+        if(value instanceof Boolean || value instanceof Number) {
             return value.toString();
         } else if(value instanceof String) {
             return (String) value;
         } else if(suppress) {
             return null;
         } else {
-            throw new InvalidTypeException();
+            throw new UnexpectedTypeException(this, value);
         }
     }
 

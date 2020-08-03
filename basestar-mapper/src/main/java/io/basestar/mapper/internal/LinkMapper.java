@@ -22,8 +22,10 @@ package io.basestar.mapper.internal;
 
 import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
+import io.basestar.mapper.exception.MappingException;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Link;
+import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.type.PropertyContext;
 import io.basestar.type.SerializableAccessor;
 import io.basestar.util.Sort;
@@ -54,20 +56,26 @@ public class LinkMapper implements MemberMapper<InstanceSchema.Builder> {
 
         this.name = name;
         this.property = property.serializableAccessor();
-        this.type = context.typeMapper(property.type());
-        if(type instanceof TypeMapper.OfArray) {
-            final TypeMapper.OfArray array = (TypeMapper.OfArray)type;
+        this.type = context.typeMapper(property);
+        final TypeMapper requiredType;
+        if(type instanceof TypeMapper.OfOptional) {
+            requiredType = ((TypeMapper.OfOptional) type).getValue();
+        } else {
+            requiredType = type;
+        }
+        if(requiredType instanceof TypeMapper.OfArray) {
+            final TypeMapper.OfArray array = (TypeMapper.OfArray)requiredType;
             if(array.getValue() instanceof TypeMapper.OfCustom) {
                 itemType = (TypeMapper.OfCustom)array.getValue();
                 single = false;
             } else {
                 throw new IllegalStateException("Cannot create link item mapper for " + array.getValue());
             }
-        } else if(type instanceof TypeMapper.OfCustom) {
-            itemType = (TypeMapper.OfCustom) type;
+        } else if(requiredType instanceof TypeMapper.OfCustom) {
+            itemType = (TypeMapper.OfCustom) requiredType;
             single = true;
         } else {
-            throw new IllegalStateException("Cannot create link mapper for " + type);
+            throw new IllegalStateException("Cannot create link mapper for " + requiredType);
         }
         this.expression = expression;
         this.sort = sort;
@@ -118,9 +126,13 @@ public class LinkMapper implements MemberMapper<InstanceSchema.Builder> {
     @Override
     public void unmarshall(final Object source, final Map<String, Object> target) throws InvocationTargetException, IllegalAccessException {
 
-        if(property.canGet()) {
-            final Object value = property.get(source);
-            target.put(name, type.unmarshall(value));
+        try {
+            if (property.canGet()) {
+                final Object value = property.get(source);
+                target.put(name, type.unmarshall(value));
+            }
+        } catch (final UnexpectedTypeException e) {
+            throw new MappingException(this.name, e);
         }
     }
 

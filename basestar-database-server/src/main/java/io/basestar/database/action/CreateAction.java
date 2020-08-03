@@ -36,10 +36,7 @@ import io.basestar.util.Nullsafe;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
@@ -107,7 +104,7 @@ public class CreateAction implements Action {
         Instance.setUpdated(initial, now);
         Instance.setHash(initial, schema.hash(initial));
 
-        final Instance evaluated = schema.evaluateProperties(context.with(CommonVars.VAR_THIS, initial), new Instance(initial));
+        final Instance evaluated = schema.evaluateProperties(context.with(CommonVars.VAR_THIS, initial), Collections.emptySet(), new Instance(initial));
 
         final Set<Constraint.Violation> violations = schema.validate(context.with(CommonVars.VAR_THIS, evaluated), evaluated, evaluated);
         if(!violations.isEmpty()) {

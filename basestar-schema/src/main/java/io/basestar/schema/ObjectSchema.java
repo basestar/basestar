@@ -452,7 +452,7 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
     }
 
     @Override
-    public Instance create(final Map<String, Object> value, final boolean expand, final boolean suppress) {
+    public Instance create(final Map<String, Object> value, final Set<Name> expand, final boolean suppress) {
 
         if(value == null) {
             return null;
@@ -470,10 +470,11 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
                 result.put(entry.getKey(), entry.getValue());
             }
         }
-        if(expand) {
+        if(expand != null && !expand.isEmpty()) {
+            final Map<String, Set<Name>> branches = Name.branch(expand);
             Stream.of(links, transients).forEach(members -> members.forEach((name, link) -> {
                 if(value.containsKey(name)) {
-                    result.put(name, link.create(value.get(name), true, suppress));
+                    result.put(name, link.create(value.get(name), branches.get(name), suppress));
                 }
             }));
         }
@@ -489,11 +490,12 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
         });
     }
 
-    public Instance evaluateProperties(final Context context, final Instance object) {
+    public Instance evaluateProperties(final Context context, final Set<Name> expand, final Instance object) {
 
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         final Context thisContext = context.with(VAR_THIS, object);
         final HashMap<String, Object> result = new HashMap<>();
-        properties.forEach((k, v) -> result.put(k, v.evaluate(thisContext, object.get(k))));
+        properties.forEach((k, v) -> result.put(k, v.evaluate(thisContext, branches.get(k), object.get(k))));
         copyMeta(object, result);
         result.put(Reserved.HASH, hash(result));
         // Links deliberately not copied, this is only used to prepare an instance for write.

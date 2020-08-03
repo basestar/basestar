@@ -20,9 +20,7 @@ package io.basestar.spark.sink;
  * #L%
  */
 
-import java.io.Serializable;
-
-public interface Sink<I> extends Serializable {
+public interface Sink<I> {
 
     void accept(I input);
 }

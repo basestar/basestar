@@ -128,7 +128,7 @@ public interface SQLStrategy {
                 final org.jooq.Name objectTableName = objectTableName(schema);
                 final org.jooq.Name historyTableName = historyTableName(schema);
 
-                final List<Field<?>> columns = rowMapper(schema, schema.getExpand()).columns();
+                final List<Field<?>> columns = SQLUtils.fields(schema); //rowMapper(schema, schema.getExpand()).columns();
 
                 log.info("Creating table {}", objectTableName);
                 try(final CreateTableFinalStep create = context.createTableIfNotExists(objectTableName)

@@ -29,7 +29,7 @@ import io.basestar.expression.iterate.ForAny;
 import io.basestar.expression.iterate.Of;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.Schema;
-import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
@@ -41,7 +41,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.*;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -94,25 +93,24 @@ public class UseMap<T> implements Use<Map<String, T>> {
     }
 
     @Override
-    public Map<String, T> create(final Object value, final boolean expand, final boolean suppress) {
+    public Map<String, T> create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        return create(value, suppress, v -> type.create(v, expand, suppress));
+        final Map<String, Set<Name>> branches = Name.branch(expand);
+        return create(value, suppress, (k, v) -> type.create(v, branch(branches, k), suppress));
     }
 
-    public static <T> Map<String, T> create(final Object value, final boolean suppress, final Function<Object, T> fn) {
+    public static <T> Map<String, T> create(final Object value, final boolean suppress, final BiFunction<String, Object, T> fn) {
 
-        if(value == null) {
-            return null;
-        } else if(value instanceof Map) {
+        if(value instanceof Map) {
             return ((Map<?, ?>) value).entrySet().stream()
                     .collect(Collectors.toMap(
                             entry -> entry.getKey().toString(),
-                            entry -> fn.apply(entry.getValue())
+                            entry -> fn.apply(entry.getKey().toString(), entry.getValue())
                     ));
         } else if(suppress) {
             return null;
         } else {
-            throw new InvalidTypeException();
+            throw new UnexpectedTypeException(NAME, value);
         }
     }
 
@@ -241,7 +239,7 @@ public class UseMap<T> implements Use<Map<String, T>> {
 //        }
 //    }
 
-    private static Set<Name> branch(final Map<String, Set<Name>> branches, final String key) {
+    public static Set<Name> branch(final Map<String, Set<Name>> branches, final String key) {
 
         final Set<Name> branch = branches.get(key);
         if(branch == null) {

@@ -47,7 +47,7 @@ public class UseAny implements Use<Object> {
     }
 
     @Override
-    public Object create(final Object value, final boolean expand, final boolean suppress) {
+    public Object create(final Object value, final Set<Name> expand, final boolean suppress) {
 
         return value;
     }

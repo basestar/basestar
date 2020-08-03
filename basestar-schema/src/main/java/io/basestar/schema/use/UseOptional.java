@@ -1,5 +1,6 @@
 package io.basestar.schema.use;
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Constraint;
@@ -16,60 +17,66 @@ import java.util.Map;
 import java.util.Set;
 
 @Data
-public class UseNullable<T> implements Use<T> {
+public class UseOptional<T> implements Use<T> {
 
-    public static final String NAME = "nullable";
+    public static final String SYMBOL = "?";
+
+    public static final String NAME = "optional";
 
     private final Use<T> type;
 
     @Override
     public <R> R visit(final Visitor<R> visitor) {
 
-        return visitor.visitNullable(this);
+        return visitor.visitOptional(this);
     }
 
-    public static UseNullable<?> from(final Object config) {
+    public static UseOptional<?> from(final Object config) {
 
-        return Use.fromNestedConfig(config, (type, nestedConfig) -> new UseNullable<>(type));
+        return Use.fromNestedConfig(config, (type, nestedConfig) -> new UseOptional<>(type));
     }
 
     @Override
-    public boolean isNullable() {
+    public boolean isOptional() {
 
         return true;
     }
 
     @Override
-    public Use<T> nullable(final boolean nullable) {
+    public Use<T> optional(final boolean nullable) {
 
         if(nullable) {
             return this;
         } else {
-            return type.nullable(false);
+            return type.optional(false);
         }
     }
 
     @Override
-    public UseNullable<?> resolve(final Schema.Resolver resolver) {
+    public UseOptional<?> resolve(final Schema.Resolver resolver) {
 
         final Use<?> resolved = type.resolve(resolver);
         if(resolved == type) {
             return this;
         } else {
-            return new UseNullable<>(resolved);
+            return new UseOptional<>(resolved);
         }
     }
 
     @Override
-    public T create(final Object value, final boolean expand, final boolean suppress) {
+    public T create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        return type.create(value, expand, suppress);
+        if(value == null) {
+            return null;
+        } else {
+            return type.create(value, expand, suppress);
+        }
     }
 
     @Override
     public Code code() {
 
-        return Code.NULLABLE;
+        return Code.OPTIONAL;
     }
 
     @Override
@@ -93,7 +100,9 @@ public class UseNullable<T> implements Use<T> {
     @Override
     public Object toConfig() {
 
-        return null;
+        return ImmutableMap.of(
+                NAME, type
+        );
     }
 
     @Override
@@ -103,15 +112,29 @@ public class UseNullable<T> implements Use<T> {
     }
 
     @Override
+    public void serialize(final T value, final DataOutput out) throws IOException {
+
+        // Skip emitting a wrapper for optional, since we allow nulls anywhere
+        serializeValue(value, out);
+    }
+
+    @Override
+    public T deserialize(final DataInput in) throws IOException {
+
+        // Skip emitting a wrapper for optional, since we allow nulls anywhere
+        return deserializeValue(in);
+    }
+
+    @Override
     public void serializeValue(final T value, final DataOutput out) throws IOException {
 
-        type.serializeValue(value, out);
+        type.serialize(value, out);
     }
 
     @Override
     public T deserializeValue(final DataInput in) throws IOException {
 
-        return type.deserializeValue(in);
+        return type.deserialize(in);
     }
 
     @Override

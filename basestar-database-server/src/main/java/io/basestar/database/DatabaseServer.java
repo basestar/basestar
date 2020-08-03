@@ -112,7 +112,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
     }
 
     @Override
-    public CompletableFuture<Map<String, Instance>> transaction(final Caller caller, final TransactionOptions options) {
+    public CompletableFuture<Map<String, Instance>> transaction(final Caller caller, final BatchOptions options) {
 
         log.debug("Batch: options={}", options);
 
@@ -784,11 +784,12 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final Storage.ReadTransaction read = storage.read(Consistency.ATOMIC);
         read.readObject(schema, id, ImmutableSet.of());
         read.readObject(refSchema, refId, ImmutableSet.of());
+        final Set<Name> expand = schema.getExpand();
         return read.read().thenCompose(readResponse -> {
-            final Instance before = schema.create(readResponse.getObject(schema, id), true, true);
+            final Instance before = schema.create(readResponse.getObject(schema, id), expand, true);
             if(before != null) {
                 final Set<Name> refExpand = schema.refExpand(refSchema.getQualifiedName(), schema.getExpand());
-                final Instance refAfter = refSchema.create(readResponse.getObject(refSchema, refId), true, true);
+                final Instance refAfter = refSchema.create(readResponse.getObject(refSchema, refId), expand, true);
                 return expand(context(Caller.SUPER), refAfter, refExpand).thenCompose(expandedRefAfter -> {
 
                     final Long version = Instance.getVersion(before);

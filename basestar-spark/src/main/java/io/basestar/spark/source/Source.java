@@ -23,9 +23,7 @@ package io.basestar.spark.source;
 import io.basestar.spark.sink.Sink;
 import io.basestar.spark.transform.Transform;
 
-import java.io.Serializable;
-
-public interface Source<I> extends Serializable {
+public interface Source<I> {
 
     void then(Sink<I> sink);
 

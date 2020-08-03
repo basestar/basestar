@@ -2,15 +2,15 @@ A:
   type: object
   properties:
     ref:
-      type: B
+      type: B?
     arrayRef:
       type:
-        array: B
+        array?: B
     mapRef:
       type:
-        map: B
+        map?: B
     structRef:
-      type: E
+      type: E?
   links:
     multi:
       schema: C
@@ -20,7 +20,7 @@ B:
   type: object
   properties:
     key:
-      type: D
+      type: D?
     value:
       type: integer
 
@@ -28,7 +28,7 @@ C:
   type: object
   properties:
     owner:
-      type: A
+      type: A?
 
 D:
   type: object
@@ -37,16 +37,16 @@ E:
   type: struct
   properties:
     ref:
-      type: B
+      type: B?
 
 AggView:
   type: view
   properties:
     agg:
-      type: string
+      type: number
       expression: sum(value) + 2
     key:
-      type: string
+      type: string?
       expression: key.id
   from: B
   group: key

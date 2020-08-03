@@ -229,12 +229,6 @@ public class StructSchema implements InstanceSchema {
     }
 
     @Override
-    public SortedMap<String, Use<?>> layout() {
-
-        return layout(Collections.emptySet());
-    }
-
-    @Override
     public Map<String, ? extends Member> getDeclaredMembers() {
 
         return declaredProperties;
@@ -261,7 +255,7 @@ public class StructSchema implements InstanceSchema {
     }
 
     @Override
-    public Instance create(final Map<String, Object> value, final boolean expand, final boolean suppress) {
+    public Instance create(final Map<String, Object> value, final Set<Name> expand, final boolean suppress) {
 
         return new Instance(readProperties(value, expand, suppress));
     }

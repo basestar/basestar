@@ -182,7 +182,7 @@ public class Mappings {
                     }
 
                     @Override
-                    public <T> FieldType visitNullable(final UseNullable<T> type) {
+                    public <T> FieldType visitOptional(final UseOptional<T> type) {
 
                         return type.getType().visit(this);
                     }

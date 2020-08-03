@@ -23,7 +23,6 @@ MyObject:
         array: MyEnum
     test3:
       type: MyObject
-      required: true
     mydate:
       type: date
     mydatetime:

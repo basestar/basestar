@@ -403,7 +403,7 @@ public interface GraphQLStrategy {
             }
 
             @Override
-            public <T> String visitNullable(final UseNullable<T> type) {
+            public <T> String visitOptional(final UseOptional<T> type) {
 
                 return type.getType().visit(this);
             }

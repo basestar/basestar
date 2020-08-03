@@ -147,7 +147,7 @@ public interface Member extends Named, Described, Serializable, Extendable {
         return getType().openApi().description(getDescription());
     }
 
-    Object create(Object value, boolean expand, boolean suppress);
+    Object create(Object value, Set<Name> expand, boolean suppress);
 
     Descriptor descriptor();
 }

@@ -354,9 +354,7 @@ public abstract class TestStorage {
 
         final Map<String, Object> data = new HashMap<>();
         data.put("string", str.toString());
-        data.put(Reserved.ID, id);
-        data.put(Reserved.VERSION, 1L);
-        final Instance instance = schema.create(data);
+        final Instance instance = instance(schema, id, 1L, data);
 
         storage.write(Consistency.ATOMIC)
                 .createObject(schema, id, instance)
@@ -748,11 +746,8 @@ public abstract class TestStorage {
     private String createComplete(final Storage storage, final ObjectSchema schema, final Map<String, Object> data) {
 
         final StorageTraits traits = storage.storageTraits(schema);
-        final Map<String, Object> instance = new HashMap<>(data);
         final String id = UUID.randomUUID().toString();
-        Instance.setId(instance, id);
-        Instance.setVersion(instance, 1L);
-        Instance.setSchema(instance, schema.getQualifiedName());
+        final Map<String, Object> instance = instance(schema, id, 1L, data);
         final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC);
         write.createObject(schema, id, instance);
         for(final Index index : schema.getIndexes().values()) {
@@ -774,10 +769,15 @@ public abstract class TestStorage {
 
     private Instance instance(final ObjectSchema schema, final String id, final long version, final Map<String, Object> data) {
 
-        final Map<String, Object> object = new HashMap<>(data);
-        object.put(Reserved.ID, id);
-        object.put(Reserved.VERSION, version);
-        return schema.create(object);
+        final LocalDateTime now = LocalDateTime.now();
+        final Map<String, Object> instance = new HashMap<>(data);
+        Instance.setId(instance, id);
+        Instance.setVersion(instance, version);
+        Instance.setSchema(instance, schema.getQualifiedName());
+        Instance.setCreated(instance, now);
+        Instance.setUpdated(instance, now);
+        Instance.setHash(instance, schema.hash(instance));
+        return schema.create(instance);
     }
 
     private static void assertCause(final Class<? extends Throwable> except, final Executable exe) {

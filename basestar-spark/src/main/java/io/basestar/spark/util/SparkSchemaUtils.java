@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import io.basestar.schema.*;
+import io.basestar.schema.layout.Layout;
 import io.basestar.schema.use.*;
 import io.basestar.util.Name;
 import org.apache.spark.sql.Row;
@@ -39,38 +40,17 @@ import java.util.stream.Stream;
 
 public class SparkSchemaUtils {
 
-    public static StructType structType(final InstanceSchema schema, final Set<Name> expand) {
+    public static StructType structType(final Layout schema, final Set<Name> expand) {
 
         return structType(schema, expand, ImmutableMap.of());
     }
 
-    public static StructType structType(final InstanceSchema schema, final Set<Name> expand, final Map<String, Use<?>> extraMetadata) {
+    public static StructType structType(final Layout schema, final Set<Name> expand, final Map<String, Use<?>> extraMetadata) {
 
-        final List<StructField> fields = new ArrayList<>();
         final Map<String, Set<Name>> branches = Name.branch(expand);
-        schema.getProperties()
-                .forEach((name, property) -> fields.add(field(name, property, branches.get(name))));
-        schema.metadataSchema()
-                .forEach((name, type) -> fields.add(field(name, type, null)));
-        extraMetadata.forEach((name, type) -> fields.add(field(name, type, null)));
-        if(schema instanceof Link.Resolver) {
-            ((Link.Resolver)schema).getLinks()
-                    .forEach((name, link) -> {
-                        final Set<Name> branch = branches.get(name);
-                        if(branch != null) {
-                            fields.add(field(name, link, branch));
-                        }
-                    });
-        }
-        if(schema instanceof Transient.Resolver) {
-            ((Transient.Resolver)schema).getTransients()
-                    .forEach((name, trans) -> {
-                        final Set<Name> branch = branches.get(name);
-                        if(branch != null) {
-                            fields.add(field(name, trans, branch));
-                        }
-                    });
-        }
+        final List<StructField> fields = new ArrayList<>();
+        schema.layoutSchema(expand).forEach((name, type) -> fields.add(field(name, type, branches.get(name))));
+        extraMetadata.forEach((name, type) -> fields.add(field(name, type, branches.get(name))));
         fields.sort(Comparator.comparing(StructField::name));
         return DataTypes.createStructType(fields);
     }
@@ -87,29 +67,9 @@ public class SparkSchemaUtils {
     public static StructType refType() {
 
         final List<StructField> fields = new ArrayList<>();
-        ObjectSchema.REF_SCHEMA
-                .forEach((name, type) -> fields.add(field(name, type, null)));
+        ObjectSchema.REF_SCHEMA.forEach((name, type) -> fields.add(field(name, type, null)));
         fields.sort(Comparator.comparing(StructField::name));
         return DataTypes.createStructType(fields);
-    }
-
-    public static StructField field(final String name, final Property property, final Set<Name> expand) {
-
-        return field(name, property.getType(), expand);
-    }
-
-    public static StructField field(final String name, final Link link, final Set<Name> expand) {
-
-        return field(name, link.getType(), expand);
-    }
-
-    public static StructField field(final String name, final Transient trans, final Set<Name> expand) {
-
-        if(trans.isTyped()) {
-            return field(name, trans.getType(), expand);
-        } else {
-            throw new IllegalStateException("Cannot expand untyped transient");
-        }
     }
 
     public static StructField field(final String name, final Use<?> type, final Set<Name> expand) {
@@ -224,40 +184,30 @@ public class SparkSchemaUtils {
             }
 
             @Override
-            public <T> DataType visitNullable(final UseNullable<T> type) {
+            public <T> DataType visitOptional(final UseOptional<T> type) {
 
                 return type.getType().visit(this);
             }
         });
     }
 
-    public static Map<String, Object> fromSpark(final InstanceSchema schema, final Row row) {
+    public static Map<String, Object> fromSpark(final Layout schema, final Row row) {
 
         return fromSpark(schema, ImmutableSet.of(), ImmutableMap.of(), row);
     }
 
-    public static Map<String, Object> fromSpark(final InstanceSchema schema, final Set<Name> expand, final Row row) {
+    public static Map<String, Object> fromSpark(final Layout schema, final Set<Name> expand, final Row row) {
 
-       return fromSpark(schema, expand, ImmutableMap.of(), row);
+        return fromSpark(schema, expand, Collections.emptyMap(), row);
     }
 
-    public static Map<String, Object> fromSpark(final InstanceSchema schema, final Set<Name> expand, final Map<String, Use<?>> extraMetadata, final Row row) {
+    public static Map<String, Object> fromSpark(final Layout schema, final Set<Name> expand, final Map<String, Use<?>> extraMetadata, final Row row) {
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
         final Map<String, Object> object = new HashMap<>();
-        schema.getProperties().forEach((name, property) -> object.put(name, fromSpark(property.getType(), branches.get(name), get(row, name))));
-        schema.metadataSchema().forEach((name, type) -> object.put(name, fromSpark(type, get(row, name))));
-        extraMetadata.forEach((name, type) -> object.put(name, fromSpark(type, get(row, name))));
-        if(schema instanceof Link.Resolver) {
-            ((Link.Resolver)schema).getLinks()
-                    .forEach((name, link) -> {
-                        final Set<Name> branch = branches.get(name);
-                        if(branch != null) {
-                            object.put(name, fromSpark(link, branch, get(row, name)));
-                        }
-                    });
-        }
-        return schema.create(object, true, true);
+        schema.layoutSchema(expand).forEach((name, type) -> object.put(name, fromSpark(type, branches.get(name), get(row, name))));
+        extraMetadata.forEach((name, type) -> object.put(name, fromSpark(type, branches.get(name), get(row, name))));
+        return object;
     }
 
     protected static Object fromSpark(final Link link, final Set<Name> expand, final Object value) {
@@ -278,16 +228,21 @@ public class SparkSchemaUtils {
 
         final Map<String, Object> object = new HashMap<>();
         ObjectSchema.REF_SCHEMA
-                .forEach((name, type) -> object.put(name, fromSpark(type, get(row, name))));
+                .forEach((name, type) -> object.put(name, fromSpark(type, Collections.emptySet(), get(row, name))));
         return object;
     }
 
-    public static Object fromSpark(final Use<?> type, final Object value) {
-
-        return fromSpark(type, ImmutableSet.of(), value);
-    }
+//    public static Object fromSpark(final Use<?> type, final Object value) {
+//
+//        return fromSpark(type, Collections.emptySet(), value);
+//    }
 
     public static Object fromSpark(final Use<?> type, final Set<Name> expand, final Object value) {
+
+        return fromSpark(type, expand, value, true);
+    }
+
+    public static Object fromSpark(final Use<?> type, final Set<Name> expand, final Object value, final boolean suppress) {
 
         if(value == null) {
             return null;
@@ -297,31 +252,31 @@ public class SparkSchemaUtils {
             @Override
             public Object visitBoolean(final UseBoolean type) {
 
-                return type.create(value, false, true);
+                return type.create(value, expand, suppress);
             }
 
             @Override
             public Object visitInteger(final UseInteger type) {
 
-                return type.create(value, false, true);
+                return type.create(value, expand, suppress);
             }
 
             @Override
             public Object visitNumber(final UseNumber type) {
 
-                return type.create(value, false, true);
+                return type.create(value, expand, suppress);
             }
 
             @Override
             public Object visitString(final UseString type) {
 
-                return type.create(value, false, true);
+                return type.create(value, expand, suppress);
             }
 
             @Override
             public Object visitEnum(final UseEnum type) {
 
-                return type.create(value, false, true);
+                return type.create(value, expand, suppress);
             }
 
             @Override
@@ -341,7 +296,7 @@ public class SparkSchemaUtils {
                 if(value instanceof Seq<?>) {
                     final List<T> result = new ArrayList<>();
                     ((Seq<?>)value).foreach(ScalaUtils.scalaFunction(v -> {
-                        result.add((T)fromSpark(type.getType(), v));
+                        result.add((T)fromSpark(type.getType(), expand, v, suppress));
                         return null;
                     }));
                     return result;
@@ -357,7 +312,7 @@ public class SparkSchemaUtils {
                 if(value instanceof Seq<?>) {
                     final Set<T> result = new HashSet<>();
                     ((Seq<?>)value).foreach(ScalaUtils.scalaFunction(v -> {
-                        result.add((T)fromSpark(type.getType(), v));
+                        result.add((T)fromSpark(type.getType(), expand, v, suppress));
                         return null;
                     }));
                     return result;
@@ -371,11 +326,12 @@ public class SparkSchemaUtils {
             public <T> Object visitMap(final UseMap<T> type) {
 
                 if(value instanceof scala.collection.Map<?, ?>) {
+                    final Map<String, Set<Name>> branches = Name.branch(expand);
                     final Map<String, T> result = new HashMap<>();
                     ((scala.collection.Map<?, ?>)value).foreach(ScalaUtils.scalaFunction(e -> {
                         final String k = (String)e._1();
                         final Object v = e._2();
-                        result.put(k, (T)fromSpark(type.getType(), v));
+                        result.put(k, (T)fromSpark(type.getType(), branches.get(k), v, suppress));
                         return null;
                     }));
                     return result;
@@ -397,19 +353,19 @@ public class SparkSchemaUtils {
             @Override
             public Object visitBinary(final UseBinary type) {
 
-                return type.create(value, false, true);
+                return type.create(value, expand, suppress);
             }
 
             @Override
             public Object visitDate(final UseDate type) {
 
-                return type.create(value, false, true);
+                return type.create(value, expand, suppress);
             }
 
             @Override
             public Object visitDateTime(final UseDateTime type) {
 
-                return type.create(value, false, true);
+                return type.create(value, expand, suppress);
             }
 
             @Override
@@ -423,35 +379,30 @@ public class SparkSchemaUtils {
             }
 
             @Override
-            public <T> Object visitNullable(final UseNullable<T> type) {
+            public <T> Object visitOptional(final UseOptional<T> type) {
 
                 return type.getType().visit(this);
             }
         });
     }
 
-    // FIXME::
-    public static Row toSpark(final InstanceSchema schema, final StructType structType, final Map<String, Object> object) {
+    public static Row toSpark(final Layout schema, final Set<Name> expand, final StructType structType, final Map<String, Object> object) {
 
-        return toSpark(schema, ImmutableMap.of(), structType, object);
+        return toSpark(schema, expand, ImmutableMap.of(), structType, object);
     }
 
-    // FIXME::
-    public static Row toSpark(final InstanceSchema schema, final Map<String, Use<?>> extraMetadata, final StructType structType, final Map<String, Object> object) {
+    public static Row toSpark(final Layout schema, final Set<Name> expand, final Map<String, Use<?>> extraMetadata, final StructType structType, final Map<String, Object> object) {
 
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         final StructField[] fields = structType.fields();
         final Object[] values = new Object[fields.length];
-        schema.metadataSchema().forEach((name, type) -> {
+        schema.layoutSchema(expand).forEach((name, type) -> {
             final int i = structType.fieldIndex(name);
-            values[i] = toSpark(type, fields[i].dataType(), object.get(name));
-        });
-        schema.getProperties().forEach((name, property) -> {
-            final int i = structType.fieldIndex(name);
-            values[i] = toSpark(property.getType(), fields[i].dataType(), object.get(name));
+            values[i] = toSpark(type, branches.get(name), fields[i].dataType(), object.get(name));
         });
         extraMetadata.forEach((name, type) -> {
             final int i = structType.fieldIndex(name);
-            values[i] = toSpark(type, fields[i].dataType(), object.get(name));
+            values[i] = toSpark(type, branches.get(name), fields[i].dataType(), object.get(name));
         });
         return new GenericRowWithSchema(values, structType);
     }
@@ -463,12 +414,17 @@ public class SparkSchemaUtils {
         final Object[] values = new Object[fields.length];
         ObjectSchema.REF_SCHEMA.forEach((name, type) -> {
             final int i = structType.fieldIndex(name);
-            values[i] = toSpark(type, fields[i].dataType(), object.get(name));
+            values[i] = toSpark(type, Collections.emptySet(), fields[i].dataType(), object.get(name));
         });
         return new GenericRowWithSchema(values, structType);
     }
 
-    public static Object toSpark(final Use<?> type, final DataType dataType, final Object value) {
+    public static Object toSpark(final Use<?> type, final Set<Name> expand, final DataType dataType, final Object value) {
+
+        return toSpark(type, expand, dataType, value, true);
+    }
+
+    public static Object toSpark(final Use<?> type, final Set<Name> expand, final DataType dataType, final Object value, final boolean suppress) {
 
         if(value == null) {
             return null;
@@ -478,31 +434,31 @@ public class SparkSchemaUtils {
             @Override
             public Object visitBoolean(final UseBoolean type) {
 
-                return scala.Boolean.box(type.create(value, false, true));
+                return scala.Boolean.box(type.create(value, expand, suppress));
             }
 
             @Override
             public Object visitInteger(final UseInteger type) {
 
-                return scala.Long.box(type.create(value, false, true));
+                return scala.Long.box(type.create(value, expand, suppress));
             }
 
             @Override
             public Object visitNumber(final UseNumber type) {
 
-                return scala.Double.box(type.create(value, false, true));
+                return scala.Double.box(type.create(value, expand, suppress));
             }
 
             @Override
             public Object visitString(final UseString type) {
 
-                return type.create(value, false, true);
+                return type.create(value, expand, suppress);
             }
 
             @Override
             public Object visitEnum(final UseEnum type) {
 
-                return type.create(value, false, true);
+                return type.create(value, expand, suppress);
             }
 
             @Override
@@ -522,7 +478,7 @@ public class SparkSchemaUtils {
                 if(value instanceof Collection<?> && dataType instanceof ArrayType) {
                     final DataType valueDataType = ((ArrayType) dataType).elementType();
                     final Stream<Object> stream = ((Collection<T>)value).stream()
-                            .map(v -> toSpark(type.getType(), valueDataType, v));
+                            .map(v -> toSpark(type.getType(), expand, valueDataType, v, suppress));
                     return ScalaUtils.asScalaSeq(stream.iterator());
                 } else {
                     throw new IllegalStateException();
@@ -546,10 +502,11 @@ public class SparkSchemaUtils {
             public <T> Object visitMap(final UseMap<T> type) {
 
                 if(value instanceof Map<?, ?> && dataType instanceof MapType) {
+                    final Map<String, Set<Name>> branches = Name.branch(expand);
                     final DataType valueDataType = ((MapType) dataType).valueType();
                     final Map<String, Object> tmp = new HashMap<>();
                     ((Map<String, T>)value)
-                            .forEach((k, v) -> tmp.put(k, toSpark(type.getType(), valueDataType, v)));
+                            .forEach((k, v) -> tmp.put(k, toSpark(type.getType(), UseMap.branch(branches, k), valueDataType, v, suppress)));
                     return ScalaUtils.asScalaMap(tmp);
                 } else {
                     throw new IllegalStateException();
@@ -561,7 +518,7 @@ public class SparkSchemaUtils {
             public Object visitStruct(final UseStruct type) {
 
                 if(value instanceof Map<?, ?> && dataType instanceof StructType) {
-                    return toSpark(type.getSchema(), (StructType)dataType, (Map<String, Object>)value);
+                    return toSpark(type.getSchema(), expand, (StructType)dataType, (Map<String, Object>)value);
                 } else {
                     throw new IllegalStateException();
                 }
@@ -570,19 +527,19 @@ public class SparkSchemaUtils {
             @Override
             public Object visitBinary(final UseBinary type) {
 
-                return type.create(value, false, true);
+                return type.create(value, expand, suppress);
             }
 
             @Override
             public Object visitDate(final UseDate type) {
 
-                return type.create(value, false, true);
+                return type.create(value, expand, suppress);
             }
 
             @Override
             public Object visitDateTime(final UseDateTime type) {
 
-                return type.create(value, false, true);
+                return type.create(value, expand, suppress);
             }
 
             @Override
@@ -592,7 +549,7 @@ public class SparkSchemaUtils {
             }
 
             @Override
-            public <T> Object visitNullable(final UseNullable<T> type) {
+            public <T> Object visitOptional(final UseOptional<T> type) {
 
                 return type.getType().visit(this);
             }

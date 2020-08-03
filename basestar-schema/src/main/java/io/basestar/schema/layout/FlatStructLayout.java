@@ -2,7 +2,7 @@ package io.basestar.schema.layout;
 
 import io.basestar.schema.Reserved;
 import io.basestar.schema.use.Use;
-import io.basestar.schema.use.UseNullable;
+import io.basestar.schema.use.UseOptional;
 import io.basestar.schema.use.UseStruct;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -10,6 +10,7 @@ import io.basestar.util.Nullsafe;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Layout transformation that converts structs to top-level properties with delimited names.
@@ -40,61 +41,63 @@ public class FlatStructLayout implements Layout {
     }
 
     @Override
-    public Map<String, Use<?>> layout() {
+    public Map<String, Use<?>> layoutSchema(final Set<Name> expand) {
 
-        return schema(Name.empty(), base.layout(), false);
+        return schema(Name.empty(), base.layoutSchema(expand), expand, false);
     }
 
-    private Map<String, Use<?>> schema(final Name qualifiedName, final Map<String, Use<?>> schema, final boolean nullable) {
+    private Map<String, Use<?>> schema(final Name qualifiedName, final Map<String, Use<?>> schema, final Set<Name> expand, final boolean optional) {
 
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         final Map<String, Use<?>> result = new HashMap<>();
         schema.forEach((name, type) -> {
-            result.putAll(schema(qualifiedName.with(name), type, nullable));
+            result.putAll(schema(qualifiedName.with(name), type, branches.get(name), optional));
         });
         return result;
     }
 
-    private Map<String, Use<?>> schema(final Name qualifiedName, final Use<?> type, final boolean nullable) {
+    private Map<String, Use<?>> schema(final Name qualifiedName, final Use<?> type, final Set<Name> expand, final boolean optional) {
 
         return type.visit(new Use.Visitor.Defaulting<Map<String, Use<?>>>() {
 
             @Override
             public Map<String, Use<?>> visitDefault(final Use<?> type) {
 
-                return Collections.singletonMap(flatName(qualifiedName), type.nullable(nullable));
+                return Collections.singletonMap(flatName(qualifiedName), type.optional(optional));
             }
 
             @Override
-            public <T> Map<String, Use<?>> visitNullable(final UseNullable<T> type) {
+            public <T> Map<String, Use<?>> visitOptional(final UseOptional<T> type) {
 
-                return schema(qualifiedName, type.getType(), true);
+                return schema(qualifiedName, type.getType(), expand, true);
             }
 
             @Override
             public Map<String, Use<?>> visitStruct(final UseStruct type) {
 
-                return schema(qualifiedName, type.getSchema().layout(), nullable);
+                return schema(qualifiedName, type.getSchema().layoutSchema(expand), expand, optional);
             }
         });
     }
 
     @Override
-    public Map<String, Object> applyLayout(final Map<String, Object> object) {
+    public Map<String, Object> applyLayout(final Set<Name> expand, final Map<String, Object> object) {
 
-        return apply(Name.empty(), base.layout(), object);
+        return apply(Name.empty(), base.layoutSchema(expand), expand, object);
     }
 
-    private Map<String, Object> apply(final Name qualifiedName, final Map<String, Use<?>> schema, final Map<String, Object> object) {
+    private Map<String, Object> apply(final Name qualifiedName, final Map<String, Use<?>> schema, final Set<Name> expand, final Map<String, Object> object) {
 
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         final Map<String, Object> result = new HashMap<>();
         schema.forEach((name, type) -> {
             final Object value = object == null ? null : object.get(name);
-            result.putAll(apply(qualifiedName.with(name), type, value));
+            result.putAll(apply(qualifiedName.with(name), type,branches.get(name), value));
         });
         return result;
     }
 
-    private Map<String, Object> apply(final Name qualifiedName, final Use<?> type, final Object value) {
+    private Map<String, Object> apply(final Name qualifiedName, final Use<?> type, final Set<Name> expand, final Object value) {
 
         return type.visit(new Use.Visitor.Defaulting<Map<String, Object>>() {
 
@@ -107,27 +110,28 @@ public class FlatStructLayout implements Layout {
             @Override
             public Map<String, Object> visitStruct(final UseStruct type) {
 
-                return apply(qualifiedName, type.getSchema().layout(), type.create(value));
+                return apply(qualifiedName, type.getSchema().layoutSchema(expand), expand, type.create(value));
             }
         });
     }
 
     @Override
-    public Map<String, Object> unapplyLayout(final Map<String, Object> object) {
+    public Map<String, Object> unapplyLayout(final Set<Name> expand, final Map<String, Object> object) {
 
-        return unapply(Name.empty(), base.layout(), object);
+        return unapply(Name.empty(), base.layoutSchema(expand), expand, object);
     }
 
-    private Map<String, Object> unapply(final Name qualifiedName, final Map<String, Use<?>> schema, final Map<String, Object> object) {
+    private Map<String, Object> unapply(final Name qualifiedName, final Map<String, Use<?>> schema, final Set<Name> expand, final Map<String, Object> object) {
 
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         final Map<String, Object> result = new HashMap<>();
         schema.forEach((name, type) -> {
-            result.put(name, unapply(qualifiedName.with(name), type, object));
+            result.put(name, unapply(qualifiedName.with(name), type, branches.get(name), object));
         });
         return result;
     }
 
-    private Object unapply(final Name qualifiedName, final Use<?> type, final Map<String, Object> object) {
+    private Object unapply(final Name qualifiedName, final Use<?> type, final Set<Name> expand, final Map<String, Object> object) {
 
         return type.visit(new Use.Visitor.Defaulting<Object>() {
 
@@ -141,7 +145,7 @@ public class FlatStructLayout implements Layout {
             @Override
             public Object visitStruct(final UseStruct type) {
 
-                return unapply(qualifiedName, type.getSchema().layout(), object);
+                return unapply(qualifiedName, type.getSchema().layoutSchema(expand), expand, object);
             }
         });
     }

@@ -20,6 +20,23 @@ package io.basestar.schema.exception;
  * #L%
  */
 
-public class InvalidTypeException extends RuntimeException {
+import io.basestar.schema.Schema;
+import io.basestar.schema.use.Use;
 
+public class UnexpectedTypeException extends RuntimeException {
+
+    public UnexpectedTypeException(final Schema<?> expected, final Object actual) {
+
+        this(expected.getQualifiedName().toString(), actual);
+    }
+
+    public UnexpectedTypeException(final Use<?> expected, final Object actual) {
+
+        this(expected.toString(), actual);
+    }
+
+    public UnexpectedTypeException(final String expected, final Object actual) {
+
+        super("Expected type " + expected + " but was " + (actual == null ? "(null)" : actual.getClass()));
+    }
 }

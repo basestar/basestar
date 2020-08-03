@@ -23,7 +23,7 @@ package io.basestar.schema;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.layout.Layout;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseInstance;
@@ -41,7 +41,7 @@ import java.util.stream.Collectors;
 
 public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolver, Property.Resolver {
 
-    Instance create(Map<String, Object> value, boolean expand, boolean suppress);
+    Instance create(Map<String, Object> value, Set<Name> expand, boolean suppress);
 
     interface Descriptor extends Schema.Descriptor<Instance> {
 
@@ -62,9 +62,7 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
 
     SortedMap<String, Use<?>> metadataSchema();
 
-    SortedMap<String, Use<?>> layout();
-
-    default SortedMap<String, Use<?>> layout(final Set<Name> expand) {
+    default SortedMap<String, Use<?>> layoutSchema(final Set<Name> expand) {
 
         final SortedMap<String, Use<?>> result = new TreeMap<>();
         metadataSchema().forEach(result::put);
@@ -77,15 +75,17 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
     }
 
     @Override
-    default Map<String, Object> applyLayout(final Map<String, Object> object) {
+    default Map<String, Object> applyLayout(final Set<Name> expand, final Map<String, Object> object) {
 
-        return object;
+        // This is the default layout, by definition
+        return create(object, expand, false);
     }
 
     @Override
-    default Map<String, Object> unapplyLayout(final Map<String, Object> object) {
+    default Map<String, Object> unapplyLayout(final Set<Name> expand, final Map<String, Object> object) {
 
-        return object;
+        // This is the default layout, by definition
+        return create(object, expand, false);
     }
 
     InstanceSchema getExtend();
@@ -100,14 +100,14 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
 
     @Override
     @SuppressWarnings("unchecked")
-    default Instance create(final Object value, final boolean expand, final boolean suppress) {
+    default Instance create(final Object value, final Set<Name> expand, final boolean suppress) {
 
         if(value == null) {
             return null;
         } else if(value instanceof Map) {
             return create((Map<String, Object>)value, expand, suppress);
         } else {
-            throw new InvalidTypeException();
+            throw new UnexpectedTypeException(this, value);
         }
     }
 
@@ -171,10 +171,11 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
         }
     }
 
-    default Map<String, Object> readProperties(final Map<String, Object> object, final boolean expand, final boolean suppress) {
+    default Map<String, Object> readProperties(final Map<String, Object> object, final Set<Name> expand, final boolean suppress) {
 
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         final Map<String, Object> result = new HashMap<>();
-        getProperties().forEach((k, v) -> result.put(k, v.create(object.get(k), expand, suppress)));
+        getProperties().forEach((k, v) -> result.put(k, v.create(object.get(k), branches.get(k), suppress)));
         return Collections.unmodifiableMap(result);
     }
 

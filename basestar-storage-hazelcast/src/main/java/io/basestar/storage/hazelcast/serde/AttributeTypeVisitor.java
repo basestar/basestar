@@ -111,7 +111,7 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
     }
 
     @Override
-    public <T> AttributeType<?> visitNullable(final UseNullable<T> type) {
+    public <T> AttributeType<?> visitOptional(final UseOptional<T> type) {
 
         return type.getType().visit(this);
     }
@@ -205,7 +205,7 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
         }
 
         @Override
-        public <T> AttributeType<?> visitNullable(final UseNullable<T> type) {
+        public <T> AttributeType<?> visitOptional(final UseOptional<T> type) {
 
             return type.getType().visit(this);
         }

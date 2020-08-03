@@ -2,9 +2,9 @@
 Post:
   properties:
     string:
-      type: string
+      type: string?
     ref:
-      type: Post
+      type: Post?
 
 Comment:
   properties:

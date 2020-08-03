@@ -80,6 +80,7 @@ public class SchemaTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
     private Column column(final Column source, final DataType sourceDataType, final Use<?> type) {
 
+        final Set<Name> expand = this.expand;
         final DataType targetDataType = SparkSchemaUtils.type(type, expand);
         if(targetDataType.equals(sourceDataType)) {
             return source;
@@ -88,8 +89,8 @@ public class SchemaTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
             final UserDefinedFunction udf = functions.udf(
                     (Object sourceValue) -> {
-                        final Object targetValue = type.create(SparkSchemaUtils.fromSpark(sourceType, sourceValue));
-                        return SparkSchemaUtils.toSpark(type, targetDataType, targetValue);
+                        final Object targetValue = type.create(SparkSchemaUtils.fromSpark(sourceType, expand, sourceValue, true));
+                        return SparkSchemaUtils.toSpark(type, expand, targetDataType, targetValue, true);
                     },
                     targetDataType
             );

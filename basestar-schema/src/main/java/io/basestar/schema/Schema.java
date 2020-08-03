@@ -86,10 +86,10 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
 
     default T create(final Object value) {
 
-        return create(value, false, false);
+        return create(value, Collections.emptySet(), false);
     }
 
-    T create(Object value, boolean expand, boolean suppress);
+    T create(Object value, Set<Name> expand, boolean suppress);
 
     int getSlot();
 

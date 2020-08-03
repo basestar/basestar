@@ -26,7 +26,7 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.Schema;
-import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.schema.exception.TypeSyntaxException;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
@@ -68,7 +68,7 @@ public interface Use<T> extends Serializable {
         DATE,
         DATETIME,
         VIEW,
-        NULLABLE
+        OPTIONAL
     }
 
     <R> R visit(Visitor<R> visitor);
@@ -80,11 +80,11 @@ public interface Use<T> extends Serializable {
 
     Use<?> resolve(Schema.Resolver resolver);
 
-    T create(Object value, boolean expand, boolean suppress);
+    T create(Object value, Set<Name> expand, boolean suppress);
 
     default T create(final Object value) {
 
-        return create(value, false, false);
+        return create(value, null, false);
     }
 
     Code code();
@@ -122,16 +122,16 @@ public interface Use<T> extends Serializable {
 
     void collectDependencies(Set<Name> expand, Map<Name, Schema<?>> out);
 
-    default boolean isNullable() {
+    default boolean isOptional() {
 
         return false;
     }
 
-    default Use<T> nullable(final boolean nullable) {
+    default Use<T> optional(final boolean optional) {
 
-        // Inverse implemented in UseNullable
-        if(nullable) {
-            return new UseNullable<>(this);
+        // Inverse implemented in UseOptional
+        if(optional) {
+            return new UseOptional<>(this);
         } else {
             return this;
         }
@@ -141,18 +141,37 @@ public interface Use<T> extends Serializable {
     @SuppressWarnings("unchecked")
     static Use<?> fromConfig(final Object value) {
 
-        final String type;
+        final String typeName;
         final Object config;
-        if(value instanceof String) {
-            type = (String)value;
+        if (value instanceof String) {
+            typeName = ((String) value).trim();
             config = Collections.emptyMap();
-        } else if(value instanceof Map) {
+        } else if (value instanceof Map) {
             final Map.Entry<String, Object> entry = ((Map<String, Object>) value).entrySet().iterator().next();
-            type = entry.getKey();
+            typeName = entry.getKey().trim();
             config = entry.getValue();
         } else {
-            throw new InvalidTypeException();
+            throw new TypeSyntaxException();
         }
+        final String type;
+        final boolean optional;
+        if(typeName.endsWith(UseOptional.SYMBOL)) {
+            type = typeName.substring(0, typeName.length() - UseOptional.SYMBOL.length()).trim();
+            optional = true;
+        } else {
+            type = typeName;
+            optional = false;
+        }
+        final Use<?> result = fromConfig(type, config);
+        if(optional) {
+            return result.optional(true);
+        } else {
+            return result;
+        }
+    }
+
+    static Use<?> fromConfig(final String type, final Object config) {
+
         switch(type) {
             case UseBoolean.NAME:
                 return UseBoolean.from(config);
@@ -174,8 +193,8 @@ public interface Use<T> extends Serializable {
                 return UseDate.from(config);
             case UseDateTime.NAME:
                 return UseDateTime.from(config);
-            case UseNullable.NAME:
-                return UseNullable.from(config);
+            case UseOptional.NAME:
+                return UseOptional.from(config);
             default:
                 return UseNamed.from(type, config);
         }
@@ -199,7 +218,7 @@ public interface Use<T> extends Serializable {
                 nestedConfig = null;
             }
         } else {
-            throw new InvalidTypeException();
+            throw new TypeSyntaxException();
         }
         return apply.apply((V)nestedType, nestedConfig);
     }
@@ -308,7 +327,7 @@ public interface Use<T> extends Serializable {
             throw new UnsupportedOperationException();
         }
 
-        <T> R visitNullable(UseNullable<T> type);
+        <T> R visitOptional(UseOptional<T> type);
 
         interface Defaulting<R> extends Visitor<R> {
 
@@ -331,7 +350,7 @@ public interface Use<T> extends Serializable {
 
             default R visitLinkable(final UseLinkable type) {
 
-                return visitDefault(type);
+                return visitInstance(type);
             }
 
             @Override
@@ -419,7 +438,7 @@ public interface Use<T> extends Serializable {
             }
 
             @Override
-            default <T> R visitNullable(final UseNullable<T> type) {
+            default <T> R visitOptional(final UseOptional<T> type) {
 
                 return type.getType().visit(this);
             }

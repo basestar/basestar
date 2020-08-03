@@ -453,7 +453,7 @@ public class GraphQLUtils {
                 }
 
                 @Override
-                public <V> Object visitNullable(final UseNullable<V> type) {
+                public <V> Object visitOptional(final UseOptional<V> type) {
 
                     return type.getType().visit(this);
                 }

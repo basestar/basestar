@@ -6,7 +6,6 @@ Project:
   properties:
     name:
       type: string
-      required: true
       constraints:
         length:
           expression: value.size() > 2

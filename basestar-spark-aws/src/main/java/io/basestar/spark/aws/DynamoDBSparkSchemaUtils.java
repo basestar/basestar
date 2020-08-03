@@ -29,6 +29,7 @@ import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.storage.dynamodb.DynamoDBLegacyUtils;
 import io.basestar.storage.dynamodb.DynamoDBStorage;
 import io.basestar.storage.dynamodb.DynamoDBStrategy;
+import io.basestar.util.Name;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
@@ -69,6 +70,7 @@ public class DynamoDBSparkSchemaUtils {
                               final StructType structType, final String id, final Index.Key key,
                               final Map<String, Object> projection) {
 
+        final Map<String, Set<Name>> branches = Name.branch(schema.getExpand());
         final StructField[] fields = structType.fields();
         final Object[] values = new Object[fields.length];
         final byte[] partition = DynamoDBStorage.partition(strategy, schema, index, id, key.getPartition());
@@ -77,7 +79,7 @@ public class DynamoDBSparkSchemaUtils {
         values[structType.fieldIndex(strategy.indexSortName(schema, index))] = sort;
         index.projectionSchema(schema).forEach((name, type) -> {
             final int i = structType.fieldIndex(name);
-            values[i] = SparkSchemaUtils.toSpark(type, fields[i].dataType(), projection.get(name));
+            values[i] = SparkSchemaUtils.toSpark(type, branches.get(name), fields[i].dataType(), projection.get(name));
         });
         Arrays.sort(fields, Comparator.comparing(StructField::name));
         return new GenericRowWithSchema(values, structType);

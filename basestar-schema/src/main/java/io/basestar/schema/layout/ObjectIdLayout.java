@@ -3,6 +3,7 @@ package io.basestar.schema.layout;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.use.*;
+import io.basestar.util.Name;
 
 import java.util.*;
 
@@ -22,16 +23,17 @@ public class ObjectIdLayout implements Layout {
     }
 
     @Override
-    public Map<String, Use<?>> layout() {
+    public Map<String, Use<?>> layoutSchema(final Set<Name> expand) {
 
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         final Map<String, Use<?>> result = new HashMap<>();
-        base.layout().forEach((name, type) -> {
-            result.put(name, layout(type, false));
+        base.layoutSchema(expand).forEach((name, type) -> {
+            result.put(name, layout(type, branches.get(name),false));
         });
         return result;
     }
 
-    private Use<?> layout(final Use<?> type, final boolean nullable) {
+    private Use<?> layout(final Use<?> type, final Set<Name> expand, final boolean nullable) {
 
         return type.visit(new Use.Visitor.Defaulting<Use<?>>() {
 
@@ -42,49 +44,50 @@ public class ObjectIdLayout implements Layout {
             }
 
             @Override
-            public <T> Use<?> visitNullable(final UseNullable<T> type) {
+            public <T> Use<?> visitOptional(final UseOptional<T> type) {
 
-                return layout(type, true);
+                return layout(type.getType(), expand, true);
             }
 
             @Override
             public Use<?> visitLinkable(final UseLinkable type) {
 
-                return UseString.DEFAULT.nullable(nullable);
+                return UseString.DEFAULT.optional(nullable);
             }
 
             @Override
             public <T> Use<?> visitArray(final UseArray<T> type) {
 
-                return new UseArray<>(layout(type.getType(), false)).nullable(nullable);
+                return new UseArray<>(layout(type.getType(), expand, false)).optional(nullable);
             }
 
             @Override
             public <T> Use<?> visitSet(final UseSet<T> type) {
 
-                return new UseSet<>(layout(type.getType(), false)).nullable(nullable);
+                return new UseSet<>(layout(type.getType(), expand,false)).optional(nullable);
             }
 
             @Override
             public <T> Use<?> visitMap(final UseMap<T> type) {
 
-                return new UseMap<>(layout(type.getType(), false)).nullable(nullable);
+                return new UseMap<>(layout(type.getType(), expand, false)).optional(nullable);
             }
         });
     }
 
     @Override
-    public Map<String, Object> applyLayout(final Map<String, Object> object) {
+    public Map<String, Object> applyLayout(final Set<Name> expand, final Map<String, Object> object) {
 
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         final Map<String, Object> result = new HashMap<>();
-        base.layout().forEach((name, type) -> {
+        base.layoutSchema(expand).forEach((name, type) -> {
             final Object value = object == null ? null : object.get(name);
-            result.put(name, applyLayout(type, value));
+            result.put(name, applyLayout(type, branches.get(name), value));
         });
         return result;
     }
 
-    private Object applyLayout(final Use<?> type, final Object value) {
+    private Object applyLayout(final Use<?> type, final Set<Name> expand, final Object value) {
 
         if(value == null) {
             return null;
@@ -107,7 +110,7 @@ public class ObjectIdLayout implements Layout {
             public <T> Object visitArray(final UseArray<T> type) {
 
                 final List<Object> result = new ArrayList<>();
-                type.create(value).forEach(v -> result.add(applyLayout(type.getType(), v)));
+                type.create(value).forEach(v -> result.add(applyLayout(type.getType(), expand, v)));
                 return result;
             }
 
@@ -115,32 +118,34 @@ public class ObjectIdLayout implements Layout {
             public <T> Object visitSet(final UseSet<T> type) {
 
                 final Set<Object> result = new HashSet<>();
-                type.create(value).forEach(v -> result.add(applyLayout(type.getType(), v)));
+                type.create(value).forEach(v -> result.add(applyLayout(type.getType(), expand, v)));
                 return result;
             }
 
             @Override
             public <T> Object visitMap(final UseMap<T> type) {
 
+                final Map<String, Set<Name>> branches = Name.branch(expand);
                 final Map<String, Object> result = new HashMap<>();
-                type.create(value).forEach((k, v) -> result.put(k, applyLayout(type.getType(), v)));
+                type.create(value).forEach((k, v) -> result.put(k, applyLayout(type.getType(), UseMap.branch(branches, k), v)));
                 return result;
             }
         });
     }
 
     @Override
-    public Map<String, Object> unapplyLayout(final Map<String, Object> object) {
+    public Map<String, Object> unapplyLayout(final Set<Name> expand, final Map<String, Object> object) {
 
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         final Map<String, Object> result = new HashMap<>();
-        base.layout().forEach((name, type) -> {
+        base.layoutSchema(expand).forEach((name, type) -> {
             final Object value = object == null ? null : object.get(name);
-            result.put(name, unapplyLayout(type, value));
+            result.put(name, unapplyLayout(type, branches.get(name), value));
         });
         return result;
     }
 
-    private Object unapplyLayout(final Use<?> type, final Object value) {
+    private Object unapplyLayout(final Use<?> type, final Set<Name> expand, final Object value) {
 
         if(value == null) {
             return null;
@@ -163,7 +168,7 @@ public class ObjectIdLayout implements Layout {
             public <T> Object visitArray(final UseArray<T> type) {
 
                 final List<Object> result = new ArrayList<>();
-                type.create(value).forEach(v -> result.add(unapplyLayout(type.getType(), v)));
+                type.create(value).forEach(v -> result.add(unapplyLayout(type.getType(), expand, v)));
                 return result;
             }
 
@@ -171,15 +176,16 @@ public class ObjectIdLayout implements Layout {
             public <T> Object visitSet(final UseSet<T> type) {
 
                 final Set<Object> result = new HashSet<>();
-                type.create(value).forEach(v -> result.add(unapplyLayout(type.getType(), v)));
+                type.create(value).forEach(v -> result.add(unapplyLayout(type.getType(), expand, v)));
                 return result;
             }
 
             @Override
             public <T> Object visitMap(final UseMap<T> type) {
 
+                final Map<String, Set<Name>> branches = Name.branch(expand);
                 final Map<String, Object> result = new HashMap<>();
-                type.create(value).forEach((k, v) -> result.put(k, unapplyLayout(type.getType(), v)));
+                type.create(value).forEach((k, v) -> result.put(k, unapplyLayout(type.getType(), UseMap.branch(branches, k), v)));
                 return result;
             }
         });

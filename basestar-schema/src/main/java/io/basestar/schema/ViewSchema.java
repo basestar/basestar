@@ -328,7 +328,7 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
     }
 
     @Override
-    public Instance create(final Map<String, Object> value, final boolean expand, final boolean suppress) {
+    public Instance create(final Map<String, Object> value, final Set<Name> expand, final boolean suppress) {
 
         return new Instance(readProperties(value, expand, suppress));
     }
@@ -488,12 +488,6 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
                 } else {
                     return descriptor.getType();
                 }
-            }
-
-            @Override
-            public Boolean getRequired() {
-
-                return descriptor.getRequired();
             }
 
             @Override

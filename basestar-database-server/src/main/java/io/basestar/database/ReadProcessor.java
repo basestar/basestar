@@ -20,10 +20,7 @@ package io.basestar.database;
  * #L%
  */
 
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Multimap;
+import com.google.common.collect.*;
 import io.basestar.auth.Caller;
 import io.basestar.database.util.ExpandKey;
 import io.basestar.database.util.LinkKey;
@@ -115,9 +112,11 @@ public class ReadProcessor {
                 .add(Sort.asc(Name.of(Reserved.ID)))
                 .build();
 
-        final List<Pager.Source<Instance>> sources = storage.query(objectSchema, expression, sort, expand).stream()
+        final Set<Name> queryExpand = Sets.union(Nullsafe.option(expand), Nullsafe.option(objectSchema.getExpand()));
+
+        final List<Pager.Source<Instance>> sources = storage.query(objectSchema, expression, sort, queryExpand).stream()
                 .map(source -> (Pager.Source<Instance>) (c, t, stats) -> source.page(c, t, stats)
-                        .thenCompose(data -> cast(objectSchema, data, expand)))
+                        .thenCompose(data -> cast(objectSchema, data, queryExpand)))
                 .collect(Collectors.toList());
 
         return pageImpl(context, sources, expression, pageSort, count, paging);
@@ -346,7 +345,7 @@ public class ReadProcessor {
         if(needed.isEmpty()) {
             return CompletableFuture.completedFuture(data.map(v -> {
                 final ObjectSchema schema = objectSchema(Instance.getSchema(v));
-                return schema.create(v, true, true);
+                return schema.create(v, expand, true);
             }));
         } else {
             final Storage.ReadTransaction readTransaction = storage.read(Consistency.NONE);
@@ -368,7 +367,7 @@ public class ReadProcessor {
                     final RefKey key = RefKey.from(v);
                     final Map<String, Object> result = Nullsafe.option(mapped.get(key), v);
                     final ObjectSchema schema = objectSchema(Instance.getSchema(result));
-                    return schema.create(result, true, true);
+                    return schema.create(result, expand, true);
                 });
             });
         }

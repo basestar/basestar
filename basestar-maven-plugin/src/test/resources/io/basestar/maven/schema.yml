@@ -9,7 +9,6 @@ Test:
       type: b.Test
     date:
       type: date
-      required: true
       constraints:
         - size: 10
         - size:

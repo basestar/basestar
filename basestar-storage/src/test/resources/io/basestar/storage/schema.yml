@@ -1,13 +1,13 @@
 Address:
   properties:
     country:
-      type: string
+      type: string?
     state:
-      type: string
+      type: string?
     city:
-      type: string
+      type: string?
     zip:
-      type: string
+      type: string?
   indexes:
     Country:
       sparse: true
@@ -27,75 +27,75 @@ Address:
 Simple:
   properties:
     boolean:
-      type: boolean
+      type: boolean?
     integer:
-      type: integer
+      type: integer?
     number:
-      type: number
+      type: number?
     string:
-      type: string
+      type: string?
     binary:
-      type: binary
+      type: binary?
     struct:
-      type: Point
+      type: Point?
     object:
-      type: Simple
+      type: Simple?
     arrayBoolean:
       type:
-        array: boolean
+        array?: boolean
     arrayInteger:
       type:
-        array: integer
+        array?: integer
     arrayNumber:
       type:
-        array: number
+        array?: number
     arrayString:
       type:
-        array: string
+        array?: string
     arrayBinary:
       type:
-        array: binary
+        array?: binary
     arrayStruct:
       type:
-        array: Point
+        array?: Point
     arrayObject:
       type:
-        array: Simple
+        array?: Simple
     mapBoolean:
       type:
-        map: boolean
+        map?: boolean
     mapInteger:
       type:
-        map: integer
+        map?: integer
     mapNumber:
       type:
-        map: number
+        map?: number
     mapString:
       type:
-        map: string
+        map?: string
     mapBinary:
       type:
-        map: binary
+        map?: binary
     mapStruct:
       type:
-        map: Point
+        map?: Point
     mapObject:
       type:
-        map: Simple
+        map?: Simple
 
 Point:
   type: struct
   properties:
     x:
-      type: integer
+      type: integer?
     y:
-      type: integer
+      type: integer?
 
 Pointset:
   properties:
     points:
       type:
-        array: Point
+        array?: Point
   indexes:
     points:
       over:
@@ -108,17 +108,17 @@ RefTarget:
   type: object
   properties:
     source:
-      type: RefSource
+      type: RefSource?
     hello:
-      type: string
+      type: string?
 
 RefSource:
   type: object
   properties:
     target:
-      type: RefTarget
+      type: RefTarget?
     hello:
-      type: string
+      type: string?
   indexes:
     target:
       partition:

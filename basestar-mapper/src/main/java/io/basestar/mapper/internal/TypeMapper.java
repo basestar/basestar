@@ -100,6 +100,11 @@ public interface TypeMapper extends Serializable {
             return new OfStringConverted<>(Expression.class, Expression::parse);
         } else if (Sort.class.equals(erased)) {
             return new OfStringConverted<>(Sort.class, Sort::parse);
+        } else if (Optional.class.equals(erased)) {
+            final TypeContext optionalContext = type.find(Optional.class);
+            final TypeContext valueType = optionalContext.typeParameters().get(0).type();
+            // FIXME?
+            return fromDefault(context, valueType);
         } else {
             return new OfCustom(context, type.erasedType());
         }
@@ -342,13 +347,68 @@ public interface TypeMapper extends Serializable {
         @Override
         public Object unmarshall(final Object value) {
 
-            return UseMap.create(value, false, this.value::unmarshall);
+            return UseMap.create(value,false, (k, v) -> this.value.unmarshall(v));
         }
 
         @Override
         public Object marshall(final Object value) {
 
             return Coercion.toMap(value, erasedType, Objects::toString, this.value::marshall);
+        }
+
+        @Override
+        public Class<?> erasedType() {
+
+            return erasedType;
+        }
+
+        @Override
+        public Set<Class<?>> dependencies() {
+
+            return value.dependencies();
+        }
+    }
+
+    @RequiredArgsConstructor
+    class OfOptional implements TypeMapper {
+
+        private final Class<?> erasedType;
+
+        @Getter
+        private final TypeMapper value;
+
+        @Override
+        public Use<?> use() {
+
+            return new UseOptional<>(value.use());
+        }
+
+        @Override
+        public Object unmarshall(final Object value) {
+
+            if(Optional.class.equals(erasedType)) {
+                return this.value.unmarshall(((Optional<?>)value).orElse(null));
+            } else if(value == null) {
+                return null;
+            } else {
+                return this.value.unmarshall(value);
+            }
+        }
+
+        @Override
+        public Object marshall(final Object value) {
+
+            if(Optional.class.equals(erasedType)) {
+                if(value == null) {
+                    return Optional.empty();
+                } else {
+                    return Optional.ofNullable(this.value.marshall(value));
+                }
+            } else if(value == null) {
+                return null;
+            } else {
+                return this.value.marshall(value);
+            }
         }
 
         @Override

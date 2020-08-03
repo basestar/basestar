@@ -4,9 +4,9 @@ Team:
 
   properties:
     name:
-      type: string
+      type: string?
     description:
-      type: string
+      type: string?
 
   links:
     members:
@@ -43,16 +43,15 @@ TeamMember:
 
   properties:
     team:
-      type: Team
+      type: Team?
       immutable: true
     user:
-      type: User
+      type: User?
       immutable: true
     role:
       type: TeamRole
-      required: true
     accepted:
-      type: boolean
+      type: boolean?
 
   expand:
     - team
@@ -113,10 +112,10 @@ TeamMemberStats:
   from: TeamMember
   properties:
     count:
-      type: integer
+      type: integer?
       expression: count()
     team:
-      type: string
+      type: string?
       expression: team.id
   group:
     - team

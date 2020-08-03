@@ -1,18 +1,23 @@
 package io.basestar.schema.layout;
 
 import com.google.common.collect.ImmutableMap;
+import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Namespace;
-import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseString;
+import io.basestar.util.Name;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestFlatStructLayout {
+
+    private final Set<Name> expand = Collections.emptySet();
 
     private Map<String, Object> a() {
 
@@ -35,7 +40,7 @@ public class TestFlatStructLayout {
     private Layout layout() throws IOException {
 
         final Namespace namespace = Namespace.load(TestFlatStructLayout.class.getResource("flatstruct.yml"));
-        final ObjectSchema schema = namespace.requireObjectSchema("Base");
+        final InstanceSchema schema = namespace.requireInstanceSchema("Base");
         return new FlatStructLayout(schema);
     }
 
@@ -44,11 +49,11 @@ public class TestFlatStructLayout {
 
         final Layout layout = layout();
 
-        final Map<String, Use<?>> result = layout.layout();
+        final Map<String, Use<?>> result = layout.layoutSchema(expand);
 
-        assertEquals(10, result.size());
-        assertEquals(UseString.DEFAULT.nullable(true), result.get("a__b1__c__d"));
-        assertEquals(UseString.DEFAULT.nullable(true), result.get("a__b1__c__e"));
+        assertEquals(4, result.size());
+        assertEquals(UseString.DEFAULT.optional(true), result.get("a__b1__c__d"));
+        assertEquals(UseString.DEFAULT.optional(true), result.get("a__b1__c__e"));
         assertEquals(UseString.DEFAULT, result.get("a__b2__c__d"));
         assertEquals(UseString.DEFAULT, result.get("a__b2__c__e"));
     }
@@ -62,9 +67,9 @@ public class TestFlatStructLayout {
                 "a", a()
         );
 
-        final Map<String, Object> result = layout.applyLayout(object);
+        final Map<String, Object> result = layout.applyLayout(expand, object);
 
-        assertEquals(10, result.size());
+        assertEquals(4, result.size());
         assertEquals("test1", result.get("a__b1__c__d"));
         assertEquals("test2", result.get("a__b1__c__e"));
         assertEquals("test3", result.get("a__b2__c__d"));
@@ -83,9 +88,9 @@ public class TestFlatStructLayout {
                 "a__b2__c__e", "test4"
         );
 
-        final Map<String, Object> result = layout.unapplyLayout(object);
+        final Map<String, Object> result = layout.unapplyLayout(expand, object);
 
-        assertEquals(7, result.size());
+        assertEquals(1, result.size());
         assertEquals(a(), result.get("a"));
     }
 }

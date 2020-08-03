@@ -26,8 +26,8 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.basestar.expression.Context;
-import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.schema.exception.ReservedNameException;
+import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.use.UseEnum;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -151,16 +151,14 @@ public class EnumSchema implements Schema<String> {
     }
 
     @Override
-    public String create(final Object value, final boolean expand, final boolean suppress) {
+    public String create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        if(value == null) {
-            return null;
-        } else if(value instanceof String && values.contains(value)) {
+        if(value instanceof String && values.contains(value)) {
             return (String) value;
         } else if(suppress) {
             return null;
         } else {
-            throw new InvalidTypeException();
+            throw new UnexpectedTypeException(this, value);
         }
     }
 

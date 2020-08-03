@@ -227,7 +227,7 @@ public class Link implements Member {
     }
 
     @Override
-    public Object create(final Object value, final boolean expand, final boolean suppress) {
+    public Object create(final Object value, final Set<Name> expand, final boolean suppress) {
 
         if(value == null) {
             return null;

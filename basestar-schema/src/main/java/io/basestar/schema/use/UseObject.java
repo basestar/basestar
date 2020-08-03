@@ -26,7 +26,7 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.compare.Eq;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.schema.*;
-import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
@@ -81,24 +81,22 @@ public class UseObject implements UseLinkable {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Instance create(final Object value, final boolean expand, final boolean suppress) {
+    public Instance create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        if(value == null) {
-            return null;
-        } else if(value instanceof Map) {
+        if(value instanceof Map) {
             final Map<String, Object> map = (Map<String, Object>)value;
             final String id = Instance.getId(map);
             if(id == null) {
                 return null;
             } else {
-                if(expand) {
-                    return schema.create(map, true, suppress);
+                if(expand != null) {
+                    return schema.create(map, expand, suppress);
                 } else {
                     return ObjectSchema.ref(id);
                 }
             }
         } else {
-            throw new InvalidTypeException();
+            throw new UnexpectedTypeException(this, value);
         }
     }
 

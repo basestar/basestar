@@ -48,11 +48,11 @@ public interface RowMapper<T> {
         final Map<String, ColumnMapper<Object>> mappers = new HashMap<>();
         final Map<String, Set<Name>> branches = Name.branch(expand);
         schema.metadataSchema().forEach((k, v) -> {
-            mappers.put(k, (ColumnMapper<Object>) strategy.columnMapper(v, true, Collections.emptySet()));
+            mappers.put(k, (ColumnMapper<Object>) strategy.columnMapper(v, false, Collections.emptySet()));
         });
         schema.getProperties().forEach((k, v) -> {
             final Set<Name> branch = branches.get(k);
-            mappers.put(k, (ColumnMapper<Object>) strategy.columnMapper(v.getType(), !v.isRequired(), branch));
+            mappers.put(k, (ColumnMapper<Object>) strategy.columnMapper(v.getType(), false, branch));
         });
 
         final String rootTable = Reserved.PREFIX;

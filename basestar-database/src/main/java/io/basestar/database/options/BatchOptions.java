@@ -29,13 +29,13 @@ import java.util.Map;
 
 @Data
 @Accessors(chain = true)
-public class TransactionOptions implements Options {
+public class BatchOptions implements Options {
 
-    public static final String TYPE = "transaction";
+    public static final String TYPE = "batch";
 
     private final Map<String, ActionOptions> actions;
 
-    private TransactionOptions(final Builder builder) {
+    private BatchOptions(final Builder builder) {
 
         this.actions = ImmutableMap.copyOf(builder.actions);
     }
@@ -61,9 +61,9 @@ public class TransactionOptions implements Options {
             return this;
         }
 
-        public TransactionOptions build() {
+        public BatchOptions build() {
 
-            return new TransactionOptions(this);
+            return new BatchOptions(this);
         }
     }
 

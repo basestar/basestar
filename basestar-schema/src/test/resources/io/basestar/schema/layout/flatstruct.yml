@@ -1,4 +1,5 @@
 Base:
+  type: struct
   properties:
     a:
       type: A
@@ -7,8 +8,7 @@ A:
   type: struct
   properties:
     b1:
-      required: true
-      type: B
+      type: B?
     b2:
       type: B
 

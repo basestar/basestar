@@ -90,7 +90,7 @@ public interface UseNamed<T> extends Use<T> {
         }
 
         @Override
-        public Object create(final Object value, final boolean expand, final boolean suppress) {
+        public Object create(final Object value, final Set<Name> expand, final boolean suppress) {
 
             throw new UnsupportedOperationException();
         }

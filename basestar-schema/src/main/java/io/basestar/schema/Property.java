@@ -24,11 +24,14 @@ import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.ExpressionDeserializer;
+import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.schema.exception.MissingPropertyException;
 import io.basestar.schema.exception.ReservedNameException;
+import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
@@ -63,10 +66,6 @@ public class Property implements Member {
     @Nonnull
     private final Use<?> type;
 
-    // Replaced with nullable on Use<T>
-    @Deprecated
-    private final boolean required;
-
     private final boolean immutable;
 
     @Nullable
@@ -88,10 +87,6 @@ public class Property implements Member {
     public interface Descriptor extends Member.Descriptor {
 
         Use<?> getType();
-
-        @Deprecated
-        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-        Boolean getRequired();
 
         @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         Boolean getImmutable();
@@ -117,13 +112,6 @@ public class Property implements Member {
             default Use<?> getType() {
 
                 return delegate().getType();
-            }
-
-            @Override
-            @Deprecated
-            default Boolean getRequired() {
-
-                return delegate().getRequired();
             }
 
             @Override
@@ -154,15 +142,15 @@ public class Property implements Member {
 
     @Data
     @Accessors(chain = true)
-    @JsonPropertyOrder({"type", "description", "required", "immutable", "expression", "constraints", "visibility", "extensions"})
+    @JsonPropertyOrder({"type", "description", "immutable", "expression", "constraints", "visibility", "extensions"})
     public static class Builder implements Descriptor, Member.Builder {
 
         private Use<?> type;
 
         private String description;
 
-        @Deprecated
-        private Boolean required;
+//        @Deprecated
+//        private Boolean required;
 
         private Boolean immutable;
 
@@ -213,9 +201,9 @@ public class Property implements Member {
         }
         this.qualifiedName = qualifiedName;
         this.description = builder.getDescription();
+//        this.required = Nullsafe.option(builder.getRequired());
         this.type = builder.getType().resolve(schemaResolver);
-        this.required = Nullsafe.option(builder.getRequired());
-        this.defaultValue = type.create(builder.getDefault());
+        this.defaultValue = Nullsafe.map(builder.getDefault(), type::create);
         this.immutable = Nullsafe.option(builder.getImmutable());
         this.expression = builder.getExpression();
         this.constraints = Nullsafe.immutableCopy(builder.getConstraints());
@@ -226,7 +214,7 @@ public class Property implements Member {
     @Override
     public Optional<Use<?>> layout(final Set<Name> expand) {
 
-        return Optional.of(getType().nullable(!required));
+        return Optional.of(getType());
     }
 
     @Override
@@ -289,9 +277,15 @@ public class Property implements Member {
     }
 
     @Override
-    public Object create(final Object value, final boolean expand, final boolean suppress) {
+    public Object create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        return type.create(value, expand, suppress);
+        try {
+            return type.create(value, expand, suppress);
+        } catch (final UnexpectedTypeException e) {
+            throw new ConstraintViolationException(ImmutableSet.of(
+                    new Constraint.Violation(getQualifiedName(), "type", e.getMessage())
+            ));
+        }
     }
 
     public <T> T cast(final Object o, final Class<T> as) {
@@ -305,17 +299,10 @@ public class Property implements Member {
         ((Use<Object>)type).serialize(value, out);
     }
 
-//    public Map<String, Object> openApiProperty() {
-//
-//        return type.openApiType();
-//    }
-
-    public Object evaluate(final Context context, final Object value) {
+    public Object evaluate(final Context context, final Set<Name> expand, final Object value) {
 
         if(expression != null) {
-//            final Map<String, Object> newContext = new HashMap<>(context);
-//            newContext.put(VAR_VALUE, value);
-            return type.create(expression.evaluate(context.with(VAR_VALUE, value)), true, false);
+            return type.create(expression.evaluate(context.with(VAR_VALUE, value)), expand, false);
         } else {
             return value;
         }
@@ -325,28 +312,22 @@ public class Property implements Member {
 
         return validate(context, name, after, after);
     }
-/*
-
- */
-    // FIXME: immutability check should be implemented differently
 
     @SuppressWarnings("unchecked")
     public Set<Constraint.Violation> validate(final Context context, final Name path, final Object before, final Object after) {
 
         final Set<Constraint.Violation> violations = new HashSet<>();
         final Name qualifiedName = path.with(getName());
-        if(after == null && required) {
-            violations.add(new Constraint.Violation(qualifiedName, Constraint.REQUIRED, null));
-        } else if(immutable && !Objects.equals(before, after)) {
+        if(immutable && !Objects.equals(before, after)) {
             violations.add(new Constraint.Violation(qualifiedName, Constraint.IMMUTABLE, null));
         } else {
-//            violations.addAll(((Use<Object>)type).validate(context, qualifiedName, after));
-//            if (!constraints.isEmpty()) {
-//                final Context newContext = context.with(VAR_VALUE, after);
-//                for (final Constraint constraint : constraints) {
-//                    violations.addAll(constraint.violations(type, newContext, qualifiedName, after));
-//                }
-//            }
+            violations.addAll(((Use<Object>)type).validate(context, qualifiedName, after));
+            if (!constraints.isEmpty()) {
+                final Context newContext = context.with(VAR_VALUE, after);
+                for (final Constraint constraint : constraints) {
+                    violations.addAll(constraint.violations(type, newContext, qualifiedName, after));
+                }
+            }
         }
         return violations;
     }
@@ -398,13 +379,6 @@ public class Property implements Member {
             public String getDescription() {
 
                 return description;
-            }
-
-            @Override
-            @Deprecated
-            public Boolean getRequired() {
-
-                return required;
             }
 
             @Override

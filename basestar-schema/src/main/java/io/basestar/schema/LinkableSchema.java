@@ -1,12 +1,10 @@
 package io.basestar.schema;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import io.basestar.schema.use.Use;
 import io.basestar.util.Name;
 
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedMap;
 
 public interface LinkableSchema extends InstanceSchema, Link.Resolver {
 
@@ -31,10 +29,4 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver {
     Set<Name> getDeclaredExpand();
 
     Set<Name> getExpand();
-
-    @Override
-    default SortedMap<String, Use<?>> layout() {
-
-        return layout(getExpand());
-    }
 }

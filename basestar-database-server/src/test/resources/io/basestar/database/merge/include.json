@@ -1,7 +1,7 @@
 {
   "properties": {
     "value": {
-      "required": "hello"
+      "type": "string"
     }
   }
 }

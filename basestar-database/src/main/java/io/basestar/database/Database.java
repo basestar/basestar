@@ -99,5 +99,5 @@ public interface Database {
         return queryLink(caller, QueryLinkOptions.builder().schema(schema).id(id).link(link).build());
     }
 
-    CompletableFuture<Map<String, Instance>> transaction(Caller caller, TransactionOptions options);
+    CompletableFuture<Map<String, Instance>> transaction(Caller caller, BatchOptions options);
 }

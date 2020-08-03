@@ -208,7 +208,7 @@ public interface TypeModel {
             }
 
             @Override
-            public <T> TypeModel visitNullable(final UseNullable<T> type) {
+            public <T> TypeModel visitOptional(final UseOptional<T> type) {
 
                 return type.getType().visit(this);
             }

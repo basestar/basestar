@@ -493,7 +493,7 @@ public class TestDatabaseServer {
     @Test
     public void batch() {
 
-        final Map<String, Instance> results = database.transaction(caller, TransactionOptions.builder()
+        final Map<String, Instance> results = database.transaction(caller, BatchOptions.builder()
                 .action("a", CreateOptions.builder()
                         .schema(SIMPLE)
                         .expressions(ImmutableMap.of(
@@ -526,7 +526,7 @@ public class TestDatabaseServer {
         when(caller.getSchema()).thenReturn(USER);
         when(caller.getId()).thenReturn("test");
 
-        final Map<String, Instance> ok = database.transaction(caller, TransactionOptions.builder()
+        final Map<String, Instance> ok = database.transaction(caller, BatchOptions.builder()
                 .action("team", CreateOptions.builder()
                         .schema(TEAM)
                         .id("t1")
@@ -543,7 +543,7 @@ public class TestDatabaseServer {
         assertEquals(2, ok.size());
 
         assertThrows(PermissionDeniedException.class, cause(() ->
-                database.transaction(caller, TransactionOptions.builder()
+                database.transaction(caller, BatchOptions.builder()
                         .action("team", CreateOptions.builder()
                                 .schema(TEAM)
                                 .id("t2")
@@ -621,7 +621,7 @@ public class TestDatabaseServer {
     @Test
     public void expand() throws Exception {
 
-        final Map<String, Instance> ok = database.transaction(Caller.SUPER, TransactionOptions.builder()
+        final Map<String, Instance> ok = database.transaction(Caller.SUPER, BatchOptions.builder()
                 .action("team", CreateOptions.builder()
                         .schema(TEAM)
                         .id("t1")
@@ -664,7 +664,7 @@ public class TestDatabaseServer {
     @Test
     public void refRefresh() throws Exception {
 
-        final Map<String, Instance> init = database.transaction(Caller.SUPER, TransactionOptions.builder()
+        final Map<String, Instance> init = database.transaction(Caller.SUPER, BatchOptions.builder()
                 .action("team", CreateOptions.builder()
                         .schema(TEAM)
                         .id("t1")
@@ -683,7 +683,7 @@ public class TestDatabaseServer {
         final Instance member = init.get("member");
         assertNotNull(member);
 
-        final Map<String, Instance> update = database.transaction(Caller.SUPER, TransactionOptions.builder()
+        final Map<String, Instance> update = database.transaction(Caller.SUPER, BatchOptions.builder()
                 .action("team", UpdateOptions.builder()
                         .schema(TEAM)
                         .id("t1")
@@ -696,9 +696,9 @@ public class TestDatabaseServer {
 
         final RefRefreshEvent refreshEvent = RefRefreshEvent.of(Ref.of(TEAM, "t1"), TEAM_MEMBER, member.getId());
 
-        database.onRefRefresh(refreshEvent).join();
+        database.onRefRefresh(refreshEvent).get();
 
-        final PagedList<Instance> get = database.query(Caller.SUPER, TEAM_MEMBER, Expression.parse("team.name == 'Test'")).join();
+        final PagedList<Instance> get = database.query(Caller.SUPER, TEAM_MEMBER, Expression.parse("team.name == 'Test'")).get();
         assertEquals(1, get.size());
     }
 
@@ -706,7 +706,7 @@ public class TestDatabaseServer {
     @Disabled
     public void aggregate() throws Exception {
 
-        database.transaction(Caller.SUPER, TransactionOptions.builder()
+        database.transaction(Caller.SUPER, BatchOptions.builder()
                 .action("a", CreateOptions.builder()
                         .schema(TEAM_MEMBER)
                         .data(ImmutableMap.of(

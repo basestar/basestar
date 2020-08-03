@@ -118,9 +118,9 @@ public interface ColumnStrategy {
 
                 @Override
                 @SuppressWarnings("unchecked")
-                public <V> ColumnMapper<T> visitNullable(final UseNullable<V> type) {
+                public <V> ColumnMapper<T> visitOptional(final UseOptional<V> type) {
 
-                    return columnMapper((Use<T>)type.getType(), false, expand);
+                    return columnMapper((Use<T>)type.getType(), true, expand);
                 }
 
                 @Override
@@ -150,7 +150,7 @@ public interface ColumnStrategy {
                     final Map<String, ColumnMapper<Object>> mappers = new HashMap<>();
                     type.getSchema().getProperties().forEach((k, v) -> {
                         final Set<Name> branch = branches.get(k);
-                        mappers.put(k, (ColumnMapper<Object>)columnMapper(v.getType(), !v.isRequired(), branch));
+                        mappers.put(k, (ColumnMapper<Object>)columnMapper(v.getType(), false, branch));
                     });
                     return new FlatColumnMapper<T>(mappers, v -> (T)type.create(v), type::create, delimiter);
                 }
@@ -163,11 +163,11 @@ public interface ColumnStrategy {
                         final ObjectSchema schema = type.getSchema();
                         final Map<String, Set<Name>> branches = Name.branch(expand);
                         schema.metadataSchema().forEach((k, v) -> {
-                            mappers.put(k, (ColumnMapper<Object>) columnMapper(v, true, Collections.emptySet()));
+                            mappers.put(k, (ColumnMapper<Object>) columnMapper(v, false, Collections.emptySet()));
                         });
                         schema.getProperties().forEach((k, v) -> {
                             final Set<Name> branch = branches.get(k);
-                            mappers.put(k, (ColumnMapper<Object>) columnMapper(v.getType(), !v.isRequired(), branch));
+                            mappers.put(k, (ColumnMapper<Object>) columnMapper(v.getType(), false, branch));
                         });
                     }
 

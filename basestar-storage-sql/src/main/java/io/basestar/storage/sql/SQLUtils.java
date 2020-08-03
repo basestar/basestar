@@ -138,9 +138,9 @@ public class SQLUtils {
             }
 
             @Override
-            public <T> DataType<?> visitNullable(final UseNullable<T> type) {
+            public <T> DataType<?> visitOptional(final UseOptional<T> type) {
 
-                return type.getType().visit(this);
+                return type.getType().visit(this).nullable(true);
             }
         });
     }
@@ -252,9 +252,13 @@ public class SQLUtils {
             }
 
             @Override
-            public <T> Object visitNullable(final UseNullable<T> type) {
+            public <T> Object visitOptional(final UseOptional<T> type) {
 
-                return type.getType().visit(this);
+                if(value == null) {
+                    return null;
+                } else {
+                    return type.getType().visit(this);
+                }
             }
         });
     }
@@ -337,13 +341,15 @@ public class SQLUtils {
             @Override
             public <T> Collection<T> visitArray(final UseArray<T> type) {
 
-                return type.create(fromJson(value, new TypeReference<Collection<?>>() {}));
+                final Collection<?> results = fromJson(value, new TypeReference<Collection<?>>() {});
+                return type.create(results);
             }
 
             @Override
             public <T> Collection<T> visitSet(final UseSet<T> type) {
 
-                return type.create(fromJson(value, new TypeReference<Collection<?>>() {}));
+                final Collection<?> results = fromJson(value, new TypeReference<Collection<?>>() {});
+                return type.create(results);
             }
 
             @Override
@@ -383,23 +389,27 @@ public class SQLUtils {
             }
 
             @Override
-            public <T> Object visitNullable(final UseNullable<T> type) {
+            public <T> Object visitOptional(final UseOptional<T> type) {
 
-                return type.getType().visit(this);
+                if(value == null) {
+                    return null;
+                } else {
+                    return type.getType().visit(this);
+                }
             }
         });
     }
 
-//    public static List<Field<?>> fields(final ObjectSchema schema) {
-//
-//        return Stream.concat(
-//                ObjectSchema.METADATA_SCHEMA.entrySet().stream()
-//                        .map(e -> DSL.field(DSL.name(e.getKey()), dataType(e.getValue()))),
-//                schema.getProperties().entrySet().stream()
-//                        .map(e -> DSL.field(DSL.name(e.getKey()),
-//                                dataType(e.getValue().getType()).nullable(!e.getValue().isRequired())))
-//        ).collect(Collectors.toList());
-//    }
+    public static List<Field<?>> fields(final ObjectSchema schema) {
+
+        return Stream.concat(
+                ObjectSchema.METADATA_SCHEMA.entrySet().stream()
+                        .map(e -> DSL.field(DSL.name(e.getKey()), dataType(e.getValue()))),
+                schema.getProperties().entrySet().stream()
+                        .map(e -> DSL.field(DSL.name(e.getKey()),
+                                dataType(e.getValue().getType())))
+        ).collect(Collectors.toList());
+    }
 
     private static SortOrder sort(final Sort.Order order) {
 
@@ -410,7 +420,7 @@ public class SQLUtils {
 //
 //        return Stream.concat(
 //                index.getPartition().stream().map(v -> DSL.field(DSL.name(v.toString()))),
-//                index.getSort().stream().map(v -> DSL.field(DSL.name(v.getPath().toString()))
+//                index.getSort().stream().map(v -> DSL.field(DSL.name(v.getName().toString()))
 //                        .sort(sort(v.getOrder())))
 //        ).collect(Collectors.toList());
 //    }

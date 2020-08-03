@@ -34,6 +34,7 @@ import io.basestar.util.Name;
 import lombok.Data;
 import org.junit.jupiter.api.Test;
 
+import javax.annotation.Nullable;
 import javax.validation.constraints.Size;
 import java.io.IOException;
 import java.time.LocalDate;
@@ -48,32 +49,42 @@ public class TestMappingContext {
     public static class Post {
 
         @Id
+        @Nullable
         private String id;
 
+        @Nullable
         @Link(expression = "target.id == this.id", sort = "blah:desc")
         private List<Comment> comments;
 
         @Created
+        @Nullable
         private LocalDateTime created;
 
         @Updated
+        @Nullable
         private LocalDateTime updated;
 
         @Hash
+        @Nullable
         private String hash;
 
+        @Nullable
         @Size(min = 10, max = 100)
         private double value;
 
         @Version
+        @Nullable
         @Assert("x == 1")
         private Long version;
 
+        @Nullable
         @Property
         private String test;
 
+        @Nullable
         private LocalDate date;
 
+        @Nullable
         private Comment comment;
 
         @ObjectSchema
@@ -85,8 +96,10 @@ public class TestMappingContext {
             @Id
             private String id;
 
+            @Nullable
             private Comment comment;
 
+            @Nullable
             @Link(expression = "target.id == this.id")
             private List<Comment> comments;
         }

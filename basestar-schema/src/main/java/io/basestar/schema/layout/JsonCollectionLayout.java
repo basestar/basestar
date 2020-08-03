@@ -2,11 +2,13 @@ package io.basestar.schema.layout;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.basestar.schema.use.*;
+import io.basestar.util.Name;
 
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Layout transformation that converts collections and maps to JSON strings
@@ -31,10 +33,10 @@ public class JsonCollectionLayout implements Layout {
     }
 
     @Override
-    public Map<String, Use<?>> layout() {
+    public Map<String, Use<?>> layoutSchema(final Set<Name> expand) {
 
         final Map<String, Use<?>> result = new HashMap<>();
-        base.layout().forEach((name, type) -> {
+        base.layoutSchema(expand).forEach((name, type) -> {
             result.put(name, layout(type, false));
         });
         return result;
@@ -51,7 +53,7 @@ public class JsonCollectionLayout implements Layout {
             }
 
             @Override
-            public <T> Use<?> visitNullable(final UseNullable<T> type) {
+            public <T> Use<?> visitOptional(final UseOptional<T> type) {
 
                 return layout(type.getType(), true);
             }
@@ -59,22 +61,22 @@ public class JsonCollectionLayout implements Layout {
             @Override
             public <T> Use<?> visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
 
-                return UseString.DEFAULT.nullable(nullable);
+                return UseString.DEFAULT.optional(nullable);
             }
 
             @Override
             public <T> Use<?> visitMap(final UseMap<T> type) {
 
-                return UseString.DEFAULT.nullable(nullable);
+                return UseString.DEFAULT.optional(nullable);
             }
         });
     }
 
     @Override
-    public Map<String, Object> applyLayout(final Map<String, Object> object) {
+    public Map<String, Object> applyLayout(final Set<Name> expand, final Map<String, Object> object) {
 
         final Map<String, Object> result = new HashMap<>();
-        base.layout().forEach((name, type) -> {
+        base.layoutSchema(expand).forEach((name, type) -> {
             final Object value = object == null ? null : object.get(name);
             result.put(name, applyLayout(type, value));
         });
@@ -117,10 +119,10 @@ public class JsonCollectionLayout implements Layout {
     }
 
     @Override
-    public Map<String, Object> unapplyLayout(final Map<String, Object> object) {
+    public Map<String, Object> unapplyLayout(final Set<Name> expand, final Map<String, Object> object) {
 
         final Map<String, Object> result = new HashMap<>();
-        base.layout().forEach((name, type) -> {
+        base.layoutSchema(expand).forEach((name, type) -> {
             final Object value = object == null ? null : object.get(name);
             result.put(name, unapplyLayout(type, value));
         });
