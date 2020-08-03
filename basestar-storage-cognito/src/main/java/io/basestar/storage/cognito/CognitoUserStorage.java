@@ -60,7 +60,7 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
     private static final Set<String> REQUIRED_ATTRS = ImmutableSet.of(
             "address", "birthdate", "email", "family_name", "gender", "given_name", "locale", "middle_name",
             "name", "nickname", "phone_number", "picture", "preferred_username", "profile", "updated_at",
-            "website", "zoneinfo"
+            "username", "website", "zoneinfo"
     );
 
     private final CognitoIdentityProviderAsyncClient client;
