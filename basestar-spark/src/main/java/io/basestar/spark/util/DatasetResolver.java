@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.ViewSchema;
+import io.basestar.spark.database.QueryChain;
 import io.basestar.spark.transform.*;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -33,20 +34,21 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.StructType;
 
 import java.io.Serializable;
+import java.util.HashSet;
 import java.util.Set;
 
-public interface DatasetResolver extends Serializable {
+public interface DatasetResolver {
 
-    default Dataset<Row> resolve(final InstanceSchema schema) {
+    default Dataset<Row> resolve(final InstanceSchema schema, final ColumnResolver<Row> columnResolver) {
 
-        return resolve(schema, ImmutableSet.of());
+        return resolve(schema, columnResolver, ImmutableSet.of());
     }
 
-    Dataset<Row> resolve(InstanceSchema schema, Set<Name> expand);
+    Dataset<Row> resolve(InstanceSchema schema, ColumnResolver<Row> columnResolver, Set<Name> expand);
 
-    default Dataset<Row> resolveAndConform(final InstanceSchema schema, final Set<Name> expand) {
+    default Dataset<Row> resolveAndConform(final InstanceSchema schema, final ColumnResolver<Row> columnResolver, final Set<Name> expand) {
 
-        return conform(schema, expand, resolve(schema, expand));
+        return conform(schema, expand, resolve(schema, columnResolver, expand));
     }
 
     default Dataset<Row> conform(final InstanceSchema schema, final Set<Name> expand, final Dataset<Row> input) {
@@ -72,29 +74,43 @@ public interface DatasetResolver extends Serializable {
         private final Resolver resolver;
 
         @Override
-        public Dataset<Row> resolve(final InstanceSchema schema, final Set<Name> expand) {
+        public Dataset<Row> resolve(final InstanceSchema schema, final ColumnResolver<Row> columnResolver, final Set<Name> expand) {
 
             if(schema instanceof ObjectSchema) {
 
                 final ObjectSchema objectSchema = (ObjectSchema)schema;
-                final ExpressionTransform expressionTransform = ExpressionTransform.builder().schema(objectSchema).expand(expand).build();
+                final Set<Name> mergedExpand = mergedExpand(expand, objectSchema.getExpand());
+                final ExpressionTransform expressionTransform = ExpressionTransform.builder().schema(objectSchema).expand(mergedExpand).build();
                 final SchemaTransform schemaTransform = SchemaTransform.builder().schema(schema).build();
-                final ExpandTransform expandTransform = ExpandTransform.builder().resolver(this).schema(schema).expand(expand).build();
+                final ExpandTransform expandTransform = ExpandTransform.builder().resolver(this).columnResolver(columnResolver).schema(schema).expand(mergedExpand).build();
                 final Dataset<Row> base = Nullsafe.require(resolver.resolve(schema));
                 return schemaTransform.then(expressionTransform).then(expandTransform).accept(base);
 
             } else if(schema instanceof ViewSchema) {
 
                 final ViewSchema viewSchema = (ViewSchema)schema;
+                final Set<Name> mergedExpand = mergedExpand(expand, viewSchema.getExpand());
                 final ViewTransform viewTransform = ViewTransform.builder().schema(viewSchema).build();
-                final ExpandTransform expandTransform = ExpandTransform.builder().resolver(this).schema(schema).expand(expand).build();
+                final ExpandTransform expandTransform = ExpandTransform.builder().resolver(this).columnResolver(columnResolver).schema(schema).expand(mergedExpand).build();
                 final ViewSchema.From from = viewSchema.getFrom();
-                final Dataset<Row> base = resolve(from.getSchema(), from.getExpand());
+                final Dataset<Row> base = resolve(from.getSchema(), columnResolver, from.getExpand());
                 return viewTransform.then(expandTransform).accept(base);
 
             } else {
 
                 throw new IllegalStateException("Cannot resolve dataset for schema: " + schema.getQualifiedName());
+            }
+        }
+
+        private Set<Name> mergedExpand(final Set<Name> expand, final Set<Name> defaultExpand) {
+
+            if(expand.contains(QueryChain.DEFAULT_EXPAND)) {
+                final Set<Name> mergedExpand = new HashSet<>(expand);
+                mergedExpand.remove(QueryChain.DEFAULT_EXPAND);
+                mergedExpand.addAll(defaultExpand);
+                return mergedExpand;
+            } else {
+                return expand;
             }
         }
     }

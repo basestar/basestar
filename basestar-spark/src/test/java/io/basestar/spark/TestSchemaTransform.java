@@ -23,19 +23,34 @@ package io.basestar.spark;
 import com.google.common.collect.ImmutableList;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.spark.sink.Sink;
 import io.basestar.spark.source.Source;
 import io.basestar.spark.transform.ConformTransform;
+import io.basestar.spark.transform.MarshallTransform;
 import io.basestar.spark.transform.SchemaTransform;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.apache.spark.sql.*;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestSchemaTransform extends AbstractSparkTest {
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class B2 {
+
+        private String value;
+    }
 
     @Test
     public void testSchemaTransform() throws IOException {
@@ -49,7 +64,7 @@ public class TestSchemaTransform extends AbstractSparkTest {
         final ObjectSchema a = namespace.requireObjectSchema("A");
 
         final Source<Dataset<Row>> sourceA = (Source<Dataset<Row>>) sink -> sink.accept(session.createDataset(ImmutableList.of(
-                new A("a:1", new B("b:1", null, 0L))
+                new A("a:1", new B("b:1", null, 0L), null, null, null)
         ), Encoders.bean(A.class)).toDF());
 
         final SchemaTransform schema = SchemaTransform.builder().schema(a).build();
@@ -57,11 +72,99 @@ public class TestSchemaTransform extends AbstractSparkTest {
         final Encoder<A> encoder = Encoders.bean(A.class);
         final ConformTransform conform = ConformTransform.builder().structType(encoder.schema()).build();
 
-        sourceA.then(schema).then(conform).then(dataset -> {
+        sourceA.then(schema).then(conform).then((Sink<Dataset<Row>>) (dataset -> {
 
             final List<A> rows = dataset.as(Encoders.bean(A.class)).collectAsList();
             assertEquals(1, rows.size());
-            assertTrue(rows.contains(new A("a:1", new B("b:1", null, null))));
+            assertTrue(rows.contains(new A("a:1", new B("b:1", null, null), null, null, null)));
+        }));
+    }
+
+    @Test
+    public void testSchemaTransformInvalid2() throws IOException {
+
+        final SparkSession session = SparkSession.builder()
+                .master("local[*]")
+                .getOrCreate();
+
+        final Namespace namespace = Namespace.load(TestExpandTransform.class.getResourceAsStream("schema.yml"));
+
+        final ObjectSchema b = namespace.requireObjectSchema("B");
+
+        final Source<Dataset<Row>> sourceA = (Source<Dataset<Row>>) sink -> sink.accept(session.createDataset(ImmutableList.of(
+                new B2("1"), new B2("x")
+        ), Encoders.bean(B2.class)).toDF());
+
+        final SchemaTransform schema = SchemaTransform.builder().schema(b).build();
+
+        final Encoder<B> encoder = Encoders.bean(B.class);
+        final ConformTransform conform = ConformTransform.builder().structType(encoder.schema()).build();
+
+        sourceA.then(schema).then(conform).then(dataset -> {
+
+            final List<B> rows = dataset.as(Encoders.bean(B.class)).collectAsList();
+            assertEquals(2, rows.size());
+            assertTrue(rows.contains(new B(null, null, 1L)));
+            assertTrue(rows.contains(new B(null, null, null)));
         });
+    }
+
+    @Test
+    public void testSchemaTransformInvalid() throws IOException {
+
+        final SparkSession session = SparkSession.builder()
+                .master("local[*]")
+                .getOrCreate();
+
+        final Namespace namespace = Namespace.load(TestExpandTransform.class.getResourceAsStream("schema.yml"));
+
+        final ObjectSchema b = namespace.requireObjectSchema("B");
+
+        final Source<Dataset<Row>> sourceA = (Source<Dataset<Row>>) sink -> sink.accept(session.createDataset(ImmutableList.of(
+                new B2("1"), new B2("x")
+        ), Encoders.bean(B2.class)).toDF());
+
+        final MarshallTransform<B> marshall = MarshallTransform.<B>builder().targetType(B.class).build();
+
+        sourceA.then(marshall).then(dataset -> {
+
+            final List<B> rows = dataset.collectAsList();
+            assertEquals(2, rows.size());
+            assertTrue(rows.contains(new B(null, null, 1L)));
+            assertTrue(rows.contains(new B(null, null, null)));
+        });
+    }
+
+    @Test
+    public void testDateTimes() throws IOException {
+
+        final SparkSession session = SparkSession.builder()
+                .master("local[*]")
+                .getOrCreate();
+
+        final Namespace namespace = Namespace.load(TestExpandTransform.class.getResourceAsStream("schema.yml"));
+
+        final ObjectSchema f = namespace.requireObjectSchema("F");
+
+        final Encoder<F> encoder = Encoders.bean(F.class);
+
+        // FIXME
+        final java.sql.Date date = null;//new java.sql.Date(LocalDate.now(ZoneOffset.UTC).atStartOfDay().toEpochSecond(ZoneOffset.UTC) * 1000);
+        final java.sql.Timestamp datetime = new java.sql.Timestamp(LocalDateTime.now(ZoneOffset.UTC).toEpochSecond(ZoneOffset.UTC) * 1000);
+
+        final Source<Dataset<Row>> sourceF = (Source<Dataset<Row>>) sink -> sink.accept(session.createDataset(ImmutableList.of(
+                new F(date, datetime)
+        ), encoder).toDF());
+
+        final SchemaTransform schema = SchemaTransform.builder().schema(f).build();
+
+        final ConformTransform conform = ConformTransform.builder().structType(encoder.schema()).build();
+
+        sourceF.then(schema).then(conform).then((Sink<Dataset<Row>>) (dataset -> {
+
+            final List<F> rows = dataset.as(Encoders.bean(F.class)).collectAsList();
+            assertEquals(1, rows.size());
+            assertTrue(rows.contains(new F(date, datetime)));
+        }));
     }
 }

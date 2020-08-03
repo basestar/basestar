@@ -24,6 +24,7 @@ import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.IntegerSchema;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -42,6 +43,7 @@ import java.util.Set;
  */
 
 @Data
+@Slf4j
 public class UseInteger implements UseScalar<Long> {
 
     public static final UseInteger DEFAULT = new UseInteger();
@@ -77,12 +79,14 @@ public class UseInteger implements UseScalar<Long> {
                 return Long.parseLong((String) value);
             } catch (final NumberFormatException e) {
                 if(suppress) {
+                    log.warn("Suppressed conversion error", e);
                     return null;
                 } else {
                     throw e;
                 }
             }
         } else if(suppress) {
+            log.warn("Suppressed conversion error (invalid type: " + value.getClass() + ")");
             return null;
         } else {
             throw new UnexpectedTypeException(this, value);

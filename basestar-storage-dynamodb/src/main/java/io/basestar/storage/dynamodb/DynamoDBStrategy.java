@@ -76,7 +76,7 @@ public interface DynamoDBStrategy extends Serializable {
 
         public static final String HISTORY_PARTITION_KEY = OBJECT_PARTITION_KEY;
 
-        public static final String HISTORY_SORT_KEY = Reserved.VERSION;
+        public static final String HISTORY_SORT_KEY = ObjectSchema.VERSION;
 
         public static final String INDEX_PARTITION_KEY = OBJECT_PARTITION_KEY;
 
@@ -206,11 +206,11 @@ public interface DynamoDBStrategy extends Serializable {
 
         public static final String NAME_DELIMITER = ".";
 
-        public static final String OBJECT_PARTITION_KEY = Reserved.ID;
+        public static final String OBJECT_PARTITION_KEY = ObjectSchema.ID;
 
         public static final String HISTORY_PARTITION_KEY = OBJECT_PARTITION_KEY;
 
-        public static final String HISTORY_SORT_KEY = Reserved.VERSION;
+        public static final String HISTORY_SORT_KEY = ObjectSchema.VERSION;
 
         public static final String EXT_INDEX_PARTITION_KEY = Reserved.PREFIX + "partition";
 

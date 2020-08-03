@@ -21,8 +21,7 @@ package io.basestar.storage.util;
  */
 
 import com.google.common.collect.ImmutableList;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.Reserved;
+import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.use.Use;
 import io.basestar.util.Name;
 import io.basestar.util.PagingToken;
@@ -35,25 +34,26 @@ import java.util.Map;
 
 public class KeysetPagingUtils {
 
-    public static List<Sort> normalizeSort(final List<Sort> sort) {
+    public static List<Sort> normalizeSort(final InstanceSchema schema, final List<Sort> sort) {
 
+        final Name id = Name.of(schema.id());
         if(sort == null) {
-            return ImmutableList.of(Sort.asc(Name.of(Reserved.ID)));
+            return ImmutableList.of(Sort.asc(id));
         } else {
             final List<Sort> result = new ArrayList<>();
             for(final Sort s : sort) {
                 result.add(s);
-                if(s.getName().equalsSingle(Reserved.ID)) {
+                if(s.getName().equals(id)) {
                     // Other sort paths are irrelevant
                     return result;
                 }
             }
-            result.add(Sort.asc(Name.of(Reserved.ID)));
+            result.add(Sort.asc(id));
             return result;
         }
     }
 
-    public static List<Object> keysetValues(final ObjectSchema schema, final List<Sort> sort, final PagingToken token) {
+    public static List<Object> keysetValues(final InstanceSchema schema, final List<Sort> sort, final PagingToken token) {
 
         final byte[] bytes = token.getValue();
         final List<Object> values = new ArrayList<>();
@@ -73,14 +73,14 @@ public class KeysetPagingUtils {
         return values;
     }
 
-    public static PagingToken keysetPagingToken(final ObjectSchema schema, final List<Sort> sort, final Map<String, Object> object) {
+    public static PagingToken keysetPagingToken(final InstanceSchema schema, final List<Sort> sort, final Map<String, Object> object) {
 
         try(final ByteArrayOutputStream baos = new ByteArrayOutputStream();
             final DataOutputStream dos = new DataOutputStream(baos)) {
             for (final Sort s : sort) {
                 final Name name = s.getName();
-                final Object value = name.apply(object);
                 final Use<Object> type = schema.typeOf(name);
+                final Object value = type.create(name.apply(object));
                 type.serialize(value, dos);
             }
             dos.flush();

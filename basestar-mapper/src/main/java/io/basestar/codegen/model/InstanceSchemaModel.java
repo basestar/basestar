@@ -45,7 +45,7 @@ public abstract class InstanceSchemaModel extends SchemaModel {
 
         return Stream.concat(Stream.concat(
                 schema.getExtend() != null ? Stream.<MemberModel>empty() : schema.metadataSchema().entrySet().stream()
-                        .filter(entry -> !Reserved.SCHEMA.equals(entry.getKey()))
+                        .filter(entry -> !ObjectSchema.SCHEMA.equals(entry.getKey()) && !entry.getKey().startsWith(Reserved.PREFIX))
                         .map(entry -> new MetadataModel(getContext(), entry.getKey(), entry.getValue())),
                 schema.getDeclaredProperties().values().stream()
                         .map(v -> new PropertyModel(getContext(), v))

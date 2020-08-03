@@ -39,6 +39,14 @@ E:
     ref:
       type: B?
 
+F:
+  type: object
+  properties:
+    date:
+      type: date
+    datetime:
+      type: datetime
+
 AggView:
   type: view
   properties:
@@ -50,3 +58,6 @@ AggView:
       expression: key.id
   from: B
   group: key
+  expand:
+    - agg
+    - key

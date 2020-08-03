@@ -24,8 +24,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.ViewSchema;
+import io.basestar.spark.database.SparkDatabase;
 import io.basestar.spark.transform.ConformTransform;
+import io.basestar.spark.util.ColumnResolver;
 import io.basestar.spark.util.DatasetResolver;
 import io.basestar.util.Name;
 import org.apache.spark.sql.*;
@@ -53,7 +54,6 @@ public class TestViewTransform extends AbstractSparkTest {
         final D d2 = new D("b");
 
         final ObjectSchema b = namespace.requireObjectSchema("B");
-        final ViewSchema agg = namespace.requireViewSchema("AggView");
 
         final Dataset<Row> datasetB = session.createDataset(ImmutableList.of(
                 new B("1", d1, 1L), new B("2", d1, 2L), new B("3", d1, 3L),
@@ -66,7 +66,12 @@ public class TestViewTransform extends AbstractSparkTest {
 
         final DatasetResolver resolver = DatasetResolver.automatic((schema) -> datasets.get(schema.getQualifiedName()));
 
-        final Dataset<Row> dataset = resolver.resolve(agg);
+        final SparkDatabase database = SparkDatabase.builder()
+                .resolver(resolver).namespace(namespace)
+                .columnResolver(ColumnResolver.lowercase(ColumnResolver::nested))
+                .build();
+
+        final Dataset<Row> dataset = database.from("AggView").defaultExpand().query();
 
         final Encoder<AggView> encoder = Encoders.bean(AggView.class);
         final ConformTransform conform = ConformTransform.builder().structType(encoder.schema()).build();

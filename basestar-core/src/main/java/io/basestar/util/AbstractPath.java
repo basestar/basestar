@@ -364,6 +364,16 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
         return create(parts);
     }
 
+    public SELF toLowerCase() {
+
+        return transform(String::toLowerCase);
+    }
+
+    public SELF toUpperCase() {
+
+        return transform(String::toUpperCase);
+    }
+
     public String[] toArray() {
 
         return parts.toArray(new String[0]);

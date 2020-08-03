@@ -35,6 +35,7 @@ import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.MapSchema;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -54,6 +55,7 @@ import java.util.stream.Collectors;
  */
 
 @Data
+@Slf4j
 public class UseMap<T> implements Use<Map<String, T>> {
 
     public static final String NAME = "map";
@@ -108,6 +110,7 @@ public class UseMap<T> implements Use<Map<String, T>> {
                             entry -> fn.apply(entry.getKey().toString(), entry.getValue())
                     ));
         } else if(suppress) {
+            log.warn("Suppressed conversion error (invalid type: " + value.getClass() + ")");
             return null;
         } else {
             throw new UnexpectedTypeException(NAME, value);

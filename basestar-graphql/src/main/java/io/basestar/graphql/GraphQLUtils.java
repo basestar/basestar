@@ -26,6 +26,7 @@ import graphql.GraphQLContext;
 import graphql.execution.ExecutionContext;
 import graphql.language.*;
 import io.basestar.auth.Caller;
+import io.basestar.graphql.subscription.SubscriberContext;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import io.basestar.util.Name;
@@ -52,6 +53,8 @@ public class GraphQLUtils {
     public static final String QUERY_TYPE = "Query";
 
     public static final String MUTATION_TYPE = "Mutation";
+
+    public static final String SUBSCRIPTION_TYPE = "Subscription";
 
     private static final SelectionSet EMPTY_SELECTION = SelectionSet.newSelectionSet().build();
 
@@ -383,7 +386,7 @@ public class GraphQLUtils {
                 public Object visitObject(final UseObject type) {
 
                     if(value instanceof ObjectValue) {
-                        final String id = fromInput(context, UseString.DEFAULT, get((ObjectValue)value, Reserved.ID));
+                        final String id = fromInput(context, UseString.DEFAULT, get((ObjectValue)value, ObjectSchema.ID));
                         return ObjectSchema.ref(id);
                     } else {
                         throw new IllegalStateException();
@@ -812,7 +815,17 @@ public class GraphQLUtils {
                 return caller;
             }
         }
-        // FIXME
-        return Caller.SUPER;
+        return Caller.ANON;
+    }
+
+    public static SubscriberContext subscriber(final GraphQLContext context) {
+
+        if(context != null) {
+            final SubscriberContext sub = context.get("subscriber");
+            if(sub != null) {
+                return sub;
+            }
+        }
+        throw new IllegalStateException("Subscription not available");
     }
 }

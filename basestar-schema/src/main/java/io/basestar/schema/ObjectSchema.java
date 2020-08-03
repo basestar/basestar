@@ -71,6 +71,33 @@ import java.util.stream.Stream;
 @Accessors(chain = true)
 public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.Resolver, Permission.Resolver {
 
+    public static final String ID = "id";
+
+    public static final String SCHEMA = "schema";
+
+    public static final String CREATED = "created";
+
+    public static final String UPDATED = "updated";
+
+    public static final String VERSION = "version";
+
+    public static final String HASH = "hash";
+
+    public static final Name ID_NAME = Name.of(ID);
+
+    public static final SortedMap<String, Use<?>> METADATA_SCHEMA = ImmutableSortedMap.<String, Use<?>>orderedBy(Comparator.naturalOrder())
+            .put(ID, UseString.DEFAULT)
+            .put(SCHEMA, UseString.DEFAULT)
+            .put(VERSION, UseInteger.DEFAULT)
+            .put(CREATED, UseDateTime.DEFAULT)
+            .put(UPDATED, UseDateTime.DEFAULT)
+            .put(HASH, UseString.DEFAULT)
+            .build();
+
+    public static final SortedMap<String, Use<?>> REF_SCHEMA = ImmutableSortedMap.<String, Use<?>>orderedBy(Comparator.naturalOrder())
+            .put(ID, UseString.DEFAULT)
+            .build();
+
     @Nonnull
     private final Name qualifiedName;
 
@@ -295,19 +322,6 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
         return new Builder();
     }
 
-    public static final SortedMap<String, Use<?>> METADATA_SCHEMA = ImmutableSortedMap.<String, Use<?>>orderedBy(Comparator.naturalOrder())
-            .put(Reserved.ID, UseString.DEFAULT)
-            .put(Reserved.SCHEMA, UseString.DEFAULT)
-            .put(Reserved.VERSION, UseInteger.DEFAULT)
-            .put(Reserved.CREATED, UseDateTime.DEFAULT)
-            .put(Reserved.UPDATED, UseDateTime.DEFAULT)
-            .put(Reserved.HASH, UseString.DEFAULT)
-            .build();
-
-    public static final SortedMap<String, Use<?>> REF_SCHEMA = ImmutableSortedMap.<String, Use<?>>orderedBy(Comparator.naturalOrder())
-            .put(Reserved.ID, UseString.DEFAULT)
-            .build();
-
     private ObjectSchema(final Descriptor descriptor, final Schema.Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
 
         resolver.constructing(this);
@@ -320,7 +334,7 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
             this.extend = null;
         }
         this.description = descriptor.getDescription();
-        this.id = descriptor.getId() == null ? null : descriptor.getId().build(qualifiedName.with(Reserved.ID));
+        this.id = descriptor.getId() == null ? null : descriptor.getId().build(qualifiedName.with(ID));
         this.history = Nullsafe.option(descriptor.getHistory(), History.ENABLED);
         this.declaredProperties = Nullsafe.immutableSortedCopy(descriptor.getProperties(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
         this.declaredTransients = Nullsafe.immutableSortedCopy(descriptor.getTransients(), (k, v) -> v.build(qualifiedName.with(k)));
@@ -407,6 +421,12 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
     }
 
     @Override
+    public String id() {
+
+        return ID;
+    }
+
+    @Override
     public Map<String, ? extends Member> getDeclaredMembers() {
 
         final Map<String, Member> members = new HashMap<>();
@@ -458,7 +478,7 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
             return null;
         }
         final HashMap<String, Object> result = new HashMap<>(readProperties(value, expand, suppress));
-        result.putAll(readMeta(value));
+        result.putAll(readMeta(value, suppress));
         if(Instance.getSchema(result) == null) {
             Instance.setSchema(result, this.getQualifiedName());
         }
@@ -481,11 +501,18 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
         return new Instance(result);
     }
 
-    private void copyMeta(final Map<String, Object> source, final Map<String, Object> target) {
+    public static Map<String, Object> copyMeta(final Map<String, Object> source) {
 
-        METADATA_SCHEMA.keySet().forEach(k -> {
-            if(source.containsKey(k)) {
-                target.put(k, source.get(k));
+        final Map<String, Object> target = new HashMap<>();
+        copyMeta(source, target);
+        return Collections.unmodifiableMap(target);
+    }
+
+    public static void copyMeta(final Map<String, Object> source, final Map<String, Object> target) {
+
+        source.forEach((k, v) -> {
+            if(METADATA_SCHEMA.containsKey(k) || Reserved.isMeta(k)) {
+                target.put(k, v);
             }
         });
     }
@@ -497,7 +524,7 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
         final HashMap<String, Object> result = new HashMap<>();
         properties.forEach((k, v) -> result.put(k, v.evaluate(thisContext, branches.get(k), object.get(k))));
         copyMeta(object, result);
-        result.put(Reserved.HASH, hash(result));
+        result.put(HASH, hash(result));
         // Links deliberately not copied, this is only used to prepare an instance for write.
         return new Instance(result);
     }
@@ -554,8 +581,8 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
         UseString.DEFAULT.serialize(schema == null ? null : schema.toString(), out);
         UseString.DEFAULT.serialize(id, out);
         UseInteger.DEFAULT.serialize(version, out);
-        UseString.DEFAULT.serialize(created == null ? null : created.toString(), out);
-        UseString.DEFAULT.serialize(updated == null ? null : updated.toString(), out);
+        UseDateTime.DEFAULT.serialize(created, out);
+        UseDateTime.DEFAULT.serialize(updated, out);
         UseString.DEFAULT.serialize(hash, out);
         serializeProperties(object, out);
     }
@@ -565,16 +592,16 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
         final String schema = Use.deserializeAny(in);
         final String id = Use.deserializeAny(in);
         final Long version = Use.deserializeAny(in);
-        final String created = Use.deserializeAny(in);
-        final String updated = Use.deserializeAny(in);
+        final LocalDateTime created = Use.deserializeAny(in);
+        final LocalDateTime updated = Use.deserializeAny(in);
         final String hash = Use.deserializeAny(in);
 
         final Map<String, Object> data = new HashMap<>(InstanceSchema.deserializeProperties(in));
         Instance.setSchema(data, schema == null ? null : Name.parse(schema));
         Instance.setId(data, id);
         Instance.setVersion(data, version);
-        Instance.setCreated(data, created == null ? null : LocalDateTime.parse(created));
-        Instance.setUpdated(data, updated == null ? null : LocalDateTime.parse(updated));
+        Instance.setCreated(data, created);
+        Instance.setUpdated(data, updated);
         Instance.setHash(data, hash);
         return data;
     }
@@ -582,7 +609,7 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
     public static Instance ref(final String key) {
 
         return new Instance(ImmutableMap.of(
-                Reserved.ID, key
+                ID, key
         ));
     }
 

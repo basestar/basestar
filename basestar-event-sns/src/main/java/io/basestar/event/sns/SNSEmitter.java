@@ -45,6 +45,8 @@ public class SNSEmitter implements Emitter {
 
     private static final String EVENT_ATTRIBUTE = "event";
 
+    private static final String MODULE_ATTRIBUTE = "module";
+
     private static final String OVERSIZE_ATTRIBUTE = "oversize";
 
     private static final String DEDUPLICATION_ATTRIBUTE = "MessageDeduplicationId";
@@ -103,7 +105,11 @@ public class SNSEmitter implements Emitter {
                     // FIXME: these need to be included in sizing
                     final Map<String, MessageAttributeValue> attributes = new HashMap<>();
 
-                    attributes.put(EVENT_ATTRIBUTE, stringAttribute(event.getClass().getName()));
+                    final String eventType = event.eventType();
+                    final String eventModule = event.eventModule();
+
+                    attributes.put(EVENT_ATTRIBUTE, stringAttribute(eventType));
+                    attributes.put(MODULE_ATTRIBUTE, stringAttribute(eventModule));
                     attributes.put(DEDUPLICATION_ATTRIBUTE, stringAttribute(id));
                     meta.forEach((k, v) -> attributes.put(k, stringAttribute(v)));
 
@@ -136,7 +142,7 @@ public class SNSEmitter implements Emitter {
                 .message(message)
                 .build();
 
-        log.info("Publish to SNS topic {}", request);
+        log.debug("Publish to SNS topic {}", request);
 
         return client.publish(request);
     }

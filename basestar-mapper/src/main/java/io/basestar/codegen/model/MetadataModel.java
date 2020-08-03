@@ -23,7 +23,6 @@ package io.basestar.codegen.model;
 import com.google.common.collect.ImmutableList;
 import io.basestar.codegen.CodegenContext;
 import io.basestar.mapper.annotation.*;
-import io.basestar.schema.Reserved;
 import io.basestar.schema.use.Use;
 
 import java.lang.annotation.Annotation;
@@ -52,15 +51,15 @@ public class MetadataModel extends MemberModel {
     protected Annotation getAnnotation() {
 
         switch (name) {
-            case Reserved.ID:
+            case io.basestar.schema.ObjectSchema.ID:
                 return Id.Declaration.annotation();
-            case Reserved.VERSION:
+            case io.basestar.schema.ObjectSchema.VERSION:
                 return Version.Declaration.annotation();
-            case Reserved.CREATED:
+            case io.basestar.schema.ObjectSchema.CREATED:
                 return Created.Declaration.annotation();
-            case Reserved.UPDATED:
+            case io.basestar.schema.ObjectSchema.UPDATED:
                 return Updated.Declaration.annotation();
-            case Reserved.HASH:
+            case io.basestar.schema.ObjectSchema.HASH:
                 return Hash.Declaration.annotation();
             default:
                 throw new UnsupportedOperationException("Invalid metadata " + name);

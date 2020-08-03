@@ -51,10 +51,11 @@ import io.basestar.schema.*;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.storage.ConstantStorage;
-import io.basestar.storage.OverlayStorage;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
+import io.basestar.storage.Versioning;
 import io.basestar.storage.exception.ObjectMissingException;
+import io.basestar.storage.overlay.OverlayStorage;
 import io.basestar.storage.util.IndexRecordDiff;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.*;
@@ -112,7 +113,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
     }
 
     @Override
-    public CompletableFuture<Map<String, Instance>> transaction(final Caller caller, final BatchOptions options) {
+    public CompletableFuture<Map<String, Instance>> batch(final Caller caller, final BatchOptions options) {
 
         log.debug("Batch: options={}", options);
 
@@ -130,12 +131,13 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             }
         });
 
-        return batch(caller, actions);
+        return batch(caller, options.getConsistency(), actions);
     }
 
     private CompletableFuture<Instance> single(final Caller caller, final Action action) {
 
-        return batch(caller, ImmutableMap.of(SINGLE_BATCH_ROOT, action))
+        // FIXME: unspecified consistency should be passed to storage so it can define default, but that might break too many things today
+        return batch(caller, Nullsafe.option(action.getConsistency(), Consistency.ATOMIC), ImmutableMap.of(SINGLE_BATCH_ROOT, action))
                 .thenApply(v -> v.get(SINGLE_BATCH_ROOT));
     }
 
@@ -144,7 +146,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         return permission == null ? Collections.emptySet() : Nullsafe.option(permission.getExpand());
     }
 
-    private CompletableFuture<Map<String, Instance>> batch(final Caller caller, final Map<String, Action> actions) {
+    private CompletableFuture<Map<String, Instance>> batch(final Caller caller, final Consistency consistency, final Map<String, Action> actions) {
 
         final Set<RefKey> beforeCheck = new HashSet<>();
         final Set<ExpandKey<RefKey>> beforeKeys = new HashSet<>();
@@ -179,7 +181,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
             final CompletableFuture<Map<RefKey, Instance>> beforeFuture;
             if (!beforeKeys.isEmpty()) {
-                final Storage.ReadTransaction read = storage.read(Consistency.NONE);
+                final Storage.ReadTransaction read = storage.read(consistency);
                 beforeKeys.forEach(expandKey -> {
                     final RefKey key = expandKey.getKey();
                     read.readObject(objectSchema(key.getSchema()), key.getId(), expandKey.getExpand());
@@ -296,7 +298,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                             checkPermission(afterCaller, schema, permission, scope);
                         });
 
-                        final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC);
+                        final Storage.WriteTransaction write = storage.write(consistency, Versioning.CHECKED);
 
                         final Map<String, Instance> results = new HashMap<>();
                         final Set<Event> events = new HashSet<>();
@@ -819,7 +821,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                             return value;
                         }
                     }, schema.getExpand());
-                    final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC);
+                    final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC, Versioning.CHECKED);
                     write.updateObject(schema, id, before, after);
                     return write.write()
                             .thenCompose(ignored -> emitter.emit(ObjectRefreshedEvent.of(schema.getQualifiedName(), id, version, before, after)));

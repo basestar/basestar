@@ -28,8 +28,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.DateTimeParseException;
 import java.time.temporal.TemporalAccessor;
 import java.util.Date;
 import java.util.Set;
@@ -39,6 +41,14 @@ public class UseDateTime implements UseScalar<LocalDateTime> {
     public static final UseDateTime DEFAULT = new UseDateTime();
 
     public static final String NAME = "datetime";
+
+    public static final DateTimeFormatter[] FORMATS = {
+            new DateTimeFormatterBuilder().append(DateTimeFormatter.ISO_LOCAL_DATE)
+                .appendLiteral('T')
+                .append(DateTimeFormatter.ISO_LOCAL_TIME)
+                .appendLiteral('Z')
+                .toFormatter()
+    };
 
     @Override
     public <R> R visit(final Visitor<R> visitor) {
@@ -51,15 +61,27 @@ public class UseDateTime implements UseScalar<LocalDateTime> {
         return DEFAULT;
     }
 
+    public static LocalDateTime parse(final String value) {
+
+        for(final DateTimeFormatter formatter: FORMATS) {
+            try {
+                return formatter.parse(value, LocalDateTime::from);
+            } catch (final DateTimeParseException e) {
+                // suppress
+            }
+        }
+        return LocalDateTime.parse(value, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+    }
+
     @Override
     public LocalDateTime create(final Object value, final Set<Name> expand, final boolean suppress) {
 
         if(value instanceof String) {
-            return LocalDateTime.parse((String)value, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            return parse((String)value);
         } else if(value instanceof TemporalAccessor) {
             return LocalDateTime.from((TemporalAccessor)value);
         } else if(value instanceof Date) {
-            return ((Date) value).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+            return ((Date) value).toInstant().atZone(ZoneOffset.UTC).toLocalDateTime();
         } else if(suppress) {
             return null;
         } else {

@@ -184,14 +184,14 @@ public class Link implements Member {
     public List<Sort> getEffectiveSort() {
 
         if(sort.isEmpty()) {
-            return ImmutableList.of(Sort.asc(Reserved.ID_NAME));
+            return ImmutableList.of(Sort.asc(schema.id()));
         } else {
             final Sort last = sort.get(sort.size() - 1);
-            if(last.getName().equals(Reserved.ID_NAME)) {
+            if(last.getName().equals(schema.id())) {
                 return sort;
             } else {
                 return ImmutableList.<Sort>builder().addAll(sort)
-                        .add(Sort.asc(Reserved.ID_NAME))
+                        .add(Sort.asc(schema.id()))
                         .build();
             }
         }

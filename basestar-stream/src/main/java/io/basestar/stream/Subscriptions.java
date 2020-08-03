@@ -23,21 +23,18 @@ package io.basestar.stream;
 import io.basestar.auth.Caller;
 import io.basestar.expression.Expression;
 import io.basestar.storage.util.Pager;
-import io.basestar.util.Name;
-import io.basestar.util.PagingToken;
 
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-public interface Subscriber {
+public interface Subscriptions {
 
-    CompletableFuture<?> create(Caller caller, String sub, String channel, Expression expression, Set<Subscription.Key> keys, Set<Name> expand);
+    CompletableFuture<?> subscribe(Caller caller, String sub, String channel, Set<Subscription.Key> keys, Expression expression, SubscriptionInfo info);
 
-    Pager<Subscription> listBySubAndChannel(String sub, String channel, PagingToken token);
+    List<Pager.Source<Subscription>> query(Set<Subscription.Key> keys);
 
-    Pager<Subscription> listBySub(String sub, PagingToken token);
+    CompletableFuture<?> unsubscribe(String sub, String channel);
 
-    Pager<Subscription> listByKeys(Set<Subscription.Key> keys, PagingToken token);
-
-    CompletableFuture<?> delete(Set<String> ids);
+    CompletableFuture<?> unsubscribeAll(String sub);
 }

@@ -7,6 +7,7 @@ import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Namespace;
 import io.basestar.spark.util.SparkSchemaUtils;
+import io.basestar.util.Nullsafe;
 import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
 import org.apache.spark.api.java.function.MapFunction;
@@ -29,8 +30,9 @@ public class UnmarshallTransform<T> implements Transform<Dataset<T>, Dataset<Row
     private final Set<Name> expand;
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public UnmarshallTransform(final MappingContext context, final Class<T> cls) {
+    public UnmarshallTransform(final MappingContext context, final Class<T> sourceType) {
 
+        Nullsafe.require(sourceType);
         final Namespace namespace = context.namespace(cls).build();
         this.schema = namespace.requireInstanceSchema(context.schemaName(cls));
         if(this.schema instanceof LinkableSchema) {
@@ -39,12 +41,7 @@ public class UnmarshallTransform<T> implements Transform<Dataset<T>, Dataset<Row
             this.expand = Collections.emptySet();
         }
         // FIXME: should provide an instanceSchemaMapper method in MappingContext so we don't have to cast like this
-        this.mapper = (InstanceSchemaMapper<T, ?>)(InstanceSchemaMapper)context.schemaMapper(cls);
-    }
-
-    public UnmarshallTransform(final Class<T> cls) {
-
-        this(new MappingContext(), cls);
+        this.mapper = (InstanceSchemaMapper<T, ?>)(InstanceSchemaMapper)resolvedContext.schemaMapper(sourceType);
     }
 
     @Override

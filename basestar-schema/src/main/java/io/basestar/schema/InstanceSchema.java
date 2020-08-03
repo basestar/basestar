@@ -93,6 +93,13 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
     @Override
     UseInstance use();
 
+    String id();
+
+    default Use<?> typeOfId() {
+
+        return metadataSchema().get(id());
+    }
+
     default boolean hasMutableProperties() {
 
         return !getProperties().values().stream().map(Property::isImmutable).reduce(true, (a, b) -> a && b);
@@ -105,7 +112,7 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
         if(value == null) {
             return null;
         } else if(value instanceof Map) {
-            return create((Map<String, Object>)value, expand, suppress);
+            return create((Map<String, Object>) value, expand, suppress);
         } else {
             throw new UnexpectedTypeException(this, value);
         }
@@ -176,6 +183,21 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
         final Map<String, Set<Name>> branches = Name.branch(expand);
         final Map<String, Object> result = new HashMap<>();
         getProperties().forEach((k, v) -> result.put(k, v.create(object.get(k), branches.get(k), suppress)));
+        return Collections.unmodifiableMap(result);
+    }
+
+    default Map<String, Object> readMeta(final Map<String, Object> object, final boolean suppress) {
+
+        final Map<String, Use<?>> metadataSchema = metadataSchema();
+        final HashMap<String, Object> result = new HashMap<>();
+        object.forEach((k, v) -> {
+            final Use<?> type = metadataSchema.get(k);
+            if(type != null) {
+                result.put(k, type.create(v, false, suppress));
+            } else if(Reserved.isMeta(k)) {
+                result.put(k, v);
+            }
+        });
         return Collections.unmodifiableMap(result);
     }
 

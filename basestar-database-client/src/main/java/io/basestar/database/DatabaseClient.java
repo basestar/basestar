@@ -112,7 +112,7 @@ public class DatabaseClient implements Database {
     }
 
     @Override
-    public CompletableFuture<Map<String, Instance>> transaction(final Caller caller, final BatchOptions options) {
+    public CompletableFuture<Map<String, Instance>> batch(final Caller caller, final BatchOptions options) {
 
         return null;
     }

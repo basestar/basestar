@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
+import io.basestar.schema.Reserved;
 import io.basestar.spark.transform.ConformTransform;
 import io.basestar.spark.transform.MarshallTransform;
 import io.basestar.util.Name;
@@ -18,6 +19,8 @@ import java.util.List;
 import java.util.Set;
 
 public interface QueryChain<T> {
+
+    Name DEFAULT_EXPAND = Name.of(Reserved.PREFIX + "default");
 
     Dataset<T> query(@Nullable Expression query, @Nonnull List<Sort> sort, @Nonnull Set<Name> expand);
 
@@ -39,6 +42,11 @@ public interface QueryChain<T> {
     default QueryChain<T> expand(@Nonnull final Set<Name> expand) {
 
         return (query, sort, expand2) -> this.query(query, sort, Sets.union(expand, expand2));
+    }
+
+    default QueryChain<T> defaultExpand() {
+
+        return expand(ImmutableSet.of(DEFAULT_EXPAND));
     }
 
     default QueryChain<T> sort(@Nonnull final Sort sort) {
@@ -68,6 +76,7 @@ public interface QueryChain<T> {
     default <T2> QueryChain<T2> as(final MappingContext context, final Class<T2> marshallAs) {
 
         final QueryChain<T> self = this;
-        return (expand, query, sort) -> new MarshallTransform<>(context, marshallAs).accept(self.query(expand, query, sort));
+        final MarshallTransform<T2> marshall = MarshallTransform.<T2>builder().context(context).targetType(marshallAs).build();
+        return (expand, query, sort) -> marshall.accept(self.query(expand, query, sort).toDF());
     }
 }

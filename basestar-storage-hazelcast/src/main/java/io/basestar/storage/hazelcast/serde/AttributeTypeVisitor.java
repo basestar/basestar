@@ -95,13 +95,13 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
     @Override
     public AttributeType<?> visitDate(final UseDate type) {
 
-        return AttributeType.STRING;
+        return AttributeType.DATE;
     }
 
     @Override
     public AttributeType<?> visitDateTime(final UseDateTime type) {
 
-        return AttributeType.STRING;
+        return AttributeType.DATETIME;
     }
 
     @Override
@@ -189,13 +189,13 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
         @Override
         public AttributeType<?> visitDate(final UseDate type) {
 
-            return AttributeType.STRING_ARRAY;
+            return AttributeType.DATE_ARRAY;
         }
 
         @Override
         public AttributeType<?> visitDateTime(final UseDateTime type) {
 
-            return AttributeType.STRING_ARRAY;
+            return AttributeType.DATETIME_ARRAY;
         }
 
         @Override

@@ -29,6 +29,7 @@ import io.basestar.util.Name;
 import io.basestar.util.PagedList;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 public interface Database {
@@ -99,5 +100,11 @@ public interface Database {
         return queryLink(caller, QueryLinkOptions.builder().schema(schema).id(id).link(link).build());
     }
 
-    CompletableFuture<Map<String, Instance>> transaction(Caller caller, BatchOptions options);
+    CompletableFuture<Map<String, Instance>> batch(Caller caller, BatchOptions options);
+
+    default CompletableFuture<Instance> expand(Caller caller, Map<String, Object> instance, Set<Name> expand) {
+
+        // FIXME: should not read the root object (will break in versioning scenario anyway)
+        return read(caller, ReadOptions.builder().schema(Instance.getSchema(instance)).version(Instance.getVersion(instance)).expand(expand).build());
+    }
 }

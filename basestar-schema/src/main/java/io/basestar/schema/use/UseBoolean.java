@@ -24,6 +24,7 @@ import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.BooleanSchema;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -40,6 +41,7 @@ import java.util.Set;
  */
 
 @Data
+@Slf4j
 public class UseBoolean implements UseScalar<Boolean> {
 
     public static final UseBoolean DEFAULT = new UseBoolean();
@@ -73,6 +75,7 @@ public class UseBoolean implements UseScalar<Boolean> {
         } else if(value instanceof String) {
             return !(((String)value).isEmpty() || value.equals("false"));
         } else if(suppress) {
+            log.warn("Suppressed conversion error (invalid type: " + value.getClass() + ")");
             return null;
         } else {
             throw new UnexpectedTypeException(this, value);

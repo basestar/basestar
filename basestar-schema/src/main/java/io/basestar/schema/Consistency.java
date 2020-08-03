@@ -20,17 +20,36 @@ package io.basestar.schema;
  * #L%
  */
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
+@Getter
+@RequiredArgsConstructor
 public enum Consistency implements Comparable<Consistency> {
 
-    ATOMIC,
-    QUORUM,
-    EVENTUAL,
-    ASYNC,
-    NONE; /* internal use only */
+    ATOMIC_ALL(false),
+    ATOMIC(true),
+    QUORUM_ALL(false),
+    QUORUM(true),
+    EVENTUAL(true),
+    ASYNC(true),
+    NONE(false); /* internal use only */
+
+    private final boolean visible;
+
+    public boolean isAtomicAll() {
+
+        return this == ATOMIC_ALL;
+    }
 
     public boolean isAtomic() {
 
         return this == ATOMIC;
+    }
+
+    public boolean isQuorumAll() {
+
+        return this == ATOMIC_ALL;
     }
 
     public boolean isQuorum() {

@@ -26,7 +26,6 @@ import io.basestar.mapper.MappingContext;
 import io.basestar.schema.Id;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.Reserved;
 import io.basestar.type.PropertyContext;
 import io.basestar.type.SerializableAccessor;
 
@@ -82,7 +81,7 @@ public class IdMapper implements MemberMapper<ObjectSchema.Builder> {
     @Override
     public String memberType() {
 
-        return Reserved.ID;
+        return ObjectSchema.ID;
     }
 
     @Override

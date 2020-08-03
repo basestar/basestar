@@ -22,14 +22,18 @@ package io.basestar.graphql;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import graphql.ExecutionInput;
+import graphql.ExecutionResult;
 import graphql.GraphQL;
+import graphql.GraphQLContext;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.basestar.auth.Caller;
 import io.basestar.database.DatabaseServer;
 import io.basestar.database.options.CreateOptions;
 import io.basestar.graphql.schema.SchemaConverter;
+import io.basestar.graphql.subscription.SubscriberContext;
 import io.basestar.schema.Namespace;
 import io.basestar.storage.MemoryStorage;
 import io.basestar.util.Name;
@@ -37,9 +41,12 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.*;
 
 public class GraphQLTest {
 
@@ -48,9 +55,7 @@ public class GraphQLTest {
         return Namespace.load(GraphQLTest.class.getResource("schema.yml"));
     }
 
-    private GraphQL graphQL() throws Exception {
-
-        final Namespace namespace = namespace();
+    private GraphQL graphQL(final Namespace namespace) throws Exception {
 
         final MemoryStorage storage = MemoryStorage.builder().build();
         final DatabaseServer databaseServer = new DatabaseServer(namespace, storage);
@@ -77,8 +82,7 @@ public class GraphQLTest {
                 ))
                 .build()).get();
 
-        return new GraphQLAdaptor(databaseServer, namespace)
-                .graphQL();
+        return GraphQLAdaptor.builder().database(databaseServer).namespace(namespace).build().graphQL();
     }
 
     @Test
@@ -96,7 +100,8 @@ public class GraphQLTest {
     @Test
     public void testGet() throws Exception {
 
-        final GraphQL graphQL = graphQL();
+        final Namespace namespace = namespace();
+        final GraphQL graphQL = graphQL(namespace);
 
         final Map<String, Object> get = graphQL.execute(ExecutionInput.newExecutionInput()
                 .query("query {\n" +
@@ -112,6 +117,7 @@ public class GraphQLTest {
                         "    }\n" +
                         "  }\n" +
                         "}")
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
                 .build()).getData();
         assertEquals(Collections.singletonMap(
                 "readTest1", ImmutableMap.of(
@@ -129,7 +135,8 @@ public class GraphQLTest {
     @Test
     public void testGetMissing() throws Exception {
 
-        final GraphQL graphQL = graphQL();
+        final Namespace namespace = namespace();
+        final GraphQL graphQL = graphQL(namespace);
 
         final Map<String, Object> get = graphQL.execute(ExecutionInput.newExecutionInput()
                 .query("query {\n" +
@@ -146,7 +153,8 @@ public class GraphQLTest {
     @Test
     public void testCreate() throws Exception {
 
-        final GraphQL graphQL = graphQL();
+        final Namespace namespace = namespace();
+        final GraphQL graphQL = graphQL(namespace);
 
         final Map<String, Map<String, Object>> create = graphQL.execute(ExecutionInput.newExecutionInput()
                 .query("mutation {\n" +
@@ -157,6 +165,7 @@ public class GraphQLTest {
                         "    updated\n" +
                         "  }\n" +
                         "}")
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
                 .build()).getData();
         assertEquals(4, create.get("createTest1").size());
 
@@ -166,14 +175,16 @@ public class GraphQLTest {
                         "    id\n" +
                         "  }\n" +
                         "}")
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
                 .build()).getData();
         assertEquals(ImmutableMap.of("readTest1", ImmutableMap.of("id", "x")), get);
     }
 
     @Test
-    public void testBatchMutate() throws Exception {
+    public void testMultiMutate() throws Exception {
 
-        final GraphQL graphQL = graphQL();
+        final Namespace namespace = namespace();
+        final GraphQL graphQL = graphQL(namespace);
 
         final Map<String, Object> result = graphQL.execute(ExecutionInput.newExecutionInput()
                 .query("mutation {\n" +
@@ -184,6 +195,7 @@ public class GraphQLTest {
                         "    id\n" +
                         "  }\n" +
                         "}")
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
                 .build()).getData();
         assertEquals(ImmutableMap.of(
                 "a", ImmutableMap.of("id", "x"),
@@ -194,7 +206,8 @@ public class GraphQLTest {
     @Test
     public void testNullErrors() throws Exception {
 
-        final GraphQL graphQL = graphQL();
+        final Namespace namespace = namespace();
+        final GraphQL graphQL = graphQL(namespace);
 
         final Map<String, Object> result = graphQL.execute(ExecutionInput.newExecutionInput()
                 .query("mutation {\n" +
@@ -203,5 +216,47 @@ public class GraphQLTest {
                         "  }\n" +
                         "}")
                 .build()).getData();
+    }
+
+    @Test
+    public void testSubscribe() throws Exception {
+
+        final Namespace namespace = namespace();
+        final GraphQL graphQL = graphQL(namespace);
+
+        final SubscriberContext subscriberContext = mock(SubscriberContext.class);
+        when(subscriberContext.subscribe(any(), any(), any(), any())).thenReturn(CompletableFuture.completedFuture(null));
+
+        graphQL.execute(ExecutionInput.newExecutionInput()
+                .context(GraphQLContext.newContext().of("subscriber", subscriberContext).build())
+                .query("subscription {\n" +
+                        "  a: subscribeTest1(id:\"x\") {\n" +
+                        "    id\n" +
+                        "  }\n" +
+                        "}")
+                .build()).getData();
+
+        verify(subscriberContext).subscribe(namespace.requireObjectSchema("Test1"), "x", "a", ImmutableSet.of(Name.of("id")));
+    }
+
+    @Test
+    public void testBatch() throws Exception {
+
+        final Namespace namespace = namespace();
+        final GraphQL graphQL = graphQL(namespace);
+
+        final ExecutionResult result = graphQL.execute(ExecutionInput.newExecutionInput()
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
+                .query("mutation {\n" +
+                        "  batch {\n" +
+                        "    a:createTest1(id:\"x\", data:{x:\"x\"}) {\n" +
+                        "      id\n" +
+                        "    }\n" +
+                        "  }\n" +
+                        "}")
+                .build());
+
+        System.err.println((Object)result.getData());
+        System.err.println(result.getErrors());
     }
 }

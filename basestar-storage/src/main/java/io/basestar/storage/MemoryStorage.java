@@ -28,6 +28,7 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.*;
+import io.basestar.schema.use.UseBinary;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;
@@ -139,7 +140,7 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
         return CompletableFuture.supplyAsync(() -> {
             synchronized (lock) {
 
-                final byte[] partBinary = binary(satisfy.getPartition());
+                final byte[] partBinary = UseBinary.binaryKey(satisfy.getPartition());
                 final IndexPartition partKey = new IndexPartition(schema.getQualifiedName(), index.getName(), partBinary);
 
                 final NavigableMap<IndexSort, Map<String, Object>> partition = state.index.get(partKey);
@@ -149,8 +150,8 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
                     results = Collections.emptyList();
                 } else {
                     if(!satisfy.getSort().isEmpty()) {
-                        final byte[] sortLo = binary(satisfy.getSort());
-                        final byte[] sortHi = binary(satisfy.getSort(), new byte[]{0});
+                        final byte[] sortLo = UseBinary.binaryKey(satisfy.getSort());
+                        final byte[] sortHi = UseBinary.binaryKey(satisfy.getSort(), new byte[]{0});
                         results = Lists.newArrayList(partition.tailMap(new IndexSort(sortLo, null), true)
                                 .headMap(new IndexSort(sortHi, null)).values());
                     } else {
@@ -232,7 +233,7 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
     }
 
     @Override
-    public PartitionedStorage.WriteTransaction write(final Consistency consistency) {
+    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
         return new PartitionedStorage.WriteTransaction() {
 
@@ -346,8 +347,8 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
                 items.add(state -> {
 
 
-                    final IndexPartition partKey = new IndexPartition(schema.getQualifiedName(), index.getName(), binary(key.getPartition()));
-                    final IndexSort sortKey = new IndexSort(binary(key.getSort()), index.isUnique() ? null : id);
+                    final IndexPartition partKey = new IndexPartition(schema.getQualifiedName(), index.getName(), UseBinary.binaryKey(key.getPartition()));
+                    final IndexSort sortKey = new IndexSort(UseBinary.binaryKey(key.getSort()), index.isUnique() ? null : id);
 
                     final Map<IndexSort, Map<String, Object>> partition = state.index
                             .computeIfAbsent(partKey, k -> new TreeMap<>());

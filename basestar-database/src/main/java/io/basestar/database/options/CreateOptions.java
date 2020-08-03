@@ -21,6 +21,7 @@ package io.basestar.database.options;
  */
 
 import io.basestar.expression.Expression;
+import io.basestar.schema.Consistency;
 import io.basestar.util.Name;
 import lombok.Builder;
 import lombok.Data;
@@ -39,6 +40,8 @@ public class CreateOptions implements ActionOptions {
     private final String id;
 
     private final Map<String, Object> data;
+
+    private final Consistency consistency;
 
     private final Map<String, Expression> expressions;
 

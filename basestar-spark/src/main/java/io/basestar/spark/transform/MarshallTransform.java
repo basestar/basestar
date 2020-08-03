@@ -5,6 +5,7 @@ import io.basestar.mapper.SchemaMapper;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Namespace;
 import io.basestar.spark.util.SparkSchemaUtils;
+import io.basestar.util.Nullsafe;
 import lombok.RequiredArgsConstructor;
 import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
@@ -14,31 +15,29 @@ import org.apache.spark.sql.Row;
 import java.util.Map;
 
 @RequiredArgsConstructor
-public class MarshallTransform<T> implements Transform<Dataset<?>, Dataset<T>> {
+public class MarshallTransform<T> implements Transform<Dataset<Row>, Dataset<T>> {
 
     private final SchemaMapper<T, ? extends Map<String, Object>> mapper;
 
     private final InstanceSchema schema;
 
-    public MarshallTransform(final MappingContext context, final Class<T> cls) {
+    @lombok.Builder(builderClassName = "Builder")
+    MarshallTransform(final MappingContext context, final Class<T> targetType) {
 
-        final Namespace namespace = context.namespace(cls).build();
-        this.schema = namespace.requireInstanceSchema(context.schemaName(cls));
-        this.mapper = context.schemaMapper(cls);
-    }
-
-    public MarshallTransform(final Class<T> cls) {
-
-        this(new MappingContext(), cls);
+        Nullsafe.require(targetType);
+        final MappingContext resolvedContext = Nullsafe.option(context, MappingContext::new);
+        final Namespace namespace = resolvedContext.namespace(targetType).build();
+        this.schema = namespace.requireInstanceSchema(resolvedContext.schemaName(targetType));
+        this.mapper = resolvedContext.schemaMapper(targetType);
     }
 
     @Override
-    public Dataset<T> accept(final Dataset<?> input) {
+    public Dataset<T> accept(final Dataset<Row> input) {
 
         final SchemaMapper<T, ? extends Map<String, Object>> mapper = this.mapper;
         final InstanceSchema schema = this.schema;
         final Class<T> beanClass = mapper.marshalledType();
-        return input.toDF().map((MapFunction<Row, T>) row -> {
+        return input.map((MapFunction<Row, T>) row -> {
             final Map<String, Object> object = SparkSchemaUtils.fromSpark(schema, row);
             return mapper.marshall(object);
         }, Encoders.bean(beanClass));

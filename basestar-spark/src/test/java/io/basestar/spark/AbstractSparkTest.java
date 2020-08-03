@@ -20,10 +20,13 @@ package io.basestar.spark;
  * #L%
  */
 
+import io.basestar.mapper.annotation.ObjectSchema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -101,6 +104,27 @@ public abstract class AbstractSparkTest {
     public static class E {
 
         private B ref;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class F {
+
+        private java.sql.Date date;
+
+        private java.sql.Timestamp datetime;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @ObjectSchema(name = "F")
+    public static class F2 {
+
+        private LocalDate date;
+
+        private LocalDateTime datetime;
     }
 
     @Data

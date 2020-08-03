@@ -31,6 +31,7 @@ import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -86,7 +87,7 @@ public class UseObject implements UseLinkable {
         if(value instanceof Map) {
             final Map<String, Object> map = (Map<String, Object>)value;
             final String id = Instance.getId(map);
-            if(id == null) {
+            if (id == null) {
                 return null;
             } else {
                 if(expand != null) {
@@ -95,6 +96,9 @@ public class UseObject implements UseLinkable {
                     return ObjectSchema.ref(id);
                 }
             }
+        } else if(suppress) {
+            log.warn("Suppressed conversion error (invalid type: " + value.getClass() + ")");
+            return null;
         } else {
             throw new UnexpectedTypeException(this, value);
         }
@@ -134,7 +138,7 @@ public class UseObject implements UseLinkable {
             if(expand == null) {
                 // If non-expanded, strip back to just a ref, this is needed because expand is also used to
                 // reset after expansion for permission evaluation
-                if(value.size() == 1 && value.containsKey(Reserved.ID)) {
+                if(value.size() == 1 && value.containsKey(ObjectSchema.ID)) {
                     return value;
                 } else {
                     return ObjectSchema.ref(Instance.getId(value));
@@ -159,8 +163,8 @@ public class UseObject implements UseLinkable {
     public Set<Name> requiredExpand(final Set<Name> names) {
 
         final Set<Name> copy = Sets.newHashSet(names);
-        copy.remove(Name.of(Reserved.SCHEMA));
-        copy.remove(Name.of(Reserved.ID));
+        copy.remove(Name.of(ObjectSchema.SCHEMA));
+        copy.remove(Name.of(ObjectSchema.ID));
 
         if(!copy.isEmpty()) {
             final Set<Name> result = Sets.newHashSet();
@@ -183,7 +187,7 @@ public class UseObject implements UseLinkable {
 
         final Set<Expression> queries = new HashSet<>();
         if(schema.getQualifiedName().equals(otherTypeName)) {
-            queries.add(new Eq(new NameConstant(name.with(Reserved.ID)), new NameConstant(Name.of(Reserved.THIS, Reserved.ID))));
+            queries.add(new Eq(new NameConstant(name.with(ObjectSchema.ID)), new NameConstant(Name.of(Reserved.THIS, ObjectSchema.ID))));
         }
         if(expand != null && !expand.isEmpty()) {
             queries.addAll(schema.refQueries(otherTypeName, expand, name));

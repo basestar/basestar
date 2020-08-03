@@ -26,6 +26,7 @@ import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
 import io.basestar.util.Name;
+import io.basestar.storage.Versioning;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import software.amazon.awssdk.core.BytesWrapper;
@@ -134,7 +135,7 @@ public class S3BlobStorage implements Storage.WithoutWriteIndex, Storage.Without
     }
 
     @Override
-    public WriteTransaction write(final Consistency consistency) {
+    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
         return new WriteTransaction() {
 

@@ -31,6 +31,7 @@ import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -40,6 +41,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Data
+@Slf4j
 public class UseView implements UseLinkable {
 
     private final ViewSchema schema;
@@ -76,6 +78,7 @@ public class UseView implements UseLinkable {
         if(value instanceof Map) {
             return schema.create((Map<String, Object>) value, expand, suppress);
         } else if(suppress) {
+            log.warn("Suppressed conversion error (invalid type: " + value.getClass() + ")");
             return null;
         } else {
             throw new UnexpectedTypeException(this, value);

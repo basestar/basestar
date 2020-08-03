@@ -28,6 +28,7 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -45,15 +46,15 @@ public class AuthenticatingAPI implements API {
     }
 
     @Override
-    public CompletableFuture<APIResponse> handle(final APIRequest request) {
+    public CompletableFuture<APIResponse> handle(final APIRequest request) throws IOException {
 
         final Authorization authorization = Authorization.from(request.getFirstHeader("Authorization"));
         if(authenticator.canAuthenticate(authorization)) {
             return authenticator.authenticate(authorization).thenCompose(caller -> {
 
-                log.info("Authenticated as {} (anon: {}, super: {})", caller.getId(), caller.isAnon(), caller.isSuper());
+                log.debug("Authenticated as {} (anon: {}, super: {})", caller.getId(), caller.isAnon(), caller.isSuper());
 
-                return api.handle(new APIRequest.Delegating(request) {
+                return api.handleUnchecked(new APIRequest.Delegating(request) {
 
                     @Override
                     public Caller getCaller() {

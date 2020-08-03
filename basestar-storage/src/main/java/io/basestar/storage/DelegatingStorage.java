@@ -149,14 +149,14 @@ public interface DelegatingStorage extends Storage {
     }
 
     @Override
-    default WriteTransaction write(final Consistency consistency) {
+    default WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
         final IdentityHashMap<Storage, WriteTransaction> transactions = new IdentityHashMap<>();
         return new WriteTransaction() {
             @Override
             public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
-                transactions.computeIfAbsent(storage(schema), v -> v.write(consistency))
+                transactions.computeIfAbsent(storage(schema), v -> v.write(consistency, versioning))
                         .createObject(schema, id, after);
 
                 return this;
@@ -165,7 +165,7 @@ public interface DelegatingStorage extends Storage {
             @Override
             public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
-                transactions.computeIfAbsent(storage(schema), v -> v.write(consistency))
+                transactions.computeIfAbsent(storage(schema), v -> v.write(consistency, versioning))
                         .updateObject(schema, id, before, after);
 
                 return this;
@@ -174,7 +174,7 @@ public interface DelegatingStorage extends Storage {
             @Override
             public WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
 
-                transactions.computeIfAbsent(storage(schema), v -> v.write(consistency))
+                transactions.computeIfAbsent(storage(schema), v -> v.write(consistency, versioning))
                         .deleteObject(schema, id, before);
 
                 return this;

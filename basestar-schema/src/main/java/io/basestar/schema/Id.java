@@ -116,7 +116,7 @@ public class Id implements Serializable {
     public Set<Constraint.Violation> validate(final Name path, final Object after, final Context context) {
 
         final Set<Constraint.Violation> violations = new HashSet<>();
-        final Name qualifiedName = path.with(Reserved.ID);
+        final Name qualifiedName = path.with(ObjectSchema.ID);
         if(after == null) {
             violations.add(new Constraint.Violation(qualifiedName, Constraint.REQUIRED, null));
         } else if(!constraints.isEmpty()) {

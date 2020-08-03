@@ -59,6 +59,8 @@ public abstract class TestStorage {
 
     private static final String REF_SOURCE = "RefSource";
 
+    private static final String DATE_SORT = "DateSort";
+
     private final Namespace namespace;
 
     public TestStorage() {
@@ -82,7 +84,7 @@ public abstract class TestStorage {
     protected void writeAll(final Storage storage, final Namespace namespace, final Multimap<String, Map<String, Object>> data) {
 
         if(!data.isEmpty()) {
-            final Storage.WriteTransaction write = storage.write(Consistency.NONE);
+            final Storage.WriteTransaction write = storage.write(Consistency.QUORUM, Versioning.CHECKED);
 
             data.asMap().forEach((k, vs) -> {
                 final ObjectSchema schema = namespace.requireObjectSchema(k);
@@ -126,7 +128,6 @@ public abstract class TestStorage {
     }
 
     @Test
-    @SuppressWarnings({"unchecked", "rawtypes"})
     public void testIndexes() throws IOException {
 
         final Storage storage = storage(namespace, loadAddresses());
@@ -141,8 +142,8 @@ public abstract class TestStorage {
         );
 
         final Expression expr = Expression.parse("country == 'United Kingdom' || state == 'Victoria'");
-        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, Collections.emptyList(), Collections.emptySet());
-        final Comparator<Map<String, Object>> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
+        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, Collections.emptyList());
+        final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
         final PagedList<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
         assertEquals(8, results.size());
     }
@@ -150,7 +151,6 @@ public abstract class TestStorage {
     // FIXME: needs to cover non-trivial case(s)
 
     @Test
-    @SuppressWarnings({"unchecked", "rawtypes"})
     public void testSortAndPaging() {
 
         final LocalDateTime now = LocalDateTime.now();
@@ -186,8 +186,8 @@ public abstract class TestStorage {
         );
 
         final Expression expr = Expression.parse("country == '" + country + "'");
-        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, sort, ImmutableSet.of());
-        final Comparator<Map<String, Object>> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
+        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, sort);
+        final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
 
         final List<Map<String, Object>> results = new ArrayList<>();
         PagingToken paging = null;
@@ -218,7 +218,7 @@ public abstract class TestStorage {
 
         final Instance after = instance(schema, id, 1L, data);
 
-        storage.write(Consistency.ATOMIC)
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .createObject(schema, id, after)
                 .write().join();
 
@@ -276,7 +276,7 @@ public abstract class TestStorage {
 
         final Instance init = instance(schema, id, 1L);
 
-        storage.write(Consistency.ATOMIC)
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .createObject(schema, id, init)
                 .write().join();
 
@@ -285,7 +285,7 @@ public abstract class TestStorage {
 
         final Instance after = instance(schema, id, 2L);
 
-        storage.write(Consistency.ATOMIC)
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .updateObject(schema, id, setVersion(before, 1L), after)
                 .write().join();
 
@@ -317,13 +317,13 @@ public abstract class TestStorage {
 
         final Instance init = instance(schema, id, 1L);
 
-        storage.write(Consistency.ATOMIC)
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .createObject(schema, id, init)
                 .write().join();
 
         final Instance before = schema.create(storage.readObject(schema, id, ImmutableSet.of()).join());
 
-        storage.write(Consistency.ATOMIC)
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .deleteObject(schema, id, setVersion(before, 1L))
                 .write().join();
 
@@ -356,7 +356,7 @@ public abstract class TestStorage {
         data.put("string", str.toString());
         final Instance instance = instance(schema, id, 1L, data);
 
-        storage.write(Consistency.ATOMIC)
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .createObject(schema, id, instance)
                 .write().join();
 
@@ -380,11 +380,11 @@ public abstract class TestStorage {
 
         final Instance after = instance(schema, id, 2L);
 
-        storage.write(Consistency.ATOMIC)
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .createObject(schema, id, after)
                 .write().join();
 
-        assertCause(ObjectExistsException.class, () -> storage.write(Consistency.ATOMIC)
+        assertCause(ObjectExistsException.class, () -> storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                     .createObject(schema, id, after)
                     .write().get());
     }
@@ -402,19 +402,19 @@ public abstract class TestStorage {
 
         final Instance init = instance(schema, id, 1L);
 
-        storage.write(Consistency.ATOMIC)
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .createObject(schema, id, init)
                 .write().join();
 
         final Instance before = schema.create(storage.readObject(schema, id, ImmutableSet.of()).join());
 
-        storage.write(Consistency.ATOMIC)
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .deleteObject(schema, id, setVersion(before, 1L))
                 .write().join();
 
         final Instance after = instance(schema, id, 2L);
 
-        assertCause(VersionMismatchException.class, () -> storage.write(Consistency.ATOMIC)
+        assertCause(VersionMismatchException.class, () -> storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .updateObject(schema, id, setVersion(before, 1L), after)
                 .write().get());
     }
@@ -432,17 +432,17 @@ public abstract class TestStorage {
 
         final Instance init = instance(schema, id, 1L);
 
-        storage.write(Consistency.ATOMIC)
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .createObject(schema, id, init)
                 .write().join();
 
         final Instance before = schema.create(storage.readObject(schema, id, ImmutableSet.of()).join());
 
-        storage.write(Consistency.ATOMIC)
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .deleteObject(schema, id, setVersion(before, 1L))
                 .write().join();
 
-        assertCause(VersionMismatchException.class, () -> storage.write(Consistency.ATOMIC)
+        assertCause(VersionMismatchException.class, () -> storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .deleteObject(schema, id, setVersion(before, 1L))
                 .write().get());
     }
@@ -460,7 +460,7 @@ public abstract class TestStorage {
 
         final Instance init = instance(schema, id, 1L);
 
-        storage.write(Consistency.ATOMIC)
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .createObject(schema, id, init)
                 .write().join();
 
@@ -468,11 +468,11 @@ public abstract class TestStorage {
 
         final Instance after = instance(schema, id, 2L);
 
-        storage.write(Consistency.ATOMIC)
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .updateObject(schema, id, setVersion(before, 1L), after)
                 .write().join();
 
-        assertCause(VersionMismatchException.class, () -> storage.write(Consistency.ATOMIC)
+        assertCause(VersionMismatchException.class, () -> storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .deleteObject(schema, id, setVersion(before, 1L))
                 .write().get());
     }
@@ -490,7 +490,7 @@ public abstract class TestStorage {
 
         final Instance init = instance(schema, id, 1L);
 
-        storage.write(Consistency.ATOMIC)
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .createObject(schema, id, init)
                 .write().join();
 
@@ -498,7 +498,7 @@ public abstract class TestStorage {
 
         final Instance after = instance(schema, id, 2L);
 
-        storage.write(Consistency.ATOMIC)
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .updateObject(schema, id, setVersion(before, 1L), after)
                 .write().join();
 
@@ -506,13 +506,12 @@ public abstract class TestStorage {
 //                .updateObject(schema, id, 1L, before, after)
 //                .commit().join();
 
-        assertCause(VersionMismatchException.class, () -> storage.write(Consistency.ATOMIC)
+        assertCause(VersionMismatchException.class, () -> storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .updateObject(schema, id, setVersion(before, 1L), after)
                 .write().get());
     }
 
     @Test
-    @SuppressWarnings({"unchecked", "rawtypes"})
     public void testMultiValueIndex() {
 
         final Storage storage = storage(namespace);
@@ -535,10 +534,10 @@ public abstract class TestStorage {
                 )
         ));
 
-        final List<Sort> sort = ImmutableList.of(Sort.asc(Name.of(Reserved.ID)));
+        final List<Sort> sort = ImmutableList.of(Sort.asc(Name.of(ObjectSchema.ID)));
         final Expression expr = Expression.parse("p.x == 10 && p.y == 100 for any p of points");
-        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, Collections.emptyList(), ImmutableSet.of());
-        final Comparator<Map<String, Object>> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
+        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, Collections.emptyList());
+        final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
         final PagedList<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
         assertEquals(1, results.size());
     }
@@ -554,11 +553,11 @@ public abstract class TestStorage {
 
         final String id = UUID.randomUUID().toString();
 
-        storage.write(Consistency.ATOMIC)
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .createObject(schema, id, instance(schema, id, 1L))
                 .write().join();
 
-        storage.write(Consistency.ATOMIC)
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .updateObject(schema, id, null, instance(schema, id, 2L))
                 .write().join();
     }
@@ -574,11 +573,11 @@ public abstract class TestStorage {
 
         final String id = UUID.randomUUID().toString();
 
-        storage.write(Consistency.ATOMIC)
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .createObject(schema, id, instance(schema, id, 1L))
                 .write().join();
 
-        storage.write(Consistency.ATOMIC)
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .deleteObject(schema, id, null)
                 .write().join();
     }
@@ -622,7 +621,7 @@ public abstract class TestStorage {
                 Sort.asc(Name.of("zip"))
         );
 
-//        assertEquals(6, page(storage, schema, Expression.parse("country == 'United Kingdom' && city ILIKE 'l%'"), sort, 10).size());
+        assertEquals(6, page(storage, schema, Expression.parse("country == 'United Kingdom' && city ILIKE 'l%'"), sort, 10).size());
         assertEquals(3, page(storage, schema, Expression.parse("country == 'United Kingdom' && city LIKE 'l%'"), sort, 10).size());
         assertEquals(1, page(storage, schema, Expression.parse("country == 'United Kingdom' && city LIKE 'l\\\\%n_on'"), sort, 10).size());
         assertEquals(1, page(storage, schema, Expression.parse("country == 'United Kingdom' && city LIKE 'L\\\\_n_on'"), sort, 10).size());
@@ -636,7 +635,6 @@ public abstract class TestStorage {
     }
 
     @Test
-    @SuppressWarnings({"unchecked", "rawtypes"})
     public void testAggregation() throws IOException {
 
         final Storage storage = storage(namespace, loadAddresses());
@@ -646,11 +644,11 @@ public abstract class TestStorage {
         assumeTrue(storage.storageTraits(schema).supportsAggregation(),
                 "Aggregation must be enabled for this test");
 
-        final List<Sort> sort = ImmutableList.of(Sort.asc(Name.of("country")), Sort.asc(Name.of(Reserved.ID)));
+        final List<Sort> sort = ImmutableList.of(Sort.asc(Name.of("country")), Sort.asc(Name.of(ObjectSchema.ID)));
         final List<Pager.Source<Map<String, Object>>> sources = storage.aggregate(schema, Expression.parse("true"),
                 ImmutableMap.of("country", Expression.parse("country")),
                 ImmutableMap.of("count", new Count()));
-        final Comparator<Map<String, Object>> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
+        final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
 
         final PagedList<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
         //assertEquals(?, results.size());
@@ -671,7 +669,7 @@ public abstract class TestStorage {
 
         final String targetId = createComplete(storage, target, ImmutableMap.of());
         createComplete(storage, source, ImmutableMap.of(
-                "target", new Instance(ImmutableMap.of(Reserved.ID, targetId))
+                "target", new Instance(ImmutableMap.of(ObjectSchema.ID, targetId))
         ));
 
         final List<Sort> sort = Sort.parseList("id");
@@ -735,16 +733,36 @@ public abstract class TestStorage {
         assertEquals(1, page.size());
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @Test
+    public void testDateSort() {
+
+        final Storage storage = storage(namespace);
+
+        final ObjectSchema dateSort = namespace.requireObjectSchema(DATE_SORT);
+
+        assumeConcurrentObjectWrite(storage, dateSort);
+
+        for(int i = 0; i != 10; ++i) {
+            createComplete(storage, dateSort, ImmutableMap.of(
+                    "group", "test"
+            ));
+        }
+
+        final List<Sort> sort = Sort.parseList("created", "id");
+        final PagedList<Map<String, Object>> page = page(storage, dateSort, Expression.parse("group == 'test'"), sort, 5);
+        assertEquals(5, page.size());
+    }
+
     private PagedList<Map<String, Object>> page(final Storage storage, final ObjectSchema schema, final Expression expression, final List<Sort> sort, final int count) {
 
-        final Comparator<Map<String, Object>> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
-        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expression.bind(Context.init()), sort, ImmutableSet.of());
+        final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
+        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expression.bind(Context.init()), sort);
         return new Pager<>(comparator, sources, null).page(count).join();
     }
 
     private String createComplete(final Storage storage, final ObjectSchema schema, final Map<String, Object> data) {
 
+        final LocalDateTime now = LocalDateTime.now();
         final StorageTraits traits = storage.storageTraits(schema);
         final String id = UUID.randomUUID().toString();
         final Map<String, Object> instance = instance(schema, id, 1L, data);

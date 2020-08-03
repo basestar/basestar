@@ -109,7 +109,7 @@ public class ReadProcessor {
 
         final List<Sort> pageSort = ImmutableList.<Sort>builder()
                 .addAll(sort)
-                .add(Sort.asc(Name.of(Reserved.ID)))
+                .add(Sort.asc(Name.of(ObjectSchema.ID)))
                 .build();
 
         final Set<Name> queryExpand = Sets.union(Nullsafe.option(expand), Nullsafe.option(objectSchema.getExpand()));
@@ -122,7 +122,6 @@ public class ReadProcessor {
         return pageImpl(context, sources, expression, pageSort, count, paging);
     }
 
-    @SuppressWarnings("rawtypes")
     protected CompletableFuture<PagedList<Instance>> pageImpl(final Context context, final List<Pager.Source<Instance>> sources, final Expression expression,
                                                               final List<Sort> sort, final int count, final PagingToken paging) {
 
@@ -130,8 +129,7 @@ public class ReadProcessor {
             throw new IllegalStateException("Query not supported");
         } else {
 
-            @SuppressWarnings("unchecked")
-            final Comparator<Instance> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
+            final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
             final Pager<Instance> pager = new Pager<>(comparator, sources, paging);
             return pager.page(count)
                     .thenApply(results -> {
@@ -141,7 +139,7 @@ public class ReadProcessor {
                                 return expression.evaluatePredicate(context.with(instance));
                             } catch (final Exception e) {
                                 // FIXME:
-                                log.info("Failed to evaluate predicate", e);
+                                log.warn("Failed to evaluate predicate", e);
                                 return false;
                             }
                         });
@@ -477,8 +475,8 @@ public class ReadProcessor {
                 }
             }
             final HashMap<String, Object> object = new HashMap<>();
-            object.put(Reserved.ID, caller.getId());
-            object.put(Reserved.SCHEMA, caller.getSchema());
+            object.put(ObjectSchema.ID, caller.getId());
+            object.put(ObjectSchema.SCHEMA, caller.getSchema());
             return new Instance(object);
         }
 

@@ -20,16 +20,16 @@ package io.basestar.auth;
  * #L%
  */
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.Setter;
-import lombok.experimental.Accessors;
 
 import java.util.Collections;
 import java.util.Map;
 
+@JsonDeserialize(as = SimpleCaller.class)
 public interface Caller {
 
     Anon ANON = new Anon();
@@ -40,76 +40,16 @@ public interface Caller {
 
     boolean isSuper();
 
+    @JsonSerialize(using = ToStringSerializer.class)
     Name getSchema();
 
     String getId();
 
     Map<String, Object> getClaims();
 
-    static Builder builder() {
+    static SimpleCaller.Builder builder() {
 
-        return new Builder();
-    }
-
-    @Setter
-    @Accessors(chain = true)
-    class Builder {
-
-        private Name schema;
-
-        private String id;
-
-        private Map<String, Object> claims;
-
-        private boolean anon;
-
-        @Setter(AccessLevel.NONE)
-        private boolean _super;
-
-        public void setSuper(final boolean value) {
-
-            this._super = value;
-        }
-
-        public Caller build() {
-
-            final Name schema = this.schema;
-            final String id = this.id;
-            final Map<String, Object> claims = Nullsafe.immutableCopy(this.claims);
-            final boolean anon = this.anon;
-            final boolean _super = this._super;
-            return new Caller() {
-                @Override
-                public boolean isAnon() {
-
-                    return anon;
-                }
-
-                @Override
-                public boolean isSuper() {
-
-                    return _super;
-                }
-
-                @Override
-                public Name getSchema() {
-
-                    return schema;
-                }
-
-                @Override
-                public String getId() {
-
-                    return id;
-                }
-
-                @Override
-                public Map<String, Object> getClaims() {
-
-                    return claims;
-                }
-            };
-        }
+        return new SimpleCaller.Builder();
     }
 
     @Data

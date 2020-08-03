@@ -33,6 +33,7 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Namespace;
+import io.basestar.schema.Reserved;
 import io.basestar.schema.util.Ref;
 import io.basestar.storage.MemoryStorage;
 import io.basestar.storage.Storage;
@@ -346,6 +347,7 @@ public class TestDatabaseServer {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     public void nestedRef() throws Exception {
 
         final String idA = "a";
@@ -363,7 +365,7 @@ public class TestDatabaseServer {
         )).expand(Name.parseSet("target")).build()).get();
         // Check reading refs doesn't wipe properties
         assertNotNull(createRefB.get("value"));
-        assertEquals(createRefA, createRefB.get("target"));
+        assertEquals(createRefA, Instance.without((Map<String, Object>)createRefB.get("target"), Reserved.META));
 
         //System.err.println(Path.parseSet("target.target"));
 
@@ -375,7 +377,7 @@ public class TestDatabaseServer {
                         "id", idB
                 )
         )).expand(Name.parseSet("target.target")).build()).get();
-        assertEquals(createRefB, createRefC.get("target"));
+        assertEquals(createRefB, Instance.without((Map<String, Object>)createRefC.get("target"), Reserved.META));
     }
 
     @Test
@@ -526,7 +528,7 @@ public class TestDatabaseServer {
         when(caller.getSchema()).thenReturn(USER);
         when(caller.getId()).thenReturn("test");
 
-        final Map<String, Instance> ok = database.transaction(caller, BatchOptions.builder()
+        final Map<String, Instance> ok = database.batch(caller, BatchOptions.builder()
                 .action("team", CreateOptions.builder()
                         .schema(TEAM)
                         .id("t1")
@@ -543,7 +545,7 @@ public class TestDatabaseServer {
         assertEquals(2, ok.size());
 
         assertThrows(PermissionDeniedException.class, cause(() ->
-                database.transaction(caller, BatchOptions.builder()
+                database.batch(caller, BatchOptions.builder()
                         .action("team", CreateOptions.builder()
                                 .schema(TEAM)
                                 .id("t2")
@@ -621,7 +623,7 @@ public class TestDatabaseServer {
     @Test
     public void expand() throws Exception {
 
-        final Map<String, Instance> ok = database.transaction(Caller.SUPER, BatchOptions.builder()
+        final Map<String, Instance> ok = database.batch(Caller.SUPER, BatchOptions.builder()
                 .action("team", CreateOptions.builder()
                         .schema(TEAM)
                         .id("t1")
@@ -664,7 +666,7 @@ public class TestDatabaseServer {
     @Test
     public void refRefresh() throws Exception {
 
-        final Map<String, Instance> init = database.transaction(Caller.SUPER, BatchOptions.builder()
+        final Map<String, Instance> init = database.batch(Caller.SUPER, BatchOptions.builder()
                 .action("team", CreateOptions.builder()
                         .schema(TEAM)
                         .id("t1")
@@ -683,7 +685,7 @@ public class TestDatabaseServer {
         final Instance member = init.get("member");
         assertNotNull(member);
 
-        final Map<String, Instance> update = database.transaction(Caller.SUPER, BatchOptions.builder()
+        final Map<String, Instance> update = database.batch(Caller.SUPER, BatchOptions.builder()
                 .action("team", UpdateOptions.builder()
                         .schema(TEAM)
                         .id("t1")
@@ -706,7 +708,7 @@ public class TestDatabaseServer {
     @Disabled
     public void aggregate() throws Exception {
 
-        database.transaction(Caller.SUPER, BatchOptions.builder()
+        database.batch(Caller.SUPER, BatchOptions.builder()
                 .action("a", CreateOptions.builder()
                         .schema(TEAM_MEMBER)
                         .data(ImmutableMap.of(

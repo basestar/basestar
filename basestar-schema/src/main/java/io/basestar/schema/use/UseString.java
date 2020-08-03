@@ -27,6 +27,7 @@ import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.StringSchema;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -44,6 +45,7 @@ import java.util.Set;
  */
 
 @Data
+@Slf4j
 @RequiredArgsConstructor
 public class UseString implements UseScalar<String> {
 
@@ -91,6 +93,7 @@ public class UseString implements UseScalar<String> {
         } else if(value instanceof String) {
             return (String) value;
         } else if(suppress) {
+            log.warn("Suppressed conversion error (invalid type: " + value.getClass() + ")");
             return null;
         } else {
             throw new UnexpectedTypeException(this, value);

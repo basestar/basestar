@@ -20,81 +20,44 @@ package io.basestar.spark.transform;
  * #L%
  */
 
+import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.use.Use;
 import io.basestar.spark.util.SparkSchemaUtils;
-import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import org.apache.spark.sql.Column;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.expressions.UserDefinedFunction;
-import org.apache.spark.sql.functions;
-import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.catalyst.encoders.RowEncoder;
 import org.apache.spark.sql.types.StructType;
 
+import javax.annotation.Nullable;
 import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
 
+@Slf4j
 public class SchemaTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
     private final InstanceSchema schema;
 
-    private final Set<Name> expand;
-
     private final Map<String, Use<?>> extraMetadata;
 
+    private final StructType structType;
+
     @lombok.Builder(builderClassName = "Builder")
-    SchemaTransform(final InstanceSchema schema, final Set<Name> expand, final Map<String, Use<?>> extraMetadata) {
+    SchemaTransform(final InstanceSchema schema, final Map<String, Use<?>> extraMetadata, @Nullable final StructType structType) {
 
         this.schema = Nullsafe.require(schema);
-        this.expand = Nullsafe.option(expand);
         this.extraMetadata = Nullsafe.option(extraMetadata);
+        this.structType = Nullsafe.option(structType, () -> SparkSchemaUtils.structType(this.schema, ImmutableSet.of(), this.extraMetadata));
     }
 
     @Override
     public Dataset<Row> accept(final Dataset<Row> input) {
 
-        final SortedMap<String, Column> columns = new TreeMap<>();
-        schema.getProperties().forEach((name, prop) -> columns.put(name, column(input, name, prop.getType())));
-        schema.metadataSchema().forEach((name, type) -> columns.put(name, column(input, name, type)));
-        extraMetadata.forEach((name, type) -> columns.put(name, column(input, name, type)));
-        return input.select(columns.values().toArray(new Column[0]));
-    }
-
-    private Column column(final Dataset<?> input, final String name, final Use<?> type) {
-
-        final StructType schema = input.schema();
-
-        return SparkSchemaUtils.findField(schema, name)
-                .map(field -> column(input.col(field.name()), field.dataType(), type).as(name))
-                .orElseGet(() -> nullColumn(type).as(name));
-    }
-
-    private Column nullColumn(final Use<?> type) {
-
-        return functions.lit(null).cast(SparkSchemaUtils.type(type, null));
-    }
-
-    private Column column(final Column source, final DataType sourceDataType, final Use<?> type) {
-
-        final Set<Name> expand = this.expand;
-        final DataType targetDataType = SparkSchemaUtils.type(type, expand);
-        if(targetDataType.equals(sourceDataType)) {
-            return source;
-        } else {
-            final Use<?> sourceType = SparkSchemaUtils.type(sourceDataType);
-
-            final UserDefinedFunction udf = functions.udf(
-                    (Object sourceValue) -> {
-                        final Object targetValue = type.create(SparkSchemaUtils.fromSpark(sourceType, expand, sourceValue, true));
-                        return SparkSchemaUtils.toSpark(type, expand, targetDataType, targetValue, true);
-                    },
-                    targetDataType
-            );
-            return udf.apply(source);
-        }
+        return input.map((MapFunction<Row, Row>) row -> {
+            final Map<String, Object> object = schema.create(SparkSchemaUtils.fromSpark(schema, row), false, false);
+            return SparkSchemaUtils.toSpark(schema, extraMetadata, structType, object);
+        }, RowEncoder.apply(structType));
     }
 }

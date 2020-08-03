@@ -22,11 +22,21 @@ package io.basestar.api;
 
 import io.swagger.v3.oas.models.OpenAPI;
 
+import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
 public interface API {
 
-    CompletableFuture<APIResponse> handle(APIRequest request);
+    CompletableFuture<APIResponse> handle(APIRequest request) throws IOException;
+
+    default CompletableFuture<APIResponse> handleUnchecked(final APIRequest request) {
+
+        try {
+            return handle(request);
+        } catch (final IOException e) {
+            return CompletableFuture.completedFuture(APIResponse.error(request, 400, e));
+        }
+    }
 
     CompletableFuture<OpenAPI> openApi();
 }

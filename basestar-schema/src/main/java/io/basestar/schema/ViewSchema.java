@@ -30,10 +30,13 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
+import io.basestar.jackson.serde.AbbrevSetDeserializer;
 import io.basestar.jackson.serde.ExpressionDeserializer;
+import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseBinary;
 import io.basestar.schema.use.UseView;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -48,15 +51,22 @@ import javax.annotation.Nullable;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Getter
 public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Resolver {
 
+    public static String KEY = Reserved.PREFIX + "key";
+
+    public static final SortedMap<String, Use<?>> METADATA_SCHEMA = ImmutableSortedMap.<String, Use<?>>orderedBy(Comparator.naturalOrder())
+            .put(KEY, UseBinary.DEFAULT)
+            .build();
+
     @Getter
     @RequiredArgsConstructor
-    public static class From {
+    public static class From implements Serializable {
 
         @Nonnull
         private final InstanceSchema schema;
@@ -92,7 +102,8 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
 
             @Nullable
             @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
-            @JsonDeserialize(using = AbbrevListDeserializer.class)
+            @JsonSerialize(contentUsing = ToStringSerializer.class)
+            @JsonDeserialize(using = AbbrevSetDeserializer.class)
             private Set<Name> expand;
 
             @JsonCreator
@@ -124,6 +135,7 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
 
             Name getSchema();
 
+            @JsonInclude(JsonInclude.Include.NON_EMPTY)
             Set<Name> getExpand();
         }
 
@@ -136,11 +148,22 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
 
         From getFrom();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         List<Sort> getSort();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         List<String> getGroup();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        Map<String, Link.Descriptor> getLinks();
+
         Expression getWhere();
+
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        Map<String, Permission.Descriptor> getPermissions();
+
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        Set<Name> getExpand();
 
         @Override
         default ViewSchema build(final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
@@ -192,7 +215,11 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
         private Map<String, Link.Descriptor> links;
 
         @Nullable
-        @JsonInclude(JsonInclude.Include.NON_NULL)
+        @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
+        @JsonDeserialize(contentUsing = NameDeserializer.class)
+        private Set<Name> expand;
+
+        @Nullable
         @JsonSerialize(using = ToStringSerializer.class)
         @JsonDeserialize(using = ExpressionDeserializer.class)
         private Expression where;
@@ -330,7 +357,23 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
     @Override
     public Instance create(final Map<String, Object> value, final Set<Name> expand, final boolean suppress) {
 
-        return new Instance(readProperties(value, expand, suppress));
+        final Map<String, Object> result = new HashMap<>(readProperties(value, expand, suppress));
+        result.putAll(readMeta(value, suppress));
+        if(Instance.getSchema(result) == null) {
+            Instance.setSchema(result, this.getQualifiedName());
+        }
+        return new Instance(result);
+    }
+
+    public byte[] key(final Map<String, Object> value) {
+
+        final List<Object> key = new ArrayList<>();
+        if(group.isEmpty()) {
+            key.add(value.get(from.getSchema().id()));
+        } else {
+            group.forEach(name -> key.add(value.get(name)));
+        }
+        return UseBinary.binaryKey(key);
     }
 
     public void serialize(final Map<String, Object> object, final DataOutput out) throws IOException {
@@ -382,13 +425,19 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
     @Override
     public SortedMap<String, Use<?>> metadataSchema() {
 
-        return ImmutableSortedMap.of();
+        return METADATA_SCHEMA;
     }
 
     @Override
     public UseView use() {
 
         return new UseView(this);
+    }
+
+    @Override
+    public String id() {
+
+        return KEY;
     }
 
     @Override
@@ -425,6 +474,11 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
                 .putAll(getProperties())
                 .putAll(getLinks())
                 .build();
+    }
+
+    public Set<Name> getExpand() {
+
+        return declaredExpand;
     }
 
     @Override
@@ -582,6 +636,12 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
                         Map.Entry::getKey,
                         entry -> entry.getValue().descriptor()
                 ));
+            }
+
+            @Override
+            public Set<Name> getExpand() {
+
+                return declaredExpand;
             }
 
             @Override

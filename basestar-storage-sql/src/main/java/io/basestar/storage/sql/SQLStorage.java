@@ -31,6 +31,7 @@ import io.basestar.schema.use.UseStruct;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
+import io.basestar.storage.Versioning;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.DisjunctionVisitor;
@@ -232,7 +233,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                     public QueryPart visitObject(final UseObject type) {
 
                         final Field<String> sourceId = DSL.field(DSL.name(name.first()), String.class);
-                        if(rest.equals(Reserved.ID_NAME)) {
+                        if(rest.equals(ObjectSchema.ID_NAME)) {
                             return sourceId;
                         } else {
                             throw new UnsupportedOperationException("Query of this type is not supported");
@@ -328,7 +329,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
     }
 
     @Override
-    public WriteTransaction write(final Consistency consistency) {
+    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
         return new WriteTransaction();
     }
@@ -563,12 +564,12 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
 
     private Field<String> idField(final ObjectSchema schema) {
 
-        return DSL.field(DSL.name(Reserved.ID), String.class);
+        return DSL.field(DSL.name(ObjectSchema.ID), String.class);
     }
 
     private Field<Long> versionField(final ObjectSchema schema) {
 
-        return DSL.field(DSL.name(Reserved.VERSION), Long.class);
+        return DSL.field(DSL.name(ObjectSchema.VERSION), Long.class);
     }
 
     private org.jooq.Name objectTableName(final ObjectSchema schema) {

@@ -21,6 +21,8 @@ package io.basestar.database.options;
  */
 
 import com.google.common.collect.ImmutableMap;
+import io.basestar.schema.Consistency;
+import io.basestar.util.Nullsafe;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -33,10 +35,13 @@ public class BatchOptions implements Options {
 
     public static final String TYPE = "batch";
 
+    private final Consistency consistency;
+
     private final Map<String, ActionOptions> actions;
 
     private BatchOptions(final Builder builder) {
 
+        this.consistency = Nullsafe.option(builder.consistency, Consistency.EVENTUAL);
         this.actions = ImmutableMap.copyOf(builder.actions);
     }
 
@@ -47,7 +52,15 @@ public class BatchOptions implements Options {
 
     public static class Builder {
 
+        private Consistency consistency;
+
         private final LinkedHashMap<String, ActionOptions> actions = new LinkedHashMap<>();
+
+        public Builder consistency(final Consistency consistency) {
+
+            this.consistency = consistency;
+            return this;
+        }
 
         public Builder action(final String name, final ActionOptions action) {
 
@@ -66,41 +79,4 @@ public class BatchOptions implements Options {
             return new BatchOptions(this);
         }
     }
-
-//    @Data
-//    @lombok.Builder
-//    public static class Action {
-//
-//        private final CreateOptions create;
-//
-//        private final UpdateOptions update;
-//
-//        private final DeleteOptions delete;
-//
-//        private Action(final CreateOptions create, final UpdateOptions update, final DeleteOptions delete) {
-//
-//            if(Stream.of(create, update, delete).filter(Objects::nonNull).count() != 1) {
-//                throw new IllegalStateException("Must specify one of [create, update, delete]");
-//            }
-//            this.create = create;
-//            this.update = update;
-//            this.delete = delete;
-//        }
-//
-//
-//        public static Action create(final CreateOptions create) {
-//
-//            return new Action(create, null, null);
-//        }
-//
-//        public static Action update(final UpdateOptions update) {
-//
-//            return new Action(null, update, null);
-//        }
-//
-//        public static Action delete(final DeleteOptions delete) {
-//
-//            return new Action(null, null, delete);
-//        }
-//    }
 }

@@ -24,6 +24,7 @@ import io.basestar.database.event.ObjectDeletedEvent;
 import io.basestar.database.options.DeleteOptions;
 import io.basestar.event.Event;
 import io.basestar.expression.Context;
+import io.basestar.schema.Consistency;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Permission;
@@ -125,5 +126,11 @@ public class DeleteAction implements Action {
     public Set<Name> paths() {
 
         return Collections.emptySet();
+    }
+
+    @Override
+    public Consistency getConsistency() {
+
+        return options.getConsistency();
     }
 }

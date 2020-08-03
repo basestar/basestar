@@ -20,18 +20,9 @@ package io.basestar.stream;
  * #L%
  */
 
-import io.basestar.auth.Caller;
-import io.basestar.expression.Expression;
-import io.basestar.util.Name;
+import io.basestar.event.Event;
+import io.basestar.event.Handler;
 
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
+public interface Hub extends Subscribable, Handler<Event> {
 
-public interface Nexus {
-
-    CompletableFuture<?> subscribe(Caller caller, String sub, String channel, String schema, Expression expression, Set<Name> expand);
-
-    CompletableFuture<?> unsubscribe(Caller caller, String sub, String channel);
-
-    CompletableFuture<?> unsubscribeAll(Caller caller, String sub);
 }

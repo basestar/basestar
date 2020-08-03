@@ -32,8 +32,12 @@ import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseArray;
+import io.basestar.schema.use.UseDate;
+import io.basestar.schema.use.UseDateTime;
 
 import java.io.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +60,14 @@ public interface AttributeType<T> {
     StringType STRING = new StringType();
 
     StringArrayType STRING_ARRAY = new StringArrayType();
+
+    DateType DATE = new DateType();
+
+    DateArrayType DATE_ARRAY = new DateArrayType();
+
+    DateTimeType DATETIME = new DateTimeType();
+
+    DateTimeArrayType DATETIME_ARRAY = new DateTimeArrayType();
 
     BinaryType BINARY = new BinaryType();
 
@@ -278,6 +290,90 @@ public interface AttributeType<T> {
         public void writeValue(final PortableSchemaFactory factory, final PortableWriter writer, final String name, final List<String> value) throws IOException {
 
             writer.writeUTFArray(name, value.toArray(new String[0]));
+        }
+
+        @Override
+        public void defValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
+
+            builder.addUTFArrayField(name);
+        }
+    }
+
+    class DateType implements AttributeType<LocalDate> {
+
+        @Override
+        public LocalDate readValue(final PortableReader reader, final String name) throws IOException {
+
+            return UseDate.DEFAULT.create(reader.readUTF(name));
+        }
+
+        @Override
+        public void writeValue(final PortableSchemaFactory factory, final PortableWriter writer, final String name, final LocalDate value) throws IOException {
+
+            writer.writeUTF(name, value.toString());
+        }
+
+        @Override
+        public void defValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
+
+            builder.addUTFField(name);
+        }
+    }
+
+    class DateArrayType implements AttributeType<List<LocalDate>> {
+
+        @Override
+        public List<LocalDate> readValue(final PortableReader reader, final String name) throws IOException {
+
+            return Arrays.stream(reader.readUTFArray(name)).map(UseDate.DEFAULT::create).collect(Collectors.toList());
+        }
+
+        @Override
+        public void writeValue(final PortableSchemaFactory factory, final PortableWriter writer, final String name, final List<LocalDate> value) throws IOException {
+
+            writer.writeUTFArray(name, value.stream().map(LocalDate::toString).toArray(String[]::new));
+        }
+
+        @Override
+        public void defValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
+
+            builder.addUTFArrayField(name);
+        }
+    }
+
+    class DateTimeType implements AttributeType<LocalDateTime> {
+
+        @Override
+        public LocalDateTime readValue(final PortableReader reader, final String name) throws IOException {
+
+            return UseDateTime.DEFAULT.create(reader.readUTF(name));
+        }
+
+        @Override
+        public void writeValue(final PortableSchemaFactory factory, final PortableWriter writer, final String name, final LocalDateTime value) throws IOException {
+
+            writer.writeUTF(name, value.toString());
+        }
+
+        @Override
+        public void defValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
+
+            builder.addUTFField(name);
+        }
+    }
+
+    class DateTimeArrayType implements AttributeType<List<LocalDateTime>> {
+
+        @Override
+        public List<LocalDateTime> readValue(final PortableReader reader, final String name) throws IOException {
+
+            return Arrays.stream(reader.readUTFArray(name)).map(UseDateTime.DEFAULT::create).collect(Collectors.toList());
+        }
+
+        @Override
+        public void writeValue(final PortableSchemaFactory factory, final PortableWriter writer, final String name, final List<LocalDateTime> value) throws IOException {
+
+            writer.writeUTFArray(name, value.stream().map(LocalDateTime::toString).toArray(String[]::new));
         }
 
         @Override

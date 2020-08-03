@@ -20,12 +20,14 @@ package io.basestar.storage;
  * #L%
  */
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
-import io.basestar.schema.*;
+import io.basestar.schema.Consistency;
+import io.basestar.schema.Index;
+import io.basestar.schema.Instance;
+import io.basestar.schema.ObjectSchema;
 import io.basestar.storage.exception.UnsupportedQueryException;
 import io.basestar.storage.query.DisjunctionVisitor;
 import io.basestar.storage.query.Range;
@@ -39,9 +41,6 @@ import io.basestar.util.Sort;
 import lombok.Data;
 
 import javax.annotation.Nonnull;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -130,7 +129,7 @@ public abstract class PartitionedStorage implements Storage.WithWriteIndex {
 
     public static Optional<String> constantId(final Map<Name, Range<Object>> query) {
 
-        final Range<Object> range = query.get(Name.of(Reserved.ID));
+        final Range<Object> range = query.get(Name.of(ObjectSchema.ID));
         if(range instanceof Range.Eq) {
             final Object eq = ((Range.Eq<?>) range).getEq();
             if(eq instanceof String) {
@@ -209,59 +208,6 @@ public abstract class PartitionedStorage implements Storage.WithWriteIndex {
         return Optional.of(new SatisfyResult(index, partitionValues, sortValues, reversed, matched));
     }
 
-    public static byte[] binary(final List<?> keys) {
-
-        return binary(keys, null);
-    }
-
-    public static byte[] binary(final List<?> keys, final byte[] suffix) {
-
-        final byte T_NULL = 1;
-        final byte T_FALSE = 2;
-        final byte T_TRUE = 3;
-        final byte T_INT = 4;
-        final byte T_STRING = 5;
-        final byte T_BYTES = 6;
-
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
-        try {
-            for(final Object v : keys) {
-                if(v == null) {
-                    baos.write(T_NULL);
-                } else if(v instanceof Boolean) {
-                    baos.write(((Boolean)v) ? T_TRUE : T_FALSE);
-                } else if(v instanceof Integer || v instanceof Long) {
-                    final ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
-                    buffer.putLong(((Number)v).longValue());
-                    final byte[] bytes = buffer.array();
-                    baos.write(T_INT);
-                    baos.write(bytes);
-                } else if(v instanceof String) {
-                    final String str = (String) v;
-                    baos.write(T_STRING);
-                    if(str.contains("\0")) {
-                        throw new IllegalStateException("String used in index cannot contain NULL byte");
-                    }
-                    baos.write(str.getBytes(Charsets.UTF_8));
-                } else if(v instanceof byte[]) {
-                    baos.write(T_BYTES);
-                    baos.write(((byte[]) v));
-                } else {
-                    throw new IllegalStateException("Cannot convert " + v.getClass() + " to binary");
-                }
-            }
-
-            if(suffix != null) {
-                baos.write(suffix);
-            }
-
-        } catch (final IOException e) {
-            throw new IllegalStateException(e);
-        }
-
-        return baos.toByteArray();
-    }
 
     @Data
     public static class SatisfyResult implements Comparable<SatisfyResult> {
@@ -293,7 +239,7 @@ public abstract class PartitionedStorage implements Storage.WithWriteIndex {
     }
 
     @Override
-    public abstract WriteTransaction write(Consistency consistency);
+    public abstract WriteTransaction write(Consistency consistency, Versioning versioning);
 
     protected abstract class WriteTransaction implements WithWriteIndex.WriteTransaction {
 

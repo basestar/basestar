@@ -70,6 +70,8 @@ public interface GraphQLStrategy {
 
     String readMethodName(ObjectSchema type);
 
+    String subscribeMethodName(ObjectSchema type);
+
     String queryMethodName(ObjectSchema type);
 
     String queryLinkMethodName(ObjectSchema type, Link link);
@@ -94,9 +96,17 @@ public interface GraphQLStrategy {
 
     String expressionsArgumentName();
 
-    String transactionMethodName();
+    String consistencyArgumentName();
 
-    String transactionTypeName();
+    String consistencyTypeName();
+
+    String batchMethodName();
+
+    String batchTypeName();
+
+    String idArgumentName();
+
+    String versionArgumentName();
 
     class Default implements GraphQLStrategy {
 
@@ -233,6 +243,12 @@ public interface GraphQLStrategy {
         }
 
         @Override
+        public String subscribeMethodName(final ObjectSchema type) {
+
+            return "subscribe" + typeName(type);
+        }
+
+        @Override
         public String queryMethodName(final ObjectSchema type) {
 
             return "query" + typeName(type);
@@ -305,15 +321,39 @@ public interface GraphQLStrategy {
         }
 
         @Override
-        public String transactionMethodName() {
+        public String consistencyArgumentName() {
 
-            return "transaction";
+            return "consistency";
         }
 
         @Override
-        public String transactionTypeName() {
+        public String consistencyTypeName() {
 
-            return "Transaction";
+            return "BatchConsistency";
+        }
+
+        @Override
+        public String batchMethodName() {
+
+            return "batch";
+        }
+
+        @Override
+        public String batchTypeName() {
+
+            return "Batch";
+        }
+
+        @Override
+        public String idArgumentName() {
+
+            return ObjectSchema.ID;
+        }
+
+        @Override
+        public String versionArgumentName() {
+
+            return ObjectSchema.VERSION;
         }
 
         protected final Use.Visitor<String> TYPE_NAME_VISITOR = new Use.Visitor<String>() {

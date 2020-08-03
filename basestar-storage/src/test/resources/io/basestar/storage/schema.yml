@@ -124,3 +124,16 @@ RefSource:
       partition:
         - target.id
 
+DateSort:
+  type: object
+  properties:
+    group:
+      type: string
+  indexes:
+    created:
+      consistency: ATOMIC
+      partition:
+        - group
+      sort:
+        - created
+

@@ -30,8 +30,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.time.temporal.TemporalAccessor;
 import java.util.Date;
 import java.util.Set;
@@ -43,20 +44,20 @@ public class UseDate implements UseScalar<LocalDate> {
 
     public static final String NAME = "date";
 
-//    public static final DateTimeFormatter[] FORMATS = {
-//            DateTimeFormatter.ofPattern("yyyy"),
-//            DateTimeFormatter.ofPattern("yyyy-MM-dd"),
-//            DateTimeFormatter.ofPattern("yyyyMMdd"),
-//            DateTimeFormatter.ofPattern("yyyy-MM"),
-//            DateTimeFormatter.ofPattern("-MM-dd"),
-//            DateTimeFormatter.ofPattern("-MMdd"),
-//            DateTimeFormatter.ofPattern("yyyy-'W'ww"),
-//            DateTimeFormatter.ofPattern("yyyy'W'ww"),
-//            DateTimeFormatter.ofPattern("yyyy-'W'ww-D"),
-//            DateTimeFormatter.ofPattern("yyyy'W'ww-D"),
-//            DateTimeFormatter.ofPattern("yyyy-DDD"),
-//            DateTimeFormatter.ofPattern("yyyyDDD")
-//    };
+    public static final DateTimeFormatter[] FORMATS = {
+            DateTimeFormatter.ofPattern("yyyy-MM-dd"),
+            DateTimeFormatter.ofPattern("yyyy"),
+            DateTimeFormatter.ofPattern("yyyyMMdd"),
+            DateTimeFormatter.ofPattern("yyyy-MM"),
+            DateTimeFormatter.ofPattern("-MM-dd"),
+            DateTimeFormatter.ofPattern("-MMdd"),
+            DateTimeFormatter.ofPattern("yyyy-'W'ww"),
+            DateTimeFormatter.ofPattern("yyyy'W'ww"),
+            DateTimeFormatter.ofPattern("yyyy-'W'ww-D"),
+            DateTimeFormatter.ofPattern("yyyy'W'ww-D"),
+            DateTimeFormatter.ofPattern("yyyy-DDD"),
+            DateTimeFormatter.ofPattern("yyyyDDD")
+    };
 
     @Override
     public <R> R visit(final Visitor<R> visitor) {
@@ -69,15 +70,29 @@ public class UseDate implements UseScalar<LocalDate> {
         return DEFAULT;
     }
 
+    public static LocalDate parse(final String value) {
+
+        for(final DateTimeFormatter formatter: FORMATS) {
+            try {
+                return formatter.parse(value, LocalDate::from);
+            } catch (final DateTimeParseException e) {
+                // suppress
+            }
+        }
+        return LocalDate.parse(value, DateTimeFormatter.ISO_LOCAL_DATE);
+    }
+
     @Override
     public LocalDate create(final Object value, final Set<Name> expand, final boolean suppress) {
 
         if(value instanceof String) {
-            return LocalDate.parse((String)value, DateTimeFormatter.ISO_LOCAL_DATE);
+            return parse((String)value);
         } else if(value instanceof TemporalAccessor) {
             return LocalDate.from((TemporalAccessor) value);
+        } else if(value instanceof java.sql.Date) {
+            return ((java.sql.Date) value).toLocalDate();
         } else if(value instanceof Date) {
-            return ((Date) value).toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            return ((Date) value).toInstant().atZone(ZoneOffset.UTC).toLocalDate();
         } else if(suppress) {
             return null;
         } else {

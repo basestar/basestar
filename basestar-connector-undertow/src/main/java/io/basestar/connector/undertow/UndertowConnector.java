@@ -29,12 +29,27 @@ public class UndertowConnector {
 
     private final Undertow server;
 
-    public UndertowConnector(final API api, final String host, final int port) {
+    @lombok.Builder(builderClassName = "Builder")
+    UndertowConnector(final API api, final String host, final int port,
+                      final Integer ioThreads, final Integer workerThreads,
+                      final Integer bufferSize, final Boolean directBuffers) {
 
-        this.server = Undertow.builder()
+        final Undertow.Builder builder = Undertow.builder()
                 .addHttpListener(port, host)
-                .setHandler(new UndertowHandler(api))
-                .build();
+                .setHandler(new UndertowHandler(api));
+        if(ioThreads != null) {
+            builder.setIoThreads(ioThreads);
+        }
+        if(workerThreads != null) {
+            builder.setWorkerThreads(workerThreads);
+        }
+        if(bufferSize != null) {
+            builder.setBufferSize(bufferSize);
+        }
+        if(directBuffers != null) {
+            builder.setDirectBuffers(directBuffers);
+        }
+        this.server = builder.build();
     }
 
     public void start() {

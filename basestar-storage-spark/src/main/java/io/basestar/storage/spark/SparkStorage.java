@@ -25,11 +25,11 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.Reserved;
 import io.basestar.spark.expression.SparkExpressionVisitor;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
+import io.basestar.storage.Versioning;
 import io.basestar.storage.util.Pager;
 import io.basestar.util.Name;
 import io.basestar.util.PagedList;
@@ -92,7 +92,7 @@ public class SparkStorage implements Storage.WithoutWrite, /* FIXME */ Storage.W
         return CompletableFuture.supplyAsync(() -> {
 
             Dataset<Row> ds = strategy.objectRead(session, schema);
-            ds = ds.filter(ds.col(Reserved.ID).equalTo(id));
+            ds = ds.filter(ds.col(ObjectSchema.ID).equalTo(id));
             final Row row = ds.first();
             return row == null ? null : SparkSchemaUtils.fromSpark(schema, row);
 
@@ -105,8 +105,8 @@ public class SparkStorage implements Storage.WithoutWrite, /* FIXME */ Storage.W
         return CompletableFuture.supplyAsync(() -> {
 
             Dataset<Row> ds = strategy.historyRead(session, schema);
-            ds = ds.filter(ds.col(Reserved.ID).equalTo(id)
-                    .and(ds.col(Reserved.VERSION).equalTo(version)));
+            ds = ds.filter(ds.col(ObjectSchema.ID).equalTo(id)
+                    .and(ds.col(ObjectSchema.VERSION).equalTo(version)));
             final Row row = ds.first();
             return row == null ? null : SparkSchemaUtils.fromSpark(schema, row);
 
@@ -159,7 +159,7 @@ public class SparkStorage implements Storage.WithoutWrite, /* FIXME */ Storage.W
     }
 
     @Override
-    public WriteTransaction write(final Consistency consistency) {
+    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
         throw new UnsupportedOperationException();
     }
