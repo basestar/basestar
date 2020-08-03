@@ -47,6 +47,16 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
             return setReplica(schema -> Optional.ofNullable(secondary));
         }
 
+        public Builder setSimpleReadConsistency(final Consistency consistency) {
+
+            return setReadConsistency(ignored -> consistency);
+        }
+
+        public Builder setSimpleWriteConsistency(final Consistency consistency) {
+
+            return setWriteConsistency(ignored -> consistency);
+        }
+
         public Builder setSimplePrimaryConsistency(final Consistency consistency) {
 
             return setPrimaryConsistency((schema, ignored) -> consistency);
@@ -70,6 +80,8 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
         public ReplicaStorage build() {
 
             return new ReplicaStorage(namespace, emitter, Nullsafe.require(primary), Nullsafe.require(replica),
+                    Nullsafe.option(readConsistency, (consistency) -> consistency),
+                    Nullsafe.option(writeConsistency, (consistency) -> consistency),
                     Nullsafe.option(primaryConsistency, (schema, consistency) -> consistency),
                     Nullsafe.option(primaryVersioning, (schema, versioning) -> versioning),
                     Nullsafe.option(replicaConsistency, (schema, consistency) -> consistency),
@@ -86,6 +98,10 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
     private final Function<ObjectSchema, Storage> primary;
 
     private final Function<ObjectSchema, Optional<Storage>> replica;
+
+    private final Function<Consistency, Consistency> readConsistency;
+
+    private final Function<Consistency, Consistency> writeConsistency;
 
     private final BiFunction<ObjectSchema, Consistency, Consistency> primaryConsistency;
 
@@ -104,7 +120,8 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
     @Override
     public ReadTransaction read(final Consistency consistency) {
 
-        if(consistency.isStronger(Consistency.ASYNC)) {
+        final Consistency replicationConsistency = this.readConsistency.apply(consistency);
+        if(replicationConsistency.isStrongerOrEqual(Consistency.QUORUM)) {
 
             final IdentityHashMap<Storage, ReadTransaction> primaryTransactions = new IdentityHashMap<>();
             final IdentityHashMap<Storage, ReadTransaction> replicaTransactions = new IdentityHashMap<>();
@@ -179,7 +196,8 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
     @Override
     public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
-        if(consistency.isStronger(Consistency.ASYNC) || namespace == null || emitter == null) {
+        final Consistency replicationConsistency = this.writeConsistency.apply(consistency);
+        if(replicationConsistency.isStrongerOrEqual(Consistency.QUORUM) || namespace == null || emitter == null) {
 
             final IdentityHashMap<Storage, WriteTransaction> primaryTransactions = new IdentityHashMap<>();
             final IdentityHashMap<Storage, WriteTransaction> replicaTransactions = new IdentityHashMap<>();

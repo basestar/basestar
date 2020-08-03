@@ -215,10 +215,11 @@ public class GraphQLAdaptor {
             final Set<Name> expand = schema.requiredExpand(names);
             final String id = env.getArgumentOrDefault(strategy.idArgumentName(), null);
             final Map<String, Object> data = GraphQLUtils.fromRequest(schema, env.getArgument(strategy.dataArgumentName()));
+            final Consistency consistency = consistency(env);
             final Map<String, Expression> expressions = parseExpressions(env.getArgument(strategy.expressionsArgumentName()));
             final CreateOptions options = CreateOptions.builder()
                     .schema(schema.getQualifiedName()).id(id)
-                    .data(data).expand(expand)
+                    .data(data).consistency(consistency).expand(expand)
                     .expressions(expressions)
                     .build();
             return database.create(caller, options)
@@ -235,6 +236,7 @@ public class GraphQLAdaptor {
             final String id = env.getArgument(strategy.idArgumentName());
             final Long version = version(env);
             final Map<String, Object> data = GraphQLUtils.fromRequest(schema, env.getArgument(strategy.dataArgumentName()));
+            final Consistency consistency = consistency(env);
             final Map<String, Expression> expressions = parseExpressions(env.getArgument(strategy.expressionsArgumentName()));
 
             final UpdateOptions options = UpdateOptions.builder()
@@ -265,6 +267,7 @@ public class GraphQLAdaptor {
             final Caller caller = GraphQLUtils.caller(env.getContext());
             final String id = env.getArgument(strategy.idArgumentName());
             final Long version = version(env);
+            final Consistency consistency = consistency(env);
             final DeleteOptions options = DeleteOptions.builder()
                     .schema(schema.getQualifiedName()).id(id)
                     .version(version)
@@ -468,6 +471,16 @@ public class GraphQLAdaptor {
             return null;
         } else {
             return value.longValue();
+        }
+    }
+
+    private Consistency consistency(final DataFetchingEnvironment env) {
+
+        final String value = env.getArgument(strategy.consistencyArgumentName());
+        if(value == null) {
+            return null;
+        } else {
+            return Consistency.valueOf(value.toUpperCase());
         }
     }
 

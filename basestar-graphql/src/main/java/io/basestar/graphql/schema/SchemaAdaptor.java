@@ -216,6 +216,8 @@ public class SchemaAdaptor {
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(strategy.dataArgumentName()).type(new TypeName(strategy.createInputTypeName(schema))).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name(strategy.consistencyArgumentName()).type(new TypeName(strategy.consistencyTypeName())).build());
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(strategy.expressionsArgumentName()).type(new TypeName(strategy.inputExpressionsTypeName(schema))).build());
         return builder.build();
     }
@@ -231,6 +233,8 @@ public class SchemaAdaptor {
                 .name(strategy.versionArgumentName()).type(new TypeName(GraphQLUtils.INT_TYPE)).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(strategy.dataArgumentName()).type(new TypeName(typeName)).build());
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name(strategy.consistencyArgumentName()).type(new TypeName(strategy.consistencyTypeName())).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(strategy.expressionsArgumentName()).type(new TypeName(strategy.inputExpressionsTypeName(schema))).build());
         return builder.build();
@@ -253,6 +257,8 @@ public class SchemaAdaptor {
         builder.type(new TypeName(strategy.typeName(schema)));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(strategy.idArgumentName()).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build());
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name(strategy.consistencyArgumentName()).type(new TypeName(strategy.consistencyTypeName())).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(strategy.versionArgumentName()).type(new TypeName(GraphQLUtils.INT_TYPE)).build());
         return builder.build();

@@ -25,10 +25,7 @@ import io.basestar.database.event.ObjectCreatedEvent;
 import io.basestar.database.options.CreateOptions;
 import io.basestar.event.Event;
 import io.basestar.expression.Context;
-import io.basestar.schema.Constraint;
-import io.basestar.schema.Instance;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.Permission;
+import io.basestar.schema.*;
 import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.util.Name;
@@ -138,5 +135,11 @@ public class CreateAction implements Action {
         return Nullsafe.option(options.getExpressions()).values().stream()
                 .flatMap(e -> e.bind(Context.init()).paths().stream())
                 .collect(Collectors.toSet());
+    }
+
+    @Override
+    public Consistency getConsistency() {
+
+        return options.getConsistency();
     }
 }

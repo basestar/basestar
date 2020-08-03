@@ -22,6 +22,7 @@ package io.basestar.database.action;
 
 import io.basestar.event.Event;
 import io.basestar.expression.Context;
+import io.basestar.schema.Consistency;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Permission;
@@ -48,6 +49,8 @@ public interface Action {
     Event event(Instance before, Instance after);
 
     Set<Name> paths();
+
+    Consistency getConsistency();
 
 //    ExpandKey<RefKey> afterKey(Instance after);
 //

@@ -135,7 +135,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
     private CompletableFuture<Instance> single(final Caller caller, final Action action) {
 
-        return batch(caller, Consistency.ATOMIC, ImmutableMap.of(SINGLE_BATCH_ROOT, action))
+        // FIXME: unspecified consistency should be passed to storage so it can define default, but that might break too many things today
+        return batch(caller, Nullsafe.option(action.getConsistency(), Consistency.ATOMIC), ImmutableMap.of(SINGLE_BATCH_ROOT, action))
                 .thenApply(v -> v.get(SINGLE_BATCH_ROOT));
     }
 

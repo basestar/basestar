@@ -20,6 +20,7 @@ package io.basestar.database.options;
  * #L%
  */
 
+import io.basestar.schema.Consistency;
 import io.basestar.util.Name;
 import lombok.Builder;
 import lombok.Data;
@@ -35,4 +36,6 @@ public class DeleteOptions implements ActionOptions {
     private final String id;
 
     private final Long version;
+
+    private final Consistency consistency;
 }
