@@ -37,7 +37,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public interface UseCollection<V, T extends Collection<V>> extends UseContainer<V, T> {
+public interface UseCollection<V, T extends Collection<V>> extends Use<T> {
 
     Use<V> getType();
 

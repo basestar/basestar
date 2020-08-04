@@ -57,7 +57,7 @@ import java.util.stream.Collectors;
 
 @Data
 @Slf4j
-public class UseMap<T> implements UseContainer<T, Map<String, T>> {
+public class UseMap<T> implements Use<Map<String, T>> {
 
     public static final String NAME = "map";
 

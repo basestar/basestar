@@ -3,11 +3,13 @@ package io.basestar.schema.layout;
 import io.basestar.schema.Property;
 import io.basestar.schema.StructSchema;
 import io.basestar.schema.use.Use;
-import io.basestar.schema.use.UseContainer;
+import io.basestar.schema.use.UseCollection;
+import io.basestar.schema.use.UseMap;
 import io.basestar.schema.use.UseStruct;
 import io.basestar.schema.util.Casing;
 import io.basestar.util.Name;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -50,9 +52,15 @@ public class CasingLayout implements Layout {
             }
 
             @Override
-            public <T> Use<?> visitContainer(final UseContainer<T, ?> type) {
+            public <T> Use<?> visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
 
-                return type.transform(t -> t.visit(this));
+                return type.transform(v -> v.visit(this));
+            }
+
+            @Override
+            public <T> Use<?> visitMap(final UseMap<T> type) {
+
+                return type.transform(v -> v.visit(this));
             }
 
             @Override

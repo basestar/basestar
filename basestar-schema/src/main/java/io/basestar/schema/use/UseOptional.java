@@ -18,7 +18,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 @Data
-public class UseOptional<T> implements UseContainer<T, T> {
+public class UseOptional<T> implements Use<T> {
 
     public static final String SYMBOL = "?";
 
@@ -32,7 +32,6 @@ public class UseOptional<T> implements UseContainer<T, T> {
         return visitor.visitOptional(this);
     }
 
-    @Override
     public UseOptional<?> transform(final Function<Use<T>, Use<?>> fn) {
 
         final Use<?> type2 = fn.apply(type);
