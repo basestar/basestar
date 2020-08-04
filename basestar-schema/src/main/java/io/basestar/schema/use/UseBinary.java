@@ -83,7 +83,6 @@ public class UseBinary implements UseScalar<byte[]> {
         } else if(value instanceof String) {
             return BaseEncoding.base64().decode((String)value);
         } else if(suppress) {
-            log.warn("Suppressed conversion error (invalid type: " + value.getClass() + ")");
             return null;
         } else {
             throw new UnexpectedTypeException(this, value);

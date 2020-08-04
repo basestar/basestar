@@ -79,14 +79,12 @@ public class UseNumber implements UseScalar<Double> {
                 return Double.parseDouble((String)value);
             } catch (final NumberFormatException e) {
                 if(suppress) {
-                    log.warn("Suppressed conversion error", e);
                     return null;
                 } else {
                     throw e;
                 }
             }
         } else if(suppress) {
-            log.warn("Suppressed conversion error (invalid type: " + value.getClass() + ")");
             return null;
         } else {
             throw new UnexpectedTypeException(this, value);

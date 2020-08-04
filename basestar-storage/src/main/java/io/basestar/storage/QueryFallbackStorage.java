@@ -56,7 +56,7 @@ public class QueryFallbackStorage implements DelegatingStorage {
     @Override
     public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        return tryQuery(0, schema, query, sort);
+        return tryQuery(0, schema, query, sort, expand);
     }
 
     @Override
@@ -65,20 +65,20 @@ public class QueryFallbackStorage implements DelegatingStorage {
         throw new UnsupportedOperationException();
     }
 
-    protected List<Pager.Source<Map<String, Object>>> tryQuery(final int offset, final ObjectSchema schema, final Expression query, final List<Sort> sort) {
+    protected List<Pager.Source<Map<String, Object>>> tryQuery(final int offset, final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         if (offset >= storage.size()) {
             throw new UnsupportedQueryException(schema.getQualifiedName(), query);
         } else {
             try {
-                final List<Pager.Source<Map<String, Object>>> result = storage.get(offset).query(schema, query, sort);
+                final List<Pager.Source<Map<String, Object>>> result = storage.get(offset).query(schema, query, sort, expand);
                 if(offset != 0) {
                     return Pager.map(result, v -> Instance.without(v, Reserved.META));
                 } else {
                     return result;
                 }
             } catch (final UnsupportedQueryException e) {
-                return tryQuery(offset + 1, schema, query, sort);
+                return tryQuery(offset + 1, schema, query, sort, expand);
             }
         }
     }

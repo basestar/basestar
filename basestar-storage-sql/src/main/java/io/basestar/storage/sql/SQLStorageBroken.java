@@ -33,6 +33,7 @@ import io.basestar.schema.use.UseStruct;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
+import io.basestar.storage.Versioning;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.DisjunctionVisitor;
@@ -353,7 +354,7 @@ public class SQLStorageBroken implements Storage.WithWriteIndex, Storage.WithWri
                 @Override
                 public Name visitObject(final UseObject type) {
 
-                    if (rest.equals(Reserved.ID_NAME)) {
+                    if (rest.equals(ObjectSchema.ID_NAME)) {
                         return first;
                     } else {
                         return Name.of(Reserved.PREFIX).with(first.with(instanceFieldName(type.getSchema(), rest)));
@@ -458,7 +459,7 @@ public class SQLStorageBroken implements Storage.WithWriteIndex, Storage.WithWri
     }
 
     @Override
-    public WriteTransaction write(final Consistency consistency) {
+    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
         return new WriteTransaction();
     }
@@ -703,12 +704,12 @@ public class SQLStorageBroken implements Storage.WithWriteIndex, Storage.WithWri
 
     private Field<String> idField(final ObjectSchema schema) {
 
-        return DSL.field(DSL.name(Reserved.ID), String.class);
+        return DSL.field(DSL.name(ObjectSchema.ID), String.class);
     }
 
     private Field<Long> versionField(final ObjectSchema schema) {
 
-        return DSL.field(DSL.name(Reserved.VERSION), Long.class);
+        return DSL.field(DSL.name(ObjectSchema.VERSION), Long.class);
     }
 
     private org.jooq.Name objectTableName(final ObjectSchema schema) {

@@ -495,7 +495,7 @@ public class TestDatabaseServer {
     @Test
     public void batch() {
 
-        final Map<String, Instance> results = database.transaction(caller, BatchOptions.builder()
+        final Map<String, Instance> results = database.batch(caller, BatchOptions.builder()
                 .action("a", CreateOptions.builder()
                         .schema(SIMPLE)
                         .expressions(ImmutableMap.of(

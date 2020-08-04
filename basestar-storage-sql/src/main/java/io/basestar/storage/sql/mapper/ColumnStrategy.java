@@ -223,7 +223,7 @@ public interface ColumnStrategy {
                             }
                             final String outer = rest.first();
                             final String inner = rest.get(1);
-                            if(inner.equals(Reserved.ID) && rest.size() == 2) {
+                            if(inner.equals(ObjectSchema.ID) && rest.size() == 2) {
                                 return qualifiedName(table, head.with(rest.withoutLast()));
                             }
                             final ColumnMapper<?> mapper = mappers.get(inner);
@@ -247,7 +247,7 @@ public interface ColumnStrategy {
                                 final String targetTableName = tableName(name);
                                 final Table<Record> target = resolver.table(type.getSchema()).as(targetTableName);
                                 final Name sourceColumn = qualifiedName(table, name);
-                                final Field<String> targetId = DSL.field(DSL.name(DSL.name(targetTableName), DSL.name(Reserved.ID)), String.class);
+                                final Field<String> targetId = DSL.field(DSL.name(DSL.name(targetTableName), DSL.name(ObjectSchema.ID)), String.class);
                                 final Field<String> sourceId = DSL.field(DSL.name(DSL.name(table), columnName(sourceColumn)), String.class);
                                 final Table<Record> initial = source.leftJoin(target).on(targetId.eq(sourceId));
                                 return joinAll(targetTableName, name, initial, resolver);

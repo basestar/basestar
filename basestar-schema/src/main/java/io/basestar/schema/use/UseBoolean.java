@@ -75,7 +75,6 @@ public class UseBoolean implements UseScalar<Boolean> {
         } else if(value instanceof String) {
             return !(((String)value).isEmpty() || value.equals("false"));
         } else if(suppress) {
-            log.warn("Suppressed conversion error (invalid type: " + value.getClass() + ")");
             return null;
         } else {
             throw new UnexpectedTypeException(this, value);

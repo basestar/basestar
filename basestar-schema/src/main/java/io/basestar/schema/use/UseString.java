@@ -93,7 +93,6 @@ public class UseString implements UseScalar<String> {
         } else if(value instanceof String) {
             return (String) value;
         } else if(suppress) {
-            log.warn("Suppressed conversion error (invalid type: " + value.getClass() + ")");
             return null;
         } else {
             throw new UnexpectedTypeException(this, value);

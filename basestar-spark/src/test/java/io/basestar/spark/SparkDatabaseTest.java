@@ -44,7 +44,7 @@ public class SparkDatabaseTest extends AbstractSparkTest {
 
         final SparkDatabase database = SparkDatabase.builder()
                 .resolver(resolver).namespace(namespace)
-                .columnResolver(ColumnResolver.lowercase((ds, name) -> ColumnResolver.<Row>nested(ds, name)))
+                .columnResolver(ColumnResolver.lowercase(ColumnResolver::nested))
                 .build();
 
         final List<A> results = database.from("A")

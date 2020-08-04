@@ -141,7 +141,7 @@ public class StorageSubscriptions implements Subscriptions {
 
         final Expression expression = new Or(keys.stream().map(StorageSubscriptions::keyExpression).toArray(Expression[]::new));
 
-        return Pager.map(storage.query(SCHEMA, expression, sort()), this::fromMap);
+        return Pager.map(storage.query(SCHEMA, expression, sort(), Collections.emptySet()), this::fromMap);
     }
 
     private Subscription fromMap(final Map<String, Object> object) {
@@ -168,7 +168,7 @@ public class StorageSubscriptions implements Subscriptions {
     public CompletableFuture<?> unsubscribe(final String sub, final String channel) {
 
         final String id = id(sub, channel);
-        return storage.readObject(SCHEMA, id).thenCompose(before -> {
+        return storage.readObject(SCHEMA, id, Collections.emptySet()).thenCompose(before -> {
             final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC, Versioning.CHECKED);
             write.deleteObject(SCHEMA, id(sub, channel), before);
             return write.write();
@@ -181,7 +181,7 @@ public class StorageSubscriptions implements Subscriptions {
         final Context context = Context.init(ImmutableMap.of("s", sub));
         final Expression expression = Expression.parseAndBind(context, "sub == s");
 
-        return unsubscribeAll(storage.query(SCHEMA, expression, sort()), null);
+        return unsubscribeAll(storage.query(SCHEMA, expression, sort(), Collections.emptySet()), null);
     }
 
     private CompletableFuture<?> unsubscribeAll(final List<Pager.Source<Map<String, Object>>> sources, final PagingToken token) {

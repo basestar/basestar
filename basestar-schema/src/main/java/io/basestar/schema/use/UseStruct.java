@@ -93,7 +93,6 @@ public class UseStruct implements UseInstance {
         if(value instanceof Map) {
             return schema.create((Map<String, Object>) value, expand, suppress);
         } else if(suppress) {
-            log.warn("Suppressed conversion error (invalid type: " + value.getClass() + ")");
             return null;
         } else {
             throw new UnexpectedTypeException(this, value);

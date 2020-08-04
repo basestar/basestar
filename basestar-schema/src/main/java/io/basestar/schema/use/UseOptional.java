@@ -15,9 +15,10 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 @Data
-public class UseOptional<T> implements Use<T> {
+public class UseOptional<T> implements UseContainer<T, T> {
 
     public static final String SYMBOL = "?";
 
@@ -29,6 +30,17 @@ public class UseOptional<T> implements Use<T> {
     public <R> R visit(final Visitor<R> visitor) {
 
         return visitor.visitOptional(this);
+    }
+
+    @Override
+    public UseOptional<?> transform(final Function<Use<T>, Use<?>> fn) {
+
+        final Use<?> type2 = fn.apply(type);
+        if(type2 == type ) {
+            return this;
+        } else {
+            return new UseOptional<>(type2);
+        }
     }
 
     public static UseOptional<?> from(final Object config) {

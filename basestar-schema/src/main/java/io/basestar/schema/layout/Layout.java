@@ -3,10 +3,11 @@ package io.basestar.schema.layout;
 import io.basestar.schema.use.Use;
 import io.basestar.util.Name;
 
+import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
 
-public interface Layout {
+public interface Layout extends Serializable {
 
     Map<String, Use<?>> layoutSchema(Set<Name> expand);
 

@@ -37,11 +37,13 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public interface UseCollection<V, T extends Collection<V>> extends Use<T> {
+public interface UseCollection<V, T extends Collection<V>> extends UseContainer<V, T> {
 
     Use<V> getType();
 
     T transform(T value, Function<V, V> fn);
+
+    UseCollection<?, ?> transform(Function<Use<V>, Use<?>> fn);
 
     @Override
     default Set<Constraint.Violation> validate(final Context context, final Name name, final T value) {

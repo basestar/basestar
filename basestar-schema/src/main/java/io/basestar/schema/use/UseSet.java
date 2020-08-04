@@ -67,6 +67,16 @@ public class UseSet<T> implements UseCollection<T, Set<T>> {
         return visitor.visitSet(this);
     }
 
+    public UseSet<?> transform(final Function<Use<T>, Use<?>> fn) {
+
+        final Use<?> type2 = fn.apply(type);
+        if(type2 == type ) {
+            return this;
+        } else {
+            return new UseSet<>(type2);
+        }
+    }
+
     @Override
     public Object toConfig() {
 
@@ -98,7 +108,6 @@ public class UseSet<T> implements UseCollection<T, Set<T>> {
             return ((Collection<?>) value).stream()
                     .map(fn).collect(Collectors.toSet());
         } else if (suppress) {
-            log.warn("Suppressed conversion error (invalid type: " + value.getClass() + ")");
             return null;
         } else {
             throw new UnexpectedTypeException(NAME, value);

@@ -233,7 +233,7 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
     }
 
     @Override
-    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
+    public PartitionedStorage.WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
         return new PartitionedStorage.WriteTransaction() {
 

@@ -232,11 +232,6 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private Map<String, Object> extensions;
 
-        @Nullable
-        @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
-        @JsonDeserialize(using = AbbrevListDeserializer.class)
-        private Set<Name> expand;
-
         public String getType() {
 
             return TYPE;
@@ -414,12 +409,6 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
     public Map<String, Permission> getPermissions() {
 
         return declaredPermissions;
-    }
-
-    @Override
-    public Set<Name> getExpand() {
-
-        return declaredExpand;
     }
 
     @Override
@@ -636,12 +625,6 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
                         Map.Entry::getKey,
                         entry -> entry.getValue().descriptor()
                 ));
-            }
-
-            @Override
-            public Set<Name> getExpand() {
-
-                return declaredExpand;
             }
 
             @Override

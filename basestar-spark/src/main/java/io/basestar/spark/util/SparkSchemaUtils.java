@@ -442,25 +442,19 @@ public class SparkSchemaUtils {
             @Override
             public Object visitBoolean(final UseBoolean type) {
 
-                final Boolean result = type.create(value, false, true);
-                return result;
-//                return result == null ? null : scala.Boolean.box(result);
+                return type.create(value, expand, suppress);
             }
 
             @Override
             public Object visitInteger(final UseInteger type) {
 
-                final Long result = type.create(value, false, true);
-                return result;
-//                return result == null ? null : scala.Long.box(result);
+                return type.create(value, expand, suppress);
             }
 
             @Override
             public Object visitNumber(final UseNumber type) {
 
-                final Double result = type.create(value, false, true);
-                return result;
-//                return result == null ? null : scala.Double.box(result);
+                return type.create(value, expand, suppress);
             }
 
             @Override
@@ -547,14 +541,14 @@ public class SparkSchemaUtils {
             @Override
             public Object visitDate(final UseDate type) {
 
-                final LocalDate converted = type.create(value, false, true);
+                final LocalDate converted = type.create(value, expand, suppress);
                 return new java.sql.Date(converted.atStartOfDay().toEpochSecond(ZoneOffset.UTC) * 1000);
             }
 
             @Override
             public Object visitDateTime(final UseDateTime type) {
 
-                final LocalDateTime converted = type.create(value, false, true);
+                final LocalDateTime converted = type.create(value, expand, suppress);
                 return new java.sql.Timestamp(converted.toEpochSecond(ZoneOffset.UTC) * 1000);
             }
 
@@ -867,6 +861,18 @@ public class SparkSchemaUtils {
             public Encoder<?> visitView(final UseView type) {
 
                 throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public Encoder<?> visitAny(final UseAny useAny) {
+
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public <T> Encoder<?> visitOptional(final UseOptional<T> type) {
+
+                return encoder(type.getType());
             }
         });
     }

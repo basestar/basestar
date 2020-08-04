@@ -22,10 +22,10 @@ package io.basestar.schema;
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
@@ -123,6 +123,9 @@ public class Namespace implements Serializable, Schema.Resolver {
     @Accessors(chain = true)
     public static class Builder implements Descriptor {
 
+        @JsonProperty("$version")
+        private String version;
+
         private Map<Name, Schema.Descriptor<?>> schemas;
 
         public Builder setSchema(final Name name, final Schema.Descriptor<?> schema) {
@@ -161,8 +164,8 @@ public class Namespace implements Serializable, Schema.Resolver {
 
             final Map<Name, Schema.Descriptor<?>> builders = new HashMap<>();
             for(final URL url : URLs.all(urls)) {
-                final Map<Name, Schema.Descriptor<?>> schemas = YAML_MAPPER.readValue(url, new TypeReference<Map<Name, Schema.Descriptor<?>>>(){});
-                builders.putAll(schemas);
+                final Builder schemas = YAML_MAPPER.readValue(url, Builder.class);
+                builders.putAll(schemas.getSchemas());
             }
             return new Builder()
                     .setSchemas(builders);
@@ -172,8 +175,8 @@ public class Namespace implements Serializable, Schema.Resolver {
 
             final Map<Name, Schema.Descriptor<?>> builders = new HashMap<>();
             for(final InputStream is : iss) {
-                final Map<Name, Schema.Descriptor<?>> schemas = YAML_MAPPER.readValue(is, new TypeReference<Map<Name, Schema.Descriptor<?>>>(){});
-                builders.putAll(schemas);
+                final Builder schemas = YAML_MAPPER.readValue(is, Builder.class);
+                builders.putAll(schemas.getSchemas());
             }
             return new Builder()
                     .setSchemas(builders);

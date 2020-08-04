@@ -42,6 +42,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.*;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -56,7 +57,7 @@ import java.util.stream.Collectors;
 
 @Data
 @Slf4j
-public class UseMap<T> implements Use<Map<String, T>> {
+public class UseMap<T> implements UseContainer<T, Map<String, T>> {
 
     public static final String NAME = "map";
 
@@ -68,6 +69,16 @@ public class UseMap<T> implements Use<Map<String, T>> {
     public <R> R visit(final Visitor<R> visitor) {
 
         return visitor.visitMap(this);
+    }
+
+    public UseMap<?> transform(final Function<Use<T>, Use<?>> fn) {
+
+        final Use<?> type2 = fn.apply(type);
+        if(type2 == type ) {
+            return this;
+        } else {
+            return new UseMap<>(type2);
+        }
     }
 
     public static UseMap<?> from(final Object config) {
@@ -110,7 +121,6 @@ public class UseMap<T> implements Use<Map<String, T>> {
                             entry -> fn.apply(entry.getKey().toString(), entry.getValue())
                     ));
         } else if(suppress) {
-            log.warn("Suppressed conversion error (invalid type: " + value.getClass() + ")");
             return null;
         } else {
             throw new UnexpectedTypeException(NAME, value);

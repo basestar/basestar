@@ -338,9 +338,14 @@ public interface Use<T> extends Serializable {
                 return visitDefault(type);
             }
 
-            default <T> R visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
+            default <T> R visitContainer(final UseContainer<T, ?> type) {
 
                 return visitDefault(type);
+            }
+
+            default <T> R visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
+
+                return visitContainer(type);
             }
 
             default R visitInstance(final UseInstance type) {
@@ -404,7 +409,7 @@ public interface Use<T> extends Serializable {
             @Override
             default <T> R visitMap(final UseMap<T> type) {
 
-                return visitDefault(type);
+                return visitContainer(type);
             }
 
             @Override
@@ -440,7 +445,7 @@ public interface Use<T> extends Serializable {
             @Override
             default <T> R visitOptional(final UseOptional<T> type) {
 
-                return type.getType().visit(this);
+                return visitContainer(type);
             }
         }
     }

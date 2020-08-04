@@ -64,6 +64,7 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
 
     default SortedMap<String, Use<?>> layoutSchema(final Set<Name> expand) {
 
+        // This is the canonical layout, by definition
         final SortedMap<String, Use<?>> result = new TreeMap<>();
         metadataSchema().forEach(result::put);
         final Map<String, Set<Name>> branches = Name.branch(expand);
@@ -77,15 +78,13 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
     @Override
     default Map<String, Object> applyLayout(final Set<Name> expand, final Map<String, Object> object) {
 
-        // This is the default layout, by definition
-        return create(object, expand, false);
+        return create(object, expand, true);
     }
 
     @Override
     default Map<String, Object> unapplyLayout(final Set<Name> expand, final Map<String, Object> object) {
 
-        // This is the default layout, by definition
-        return create(object, expand, false);
+        return create(object, expand, true);
     }
 
     InstanceSchema getExtend();
@@ -193,7 +192,7 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
         object.forEach((k, v) -> {
             final Use<?> type = metadataSchema.get(k);
             if(type != null) {
-                result.put(k, type.create(v, false, suppress));
+                result.put(k, type.create(v, null, suppress));
             } else if(Reserved.isMeta(k)) {
                 result.put(k, v);
             }

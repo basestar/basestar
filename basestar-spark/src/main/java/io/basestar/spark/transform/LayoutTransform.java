@@ -38,11 +38,13 @@ public class LayoutTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         final Layout inputLayout = this.inputLayout;
         final Layout outputLayout = this.outputLayout;
         final Set<Name> expand = this.expand;
+        final StructType outputStructType = this.outputStructType;
         return input.map((MapFunction<Row, Row>) row -> {
 
             final Map<String, Object> initial = SparkSchemaUtils.fromSpark(inputLayout, expand, row);
-            final Map<String, Object> transformed = outputLayout.applyLayout(expand, initial);
-            return SparkSchemaUtils.toSpark(outputLayout, expand, outputStructType, transformed);
+            final Map<String, Object> canonical = inputLayout.unapplyLayout(expand, initial);
+            final Map<String, Object> result = outputLayout.applyLayout(expand, canonical);
+            return SparkSchemaUtils.toSpark(outputLayout, expand, outputStructType, result);
 
         }, RowEncoder.apply(outputStructType));
     }

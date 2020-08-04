@@ -49,6 +49,8 @@ public class MigrateTransform implements Transform<Dataset<Row>, Dataset<Row>> {
     @Override
     public Dataset<Row> accept(final Dataset<Row> df) {
 
+        final ObjectSchema sourceSchema = this.sourceSchema;
+        final ObjectSchema targetSchema = this.targetSchema;
         final StructType targetType = SparkSchemaUtils.structType(targetSchema, null);
         return df.map((MapFunction<Row, Row>) row -> {
 

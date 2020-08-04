@@ -13,6 +13,7 @@ import io.basestar.storage.DelegatingStorage;
 import io.basestar.storage.Storage;
 import io.basestar.storage.Versioning;
 import io.basestar.storage.replica.event.ReplicaSyncEvent;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.Builder;
 
@@ -139,19 +140,19 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
                 }
 
                 @Override
-                public ReadTransaction readObject(final ObjectSchema schema, final String id) {
+                public ReadTransaction readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
-                    primaryTransaction(schema).readObject(schema, id);
-                    replicaTransaction(schema).readObject(schema, id);
+                    primaryTransaction(schema).readObject(schema, id, expand);
+                    replicaTransaction(schema).readObject(schema, id, expand);
 
                     return this;
                 }
 
                 @Override
-                public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+                public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
-                    primaryTransaction(schema).readObjectVersion(schema, id, version);
-                    replicaTransaction(schema).readObjectVersion(schema, id, version);
+                    primaryTransaction(schema).readObjectVersion(schema, id, version, expand);
+                    replicaTransaction(schema).readObjectVersion(schema, id, version, expand);
 
                     return this;
                 }

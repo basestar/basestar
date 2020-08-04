@@ -1,3 +1,5 @@
+$version: 2020-09-04
+
 A:
   type: object
   properties:
@@ -22,7 +24,7 @@ B:
     key:
       type: D?
     value:
-      type: integer
+      type: integer?
 
 C:
   type: object
@@ -43,9 +45,9 @@ F:
   type: object
   properties:
     date:
-      type: date
+      type: date?
     datetime:
-      type: datetime
+      type: datetime?
 
 AggView:
   type: view

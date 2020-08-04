@@ -50,6 +50,7 @@ import java.util.*;
  */
 
 @Data
+@Slf4j
 public class UseObject implements UseLinkable {
 
     private final ObjectSchema schema;
@@ -97,7 +98,6 @@ public class UseObject implements UseLinkable {
                 }
             }
         } else if(suppress) {
-            log.warn("Suppressed conversion error (invalid type: " + value.getClass() + ")");
             return null;
         } else {
             throw new UnexpectedTypeException(this, value);

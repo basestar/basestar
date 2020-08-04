@@ -7,8 +7,8 @@ import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Namespace;
 import io.basestar.spark.util.SparkSchemaUtils;
-import io.basestar.util.Nullsafe;
 import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
 import lombok.RequiredArgsConstructor;
 import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
@@ -33,8 +33,9 @@ public class UnmarshallTransform<T> implements Transform<Dataset<T>, Dataset<Row
     public UnmarshallTransform(final MappingContext context, final Class<T> sourceType) {
 
         Nullsafe.require(sourceType);
-        final Namespace namespace = context.namespace(cls).build();
-        this.schema = namespace.requireInstanceSchema(context.schemaName(cls));
+        final MappingContext resolvedContext = Nullsafe.option(context, MappingContext::new);
+        final Namespace namespace = resolvedContext.namespace(sourceType).build();
+        this.schema = namespace.requireInstanceSchema(resolvedContext.schemaName(sourceType));
         if(this.schema instanceof LinkableSchema) {
             this.expand = ((LinkableSchema) this.schema).getExpand();
         } else {

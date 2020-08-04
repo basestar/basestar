@@ -63,6 +63,16 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
         return visitor.visitArray(this);
     }
 
+    public UseArray<?> transform(final Function<Use<T>, Use<?>> fn) {
+
+        final Use<?> type2 = fn.apply(type);
+        if(type2 == type ) {
+            return this;
+        } else {
+            return new UseArray<>(type2);
+        }
+    }
+
     public static UseArray<?> from(final Object config) {
 
         return Use.fromNestedConfig(config, (type, nestedConfig) -> new UseArray<>(type));
@@ -99,7 +109,6 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
             return ((Collection<?>) value).stream()
                     .map(fn).collect(Collectors.toList());
         } else if (suppress) {
-            log.warn("Suppressed conversion error (invalid type: " + value.getClass() + ")");
             return null;
         } else {
             throw new UnexpectedTypeException(NAME, value);

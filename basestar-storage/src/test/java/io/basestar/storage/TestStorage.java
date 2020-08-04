@@ -142,7 +142,7 @@ public abstract class TestStorage {
         );
 
         final Expression expr = Expression.parse("country == 'United Kingdom' || state == 'Victoria'");
-        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, Collections.emptyList());
+        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, Collections.emptyList(), Collections.emptySet());
         final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
         final PagedList<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
         assertEquals(8, results.size());
@@ -186,7 +186,7 @@ public abstract class TestStorage {
         );
 
         final Expression expr = Expression.parse("country == '" + country + "'");
-        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, sort);
+        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, sort, Collections.emptySet());
         final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
 
         final List<Map<String, Object>> results = new ArrayList<>();
@@ -536,7 +536,7 @@ public abstract class TestStorage {
 
         final List<Sort> sort = ImmutableList.of(Sort.asc(Name.of(ObjectSchema.ID)));
         final Expression expr = Expression.parse("p.x == 10 && p.y == 100 for any p of points");
-        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, Collections.emptyList());
+        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, Collections.emptyList(), Collections.emptySet());
         final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
         final PagedList<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
         assertEquals(1, results.size());
@@ -695,7 +695,7 @@ public abstract class TestStorage {
                 "hello", "world"
         ));
         createComplete(storage, source, ImmutableMap.of(
-                "target", new Instance(ImmutableMap.of(Reserved.ID, targetId))
+                "target", new Instance(ImmutableMap.of(ObjectSchema.ID, targetId))
         ));
 
         final List<Sort> sort = Sort.parseList("id");
@@ -756,7 +756,7 @@ public abstract class TestStorage {
     private PagedList<Map<String, Object>> page(final Storage storage, final ObjectSchema schema, final Expression expression, final List<Sort> sort, final int count) {
 
         final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
-        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expression.bind(Context.init()), sort);
+        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expression.bind(Context.init()), sort, Collections.emptySet());
         return new Pager<>(comparator, sources, null).page(count).join();
     }
 
@@ -766,7 +766,7 @@ public abstract class TestStorage {
         final StorageTraits traits = storage.storageTraits(schema);
         final String id = UUID.randomUUID().toString();
         final Map<String, Object> instance = instance(schema, id, 1L, data);
-        final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC);
+        final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC, Versioning.CHECKED);
         write.createObject(schema, id, instance);
         for(final Index index : schema.getIndexes().values()) {
             final Consistency best = traits.getIndexConsistency(index.isMultiValue());
