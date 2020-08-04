@@ -1,9 +1,11 @@
 package io.basestar.mapper;
 
 import io.basestar.mapper.internal.TypeMapper;
+import io.basestar.type.PropertyContext;
 import io.basestar.type.TypeContext;
 import io.basestar.util.Name;
 
+import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.Optional;
 
@@ -42,6 +44,8 @@ public interface MappingStrategy extends Serializable {
 
     TypeMapper typeMapper(MappingContext context, TypeContext type);
 
+    boolean isOptional(PropertyContext property);
+
     class Default implements MappingStrategy {
 
         @Override
@@ -54,6 +58,12 @@ public interface MappingStrategy extends Serializable {
         public TypeMapper typeMapper(final MappingContext context, final TypeContext type) {
 
             return TypeMapper.fromDefault(context, type);
+        }
+
+        @Override
+        public boolean isOptional(final PropertyContext property) {
+
+            return property.annotation(Nullable.class) != null;
         }
     }
 }

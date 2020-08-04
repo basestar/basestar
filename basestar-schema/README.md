@@ -226,6 +226,10 @@ MyEnum:
 
   
 
+- `defaultValue` **java.lang.Object**
+
+  
+
 - `expression` **Expression**
 
   

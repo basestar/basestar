@@ -159,7 +159,7 @@ public class TestMappingContext {
     @Test
     public void testSchemaOfSchema() throws IOException {
 
-        final MappingContext mappingContext = new MappingContext(new MappingStrategy() {
+        final MappingContext mappingContext = new MappingContext(new MappingStrategy.Default() {
             @Override
             public Name schemaName(final MappingContext context, final TypeContext type) {
 

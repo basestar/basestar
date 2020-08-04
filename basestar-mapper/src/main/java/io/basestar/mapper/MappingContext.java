@@ -32,7 +32,6 @@ import io.basestar.type.has.HasType;
 import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
 
-import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
@@ -108,7 +107,7 @@ public class MappingContext implements Serializable {
     public TypeMapper typeMapper(final PropertyContext property) {
 
         final TypeContext type = property.type();
-        if(property.annotation(Nullable.class) != null) {
+        if(strategy.isOptional(property)) {
             return new TypeMapper.OfOptional(type.erasedType(), typeMapper(type));
         } else {
             return typeMapper(type);
