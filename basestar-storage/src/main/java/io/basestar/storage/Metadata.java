@@ -14,11 +14,13 @@ public interface Metadata {
 
     default <T> Map<String, Object> applyTo(final Map<String, Object> object) {
 
-        return object == null ? null : Instance.with(object, Reserved.META, this);
+        return object;
+//        return object == null ? null : Instance.with(object, Reserved.META, this);
     }
 
     default <T> Instance applyTo(final Instance object) {
 
-        return object == null ? null : object.with(Reserved.META, this);
+        return object;
+//        return object == null ? null : object.with(Reserved.META, this);
     }
 }
