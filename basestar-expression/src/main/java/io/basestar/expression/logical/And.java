@@ -102,9 +102,9 @@ public class And implements Expression {
     }
 
     @Override
-    public Set<Name> paths() {
+    public Set<Name> names() {
 
-        return terms.stream().flatMap(v -> v.paths().stream())
+        return terms.stream().flatMap(v -> v.names().stream())
                 .collect(Collectors.toSet());
     }
 

@@ -20,15 +20,13 @@ package io.basestar.schema.use;
  * #L%
  */
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Schema;
 import io.basestar.schema.ViewSchema;
-import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
@@ -44,7 +42,7 @@ import java.util.Set;
 
 @Data
 @Slf4j
-public class UseView implements UseInstance {
+public class UseView implements UseLinkable {
 
     private final ViewSchema schema;
 
@@ -75,17 +73,14 @@ public class UseView implements UseInstance {
     }
     @Override
     @SuppressWarnings("unchecked")
-    public Instance create(final Object value, final boolean expand, final boolean suppress) {
+    public Instance create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        if(value == null) {
-            return null;
-        } else if(value instanceof Map) {
+        if(value instanceof Map) {
             return schema.create((Map<String, Object>) value, expand, suppress);
         } else if(suppress) {
-            log.warn("Suppressed conversion error (invalid type: " + value.getClass() + ")");
             return null;
         } else {
-            throw new InvalidTypeException();
+            throw new UnexpectedTypeException(this, value);
         }
     }
 
@@ -158,17 +153,6 @@ public class UseView implements UseInstance {
     public Set<Name> requiredExpand(final Set<Name> names) {
 
         return schema.requiredExpand(names);
-    }
-
-    @Override
-    @Deprecated
-    public Multimap<Name, Instance> refs(final Instance value) {
-
-        if(value != null) {
-            return schema.refs(value);
-        } else {
-            return HashMultimap.create();
-        }
     }
 
     @Override

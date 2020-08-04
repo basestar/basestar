@@ -22,7 +22,8 @@ package io.basestar.schema.use;
 
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Schema;
-import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.schema.exception.UnexpectedTypeException;
+import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.ArraySchema;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -61,6 +63,16 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
         return visitor.visitArray(this);
     }
 
+    public UseArray<?> transform(final Function<Use<T>, Use<?>> fn) {
+
+        final Use<?> type2 = fn.apply(type);
+        if(type2 == type ) {
+            return this;
+        } else {
+            return new UseArray<>(type2);
+        }
+    }
+
     public static UseArray<?> from(final Object config) {
 
         return Use.fromNestedConfig(config, (type, nestedConfig) -> new UseArray<>(type));
@@ -86,23 +98,20 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
     }
 
     @Override
-    public List<T> create(final Object value, final boolean expand, final boolean suppress) {
+    public List<T> create(final Object value, final Set<Name> expand, final boolean suppress) {
 
         return create(value, suppress, v -> type.create(v, expand, suppress));
     }
 
     public static <T> List<T> create(final Object value, final boolean suppress, final Function<Object, T> fn) {
 
-        if(value == null) {
-            return null;
-        } else if(value instanceof Collection) {
+        if(value instanceof Collection) {
             return ((Collection<?>) value).stream()
                     .map(fn).collect(Collectors.toList());
         } else if (suppress) {
-            log.warn("Suppressed conversion error (invalid type: " + value.getClass() + ")");
             return null;
         } else {
-            throw new InvalidTypeException();
+            throw new UnexpectedTypeException(NAME, value);
         }
     }
 

@@ -86,7 +86,7 @@ public class NameConstant implements Expression {
     }
 
     @Override
-    public Set<Name> paths() {
+    public Set<Name> names() {
 
         return ImmutableSet.of(name);
     }

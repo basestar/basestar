@@ -456,6 +456,12 @@ public class GraphQLUtils {
                 }
 
                 @Override
+                public <V> Object visitOptional(final UseOptional<V> type) {
+
+                    return type.getType().visit(this);
+                }
+
+                @Override
                 public Object visitBinary(final UseBinary type) {
 
                     if(value instanceof StringValue) {

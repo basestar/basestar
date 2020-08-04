@@ -20,7 +20,8 @@ package io.basestar.schema.use;
  * #L%
  */
 
-import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.schema.exception.UnexpectedTypeException;
+import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.NumberSchema;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Set;
 
 /**
  * Number Type
@@ -66,11 +68,9 @@ public class UseNumber implements UseScalar<Double> {
     }
 
     @Override
-    public Double create(final Object value, final boolean expand, final boolean suppress) {
+    public Double create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        if(value == null) {
-            return null;
-        } else if(value instanceof Boolean) {
+        if(value instanceof Boolean) {
             return ((Boolean)value) ? 1.0 : 0.0;
         } else if(value instanceof Number) {
             return ((Number)value).doubleValue();
@@ -79,17 +79,15 @@ public class UseNumber implements UseScalar<Double> {
                 return Double.parseDouble((String)value);
             } catch (final NumberFormatException e) {
                 if(suppress) {
-                    log.warn("Suppressed conversion error", e);
                     return null;
                 } else {
                     throw e;
                 }
             }
         } else if(suppress) {
-            log.warn("Suppressed conversion error (invalid type: " + value.getClass() + ")");
             return null;
         } else {
-            throw new InvalidTypeException();
+            throw new UnexpectedTypeException(this, value);
         }
     }
 

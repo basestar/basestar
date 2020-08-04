@@ -57,7 +57,7 @@ public class PropertyModel extends MemberModel {
         if(property.getExpression() != null) {
             annotations.add(new AnnotationModel<>(getContext(), Expression.Modifier.annotation(property.getExpression())));
         }
-        if(property.isRequired()) {
+        if(!property.getType().isOptional()) {
             annotations.add(new AnnotationModel<>(getContext(), NOT_NULL));
 //            annotations.add(new AnnotationModel<>(getSettings(), Required.Modifier.annotation(true)));
         }
@@ -80,6 +80,6 @@ public class PropertyModel extends MemberModel {
     @Override
     public boolean isRequired() {
 
-        return property.isRequired();
+        return !property.getType().isOptional();
     }
 }

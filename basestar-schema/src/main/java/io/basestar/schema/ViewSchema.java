@@ -24,10 +24,8 @@ import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
@@ -58,7 +56,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Getter
-public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Resolver {
+public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Resolver {
 
     public static String KEY = Reserved.PREFIX + "key";
 
@@ -127,53 +125,8 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
         }
     }
 
-    @Nonnull
-    private final Name qualifiedName;
-
-    private final int slot;
-
-    /**
-     * Current version of the schema, defaults to 1
-     */
-
-    private final long version;
-
-    @Nonnull
-    private final From from;
-
-    private final boolean materialized;
-
-    @Nonnull
-    private final List<Sort> sort;
-
-    /** Description of the schema */
-
-    @Nullable
-    private final String description;
-
-    @Nonnull
-    private final List<String> group;
-
-    @Nullable
-    private final Expression where;
-
-    @Nonnull
-    private final SortedMap<String, Property> declaredProperties;
-
-    @Nonnull
-    private final SortedMap<String, Permission> declaredPermissions;
-
-    @Nonnull
-    private final SortedMap<String, Link> declaredLinks;
-
-    @Nonnull
-    private final SortedSet<Name> declaredExpand;
-
-    @Nonnull
-    private final SortedMap<String, Object> extensions;
-
     @JsonDeserialize(as = Builder.class)
-    public interface Descriptor extends InstanceSchema.Descriptor {
+    public interface Descriptor extends LinkableSchema.Descriptor {
 
         String TYPE = "view";
 
@@ -213,15 +166,15 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
         Set<Name> getExpand();
 
         @Override
-        default ViewSchema build(final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
+        default ViewSchema build(final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
-            return new ViewSchema(this, resolver, qualifiedName, slot);
+            return new ViewSchema(this, resolver, version, qualifiedName, slot);
         }
 
         @Override
         default ViewSchema build() {
 
-            return new ViewSchema(this, Resolver.Constructing.ANONYMOUS, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
+            return new ViewSchema(this, Resolver.Constructing.ANONYMOUS, Version.CURRENT, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
         }
     }
 
@@ -311,12 +264,57 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
         }
     }
 
+    @Nonnull
+    private final Name qualifiedName;
+
+    private final int slot;
+
+    /**
+     * Current version of the schema, defaults to 1
+     */
+
+    private final long version;
+
+    @Nonnull
+    private final From from;
+
+    private final boolean materialized;
+
+    @Nonnull
+    private final List<Sort> sort;
+
+    /** Description of the schema */
+
+    @Nullable
+    private final String description;
+
+    @Nonnull
+    private final List<String> group;
+
+    @Nullable
+    private final Expression where;
+
+    @Nonnull
+    private final SortedMap<String, Property> declaredProperties;
+
+    @Nonnull
+    private final SortedMap<String, Permission> declaredPermissions;
+
+    @Nonnull
+    private final SortedMap<String, Link> declaredLinks;
+
+    @Nonnull
+    private final SortedSet<Name> declaredExpand;
+
+    @Nonnull
+    private final SortedMap<String, Object> extensions;
+
     public static Builder builder() {
 
         return new Builder();
     }
 
-    private ViewSchema(final Descriptor descriptor, final Schema.Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
+    private ViewSchema(final Descriptor descriptor, final Schema.Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
         resolver.constructing(this);
         this.qualifiedName = qualifiedName;
@@ -333,7 +331,7 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
         this.group = Nullsafe.immutableCopy(descriptor.getGroup());
         this.where = descriptor.getWhere();
         this.declaredProperties = Nullsafe.immutableSortedCopy(descriptor.getProperties(),
-                (k, v) -> viewPropertyDescriptor(v, this.from).build(resolver, qualifiedName.with(k)));
+                (k, v) -> viewPropertyDescriptor(v, this.from).build(resolver, version, qualifiedName.with(k)));
         this.declaredLinks = Nullsafe.immutableSortedCopy(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
         this.declaredPermissions = Nullsafe.immutableSortedCopy(descriptor.getPermissions(), (k, v) -> v.build(k));
         this.declaredExpand = Nullsafe.immutableSortedCopy(descriptor.getExpand());
@@ -352,7 +350,7 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
     }
 
     @Override
-    public Instance create(final Map<String, Object> value, final boolean expand, final boolean suppress) {
+    public Instance create(final Map<String, Object> value, final Set<Name> expand, final boolean suppress) {
 
         final Map<String, Object> result = new HashMap<>(readProperties(value, expand, suppress));
         result.putAll(readMeta(value, suppress));
@@ -478,14 +476,6 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
         return getProperty(name, inherited);
     }
 
-    public Multimap<Name, Instance> refs(final Instance object) {
-
-        final Multimap<Name, Instance> results = HashMultimap.create();
-        getProperties().forEach((k, v) -> v.links(object.get(k)).entries().forEach(e ->
-                results.put(Name.of(v.getName()).with(e.getKey()), e.getValue())));
-        return results;
-    }
-
     @Override
     public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
@@ -544,6 +534,7 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
             }
 
             @Override
+            @Deprecated
             public Boolean getRequired() {
 
                 return descriptor.getRequired();
@@ -605,6 +596,12 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
             }
 
             @Override
+            public Set<Name> getExpand() {
+
+                return declaredExpand;
+            }
+
+            @Override
             public Map<String, Property.Descriptor> getProperties() {
 
                 return declaredProperties.entrySet().stream().collect(Collectors.toMap(
@@ -635,12 +632,6 @@ public class ViewSchema implements InstanceSchema, Permission.Resolver, Link.Res
                         Map.Entry::getKey,
                         entry -> entry.getValue().descriptor()
                 ));
-            }
-
-            @Override
-            public Set<Name> getExpand() {
-
-                return declaredExpand;
             }
 
             @Override

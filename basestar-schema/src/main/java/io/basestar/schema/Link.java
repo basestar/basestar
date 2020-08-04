@@ -82,6 +82,16 @@ public class Link implements Member {
     @Nonnull
     private final Map<String, Object> extensions;
 
+//    @Override
+//    public Use<?> storageSchema(final Set<Name> expand) {
+//
+//        if(single) {
+//            return schema.storageSchema(expand);
+//        } else {
+//            return new UseArray<>();
+//        }
+//    }
+
     @JsonDeserialize(as = Builder.class)
     public interface Descriptor extends Member.Descriptor {
 
@@ -161,6 +171,16 @@ public class Link implements Member {
         }
     }
 
+    @Override
+    public Optional<Use<?>> layout(final Set<Name> expand) {
+
+        if(expand == null) {
+            return Optional.empty();
+        } else {
+            return Optional.of(getType());
+        }
+    }
+
     public List<Sort> getEffectiveSort() {
 
         if(sort.isEmpty()) {
@@ -207,7 +227,7 @@ public class Link implements Member {
     }
 
     @Override
-    public Object create(final Object value, final boolean expand, final boolean suppress) {
+    public Object create(final Object value, final Set<Name> expand, final boolean suppress) {
 
         if(value == null) {
             return null;

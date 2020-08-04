@@ -80,9 +80,19 @@ public class Name extends AbstractPath<Name> implements Comparable<Name> {
         return name;
     }
 
+    public static Name parse(final String str, final char delimiter) {
+
+        return new Name(splitter(delimiter).split(str));
+    }
+
+    public static Name parse(final String str, final String delimiter) {
+
+        return new Name(splitter(delimiter).split(str));
+    }
+
     public static Name parse(final String str) {
 
-        return new Name(splitter(DELIMITER).split(str));
+        return parse(str, DELIMITER);
     }
 
     public static Set<Name> parseSet(final Iterable<String> strs) {
@@ -132,6 +142,11 @@ public class Name extends AbstractPath<Name> implements Comparable<Name> {
     public static Name empty() {
 
         return new Name(Collections.emptyList());
+    }
+
+    protected static Splitter splitter(final String delimiter) {
+
+        return Splitter.on(delimiter).omitEmptyStrings().trimResults();
     }
 
     protected static Splitter splitter(final char delimiter) {

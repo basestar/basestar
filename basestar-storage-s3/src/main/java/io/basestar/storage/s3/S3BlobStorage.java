@@ -25,6 +25,7 @@ import io.basestar.schema.ObjectSchema;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
+import io.basestar.util.Name;
 import io.basestar.storage.Versioning;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -38,10 +39,11 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
-public class S3BlobStorage implements Storage.WithoutWriteIndex, Storage.WithoutWriteHistory, Storage.WithoutQuery {
+public class S3BlobStorage implements Storage.WithoutWriteIndex, Storage.WithoutWriteHistory, Storage.WithoutQuery, Storage.WithoutExpand {
 
     private final S3AsyncClient client;
 
@@ -73,7 +75,7 @@ public class S3BlobStorage implements Storage.WithoutWriteIndex, Storage.Without
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
+    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
         final String bucket = strategy.objectBucket(schema);
         final String key = objectKey(schema, id);
@@ -81,7 +83,7 @@ public class S3BlobStorage implements Storage.WithoutWriteIndex, Storage.Without
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
         final String bucket = strategy.historyBucket(schema);
         final String key = historyKey(schema, id, version);

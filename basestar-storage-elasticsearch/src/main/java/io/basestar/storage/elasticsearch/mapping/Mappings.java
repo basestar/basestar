@@ -179,6 +179,12 @@ public class Mappings {
 
                         return new FieldType.NestedType(properties(type.getSchema(), expand));
                     }
+
+                    @Override
+                    public <T> FieldType visitOptional(final UseOptional<T> type) {
+
+                        return type.getType().visit(this);
+                    }
                 });
             }
         }

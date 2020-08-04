@@ -23,31 +23,43 @@ package io.basestar.storage.sql;
 import io.basestar.schema.Index;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
+import io.basestar.storage.sql.mapper.ColumnStrategy;
+import io.basestar.storage.sql.mapper.RowMapper;
+import io.basestar.util.Name;
+import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.*;
 import org.jooq.impl.DSL;
 
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public interface SQLStrategy {
 
-    Name objectTableName(ObjectSchema schema);
+    org.jooq.Name objectTableName(ObjectSchema schema);
 
-    Name historyTableName(ObjectSchema schema);
+    org.jooq.Name historyTableName(ObjectSchema schema);
 
     // Only used for multi-value indexes
-    Name indexTableName(ObjectSchema schema, Index index);
+    org.jooq.Name indexTableName(ObjectSchema schema, Index index);
 
     void createTables(DSLContext context, Collection<ObjectSchema> schemas);
 
+    RowMapper<Map<String, Object>> rowMapper(ObjectSchema schema, Set<Name> expand);
+
     @Data
     @Slf4j
+    @Builder(builderClassName = "Builder")
     class Simple implements SQLStrategy {
 
         private final String objectSchemaName;
 
         private final String historySchemaName;
+
+        private final ColumnStrategy columnStrategy;
 
         private String name(final ObjectSchema schema) {
 
@@ -55,23 +67,51 @@ public interface SQLStrategy {
         }
 
         @Override
-        public Name objectTableName(final ObjectSchema schema) {
+        public org.jooq.Name objectTableName(final ObjectSchema schema) {
 
             return DSL.name(DSL.name(objectSchemaName), DSL.name(name(schema)));
         }
 
         @Override
-        public Name historyTableName(final ObjectSchema schema) {
+        public org.jooq.Name historyTableName(final ObjectSchema schema) {
 
             return DSL.name(DSL.name(historySchemaName), DSL.name(name(schema)));
         }
 
         @Override
-        public Name indexTableName(final ObjectSchema schema, final Index index) {
+        public org.jooq.Name indexTableName(final ObjectSchema schema, final Index index) {
 
             final String name = name(schema) + Reserved.PREFIX + index.getName();
             return DSL.name(DSL.name(objectSchemaName), DSL.name(name));
         }
+
+        @Override
+        public RowMapper<Map<String, Object>> rowMapper(final ObjectSchema schema, final Set<Name> expand) {
+
+            return RowMapper.forInstance(columnStrategy, schema, expand);
+        }
+
+//        private List<Field<?>> columns(final ObjectSchema schema) {
+//
+//            final List<Field<?>> result = new ArrayList<>();
+//            schema.metadataSchema().forEach((name, type) -> {
+//                columnStrategy.columnMapper(type).toColumns(name).forEach((col, dt) -> {
+//                    result.add(DSL.field(DSL.name(col), dt));
+//                });
+//            });
+//            schema.getProperties().forEach((name, property) -> {
+//                final Use<?> type = property.getType();
+//                columnStrategy.columnMapper(type).toColumns(name).forEach((col, dt) -> {
+//                    result.add(DSL.field(DSL.name(col), dt));
+//                });
+//            });
+//            return result;
+//        }
+//
+//        private List<Field<?>> columns(final ObjectSchema schema, final Index index) {
+//
+//            return columns(schema);
+//        }
 
         @Override
         public void createTables(final DSLContext context, final Collection<ObjectSchema> schemas) {
@@ -85,19 +125,21 @@ public interface SQLStrategy {
 
             for(final ObjectSchema schema : schemas) {
 
-                final Name objectTableName = objectTableName(schema);
-                final Name historyTableName = historyTableName(schema);
+                final org.jooq.Name objectTableName = objectTableName(schema);
+                final org.jooq.Name historyTableName = historyTableName(schema);
+
+                final List<Field<?>> columns = SQLUtils.fields(schema); //rowMapper(schema, schema.getExpand()).columns();
 
                 log.info("Creating table {}", objectTableName);
                 try(final CreateTableFinalStep create = context.createTableIfNotExists(objectTableName)
-                        .columns(SQLUtils.fields(schema))
+                        .columns(columns)
                         .constraint(DSL.primaryKey(ObjectSchema.ID))) {
                     create.execute();
                 }
 
                 for(final Index index : schema.getIndexes().values()) {
                     if(index.isMultiValue()) {
-                        final Name indexTableName = indexTableName(schema, index);
+                        final org.jooq.Name indexTableName = indexTableName(schema, index);
                         log.info("Creating multi-value index table {}", indexTableName);
                         try(final CreateTableFinalStep create = context.createTableIfNotExists(indexTableName(schema, index))
                                 .columns(SQLUtils.fields(schema, index))
@@ -121,12 +163,11 @@ public interface SQLStrategy {
 
                 log.info("Creating table {}", historyTableName);
                 try(final CreateTableFinalStep create = context.createTableIfNotExists(historyTableName)
-                        .columns(SQLUtils.fields(schema))
+                        .columns(columns)
                         .constraint(DSL.primaryKey(ObjectSchema.ID, ObjectSchema.VERSION))) {
                     create.execute();
                 }
             }
         }
-
     }
 }

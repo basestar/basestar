@@ -10,6 +10,7 @@ import io.basestar.schema.Member;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.Schema;
 import io.basestar.schema.use.Use;
+import io.basestar.type.PropertyContext;
 import io.basestar.type.TypeContext;
 import io.basestar.util.Name;
 import io.basestar.util.Path;
@@ -83,6 +84,13 @@ public class TestTypescriptCodegen {
 
                 return TypeMapper.fromDefault(context, type);
             }
+
+            @Override
+            public boolean isOptional(final PropertyContext property) {
+
+
+                return true;
+            }
         });
 
         final Class<?>[] classes = {
@@ -118,7 +126,8 @@ public class TestTypescriptCodegen {
                 io.basestar.schema.use.UseNumber.class,
                 io.basestar.schema.use.UseSet.class,
                 io.basestar.schema.use.UseString.class,
-                io.basestar.schema.use.UseNamed.class
+                io.basestar.schema.use.UseNamed.class,
+                io.basestar.schema.use.UseOptional.class
         };
 
         final Map<Name, Schema.Descriptor<?>> schemas = Arrays.stream(classes)

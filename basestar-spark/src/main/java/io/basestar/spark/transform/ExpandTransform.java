@@ -102,6 +102,15 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
     private Dataset<Row> linkExpand(final Dataset<Row> input, final Link link, final Set<Name> expand) {
 
+        final String rootIdColumn = this.schema.id();
+        final Use<?> rootIdType = this.schema.typeOfId();
+
+        return linkExpand(input, link, expand, rootIdColumn, rootIdType);
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> Dataset<Row> linkExpand(final Dataset<Row> input, final Link link, final Set<Name> expand, final String rootIdColumn, final Use<T> rootIdType) {
+
         final String linkName = link.getName();
 
         final InstanceSchema linkSchema = link.getSchema();
@@ -127,11 +136,10 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
         final Dataset<Tuple2<Row, Row>> sorted = sortTransform.accept(joined);
 
-        final String idColumn = schema.id();
-        final MapFunction<Tuple2<Row, Row>, String> groupBy = v -> (String) SparkSchemaUtils.get(v._1(), idColumn);
-        final KeyValueGroupedDataset<String, Tuple2<Row, Row>> grouped = sorted.groupByKey(groupBy, Encoders.STRING());
+        final MapFunction<Tuple2<Row, Row>, T> groupBy = v -> (T) SparkSchemaUtils.get(v._1(), rootIdColumn);
+        final KeyValueGroupedDataset<T, Tuple2<Row, Row>> grouped = sorted.groupByKey(groupBy, (Encoder<T>)SparkSchemaUtils.encoder(rootIdType));
 
-        final MapGroupsFunction<String, Tuple2<Row, Row>, Row> collect = (id, iter) -> {
+        final MapGroupsFunction<T, Tuple2<Row, Row>, Row> collect = (id, iter) -> {
 
             Row root = null;
             final List<Row> values = new ArrayList<>();

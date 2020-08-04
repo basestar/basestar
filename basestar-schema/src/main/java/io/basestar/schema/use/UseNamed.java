@@ -21,7 +21,6 @@ package io.basestar.schema.use;
  */
 
 
-import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
@@ -91,7 +90,7 @@ public interface UseNamed<T> extends Use<T> {
         }
 
         @Override
-        public Object create(final Object value, final boolean expand, final boolean suppress) {
+        public Object create(final Object value, final Set<Name> expand, final boolean suppress) {
 
             throw new UnsupportedOperationException();
         }
@@ -111,13 +110,6 @@ public interface UseNamed<T> extends Use<T> {
         @Override
         @Deprecated
         public Set<Name> requiredExpand(final Set<Name> names) {
-
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        @Deprecated
-        public Multimap<Name, Instance> refs(final Object value) {
 
             throw new UnsupportedOperationException();
         }

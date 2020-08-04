@@ -22,9 +22,7 @@ package io.basestar.spark.transform;
 
 import io.basestar.spark.sink.Sink;
 
-import java.io.Serializable;
-
-public interface Transform<I, O> extends Serializable {
+public interface Transform<I, O> {
 
     O accept(I input);
 

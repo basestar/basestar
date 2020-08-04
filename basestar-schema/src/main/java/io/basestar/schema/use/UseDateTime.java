@@ -20,7 +20,8 @@ package io.basestar.schema.use;
  * #L%
  */
 
-import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.schema.exception.UnexpectedTypeException;
+import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.DateTimeSchema;
 
 import java.io.DataInput;
@@ -33,6 +34,7 @@ import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.TemporalAccessor;
 import java.util.Date;
+import java.util.Set;
 
 public class UseDateTime implements UseScalar<LocalDateTime> {
 
@@ -72,11 +74,9 @@ public class UseDateTime implements UseScalar<LocalDateTime> {
     }
 
     @Override
-    public LocalDateTime create(final Object value, final boolean expand, final boolean suppress) {
+    public LocalDateTime create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        if(value == null) {
-            return null;
-        } else if(value instanceof String) {
+        if(value instanceof String) {
             return parse((String)value);
         } else if(value instanceof TemporalAccessor) {
             return LocalDateTime.from((TemporalAccessor)value);
@@ -85,7 +85,7 @@ public class UseDateTime implements UseScalar<LocalDateTime> {
         } else if(suppress) {
             return null;
         } else {
-            throw new InvalidTypeException();
+            throw new UnexpectedTypeException(this, value);
         }
     }
 
@@ -117,5 +117,11 @@ public class UseDateTime implements UseScalar<LocalDateTime> {
     public io.swagger.v3.oas.models.media.Schema<?> openApi() {
 
         return new DateTimeSchema();
+    }
+
+    @Override
+    public String toString() {
+
+        return NAME;
     }
 }

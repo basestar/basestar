@@ -23,7 +23,8 @@ package io.basestar.schema;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.schema.exception.UnexpectedTypeException;
+import io.basestar.schema.layout.Layout;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseInstance;
 import io.basestar.schema.use.UseString;
@@ -38,9 +39,9 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
-public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Property.Resolver {
+public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolver, Property.Resolver {
 
-    Instance create(Map<String, Object> value, boolean expand, boolean suppress);
+    Instance create(Map<String, Object> value, Set<Name> expand, boolean suppress);
 
     interface Descriptor extends Schema.Descriptor<Instance> {
 
@@ -48,7 +49,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         Map<String, Property.Descriptor> getProperties();
 
         @Override
-        InstanceSchema build(Resolver.Constructing resolver, Name qualifiedName, int slot);
+        InstanceSchema build(Resolver.Constructing resolver, Version version, Name qualifiedName, int slot);
 
         @Override
         InstanceSchema build();
@@ -60,6 +61,31 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
     }
 
     SortedMap<String, Use<?>> metadataSchema();
+
+    default SortedMap<String, Use<?>> layoutSchema(final Set<Name> expand) {
+
+        // This is the canonical layout, by definition
+        final SortedMap<String, Use<?>> result = new TreeMap<>();
+        metadataSchema().forEach(result::put);
+        final Map<String, Set<Name>> branches = Name.branch(expand);
+        getMembers().forEach((name, member) -> {
+            final Set<Name> branch = branches.get(name);
+            member.layout(branch).ifPresent(memberLayout -> result.put(name, memberLayout));
+        });
+        return result;
+    }
+
+    @Override
+    default Map<String, Object> applyLayout(final Set<Name> expand, final Map<String, Object> object) {
+
+        return create(object, expand, true);
+    }
+
+    @Override
+    default Map<String, Object> unapplyLayout(final Set<Name> expand, final Map<String, Object> object) {
+
+        return create(object, expand, true);
+    }
 
     InstanceSchema getExtend();
 
@@ -80,14 +106,14 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
 
     @Override
     @SuppressWarnings("unchecked")
-    default Instance create(final Object value, final boolean expand, final boolean suppress) {
+    default Instance create(final Object value, final Set<Name> expand, final boolean suppress) {
 
         if(value == null) {
             return null;
         } else if(value instanceof Map) {
             return create((Map<String, Object>) value, expand, suppress);
         } else {
-            throw new InvalidTypeException();
+            throw new UnexpectedTypeException(this, value);
         }
     }
 
@@ -151,10 +177,11 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         }
     }
 
-    default Map<String, Object> readProperties(final Map<String, Object> object, final boolean expand, final boolean suppress) {
+    default Map<String, Object> readProperties(final Map<String, Object> object, final Set<Name> expand, final boolean suppress) {
 
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         final Map<String, Object> result = new HashMap<>();
-        getProperties().forEach((k, v) -> result.put(k, v.create(object.get(k), expand, suppress)));
+        getProperties().forEach((k, v) -> result.put(k, v.create(object.get(k), branches.get(k), suppress)));
         return Collections.unmodifiableMap(result);
     }
 
@@ -165,7 +192,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         object.forEach((k, v) -> {
             final Use<?> type = metadataSchema.get(k);
             if(type != null) {
-                result.put(k, type.create(v, false, suppress));
+                result.put(k, type.create(v, null, suppress));
             } else if(Reserved.isMeta(k)) {
                 result.put(k, v);
             }

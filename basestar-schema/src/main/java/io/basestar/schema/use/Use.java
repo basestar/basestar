@@ -22,13 +22,11 @@ package io.basestar.schema.use;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Constraint;
-import io.basestar.schema.Instance;
 import io.basestar.schema.Schema;
-import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.schema.exception.TypeSyntaxException;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
@@ -69,7 +67,8 @@ public interface Use<T> extends Serializable {
         BINARY,
         DATE,
         DATETIME,
-        VIEW
+        VIEW,
+        OPTIONAL
     }
 
     <R> R visit(Visitor<R> visitor);
@@ -81,11 +80,11 @@ public interface Use<T> extends Serializable {
 
     Use<?> resolve(Schema.Resolver resolver);
 
-    T create(Object value, boolean expand, boolean suppress);
+    T create(Object value, Set<Name> expand, boolean suppress);
 
     default T create(final Object value) {
 
-        return create(value, false, false);
+        return create(value, null, false);
     }
 
     Code code();
@@ -95,9 +94,6 @@ public interface Use<T> extends Serializable {
     T expand(T value, Expander expander, Set<Name> expand);
 
     Set<Name> requiredExpand(Set<Name> names);
-
-    @Deprecated
-    Multimap<Name, Instance> refs(T value);
 
     @JsonValue
     Object toConfig();
@@ -126,22 +122,56 @@ public interface Use<T> extends Serializable {
 
     void collectDependencies(Set<Name> expand, Map<Name, Schema<?>> out);
 
+    default boolean isOptional() {
+
+        return false;
+    }
+
+    default Use<T> optional(final boolean optional) {
+
+        // Inverse implemented in UseOptional
+        if(optional) {
+            return new UseOptional<>(this);
+        } else {
+            return this;
+        }
+    }
+
     @JsonCreator
     @SuppressWarnings("unchecked")
     static Use<?> fromConfig(final Object value) {
 
-        final String type;
+        final String typeName;
         final Object config;
-        if(value instanceof String) {
-            type = (String)value;
+        if (value instanceof String) {
+            typeName = ((String) value).trim();
             config = Collections.emptyMap();
-        } else if(value instanceof Map) {
+        } else if (value instanceof Map) {
             final Map.Entry<String, Object> entry = ((Map<String, Object>) value).entrySet().iterator().next();
-            type = entry.getKey();
+            typeName = entry.getKey().trim();
             config = entry.getValue();
         } else {
-            throw new InvalidTypeException();
+            throw new TypeSyntaxException();
         }
+        final String type;
+        final boolean optional;
+        if(typeName.endsWith(UseOptional.SYMBOL)) {
+            type = typeName.substring(0, typeName.length() - UseOptional.SYMBOL.length()).trim();
+            optional = true;
+        } else {
+            type = typeName;
+            optional = false;
+        }
+        final Use<?> result = fromConfig(type, config);
+        if(optional) {
+            return result.optional(true);
+        } else {
+            return result;
+        }
+    }
+
+    static Use<?> fromConfig(final String type, final Object config) {
+
         switch(type) {
             case UseBoolean.NAME:
                 return UseBoolean.from(config);
@@ -163,6 +193,8 @@ public interface Use<T> extends Serializable {
                 return UseDate.from(config);
             case UseDateTime.NAME:
                 return UseDateTime.from(config);
+            case UseOptional.NAME:
+                return UseOptional.from(config);
             default:
                 return UseNamed.from(type, config);
         }
@@ -186,7 +218,7 @@ public interface Use<T> extends Serializable {
                 nestedConfig = null;
             }
         } else {
-            throw new InvalidTypeException();
+            throw new TypeSyntaxException();
         }
         return apply.apply((V)nestedType, nestedConfig);
     }
@@ -295,6 +327,8 @@ public interface Use<T> extends Serializable {
             throw new UnsupportedOperationException();
         }
 
+        <T> R visitOptional(UseOptional<T> type);
+
         interface Defaulting<R> extends Visitor<R> {
 
             R visitDefault(Use<?> type);
@@ -312,6 +346,11 @@ public interface Use<T> extends Serializable {
             default R visitInstance(final UseInstance type) {
 
                 return visitDefault(type);
+            }
+
+            default R visitLinkable(final UseLinkable type) {
+
+                return visitInstance(type);
             }
 
             @Override
@@ -347,7 +386,7 @@ public interface Use<T> extends Serializable {
             @Override
             default R visitObject(final UseObject type) {
 
-                return visitInstance(type);
+                return visitLinkable(type);
             }
 
             @Override
@@ -395,7 +434,14 @@ public interface Use<T> extends Serializable {
             @Override
             default R visitView(final UseView type) {
 
-                return visitInstance(type);
+                return visitLinkable(type);
+            }
+
+            @Override
+            default <T> R visitOptional(final UseOptional<T> type) {
+
+                // Least astonishment is to unwrap so that handling is optional
+                return type.getType().visit(this);
             }
         }
     }

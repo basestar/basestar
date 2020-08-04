@@ -33,6 +33,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.StructType;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -56,7 +57,7 @@ public class TestSparkStorage extends TestStorage {
                 final StructType structType = SparkSchemaUtils.structType(schema, null);
                 final List<Row> items = Nullsafe.option(data.get(schema.getQualifiedName().toString())).stream()
                         .map(schema::create)
-                        .map(v -> SparkSchemaUtils.toSpark(schema, structType, v))
+                        .map(v -> SparkSchemaUtils.toSpark(schema, Collections.emptySet(), structType, v))
                         .collect(Collectors.toList());
 
                 return session.sqlContext()

@@ -66,11 +66,7 @@ public class AvroUtils {
 
     public static Schema schema(final Property property) {
 
-        if(property.isRequired()) {
-            return schema(property.getType());
-        } else {
-            return optional(schema(property.getType()));
-        }
+        return schema(property.getType());
     }
 
     public static Schema schema(final Use<?> use) {
@@ -116,22 +112,19 @@ public class AvroUtils {
             @Override
             public <T> Schema visitArray(final UseArray<T> type) {
 
-                // Allow null values
-                return Schema.createArray(optional(schema(type.getType())));
+                return Schema.createArray(schema(type.getType()));
             }
 
             @Override
             public <T> Schema visitSet(final UseSet<T> type) {
 
-                // Allow null values
-                return Schema.createArray(optional(schema(type.getType())));
+                return Schema.createArray(schema(type.getType()));
             }
 
             @Override
             public <T> Schema visitMap(final UseMap<T> type) {
 
-                // Allow null values
-                return Schema.createMap(optional(schema(type.getType())));
+                return Schema.createMap(schema(type.getType()));
             }
 
             @Override
@@ -163,12 +156,13 @@ public class AvroUtils {
 
                 return schema(type.getSchema());
             }
+
+            @Override
+            public <T> Schema visitOptional(final UseOptional<T> type) {
+
+                return Schema.createUnion(schema(type.getType()), Schema.create(Schema.Type.NULL));
+            }
         });
-    }
-
-    public static Schema optional(final Schema schema) {
-
-        return Schema.createUnion(schema, Schema.create(Schema.Type.NULL));
     }
 
     public static GenericRecord encode(final InstanceSchema instanceSchema, final Schema schema, final Map<String, Object> object) {

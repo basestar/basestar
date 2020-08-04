@@ -153,6 +153,12 @@ public class Transient implements Member {
     }
 
     @Override
+    public Optional<Use<?>> layout(final Set<Name> expand) {
+
+        return Optional.empty();
+    }
+
+    @Override
     public Object expand(final Object value, final Expander expander, final Set<Name> expand) {
 
         return value;
@@ -189,7 +195,7 @@ public class Transient implements Member {
     }
 
     @Override
-    public Object create(final Object value, final boolean expand, final boolean suppress) {
+    public Object create(final Object value, final Set<Name> expand, final boolean suppress) {
 
         if(value == null) {
             return null;

@@ -20,6 +20,7 @@ package io.basestar.storage.overlay;
  * #L%
  */
 
+import com.google.common.collect.Sets;
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.*;
@@ -28,14 +29,12 @@ import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
 import io.basestar.storage.Versioning;
 import io.basestar.storage.util.Pager;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Sort;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 // Used in batch to allow pending creates/updates to be linked and referenced in permission expressions.
@@ -59,10 +58,10 @@ public class OverlayStorage implements Storage {
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
+    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
-        final CompletableFuture<Map<String, Object>> futBase = baseline.readObject(schema, id);
-        final CompletableFuture<Map<String, Object>> futOver = overlay.readObject(schema, id);
+        final CompletableFuture<Map<String, Object>> futBase = baseline.readObject(schema, id, expand);
+        final CompletableFuture<Map<String, Object>> futOver = overlay.readObject(schema, id, expand);
         return CompletableFuture.allOf(futBase, futOver).thenApply(ignored -> {
             final Map<String, Object> over = futOver.getNow(null);
             final Map<String, Object> base = futBase.getNow(null);
@@ -71,11 +70,11 @@ public class OverlayStorage implements Storage {
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
-        final CompletableFuture<Map<String, Object>> futBase = baseline.readObjectVersion(schema, id, version);
-        final CompletableFuture<Map<String, Object>> futOver = overlay.readObjectVersion(schema, id, version);
-        final CompletableFuture<Map<String, Object>> futCheck = overlay.readObject(schema, id);
+        final CompletableFuture<Map<String, Object>> futBase = baseline.readObjectVersion(schema, id, version, expand);
+        final CompletableFuture<Map<String, Object>> futOver = overlay.readObjectVersion(schema, id, version, expand);
+        final CompletableFuture<Map<String, Object>> futCheck = overlay.readObject(schema, id, expand);
         return CompletableFuture.allOf(futBase, futOver, futCheck).thenApply(ignored -> {
             final Map<String, Object> over = futOver.getNow(null);
             final Map<String, Object> base = futOver.getNow(null);
@@ -97,14 +96,14 @@ public class OverlayStorage implements Storage {
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
+    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         final List<Pager.Source<Map<String, Object>>> sources = new ArrayList<>();
 
         // FIXME: relies on stable impl of Stream.min() in Pager
         // Overlay entries appear first, so they will be chosen
-        sources.addAll(Pager.map(overlay.query(schema, query, sort), v -> OverlayMetadata.wrap(null, v).applyTo(v)));
-        sources.addAll(Pager.map(baseline.query(schema, query, sort), v -> OverlayMetadata.wrap(v, null).applyTo(v)));
+        sources.addAll(Pager.map(overlay.query(schema, query, sort, expand), v -> OverlayMetadata.wrap(null, v).applyTo(v)));
+        sources.addAll(Pager.map(baseline.query(schema, query, sort, expand), v -> OverlayMetadata.wrap(v, null).applyTo(v)));
 
         return sources;
     }
@@ -211,4 +210,9 @@ public class OverlayStorage implements Storage {
         return overlay.storageTraits(schema);
     }
 
+    @Override
+    public Set<Name> supportedExpand(final ObjectSchema schema, final Set<Name> expand) {
+
+        return Sets.intersection(baseline.supportedExpand(schema, expand), overlay.supportedExpand(schema, expand));
+    }
 }

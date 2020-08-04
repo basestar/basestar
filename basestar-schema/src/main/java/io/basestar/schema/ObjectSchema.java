@@ -25,10 +25,8 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Multimap;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import io.basestar.expression.Context;
@@ -71,7 +69,7 @@ import java.util.stream.Stream;
 
 @Getter
 @Accessors(chain = true)
-public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolver, Transient.Resolver, Permission.Resolver {
+public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.Resolver, Permission.Resolver {
 
     public static final String ID = "id";
 
@@ -191,7 +189,7 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
     private final SortedMap<String, Object> extensions;
 
     @JsonDeserialize(as = Builder.class)
-    public interface Descriptor extends InstanceSchema.Descriptor {
+    public interface Descriptor extends LinkableSchema.Descriptor {
 
         String TYPE = "object";
 
@@ -214,27 +212,18 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         Map<String, Transient.Descriptor> getTransients();
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        Map<String, Link.Descriptor> getLinks();
-
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Map<String, Index.Descriptor> getIndexes();
 
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        Map<String, Permission.Descriptor> getPermissions();
-
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        Set<Name> getExpand();
-
         @Override
-        default ObjectSchema build(final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
+        default ObjectSchema build(final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
-            return new ObjectSchema(this, resolver, qualifiedName, slot);
+            return new ObjectSchema(this, resolver, version, qualifiedName, slot);
         }
 
         @Override
         default ObjectSchema build() {
 
-            return build(Resolver.Constructing.ANONYMOUS, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
+            return build(Resolver.Constructing.ANONYMOUS, Version.CURRENT, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
         }
     }
 
@@ -333,7 +322,7 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         return new Builder();
     }
 
-    private ObjectSchema(final Descriptor descriptor, final Schema.Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
+    private ObjectSchema(final Descriptor descriptor, final Schema.Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
         resolver.constructing(this);
         this.qualifiedName = qualifiedName;
@@ -347,7 +336,7 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         this.description = descriptor.getDescription();
         this.id = descriptor.getId() == null ? null : descriptor.getId().build(qualifiedName.with(ID));
         this.history = Nullsafe.option(descriptor.getHistory(), History.ENABLED);
-        this.declaredProperties = Nullsafe.immutableSortedCopy(descriptor.getProperties(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
+        this.declaredProperties = Nullsafe.immutableSortedCopy(descriptor.getProperties(), (k, v) -> v.build(resolver, version, qualifiedName.with(k)));
         this.declaredTransients = Nullsafe.immutableSortedCopy(descriptor.getTransients(), (k, v) -> v.build(qualifiedName.with(k)));
         this.declaredLinks = Nullsafe.immutableSortedCopy(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
         this.declaredIndexes = Nullsafe.immutableSortedCopy(descriptor.getIndexes(), (k, v) -> v.build(qualifiedName.with(k)));
@@ -471,17 +460,19 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         return getTransient(name, inherited);
     }
 
-    @Deprecated
-    public Multimap<Name, Instance> refs(final Map<String, Object> object) {
+    public static Map<String, Object> readMeta(final Map<String, Object> object) {
 
-        final Multimap<Name, Instance> results = HashMultimap.create();
-        properties.forEach((k, v) -> v.links(object.get(k)).entries().forEach(e ->
-                results.put(Name.of(v.getName()).with(e.getKey()), e.getValue())));
-        return results;
+        final HashMap<String, Object> result = new HashMap<>();
+        METADATA_SCHEMA.keySet().forEach(k -> {
+            if(object.containsKey(k)) {
+                result.put(k, object.get(k));
+            }
+        });
+        return Collections.unmodifiableMap(result);
     }
 
     @Override
-    public Instance create(final Map<String, Object> value, final boolean expand, final boolean suppress) {
+    public Instance create(final Map<String, Object> value, final Set<Name> expand, final boolean suppress) {
 
         if(value == null) {
             return null;
@@ -499,10 +490,11 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
                 result.put(entry.getKey(), entry.getValue());
             }
         }
-        if(expand) {
+        if(expand != null && !expand.isEmpty()) {
+            final Map<String, Set<Name>> branches = Name.branch(expand);
             Stream.of(links, transients).forEach(members -> members.forEach((name, link) -> {
                 if(value.containsKey(name)) {
-                    result.put(name, link.create(value.get(name), true, suppress));
+                    result.put(name, link.create(value.get(name), branches.get(name), suppress));
                 }
             }));
         }
@@ -525,11 +517,12 @@ public class ObjectSchema implements InstanceSchema, Link.Resolver, Index.Resolv
         });
     }
 
-    public Instance evaluateProperties(final Context context, final Instance object) {
+    public Instance evaluateProperties(final Context context, final Set<Name> expand, final Instance object) {
 
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         final Context thisContext = context.with(VAR_THIS, object);
         final HashMap<String, Object> result = new HashMap<>();
-        properties.forEach((k, v) -> result.put(k, v.evaluate(thisContext, object.get(k))));
+        properties.forEach((k, v) -> result.put(k, v.evaluate(thisContext, branches.get(k), object.get(k))));
         copyMeta(object, result);
         result.put(HASH, hash(result));
         // Links deliberately not copied, this is only used to prepare an instance for write.

@@ -22,7 +22,8 @@ package io.basestar.schema.use;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.BaseEncoding;
-import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.schema.exception.UnexpectedTypeException;
+import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.BinarySchema;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +37,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Binary Type
@@ -74,19 +76,16 @@ public class UseBinary implements UseScalar<byte[]> {
     }
 
     @Override
-    public byte[] create(final Object value, final boolean expand, final boolean suppress) {
+    public byte[] create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        if(value == null) {
-            return null;
-        } else if(value instanceof byte[]) {
+        if(value instanceof byte[]) {
             return (byte[])value;
         } else if(value instanceof String) {
             return BaseEncoding.base64().decode((String)value);
         } else if(suppress) {
-            log.warn("Suppressed conversion error (invalid type: " + value.getClass() + ")");
             return null;
         } else {
-            throw new InvalidTypeException();
+            throw new UnexpectedTypeException(this, value);
         }
     }
 

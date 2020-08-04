@@ -142,7 +142,7 @@ public abstract class TestStorage {
         );
 
         final Expression expr = Expression.parse("country == 'United Kingdom' || state == 'Victoria'");
-        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, Collections.emptyList());
+        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, Collections.emptyList(), Collections.emptySet());
         final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
         final PagedList<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
         assertEquals(8, results.size());
@@ -186,7 +186,7 @@ public abstract class TestStorage {
         );
 
         final Expression expr = Expression.parse("country == '" + country + "'");
-        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, sort);
+        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, sort, Collections.emptySet());
         final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
 
         final List<Map<String, Object>> results = new ArrayList<>();
@@ -222,16 +222,16 @@ public abstract class TestStorage {
                 .createObject(schema, id, after)
                 .write().join();
 
-        final Map<String, Object> current = storage.readObject(schema, id).join();
+        final Map<String, Object> current = storage.readObject(schema, id, ImmutableSet.of()).join();
         assertNotNull(current);
         assertEquals(1, Instance.getVersion(current));
         data.forEach((k, v) -> {
             final Object v2 = current.get(k);
-            assertTrue(Values.equals(v, v2), v + " != " + v2);
+            assertTrue(Values.equals(v, v2), k + ": " + v + " != " + v2);
         });
 
         if(storage.storageTraits(schema).getHistoryConsistency().isStronger(Consistency.EVENTUAL)) {
-            final Map<String, Object> v1 = storage.readObjectVersion(schema, id, 1L).join();
+            final Map<String, Object> v1 = storage.readObjectVersion(schema, id, 1L, ImmutableSet.of()).join();
             assertNotNull(v1);
             assertEquals(1, Instance.getVersion(v1));
         }
@@ -280,7 +280,7 @@ public abstract class TestStorage {
                 .createObject(schema, id, init)
                 .write().join();
 
-        final Instance before = schema.create(storage.readObject(schema, id).join());
+        final Instance before = schema.create(storage.readObject(schema, id, ImmutableSet.of()).join());
         assertEquals(1L, before.getVersion());
 
         final Instance after = instance(schema, id, 2L);
@@ -289,11 +289,11 @@ public abstract class TestStorage {
                 .updateObject(schema, id, setVersion(before, 1L), after)
                 .write().join();
 
-        final Map<String, Object> current = storage.readObject(schema, id).join();
+        final Map<String, Object> current = storage.readObject(schema, id, ImmutableSet.of()).join();
         assertNotNull(current);
         assertEquals(2, Instance.getVersion(current));
         if(storage.storageTraits(schema).getHistoryConsistency().isStronger(Consistency.EVENTUAL)) {
-            final Map<String, Object> v2 = storage.readObjectVersion(schema, id, 2L).join();
+            final Map<String, Object> v2 = storage.readObjectVersion(schema, id, 2L, ImmutableSet.of()).join();
             assertNotNull(v2);
             assertEquals(2, Instance.getVersion(v2));
         }
@@ -321,13 +321,13 @@ public abstract class TestStorage {
                 .createObject(schema, id, init)
                 .write().join();
 
-        final Instance before = schema.create(storage.readObject(schema, id).join());
+        final Instance before = schema.create(storage.readObject(schema, id, ImmutableSet.of()).join());
 
         storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .deleteObject(schema, id, setVersion(before, 1L))
                 .write().join();
 
-        final Map<String, Object> current = storage.readObject(schema, id).join();
+        final Map<String, Object> current = storage.readObject(schema, id, ImmutableSet.of()).join();
         assertNull(current);
         // FIXME
 //        if(storage.storageTraits(schema).getHistoryConsistency().isStronger(Consistency.EVENTUAL)) {
@@ -354,16 +354,14 @@ public abstract class TestStorage {
 
         final Map<String, Object> data = new HashMap<>();
         data.put("string", str.toString());
-        data.put(ObjectSchema.ID, id);
-        data.put(ObjectSchema.VERSION, 1L);
-        final Instance instance = schema.create(data);
+        final Instance instance = instance(schema, id, 1L, data);
 
         storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .createObject(schema, id, instance)
                 .write().join();
 
         final BatchResponse results = storage.read(Consistency.ATOMIC)
-                .readObject(schema, id)
+                .readObject(schema, id, ImmutableSet.of())
                 .read().join();
 
         assertEquals(1, results.size());
@@ -408,7 +406,7 @@ public abstract class TestStorage {
                 .createObject(schema, id, init)
                 .write().join();
 
-        final Instance before = schema.create(storage.readObject(schema, id).join());
+        final Instance before = schema.create(storage.readObject(schema, id, ImmutableSet.of()).join());
 
         storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .deleteObject(schema, id, setVersion(before, 1L))
@@ -438,7 +436,7 @@ public abstract class TestStorage {
                 .createObject(schema, id, init)
                 .write().join();
 
-        final Instance before = schema.create(storage.readObject(schema, id).join());
+        final Instance before = schema.create(storage.readObject(schema, id, ImmutableSet.of()).join());
 
         storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .deleteObject(schema, id, setVersion(before, 1L))
@@ -466,7 +464,7 @@ public abstract class TestStorage {
                 .createObject(schema, id, init)
                 .write().join();
 
-        final Instance before = schema.create(storage.readObject(schema, id).join());
+        final Instance before = schema.create(storage.readObject(schema, id, ImmutableSet.of()).join());
 
         final Instance after = instance(schema, id, 2L);
 
@@ -496,7 +494,7 @@ public abstract class TestStorage {
                 .createObject(schema, id, init)
                 .write().join();
 
-        final Instance before = schema.create(storage.readObject(schema, id).join());
+        final Instance before = schema.create(storage.readObject(schema, id, ImmutableSet.of()).join());
 
         final Instance after = instance(schema, id, 2L);
 
@@ -538,7 +536,7 @@ public abstract class TestStorage {
 
         final List<Sort> sort = ImmutableList.of(Sort.asc(Name.of(ObjectSchema.ID)));
         final Expression expr = Expression.parse("p.x == 10 && p.y == 100 for any p of points");
-        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, Collections.emptyList());
+        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, Collections.emptyList(), Collections.emptySet());
         final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
         final PagedList<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
         assertEquals(1, results.size());
@@ -664,6 +662,8 @@ public abstract class TestStorage {
         final ObjectSchema target = namespace.requireObjectSchema(REF_TARGET);
         final ObjectSchema source = namespace.requireObjectSchema(REF_SOURCE);
 
+        final Set<Name> expand = Name.parseSet("target");
+
         assumeConcurrentObjectWrite(storage, target);
         assumeConcurrentObjectWrite(storage, source);
 
@@ -674,6 +674,62 @@ public abstract class TestStorage {
 
         final List<Sort> sort = Sort.parseList("id");
         final PagedList<Map<String, Object>> page = page(storage, source, Expression.parse("target.id == '" + targetId + "'"), sort, 10);
+        assertEquals(1, page.size());
+    }
+
+    @Test
+    public void testRefExpandQuery() {
+
+        final Storage storage = storage(namespace);
+
+        final ObjectSchema target = namespace.requireObjectSchema(REF_TARGET);
+        final ObjectSchema source = namespace.requireObjectSchema(REF_SOURCE);
+
+        final Set<Name> expand = Name.parseSet("target");
+
+        assumeConcurrentObjectWrite(storage, target);
+        assumeConcurrentObjectWrite(storage, source);
+        assumeTrue(storage.supportedExpand(source, expand).containsAll(expand));
+
+        final String targetId = createComplete(storage, target, ImmutableMap.of(
+                "hello", "world"
+        ));
+        createComplete(storage, source, ImmutableMap.of(
+                "target", new Instance(ImmutableMap.of(ObjectSchema.ID, targetId))
+        ));
+
+        final List<Sort> sort = Sort.parseList("id");
+        final PagedList<Map<String, Object>> page = page(storage, source, Expression.parse("target.hello == 'world'"), sort, 10);
+        assertEquals(1, page.size());
+    }
+
+    @Test
+    public void testRefDeepExpandQuery() {
+
+        final Storage storage = storage(namespace);
+
+        final ObjectSchema target = namespace.requireObjectSchema(REF_TARGET);
+        final ObjectSchema source = namespace.requireObjectSchema(REF_SOURCE);
+
+        final Set<Name> expand = Name.parseSet("target.source");
+
+        assumeConcurrentObjectWrite(storage, target);
+        assumeConcurrentObjectWrite(storage, source);
+        assumeTrue(storage.supportedExpand(source, expand).containsAll(expand));
+
+        final String sourceId = createComplete(storage, source, ImmutableMap.of(
+                "hello", "pluto"
+        ));
+        final String targetId = createComplete(storage, target, ImmutableMap.of(
+                "hello", "world",
+                "source", ObjectSchema.ref(sourceId)
+        ));
+        createComplete(storage, source, ImmutableMap.of(
+                "target", ObjectSchema.ref(targetId)
+        ));
+
+        final List<Sort> sort = Sort.parseList("id");
+        final PagedList<Map<String, Object>> page = page(storage, source, Expression.parse("target.source.hello == 'pluto'"), sort, 10);
         assertEquals(1, page.size());
     }
 
@@ -700,7 +756,7 @@ public abstract class TestStorage {
     private PagedList<Map<String, Object>> page(final Storage storage, final ObjectSchema schema, final Expression expression, final List<Sort> sort, final int count) {
 
         final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
-        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expression.bind(Context.init()), sort);
+        final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expression.bind(Context.init()), sort, Collections.emptySet());
         return new Pager<>(comparator, sources, null).page(count).join();
     }
 
@@ -708,13 +764,8 @@ public abstract class TestStorage {
 
         final LocalDateTime now = LocalDateTime.now();
         final StorageTraits traits = storage.storageTraits(schema);
-        final Map<String, Object> instance = new HashMap<>(data);
         final String id = UUID.randomUUID().toString();
-        Instance.setId(instance, id);
-        Instance.setVersion(instance, 1L);
-        Instance.setSchema(instance, schema.getQualifiedName());
-        Instance.setCreated(instance, now);
-        Instance.setUpdated(instance, now);
+        final Map<String, Object> instance = instance(schema, id, 1L, data);
         final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC, Versioning.CHECKED);
         write.createObject(schema, id, instance);
         for(final Index index : schema.getIndexes().values()) {
@@ -736,10 +787,15 @@ public abstract class TestStorage {
 
     private Instance instance(final ObjectSchema schema, final String id, final long version, final Map<String, Object> data) {
 
-        final Map<String, Object> object = new HashMap<>(data);
-        object.put(ObjectSchema.ID, id);
-        object.put(ObjectSchema.VERSION, version);
-        return schema.create(object);
+        final LocalDateTime now = LocalDateTime.now();
+        final Map<String, Object> instance = new HashMap<>(data);
+        Instance.setId(instance, id);
+        Instance.setVersion(instance, version);
+        Instance.setSchema(instance, schema.getQualifiedName());
+        Instance.setCreated(instance, now);
+        Instance.setUpdated(instance, now);
+        Instance.setHash(instance, schema.hash(instance));
+        return schema.create(instance);
     }
 
     private static void assertCause(final Class<? extends Throwable> except, final Executable exe) {

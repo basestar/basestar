@@ -20,9 +20,7 @@ package io.basestar.schema.use;
  * #L%
  */
 
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
@@ -30,9 +28,8 @@ import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.iterate.ForAny;
 import io.basestar.expression.iterate.Of;
 import io.basestar.schema.Constraint;
-import io.basestar.schema.Instance;
 import io.basestar.schema.Schema;
-import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
@@ -74,6 +71,16 @@ public class UseMap<T> implements Use<Map<String, T>> {
         return visitor.visitMap(this);
     }
 
+    public UseMap<?> transform(final Function<Use<T>, Use<?>> fn) {
+
+        final Use<?> type2 = fn.apply(type);
+        if(type2 == type ) {
+            return this;
+        } else {
+            return new UseMap<>(type2);
+        }
+    }
+
     public static UseMap<?> from(final Object config) {
 
         return Use.fromNestedConfig(config, (type, nestedConfig) -> new UseMap<>(type));
@@ -99,26 +106,24 @@ public class UseMap<T> implements Use<Map<String, T>> {
     }
 
     @Override
-    public Map<String, T> create(final Object value, final boolean expand, final boolean suppress) {
+    public Map<String, T> create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        return create(value, suppress, v -> type.create(v, expand, suppress));
+        final Map<String, Set<Name>> branches = Name.branch(expand);
+        return create(value, suppress, (k, v) -> type.create(v, branch(branches, k), suppress));
     }
 
-    public static <T> Map<String, T> create(final Object value, final boolean suppress, final Function<Object, T> fn) {
+    public static <T> Map<String, T> create(final Object value, final boolean suppress, final BiFunction<String, Object, T> fn) {
 
-        if(value == null) {
-            return null;
-        } else if(value instanceof Map) {
+        if(value instanceof Map) {
             return ((Map<?, ?>) value).entrySet().stream()
                     .collect(Collectors.toMap(
                             entry -> entry.getKey().toString(),
-                            entry -> fn.apply(entry.getValue())
+                            entry -> fn.apply(entry.getKey().toString(), entry.getValue())
                     ));
         } else if(suppress) {
-            log.warn("Suppressed conversion error (invalid type: " + value.getClass() + ")");
             return null;
         } else {
-            throw new InvalidTypeException();
+            throw new UnexpectedTypeException(NAME, value);
         }
     }
 
@@ -247,7 +252,7 @@ public class UseMap<T> implements Use<Map<String, T>> {
 //        }
 //    }
 
-    private static Set<Name> branch(final Map<String, Set<Name>> branches, final String key) {
+    public static Set<Name> branch(final Map<String, Set<Name>> branches, final String key) {
 
         final Set<Name> branch = branches.get(key);
         if(branch == null) {
@@ -342,17 +347,6 @@ public class UseMap<T> implements Use<Map<String, T>> {
         Name.branch(names)
                 .forEach((head, tail) -> type.requiredExpand(tail)
                         .forEach(path -> result.add(Name.of(head).with(path))));
-        return result;
-    }
-
-    @Override
-    public Multimap<Name, Instance> refs(final Map<String, T> value) {
-
-        final Multimap<Name, Instance> result = HashMultimap.create();
-        if(value != null) {
-            value.forEach((k, v) -> type.refs(v).entries().forEach(e ->
-                    result.put(Name.of(k).with(e.getKey()), e.getValue())));
-        }
         return result;
     }
 

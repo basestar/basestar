@@ -105,11 +105,11 @@ public class ForAny implements Binary {
     }
 
     @Override
-    public Set<Name> paths() {
+    public Set<Name> names() {
 
         return ImmutableSet.<Name>builder()
-                .addAll(lhs.paths())
-                .addAll(rhs.paths())
+                .addAll(lhs.names())
+                .addAll(rhs.names())
                 .build();
     }
 

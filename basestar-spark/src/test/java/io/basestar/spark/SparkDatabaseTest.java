@@ -29,7 +29,7 @@ public class SparkDatabaseTest extends AbstractSparkTest {
                 .master("local[*]")
                 .getOrCreate();
 
-        final Namespace namespace = Namespace.load(TestExpandTransform.class.getResourceAsStream("schema.yml"));
+        final Namespace namespace = Namespace.load(SparkDatabaseTest.class.getResourceAsStream("schema.yml"));
 
         final Dataset<Row> datasetA = session.createDataset(ImmutableList.of(
                 new A("a:1", new B("b:1"), ImmutableList.of(new B("b:3"), new B("b:4")), ImmutableMap.of("x", new B("b:5")), new E(new B("b:1"))),
@@ -44,7 +44,7 @@ public class SparkDatabaseTest extends AbstractSparkTest {
 
         final SparkDatabase database = SparkDatabase.builder()
                 .resolver(resolver).namespace(namespace)
-                .columnResolver(ColumnResolver.lowercase((ds, name) -> ColumnResolver.<Row>nested(ds, name)))
+                .columnResolver(ColumnResolver.lowercase(ColumnResolver::nested))
                 .build();
 
         final List<A> results = database.from("A")

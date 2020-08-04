@@ -698,9 +698,9 @@ public class TestDatabaseServer {
 
         final RefRefreshEvent refreshEvent = RefRefreshEvent.of(Ref.of(TEAM, "t1"), TEAM_MEMBER, member.getId());
 
-        database.onRefRefresh(refreshEvent).join();
+        database.onRefRefresh(refreshEvent).get();
 
-        final PagedList<Instance> get = database.query(Caller.SUPER, TEAM_MEMBER, Expression.parse("team.name == 'Test'")).join();
+        final PagedList<Instance> get = database.query(Caller.SUPER, TEAM_MEMBER, Expression.parse("team.name == 'Test'")).get();
         assertEquals(1, get.size());
     }
 

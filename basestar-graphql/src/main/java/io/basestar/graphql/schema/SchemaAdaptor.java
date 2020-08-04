@@ -342,8 +342,7 @@ public class SchemaAdaptor {
         if(property.getDescription() != null) {
             builder.description(new Description(property.getDescription(), null, true));
         }
-        final Type<?> valueType = inputType(property.getType());
-        final Type<?> type = required && property.isRequired() ? new NonNullType(valueType) : valueType;
+        final Type<?> type = inputType(property.getType().optional(!required));
         builder.type(type);
         return builder.build();
     }
@@ -586,6 +585,12 @@ public class SchemaAdaptor {
 
                 return new TypeName(strategy.typeName(type.getSchema()));
             }
+
+            @Override
+            public <T> Type<?> visitOptional(final UseOptional<T> type) {
+
+                return type.getType().visit(this);
+            }
         });
     }
 
@@ -675,6 +680,12 @@ public class SchemaAdaptor {
             public Type<?> visitView(final UseView type) {
 
                 return new TypeName(strategy.inputTypeName(type.getSchema()));
+            }
+
+            @Override
+            public <T> Type<?> visitOptional(final UseOptional<T> type) {
+
+                return type.getType().visit(this);
             }
         });
     }
@@ -771,6 +782,12 @@ public class SchemaAdaptor {
                 public Void visitView(final UseView type) {
 
                     return null;
+                }
+
+                @Override
+                public <T> Void visitOptional(final UseOptional<T> type) {
+
+                    return type.getType().visit(this);
                 }
             });
         });

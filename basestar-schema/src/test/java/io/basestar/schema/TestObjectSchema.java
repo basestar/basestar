@@ -25,6 +25,9 @@ import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
 import io.basestar.expression.compare.Eq;
 import io.basestar.expression.constant.NameConstant;
+import io.basestar.schema.use.UseInteger;
+import io.basestar.schema.use.UseOptional;
+import io.basestar.schema.use.UseString;
 import io.basestar.schema.util.Expander;
 import io.basestar.util.Name;
 import io.basestar.util.PagedList;
@@ -52,6 +55,17 @@ public class TestObjectSchema {
         assertEquals(Name.parseSet("ref.ref"), schema.requiredExpand(Name.parseSet("ref.ref.string")));
 
         assertEquals(Name.parseSet(""), schema.requiredExpand(Name.parseSet("string")));
+    }
+
+    @Test
+    public void testLegacy() throws IOException {
+
+        final Namespace namespace = Namespace.load(TestObjectSchema.class.getResource("legacy.yml"));
+
+        final ObjectSchema schema = namespace.requireObjectSchema("Legacy");
+
+        assertEquals(UseString.DEFAULT, schema.requireProperty("name", true).getType());
+        assertEquals(new UseOptional<>(UseInteger.DEFAULT), schema.requireProperty("age", true).getType());
     }
 
     @Test

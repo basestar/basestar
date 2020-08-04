@@ -31,6 +31,7 @@ import io.basestar.util.Name;
 
 import java.io.Serializable;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 public interface Member extends Named, Described, Serializable, Extendable {
@@ -41,6 +42,29 @@ public interface Member extends Named, Described, Serializable, Extendable {
 
         @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         Visibility getVisibility();
+
+        interface Delegating extends Descriptor {
+
+            Descriptor delegate();
+
+            @Override
+            default Visibility getVisibility() {
+
+                return delegate().getVisibility();
+            }
+
+            @Override
+            default String getDescription() {
+
+                return delegate().getDescription();
+            }
+
+            @Override
+            default Map<String, Object> getExtensions() {
+
+                return delegate().getExtensions();
+            }
+        }
     }
 
     interface Builder extends Descriptor {
@@ -69,6 +93,8 @@ public interface Member extends Named, Described, Serializable, Extendable {
     }
 
     Use<?> getType();
+
+    Optional<Use<?>> layout(Set<Name> expand);
 
     Visibility getVisibility();
 
@@ -121,7 +147,7 @@ public interface Member extends Named, Described, Serializable, Extendable {
         return getType().openApi().description(getDescription());
     }
 
-    Object create(Object value, boolean expand, boolean suppress);
+    Object create(Object value, Set<Name> expand, boolean suppress);
 
     Descriptor descriptor();
 }

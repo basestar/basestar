@@ -3,12 +3,12 @@ Test1:
   description: Project
   properties:
     x:
-      type: string
+      type: string?
     y:
-      type: integer
+      type: integer?
     z:
       type:
-        map: Test4
+        map?: Test4
   links:
     a:
       schema: Test3
@@ -18,14 +18,14 @@ Test2:
   type: struct
   properties:
     x:
-      type: string
+      type: string?
 
 Test3:
   type: object
   concrete: false
   properties:
     test:
-      type: Test1
+      type: Test1?
   indexes:
     test:
       partition: test.id

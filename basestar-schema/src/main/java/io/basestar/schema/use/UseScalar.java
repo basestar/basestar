@@ -20,12 +20,9 @@ package io.basestar.schema.use;
  * #L%
  */
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Constraint;
-import io.basestar.schema.Instance;
 import io.basestar.schema.Schema;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
@@ -90,13 +87,6 @@ public interface UseScalar<T> extends Use<T> {
     default Set<Name> requiredExpand(final Set<Name> names) {
 
         return Collections.emptySet();
-    }
-
-    @Override
-    @Deprecated
-    default Multimap<Name, Instance> refs(final T value) {
-
-        return HashMultimap.create();
     }
 
     @Override

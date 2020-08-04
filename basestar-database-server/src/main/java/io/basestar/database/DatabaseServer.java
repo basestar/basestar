@@ -22,6 +22,7 @@ package io.basestar.database;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import io.basestar.auth.Caller;
 import io.basestar.auth.exception.PermissionDeniedException;
@@ -183,7 +184,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                 final Storage.ReadTransaction read = storage.read(consistency);
                 beforeKeys.forEach(expandKey -> {
                     final RefKey key = expandKey.getKey();
-                    read.readObject(objectSchema(key.getSchema()), key.getId());
+                    read.readObject(objectSchema(key.getSchema()), key.getId(), expandKey.getExpand());
                 });
                 beforeFuture = read.read().thenCompose(readResults -> {
 
@@ -418,7 +419,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final String id = options.getId();
         final ObjectSchema objectSchema = namespace.requireObjectSchema(options.getSchema());
 
-        return readImpl(objectSchema, id, options.getVersion())
+        return readImpl(objectSchema, id, options.getVersion(), options.getExpand())
                 .thenCompose(initial -> expandAndRestrict(caller, initial, options.getExpand()));
     }
 
@@ -516,7 +517,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                     }
                     final PagingToken paging = options.getPaging();
 
-                    return queryLinkImpl(context(caller), link, owner, count, paging)
+                    return queryLinkImpl(context(caller), link, owner, options.getExpand(), count, paging)
                             .thenCompose(results -> expandAndRestrict(caller, results, options.getExpand()));
                 });
     }
@@ -627,7 +628,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             final List<Sort> sort = Nullsafe.option(options.getSort(), Collections.emptyList());
             final Expression unrooted = bound.bind(Context.init(), Renaming.removeExpectedPrefix(Name.of(Reserved.THIS)));
 
-            return queryImpl(context, objectSchema, unrooted, sort, count, paging)
+            return queryImpl(context, objectSchema, unrooted, sort, options.getExpand(), count, paging)
                     .thenCompose(results -> expandAndRestrict(caller, results, options.getExpand()));
 
         } else {
@@ -765,7 +766,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         final ObjectSchema schema = objectSchema(event.getSchema());
         final CompletableFuture<PagedList<Instance>> query = queryImpl(context(Caller.SUPER), schema,
-                event.getExpression(), ImmutableList.of(), REF_QUERY_BATCH_SIZE, event.getPaging());
+                event.getExpression(), ImmutableList.of(), ImmutableSet.of(), REF_QUERY_BATCH_SIZE, event.getPaging());
         return query.thenApply(page -> {
             final Set<Event> events = new HashSet<>();
             page.forEach(instance -> events.add(RefRefreshEvent.of(event.getRef(), schema.getQualifiedName(), Instance.getId(instance))));
@@ -783,13 +784,14 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final ObjectSchema refSchema = objectSchema(event.getRef().getSchema());
         final String refId = event.getRef().getId();
         final Storage.ReadTransaction read = storage.read(Consistency.ATOMIC);
-        read.readObject(schema, id);
-        read.readObject(refSchema, refId);
+        read.readObject(schema, id, ImmutableSet.of());
+        read.readObject(refSchema, refId, ImmutableSet.of());
+        final Set<Name> expand = schema.getExpand();
         return read.read().thenCompose(readResponse -> {
-            final Instance before = schema.create(readResponse.getObject(schema, id), true, true);
+            final Instance before = schema.create(readResponse.getObject(schema, id), expand, true);
             if(before != null) {
                 final Set<Name> refExpand = schema.refExpand(refSchema.getQualifiedName(), schema.getExpand());
-                final Instance refAfter = refSchema.create(readResponse.getObject(refSchema, refId), true, true);
+                final Instance refAfter = refSchema.create(readResponse.getObject(refSchema, refId), expand, true);
                 return expand(context(Caller.SUPER), refAfter, refExpand).thenCompose(expandedRefAfter -> {
 
                     final Long version = Instance.getVersion(before);

@@ -34,6 +34,8 @@ public class MarshallTransform<T> implements Transform<Dataset<Row>, Dataset<T>>
     @Override
     public Dataset<T> accept(final Dataset<Row> input) {
 
+        final SchemaMapper<T, ? extends Map<String, Object>> mapper = this.mapper;
+        final InstanceSchema schema = this.schema;
         final Class<T> beanClass = mapper.marshalledType();
         return input.map((MapFunction<Row, T>) row -> {
             final Map<String, Object> object = SparkSchemaUtils.fromSpark(schema, row);

@@ -22,10 +22,10 @@ package io.basestar.schema;
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
@@ -117,11 +117,16 @@ public class Namespace implements Serializable, Schema.Resolver {
             .setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)
             .configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
 
+    private final Version version;
+
     private final SortedMap<Name, Schema<?>> schemas;
 
     @Data
     @Accessors(chain = true)
     public static class Builder implements Descriptor {
+
+        @JsonProperty("$version")
+        private Version version;
 
         private Map<Name, Schema.Descriptor<?>> schemas;
 
@@ -154,28 +159,34 @@ public class Namespace implements Serializable, Schema.Resolver {
 
         public Namespace build(final Schema.Resolver resolver, final Renaming renaming) {
 
-            return new Namespace(this, resolver, renaming);
+            return new Namespace(this, Nullsafe.option(version, Version.CURRENT), resolver, renaming);
         }
 
         public static Builder load(final URL... urls) throws IOException {
 
             final Map<Name, Schema.Descriptor<?>> builders = new HashMap<>();
+            Version version = null;
             for(final URL url : URLs.all(urls)) {
-                final Map<Name, Schema.Descriptor<?>> schemas = YAML_MAPPER.readValue(url, new TypeReference<Map<Name, Schema.Descriptor<?>>>(){});
-                builders.putAll(schemas);
+                final Builder schemas = YAML_MAPPER.readValue(url, Builder.class);
+                builders.putAll(schemas.getSchemas());
+                version = version == null ? schemas.getVersion() : version;
             }
             return new Builder()
+                    .setVersion(version)
                     .setSchemas(builders);
         }
 
         public static Builder load(final InputStream... iss) throws IOException {
 
             final Map<Name, Schema.Descriptor<?>> builders = new HashMap<>();
+            Version version = null;
             for(final InputStream is : iss) {
-                final Map<Name, Schema.Descriptor<?>> schemas = YAML_MAPPER.readValue(is, new TypeReference<Map<Name, Schema.Descriptor<?>>>(){});
-                builders.putAll(schemas);
+                final Builder schemas = YAML_MAPPER.readValue(is, Builder.class);
+                builders.putAll(schemas.getSchemas());
+                version = version == null ? schemas.getVersion() : version;
             }
             return new Builder()
+                    .setVersion(version)
                     .setSchemas(builders);
         }
     }
@@ -185,13 +196,14 @@ public class Namespace implements Serializable, Schema.Resolver {
         return new Builder();
     }
 
-    private Namespace(final Builder builder, final Schema.Resolver resolver, final Renaming renaming) {
+    private Namespace(final Builder builder, final Version version, final Schema.Resolver resolver, final Renaming renaming) {
 
-        this(builder.getSchemas(), resolver, renaming);
+        this(builder.getSchemas(), version, resolver, renaming);
     }
 
-    private Namespace(final Map<Name, Schema.Descriptor<?>> schemas, final Schema.Resolver resolver, final Renaming renaming) {
+    private Namespace(final Map<Name, Schema.Descriptor<?>> schemas, final Version version, final Schema.Resolver resolver, final Renaming renaming) {
 
+        this.version = version;
         final NavigableMap<Name, Schema.Descriptor<?>> descriptors = ImmutableSortedMap.copyOf(schemas);
         final Set<Name> seen = new HashSet<>();
         descriptors.keySet().forEach(name -> {
@@ -202,18 +214,19 @@ public class Namespace implements Serializable, Schema.Resolver {
         });
         final Map<Name, Schema<?>> out = new HashMap<>();
         for(final Map.Entry<Name, Schema.Descriptor<?>> entry : descriptors.entrySet()) {
-            resolveCyclic(resolver, entry.getKey(), entry.getValue(), descriptors, renaming, out);
+            resolveCyclic(resolver, version, entry.getKey(), entry.getValue(), descriptors, renaming, out);
         }
         this.schemas = ImmutableSortedMap.copyOf(out);
     }
 
-    private Namespace(final Map<Name, Schema<?>> schemas) {
+    private Namespace(final Map<Name, Schema<?>> schemas, final Version version) {
 
         this.schemas = ImmutableSortedMap.copyOf(schemas);
+        this.version = version;
     }
 
-    private static Schema<?> resolveCyclic(final Schema.Resolver resolver, final Name inputName, final Schema.Descriptor<?> descriptor,
-                                           final NavigableMap<Name, Schema.Descriptor<?>> descriptors,
+    private static Schema<?> resolveCyclic(final Schema.Resolver resolver, final Version version, final Name inputName,
+                                           final Schema.Descriptor<?> descriptor, final NavigableMap<Name, Schema.Descriptor<?>> descriptors,
                                            final Renaming naming, final Map<Name, Schema<?>> out) {
 
         final Name outputName = naming.apply(inputName);
@@ -237,10 +250,10 @@ public class Namespace implements Serializable, Schema.Resolver {
                     if (builder == null) {
                         return resolver.getSchema(inputName);
                     } else {
-                        return resolveCyclic(resolver, inputName, builder, descriptors, naming, out);
+                        return resolveCyclic(resolver, version, inputName, builder, descriptors, naming, out);
                     }
                 }
-            }, outputName, slot);
+            }, version, outputName, slot);
         }
     }
 
@@ -252,7 +265,12 @@ public class Namespace implements Serializable, Schema.Resolver {
 
     public static Namespace from(final Map<Name, Schema<?>> schemas) {
 
-        return new Namespace(schemas);
+        return from(schemas, Version.CURRENT);
+    }
+
+    public static Namespace from(final Map<Name, Schema<?>> schemas, final Version version) {
+
+        return new Namespace(schemas, version);
     }
 
     public Namespace relative(final Name root) {
@@ -265,7 +283,7 @@ public class Namespace implements Serializable, Schema.Resolver {
         return new Namespace(getSchemas().entrySet().stream().collect(Collectors.toMap(
                 Map.Entry::getKey,
                 e -> e.getValue().descriptor()
-        )), name -> null, renaming);
+        )), version, name -> null, renaming);
     }
 
     public static Namespace load(final Schema.Resolver resolver, final URL... urls) throws IOException {

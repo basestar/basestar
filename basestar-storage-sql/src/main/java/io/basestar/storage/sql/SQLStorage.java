@@ -9,9 +9,9 @@ package io.basestar.storage.sql;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -39,10 +39,8 @@ import io.basestar.storage.query.Range;
 import io.basestar.storage.query.RangeVisitor;
 import io.basestar.storage.util.KeysetPagingUtils;
 import io.basestar.storage.util.Pager;
-import io.basestar.util.Nullsafe;
-import io.basestar.util.PagedList;
-import io.basestar.util.PagingToken;
-import io.basestar.util.Sort;
+import io.basestar.util.Name;
+import io.basestar.util.*;
 import lombok.Data;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -111,7 +109,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
+    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
         return withContext(context -> context.select(selectFields(schema))
                 .from(DSL.table(objectTableName(schema)))
@@ -120,17 +118,17 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
         return withContext(context -> context.select(selectFields(schema))
-                    .from(DSL.table(historyTableName(schema)))
-                    .where(idField(schema).eq(id)
-                            .and(versionField(schema).eq(version)))
-                    .limit(1).fetchAsync().thenApply(result -> first(schema, result)));
+                .from(DSL.table(historyTableName(schema)))
+                .where(idField(schema).eq(id)
+                        .and(versionField(schema).eq(version)))
+                .limit(1).fetchAsync().thenApply(result -> first(schema, result)));
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
+    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         final Expression bound = query.bind(Context.init());
 
@@ -139,13 +137,13 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         final List<Pager.Source<Map<String, Object>>> sources = new ArrayList<>();
 
         for(final Expression conjunction : disjunction) {
-            final Map<io.basestar.util.Name, Range<Object>> ranges = conjunction.visit(new RangeVisitor());
+            final Map<Name, Range<Object>> ranges = conjunction.visit(new RangeVisitor());
 
             Index best = null;
             // Only multi-value indexes need to be matched
             for(final Index index : schema.getIndexes().values()) {
                 if(index.isMultiValue()) {
-                    final Set<io.basestar.util.Name> names = index.getMultiValuePaths();
+                    final Set<Name> names = index.getMultiValuePaths();
                     if (ranges.keySet().containsAll(names)) {
                         best = index;
                     }
@@ -164,7 +162,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                     withContext(context -> {
 
                         final Table<Record> table;
-                        final Function<io.basestar.util.Name, QueryPart> columnResolver;
+                        final Function<Name, QueryPart> columnResolver;
                         if(index == null) {
                             table = DSL.table(objectTableName(schema));
                             columnResolver = objectColumnResolver(context, schema);
@@ -189,18 +187,18 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
 
                         return seek.fetchAsync().thenApply(results -> {
 
-                                    final List<Map<String, Object>> objects = all(schema, results);
+                            final List<Map<String, Object>> objects = all(schema, results);
 
-                                    final PagingToken nextToken;
-                                    if(objects.size() < count) {
-                                        nextToken = null;
-                                    } else {
-                                        final Map<String, Object> last = objects.get(objects.size() - 1);
-                                        nextToken = KeysetPagingUtils.keysetPagingToken(schema, sort, last);
-                                    }
+                            final PagingToken nextToken;
+                            if(objects.size() < count) {
+                                nextToken = null;
+                            } else {
+                                final Map<String, Object> last = objects.get(objects.size() - 1);
+                                nextToken = KeysetPagingUtils.keysetPagingToken(schema, sort, last);
+                            }
 
-                                    return new PagedList<>(objects, nextToken);
-                                });
+                            return new PagedList<>(objects, nextToken);
+                        });
 
                     }));
         }
@@ -208,12 +206,12 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         return sources;
     }
 
-    private Function<io.basestar.util.Name, QueryPart> objectColumnResolver(final DSLContext context, final ObjectSchema schema) {
+    private Function<Name, QueryPart> objectColumnResolver(final DSLContext context, final ObjectSchema schema) {
 
         return name -> {
 
             final Property prop = schema.requireProperty(name.first(), true);
-            final io.basestar.util.Name rest = name.withoutFirst();
+            final Name rest = name.withoutFirst();
             if(rest.isEmpty()) {
                 return DSL.field(DSL.name(name.first()));
             } else {
@@ -246,7 +244,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         };
     }
 
-    private Function<io.basestar.util.Name, QueryPart> indexColumnResolver(final DSLContext context, final ObjectSchema schema, final Index index) {
+    private Function<Name, QueryPart> indexColumnResolver(final DSLContext context, final ObjectSchema schema, final Index index) {
 
         // FIXME
         return name -> DSL.field(SQLUtils.columnName(name));
@@ -268,7 +266,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
             private final Map<ObjectSchema, Set<IdVersion>> byIdVersion = new IdentityHashMap<>();
 
             @Override
-            public ReadTransaction readObject(final ObjectSchema schema, final String id) {
+            public ReadTransaction readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
                 final Set<String> target = byId.computeIfAbsent(schema, ignored -> new HashSet<>());
                 target.add(id);
@@ -276,7 +274,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
             }
 
             @Override
-            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
                 final Set<IdVersion> target = byIdVersion.computeIfAbsent(schema, ignored -> new HashSet<>());
                 target.add(new IdVersion(id, version));
@@ -527,6 +525,12 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         return SQLStorageTraits.INSTANCE;
     }
 
+    @Override
+    public Set<Name> supportedExpand(final ObjectSchema schema, final Set<Name> expand) {
+
+        return Collections.emptySet();
+    }
+
     private <T> CompletableFuture<T> withContext(final Function<DSLContext, CompletionStage<T>> with) {
 
         Connection conn = null;
@@ -616,7 +620,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         schema.metadataSchema().forEach((k, v) ->
                 result.put(DSL.field(DSL.name(k)), SQLUtils.toSQLValue(v, object.get(k))));
         schema.getProperties().forEach((k, v) ->
-            result.put(DSL.field(DSL.name(k)), SQLUtils.toSQLValue(v.getType(), object.get(k))));
+                result.put(DSL.field(DSL.name(k)), SQLUtils.toSQLValue(v.getType(), object.get(k))));
         return result;
     }
 
@@ -626,11 +630,11 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         index.projectionSchema(schema).forEach((k, v) ->
                 result.put(DSL.field(DSL.name(k)), SQLUtils.toSQLValue(v, object.get(k))));
 
-        final List<io.basestar.util.Name> partitionNames = index.resolvePartitionPaths();
+        final List<Name> partitionNames = index.resolvePartitionPaths();
         final List<Object> partition = key.getPartition();
         assert partitionNames.size() == partition.size();
         for(int i = 0; i != partition.size(); ++i) {
-            final io.basestar.util.Name name = partitionNames.get(i);
+            final Name name = partitionNames.get(i);
             final Object value = partition.get(i);
             final Use<?> type = schema.typeOf(name);
             result.put(DSL.field(SQLUtils.columnName(name)), SQLUtils.toSQLValue(type, value));
@@ -639,7 +643,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         final List<Object> sort = key.getSort();
         assert sortPaths.size() == sort.size();
         for(int i = 0; i != sort.size(); ++i) {
-            final io.basestar.util.Name name = sortPaths.get(i).getName();
+            final Name name = sortPaths.get(i).getName();
             final Object value = sort.get(i);
             final Use<?> type = schema.typeOf(name);
             result.put(DSL.field(SQLUtils.columnName(name)), SQLUtils.toSQLValue(type, value));

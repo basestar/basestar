@@ -59,7 +59,7 @@ public class TestSchemaTransform extends AbstractSparkTest {
                 .master("local[*]")
                 .getOrCreate();
 
-        final Namespace namespace = Namespace.load(TestExpandTransform.class.getResourceAsStream("schema.yml"));
+        final Namespace namespace = Namespace.load(TestSchemaTransform.class.getResourceAsStream("schema.yml"));
 
         final ObjectSchema a = namespace.requireObjectSchema("A");
 

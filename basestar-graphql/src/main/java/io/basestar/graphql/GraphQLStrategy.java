@@ -441,6 +441,12 @@ public interface GraphQLStrategy {
 
                 return typeName(type.getSchema());
             }
+
+            @Override
+            public <T> String visitOptional(final UseOptional<T> type) {
+
+                return type.getType().visit(this);
+            }
         };
     }
 }

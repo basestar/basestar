@@ -20,23 +20,41 @@ package io.basestar.schema;
  * #L%
  */
 
-import com.fasterxml.jackson.annotation.JsonValue;
-import lombok.Data;
 
-public interface Version {
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+import io.basestar.schema.exception.SchemaValidationException;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
+import java.util.Arrays;
+
+@Getter
+@RequiredArgsConstructor
+public enum Version {
+
+    V_2020_08_04("2020-08-04"),
+    LEGACY("legacy");
+
+    public static final Version CURRENT = LEGACY;
+
+    private final String id;
+
+    @JsonCreator
+    public static Version fromString(final String str) {
+
+        if("LATEST".equalsIgnoreCase(str)) {
+            return V_2020_08_04;
+        } else {
+            return Arrays.stream(Version.values()).filter(v -> v.id.equals(str))
+                    .findFirst().orElseThrow(() -> new SchemaValidationException("Version " + str + " is not supported"));
+        }
+    }
 
     @JsonValue
-    String toString();
+    @Override
+    public String toString() {
 
-    @Data
-    class Simple {
-
-        private final String value;
-
-        @Override
-        public String toString() {
-
-            return value;
-        }
+        return this.getId();
     }
 }

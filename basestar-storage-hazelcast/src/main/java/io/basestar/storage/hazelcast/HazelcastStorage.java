@@ -58,7 +58,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class HazelcastStorage implements Storage.WithWriteHistory, Storage.WithoutWriteIndex, Storage.WithoutAggregate {
+public class HazelcastStorage implements Storage.WithWriteHistory, Storage.WithoutWriteIndex, Storage.WithoutAggregate, Storage.WithoutExpand {
 
     @Nonnull
     private final HazelcastInstance instance;
@@ -120,7 +120,7 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
 
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
+    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
         try {
             final IMap<BatchResponse.Key, CustomPortable> map = object.get(schema);
@@ -146,7 +146,7 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
         try {
             final IMap<BatchResponse.Key, CustomPortable> map = history.get(schema);
@@ -160,7 +160,7 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
+    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         return ImmutableList.of((count, token, stats) -> CompletableFuture.supplyAsync(() -> {
             try {
@@ -190,7 +190,7 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
             private final Map<String, Set<BatchResponse.Key>> requests = new HashMap<>();
 
             @Override
-            public ReadTransaction readObject(final ObjectSchema schema, final String id) {
+            public ReadTransaction readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
                 final String target = strategy.objectMapName(schema);
                 requests.computeIfAbsent(target, ignored -> new HashSet<>())
@@ -199,7 +199,7 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
             }
 
             @Override
-            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
                 final String target = strategy.historyMapName(schema);
                 requests.computeIfAbsent(target, ignored -> new HashSet<>())

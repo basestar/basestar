@@ -24,6 +24,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.*;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class Nullsafe {
@@ -194,5 +195,11 @@ public class Nullsafe {
             m.forEach((k, v) -> result.put(k, transform.apply(k, v)));
             return Collections.unmodifiableSortedMap(result);
         }
+    }
+
+    @Nullable
+    public static <T, U> U map(@Nullable final T v, final Function<T, U> fn) {
+
+        return v == null ? null : fn.apply(v);
     }
 }

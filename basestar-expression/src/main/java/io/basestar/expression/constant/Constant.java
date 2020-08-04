@@ -78,7 +78,7 @@ public class Constant implements Expression {
 //    }
 
     @Override
-    public Set<Name> paths() {
+    public Set<Name> names() {
 
         return Collections.emptySet();
     }

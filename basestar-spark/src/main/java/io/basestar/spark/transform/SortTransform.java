@@ -61,6 +61,8 @@ public class SortTransform<T> implements Transform<Dataset<T>, Dataset<T>> {
     @Override
     public Dataset<T> accept(final Dataset<T> input) {
 
+        final List<Sort> sort = this.sort;
+        final ColumnResolver<T> columnResolver = this.columnResolver;
         return input.sort(sort.stream()
                 .map(v -> order(columnResolver.resolve(input, v.getName()), v.getOrder(), v.getNulls()))
                 .toArray(Column[]::new));

@@ -22,7 +22,8 @@ package io.basestar.schema.use;
 
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Schema;
-import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.schema.exception.UnexpectedTypeException;
+import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.ArraySchema;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -66,6 +67,16 @@ public class UseSet<T> implements UseCollection<T, Set<T>> {
         return visitor.visitSet(this);
     }
 
+    public UseSet<?> transform(final Function<Use<T>, Use<?>> fn) {
+
+        final Use<?> type2 = fn.apply(type);
+        if(type2 == type ) {
+            return this;
+        } else {
+            return new UseSet<>(type2);
+        }
+    }
+
     @Override
     public Object toConfig() {
 
@@ -86,23 +97,20 @@ public class UseSet<T> implements UseCollection<T, Set<T>> {
     }
 
     @Override
-    public Set<T> create(final Object value, final boolean expand, final boolean suppress) {
+    public Set<T> create(final Object value, final Set<Name> expand, final boolean suppress) {
 
         return create(value, suppress, v -> type.create(v, expand, suppress));
     }
 
     public static <T> Set<T> create(final Object value, final boolean suppress, final Function<Object, T> fn) {
 
-        if(value == null) {
-            return null;
-        } else if(value instanceof Collection) {
+        if(value instanceof Collection) {
             return ((Collection<?>) value).stream()
                     .map(fn).collect(Collectors.toSet());
         } else if (suppress) {
-            log.warn("Suppressed conversion error (invalid type: " + value.getClass() + ")");
             return null;
         } else {
-            throw new InvalidTypeException();
+            throw new UnexpectedTypeException(NAME, value);
         }
     }
 

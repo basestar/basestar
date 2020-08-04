@@ -49,12 +49,14 @@ public class MigrateTransform implements Transform<Dataset<Row>, Dataset<Row>> {
     @Override
     public Dataset<Row> accept(final Dataset<Row> df) {
 
+        final ObjectSchema sourceSchema = this.sourceSchema;
+        final ObjectSchema targetSchema = this.targetSchema;
         final StructType targetType = SparkSchemaUtils.structType(targetSchema, null);
         return df.map((MapFunction<Row, Row>) row -> {
 
             final Map<String, Object> initial = SparkSchemaUtils.fromSpark(sourceSchema, row);
             final Map<String, Object> migrated = migration.migrate(sourceSchema, targetSchema, initial);
-            return SparkSchemaUtils.toSpark(targetSchema, targetType, migrated);
+            return SparkSchemaUtils.toSpark(targetSchema, targetSchema.getExpand(), targetType, migrated);
 
         }, RowEncoder.apply(targetType));
     }

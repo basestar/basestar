@@ -42,6 +42,7 @@ public class InstanceTransform implements Transform<Dataset<Row>, RDD<Map<String
     @Override
     public RDD<Map<String, Object>> accept(final Dataset<Row> input) {
 
+        final InstanceSchema schema = this.schema;
         return input.toJavaRDD().map(row -> {
             final Map<String, Object> instance = new HashMap<>(SparkSchemaUtils.fromSpark(schema, row));
             if(Instance.getCreated(instance) == null) {

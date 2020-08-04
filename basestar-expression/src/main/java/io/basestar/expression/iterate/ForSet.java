@@ -105,11 +105,11 @@ public class ForSet implements Expression {
     }
 
     @Override
-    public Set<Name> paths() {
+    public Set<Name> names() {
 
         return ImmutableSet.<Name>builder()
-                .addAll(yield.paths())
-                .addAll(iter.paths())
+                .addAll(yield.names())
+                .addAll(iter.names())
                 .build();
     }
 
