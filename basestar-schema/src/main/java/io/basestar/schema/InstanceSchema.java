@@ -49,7 +49,7 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
         Map<String, Property.Descriptor> getProperties();
 
         @Override
-        InstanceSchema build(Resolver.Constructing resolver, Name qualifiedName, int slot);
+        InstanceSchema build(Resolver.Constructing resolver, Version version, Name qualifiedName, int slot);
 
         @Override
         InstanceSchema build();

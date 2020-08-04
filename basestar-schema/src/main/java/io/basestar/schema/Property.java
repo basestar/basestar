@@ -28,10 +28,7 @@ import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.ExpressionDeserializer;
-import io.basestar.schema.exception.ConstraintViolationException;
-import io.basestar.schema.exception.MissingPropertyException;
-import io.basestar.schema.exception.ReservedNameException;
-import io.basestar.schema.exception.UnexpectedTypeException;
+import io.basestar.schema.exception.*;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
@@ -88,6 +85,10 @@ public class Property implements Member {
 
         Use<?> getType();
 
+        @Deprecated
+        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+        Boolean getRequired();
+
         @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         Boolean getImmutable();
 
@@ -98,9 +99,9 @@ public class Property implements Member {
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         List<? extends Constraint> getConstraints();
 
-        default Property build(final Schema.Resolver resolver, final Name qualifiedName) {
+        default Property build(final Schema.Resolver resolver, final Version version, final Name qualifiedName) {
 
-            return new Property(this, resolver, qualifiedName);
+            return new Property(this, resolver, version, qualifiedName);
         }
 
         interface Delegating extends Descriptor, Member.Descriptor.Delegating {
@@ -112,6 +113,12 @@ public class Property implements Member {
             default Use<?> getType() {
 
                 return delegate().getType();
+            }
+
+            @Override
+            default Boolean getRequired() {
+
+                return delegate().getRequired();
             }
 
             @Override
@@ -149,8 +156,8 @@ public class Property implements Member {
 
         private String description;
 
-//        @Deprecated
-//        private Boolean required;
+        @Deprecated
+        private Boolean required;
 
         private Boolean immutable;
 
@@ -194,21 +201,31 @@ public class Property implements Member {
         return new Builder();
     }
 
-    public Property(final Descriptor builder, final Schema.Resolver schemaResolver, final Name qualifiedName) {
+    public Property(final Descriptor builder, final Schema.Resolver schemaResolver, final Version version, final Name qualifiedName) {
 
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
         this.qualifiedName = qualifiedName;
         this.description = builder.getDescription();
-//        this.required = Nullsafe.option(builder.getRequired());
-        this.type = builder.getType().resolve(schemaResolver);
+        this.type = legacyFix(qualifiedName, builder.getType().resolve(schemaResolver), builder.getRequired(), version);
         this.defaultValue = Nullsafe.map(builder.getDefault(), type::create);
         this.immutable = Nullsafe.option(builder.getImmutable());
         this.expression = builder.getExpression();
         this.constraints = Nullsafe.immutableCopy(builder.getConstraints());
         this.visibility = builder.getVisibility();
         this.extensions = Nullsafe.immutableSortedCopy(builder.getExtensions());
+    }
+
+    private Use<?> legacyFix(final Name qualifiedName, final Use<?> type, final Boolean required, final Version version) {
+
+        if(version == Version.LEGACY) {
+            return type.optional(!Nullsafe.option(required));
+        } else if(required != null) {
+            throw new SchemaValidationException(qualifiedName, "Required is now deprecated, use optional: type instead");
+        } else {
+            return type;
+        }
     }
 
     @Override
@@ -372,7 +389,13 @@ public class Property implements Member {
             @Override
             public Use<?> getType() {
 
-                return type;
+                return type.optional(false);
+            }
+
+            @Override
+            public Boolean getRequired() {
+
+                return !type.isOptional();
             }
 
             @Override

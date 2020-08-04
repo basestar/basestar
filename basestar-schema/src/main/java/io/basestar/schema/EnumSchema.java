@@ -100,7 +100,7 @@ public class EnumSchema implements Schema<String> {
         List<String> getValues();
 
         @Override
-        default EnumSchema build(final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
+        default EnumSchema build(final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
             return new EnumSchema(this, resolver, qualifiedName, slot);
         }
@@ -108,7 +108,7 @@ public class EnumSchema implements Schema<String> {
         @Override
         default EnumSchema build() {
 
-            return build(Resolver.Constructing.ANONYMOUS, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
+            return build(Resolver.Constructing.ANONYMOUS, Version.CURRENT, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
         }
     }
 

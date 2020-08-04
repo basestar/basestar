@@ -1,4 +1,4 @@
-$version: 2020-09-04
+$version: LATEST
 
 A:
   type: object
@@ -63,3 +63,29 @@ AggView:
   expand:
     - agg
     - key
+
+AliasView:
+  type: view
+  group:
+    - id
+  properties:
+    id:
+      type: string
+      expression: key.id
+    count:
+      type: integer
+      expression: count()
+  from: B
+
+LinkingView:
+  type: view
+  properties:
+    id: id
+  from: B
+  expand:
+    - record
+  links:
+    record:
+      schema: AliasView
+      expression: this.id == id
+      single: true

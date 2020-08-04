@@ -1,3 +1,5 @@
+$version: LATEST
+
 Constrained:
   properties:
     name:

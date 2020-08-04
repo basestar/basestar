@@ -1,3 +1,5 @@
+$version: LATEST
+
 Base:
   type: object
   properties:

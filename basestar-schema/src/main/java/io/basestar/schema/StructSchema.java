@@ -122,15 +122,15 @@ public class StructSchema implements InstanceSchema {
         Boolean getConcrete();
 
         @Override
-        default StructSchema build(final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
+        default StructSchema build(final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
-            return new StructSchema(this, resolver, qualifiedName, slot);
+            return new StructSchema(this, resolver, version, qualifiedName, slot);
         }
 
         @Override
         default StructSchema build() {
 
-            return build(Resolver.Constructing.ANONYMOUS, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
+            return build(Resolver.Constructing.ANONYMOUS, Version.CURRENT, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
         }
     }
 
@@ -177,7 +177,7 @@ public class StructSchema implements InstanceSchema {
         return new Builder();
     }
 
-    private StructSchema(final Descriptor descriptor, final Schema.Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
+    private StructSchema(final Descriptor descriptor, final Schema.Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
         resolver.constructing(this);
         this.qualifiedName = qualifiedName;
@@ -189,7 +189,7 @@ public class StructSchema implements InstanceSchema {
             this.extend = null;
         }
         this.description = descriptor.getDescription();
-        this.declaredProperties = Nullsafe.immutableSortedCopy(descriptor.getProperties(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
+        this.declaredProperties = Nullsafe.immutableSortedCopy(descriptor.getProperties(), (k, v) -> v.build(resolver, version, qualifiedName.with(k)));
         this.declaredProperties.forEach((k, v) -> {
             if(v.isImmutable()) {
                 throw new SchemaValidationException(qualifiedName, "Struct types cannot have immutable properties");

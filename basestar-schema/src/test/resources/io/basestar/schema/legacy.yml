@@ -1,0 +1,7 @@
+Legacy:
+  properties:
+    name:
+      required: true
+      type: string
+    age:
+      type: integer

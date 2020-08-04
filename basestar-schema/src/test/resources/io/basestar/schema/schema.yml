@@ -1,3 +1,4 @@
+$version: LATEST
 
 Post:
   properties:
@@ -25,5 +26,6 @@ User:
   properties:
     email:
       type: string
+
 
 

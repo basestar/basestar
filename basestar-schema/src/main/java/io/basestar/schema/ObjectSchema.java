@@ -215,15 +215,15 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
         Map<String, Index.Descriptor> getIndexes();
 
         @Override
-        default ObjectSchema build(final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
+        default ObjectSchema build(final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
-            return new ObjectSchema(this, resolver, qualifiedName, slot);
+            return new ObjectSchema(this, resolver, version, qualifiedName, slot);
         }
 
         @Override
         default ObjectSchema build() {
 
-            return build(Resolver.Constructing.ANONYMOUS, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
+            return build(Resolver.Constructing.ANONYMOUS, Version.CURRENT, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
         }
     }
 
@@ -322,7 +322,7 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
         return new Builder();
     }
 
-    private ObjectSchema(final Descriptor descriptor, final Schema.Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
+    private ObjectSchema(final Descriptor descriptor, final Schema.Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
         resolver.constructing(this);
         this.qualifiedName = qualifiedName;
@@ -336,7 +336,7 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
         this.description = descriptor.getDescription();
         this.id = descriptor.getId() == null ? null : descriptor.getId().build(qualifiedName.with(ID));
         this.history = Nullsafe.option(descriptor.getHistory(), History.ENABLED);
-        this.declaredProperties = Nullsafe.immutableSortedCopy(descriptor.getProperties(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
+        this.declaredProperties = Nullsafe.immutableSortedCopy(descriptor.getProperties(), (k, v) -> v.build(resolver, version, qualifiedName.with(k)));
         this.declaredTransients = Nullsafe.immutableSortedCopy(descriptor.getTransients(), (k, v) -> v.build(qualifiedName.with(k)));
         this.declaredLinks = Nullsafe.immutableSortedCopy(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
         this.declaredIndexes = Nullsafe.immutableSortedCopy(descriptor.getIndexes(), (k, v) -> v.build(qualifiedName.with(k)));

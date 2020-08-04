@@ -166,15 +166,15 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
         Set<Name> getExpand();
 
         @Override
-        default ViewSchema build(final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
+        default ViewSchema build(final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
-            return new ViewSchema(this, resolver, qualifiedName, slot);
+            return new ViewSchema(this, resolver, version, qualifiedName, slot);
         }
 
         @Override
         default ViewSchema build() {
 
-            return new ViewSchema(this, Resolver.Constructing.ANONYMOUS, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
+            return new ViewSchema(this, Resolver.Constructing.ANONYMOUS, Version.CURRENT, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
         }
     }
 
@@ -314,7 +314,7 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
         return new Builder();
     }
 
-    private ViewSchema(final Descriptor descriptor, final Schema.Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
+    private ViewSchema(final Descriptor descriptor, final Schema.Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
         resolver.constructing(this);
         this.qualifiedName = qualifiedName;
@@ -331,7 +331,7 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
         this.group = Nullsafe.immutableCopy(descriptor.getGroup());
         this.where = descriptor.getWhere();
         this.declaredProperties = Nullsafe.immutableSortedCopy(descriptor.getProperties(),
-                (k, v) -> viewPropertyDescriptor(v, this.from).build(resolver, qualifiedName.with(k)));
+                (k, v) -> viewPropertyDescriptor(v, this.from).build(resolver, version, qualifiedName.with(k)));
         this.declaredLinks = Nullsafe.immutableSortedCopy(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
         this.declaredPermissions = Nullsafe.immutableSortedCopy(descriptor.getPermissions(), (k, v) -> v.build(k));
         this.declaredExpand = Nullsafe.immutableSortedCopy(descriptor.getExpand());
@@ -531,6 +531,13 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
                 } else {
                     return descriptor.getType();
                 }
+            }
+
+            @Override
+            @Deprecated
+            public Boolean getRequired() {
+
+                return descriptor.getRequired();
             }
 
             @Override

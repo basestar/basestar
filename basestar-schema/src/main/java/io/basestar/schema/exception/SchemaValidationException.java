@@ -24,8 +24,13 @@ import io.basestar.util.Name;
 
 public class SchemaValidationException extends RuntimeException {
 
+    public SchemaValidationException(final String reason) {
+
+        super(reason);
+    }
+
     public SchemaValidationException(final Name qualifiedName, final String reason) {
 
-        super(reason + " (in: " + qualifiedName + ")");
+        this(reason + " (in: " + qualifiedName + ")");
     }
 }

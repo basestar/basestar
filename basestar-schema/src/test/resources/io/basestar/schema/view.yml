@@ -1,3 +1,4 @@
+$version: LATEST
 
 Base:
   type: object

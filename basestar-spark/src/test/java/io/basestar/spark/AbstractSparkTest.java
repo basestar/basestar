@@ -24,6 +24,7 @@ import io.basestar.mapper.annotation.ObjectSchema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.apache.spark.sql.SparkSession;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -31,6 +32,13 @@ import java.util.List;
 import java.util.Map;
 
 public abstract class AbstractSparkTest {
+
+    protected SparkSession session() {
+
+        return SparkSession.builder()
+                .master("local[*]")
+                .getOrCreate();
+    }
 
     @Data
     @NoArgsConstructor
@@ -135,5 +143,25 @@ public abstract class AbstractSparkTest {
         private String key;
 
         private long agg;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AliasView {
+
+        private String id;
+
+        private Long count;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class LinkingView {
+
+        private String id;
+
+        private B record;
     }
 }

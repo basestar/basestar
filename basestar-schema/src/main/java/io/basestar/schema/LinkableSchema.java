@@ -20,7 +20,7 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver {
         Set<Name> getExpand();
 
         @Override
-        LinkableSchema build(Resolver.Constructing resolver, Name qualifiedName, int slot);
+        LinkableSchema build(Resolver.Constructing resolver, Version version, Name qualifiedName, int slot);
 
         @Override
         LinkableSchema build();
