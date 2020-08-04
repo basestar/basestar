@@ -78,12 +78,12 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
     @Override
     public Dataset<Row> accept(final Dataset<Row> input) {
 
+        final Context context = Context.init();
+
         Dataset<Row> output = input;
         if(schema.getWhere() != null) {
-            output = output.where(apply(output, schema.getWhere(), UseBoolean.DEFAULT));
+            output = output.where(apply(context, output, schema.getWhere(), UseBoolean.DEFAULT));
         }
-
-        final Context context = Context.init();
 
         final AggregateExtractingVisitor visitor = new AggregateExtractingVisitor();
         final Map<String, Expression> columns = new HashMap<>();
@@ -101,8 +101,8 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
             for(final Map.Entry<String, Property> entry : schema.getGroupProperties().entrySet()) {
                 final String name = entry.getKey();
                 final Property prop = entry.getValue();
-                final Expression expr = Nullsafe.require(prop.getExpression()).bind(context);
-                groupColumns.add(apply(output, expr, prop.getType()).as(name));
+                final Expression expr = Nullsafe.require(prop.getExpression());
+                groupColumns.add(apply(context, output, expr, prop.getType()).as(name));
             }
             final RelationalGroupedDataset groupedOutput = output.groupBy(groupColumns.toArray(new Column[0]));
 
@@ -110,7 +110,7 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
             for(final Map.Entry<String, Aggregate> entry : aggregates.entrySet()) {
                 final String name = entry.getKey();
                 final Aggregate agg = entry.getValue();
-                aggColumns.add(apply(output, agg).as(name));
+                aggColumns.add(apply(context, output, agg).as(name));
             }
             assert !aggColumns.isEmpty();
             final Column first = aggColumns.get(0);
@@ -131,26 +131,26 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         for(final Map.Entry<String, Expression> entry : columns.entrySet()) {
             final String name = entry.getKey();
             final Expression expression = entry.getValue();
-            selectColumns.add(apply(output, expression).as(name));
+            selectColumns.add(apply(context, output, expression).as(name));
         }
         selectColumns.add(output.col(ViewSchema.KEY));
 
         return output.select(selectColumns.toArray(new Column[0]));
     }
 
-    private Column apply(final Dataset<Row> ds, final Aggregate aggregate) {
+    private Column apply(final Context context, final Dataset<Row> ds, final Aggregate aggregate) {
 
-        return new SparkAggregateVisitor(expression -> apply(ds, expression)).visit(aggregate);
+        return new SparkAggregateVisitor(expression -> apply(context, ds, expression)).visit(aggregate);
     }
 
-    private Column apply(final Dataset<Row> ds, final Expression expression) {
+    private Column apply(final Context context, final Dataset<Row> ds, final Expression expression) {
 
-        return new SparkExpressionVisitor(columnResolver(ds)).visit(expression);
+        return new SparkExpressionVisitor(columnResolver(ds)).visit(expression.bind(context));
     }
 
-    private Column apply(final Dataset<Row> ds, final Expression expression, final Use<?> type) {
+    private Column apply(final Context context, final Dataset<Row> ds, final Expression expression, final Use<?> type) {
 
-        return apply(ds, expression).cast(SparkSchemaUtils.type(type, ImmutableSet.of()));
+        return apply(context, ds, expression).cast(SparkSchemaUtils.type(type, ImmutableSet.of()));
     }
 
     private Function<Name, Column> columnResolver(final Dataset<Row> ds) {

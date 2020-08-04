@@ -543,7 +543,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
                             .item(item).build())
                     .build());
             items.add(TransactWriteItem.builder()
-                    .put(conditionalCreate(strategy.historyPartitionName(schema))
+                    .put(Put.builder()
                             .tableName(strategy.historyTableName(schema))
                             .item(item)
                             .build())
@@ -579,7 +579,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
                             .item(item).build())
                     .build());
             items.add(TransactWriteItem.builder()
-                    .put(conditionalCreate(strategy.historyPartitionName(schema))
+                    .put(Put.builder()
                             .tableName(strategy.historyTableName(schema))
                             .item(item)
                             .build())
