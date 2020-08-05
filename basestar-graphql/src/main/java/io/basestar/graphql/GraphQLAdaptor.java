@@ -20,7 +20,6 @@ package io.basestar.graphql;
  * #L%
  */
 
-import com.google.common.base.Charsets;
 import graphql.GraphQL;
 import graphql.execution.AsyncExecutionStrategy;
 import graphql.schema.DataFetcher;
@@ -140,11 +139,11 @@ public class GraphQLAdaptor {
             final Set<Name> names = Name.children(paths(env), strategy.pageItemsFieldName());
             final Set<Name> expand = schema.requiredExpand(names);
             final String query = env.getArgument(strategy.queryArgumentName());
-            if(query != null) {
-                log.debug("Query expression is ({})", query);
-                log.debug("System charset representation of expression is ({})", Arrays.toString(query.getBytes()));
-                log.debug("UTF-8 representation of expression is ({})", Arrays.toString(query.getBytes(Charsets.UTF_8)));
-            }
+//            if(query != null) {
+//                log.debug("Query expression is ({})", query);
+//                log.debug("System charset representation of expression is ({})", Arrays.toString(query.getBytes()));
+//                log.debug("UTF-8 representation of expression is ({})", Arrays.toString(query.getBytes(Charsets.UTF_8)));
+//            }
             final Expression expression = query == null ? Constant.TRUE : Expression.parse(query);
             final PagingToken paging = paging(env);
             final Integer count = count(env);
