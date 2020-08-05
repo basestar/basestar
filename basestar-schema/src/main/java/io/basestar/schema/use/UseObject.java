@@ -85,7 +85,9 @@ public class UseObject implements UseLinkable {
     @SuppressWarnings("unchecked")
     public Instance create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        if(value instanceof Map) {
+        if(value == null) {
+            return null;
+        } else if(value instanceof Map) {
             final Map<String, Object> map = (Map<String, Object>)value;
             final String id = Instance.getId(map);
             if (id == null) {

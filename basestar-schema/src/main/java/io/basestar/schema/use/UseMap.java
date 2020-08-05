@@ -114,7 +114,9 @@ public class UseMap<T> implements Use<Map<String, T>> {
 
     public static <T> Map<String, T> create(final Object value, final boolean suppress, final BiFunction<String, Object, T> fn) {
 
-        if(value instanceof Map) {
+        if(value == null) {
+            return null;
+        } else if(value instanceof Map) {
             return ((Map<?, ?>) value).entrySet().stream()
                     .collect(Collectors.toMap(
                             entry -> entry.getKey().toString(),

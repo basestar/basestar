@@ -85,7 +85,9 @@ public class UseDate implements UseScalar<LocalDate> {
     @Override
     public LocalDate create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        if(value instanceof String) {
+        if(value == null) {
+            return null;
+        } else if(value instanceof String) {
             return parse((String)value);
         } else if(value instanceof TemporalAccessor) {
             return LocalDate.from((TemporalAccessor) value);

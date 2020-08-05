@@ -88,7 +88,9 @@ public class UseString implements UseScalar<String> {
     @Override
     public String create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        if(value instanceof Boolean || value instanceof Number) {
+        if(value == null) {
+            return null;
+        } else if(value instanceof Boolean || value instanceof Number) {
             return value.toString();
         } else if(value instanceof String) {
             return (String) value;

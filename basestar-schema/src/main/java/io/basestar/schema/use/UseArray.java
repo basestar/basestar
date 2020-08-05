@@ -105,7 +105,9 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
 
     public static <T> List<T> create(final Object value, final boolean suppress, final Function<Object, T> fn) {
 
-        if(value instanceof Collection) {
+        if(value == null) {
+            return null;
+        } else if(value instanceof Collection) {
             return ((Collection<?>) value).stream()
                     .map(fn).collect(Collectors.toList());
         } else if (suppress) {

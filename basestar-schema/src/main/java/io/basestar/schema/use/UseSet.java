@@ -104,7 +104,9 @@ public class UseSet<T> implements UseCollection<T, Set<T>> {
 
     public static <T> Set<T> create(final Object value, final boolean suppress, final Function<Object, T> fn) {
 
-        if(value instanceof Collection) {
+        if(value == null) {
+            return null;
+        } else if(value instanceof Collection) {
             return ((Collection<?>) value).stream()
                     .map(fn).collect(Collectors.toSet());
         } else if (suppress) {

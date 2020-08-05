@@ -70,7 +70,9 @@ public class UseInteger implements UseScalar<Long> {
     @Override
     public Long create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        if(value instanceof Boolean) {
+        if(value == null) {
+            return null;
+        } else if(value instanceof Boolean) {
             return ((Boolean)value) ? 1L : 0L;
         } else if(value instanceof Number) {
             return ((Number)value).longValue();

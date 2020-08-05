@@ -25,7 +25,8 @@ Test3:
   concrete: false
   properties:
     test:
-      type: Test1?
+      required: true
+      type: Test1
   indexes:
     test:
       partition: test.id
@@ -33,3 +34,35 @@ Test3:
 Test4:
   extend: Test3
   type: object
+
+Organization:
+  type: object
+  properties:
+    organizationType:
+      type: OrganizationType
+      required: true
+      immutable: false
+    name:
+      type: string
+      required: true
+      immutable: false
+    website:
+      type: string
+      required: false
+      immutable: false
+    identityProvider:
+      type: string
+      required: false
+      immutable: false
+    userLoginDomains:
+      type:
+        array: string
+      required: false
+      immutable: false
+
+OrganizationType:
+  type: "enum"
+  values:
+    - "DSP"
+    - "SERVICE_PROVIDER"
+    - "SOCIETY"

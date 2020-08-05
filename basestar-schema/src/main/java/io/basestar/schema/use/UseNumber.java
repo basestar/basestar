@@ -70,7 +70,9 @@ public class UseNumber implements UseScalar<Double> {
     @Override
     public Double create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        if(value instanceof Boolean) {
+        if(value == null) {
+            return null;
+        } else if(value instanceof Boolean) {
             return ((Boolean)value) ? 1.0 : 0.0;
         } else if(value instanceof Number) {
             return ((Number)value).doubleValue();

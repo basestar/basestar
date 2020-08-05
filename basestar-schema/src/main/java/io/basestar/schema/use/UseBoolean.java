@@ -68,7 +68,9 @@ public class UseBoolean implements UseScalar<Boolean> {
     @Override
     public Boolean create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        if(value instanceof Boolean) {
+        if(value == null) {
+            return null;
+        } else if(value instanceof Boolean) {
             return (Boolean)value;
         } else if(value instanceof Number) {
             return ((Number)value).intValue() != 0;

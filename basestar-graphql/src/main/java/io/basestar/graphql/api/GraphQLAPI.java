@@ -80,10 +80,14 @@ public class GraphQLAPI implements API {
 
     private CompletableFuture<APIResponse> query(final APIRequest request, final ExecutionInput input) {
 
-        log.debug("GraphQL request {}", input);
+        if(log.isDebugEnabled()) {
+            log.debug("GraphQL request {}", input.toString().replaceAll("\n", " "));
+        }
         return graphQL.executeAsync(input)
                 .thenApply(response -> {
-                    log.debug("GraphQL response {}", response);
+                    if(log.isDebugEnabled()) {
+                        log.debug("GraphQL response {}", response.toString().replaceAll("\n", " "));
+                    }
                     return APIResponse.success(request, ResponseBody.from(response));
                 });
     }

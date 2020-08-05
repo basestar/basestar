@@ -75,7 +75,9 @@ public class UseView implements UseLinkable {
     @SuppressWarnings("unchecked")
     public Instance create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        if(value instanceof Map) {
+        if(value == null) {
+            return null;
+        } else if(value instanceof Map) {
             return schema.create((Map<String, Object>) value, expand, suppress);
         } else if(suppress) {
             return null;

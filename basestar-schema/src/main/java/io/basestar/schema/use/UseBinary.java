@@ -78,7 +78,9 @@ public class UseBinary implements UseScalar<byte[]> {
     @Override
     public byte[] create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        if(value instanceof byte[]) {
+        if(value == null) {
+            return null;
+        } else if(value instanceof byte[]) {
             return (byte[])value;
         } else if(value instanceof String) {
             return BaseEncoding.base64().decode((String)value);

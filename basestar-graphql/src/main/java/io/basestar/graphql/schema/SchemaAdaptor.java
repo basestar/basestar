@@ -500,6 +500,20 @@ public class SchemaAdaptor {
 
     public Type<?> type(final Use<?> type) {
 
+        return type(type, false);
+    }
+
+    public Type<?> type(final Use<?> type, final boolean optional) {
+
+        if(optional) {
+            return typeImpl(type);
+        } else {
+            return new NonNullType(typeImpl(type));
+        }
+    }
+
+    private Type<?> typeImpl(final Use<?> type) {
+
         return type.visit(new Use.Visitor<Type<?>>() {
 
             @Override
@@ -589,7 +603,7 @@ public class SchemaAdaptor {
             @Override
             public <T> Type<?> visitOptional(final UseOptional<T> type) {
 
-                return type.getType().visit(this);
+                return type(type.getType(), true);
             }
         });
     }

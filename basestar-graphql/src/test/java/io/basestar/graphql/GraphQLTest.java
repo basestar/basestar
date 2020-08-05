@@ -277,4 +277,19 @@ public class GraphQLTest {
         System.err.println((Object)result.getData());
         System.err.println(result.getErrors());
     }
+
+    @Test
+    public void testCreateOrganization() throws Exception {
+
+        final Namespace namespace = namespace();
+        final GraphQL graphQL = graphQL(namespace);
+
+        final ExecutionResult result = graphQL.execute(ExecutionInput.newExecutionInput()
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
+                .query("mutation { createOrganization(id: \"nmp\", data: { name: \"NMP\", organizationType: SERVICE_PROVIDER }) { id name organizationType } }")
+                .build());
+
+        System.err.println((Object)result.getData());
+        System.err.println(result.getErrors());
+    }
 }
