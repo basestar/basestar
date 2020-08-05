@@ -36,8 +36,8 @@ import io.basestar.schema.use.UseDate;
 import io.basestar.schema.use.UseDateTime;
 
 import java.io.*;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -118,12 +118,12 @@ public interface AttributeType<T> {
         }
     }
 
-    void defValue(PortableSchemaFactory factory, ClassDefinitionBuilder builder, String name);
+    void defineValue(PortableSchemaFactory factory, ClassDefinitionBuilder builder, String name);
 
     default void def(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
 
         builder.addBooleanField(existsAttribute(name));
-        defValue(factory, builder, name);
+        defineValue(factory, builder, name);
     }
 
     static String existsAttribute(final String name) {
@@ -146,7 +146,7 @@ public interface AttributeType<T> {
         }
 
         @Override
-        public void defValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
+        public void defineValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
 
             builder.addBooleanField(name);
         }
@@ -167,7 +167,7 @@ public interface AttributeType<T> {
         }
 
         @Override
-        public void defValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
+        public void defineValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
 
             builder.addBooleanArrayField(name);
         }
@@ -188,7 +188,7 @@ public interface AttributeType<T> {
         }
 
         @Override
-        public void defValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
+        public void defineValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
 
             builder.addLongField(name);
         }
@@ -209,7 +209,7 @@ public interface AttributeType<T> {
         }
 
         @Override
-        public void defValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
+        public void defineValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
 
             builder.addLongArrayField(name);
         }
@@ -230,7 +230,7 @@ public interface AttributeType<T> {
         }
 
         @Override
-        public void defValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
+        public void defineValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
 
             builder.addDoubleField(name);
         }
@@ -251,7 +251,7 @@ public interface AttributeType<T> {
         }
 
         @Override
-        public void defValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
+        public void defineValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
 
             builder.addDoubleArrayField(name);
         }
@@ -272,7 +272,7 @@ public interface AttributeType<T> {
         }
 
         @Override
-        public void defValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
+        public void defineValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
 
             builder.addUTFField(name);
         }
@@ -293,7 +293,7 @@ public interface AttributeType<T> {
         }
 
         @Override
-        public void defValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
+        public void defineValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
 
             builder.addUTFArrayField(name);
         }
@@ -314,7 +314,7 @@ public interface AttributeType<T> {
         }
 
         @Override
-        public void defValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
+        public void defineValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
 
             builder.addUTFField(name);
         }
@@ -331,53 +331,53 @@ public interface AttributeType<T> {
         @Override
         public void writeValue(final PortableSchemaFactory factory, final PortableWriter writer, final String name, final List<LocalDate> value) throws IOException {
 
-            writer.writeUTFArray(name, value.stream().map(LocalDate::toString).toArray(String[]::new));
+            writer.writeUTFArray(name, value.stream().map(UseDate.DEFAULT::toString).toArray(String[]::new));
         }
 
         @Override
-        public void defValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
+        public void defineValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
 
             builder.addUTFArrayField(name);
         }
     }
 
-    class DateTimeType implements AttributeType<LocalDateTime> {
+    class DateTimeType implements AttributeType<Instant> {
 
         @Override
-        public LocalDateTime readValue(final PortableReader reader, final String name) throws IOException {
+        public Instant readValue(final PortableReader reader, final String name) throws IOException {
 
             return UseDateTime.DEFAULT.create(reader.readUTF(name));
         }
 
         @Override
-        public void writeValue(final PortableSchemaFactory factory, final PortableWriter writer, final String name, final LocalDateTime value) throws IOException {
+        public void writeValue(final PortableSchemaFactory factory, final PortableWriter writer, final String name, final Instant value) throws IOException {
 
             writer.writeUTF(name, value.toString());
         }
 
         @Override
-        public void defValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
+        public void defineValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
 
             builder.addUTFField(name);
         }
     }
 
-    class DateTimeArrayType implements AttributeType<List<LocalDateTime>> {
+    class DateTimeArrayType implements AttributeType<List<Instant>> {
 
         @Override
-        public List<LocalDateTime> readValue(final PortableReader reader, final String name) throws IOException {
+        public List<Instant> readValue(final PortableReader reader, final String name) throws IOException {
 
             return Arrays.stream(reader.readUTFArray(name)).map(UseDateTime.DEFAULT::create).collect(Collectors.toList());
         }
 
         @Override
-        public void writeValue(final PortableSchemaFactory factory, final PortableWriter writer, final String name, final List<LocalDateTime> value) throws IOException {
+        public void writeValue(final PortableSchemaFactory factory, final PortableWriter writer, final String name, final List<Instant> value) throws IOException {
 
-            writer.writeUTFArray(name, value.stream().map(LocalDateTime::toString).toArray(String[]::new));
+            writer.writeUTFArray(name, value.stream().map(UseDateTime.DEFAULT::toString).toArray(String[]::new));
         }
 
         @Override
-        public void defValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
+        public void defineValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
 
             builder.addUTFArrayField(name);
         }
@@ -398,7 +398,7 @@ public interface AttributeType<T> {
         }
 
         @Override
-        public void defValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
+        public void defineValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
 
             builder.addByteArrayField(name);
         }
@@ -435,7 +435,7 @@ public interface AttributeType<T> {
         }
 
         @Override
-        public void defValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
+        public void defineValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
 
             builder.addByteArrayField(name);
         }
@@ -466,7 +466,7 @@ public interface AttributeType<T> {
         }
 
         @Override
-        public void defValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
+        public void defineValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
 
             builder.addPortableField(name, factory.def(schema));
         }
@@ -503,7 +503,7 @@ public interface AttributeType<T> {
         }
 
         @Override
-        public void defValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
+        public void defineValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
 
             builder.addPortableArrayField(name, factory.def(schema));
         }
@@ -527,7 +527,7 @@ public interface AttributeType<T> {
         }
 
         @Override
-        public void defValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
+        public void defineValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
 
             builder.addPortableField(name, factory.refDef());
         }
@@ -557,7 +557,7 @@ public interface AttributeType<T> {
         }
 
         @Override
-        public void defValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
+        public void defineValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
 
             builder.addPortableArrayField(name, factory.refDef());
         }

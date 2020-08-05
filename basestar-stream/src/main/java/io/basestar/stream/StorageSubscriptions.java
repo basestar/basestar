@@ -22,7 +22,7 @@ import io.basestar.util.PagingToken;
 import io.basestar.util.Sort;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -83,7 +83,7 @@ public class StorageSubscriptions implements Subscriptions {
     public CompletableFuture<?> subscribe(final Caller caller, final String sub, final String channel, final Set<Subscription.Key> keys, final Expression expression, final SubscriptionInfo info) {
 
         try {
-            final LocalDateTime now = LocalDateTime.now();
+            final Instant now = Instant.now();
             final Map<String, Object> object = new HashMap<>();
 
             final String id = id(sub, channel);

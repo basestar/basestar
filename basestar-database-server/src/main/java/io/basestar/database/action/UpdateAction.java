@@ -34,7 +34,7 @@ import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.RequiredArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -80,8 +80,8 @@ public class UpdateAction implements Action {
 
 
         final long version;
-        final LocalDateTime created;
-        final LocalDateTime updated = LocalDateTime.now();
+        final Instant created;
+        final Instant updated = Instant.now();
 
         if (before == null) {
             if(mode == UpdateOptions.Mode.CREATE) {

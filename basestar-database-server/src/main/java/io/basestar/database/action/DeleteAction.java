@@ -33,7 +33,7 @@ import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -93,7 +93,7 @@ public class DeleteAction implements Action {
             final long afterVersion = beforeVersion + 1;
 
             final Map<String, Object> tombstone = new HashMap<>();
-            final LocalDateTime now = LocalDateTime.now();
+            final Instant now = Instant.now();
             Instance.setId(tombstone, id);
             Instance.setVersion(tombstone, afterVersion);
             Instance.setCreated(tombstone, Instance.getCreated(before));

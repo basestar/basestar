@@ -33,8 +33,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
@@ -160,8 +160,8 @@ public class UseBinary implements UseScalar<byte[]> {
                     final byte[] bytes = dateBytes((LocalDate)v);
                     baos.write(T_DATE);
                     baos.write(bytes);
-                } else if(v instanceof LocalDateTime) {
-                    final byte[] bytes = datetimeBytes((LocalDateTime)v);
+                } else if(v instanceof Instant) {
+                    final byte[] bytes = datetimeBytes((Instant)v);
                     baos.write(T_DATETIME);
                     baos.write(bytes);
                 } else if(v instanceof byte[]) {
@@ -185,12 +185,12 @@ public class UseBinary implements UseScalar<byte[]> {
 
     private static byte[] dateBytes(final LocalDate v) {
 
-        return datetimeBytes(v.atStartOfDay());
+        return datetimeBytes(v.atStartOfDay().toInstant(ZoneOffset.UTC));
     }
 
-    private static byte[] datetimeBytes(final LocalDateTime v) {
+    private static byte[] datetimeBytes(final Instant v) {
 
-        return longBytes(v.atZone(ZoneOffset.UTC).toInstant().toEpochMilli());
+        return longBytes(v.toEpochMilli());
     }
 
     private static byte[] longBytes(final Number v) {

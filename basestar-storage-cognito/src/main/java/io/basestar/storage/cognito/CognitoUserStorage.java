@@ -45,8 +45,6 @@ import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityPr
 import software.amazon.awssdk.services.cognitoidentityprovider.model.*;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
@@ -318,10 +316,10 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
         Instance.setSchema(result, schema.getQualifiedName());
         Instance.setId(result, username);
         if(created != null) {
-            Instance.setCreated(result, LocalDateTime.ofInstant(created, ZoneOffset.UTC));
+            Instance.setCreated(result, created);
         }
         if(updated != null) {
-            Instance.setUpdated(result, LocalDateTime.ofInstant(updated, ZoneOffset.UTC));
+            Instance.setUpdated(result, updated);
         }
         final Map<Name, String> attrs = new HashMap<>();
         attributes.forEach(attr -> {

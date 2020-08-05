@@ -20,7 +20,9 @@ package io.basestar.schema.use;
  * #L%
  */
 
+import io.basestar.exception.InvalidDateTimeException;
 import io.basestar.schema.exception.UnexpectedTypeException;
+import io.basestar.util.ISO8601;
 import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.DateSchema;
 import io.swagger.v3.oas.models.media.Schema;
@@ -30,11 +32,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.time.temporal.TemporalAccessor;
-import java.util.Date;
 import java.util.Set;
 
 @Data
@@ -43,21 +40,6 @@ public class UseDate implements UseScalar<LocalDate> {
     public static final UseDate DEFAULT = new UseDate();
 
     public static final String NAME = "date";
-
-    public static final DateTimeFormatter[] FORMATS = {
-            DateTimeFormatter.ofPattern("yyyy-MM-dd"),
-            DateTimeFormatter.ofPattern("yyyy"),
-            DateTimeFormatter.ofPattern("yyyyMMdd"),
-            DateTimeFormatter.ofPattern("yyyy-MM"),
-            DateTimeFormatter.ofPattern("-MM-dd"),
-            DateTimeFormatter.ofPattern("-MMdd"),
-            DateTimeFormatter.ofPattern("yyyy-'W'ww"),
-            DateTimeFormatter.ofPattern("yyyy'W'ww"),
-            DateTimeFormatter.ofPattern("yyyy-'W'ww-D"),
-            DateTimeFormatter.ofPattern("yyyy'W'ww-D"),
-            DateTimeFormatter.ofPattern("yyyy-DDD"),
-            DateTimeFormatter.ofPattern("yyyyDDD")
-    };
 
     @Override
     public <R> R visit(final Visitor<R> visitor) {
@@ -70,35 +52,21 @@ public class UseDate implements UseScalar<LocalDate> {
         return DEFAULT;
     }
 
-    public static LocalDate parse(final String value) {
-
-        for(final DateTimeFormatter formatter: FORMATS) {
-            try {
-                return formatter.parse(value, LocalDate::from);
-            } catch (final DateTimeParseException e) {
-                // suppress
-            }
-        }
-        return LocalDate.parse(value, DateTimeFormatter.ISO_LOCAL_DATE);
-    }
-
     @Override
     public LocalDate create(final Object value, final Set<Name> expand, final boolean suppress) {
 
         if(value == null) {
             return null;
-        } else if(value instanceof String) {
-            return parse((String)value);
-        } else if(value instanceof TemporalAccessor) {
-            return LocalDate.from((TemporalAccessor) value);
-        } else if(value instanceof java.sql.Date) {
-            return ((java.sql.Date) value).toLocalDate();
-        } else if(value instanceof Date) {
-            return ((Date) value).toInstant().atZone(ZoneOffset.UTC).toLocalDate();
-        } else if(suppress) {
-            return null;
         } else {
-            throw new UnexpectedTypeException(this, value);
+            try {
+                return ISO8601.toDate(value);
+            } catch (final InvalidDateTimeException e) {
+                if(suppress) {
+                    return null;
+                } else {
+                    throw new UnexpectedTypeException(this, value);
+                }
+            }
         }
     }
 
@@ -117,13 +85,13 @@ public class UseDate implements UseScalar<LocalDate> {
     @Override
     public void serializeValue(final LocalDate value, final DataOutput out) throws IOException {
 
-        UseString.DEFAULT.serializeValue(value.toString(), out);
+        UseString.DEFAULT.serializeValue(ISO8601.toString(value), out);
     }
 
     @Override
     public LocalDate deserializeValue(final DataInput in) throws IOException {
 
-        return LocalDate.parse(UseString.DEFAULT.deserializeValue(in));
+        return ISO8601.parseDate(UseString.DEFAULT.deserializeValue(in));
     }
 
     @Override
@@ -136,5 +104,15 @@ public class UseDate implements UseScalar<LocalDate> {
     public String toString() {
 
         return NAME;
+    }
+
+    @Override
+    public String toString(final LocalDate value) {
+
+        if(value == null) {
+            return "null";
+        } else {
+            return ISO8601.toString(value);
+        }
     }
 }

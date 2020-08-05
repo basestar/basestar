@@ -36,6 +36,10 @@ Simple:
       type: string?
     binary:
       type: binary?
+    date:
+      type: date?
+    datetime:
+      type: datetime?
     struct:
       type: Point?
     object:
@@ -55,6 +59,12 @@ Simple:
     arrayBinary:
       type:
         array?: binary
+    arrayDate:
+      type:
+        array?: date
+    arrayDatetime:
+      type:
+        array?: datetime
     arrayStruct:
       type:
         array?: Point
@@ -82,6 +92,12 @@ Simple:
     mapObject:
       type:
         map?: Simple
+    mapDate:
+      type:
+        map?: date
+    mapDatetime:
+      type:
+        map?: datetime
 
 Point:
   type: struct

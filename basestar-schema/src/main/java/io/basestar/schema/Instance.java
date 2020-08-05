@@ -26,7 +26,7 @@ import io.basestar.util.Name;
 import io.basestar.util.Sort;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.*;
 
 public class Instance extends AbstractMap<String, Object> implements Serializable {
@@ -86,23 +86,23 @@ public class Instance extends AbstractMap<String, Object> implements Serializabl
         return this;
     }
 
-    public LocalDateTime getCreated() {
+    public Instant getCreated() {
 
         return getCreated(backing);
     }
 
-    public Instance setCreated(final LocalDateTime created) {
+    public Instance setCreated(final Instant created) {
 
         setCreated(backing, created);
         return this;
     }
 
-    public LocalDateTime getUpdated() {
+    public Instant getUpdated() {
 
         return getUpdated(backing);
     }
 
-    public Instance setUpdated(final LocalDateTime updated) {
+    public Instance setUpdated(final Instant updated) {
 
         setUpdated(backing, updated);
         return this;
@@ -195,22 +195,22 @@ public class Instance extends AbstractMap<String, Object> implements Serializabl
         object.put(ObjectSchema.HASH, hash);
     }
 
-    public static LocalDateTime getCreated(final Map<String, Object> object) {
+    public static Instant getCreated(final Map<String, Object> object) {
 
-        return (LocalDateTime)object.get(ObjectSchema.CREATED);
+        return (Instant)object.get(ObjectSchema.CREATED);
     }
 
-    public static void setCreated(final Map<String, Object> object, final LocalDateTime created) {
+    public static void setCreated(final Map<String, Object> object, final Instant created) {
 
         object.put(ObjectSchema.CREATED, created);
     }
 
-    public static LocalDateTime getUpdated(final Map<String, Object> object) {
+    public static Instant getUpdated(final Map<String, Object> object) {
 
-        return (LocalDateTime)object.get(ObjectSchema.UPDATED);
+        return (Instant)object.get(ObjectSchema.UPDATED);
     }
 
-    public static void setUpdated(final Map<String, Object> object, final LocalDateTime updated) {
+    public static void setUpdated(final Map<String, Object> object, final Instant updated) {
 
         object.put(ObjectSchema.UPDATED, updated);
     }

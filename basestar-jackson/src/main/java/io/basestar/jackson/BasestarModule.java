@@ -23,17 +23,14 @@ package io.basestar.jackson;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
-import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.*;
 import io.basestar.util.Name;
 import io.basestar.util.PagingToken;
 import io.basestar.util.Sort;
 
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 public class BasestarModule extends SimpleModule {
 
@@ -45,11 +42,11 @@ public class BasestarModule extends SimpleModule {
 
         final ToStringSerializer toString = new ToStringSerializer();
 
-        addSerializer(LocalDateTime.class, toString);
-        addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        addSerializer(Instant.class, new DateTimeSerializer());
+        addDeserializer(Instant.class, new DateTimeDeserializer());
 
-        addSerializer(LocalDate.class, toString);
-        addDeserializer(LocalDate.class, new LocalDateDeserializer(DateTimeFormatter.ISO_LOCAL_DATE));
+        addSerializer(LocalDate.class, new DateSerializer());
+        addDeserializer(LocalDate.class, new DateDeserializer());
 
         addSerializer(Name.class, toString);
         addDeserializer(Name.class, new NameDeserializer());

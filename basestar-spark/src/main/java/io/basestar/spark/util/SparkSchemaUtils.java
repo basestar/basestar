@@ -35,8 +35,8 @@ import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.*;
 import scala.collection.Seq;
 
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
 import java.util.function.BiFunction;
@@ -548,8 +548,8 @@ public class SparkSchemaUtils {
             @Override
             public Object visitDateTime(final UseDateTime type) {
 
-                final LocalDateTime converted = type.create(value, expand, suppress);
-                return new java.sql.Timestamp(converted.toEpochSecond(ZoneOffset.UTC) * 1000);
+                final Instant converted = type.create(value, expand, suppress);
+                return new java.sql.Timestamp(converted.toEpochMilli());
             }
 
             @Override

@@ -30,6 +30,7 @@ import io.basestar.util.Name;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 public interface UseScalar<T> extends Use<T> {
@@ -108,5 +109,11 @@ public interface UseScalar<T> extends Use<T> {
     @Override
     default void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
+    }
+
+    @Override
+    default String toString(final T value) {
+
+        return Objects.toString(value);
     }
 }

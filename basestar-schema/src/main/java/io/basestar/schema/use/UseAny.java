@@ -13,6 +13,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 // FIXME: not properly implemented, only being used currently in codegen
@@ -154,6 +155,12 @@ public class UseAny implements Use<Object> {
     public String toString() {
 
         return NAME;
+    }
+
+    @Override
+    public String toString(final Object value) {
+
+        return Objects.toString(value);
     }
 
     @Override

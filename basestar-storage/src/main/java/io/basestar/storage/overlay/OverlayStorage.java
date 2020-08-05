@@ -33,7 +33,7 @@ import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Sort;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
@@ -183,7 +183,7 @@ public class OverlayStorage implements Storage {
                 Instance.setSchema(tombstone, schema.getQualifiedName());
                 Instance.setId(tombstone, id);
                 Instance.setCreated(tombstone, before == null ? null : Instance.getCreated(before));
-                Instance.setUpdated(tombstone, LocalDateTime.now());
+                Instance.setUpdated(tombstone, Instant.now());
                 Instance.setVersion(tombstone, before == null ? null : Nullsafe.option(Instance.getVersion(before)) + 1);
                 Instance.setHash(tombstone, schema.hash(tombstone));
                 tombstone.put(TOMBSTONE_KEY, true);

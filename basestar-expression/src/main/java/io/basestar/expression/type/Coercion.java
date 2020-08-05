@@ -21,12 +21,11 @@ package io.basestar.expression.type;
  */
 
 import com.google.common.io.BaseEncoding;
+import io.basestar.util.ISO8601;
 
 import java.lang.reflect.Modifier;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.TemporalAccessor;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -148,29 +147,17 @@ public class Coercion {
 
         if(source == null) {
             return null;
-        } else if(source instanceof TemporalAccessor) {
-            return LocalDate.from((TemporalAccessor) source);
-        } else if(source instanceof Date) {
-            return LocalDate.from(((Date) source).toInstant());
-        } else if(source instanceof String) {
-            return LocalDate.parse((String)source, DateTimeFormatter.ISO_LOCAL_DATE);
         } else {
-            throw new IllegalStateException();
+            return ISO8601.toDate(source);
         }
     }
 
-    public static LocalDateTime toDateTime(final Object source) {
+    public static Instant toDateTime(final Object source) {
 
         if(source == null) {
             return null;
-        } else if(source instanceof TemporalAccessor) {
-            return LocalDateTime.from((TemporalAccessor)source);
-        } else if(source instanceof Date) {
-            return LocalDateTime.from(((Date) source).toInstant());
-        } else if(source instanceof String) {
-            return LocalDateTime.parse((String)source, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         } else {
-            throw new IllegalStateException();
+            return ISO8601.toDateTime(source);
         }
     }
 

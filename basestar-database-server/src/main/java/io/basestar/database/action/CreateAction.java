@@ -32,7 +32,7 @@ import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.RequiredArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -78,7 +78,7 @@ public class CreateAction implements Action {
 
         final Map<String, Object> initial = new HashMap<>(schema.create(data));
 
-        final LocalDateTime now = LocalDateTime.now();
+        final Instant now = Instant.now();
 
         // FIXME: split validation so that required validation can be applied here
         // FIXME: or make evaluation (including id evaluation) respect dependencies

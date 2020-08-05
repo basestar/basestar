@@ -8,7 +8,7 @@
     <#case "Set">java.util.Set<<@type of=of.type/>><#break>
     <#case "String">String<#break>
     <#case "Date">java.time.LocalDate<#break>
-    <#case "DateTime">java.time.LocalDateTime<#break>
+    <#case "DateTime">java.time.Instant<#break>
     <#case "Any">Object<#break>
     <#default>${of.schema.fullyQualifiedClassName}<#break>
 </#switch></#macro>

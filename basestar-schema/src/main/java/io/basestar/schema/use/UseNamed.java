@@ -33,6 +33,7 @@ import lombok.Data;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 public interface UseNamed<T> extends Use<T> {
@@ -148,6 +149,12 @@ public interface UseNamed<T> extends Use<T> {
         public String toString() {
 
             return name.toString();
+        }
+
+        @Override
+        public String toString(final Object value) {
+
+            return Objects.toString(value);
         }
 
         @Override

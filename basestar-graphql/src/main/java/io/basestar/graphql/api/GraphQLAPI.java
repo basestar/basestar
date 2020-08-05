@@ -81,12 +81,12 @@ public class GraphQLAPI implements API {
     private CompletableFuture<APIResponse> query(final APIRequest request, final ExecutionInput input) {
 
         if(log.isDebugEnabled()) {
-            log.debug("GraphQL request {}", input.toString().replaceAll("\n", " "));
+            log.debug("GraphQL request: {}", input.toString().replaceAll("\n", " "));
         }
         return graphQL.executeAsync(input)
                 .thenApply(response -> {
                     if(log.isDebugEnabled()) {
-                        log.debug("GraphQL response {}", response.toString().replaceAll("\n", " "));
+                        log.debug("GraphQL response: {}", response.toString().replaceAll("\n", " "));
                     }
                     return APIResponse.success(request, ResponseBody.from(response));
                 });

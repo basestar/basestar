@@ -21,13 +21,15 @@ package io.basestar.schema;
  */
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.basestar.schema.use.*;
+import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseArray;
+import io.basestar.schema.use.UseMap;
+import io.basestar.schema.use.UseString;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class TestUse {
 
@@ -42,15 +44,5 @@ public class TestUse {
 
         final Use<?> map = new ObjectMapper().readValue("{\"map\": \"string\"}", Use.class);
         assertEquals(new UseMap<>(UseString.DEFAULT), map);
-    }
-
-    @Test
-    public void testParseDateTime() throws IOException {
-
-        assertNotNull(UseDateTime.parse("2020-01-01T00:00:00.000Z"));
-        assertNotNull(UseDateTime.parse("2020-01-01T00:00:00.000"));
-        assertNotNull(UseDateTime.parse("2020-01-01T00:00:00"));
-        assertNotNull(UseDateTime.parse("2020-01-01T00:00"));
-        assertNotNull(UseDateTime.parse("2020-07-29T11:21:38.501736Z"));
     }
 }

@@ -34,6 +34,7 @@ import io.basestar.expression.Expression;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.Reserved;
+import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.schema.util.Ref;
 import io.basestar.storage.MemoryStorage;
 import io.basestar.storage.Storage;
@@ -784,6 +785,32 @@ public class TestDatabaseServer {
                         "goodbye", "blue sky"
                 )
         ), deepMerged);
+    }
+
+    @Test
+    public void testInvalidRefError() {
+
+        assertThrows(ConstraintViolationException.class, cause(() -> {
+            database.create(Caller.SUPER, CreateOptions.builder()
+                    .schema(REF_SOURCE)
+                    .data(ImmutableMap.of(
+                            "target", "x"
+                    ))
+                    .build()).get();
+        }));
+    }
+
+    @Test
+    public void testInvalidEnumError() {
+
+        assertThrows(ConstraintViolationException.class, cause(() -> {
+            database.create(Caller.SUPER, CreateOptions.builder()
+                    .schema(WITH_ENUM)
+                    .data(ImmutableMap.of(
+                            "value", "C"
+                    ))
+                    .build()).get();
+        }));
     }
 
 //    @Test

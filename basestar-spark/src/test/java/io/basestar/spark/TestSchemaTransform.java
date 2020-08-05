@@ -35,7 +35,8 @@ import org.apache.spark.sql.*;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
 
@@ -149,8 +150,8 @@ public class TestSchemaTransform extends AbstractSparkTest {
         final Encoder<F> encoder = Encoders.bean(F.class);
 
         // FIXME
-        final java.sql.Date date = null;//new java.sql.Date(LocalDate.now(ZoneOffset.UTC).atStartOfDay().toEpochSecond(ZoneOffset.UTC) * 1000);
-        final java.sql.Timestamp datetime = new java.sql.Timestamp(LocalDateTime.now(ZoneOffset.UTC).toEpochSecond(ZoneOffset.UTC) * 1000);
+        final java.sql.Date date = new java.sql.Date(LocalDate.now(ZoneOffset.UTC).atStartOfDay().toEpochSecond(ZoneOffset.UTC) * 1000);
+        final java.sql.Timestamp datetime = new java.sql.Timestamp(Instant.now().toEpochMilli());
 
         final Source<Dataset<Row>> sourceF = (Source<Dataset<Row>>) sink -> sink.accept(session.createDataset(ImmutableList.of(
                 new F(date, datetime)

@@ -39,7 +39,7 @@ import org.junit.jupiter.api.function.Executable;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -103,7 +103,7 @@ public abstract class TestStorage {
 
     protected Multimap<String, Map<String, Object>> loadAddresses() throws IOException {
 
-        final LocalDateTime now = LocalDateTime.now();
+        final Instant now = Instant.now();
         final Multimap<String, Map<String, Object>> results = ArrayListMultimap.create();
 
         try(final InputStream is = TestStorage.class.getResourceAsStream("addresses.csv")) {
@@ -153,7 +153,7 @@ public abstract class TestStorage {
     @Test
     public void testSortAndPaging() {
 
-        final LocalDateTime now = LocalDateTime.now();
+        final Instant now = Instant.now();
 
         // Horrible index usage, but high storage support
         final String country = UUID.randomUUID().toString();
@@ -222,7 +222,7 @@ public abstract class TestStorage {
                 .createObject(schema, id, after)
                 .write().join();
 
-        final Map<String, Object> current = storage.readObject(schema, id, ImmutableSet.of()).join();
+        final Map<String, Object> current = schema.create(storage.readObject(schema, id, ImmutableSet.of()).join());
         assertNotNull(current);
         assertEquals(1, Instance.getVersion(current));
         data.forEach((k, v) -> {
@@ -237,6 +237,28 @@ public abstract class TestStorage {
         }
     }
 
+    @Test
+    public void testEmptyString() {
+
+        final Storage storage = storage(namespace);
+
+        final ObjectSchema schema = namespace.requireObjectSchema(SIMPLE);
+
+        final String id = UUID.randomUUID().toString();
+
+        final Map<String, Object> data = ImmutableMap.of("string", "");
+
+        final Instance after = instance(schema, id, 1L, data);
+
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
+                .createObject(schema, id, after)
+                .write().join();
+
+        final Map<String, Object> current = storage.readObject(schema, id, ImmutableSet.of()).join();
+        assertNotNull(current);
+        assertEquals("", current.get("string"));
+    }
+
     private Map<String, Object> data() {
 
         return ImmutableMap.<String, Object>builder()
@@ -245,6 +267,8 @@ public abstract class TestStorage {
                 .put("number", 2.5)
                 .put("string", "test")
                 .put("binary", new byte[]{1, 2, 3, 4})
+                .put("date", ISO8601.parseDate("2030-01-01"))
+                .put("datetime", ISO8601.parseDateTime("2030-01-01T01:02:03Z"))
                 .put("struct", new Instance(ImmutableMap.of("x", 1L, "y", 5L)))
                 .put("object", new Instance(ImmutableMap.of("id", "test")))
                 .put("arrayBoolean", Collections.singletonList(true))
@@ -254,6 +278,8 @@ public abstract class TestStorage {
                 .put("arrayBinary", Collections.singletonList(new byte[]{1, 2, 3, 4}))
                 .put("arrayStruct", Collections.singletonList(new Instance(ImmutableMap.of("x", 10L, "y", 5L))))
                 .put("arrayObject", Collections.singletonList(new Instance(ImmutableMap.of("id", "test"))))
+                .put("arrayDate", Collections.singletonList(ISO8601.parseDate("2030-01-01")))
+                .put("arrayDatetime", Collections.singletonList(ISO8601.parseDateTime("2030-01-01T01:02:03Z")))
                 .put("mapBoolean", Collections.singletonMap("a", true))
                 .put("mapInteger", Collections.singletonMap("a", 1L))
                 .put("mapNumber", Collections.singletonMap("a", 2.5))
@@ -261,9 +287,10 @@ public abstract class TestStorage {
                 .put("mapBinary", Collections.singletonMap("a", new byte[]{1, 2, 3, 4}))
                 .put("mapStruct", Collections.singletonMap("a",new Instance(ImmutableMap.of("x", 10L, "y", 5L))))
                 .put("mapObject", Collections.singletonMap("a", new Instance(ImmutableMap.of("id", "test"))))
+                .put("mapDate", Collections.singletonMap("a", ISO8601.parseDate("2030-01-01")))
+                .put("mapDatetime", Collections.singletonMap("a", ISO8601.parseDateTime("2030-01-01T01:02:03Z")))
                 .build();
     }
-
 
     @Test
     public void testUpdate() {
@@ -762,7 +789,7 @@ public abstract class TestStorage {
 
     private String createComplete(final Storage storage, final ObjectSchema schema, final Map<String, Object> data) {
 
-        final LocalDateTime now = LocalDateTime.now();
+        final Instant now = Instant.now();
         final StorageTraits traits = storage.storageTraits(schema);
         final String id = UUID.randomUUID().toString();
         final Map<String, Object> instance = instance(schema, id, 1L, data);
@@ -787,7 +814,7 @@ public abstract class TestStorage {
 
     private Instance instance(final ObjectSchema schema, final String id, final long version, final Map<String, Object> data) {
 
-        final LocalDateTime now = LocalDateTime.now();
+        final Instant now = Instant.now();
         final Map<String, Object> instance = new HashMap<>(data);
         Instance.setId(instance, id);
         Instance.setVersion(instance, version);

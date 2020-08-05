@@ -37,8 +37,8 @@ import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -378,7 +378,7 @@ public class SQLUtils {
             }
 
             @Override
-            public LocalDateTime visitDateTime(final UseDateTime type) {
+            public Instant visitDateTime(final UseDateTime type) {
 
                 return type.create(value);
             }

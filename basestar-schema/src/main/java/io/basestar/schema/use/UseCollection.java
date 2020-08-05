@@ -141,5 +141,16 @@ public interface UseCollection<V, T extends Collection<V>> extends Use<T> {
 
         getType().collectDependencies(expand, out);
     }
+
+    @Override
+    default String toString(final T value) {
+
+        if(value == null) {
+            return "null";
+        } else {
+            final Use<V> type = getType();
+            return "[" + value.stream().map(type::toString).collect(Collectors.joining(", ")) + "]";
+        }
+    }
 }
 

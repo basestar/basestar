@@ -10,7 +10,7 @@ import io.basestar.util.Sort;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,7 +24,7 @@ public class TestKeysetPagingUtils {
         final ObjectSchema schema = namespace.requireObjectSchema("DateSort");
 
         final Map<String, Object> object = new HashMap<>();
-        Instance.setCreated(object, LocalDateTime.now());
+        Instance.setCreated(object, Instant.now());
 
         KeysetPagingUtils.keysetPagingToken(schema, ImmutableList.of(Sort.asc(Name.of("created"))), object);
     }

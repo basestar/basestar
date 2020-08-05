@@ -42,7 +42,7 @@ import lombok.experimental.Accessors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.*;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -575,8 +575,8 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
         final Name schema = Instance.getSchema(object);
         final String id = Instance.getId(object);
         final Long version = Instance.getVersion(object);
-        final LocalDateTime created = Instance.getCreated(object);
-        final LocalDateTime updated = Instance.getUpdated(object);
+        final Instant created = Instance.getCreated(object);
+        final Instant updated = Instance.getUpdated(object);
         final String hash = Instance.getHash(object);
         UseString.DEFAULT.serialize(schema == null ? null : schema.toString(), out);
         UseString.DEFAULT.serialize(id, out);
@@ -592,8 +592,8 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
         final String schema = Use.deserializeAny(in);
         final String id = Use.deserializeAny(in);
         final Long version = Use.deserializeAny(in);
-        final LocalDateTime created = Use.deserializeAny(in);
-        final LocalDateTime updated = Use.deserializeAny(in);
+        final Instant created = Use.deserializeAny(in);
+        final Instant updated = Use.deserializeAny(in);
         final String hash = Use.deserializeAny(in);
 
         final Map<String, Object> data = new HashMap<>(InstanceSchema.deserializeProperties(in));

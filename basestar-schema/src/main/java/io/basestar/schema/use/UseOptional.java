@@ -123,6 +123,12 @@ public class UseOptional<T> implements Use<T> {
     }
 
     @Override
+    public String toString(final T value) {
+
+        return value == null ? "null" : type.toString(value);
+    }
+
+    @Override
     public void serialize(final T value, final DataOutput out) throws IOException {
 
         // Skip emitting a wrapper for optional, since we allow nulls anywhere

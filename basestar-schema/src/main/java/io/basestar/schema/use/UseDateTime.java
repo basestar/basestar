@@ -20,35 +20,23 @@ package io.basestar.schema.use;
  * #L%
  */
 
+import io.basestar.exception.InvalidDateTimeException;
 import io.basestar.schema.exception.UnexpectedTypeException;
+import io.basestar.util.ISO8601;
 import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.DateTimeSchema;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
-import java.time.format.DateTimeParseException;
-import java.time.temporal.TemporalAccessor;
-import java.util.Date;
+import java.time.Instant;
 import java.util.Set;
 
-public class UseDateTime implements UseScalar<LocalDateTime> {
+public class UseDateTime implements UseScalar<Instant> {
 
     public static final UseDateTime DEFAULT = new UseDateTime();
 
     public static final String NAME = "datetime";
-
-    public static final DateTimeFormatter[] FORMATS = {
-            new DateTimeFormatterBuilder().append(DateTimeFormatter.ISO_LOCAL_DATE)
-                .appendLiteral('T')
-                .append(DateTimeFormatter.ISO_LOCAL_TIME)
-                .appendLiteral('Z')
-                .toFormatter()
-    };
 
     @Override
     public <R> R visit(final Visitor<R> visitor) {
@@ -61,33 +49,21 @@ public class UseDateTime implements UseScalar<LocalDateTime> {
         return DEFAULT;
     }
 
-    public static LocalDateTime parse(final String value) {
-
-        for(final DateTimeFormatter formatter: FORMATS) {
-            try {
-                return formatter.parse(value, LocalDateTime::from);
-            } catch (final DateTimeParseException e) {
-                // suppress
-            }
-        }
-        return LocalDateTime.parse(value, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-    }
-
     @Override
-    public LocalDateTime create(final Object value, final Set<Name> expand, final boolean suppress) {
+    public Instant create(final Object value, final Set<Name> expand, final boolean suppress) {
 
         if(value == null) {
             return null;
-        } else if(value instanceof String) {
-            return parse((String)value);
-        } else if(value instanceof TemporalAccessor) {
-            return LocalDateTime.from((TemporalAccessor)value);
-        } else if(value instanceof Date) {
-            return ((Date) value).toInstant().atZone(ZoneOffset.UTC).toLocalDateTime();
-        } else if(suppress) {
-            return null;
         } else {
-            throw new UnexpectedTypeException(this, value);
+            try {
+                return ISO8601.toDateTime(value);
+            } catch (final InvalidDateTimeException e) {
+                if(suppress) {
+                    return null;
+                } else {
+                    throw new UnexpectedTypeException(this, value);
+                }
+            }
         }
     }
 
@@ -104,15 +80,15 @@ public class UseDateTime implements UseScalar<LocalDateTime> {
     }
 
     @Override
-    public void serializeValue(final LocalDateTime value, final DataOutput out) throws IOException {
+    public void serializeValue(final Instant value, final DataOutput out) throws IOException {
 
-        UseString.DEFAULT.serializeValue(value.toString(), out);
+        UseString.DEFAULT.serializeValue(ISO8601.toString(value), out);
     }
 
     @Override
-    public LocalDateTime deserializeValue(final DataInput in) throws IOException {
+    public Instant deserializeValue(final DataInput in) throws IOException {
 
-        return LocalDateTime.parse(UseString.DEFAULT.deserializeValue(in));
+        return ISO8601.parseDateTime(UseString.DEFAULT.deserializeValue(in));
     }
 
     @Override
@@ -125,5 +101,15 @@ public class UseDateTime implements UseScalar<LocalDateTime> {
     public String toString() {
 
         return NAME;
+    }
+
+    @Override
+    public String toString(final Instant value) {
+
+        if(value == null) {
+            return "null";
+        } else {
+            return ISO8601.toString(value);
+        }
     }
 }

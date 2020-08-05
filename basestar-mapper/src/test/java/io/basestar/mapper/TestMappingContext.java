@@ -36,8 +36,8 @@ import org.junit.jupiter.api.Test;
 import javax.annotation.Nullable;
 import javax.validation.constraints.Size;
 import java.io.IOException;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -57,11 +57,11 @@ public class TestMappingContext {
 
         @Created
         @Nullable
-        private LocalDateTime created;
+        private Instant created;
 
         @Updated
         @Nullable
-        private LocalDateTime updated;
+        private Instant updated;
 
         @Hash
         @Nullable

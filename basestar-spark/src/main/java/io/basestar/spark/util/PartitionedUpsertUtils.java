@@ -34,8 +34,7 @@ import scala.Option;
 
 import java.io.IOException;
 import java.net.URI;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +54,7 @@ public abstract class PartitionedUpsertUtils {
 
     public static String defaultUpsertId() {
 
-        return LocalDateTime.now().toString().replaceAll("[:.-]", "") + "-" + UUID.randomUUID().toString();
+        return Instant.now().toString().replaceAll("[:.-Z]", "") + "-" + UUID.randomUUID().toString();
     }
 
     public static void repairTable(final SparkSession session, final String databaseName, final String tableName,
@@ -66,7 +65,7 @@ public abstract class PartitionedUpsertUtils {
 
         final CatalogStorageFormat storage = SparkUtils.storageFormat(format, location);
 
-        final long now = LocalDateTime.now().toEpochSecond(ZoneOffset.UTC);
+        final long now = Instant.now().toEpochMilli();
 
         final CatalogTable table = CatalogTable.apply(
                 TableIdentifier.apply(tableName, Option.apply(databaseName)),

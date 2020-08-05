@@ -1,0 +1,32 @@
+package io.basestar.util;
+
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+public class TestISO8601 {
+
+    @Test
+    public void testParseDateTime() {
+
+        // FIXME: is this rounding expected?
+        assertEquals("2020-07-29T11:21:38.501Z", ISO8601.toString(ISO8601.parseDateTime("2020-07-29T11:21:38.501736Z")));
+        assertEquals("2020-01-01T00:00:00.000Z", ISO8601.toString(ISO8601.parseDateTime("2020-01-01T00:00:00.000Z")));
+        assertEquals("2020-01-01T00:00:00.000Z", ISO8601.toString(ISO8601.parseDateTime("2020-01-01T00:00:00.000")));
+        assertEquals("2020-01-01T00:00:00.000Z", ISO8601.toString(ISO8601.parseDateTime("2020-01-01T00:00:00")));
+        assertEquals("2020-01-01T00:00:00.000Z", ISO8601.toString(ISO8601.parseDateTime("2020-01-01T00:00")));
+        assertEquals("2020-01-01T01:00:00.000Z", ISO8601.toString(ISO8601.parseDateTime("2020-01-01T00:00:00-01:00")));
+    }
+
+    @Test
+    public void testParseDate() {
+
+        assertEquals("2020-01-01", ISO8601.toString(ISO8601.parseDate("20200101")));
+        assertEquals("2020-01-01", ISO8601.toString(ISO8601.parseDate("2020-01-01")));
+        assertEquals("2020-01-01", ISO8601.toString(ISO8601.parseDate("2020-W01-1")));
+        assertEquals("2020-01-01", ISO8601.toString(ISO8601.parseDate("2020W01-1")));
+        assertEquals("2020-01-01", ISO8601.toString(ISO8601.parseDate("2020-001")));
+        assertEquals("2020-01-01", ISO8601.toString(ISO8601.parseDate("2020001")));
+        assertEquals("2020-01-01", ISO8601.toString(ISO8601.parseDate("2020-01-01T00:00:00-01:00")));
+    }
+}

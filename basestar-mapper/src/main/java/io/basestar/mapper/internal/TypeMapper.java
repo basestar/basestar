@@ -36,8 +36,8 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 import java.io.Serializable;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
 
@@ -54,6 +54,8 @@ public interface TypeMapper extends Serializable {
     Class<?> erasedType();
 
     Set<Class<?>> dependencies();
+
+    // FIXME: support a wider variety of date/datetime types
 
     static TypeMapper fromDefault(final MappingContext context, final TypeContext type) {
 
@@ -86,7 +88,7 @@ public interface TypeMapper extends Serializable {
             return new OfMap(type.erasedType(), context.typeMapper(valueType));
         } else if (LocalDate.class.isAssignableFrom(erased)) {
             return new OfDate(type.erasedType());
-        } else if (LocalDateTime.class.isAssignableFrom(erased)) {
+        } else if (Instant.class.isAssignableFrom(erased)) {
             return new OfDateTime(type.erasedType());
         } else if (Map.class.isAssignableFrom(erased)) {
             final TypeContext mapContext = type.find(Map.class);
@@ -550,7 +552,7 @@ public interface TypeMapper extends Serializable {
         @Override
         public Class<?> erasedType() {
 
-            return LocalDateTime.class;
+            return erasedType;
         }
 
         @Override

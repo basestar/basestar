@@ -26,8 +26,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.apache.spark.sql.SparkSession;
 
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -132,7 +132,7 @@ public abstract class AbstractSparkTest {
 
         private LocalDate date;
 
-        private LocalDateTime datetime;
+        private Instant datetime;
     }
 
     @Data

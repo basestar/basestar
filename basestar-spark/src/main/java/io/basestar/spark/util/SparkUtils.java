@@ -27,8 +27,7 @@ import org.apache.spark.sql.catalyst.catalog.ExternalCatalog;
 import scala.Option;
 
 import java.net.URI;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -48,7 +47,7 @@ public class SparkUtils {
 
     public static CatalogTablePartition partition(final Map<String, String> spec, final Format format, final URI location) {
 
-        final long now = LocalDateTime.now().toEpochSecond(ZoneOffset.UTC);
+        final long now = Instant.now().toEpochMilli();
         return CatalogTablePartition.apply(ScalaUtils.asScalaMap(spec), storageFormat(format, location), ScalaUtils.emptyScalaMap(), now, now, Option.empty());
     }
 

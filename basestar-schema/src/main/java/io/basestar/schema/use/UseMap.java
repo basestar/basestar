@@ -364,4 +364,17 @@ public class UseMap<T> implements Use<Map<String, T>> {
         final Set<Name> union = Name.branch(expand).values().stream().reduce(Collections.emptySet(), Sets::union);
         type.collectDependencies(union, out);
     }
+
+    @Override
+    public String toString(final Map<String, T> value) {
+
+        if(value == null) {
+            return "null";
+        } else {
+            final Use<T> type = getType();
+            return "{" + value.entrySet().stream()
+                    .map(v -> v.getKey() + ": " + type.toString(v.getValue()))
+                    .collect(Collectors.joining(", ")) + "}";
+        }
+    }
 }

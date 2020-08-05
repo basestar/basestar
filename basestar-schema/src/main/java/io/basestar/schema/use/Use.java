@@ -100,6 +100,8 @@ public interface Use<T> extends Serializable {
 
     String toString();
 
+    String toString(T value);
+
     void serializeValue(T value, DataOutput out) throws IOException;
 
     T deserializeValue(DataInput in) throws IOException;
