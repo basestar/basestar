@@ -498,18 +498,20 @@ public class SchemaAdaptor {
         return builder.build();
     }
 
+    // FIXME: generalize with inputType
     public Type<?> type(final Use<?> type) {
 
         return type(type, false);
     }
 
+    // FIXME: review what happens when we respond null to a non-null type at GQL
     public Type<?> type(final Use<?> type, final boolean optional) {
 
-        if(optional) {
-            return typeImpl(type);
-        } else {
-            return new NonNullType(typeImpl(type));
-        }
+        //if(optional) {
+        return typeImpl(type);
+        //} else {
+        //    return new NonNullType(typeImpl(type));
+        //}
     }
 
     private Type<?> typeImpl(final Use<?> type) {
@@ -608,7 +610,22 @@ public class SchemaAdaptor {
         });
     }
 
+    // FIXME: generalize with type
     public Type<?> inputType(final Use<?> type) {
+
+        return inputType(type, false);
+    }
+
+    public Type<?> inputType(final Use<?> type, final boolean optional) {
+
+        if(optional) {
+            return inputTypeImpl(type);
+        } else {
+            return new NonNullType(inputTypeImpl(type));
+        }
+    }
+
+    public Type<?> inputTypeImpl(final Use<?> type) {
 
         return type.visit(new Use.Visitor<Type<?>>() {
 
@@ -699,7 +716,7 @@ public class SchemaAdaptor {
             @Override
             public <T> Type<?> visitOptional(final UseOptional<T> type) {
 
-                return type.getType().visit(this);
+                return inputType(type.getType(), true);
             }
         });
     }
