@@ -25,7 +25,6 @@ Test3:
   concrete: false
   properties:
     test:
-      required: true
       type: Test1
   indexes:
     test:

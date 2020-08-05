@@ -342,7 +342,7 @@ public class SchemaAdaptor {
         if(property.getDescription() != null) {
             builder.description(new Description(property.getDescription(), null, true));
         }
-        final Type<?> type = inputType(property.getType().optional(!required));
+        final Type<?> type = inputType(required ? property.getType() : property.getType().optional(true));
         builder.type(type);
         return builder.build();
     }
@@ -499,13 +499,8 @@ public class SchemaAdaptor {
     }
 
     // FIXME: generalize with inputType
-    public Type<?> type(final Use<?> type) {
-
-        return type(type, false);
-    }
-
     // FIXME: review what happens when we respond null to a non-null type at GQL
-    public Type<?> type(final Use<?> type, final boolean optional) {
+    public Type<?> type(final Use<?> type) {
 
         //if(optional) {
         return typeImpl(type);
@@ -557,13 +552,13 @@ public class SchemaAdaptor {
             @Override
             public <T> Type<?> visitArray(final UseArray<T> type) {
 
-                return new ListType(type.getType().visit(this));
+                return new ListType(type(type.getType()));
             }
 
             @Override
             public <T> Type<?> visitSet(final UseSet<T> type) {
 
-                return new ListType(type.getType().visit(this));
+                return new ListType(type(type.getType()));
             }
 
             @Override
@@ -605,7 +600,8 @@ public class SchemaAdaptor {
             @Override
             public <T> Type<?> visitOptional(final UseOptional<T> type) {
 
-                return type(type.getType(), true);
+                // NonNullType handled externally
+                return type.getType().visit(this);
             }
         });
     }
@@ -613,12 +609,7 @@ public class SchemaAdaptor {
     // FIXME: generalize with type
     public Type<?> inputType(final Use<?> type) {
 
-        return inputType(type, false);
-    }
-
-    public Type<?> inputType(final Use<?> type, final boolean optional) {
-
-        if(optional) {
+        if(type.isOptional()) {
             return inputTypeImpl(type);
         } else {
             return new NonNullType(inputTypeImpl(type));
@@ -668,13 +659,13 @@ public class SchemaAdaptor {
             @Override
             public <T> Type<?> visitArray(final UseArray<T> type) {
 
-                return new ListType(type.getType().visit(this));
+                return new ListType(inputType(type.getType()));
             }
 
             @Override
             public <T> Type<?> visitSet(final UseSet<T> type) {
 
-                return new ListType(type.getType().visit(this));
+                return new ListType(inputType(type.getType()));
             }
 
             @Override
@@ -716,7 +707,8 @@ public class SchemaAdaptor {
             @Override
             public <T> Type<?> visitOptional(final UseOptional<T> type) {
 
-                return inputType(type.getType(), true);
+                // NonNullType handled externally
+                return type.getType().visit(this);
             }
         });
     }
