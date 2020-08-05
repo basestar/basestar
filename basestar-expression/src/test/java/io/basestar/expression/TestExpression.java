@@ -486,6 +486,13 @@ public class TestExpression {
         assertThrows(BadExpressionException.class, () -> Expression.parse("x = y"));
     }
 
+    @Test
+    public void testExtant() {
+
+        Expression.parse("asset.fileType != 'UNKNOWN' && location.locationType == 'INBOX' && ('2018' IN asset.tags || 'student' IN asset.tags)");
+        Expression.parse("asset.fileType != 'UNKNOWN' && location.locationType == 'INBOX' && ('DSR' IN asset.fileType || 'ERN' IN asset.fileType)");
+    }
+
 //    @Test
 //    public void testPatternMatching() {
 ////

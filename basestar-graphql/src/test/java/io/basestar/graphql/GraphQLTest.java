@@ -259,4 +259,22 @@ public class GraphQLTest {
         System.err.println((Object)result.getData());
         System.err.println(result.getErrors());
     }
+
+    @Test
+    public void testExpressionInVariables() throws Exception {
+
+        final Namespace namespace = namespace();
+        final GraphQL graphQL = graphQL(namespace);
+
+        final ExecutionResult result = graphQL.execute(ExecutionInput.newExecutionInput()
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
+                .query("query Assets($filter: String) { queryTest1(query: $filter) { items { id } } }")
+                .variables(ImmutableMap.of(
+                        "filter", "asset.fileType != 'UNKNOWN' && location.locationType == 'INBOX' && ('2018' IN asset.tags || 'student' IN asset.tags)"
+                ))
+                .build());
+
+        System.err.println((Object)result.getData());
+        System.err.println(result.getErrors());
+    }
 }
