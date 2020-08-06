@@ -23,7 +23,8 @@ package io.basestar.storage.util;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import io.basestar.util.PagedList;
+import io.basestar.util.Page;
+import io.basestar.util.Pager;
 import io.basestar.util.PagingToken;
 import org.junit.jupiter.api.Test;
 
@@ -39,13 +40,13 @@ public class TestPager {
         return new Pager<Integer>(Comparator.naturalOrder(), ImmutableList.of(
                 (count, token, stats) -> CompletableFuture.supplyAsync(() ->
                         token == null
-                                ? new PagedList<>(ImmutableList.of(1, 3, 5), new PagingToken("1".getBytes(Charsets.UTF_8)))
-                                : new PagedList<>(ImmutableList.of(8, 10, 12), null)
+                                ? new Page<>(ImmutableList.of(1, 3, 5), new PagingToken("1".getBytes(Charsets.UTF_8)))
+                                : new Page<>(ImmutableList.of(8, 10, 12), null)
                 ),
                 (count, token, stats) -> CompletableFuture.supplyAsync(() ->
                         token == null
-                                ? new PagedList<>(ImmutableList.of(2, 3, 4, 6, 6), new PagingToken("1".getBytes(Charsets.UTF_8)))
-                                : new PagedList<>(ImmutableList.of(7, 7, 7, 9, 11, 12, 13, 14, 15), null)
+                                ? new Page<>(ImmutableList.of(2, 3, 4, 6, 6), new PagingToken("1".getBytes(Charsets.UTF_8)))
+                                : new Page<>(ImmutableList.of(7, 7, 7, 9, 11, 12, 13, 14, 15), null)
                 )
         ), paging);
     }
@@ -53,19 +54,19 @@ public class TestPager {
     @Test
     public void testPager() {
 
-        final PagedList<Integer> page1 = sort(null).page(3).join();
+        final Page<Integer> page1 = sort(null).page(3).join();
         assertEquals(Lists.newArrayList(1, 2, 3), page1.getPage());
         assertNotNull(page1.getPaging());
-        final PagedList<Integer> page2 = sort(page1.getPaging()).page(2).join();
+        final Page<Integer> page2 = sort(page1.getPaging()).page(2).join();
         assertEquals(Lists.newArrayList(4, 5), page2.getPage());
         assertNotNull(page1.getPaging());
-        final PagedList<Integer> page3 = sort(page2.getPaging()).page(1).join();
+        final Page<Integer> page3 = sort(page2.getPaging()).page(1).join();
         assertEquals(Lists.newArrayList(6), page3.getPage());
         assertNotNull(page3.getPaging());
-        final PagedList<Integer> page4 = sort(page3.getPaging()).page(6).join();
+        final Page<Integer> page4 = sort(page3.getPaging()).page(6).join();
         assertEquals(Lists.newArrayList(7, 8, 9, 10, 11, 12), page4.getPage());
         assertNotNull(page4.getPaging());
-        final PagedList<Integer> page5 = sort(page4.getPaging()).page(10).join();
+        final Page<Integer> page5 = sort(page4.getPaging()).page(10).join();
         assertEquals(Lists.newArrayList(13, 14, 15), page5.getPage());
         assertNull(page5.getPaging());
     }

@@ -38,7 +38,6 @@ import io.basestar.storage.query.DisjunctionVisitor;
 import io.basestar.storage.query.Range;
 import io.basestar.storage.query.RangeVisitor;
 import io.basestar.storage.util.KeysetPagingUtils;
-import io.basestar.storage.util.Pager;
 import io.basestar.util.Name;
 import io.basestar.util.*;
 import lombok.Data;
@@ -197,7 +196,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                                 nextToken = KeysetPagingUtils.keysetPagingToken(schema, sort, last);
                             }
 
-                            return new PagedList<>(objects, nextToken);
+                            return new Page<>(objects, nextToken);
                         });
 
                     }));

@@ -30,7 +30,7 @@ import io.basestar.schema.use.UseOptional;
 import io.basestar.schema.use.UseString;
 import io.basestar.schema.util.Expander;
 import io.basestar.util.Name;
-import io.basestar.util.PagedList;
+import io.basestar.util.Page;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -95,7 +95,7 @@ public class TestObjectSchema {
             }
 
             @Override
-            public PagedList<Instance> expandLink(final Link link, final PagedList<Instance> value, final Set<Name> expand) {
+            public Page<Instance> expandLink(final Link link, final Page<Instance> value, final Set<Name> expand) {
 
                 return null;
             }

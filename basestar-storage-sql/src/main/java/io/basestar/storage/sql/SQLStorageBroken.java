@@ -41,7 +41,6 @@ import io.basestar.storage.query.Range;
 import io.basestar.storage.query.RangeVisitor;
 import io.basestar.storage.sql.mapper.RowMapper;
 import io.basestar.storage.util.KeysetPagingUtils;
-import io.basestar.storage.util.Pager;
 import io.basestar.util.Name;
 import io.basestar.util.*;
 import lombok.Data;
@@ -227,7 +226,7 @@ public class SQLStorageBroken implements Storage.WithWriteIndex, Storage.WithWri
                                         nextToken = KeysetPagingUtils.keysetPagingToken(schema, sort, last);
                                     }
 
-                                    return new PagedList<>(objects, nextToken);
+                                    return new Page<>(objects, nextToken);
                                 });
 
                     }));

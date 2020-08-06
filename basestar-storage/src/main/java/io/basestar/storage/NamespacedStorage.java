@@ -26,8 +26,8 @@ import io.basestar.schema.Consistency;
 import io.basestar.schema.Index;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.storage.util.Pager;
 import io.basestar.util.Name;
+import io.basestar.util.Pager;
 import io.basestar.util.Sort;
 
 import java.util.*;

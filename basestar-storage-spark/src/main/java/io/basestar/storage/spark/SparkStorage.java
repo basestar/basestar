@@ -30,9 +30,9 @@ import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
 import io.basestar.storage.Versioning;
-import io.basestar.storage.util.Pager;
 import io.basestar.util.Name;
-import io.basestar.util.PagedList;
+import io.basestar.util.Page;
+import io.basestar.util.Pager;
 import io.basestar.util.Sort;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -139,7 +139,7 @@ public class SparkStorage implements Storage.WithoutWrite, /* FIXME */ Storage.W
 //                nextToken = KeysetPagingUtils.keysetPagingToken(schema, sort, items.get(items.size() - 1));
 //            }
 
-            return new PagedList<>(items, null);
+            return new Page<>(items, null);
 
         }, executor));
     }

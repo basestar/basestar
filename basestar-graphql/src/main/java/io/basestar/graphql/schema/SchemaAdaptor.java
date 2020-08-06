@@ -94,6 +94,14 @@ public class SchemaAdaptor {
                 .name(strategy.pagePagingFieldName())
                 .type(new TypeName(GraphQLUtils.STRING_TYPE))
                 .build());
+        builder.fieldDefinition(FieldDefinition.newFieldDefinition()
+                .name(strategy.pageTotalFieldName())
+                .type(new TypeName(GraphQLUtils.INT_TYPE))
+                .build());
+        builder.fieldDefinition(FieldDefinition.newFieldDefinition()
+                .name(strategy.pageApproxTotalFieldName())
+                .type(new TypeName(GraphQLUtils.INT_TYPE))
+                .build());
         return builder.build();
     }
 

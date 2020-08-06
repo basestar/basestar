@@ -27,11 +27,7 @@ import io.basestar.schema.Concurrency;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.storage.util.Pager;
-import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
-import io.basestar.util.PagedList;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -89,7 +85,7 @@ public class ConstantStorage implements Storage.WithoutAggregate, Storage.Withou
             final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
             page.sort(comparator);
 
-            return CompletableFuture.completedFuture(new PagedList<>(page, null));
+            return CompletableFuture.completedFuture(new Page<>(page, null));
         });
     }
 

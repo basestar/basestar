@@ -40,11 +40,7 @@ import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.hazelcast.serde.CustomPortable;
 import io.basestar.storage.hazelcast.serde.PortableSchemaFactory;
-import io.basestar.storage.util.Pager;
-import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
-import io.basestar.util.PagedList;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
@@ -173,7 +169,7 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
                     results.add(fromRecord(entry.getValue()));
                 }
                 // FIXME: need to check sorting
-                return new PagedList<>(results, null);
+                return new Page<>(results, null);
 
             } catch (final ExecutionException e) {
                 throw new IllegalStateException(e);

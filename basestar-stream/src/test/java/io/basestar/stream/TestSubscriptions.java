@@ -7,8 +7,8 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
-import io.basestar.storage.util.Pager;
 import io.basestar.util.Name;
+import io.basestar.util.Pager;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

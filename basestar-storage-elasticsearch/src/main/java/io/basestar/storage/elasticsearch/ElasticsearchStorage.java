@@ -31,7 +31,6 @@ import io.basestar.storage.elasticsearch.mapping.Settings;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.util.KeysetPagingUtils;
-import io.basestar.storage.util.Pager;
 import io.basestar.util.*;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -188,7 +187,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
                                 } else {
                                     newPaging = null;
                                 }
-                                return new PagedList<>(results, newPaging);
+                                return new Page<>(results, newPaging, Page.Stats.fromTotal(total));
                             });
                 })
         );

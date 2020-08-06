@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
 @With
 @RequiredArgsConstructor
 @EqualsAndHashCode(callSuper = false)
-public class PagedList<T> extends AbstractList<T> implements Serializable {
+public class Page<T> extends AbstractList<T> implements Serializable {
 
     public enum Stat {
 
@@ -49,20 +49,28 @@ public class PagedList<T> extends AbstractList<T> implements Serializable {
     @With
     public static class Stats {
 
-        public static final Stats UNKNOWN = new Stats(null, null);
+        private final Long approxTotal;
 
-        private final Integer total;
+        private final Long total;
 
-        private final Integer approxTotal;
+        public static Stats fromApproxTotal(final long approxTotal) {
+
+            return new Stats(approxTotal, null);
+        }
+
+        public static Stats fromTotal(final long total) {
+
+            return new Stats(total, total);
+        }
 
         public static Stats sum(final Stats a, final Stats b) {
 
             if(a == null || b == null) {
-                return UNKNOWN;
+                return null;
             } else {
-                final Integer total = (a.total == null || b.total == null) ? null : a.total + b.total;
-                final Integer approxTotal = (a.approxTotal == null || b.approxTotal == null) ? null : a.approxTotal + b.approxTotal;
-                return new Stats(total, approxTotal);
+                final Long total = (a.total == null || b.total == null) ? null : a.total + b.total;
+                final Long approxTotal = total != null ? total : ((a.approxTotal == null || b.approxTotal == null) ? null : a.approxTotal + b.approxTotal);
+                return new Stats(approxTotal, total);
             }
         }
     }
@@ -73,24 +81,24 @@ public class PagedList<T> extends AbstractList<T> implements Serializable {
 
     private final Stats stats;
 
-    public PagedList(final List<T> page, final PagingToken paging) {
+    public Page(final List<T> page, final PagingToken paging) {
 
-        this(page, paging, Stats.UNKNOWN);
+        this(page, paging, null);
     }
 
-    public static <T> PagedList<T> empty() {
+    public static <T> Page<T> empty() {
 
-        return new PagedList<>(Collections.emptyList(), null, Stats.UNKNOWN);
+        return new Page<>(Collections.emptyList(), null, null);
     }
 
-    public static <T> PagedList<T> single(final T value) {
+    public static <T> Page<T> single(final T value) {
 
-        return new PagedList<>(Collections.singletonList(value), null, Stats.UNKNOWN);
+        return new Page<>(Collections.singletonList(value), null, null);
     }
 
-    public static <T> PagedList<T> from(final List<T> page) {
+    public static <T> Page<T> from(final List<T> page) {
 
-        return new PagedList<>(page, null, Stats.UNKNOWN);
+        return new Page<>(page, null, null);
     }
 
     public boolean hasPaging() {
@@ -98,22 +106,22 @@ public class PagedList<T> extends AbstractList<T> implements Serializable {
         return getPaging() != null;
     }
 
-    public <U> PagedList<U> map(final Function<? super T, ? extends U> fn) {
+    public <U> Page<U> map(final Function<? super T, ? extends U> fn) {
 
-        final PagedList<T> delegate = this;
+        final Page<T> delegate = this;
         final List<U> results = delegate.getPage().stream().map(fn)
                 .collect(Collectors.toList());
 
-        return new PagedList<>(results, paging, stats);
+        return new Page<>(results, paging, stats);
     }
 
-    public PagedList<T> filter(final Predicate<? super T> fn) {
+    public Page<T> filter(final Predicate<? super T> fn) {
 
-        final PagedList<T> delegate = this;
+        final Page<T> delegate = this;
         final List<T> results = delegate.getPage().stream().filter(fn)
                 .collect(Collectors.toList());
 
-        return new PagedList<>(results, paging, stats);
+        return new Page<>(results, paging, stats);
     }
 
     @Override

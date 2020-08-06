@@ -22,7 +22,7 @@ package io.basestar.sql.api;
 
 import io.basestar.database.Database;
 import io.basestar.schema.Namespace;
-import io.basestar.util.PagedList;
+import io.basestar.util.Page;
 import lombok.RequiredArgsConstructor;
 import org.jooq.Parser;
 import org.jooq.Query;
@@ -37,7 +37,7 @@ public class SqlAdaptor {
 
     private final Namespace namespace;
 
-    public PagedList<?> sql(final String sql) {
+    public Page<?> sql(final String sql) {
 
         final Parser parser = DSL.using(SQLDialect.POSTGRES).parser();
         final Query query = parser.parseQuery(sql);

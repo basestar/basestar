@@ -224,9 +224,9 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
     }
 
     @Override
-    protected CompletableFuture<PagedList<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfy,
-                                                                           final Map<Name, Range<Object>> query, final List<Sort> sort, final Set<Name> expand,
-                                                                           final int count, final PagingToken paging) {
+    protected CompletableFuture<Page<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfy,
+                                                                      final Map<Name, Range<Object>> query, final List<Sort> sort, final Set<Name> expand,
+                                                                      final int count, final PagingToken paging) {
 
         final List<Object> mergePartitions = new ArrayList<>();
         mergePartitions.add(strategy.indexPartitionPrefix(schema, index));
@@ -299,7 +299,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
                         nextPaging = encodeIndexPaging(schema, index, result.lastEvaluatedKey());
                     }
 
-                    return new PagedList<>(results, nextPaging);
+                    return new Page<>(results, nextPaging);
                 });
     }
 

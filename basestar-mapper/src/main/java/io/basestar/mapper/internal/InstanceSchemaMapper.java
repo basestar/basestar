@@ -24,10 +24,7 @@ import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.SchemaMapper;
 import io.basestar.mapper.internal.annotation.MemberDeclaration;
 import io.basestar.mapper.internal.annotation.MemberModifier;
-import io.basestar.schema.InstanceSchema;
-import io.basestar.schema.Link;
-import io.basestar.schema.Property;
-import io.basestar.schema.Transient;
+import io.basestar.schema.*;
 import io.basestar.type.AnnotationContext;
 import io.basestar.type.PropertyContext;
 import io.basestar.type.TypeContext;
@@ -231,6 +228,7 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
                 for (final MemberMapper<B> member : members) {
                     member.unmarshall(source, target);
                 }
+                target.put(ObjectSchema.SCHEMA, name.toString());
                 return target;
             } catch (final InvocationTargetException | IllegalAccessException e) {
                 throw new IllegalStateException(e);

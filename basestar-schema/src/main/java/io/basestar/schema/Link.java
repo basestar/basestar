@@ -38,7 +38,7 @@ import io.basestar.schema.use.UseArray;
 import io.basestar.schema.util.Expander;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import io.basestar.util.PagedList;
+import io.basestar.util.Page;
 import io.basestar.util.Sort;
 import lombok.Data;
 import lombok.Getter;
@@ -198,16 +198,16 @@ public class Link implements Member {
     }
 
     @SuppressWarnings("unchecked")
-    private PagedList<Instance> toArray(final Object value) {
+    private Page<Instance> toArray(final Object value) {
 
         if(single) {
-            return value == null ? PagedList.empty() : PagedList.single((Instance)value);
+            return value == null ? Page.empty() : Page.single((Instance)value);
         } else {
-            return (PagedList<Instance>)value;
+            return (Page<Instance>)value;
         }
     }
 
-    private Object fromArray(final PagedList<Instance> value) {
+    private Object fromArray(final Page<Instance> value) {
 
         if(single) {
             return value == null || value.isEmpty() ? null : value.get(0);
@@ -295,7 +295,7 @@ public class Link implements Member {
         return fromArray(transform(toArray(value), fn));
     }
 
-    private PagedList<Instance> transform(final PagedList<Instance> value, final Function<Instance, Instance> fn) {
+    private Page<Instance> transform(final Page<Instance> value, final Function<Instance, Instance> fn) {
 
         if(value == null) {
             return null;
@@ -308,7 +308,7 @@ public class Link implements Member {
                 changed = changed || after != before;
             }
             if(changed) {
-                return new PagedList<>(results, value.getPaging(), PagedList.Stats.UNKNOWN);
+                return new Page<>(results, value.getPaging(), value.getStats());
             } else {
                 return value;
             }

@@ -30,7 +30,6 @@ import io.basestar.expression.Expression;
 import io.basestar.schema.*;
 import io.basestar.schema.util.Expander;
 import io.basestar.storage.Storage;
-import io.basestar.storage.util.Pager;
 import io.basestar.util.*;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -91,8 +90,8 @@ public class ReadProcessor {
         }
     }
 
-    protected CompletableFuture<PagedList<Instance>> queryLinkImpl(final Context context, final Link link, final Instance owner,
-                                                                   final Set<Name> expand, final int count, final PagingToken paging) {
+    protected CompletableFuture<Page<Instance>> queryLinkImpl(final Context context, final Link link, final Instance owner,
+                                                              final Set<Name> expand, final int count, final PagingToken paging) {
 
         final Expression expression = link.getExpression()
                 .bind(context.with(ImmutableMap.of(
@@ -104,8 +103,8 @@ public class ReadProcessor {
         return queryImpl(context, linkSchema, expression, link.getSort(), expand, count, paging);
     }
 
-    protected CompletableFuture<PagedList<Instance>> queryImpl(final Context context, final ObjectSchema objectSchema, final Expression expression,
-                                                               final List<Sort> sort, final Set<Name> expand, final int count, final PagingToken paging) {
+    protected CompletableFuture<Page<Instance>> queryImpl(final Context context, final ObjectSchema objectSchema, final Expression expression,
+                                                          final List<Sort> sort, final Set<Name> expand, final int count, final PagingToken paging) {
 
         final List<Sort> pageSort = ImmutableList.<Sort>builder()
                 .addAll(sort)
@@ -122,8 +121,8 @@ public class ReadProcessor {
         return pageImpl(context, sources, expression, pageSort, count, paging);
     }
 
-    protected CompletableFuture<PagedList<Instance>> pageImpl(final Context context, final List<Pager.Source<Instance>> sources, final Expression expression,
-                                                              final List<Sort> sort, final int count, final PagingToken paging) {
+    protected CompletableFuture<Page<Instance>> pageImpl(final Context context, final List<Pager.Source<Instance>> sources, final Expression expression,
+                                                         final List<Sort> sort, final int count, final PagingToken paging) {
 
         if(sources.isEmpty()) {
             throw new IllegalStateException("Query not supported");
@@ -160,7 +159,7 @@ public class ReadProcessor {
         }
     }
 
-    protected CompletableFuture<PagedList<Instance>> expand(final Context context, final PagedList<Instance> items, final Set<Name> expand) {
+    protected CompletableFuture<Page<Instance>> expand(final Context context, final Page<Instance> items, final Set<Name> expand) {
 
         if(items == null) {
             return CompletableFuture.completedFuture(null);
@@ -198,7 +197,7 @@ public class ReadProcessor {
     protected CompletableFuture<Map<ExpandKey<RefKey>, Instance>> expandImpl(final Context context, final Map<ExpandKey<RefKey>, Instance> items) {
 
         final Set<ExpandKey<RefKey>> refs = new HashSet<>();
-        final Map<ExpandKey<LinkKey>, CompletableFuture<PagedList<Instance>>> links = new HashMap<>();
+        final Map<ExpandKey<LinkKey>, CompletableFuture<Page<Instance>>> links = new HashMap<>();
 
         final Consistency consistency = Consistency.ATOMIC;
 
@@ -218,7 +217,7 @@ public class ReadProcessor {
                     }
 
                     @Override
-                    public PagedList<Instance> expandLink(final Link link, final PagedList<Instance> value, final Set<Name> expand) {
+                    public Page<Instance> expandLink(final Link link, final Page<Instance> value, final Set<Name> expand) {
 
                         final RefKey refKey = ref.getKey();
                         final ExpandKey<LinkKey> linkKey = ExpandKey.from(LinkKey.from(refKey, link.getName()), expand);
@@ -290,12 +289,12 @@ public class ReadProcessor {
                                 }
 
                                 @Override
-                                public PagedList<Instance> expandLink(final Link link, final PagedList<Instance> value, final Set<Name> expand) {
+                                public Page<Instance> expandLink(final Link link, final Page<Instance> value, final Set<Name> expand) {
 
                                     final ExpandKey<LinkKey> linkKey = ExpandKey.from(LinkKey.from(refKey, link.getName()), expand);
-                                    final CompletableFuture<PagedList<Instance>> future = links.get(linkKey);
+                                    final CompletableFuture<Page<Instance>> future = links.get(linkKey);
                                     if(future != null) {
-                                        final PagedList<Instance> result = future.getNow(null);
+                                        final Page<Instance> result = future.getNow(null);
                                         assert result != null;
                                         return result;
                                     } else {
@@ -331,7 +330,7 @@ public class ReadProcessor {
         }
     }
 
-    protected CompletableFuture<PagedList<Instance>> cast(final ObjectSchema baseSchema, final PagedList<? extends Map<String, Object>> data, final Set<Name> expand) {
+    protected CompletableFuture<Page<Instance>> cast(final ObjectSchema baseSchema, final Page<? extends Map<String, Object>> data, final Set<Name> expand) {
 
         final Multimap<Name, Map<String, Object>> needed = ArrayListMultimap.create();
         data.forEach(v -> {

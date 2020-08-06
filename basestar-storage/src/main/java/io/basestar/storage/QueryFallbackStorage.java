@@ -26,9 +26,9 @@ import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.storage.exception.UnsupportedQueryException;
-import io.basestar.storage.util.Pager;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
+import io.basestar.util.Pager;
 import io.basestar.util.Sort;
 
 import java.util.List;

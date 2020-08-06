@@ -16,8 +16,8 @@ import io.basestar.schema.use.UseBinary;
 import io.basestar.schema.use.UseString;
 import io.basestar.storage.Storage;
 import io.basestar.storage.Versioning;
-import io.basestar.storage.util.Pager;
 import io.basestar.util.Name;
+import io.basestar.util.Pager;
 import io.basestar.util.PagingToken;
 import io.basestar.util.Sort;
 

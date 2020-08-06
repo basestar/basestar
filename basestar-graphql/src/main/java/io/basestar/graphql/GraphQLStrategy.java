@@ -108,6 +108,10 @@ public interface GraphQLStrategy {
 
     String versionArgumentName();
 
+    String pageTotalFieldName();
+
+    String pageApproxTotalFieldName();
+
     class Default implements GraphQLStrategy {
 
         protected String delimiter() {
@@ -354,6 +358,18 @@ public interface GraphQLStrategy {
         public String versionArgumentName() {
 
             return ObjectSchema.VERSION;
+        }
+
+        @Override
+        public String pageTotalFieldName() {
+
+            return "total";
+        }
+
+        @Override
+        public String pageApproxTotalFieldName() {
+
+            return "approxTotal";
         }
 
         protected final Use.Visitor<String> TYPE_NAME_VISITOR = new Use.Visitor<String>() {

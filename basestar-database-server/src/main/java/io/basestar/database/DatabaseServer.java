@@ -57,7 +57,6 @@ import io.basestar.storage.Versioning;
 import io.basestar.storage.exception.ObjectMissingException;
 import io.basestar.storage.overlay.OverlayStorage;
 import io.basestar.storage.util.IndexRecordDiff;
-import io.basestar.storage.util.Pager;
 import io.basestar.util.*;
 import lombok.extern.slf4j.Slf4j;
 
@@ -453,7 +452,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
     }
 
     // FIXME need to create a deeper permission expand for nested permissions
-    private CompletableFuture<PagedList<Instance>> expandAndRestrict(final Caller caller, final PagedList<Instance> instances, final Set<Name> expand) {
+    private CompletableFuture<Page<Instance>> expandAndRestrict(final Caller caller, final Page<Instance> instances, final Set<Name> expand) {
 
         final Set<Name> callerExpand = new HashSet<>();
         final Set<Name> transientExpand = new HashSet<>();
@@ -496,7 +495,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
     }
 
     @Override
-    public CompletableFuture<PagedList<Instance>> queryLink(final Caller caller, final QueryLinkOptions options) {
+    public CompletableFuture<Page<Instance>> queryLink(final Caller caller, final QueryLinkOptions options) {
 
         log.debug("Query link: options={}", options);
 
@@ -523,7 +522,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
     }
 
     @Override
-    public CompletableFuture<PagedList<Instance>> query(final Caller caller, final QueryOptions options) {
+    public CompletableFuture<Page<Instance>> query(final Caller caller, final QueryOptions options) {
 
         log.debug("Query: options={}", options);
 
@@ -765,7 +764,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
     protected CompletableFuture<?> onRefQuery(final RefQueryEvent event) {
 
         final ObjectSchema schema = objectSchema(event.getSchema());
-        final CompletableFuture<PagedList<Instance>> query = queryImpl(context(Caller.SUPER), schema,
+        final CompletableFuture<Page<Instance>> query = queryImpl(context(Caller.SUPER), schema,
                 event.getExpression(), ImmutableList.of(), ImmutableSet.of(), REF_QUERY_BATCH_SIZE, event.getPaging());
         return query.thenApply(page -> {
             final Set<Event> events = new HashSet<>();
@@ -816,7 +815,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         }
 
                         @Override
-                        public PagedList<Instance> expandLink(final Link link, final PagedList<Instance> value, final Set<Name> expand) {
+                        public Page<Instance> expandLink(final Link link, final Page<Instance> value, final Set<Name> expand) {
 
                             return value;
                         }

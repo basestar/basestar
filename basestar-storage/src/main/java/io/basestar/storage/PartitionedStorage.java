@@ -33,11 +33,7 @@ import io.basestar.storage.query.DisjunctionVisitor;
 import io.basestar.storage.query.Range;
 import io.basestar.storage.query.RangeVisitor;
 import io.basestar.storage.util.IndexRecordDiff;
-import io.basestar.storage.util.Pager;
-import io.basestar.util.Name;
-import io.basestar.util.PagedList;
-import io.basestar.util.PagingToken;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 import lombok.Data;
 
 import javax.annotation.Nonnull;
@@ -47,7 +43,7 @@ import java.util.stream.Collectors;
 
 public abstract class PartitionedStorage implements Storage.WithWriteIndex {
 
-    protected abstract CompletableFuture<PagedList<Map<String, Object>>> queryIndex(ObjectSchema schema, Index index, SatisfyResult satisfyResult, Map<Name, Range<Object>> query, List<Sort> sort, Set<Name> expand, int count, PagingToken paging);
+    protected abstract CompletableFuture<Page<Map<String, Object>>> queryIndex(ObjectSchema schema, Index index, SatisfyResult satisfyResult, Map<Name, Range<Object>> query, List<Sort> sort, Set<Name> expand, int count, PagingToken paging);
 
     @Override
     public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
@@ -78,9 +74,9 @@ public abstract class PartitionedStorage implements Storage.WithWriteIndex {
 
                 queries.add((c, p, stats) -> readObject(schema, optId.get(), expand).thenApply(object -> {
                     if(object != null) {
-                        return new PagedList<>(ImmutableList.of(object), null);
+                        return new Page<>(ImmutableList.of(object), null);
                     } else {
-                        return PagedList.<Map<String, Object>>empty();
+                        return Page.<Map<String, Object>>empty();
                     }
                 }));
 

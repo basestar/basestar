@@ -33,11 +33,7 @@ import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
 import io.basestar.storage.Versioning;
-import io.basestar.storage.util.Pager;
-import io.basestar.util.Name;
-import io.basestar.util.PagedList;
-import io.basestar.util.PagingToken;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
@@ -124,7 +120,7 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
                             .paginationToken(decodePaging(token))
                             .build()).thenApply(response -> {
                         final List<UserType> users = response.users();
-                        return new PagedList<>(users.stream().map(v -> fromUser(schema, v))
+                        return new Page<>(users.stream().map(v -> fromUser(schema, v))
                                 .collect(Collectors.toList()), encodePaging(response.paginationToken()));
                     });
                 });

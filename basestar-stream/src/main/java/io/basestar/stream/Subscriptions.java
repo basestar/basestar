@@ -22,7 +22,7 @@ package io.basestar.stream;
 
 import io.basestar.auth.Caller;
 import io.basestar.expression.Expression;
-import io.basestar.storage.util.Pager;
+import io.basestar.util.Pager;
 
 import java.util.List;
 import java.util.Set;

@@ -37,11 +37,11 @@ import io.basestar.storage.exception.UnsupportedQueryException;
 import io.basestar.storage.query.DisjunctionVisitor;
 import io.basestar.storage.query.Range;
 import io.basestar.storage.query.RangeVisitor;
-import io.basestar.storage.util.Pager;
 import io.basestar.stream.event.SubscriptionPublishEvent;
 import io.basestar.stream.event.SubscriptionQueryEvent;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
+import io.basestar.util.Pager;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;

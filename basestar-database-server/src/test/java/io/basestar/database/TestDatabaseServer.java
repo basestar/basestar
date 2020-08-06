@@ -39,7 +39,7 @@ import io.basestar.schema.util.Ref;
 import io.basestar.storage.MemoryStorage;
 import io.basestar.storage.Storage;
 import io.basestar.util.Name;
-import io.basestar.util.PagedList;
+import io.basestar.util.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -249,11 +249,11 @@ public class TestDatabaseServer {
         final Map<String, Object> readB = database.read(caller, INDEXED, idB).get();
         assertEquals(createB, readB);
 
-        final PagedList<Instance> queryA = database.query(caller, INDEXED, Expression.parse("value == 'a'")).get();
+        final Page<Instance> queryA = database.query(caller, INDEXED, Expression.parse("value == 'a'")).get();
         assertEquals(1, queryA.size());
         assertEquals(readA, queryA.get(0));
 
-        final PagedList<Instance> queryB = database.query(caller, INDEXED, Expression.parse("value == 'b'")).get();
+        final Page<Instance> queryB = database.query(caller, INDEXED, Expression.parse("value == 'b'")).get();
         assertEquals(1, queryB.size());
         assertEquals(readB, queryB.get(0));
     }
@@ -274,7 +274,7 @@ public class TestDatabaseServer {
         final Map<String, Object> readA = database.read(caller, MULTI_INDEXED, idA).get();
         assertEquals(createA, readA);
 
-        final PagedList<Instance> queryA = database.query(caller, MULTI_INDEXED, Expression.parse("v == 'a' for any v of value")).get();
+        final Page<Instance> queryA = database.query(caller, MULTI_INDEXED, Expression.parse("v == 'a' for any v of value")).get();
         assertEquals(1, queryA.size());
         assertEquals(readA, queryA.get(0));
     }
@@ -297,7 +297,7 @@ public class TestDatabaseServer {
         final Map<String, Object> readA = database.read(caller, MAP_MULTI_INDEXED, idA).get();
         assertEquals(createA, readA);
 
-        final PagedList<Instance> queryA = database.query(caller, MAP_MULTI_INDEXED, Expression.parse("v.key == 'a' for any v of value")).get();
+        final Page<Instance> queryA = database.query(caller, MAP_MULTI_INDEXED, Expression.parse("v.key == 'a' for any v of value")).get();
         assertEquals(1, queryA.size());
         assertEquals(readA, queryA.get(0));
     }
@@ -324,19 +324,19 @@ public class TestDatabaseServer {
                 .id(idA).expand(Name.parseSet("target")).build()).get();
         assertEquals(createRefA, readA.get("target"));
 
-        final PagedList<Instance> linkA = database.queryLink(caller, REF_TARGET, refA, "sources").get();
+        final Page<Instance> linkA = database.queryLink(caller, REF_TARGET, refA, "sources").get();
         assertEquals(1, linkA.size());
         assertEquals(createA, linkA.get(0));
 
         final Map<String, Object> expandLinkA = database.read(caller, ReadOptions.builder().schema(REF_TARGET)
                 .id(refA).expand(Name.parseSet("sources,source")).build()).get();
-        final PagedList<?> sources = (PagedList<?>)expandLinkA.get("sources");
+        final Page<?> sources = (Page<?>)expandLinkA.get("sources");
         final Object source = expandLinkA.get("source");
         assertEquals(1, sources.size());
         assertEquals(createA, sources.get(0));
         assertEquals(createA, source);
 
-        final PagedList<Instance> expandQuery = database.query(caller, QueryOptions.builder()
+        final Page<Instance> expandQuery = database.query(caller, QueryOptions.builder()
                 .schema(REF_SOURCE)
                 .expression(Expression.parse("target.id == \"" + refA + "\""))
                 .expand(ImmutableSet.of(Name.of("target")))
@@ -461,15 +461,15 @@ public class TestDatabaseServer {
         assertEquals(DOG, readB.getSchema());
         assertEquals("Labrador", readB.get("breed"));
 
-        final PagedList<Instance> queryA = database.query(caller, ANIMAL, Expression.parse("name == 'Pippa'")).join();
+        final Page<Instance> queryA = database.query(caller, ANIMAL, Expression.parse("name == 'Pippa'")).join();
         assertEquals(1, queryA.size());
         assertEquals(CAT, queryA.get(0).getSchema());
         assertEquals("Bengal", queryA.get(0).get("breed"));
 
-        final PagedList<Instance> queryB = database.query(caller, ANIMAL, Expression.parse("class == 'Mammal'")).join();
+        final Page<Instance> queryB = database.query(caller, ANIMAL, Expression.parse("class == 'Mammal'")).join();
         assertEquals(2, queryB.size());
 
-        final PagedList<Instance> queryC = database.query(caller, CAT, Expression.parse("class == 'Mammal'")).join();
+        final Page<Instance> queryC = database.query(caller, CAT, Expression.parse("class == 'Mammal'")).join();
         assertEquals(1, queryC.size());
 
         final String idC = UUID.randomUUID().toString();
@@ -701,7 +701,7 @@ public class TestDatabaseServer {
 
         database.onRefRefresh(refreshEvent).get();
 
-        final PagedList<Instance> get = database.query(Caller.SUPER, TEAM_MEMBER, Expression.parse("team.name == 'Test'")).get();
+        final Page<Instance> get = database.query(Caller.SUPER, TEAM_MEMBER, Expression.parse("team.name == 'Test'")).get();
         assertEquals(1, get.size());
     }
 
@@ -720,7 +720,7 @@ public class TestDatabaseServer {
                         )).build())
                 .build()).get();
 
-        final PagedList<Instance> results = database.query(Caller.SUPER, QueryOptions.builder()
+        final Page<Instance> results = database.query(Caller.SUPER, QueryOptions.builder()
                 .schema(Name.of("TeamMemberStats"))
                 .build()).get();
 

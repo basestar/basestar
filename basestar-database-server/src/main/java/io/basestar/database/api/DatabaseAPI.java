@@ -388,13 +388,13 @@ public class DatabaseAPI implements API {
                 .exceptionally(v -> APIResponse.error(request, v));
     }
 
-    private CompletableFuture<APIResponse> respondPaged(final APIRequest request, final CompletableFuture<? extends PagedList<?>> future) {
+    private CompletableFuture<APIResponse> respondPaged(final APIRequest request, final CompletableFuture<? extends Page<?>> future) {
 
         return future.thenApply(v -> APIResponse.success(request, linkHeaders(request, v), v))
                 .exceptionally(v -> APIResponse.error(request, v));
     }
 
-    private Multimap<String, String> linkHeaders(final APIRequest request, final PagedList<?> paged) {
+    private Multimap<String, String> linkHeaders(final APIRequest request, final Page<?> paged) {
 
         if(paged.hasPaging()) {
             final Multimap<String, String> headers = HashMultimap.create();

@@ -5,6 +5,7 @@ import io.basestar.exception.InvalidDateTimeException;
 
 import java.time.*;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.TemporalAccessor;
 import java.util.Date;
@@ -32,6 +33,15 @@ public class ISO8601 {
 
     public static final DateTimeFormatter DATE_TIME_OUTPUT_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 
+    public static final DateTimeFormatter[] ZONED_DATE_TIME_INPUT_FORMATS = {
+            DateTimeFormatter.ISO_ZONED_DATE_TIME,
+            new DateTimeFormatterBuilder().append(DateTimeFormatter.ISO_LOCAL_DATE_TIME).appendPattern("[ ]").appendPattern("z").toFormatter()
+    };
+
+    public static final DateTimeFormatter[] LOCAL_DATE_TIME_INPUT_FORMATS = {
+            DateTimeFormatter.ISO_LOCAL_DATE_TIME
+    };
+
     public static Instant toDateTime(final TemporalAccessor value) {
 
         return Instant.from(value);
@@ -54,15 +64,19 @@ public class ISO8601 {
 
     public static Instant parseDateTime(final String value) {
 
-        try {
-            return DateTimeFormatter.ISO_ZONED_DATE_TIME.parse(value, ZonedDateTime::from).toInstant();
-        } catch (final DateTimeParseException e) {
-            // suppress
+        for(final DateTimeFormatter formatter: ZONED_DATE_TIME_INPUT_FORMATS) {
+            try {
+                return formatter.parse(value, ZonedDateTime::from).toInstant();
+            } catch (final DateTimeParseException e) {
+                // suppress
+            }
         }
-        try {
-            return DateTimeFormatter.ISO_LOCAL_DATE_TIME.parse(value, LocalDateTime::from).toInstant(ZoneOffset.UTC);
-        } catch (final DateTimeParseException e) {
-            // suppress
+        for(final DateTimeFormatter formatter: LOCAL_DATE_TIME_INPUT_FORMATS) {
+            try {
+                return formatter.parse(value, LocalDateTime::from).toInstant(ZoneOffset.UTC);
+            } catch (final DateTimeParseException e) {
+                // suppress
+            }
         }
         return Instant.parse(value);
     }

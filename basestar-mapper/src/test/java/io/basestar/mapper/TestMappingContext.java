@@ -20,10 +20,16 @@ package io.basestar.mapper;
  * #L%
  */
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.annotation.*;
 import io.basestar.mapper.internal.TypeMapper;
+import io.basestar.mapper.jackson.MarshallingDeserializer;
+import io.basestar.mapper.jackson.UnmarshallingSerializer;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.Schema;
@@ -41,10 +47,14 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 public class TestMappingContext {
 
     @Data
     @ObjectSchema
+    @JsonDeserialize(using = MarshallingDeserializer.class)
+    @JsonSerialize(using = UnmarshallingSerializer.class)
     public static class Post {
 
         @Id
@@ -154,6 +164,16 @@ public class TestMappingContext {
 
         System.err.println(schema);
 
+    }
+
+    @Test
+    public void testUnmarshall() throws JsonProcessingException {
+
+        final ObjectMapper objectMapper = new ObjectMapper();
+        final String json = objectMapper.writeValueAsString(new Post());
+        final Map<?, ?> object = objectMapper.readValue(json, Map.class);
+        assertEquals("Post", object.get("schema"));
+        objectMapper.readValue(json, Post.class);
     }
 
     @Test

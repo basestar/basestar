@@ -26,7 +26,7 @@ import io.basestar.expression.Expression;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Namespace;
 import io.basestar.util.Name;
-import io.basestar.util.PagedList;
+import io.basestar.util.Page;
 
 import java.util.Map;
 import java.util.Set;
@@ -86,16 +86,16 @@ public interface Database {
         return delete(caller, DeleteOptions.builder().schema(schema).id(id).version(version).build());
     }
 
-    CompletableFuture<PagedList<Instance>> query(Caller caller, QueryOptions options);
+    CompletableFuture<Page<Instance>> query(Caller caller, QueryOptions options);
 
-    default CompletableFuture<PagedList<Instance>> query(final Caller caller, final Name schema, final Expression expression) {
+    default CompletableFuture<Page<Instance>> query(final Caller caller, final Name schema, final Expression expression) {
 
         return query(caller, QueryOptions.builder().schema(schema).expression(expression).build());
     }
 
-    CompletableFuture<PagedList<Instance>> queryLink(Caller caller, QueryLinkOptions options);
+    CompletableFuture<Page<Instance>> queryLink(Caller caller, QueryLinkOptions options);
 
-    default CompletableFuture<PagedList<Instance>> queryLink(final Caller caller, final Name schema, final String id, final String link) {
+    default CompletableFuture<Page<Instance>> queryLink(final Caller caller, final Name schema, final String id, final String link) {
 
         return queryLink(caller, QueryLinkOptions.builder().schema(schema).id(id).link(link).build());
     }

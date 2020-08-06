@@ -292,13 +292,13 @@ public class GraphQLUtils {
                 @Override
                 public Object visitDate(final UseDate type) {
 
-                    return type.create(value).toString();
+                    return type.toString(type.create(value));
                 }
 
                 @Override
                 public Object visitDateTime(final UseDateTime type) {
 
-                    return type.create(value).toString();
+                    return type.toString(type.create(value));
                 }
             });
         }

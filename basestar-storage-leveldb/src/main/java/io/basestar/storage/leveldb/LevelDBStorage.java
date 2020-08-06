@@ -71,9 +71,9 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
     }
 
     @Override
-    protected CompletableFuture<PagedList<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfyResult,
-                                                                           final Map<Name, Range<Object>> query, final List<Sort> sort, final Set<Name> expand,
-                                                                           final int count, final PagingToken paging) {
+    protected CompletableFuture<Page<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfyResult,
+                                                                      final Map<Name, Range<Object>> query, final List<Sort> sort, final Set<Name> expand,
+                                                                      final int count, final PagingToken paging) {
 
         return CompletableFuture.supplyAsync(() -> {
             final List<Object> values = new ArrayList<>();
@@ -106,7 +106,7 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
                 }
             }
 
-            return new PagedList<>(page, newPaging);
+            return new Page<>(page, newPaging);
         });
     }
 

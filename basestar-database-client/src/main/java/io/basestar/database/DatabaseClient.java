@@ -29,7 +29,7 @@ import io.basestar.database.transport.Transport;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Namespace;
 import io.basestar.util.Name;
-import io.basestar.util.PagedList;
+import io.basestar.util.Page;
 import lombok.RequiredArgsConstructor;
 
 import java.util.Map;
@@ -100,13 +100,13 @@ public class DatabaseClient implements Database {
     }
 
     @Override
-    public CompletableFuture<PagedList<Instance>> query(final Caller caller, final QueryOptions options) {
+    public CompletableFuture<Page<Instance>> query(final Caller caller, final QueryOptions options) {
 
         return null;
     }
 
     @Override
-    public CompletableFuture<PagedList<Instance>> queryLink(final Caller caller, final QueryLinkOptions options) {
+    public CompletableFuture<Page<Instance>> queryLink(final Caller caller, final QueryLinkOptions options) {
 
         return null;
     }

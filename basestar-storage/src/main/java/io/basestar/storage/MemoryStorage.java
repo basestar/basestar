@@ -32,11 +32,7 @@ import io.basestar.schema.use.UseBinary;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;
-import io.basestar.storage.util.Pager;
-import io.basestar.util.Name;
-import io.basestar.util.PagedList;
-import io.basestar.util.PagingToken;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 import lombok.Data;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -127,15 +123,15 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
             });
 
             return ImmutableList.of(
-                    (count, token, stats) -> CompletableFuture.completedFuture(new PagedList<>(page, null))
+                    (count, token, stats) -> CompletableFuture.completedFuture(new Page<>(page, null))
             );
         }
     }
 
     @Override
-    protected CompletableFuture<PagedList<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfy,
-                                                                           final Map<Name, Range<Object>> query, final List<Sort> sort, final Set<Name> expand,
-                                                                           final int count, final PagingToken paging) {
+    protected CompletableFuture<Page<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfy,
+                                                                      final Map<Name, Range<Object>> query, final List<Sort> sort, final Set<Name> expand,
+                                                                      final int count, final PagingToken paging) {
 
         return CompletableFuture.supplyAsync(() -> {
             synchronized (lock) {
@@ -159,7 +155,7 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
                     }
                 }
 
-                return new PagedList<>(results, null);
+                return new Page<>(results, null);
             }
         });
     }

@@ -4,8 +4,8 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import io.basestar.auth.Caller;
 import io.basestar.expression.Expression;
-import io.basestar.storage.util.Pager;
-import io.basestar.util.PagedList;
+import io.basestar.util.Page;
+import io.basestar.util.Pager;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -51,7 +51,7 @@ public class MemorySubscriptions implements Subscriptions {
             });
             ids.forEach(id -> results.add(subscriptions.get(id)));
         }
-        return Collections.singletonList((count, token, stats) -> CompletableFuture.completedFuture(PagedList.from(results)));
+        return Collections.singletonList((count, token, stats) -> CompletableFuture.completedFuture(Page.from(results)));
     }
 
     @Override

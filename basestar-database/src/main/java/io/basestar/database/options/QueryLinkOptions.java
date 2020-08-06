@@ -22,7 +22,7 @@ package io.basestar.database.options;
 
 import io.basestar.expression.Expression;
 import io.basestar.util.Name;
-import io.basestar.util.PagedList;
+import io.basestar.util.Page;
 import io.basestar.util.PagingToken;
 import io.basestar.util.Sort;
 import lombok.Builder;
@@ -57,7 +57,7 @@ public class QueryLinkOptions {
 
     private final Set<Name> projection;
 
-    private final Set<PagedList.Stat> stats;
+    private final Set<Page.Stat> stats;
 
     private final PagingToken paging;
 }

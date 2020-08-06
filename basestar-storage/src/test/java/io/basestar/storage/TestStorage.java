@@ -29,7 +29,6 @@ import io.basestar.expression.type.Values;
 import io.basestar.schema.*;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
-import io.basestar.storage.util.Pager;
 import io.basestar.util.Streams;
 import io.basestar.util.*;
 import org.apache.commons.csv.CSVFormat;
@@ -144,7 +143,7 @@ public abstract class TestStorage {
         final Expression expr = Expression.parse("country == 'United Kingdom' || state == 'Victoria'");
         final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, Collections.emptyList(), Collections.emptySet());
         final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
-        final PagedList<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
+        final Page<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
         assertEquals(8, results.size());
     }
 
@@ -193,13 +192,13 @@ public abstract class TestStorage {
         PagingToken paging = null;
         for(int i = 0; i != 10; ++i) {
             final Pager<Map<String, Object>> pager = new Pager<>(comparator, sources, paging);
-            final PagedList<Map<String, Object>> page = pager.page(10).join();
+            final Page<Map<String, Object>> page = pager.page(10).join();
             results.addAll(page);
             paging = page.getPaging();
             assertNotNull(paging);
         }
         assertEquals(100, results.size());
-        final PagedList<Map<String, Object>> empty = new Pager<>(comparator, sources, paging).page(10).join();
+        final Page<Map<String, Object>> empty = new Pager<>(comparator, sources, paging).page(10).join();
         assertEquals(0, empty.size());
         assertNull(empty.getPaging());
         assertTrue(Ordering.from(comparator).isOrdered(results));
@@ -565,7 +564,7 @@ public abstract class TestStorage {
         final Expression expr = Expression.parse("p.x == 10 && p.y == 100 for any p of points");
         final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, Collections.emptyList(), Collections.emptySet());
         final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
-        final PagedList<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
+        final Page<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
         assertEquals(1, results.size());
     }
 
@@ -677,7 +676,7 @@ public abstract class TestStorage {
                 ImmutableMap.of("count", new Count()));
         final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
 
-        final PagedList<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
+        final Page<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
         //assertEquals(?, results.size());
     }
 
@@ -700,7 +699,7 @@ public abstract class TestStorage {
         ));
 
         final List<Sort> sort = Sort.parseList("id");
-        final PagedList<Map<String, Object>> page = page(storage, source, Expression.parse("target.id == '" + targetId + "'"), sort, 10);
+        final Page<Map<String, Object>> page = page(storage, source, Expression.parse("target.id == '" + targetId + "'"), sort, 10);
         assertEquals(1, page.size());
     }
 
@@ -726,7 +725,7 @@ public abstract class TestStorage {
         ));
 
         final List<Sort> sort = Sort.parseList("id");
-        final PagedList<Map<String, Object>> page = page(storage, source, Expression.parse("target.hello == 'world'"), sort, 10);
+        final Page<Map<String, Object>> page = page(storage, source, Expression.parse("target.hello == 'world'"), sort, 10);
         assertEquals(1, page.size());
     }
 
@@ -756,7 +755,7 @@ public abstract class TestStorage {
         ));
 
         final List<Sort> sort = Sort.parseList("id");
-        final PagedList<Map<String, Object>> page = page(storage, source, Expression.parse("target.source.hello == 'pluto'"), sort, 10);
+        final Page<Map<String, Object>> page = page(storage, source, Expression.parse("target.source.hello == 'pluto'"), sort, 10);
         assertEquals(1, page.size());
     }
 
@@ -776,11 +775,11 @@ public abstract class TestStorage {
         }
 
         final List<Sort> sort = Sort.parseList("created", "id");
-        final PagedList<Map<String, Object>> page = page(storage, dateSort, Expression.parse("group == 'test'"), sort, 5);
+        final Page<Map<String, Object>> page = page(storage, dateSort, Expression.parse("group == 'test'"), sort, 5);
         assertEquals(5, page.size());
     }
 
-    private PagedList<Map<String, Object>> page(final Storage storage, final ObjectSchema schema, final Expression expression, final List<Sort> sort, final int count) {
+    private Page<Map<String, Object>> page(final Storage storage, final ObjectSchema schema, final Expression expression, final List<Sort> sort, final int count) {
 
         final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
         final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expression.bind(Context.init()), sort, Collections.emptySet());

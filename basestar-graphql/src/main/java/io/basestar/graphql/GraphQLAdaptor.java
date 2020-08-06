@@ -168,11 +168,19 @@ public class GraphQLAdaptor {
 
             final Caller caller = GraphQLUtils.caller(env.getContext());
             final InstanceSchema linkSchema = link.getSchema();
-            final Set<Name> names = Name.children(paths(env), strategy.pageItemsFieldName());
-            final Set<Name> expand = linkSchema.requiredExpand(names);
+            final Set<Name> names = paths(env);
+            final Set<Name> itemNames = Name.children(names, strategy.pageItemsFieldName());
+            final Set<Name> expand = linkSchema.requiredExpand(itemNames);
             final String id = env.getArgument(strategy.idArgumentName());
             final PagingToken paging = paging(env);
             final Integer count = count(env);
+            final Set<Page.Stat> stats = new HashSet<>();
+            if(names.contains(Name.of(strategy.pageTotalFieldName()))) {
+                stats.add(Page.Stat.TOTAL);
+            }
+            if(names.contains(Name.of(strategy.pageApproxTotalFieldName()))) {
+                stats.add(Page.Stat.APPROX_TOTAL);
+            }
             final QueryLinkOptions options = QueryLinkOptions.builder()
                     .schema(schema.getQualifiedName())
                     .link(link.getName())
@@ -180,6 +188,7 @@ public class GraphQLAdaptor {
                     .expand(expand)
                     .paging(paging)
                     .count(count)
+                    .stats(stats)
                     .build();
             return database.queryLink(caller, options)
                     .thenApply(objects -> objects.map(object -> GraphQLUtils.toResponse(linkSchema, object)))
@@ -187,12 +196,21 @@ public class GraphQLAdaptor {
         };
     }
 
-    private Map<String, Object> toPage(final PagedList<?> page) {
+    private Map<String, Object> toPage(final Page<?> page) {
 
         final Map<String, Object> result = new HashMap<>();
         result.put(strategy.pageItemsFieldName(), page.getPage());
         if(page.hasPaging()) {
             result.put(strategy.pagePagingFieldName(), page.getPaging().toString());
+        }
+        final Page.Stats stats = page.getStats();
+        if(stats != null) {
+            if(stats.getTotal() != null) {
+                result.put(strategy.pageTotalFieldName(), stats.getTotal());
+            }
+            if(stats.getApproxTotal() != null) {
+                result.put(strategy.pageApproxTotalFieldName(), stats.getApproxTotal());
+            }
         }
         return result;
     }

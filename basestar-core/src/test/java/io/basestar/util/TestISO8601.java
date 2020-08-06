@@ -16,6 +16,11 @@ public class TestISO8601 {
         assertEquals("2020-01-01T00:00:00.000Z", ISO8601.toString(ISO8601.parseDateTime("2020-01-01T00:00:00")));
         assertEquals("2020-01-01T00:00:00.000Z", ISO8601.toString(ISO8601.parseDateTime("2020-01-01T00:00")));
         assertEquals("2020-01-01T01:00:00.000Z", ISO8601.toString(ISO8601.parseDateTime("2020-01-01T00:00:00-01:00")));
+        assertEquals("2020-01-01T00:00:00.000Z", ISO8601.toString(ISO8601.parseDateTime("2020-01-01T00:00:00 GMT")));
+        assertEquals("2020-01-01T00:00:00.000Z", ISO8601.toString(ISO8601.parseDateTime("2020-01-01T02:00:00 EEST")));
+        assertEquals("2020-01-01T00:00:00.000Z", ISO8601.toString(ISO8601.parseDateTime("2020-01-01T00:00:00 Europe/London")));
+        assertEquals("2020-01-01T00:00:00.000Z", ISO8601.toString(ISO8601.parseDateTime("2020-01-01T00:00:00GMT")));
+        assertEquals("2020-01-01T00:00:00.000Z", ISO8601.toString(ISO8601.parseDateTime("2020-01-01T01:00:00GMT+01:00")));
     }
 
     @Test

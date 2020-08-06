@@ -26,8 +26,8 @@ import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.*;
 import io.basestar.schema.exception.UnsupportedConsistencyException;
 import io.basestar.storage.exception.UnsupportedQueryException;
-import io.basestar.storage.util.Pager;
 import io.basestar.util.Name;
+import io.basestar.util.Pager;
 import io.basestar.util.Sort;
 import lombok.RequiredArgsConstructor;
 

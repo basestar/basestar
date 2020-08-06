@@ -25,9 +25,9 @@ import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Concurrency;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.storage.util.Pager;
 import io.basestar.util.Name;
-import io.basestar.util.PagedList;
+import io.basestar.util.Page;
+import io.basestar.util.Pager;
 import io.basestar.util.Sort;
 import lombok.RequiredArgsConstructor;
 
@@ -54,13 +54,13 @@ public class NullStorage implements Storage.WithoutWriteIndex, Storage.WithoutWr
     @Override
     public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        return Collections.singletonList((count, pagingToken, stats) -> CompletableFuture.completedFuture(PagedList.empty()));
+        return Collections.singletonList((count, pagingToken, stats) -> CompletableFuture.completedFuture(Page.empty()));
     }
 
     @Override
     public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
 
-        return Collections.singletonList((count, pagingToken, stats) -> CompletableFuture.completedFuture(PagedList.empty()));
+        return Collections.singletonList((count, pagingToken, stats) -> CompletableFuture.completedFuture(Page.empty()));
     }
 
     @Override
