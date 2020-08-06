@@ -26,7 +26,7 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.*;
 import io.basestar.util.Name;
-import io.basestar.util.PagingToken;
+import io.basestar.util.Page;
 import io.basestar.util.Sort;
 
 import java.time.Instant;
@@ -60,7 +60,7 @@ public class BasestarModule extends SimpleModule {
         addSerializer(Expression.class, toString);
         addDeserializer(Expression.class, new ExpressionDeserializer());
 
-        addSerializer(PagingToken.class, toString);
-        addDeserializer(PagingToken.class, new PagingTokenDeserializer());
+        addSerializer(Page.Token.class, toString);
+        addDeserializer(Page.Token.class, new PagingTokenDeserializer());
     }
 }

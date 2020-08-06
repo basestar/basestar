@@ -188,7 +188,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
 
                             final List<Map<String, Object>> objects = all(schema, results);
 
-                            final PagingToken nextToken;
+                            final Page.Token nextToken;
                             if(objects.size() < count) {
                                 nextToken = null;
                             } else {

@@ -38,7 +38,10 @@ import io.basestar.expression.Expression;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.*;
 import io.basestar.storage.exception.ObjectMissingException;
-import io.basestar.util.*;
+import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
+import io.basestar.util.Page;
+import io.basestar.util.Sort;
 import io.swagger.v3.oas.models.*;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.media.*;
@@ -339,12 +342,12 @@ public class DatabaseAPI implements API {
         }
     }
 
-    private PagingToken parsePaging(final APIRequest request) {
+    private Page.Token parsePaging(final APIRequest request) {
 
         try {
             final String paging = request.getFirstQuery(PARAM_PAGING);
             if(paging != null) {
-                return new PagingToken(paging);
+                return new Page.Token(paging);
             } else {
                 return null;
             }
@@ -396,7 +399,7 @@ public class DatabaseAPI implements API {
 
     private Multimap<String, String> linkHeaders(final APIRequest request, final Page<?> paged) {
 
-        if(paged.hasPaging()) {
+        if(paged.hasMore()) {
             final Multimap<String, String> headers = HashMultimap.create();
             final String path = request.getPath();
             final HashMultimap<String, String> query = HashMultimap.create(request.getQuery());

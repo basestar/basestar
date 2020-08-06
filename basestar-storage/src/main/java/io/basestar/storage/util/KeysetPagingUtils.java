@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableList;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.use.Use;
 import io.basestar.util.Name;
-import io.basestar.util.PagingToken;
+import io.basestar.util.Page;
 import io.basestar.util.Sort;
 
 import java.io.*;
@@ -53,7 +53,7 @@ public class KeysetPagingUtils {
         }
     }
 
-    public static List<Object> keysetValues(final InstanceSchema schema, final List<Sort> sort, final PagingToken token) {
+    public static List<Object> keysetValues(final InstanceSchema schema, final List<Sort> sort, final Page.Token token) {
 
         final byte[] bytes = token.getValue();
         final List<Object> values = new ArrayList<>();
@@ -73,7 +73,7 @@ public class KeysetPagingUtils {
         return values;
     }
 
-    public static PagingToken keysetPagingToken(final InstanceSchema schema, final List<Sort> sort, final Map<String, Object> object) {
+    public static Page.Token keysetPagingToken(final InstanceSchema schema, final List<Sort> sort, final Map<String, Object> object) {
 
         try(final ByteArrayOutputStream baos = new ByteArrayOutputStream();
             final DataOutputStream dos = new DataOutputStream(baos)) {
@@ -84,7 +84,7 @@ public class KeysetPagingUtils {
                 type.serialize(value, dos);
             }
             dos.flush();
-            return new PagingToken(baos.toByteArray());
+            return new Page.Token(baos.toByteArray());
         } catch (final IOException e) {
             // Shouldn't be possible, not doing real IO
             throw new IllegalStateException(e);

@@ -36,6 +36,10 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DynamoDBUtils {
 
+    public static final AttributeValue EMPTY_STRING_ATTRIBUTE_VALUE = AttributeValue.builder().s("").build();
+
+    public static final AttributeValue EMPTY_BINARY_ATTRIBUTE_VALUE = AttributeValue.builder().b(SdkBytes.fromByteArray(new byte[0])).build();
+
     public static final int MAX_READ_BATCH_SIZE = 100;
 
     public static final int MAX_ITEM_SIZE = 400_000;
@@ -57,12 +61,17 @@ public class DynamoDBUtils {
         } else if(value instanceof String) {
             final String str = (String)value;
             if(str.isEmpty()) {
-                return AttributeValue.builder().nul(true).build();
+                return EMPTY_STRING_ATTRIBUTE_VALUE;
             } else {
                 return AttributeValue.builder().s(str).build();
             }
         } else if(value instanceof byte[]) {
-            return AttributeValue.builder().b(SdkBytes.fromByteArray((byte[])value)).build();
+            final byte[] bytes = (byte[])value;
+            if(bytes.length == 0) {
+                return EMPTY_BINARY_ATTRIBUTE_VALUE;
+            } else {
+                return AttributeValue.builder().b(SdkBytes.fromByteArray(bytes)).build();
+            }
         } else if(value instanceof Collection) {
             return AttributeValue.builder()
                     .l(((Collection<?>)value).stream().map(DynamoDBUtils::toAttributeValue)

@@ -181,7 +181,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
                                     results.add(last);
                                 }
                                 final long total = searchResponse.getHits().getTotalHits().value;
-                                final PagingToken newPaging;
+                                final Page.Token newPaging;
                                 if (total > results.size() && last != null) {
                                     newPaging = KeysetPagingUtils.keysetPagingToken(schema, normalizedSort, last);
                                 } else {
@@ -199,7 +199,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
         throw new UnsupportedOperationException();
     }
 
-    private QueryBuilder pagingQueryBuilder(final ObjectSchema schema, final List<Sort> sort, final PagingToken token) {
+    private QueryBuilder pagingQueryBuilder(final ObjectSchema schema, final List<Sort> sort, final Page.Token token) {
 
         final List<Object> values = KeysetPagingUtils.keysetValues(schema, sort, token);
         final BoolQueryBuilder outer = QueryBuilders.boolQuery();

@@ -23,7 +23,6 @@ package io.basestar.database.options;
 import io.basestar.expression.Expression;
 import io.basestar.util.Name;
 import io.basestar.util.Page;
-import io.basestar.util.PagingToken;
 import io.basestar.util.Sort;
 import lombok.Builder;
 import lombok.Data;
@@ -59,5 +58,5 @@ public class QueryLinkOptions {
 
     private final Set<Page.Stat> stats;
 
-    private final PagingToken paging;
+    private final Page.Token paging;
 }

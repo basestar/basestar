@@ -32,7 +32,10 @@ import io.basestar.schema.use.UseBinary;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;
-import io.basestar.util.*;
+import io.basestar.util.Name;
+import io.basestar.util.Page;
+import io.basestar.util.Pager;
+import io.basestar.util.Sort;
 import lombok.Data;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -131,7 +134,7 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
     @Override
     protected CompletableFuture<Page<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfy,
                                                                       final Map<Name, Range<Object>> query, final List<Sort> sort, final Set<Name> expand,
-                                                                      final int count, final PagingToken paging) {
+                                                                      final int count, final Page.Token paging) {
 
         return CompletableFuture.supplyAsync(() -> {
             synchronized (lock) {

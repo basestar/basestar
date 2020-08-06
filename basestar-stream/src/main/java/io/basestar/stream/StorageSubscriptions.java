@@ -17,8 +17,8 @@ import io.basestar.schema.use.UseString;
 import io.basestar.storage.Storage;
 import io.basestar.storage.Versioning;
 import io.basestar.util.Name;
+import io.basestar.util.Page;
 import io.basestar.util.Pager;
-import io.basestar.util.PagingToken;
 import io.basestar.util.Sort;
 
 import java.io.IOException;
@@ -184,7 +184,7 @@ public class StorageSubscriptions implements Subscriptions {
         return unsubscribeAll(storage.query(SCHEMA, expression, sort(), Collections.emptySet()), null);
     }
 
-    private CompletableFuture<?> unsubscribeAll(final List<Pager.Source<Map<String, Object>>> sources, final PagingToken token) {
+    private CompletableFuture<?> unsubscribeAll(final List<Pager.Source<Map<String, Object>>> sources, final Page.Token token) {
 
         final List<Sort> sort = sort();
         final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
@@ -193,7 +193,7 @@ public class StorageSubscriptions implements Subscriptions {
             final Storage.WriteTransaction write = storage.write(Consistency.NONE, Versioning.CHECKED);
             page.forEach(object -> write.deleteObject(SCHEMA, Instance.getId(object), object));
 
-            if(page.hasPaging()) {
+            if(page.hasMore()) {
                 return write.write().thenCompose(ignored -> unsubscribeAll(sources, page.getPaging())).thenApply(ignored -> null);
             } else {
                 return write.write();

@@ -142,7 +142,7 @@ public class DefaultHub implements Hub {
                 events.add(SubscriptionPublishEvent.of(schema.getQualifiedName(), event.getId(), event.getEvent(), event.getBefore(), event.getAfter(), result));
             });
 
-            if(results.hasPaging()) {
+            if(results.hasMore()) {
                 events.add(event.withPaging(results.getPaging()));
             }
             return emitter.emit(events);

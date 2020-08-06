@@ -514,7 +514,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                     if(count > QueryLinkOptions.MAX_COUNT) {
                         throw new IllegalStateException("Count too high (max " +  QueryLinkOptions.MAX_COUNT + ")");
                     }
-                    final PagingToken paging = options.getPaging();
+                    final Page.Token paging = options.getPaging();
 
                     return queryLinkImpl(context(caller), link, owner, options.getExpand(), count, paging)
                             .thenCompose(results -> expandAndRestrict(caller, results, options.getExpand()));
@@ -532,7 +532,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         if (count > QueryOptions.MAX_COUNT) {
             throw new IllegalStateException("Count too high (max " + QueryLinkOptions.MAX_COUNT + ")");
         }
-        final PagingToken paging = options.getPaging();
+        final Page.Token paging = options.getPaging();
 
         if(schema instanceof ViewSchema) {
 
@@ -769,7 +769,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         return query.thenApply(page -> {
             final Set<Event> events = new HashSet<>();
             page.forEach(instance -> events.add(RefRefreshEvent.of(event.getRef(), schema.getQualifiedName(), Instance.getId(instance))));
-            if(page.hasPaging()) {
+            if(page.hasMore()) {
                 events.add(event.withPaging(page.getPaging()));
             }
             return emitter.emit(events);

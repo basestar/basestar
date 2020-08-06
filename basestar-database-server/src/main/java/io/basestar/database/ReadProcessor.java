@@ -91,7 +91,7 @@ public class ReadProcessor {
     }
 
     protected CompletableFuture<Page<Instance>> queryLinkImpl(final Context context, final Link link, final Instance owner,
-                                                              final Set<Name> expand, final int count, final PagingToken paging) {
+                                                              final Set<Name> expand, final int count, final Page.Token paging) {
 
         final Expression expression = link.getExpression()
                 .bind(context.with(ImmutableMap.of(
@@ -104,7 +104,7 @@ public class ReadProcessor {
     }
 
     protected CompletableFuture<Page<Instance>> queryImpl(final Context context, final ObjectSchema objectSchema, final Expression expression,
-                                                          final List<Sort> sort, final Set<Name> expand, final int count, final PagingToken paging) {
+                                                          final List<Sort> sort, final Set<Name> expand, final int count, final Page.Token paging) {
 
         final List<Sort> pageSort = ImmutableList.<Sort>builder()
                 .addAll(sort)
@@ -122,7 +122,7 @@ public class ReadProcessor {
     }
 
     protected CompletableFuture<Page<Instance>> pageImpl(final Context context, final List<Pager.Source<Instance>> sources, final Expression expression,
-                                                         final List<Sort> sort, final int count, final PagingToken paging) {
+                                                         final List<Sort> sort, final int count, final Page.Token paging) {
 
         if(sources.isEmpty()) {
             throw new IllegalStateException("Query not supported");

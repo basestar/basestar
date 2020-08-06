@@ -31,7 +31,10 @@ import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.UniqueIndexViolationException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;
-import io.basestar.util.*;
+import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
+import io.basestar.util.Page;
+import io.basestar.util.Sort;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -226,7 +229,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
     @Override
     protected CompletableFuture<Page<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfy,
                                                                       final Map<Name, Range<Object>> query, final List<Sort> sort, final Set<Name> expand,
-                                                                      final int count, final PagingToken paging) {
+                                                                      final int count, final Page.Token paging) {
 
         final List<Object> mergePartitions = new ArrayList<>();
         mergePartitions.add(strategy.indexPartitionPrefix(schema, index));
@@ -292,7 +295,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
                             .map(DynamoDBUtils::fromItem)
                             .collect(Collectors.toList());
 
-                    final PagingToken nextPaging;
+                    final Page.Token nextPaging;
                     if(result.lastEvaluatedKey().isEmpty()) {
                         nextPaging = null;
                     } else {
@@ -748,7 +751,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
         return DynamoDBStorageTraits.INSTANCE;
     }
 
-    private PagingToken encodeIndexPaging(final ObjectSchema schema, final Index index, final Map<String, AttributeValue> key) {
+    private Page.Token encodeIndexPaging(final ObjectSchema schema, final Index index, final Map<String, AttributeValue> key) {
 
         final byte[] indexSort = key.get(strategy.indexSortName(schema, index)).b().asByteArray();
 
@@ -758,14 +761,14 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
             dos.writeShort(indexSort.length);
             dos.write(indexSort);
 
-            return new PagingToken(baos.toByteArray());
+            return new Page.Token(baos.toByteArray());
 
         } catch (final IOException e) {
             throw new IllegalStateException(e);
         }
     }
 
-    private Map<String, AttributeValue> decodeIndexPaging(final ObjectSchema schema, final Index index, final SdkBytes partition, final PagingToken paging) {
+    private Map<String, AttributeValue> decodeIndexPaging(final ObjectSchema schema, final Index index, final SdkBytes partition, final Page.Token paging) {
 
         try(final ByteArrayInputStream bais = new ByteArrayInputStream(paging.getValue());
             final DataInputStream dis = new DataInputStream(bais)) {

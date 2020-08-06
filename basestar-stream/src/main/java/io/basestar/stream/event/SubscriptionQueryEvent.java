@@ -25,7 +25,7 @@ import io.basestar.event.Event;
 import io.basestar.stream.Change;
 import io.basestar.stream.Subscription;
 import io.basestar.util.Name;
-import io.basestar.util.PagingToken;
+import io.basestar.util.Page;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -48,19 +48,19 @@ public class SubscriptionQueryEvent implements ObjectEvent {
 
     private Set<Subscription.Key> keys;
 
-    private PagingToken paging;
+    private Page.Token paging;
 
     public static SubscriptionQueryEvent of(final Name schema, final String id, final Change.Event event, final Map<String, Object> before, final Map<String, Object> after, final Set<Subscription.Key> keys) {
 
         return of(schema, id, event, before, after, keys, null);
     }
 
-    public static SubscriptionQueryEvent of(final Name schema, final String id, final Change.Event event, final Map<String, Object> before, final Map<String, Object> after, final Set<Subscription.Key> keys, final PagingToken paging) {
+    public static SubscriptionQueryEvent of(final Name schema, final String id, final Change.Event event, final Map<String, Object> before, final Map<String, Object> after, final Set<Subscription.Key> keys, final Page.Token paging) {
 
         return new SubscriptionQueryEvent().setSchema(schema).setId(id).setEvent(event).setBefore(before).setAfter(after).setKeys(keys).setPaging(paging);
     }
 
-    public SubscriptionQueryEvent withPaging(final PagingToken paging) {
+    public SubscriptionQueryEvent withPaging(final Page.Token paging) {
 
         return of(schema, id, event, before, after, keys, paging);
     }

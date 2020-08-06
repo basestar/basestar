@@ -218,7 +218,7 @@ public class SQLStorageBroken implements Storage.WithWriteIndex, Storage.WithWri
 
                                     final List<Map<String, Object>> objects = rowMapper.all(results);
 
-                                    final PagingToken nextToken;
+                                    final Page.Token nextToken;
                                     if(objects.size() < count) {
                                         nextToken = null;
                                     } else {

@@ -27,7 +27,10 @@ import io.basestar.storage.*;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;
-import io.basestar.util.*;
+import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
+import io.basestar.util.Page;
+import io.basestar.util.Sort;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBIterator;
 import org.iq80.leveldb.WriteBatch;
@@ -73,7 +76,7 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
     @Override
     protected CompletableFuture<Page<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfyResult,
                                                                       final Map<Name, Range<Object>> query, final List<Sort> sort, final Set<Name> expand,
-                                                                      final int count, final PagingToken paging) {
+                                                                      final int count, final Page.Token paging) {
 
         return CompletableFuture.supplyAsync(() -> {
             final List<Object> values = new ArrayList<>();
@@ -98,11 +101,11 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
                     break;
                 }
             }
-            PagingToken newPaging = null;
+            Page.Token newPaging = null;
             if(iter.hasNext()) {
                 final Map.Entry<byte[], byte[]> entry = iter.next();
                 if(matches(entry.getKey(), key)) {
-                    newPaging = new PagingToken(entry.getKey());
+                    newPaging = new Page.Token(entry.getKey());
                 }
             }
 

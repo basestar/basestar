@@ -29,7 +29,10 @@ import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
 import io.basestar.storage.Versioning;
-import io.basestar.util.*;
+import io.basestar.util.Name;
+import io.basestar.util.Page;
+import io.basestar.util.Pager;
+import io.basestar.util.Sort;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderAsyncClient;
@@ -106,12 +109,12 @@ public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.W
                 });
     }
 
-    private String decodePaging(final PagingToken token) {
+    private String decodePaging(final Page.Token token) {
 
         return null;
     }
 
-    private PagingToken encodePaging(final String s) {
+    private Page.Token encodePaging(final String s) {
 
         return null;
     }

@@ -39,7 +39,10 @@ import io.basestar.graphql.schema.SchemaAdaptor;
 import io.basestar.graphql.subscription.SubscriberContext;
 import io.basestar.graphql.wiring.InterfaceResolver;
 import io.basestar.schema.*;
-import io.basestar.util.*;
+import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
+import io.basestar.util.Page;
+import io.basestar.util.Sort;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
@@ -145,7 +148,7 @@ public class GraphQLAdaptor {
 //                log.debug("UTF-8 representation of expression is ({})", Arrays.toString(query.getBytes(Charsets.UTF_8)));
 //            }
             final Expression expression = query == null ? Constant.TRUE : Expression.parse(query);
-            final PagingToken paging = paging(env);
+            final Page.Token paging = paging(env);
             final Integer count = count(env);
             final List<Sort> sort = sort(env);
             final QueryOptions options = QueryOptions.builder()
@@ -172,7 +175,7 @@ public class GraphQLAdaptor {
             final Set<Name> itemNames = Name.children(names, strategy.pageItemsFieldName());
             final Set<Name> expand = linkSchema.requiredExpand(itemNames);
             final String id = env.getArgument(strategy.idArgumentName());
-            final PagingToken paging = paging(env);
+            final Page.Token paging = paging(env);
             final Integer count = count(env);
             final Set<Page.Stat> stats = new HashSet<>();
             if(names.contains(Name.of(strategy.pageTotalFieldName()))) {
@@ -200,7 +203,7 @@ public class GraphQLAdaptor {
 
         final Map<String, Object> result = new HashMap<>();
         result.put(strategy.pageItemsFieldName(), page.getPage());
-        if(page.hasPaging()) {
+        if(page.hasMore()) {
             result.put(strategy.pagePagingFieldName(), page.getPaging().toString());
         }
         final Page.Stats stats = page.getStats();
@@ -519,13 +522,13 @@ public class GraphQLAdaptor {
         }
     }
 
-    private PagingToken paging(final DataFetchingEnvironment env) {
+    private Page.Token paging(final DataFetchingEnvironment env) {
 
         final String value = env.getArgument(strategy.pagingArgumentName());
         if(value == null) {
             return null;
         } else {
-            return new PagingToken(value);
+            return new Page.Token(value);
         }
     }
 

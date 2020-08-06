@@ -189,7 +189,7 @@ public abstract class TestStorage {
         final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
 
         final List<Map<String, Object>> results = new ArrayList<>();
-        PagingToken paging = null;
+        Page.Token paging = null;
         for(int i = 0; i != 10; ++i) {
             final Pager<Map<String, Object>> pager = new Pager<>(comparator, sources, paging);
             final Page<Map<String, Object>> page = pager.page(10).join();
