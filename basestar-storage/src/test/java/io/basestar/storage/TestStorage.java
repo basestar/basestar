@@ -71,12 +71,17 @@ public abstract class TestStorage {
         }
     }
 
-    protected Storage storage(final Namespace namespace) {
+//    protected Storage storage(final Namespace namespace) {
+//
+//        return storage(namespace, HashMultimap.create());
+//    }
 
-        return storage(namespace, HashMultimap.create());
+    protected abstract Storage storage(Namespace namespace);
+
+    protected void bulkLoad(final Storage storage, final Multimap<String, Map<String, Object>> data) {
+
+        writeAll(storage, namespace, data);
     }
-
-    protected abstract Storage storage(final Namespace namespace, final Multimap<String, Map<String, Object>> data);
 
     // FIXME: merge with createComplete
 
@@ -129,11 +134,13 @@ public abstract class TestStorage {
     @Test
     public void testIndexes() throws IOException {
 
-        final Storage storage = storage(namespace, loadAddresses());
+        final Storage storage = storage(namespace);
 
         final ObjectSchema schema = namespace.requireObjectSchema(ADDRESS);
 
         assumeConcurrentObjectWrite(storage, schema);
+
+        bulkLoad(storage, loadAddresses());
 
         final List<Sort> sort = ImmutableList.of(
                 Sort.asc(Name.of("city")),
@@ -173,11 +180,13 @@ public abstract class TestStorage {
             init.put(ADDRESS, data);
         }
 
-        final Storage storage = storage(namespace, init);
+        final Storage storage = storage(namespace);
 
         final ObjectSchema schema = namespace.requireObjectSchema(ADDRESS);
 
         assumeConcurrentObjectWrite(storage, schema);
+
+        bulkLoad(storage, init);
 
         final List<Sort> sort = ImmutableList.of(
                 Sort.asc(Name.of("city")),
@@ -663,12 +672,14 @@ public abstract class TestStorage {
     @Test
     public void testAggregation() throws IOException {
 
-        final Storage storage = storage(namespace, loadAddresses());
+        final Storage storage = storage(namespace);
 
         final ObjectSchema schema = namespace.requireObjectSchema(ADDRESS);
 
         assumeTrue(storage.storageTraits(schema).supportsAggregation(),
                 "Aggregation must be enabled for this test");
+
+        bulkLoad(storage, loadAddresses());
 
         final List<Sort> sort = ImmutableList.of(Sort.asc(Name.of("country")), Sort.asc(Name.of(ObjectSchema.ID)));
         final List<Pager.Source<Map<String, Object>>> sources = storage.aggregate(schema, Expression.parse("true"),

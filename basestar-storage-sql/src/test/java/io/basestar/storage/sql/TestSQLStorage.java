@@ -20,7 +20,6 @@ package io.basestar.storage.sql;
  * #L%
  */
 
-import com.google.common.collect.Multimap;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Schema;
@@ -37,14 +36,13 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
 public class TestSQLStorage extends TestStorage {
 
     @Override
-    protected Storage storage(final Namespace namespace, final Multimap<String, Map<String, Object>> data) {
+    protected Storage storage(final Namespace namespace) {
 
         final JdbcDataSource ds = new JdbcDataSource();
         ds.setURL("jdbc:h2:mem:test;DB_CLOSE_DELAY=100");
@@ -73,15 +71,11 @@ public class TestSQLStorage extends TestStorage {
             throw new IllegalStateException(e);
         }
 
-        final Storage storage = SQLStorage.builder()
+        return SQLStorage.builder()
                 .setDataSource(ds)
                 .setDialect(SQLDialect.H2)
                 .setStrategy(strategy)
                 .build();
-
-        writeAll(storage, namespace, data);
-
-        return storage;
     }
 
     protected boolean supportsLike() {
