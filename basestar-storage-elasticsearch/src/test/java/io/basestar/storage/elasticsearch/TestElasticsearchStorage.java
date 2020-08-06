@@ -20,7 +20,6 @@ package io.basestar.storage.elasticsearch;
  * #L%
  */
 
-import com.google.common.collect.Multimap;
 import io.basestar.schema.Namespace;
 import io.basestar.storage.Storage;
 import io.basestar.storage.TestStorage;
@@ -33,7 +32,6 @@ import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.junit.jupiter.api.BeforeAll;
 
-import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -54,7 +52,7 @@ public class TestElasticsearchStorage extends TestStorage {
     }
 
     @Override
-    protected Storage storage(final Namespace namespace, final Multimap<String, Map<String, Object>> data) {
+    protected Storage storage(final Namespace namespace) {
 
         final ElasticsearchStrategy strategy = ElasticsearchStrategy.Simple.builder()
                 .objectPrefix(UUID.randomUUID().toString() + "-")
@@ -70,14 +68,10 @@ public class TestElasticsearchStorage extends TestStorage {
                 RestClient.builder(
                         new HttpHost("localhost", PORT, "http")));
 
-        final Storage storage = ElasticsearchStorage.builder()
+        return ElasticsearchStorage.builder()
                 .setClient(client)
                 .setStrategy(strategy)
                 .build();
-
-        writeAll(storage, namespace, data);
-
-        return storage;
     }
 
     @Override
