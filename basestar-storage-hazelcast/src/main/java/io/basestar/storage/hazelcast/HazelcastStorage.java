@@ -54,7 +54,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class HazelcastStorage implements Storage.WithWriteHistory, Storage.WithoutWriteIndex, Storage.WithoutAggregate, Storage.WithoutExpand {
+public class HazelcastStorage implements Storage.WithWriteHistory, Storage.WithoutWriteIndex, Storage.WithoutAggregate, Storage.WithoutExpand, Storage.WithoutRepair {
 
     @Nonnull
     private final HazelcastInstance instance;

@@ -40,7 +40,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
-public class LevelDBStorage extends PartitionedStorage implements Storage.WithWriteHistory, Storage.WithoutAggregate, Storage.WithoutExpand {
+public class LevelDBStorage extends PartitionedStorage implements Storage.WithWriteHistory, Storage.WithoutAggregate, Storage.WithoutExpand, Storage.WithoutRepair {
 
     private final DB db;
 

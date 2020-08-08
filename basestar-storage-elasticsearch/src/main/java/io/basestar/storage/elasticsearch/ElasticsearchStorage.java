@@ -62,7 +62,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Function;
 
 @Slf4j
-public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.WithoutWriteIndex, Storage.WithoutExpand {
+public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.WithoutWriteIndex, Storage.WithoutExpand, Storage.WithoutRepair {
 
     private static final String PRIMARY_TERM_KEY = "@primaryTerm";
 

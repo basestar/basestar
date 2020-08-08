@@ -25,8 +25,8 @@ import io.basestar.schema.ObjectSchema;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
-import io.basestar.util.Name;
 import io.basestar.storage.Versioning;
+import io.basestar.util.Name;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import software.amazon.awssdk.core.BytesWrapper;
@@ -43,7 +43,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
-public class S3BlobStorage implements Storage.WithoutWriteIndex, Storage.WithoutWriteHistory, Storage.WithoutQuery, Storage.WithoutExpand {
+public class S3BlobStorage implements Storage.WithoutWriteIndex, Storage.WithoutWriteHistory, Storage.WithoutQuery, Storage.WithoutExpand, Storage.WithoutRepair {
 
     private final S3AsyncClient client;
 

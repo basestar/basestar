@@ -62,5 +62,8 @@ public class BasestarModule extends SimpleModule {
 
         addSerializer(Page.Token.class, toString);
         addDeserializer(Page.Token.class, new PagingTokenDeserializer());
+
+        addSerializer(Enum.class, new EnumSerializer());
+        addDeserializer(Enum.class, new EnumDeserializer());
     }
 }

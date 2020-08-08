@@ -49,7 +49,7 @@ import java.util.stream.Collectors;
 
 // TODO optimize, this is currently used only as a mock so not important but should be a viable implementation
 
-public class MemoryStorage extends PartitionedStorage implements Storage.WithoutExpand {
+public class MemoryStorage extends PartitionedStorage implements Storage.WithoutExpand, Storage.WithoutRepair {
 
     private State state = new State();
 

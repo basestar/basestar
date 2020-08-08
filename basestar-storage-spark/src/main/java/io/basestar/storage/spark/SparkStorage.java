@@ -52,7 +52,7 @@ import java.util.stream.Collectors;
 
 
 @Slf4j
-public class SparkStorage implements Storage.WithoutWrite, /* FIXME */ Storage.WithoutExpand {
+public class SparkStorage implements Storage.WithoutWrite, /* FIXME */ Storage.WithoutExpand, Storage.WithoutRepair {
 
     private final SparkSession session;
 

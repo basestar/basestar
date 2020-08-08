@@ -153,3 +153,20 @@ DateSort:
       sort:
         - created
 
+Expanded:
+  type: object
+  properties:
+    target:
+      type: RefTarget
+    source:
+      type: RefTarget
+  expand:
+    - target.hello
+    - source.hello
+  indexes:
+    expanded:
+      partition:
+        - target.hello
+      sort:
+        - source.hello
+      consistency: async

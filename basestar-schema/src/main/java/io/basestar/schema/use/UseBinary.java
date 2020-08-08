@@ -56,6 +56,10 @@ public class UseBinary implements UseScalar<byte[]> {
 
     public static final UseBinary DEFAULT = new UseBinary();
 
+    public static final byte[] LO_PREFIX = new byte[]{0};
+
+    public static final byte[] HI_PREFIX = new byte[]{127};
+
     public static final String NAME = "binary";
 
     @Override

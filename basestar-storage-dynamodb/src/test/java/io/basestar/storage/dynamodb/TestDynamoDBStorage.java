@@ -128,4 +128,10 @@ public class TestDynamoDBStorage extends TestStorage {
     public void testNullBeforeUpdate() {
 
     }
+
+    @Override
+    public boolean supportsRepair() {
+
+        return true;
+    }
 }

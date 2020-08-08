@@ -26,6 +26,11 @@ User:
   properties:
     email:
       type: string
-
+    status:
+      type:
+        enum:
+          - INVITED
+          - JOINED
+          - BANNED
 
 

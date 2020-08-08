@@ -197,6 +197,8 @@ public interface Use<T> extends Serializable {
                 return UseDateTime.from(config);
             case UseOptional.NAME:
                 return UseOptional.from(config);
+            case UseEnum.NAME:
+                return UseEnum.from(config);
             default:
                 return UseNamed.from(type, config);
         }

@@ -60,6 +60,8 @@ public abstract class TestStorage {
 
     private static final String DATE_SORT = "DateSort";
 
+    private static final String EXPANDED = "Expanded";
+
     private final Namespace namespace;
 
     public TestStorage() {
@@ -790,7 +792,78 @@ public abstract class TestStorage {
         assertEquals(5, page.size());
     }
 
+    protected boolean supportsRepair() {
+
+        return false;
+    }
+
+    @Test
+    public void testRepair() throws IOException {
+
+        assumeTrue(supportsRepair());
+
+        final Storage storage = storage(namespace);
+
+        final ObjectSchema expanded = namespace.requireObjectSchema(EXPANDED);
+        final ObjectSchema refSource = namespace.requireObjectSchema(REF_SOURCE);
+        final ObjectSchema refTarget = namespace.requireObjectSchema(REF_TARGET);
+
+        final String id = UUID.randomUUID().toString();
+
+        final Instance before = instance(expanded, id, 1L, ImmutableMap.of(
+                "target", instance(refTarget, id, 1L, ImmutableMap.of(
+                        "hello", "world"
+                )),
+                "source", instance(refSource, id, 1L, ImmutableMap.of(
+                        "hello", "pluto"
+                ))
+        ));
+
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
+                .createObject(expanded, id, before).write().join();
+
+        final List<Sort> sort = Collections.singletonList(Sort.asc(ObjectSchema.ID_NAME));
+        final Set<Name> expand = Name.parseSet("target", "source");
+        final Expression beforeExpression = Expression.parse("target.hello == 'world' && source.hello == 'pluto'");
+        final Expression afterExpression = Expression.parse("target.hello == 'pluto' && source.hello == 'world'");
+
+        // Index is async, and that isn't handled by storage, so expecting zero results
+        assertEquals(0, page(storage, expanded, beforeExpression, sort, expand, 10).size());
+
+        storage.repair(expanded).forEach(source -> {
+            source.page(50, null, null).join();
+        });
+
+        // Repair should put index back into correct state
+        assertEquals(1, page(storage, expanded, beforeExpression, sort, expand, 10).size());
+
+        final Instance after = instance(expanded, id, 2L, ImmutableMap.of(
+                "target", instance(refTarget, id, 2L, ImmutableMap.of(
+                        "hello", "pluto"
+                )),
+                "source", instance(refSource, id, 2L, ImmutableMap.of(
+                        "hello", "world"
+                ))
+        ));
+
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
+                .updateObject(expanded, id, before, after).write().join();
+
+        storage.repair(expanded).forEach(source -> {
+            source.page(50, null, null).join();
+        });
+
+        // Should remove the invalid index record and update the incorrect one
+        assertEquals(0, page(storage, expanded, beforeExpression, sort, expand, 10).size());
+        assertEquals(1, page(storage, expanded, afterExpression, sort, expand, 10).size());
+    }
+
     private Page<Map<String, Object>> page(final Storage storage, final ObjectSchema schema, final Expression expression, final List<Sort> sort, final int count) {
+
+        return page(storage, schema, expression, sort, Collections.emptySet(), count);
+    }
+
+    private Page<Map<String, Object>> page(final Storage storage, final ObjectSchema schema, final Expression expression, final List<Sort> sort, final Set<Name> expand, final int count) {
 
         final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
         final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expression.bind(Context.init()), sort, Collections.emptySet());
@@ -799,7 +872,6 @@ public abstract class TestStorage {
 
     private String createComplete(final Storage storage, final ObjectSchema schema, final Map<String, Object> data) {
 
-        final Instant now = Instant.now();
         final StorageTraits traits = storage.storageTraits(schema);
         final String id = UUID.randomUUID().toString();
         final Map<String, Object> instance = instance(schema, id, 1L, data);
@@ -832,7 +904,7 @@ public abstract class TestStorage {
         Instance.setCreated(instance, now);
         Instance.setUpdated(instance, now);
         Instance.setHash(instance, schema.hash(instance));
-        return schema.create(instance);
+        return schema.create(instance, schema.getExpand(), false);
     }
 
     private static void assertCause(final Class<? extends Throwable> except, final Executable exe) {

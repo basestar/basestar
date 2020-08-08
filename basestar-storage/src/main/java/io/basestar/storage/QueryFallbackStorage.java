@@ -22,6 +22,7 @@ package io.basestar.storage;
 
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
+import io.basestar.schema.Index;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
@@ -34,6 +35,7 @@ import io.basestar.util.Sort;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class QueryFallbackStorage implements DelegatingStorage {
 
@@ -81,5 +83,17 @@ public class QueryFallbackStorage implements DelegatingStorage {
                 return tryQuery(offset + 1, schema, query, sort, expand);
             }
         }
+    }
+
+    @Override
+    public List<Pager.Source<RepairInfo>> repair(final ObjectSchema schema) {
+
+        return storage.stream().flatMap(v -> v.repair(schema).stream()).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Pager.Source<RepairInfo>> repairIndex(final ObjectSchema schema, final Index index) {
+
+        return storage.stream().flatMap(v -> v.repairIndex(schema, index).stream()).collect(Collectors.toList());
     }
 }

@@ -35,7 +35,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 @RequiredArgsConstructor
-public class NullStorage implements Storage.WithoutWriteIndex, Storage.WithoutWriteHistory, Storage.WithoutExpand {
+public class NullStorage implements Storage.WithoutWriteIndex, Storage.WithoutWriteHistory, Storage.WithoutExpand, Storage.WithoutRepair {
 
     private final EventStrategy eventStrategy;
 

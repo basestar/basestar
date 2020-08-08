@@ -50,10 +50,7 @@ import io.basestar.expression.logical.Or;
 import io.basestar.schema.*;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
-import io.basestar.storage.ConstantStorage;
-import io.basestar.storage.Storage;
-import io.basestar.storage.StorageTraits;
-import io.basestar.storage.Versioning;
+import io.basestar.storage.*;
 import io.basestar.storage.exception.ObjectMissingException;
 import io.basestar.storage.overlay.OverlayStorage;
 import io.basestar.storage.util.IndexRecordDiff;
@@ -72,6 +69,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
     private static final int REF_QUERY_BATCH_SIZE = 100;
 
+    private static final int REPAIR_PAGE_SIZE = 500;
+
     private final Emitter emitter;
 
     private static final Handlers<DatabaseServer> HANDLERS = Handlers.<DatabaseServer>builder()
@@ -86,6 +85,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             .on(AsyncHistoryCreatedEvent.class, DatabaseServer::onAsyncHistoryCreated)
             .on(RefQueryEvent.class, DatabaseServer::onRefQuery)
             .on(RefRefreshEvent.class, DatabaseServer::onRefRefresh)
+            .on(RepairEvent.class, DatabaseServer::onRepair)
             .build();
 
     public DatabaseServer(final Namespace namespace, final Storage storage) {
@@ -131,6 +131,26 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         });
 
         return batch(caller, options.getConsistency(), actions);
+    }
+
+    private List<Pager.Source<RepairInfo>> repairSources(final Name schemaName, final String indexName) {
+
+        final ObjectSchema schema = objectSchema(schemaName);
+        if(indexName == null) {
+            return storage.repair(schema);
+        } else {
+            final Index index = schema.requireIndex(indexName, true);
+            return storage.repairIndex(schema, index);
+        }
+    }
+
+    @Override
+    public CompletableFuture<?> repair(final Caller caller, final RepairOptions options) {
+
+        final List<Pager.Source<RepairInfo>> sources = repairSources(options.getSchema(), options.getIndex());
+        final List<Event> events = new ArrayList<>();
+        sources.forEach(source -> events.add(RepairEvent.of(options.getSchema(), options.getIndex(), events.size(), null)));
+        return emitter.emit(events);
     }
 
     private CompletableFuture<Instance> single(final Caller caller, final Action action) {
@@ -828,6 +848,19 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                 });
             } else {
                 return CompletableFuture.completedFuture(null);
+            }
+        });
+    }
+
+    protected CompletableFuture<?> onRepair(final RepairEvent event) {
+
+        final List<Pager.Source<RepairInfo>> sources = repairSources(event.getSchema(), event.getIndex());
+        final Pager.Source<RepairInfo> source = sources.get(event.getSource());
+        return source.page(REPAIR_PAGE_SIZE, event.getPaging(), null).thenCompose(page -> {
+            if(page.getPaging() == null) {
+                return CompletableFuture.completedFuture(null);
+            } else {
+                return emitter.emit(event.withPaging(page.getPaging()));
             }
         });
     }

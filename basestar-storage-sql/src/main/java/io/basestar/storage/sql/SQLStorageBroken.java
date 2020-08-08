@@ -61,7 +61,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class SQLStorageBroken implements Storage.WithWriteIndex, Storage.WithWriteHistory {
+public class SQLStorageBroken implements Storage.WithWriteIndex, Storage.WithWriteHistory, Storage.WithoutRepair {
 
     private final DataSource dataSource;
 

@@ -20,19 +20,19 @@ package io.basestar.schema.use;
  * #L%
  */
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Context;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.EnumSchema;
 import io.basestar.schema.Schema;
+import io.basestar.schema.exception.TypeSyntaxException;
 import io.basestar.util.Name;
 import lombok.Data;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Enum Type
@@ -45,6 +45,8 @@ import java.util.Set;
 
 @Data
 public class UseEnum implements UseScalar<String>, UseNamed<String> {
+
+    public static final String NAME = "enum";
 
     private final EnumSchema schema;
 
@@ -77,6 +79,25 @@ public class UseEnum implements UseScalar<String>, UseNamed<String> {
     public static UseEnum from(final EnumSchema type, final Object config) {
 
         return new UseEnum(type);
+    }
+
+    public static UseEnum from(final Object config) {
+
+        if(config instanceof List) {
+            final List<String> values = new ArrayList<>();
+            for(final Object value : (List<?>)config) {
+                if(value instanceof String) {
+                    values.add((String)value);
+                } else {
+                    throw new TypeSyntaxException();
+                }
+            }
+            return new UseEnum(EnumSchema.builder()
+                    .setValues(values)
+                    .build());
+        } else {
+            throw new TypeSyntaxException();
+        }
     }
 
     @Override
@@ -131,9 +152,25 @@ public class UseEnum implements UseScalar<String>, UseNamed<String> {
         out.put(schema.getQualifiedName(), schema);
     }
 
-//    @Override
-//    public Map<String, Object> openApiType() {
-//
-//        return type.openApiRef();
-//    }
+    @Override
+    public Object toConfig() {
+
+        if(schema.isAnonymous()) {
+            return ImmutableMap.of(
+                    NAME, schema.getValues()
+            );
+        } else {
+            return UseNamed.super.toConfig();
+        }
+    }
+
+    @Override
+    public io.swagger.v3.oas.models.media.Schema<?> openApi() {
+
+        if(schema.isAnonymous()) {
+            return new io.swagger.v3.oas.models.media.StringSchema()._enum(schema.getValues());
+        } else {
+            return UseNamed.super.openApi();
+        }
+    }
 }

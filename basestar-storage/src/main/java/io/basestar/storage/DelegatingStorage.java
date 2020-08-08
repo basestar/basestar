@@ -118,6 +118,18 @@ public interface DelegatingStorage extends Storage {
     }
 
     @Override
+    default List<Pager.Source<RepairInfo>> repair(final ObjectSchema schema) {
+
+        return storage(schema).repair(schema);
+    }
+
+    @Override
+    default List<Pager.Source<RepairInfo>> repairIndex(final ObjectSchema schema, final Index index) {
+
+        return storage(schema).repairIndex(schema, index);
+    }
+
+    @Override
     default ReadTransaction read(final Consistency consistency) {
 
         final IdentityHashMap<Storage, ReadTransaction> transactions = new IdentityHashMap<>();

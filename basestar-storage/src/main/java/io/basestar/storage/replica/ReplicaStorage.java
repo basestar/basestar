@@ -6,15 +6,14 @@ import io.basestar.event.Event;
 import io.basestar.event.Handler;
 import io.basestar.event.Handlers;
 import io.basestar.schema.Consistency;
+import io.basestar.schema.Index;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.storage.BatchResponse;
-import io.basestar.storage.DelegatingStorage;
-import io.basestar.storage.Storage;
-import io.basestar.storage.Versioning;
+import io.basestar.storage.*;
 import io.basestar.storage.replica.event.ReplicaSyncEvent;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
+import io.basestar.util.Pager;
 import lombok.Builder;
 
 import javax.annotation.Nullable;
@@ -22,6 +21,8 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Builder(builderClassName = "Builder", setterPrefix = "set")
 public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
@@ -349,5 +350,23 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
             return write.write();
 
         }).orElseGet(() -> CompletableFuture.completedFuture(null));
+    }
+
+    @Override
+    public List<Pager.Source<RepairInfo>> repair(final ObjectSchema schema) {
+
+        return Stream.of(Optional.of(primary.apply(schema)), replica.apply(schema))
+                .flatMap(v -> v.map(Stream::of).orElse(Stream.of()))
+                .flatMap(v -> v.repair(schema).stream())
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Pager.Source<RepairInfo>> repairIndex(final ObjectSchema schema, final Index index) {
+
+        return Stream.of(Optional.of(primary.apply(schema)), replica.apply(schema))
+                .flatMap(v -> v.map(Stream::of).orElse(Stream.of()))
+                .flatMap(v -> v.repairIndex(schema, index).stream())
+                .collect(Collectors.toList());
     }
 }

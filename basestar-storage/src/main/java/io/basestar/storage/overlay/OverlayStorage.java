@@ -24,10 +24,7 @@ import com.google.common.collect.Sets;
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.*;
-import io.basestar.storage.BatchResponse;
-import io.basestar.storage.Storage;
-import io.basestar.storage.StorageTraits;
-import io.basestar.storage.Versioning;
+import io.basestar.storage.*;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Pager;
@@ -36,6 +33,8 @@ import io.basestar.util.Sort;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 // Used in batch to allow pending creates/updates to be linked and referenced in permission expressions.
 // This storage will respond as if the provided items exist in the underlying storage.
@@ -146,6 +145,20 @@ public class OverlayStorage implements Storage {
 
         // FIXME: need to know if overlay has the value already for correct versioning
         return overlay.asyncHistoryCreated(schema, id, version, after);
+    }
+
+    @Override
+    public List<Pager.Source<RepairInfo>> repair(final ObjectSchema schema) {
+
+        return Stream.of(baseline, overlay).flatMap(v -> v.repair(schema).stream())
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Pager.Source<RepairInfo>> repairIndex(final ObjectSchema schema, final Index index) {
+
+        return Stream.of(baseline, overlay).flatMap(v -> v.repairIndex(schema, index).stream())
+                .collect(Collectors.toList());
     }
 
     @Override

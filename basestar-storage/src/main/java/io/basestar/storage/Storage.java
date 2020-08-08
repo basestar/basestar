@@ -27,14 +27,12 @@ import io.basestar.schema.*;
 import io.basestar.schema.exception.UnsupportedConsistencyException;
 import io.basestar.storage.exception.UnsupportedQueryException;
 import io.basestar.util.Name;
+import io.basestar.util.Page;
 import io.basestar.util.Pager;
 import io.basestar.util.Sort;
 import lombok.RequiredArgsConstructor;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -48,18 +46,18 @@ public interface Storage {
         final Consistency bestMultiIndexWrite = storageTraits.getMultiValueIndexConsistency();
 
         final History history = schema.getHistory();
-        if(history.isEnabled()) {
+        if (history.isEnabled()) {
             final Consistency requested = history.getConsistency();
             if (requested != null && requested.isStronger(bestHistoryWrite)) {
                 throw new UnsupportedConsistencyException(schema.getQualifiedName() + ".history", name(schema), bestHistoryWrite, requested);
             }
         }
-        for(final Map.Entry<String, Index> entry : schema.getIndexes().entrySet()) {
+        for (final Map.Entry<String, Index> entry : schema.getIndexes().entrySet()) {
             final Index index = entry.getValue();
             final Consistency requested = index.getConsistency();
-            if(requested != null) {
+            if (requested != null) {
                 final Consistency best = index.isMultiValue() ? bestMultiIndexWrite : bestSingleIndexWrite;
-                if(requested.isStronger(best)) {
+                if (requested.isStronger(best)) {
                     throw new UnsupportedConsistencyException(schema.getQualifiedName() + "." + entry.getKey(), name(schema), best, requested);
                 }
             }
@@ -96,6 +94,10 @@ public interface Storage {
     CompletableFuture<?> asyncIndexDeleted(ObjectSchema schema, Index index, String id, long version, Index.Key key);
 
     CompletableFuture<?> asyncHistoryCreated(ObjectSchema schema, String id, long version, Map<String, Object> after);
+
+    List<Pager.Source<RepairInfo>> repair(ObjectSchema schema);
+
+    List<Pager.Source<RepairInfo>> repairIndex(ObjectSchema schema, Index index);
 
     interface ReadTransaction {
 
@@ -291,6 +293,26 @@ public interface Storage {
             WriteTransaction updateIndex(ObjectSchema schema, Index index, String id, long version, Index.Key key, Map<String, Object> projection);
 
             WriteTransaction deleteIndex(ObjectSchema schema, Index index, String id, long version, Index.Key key);
+        }
+    }
+
+    // FIXME: review usages
+    interface WithoutRepair extends Storage {
+
+        @Override
+        default List<Pager.Source<RepairInfo>> repair(final ObjectSchema schema) {
+
+            return Collections.singletonList(
+                    (count, token, stats) -> CompletableFuture.completedFuture(Page.empty())
+            );
+        }
+
+        @Override
+        default List<Pager.Source<RepairInfo>> repairIndex(final ObjectSchema schema, final Index index) {
+
+            return Collections.singletonList(
+                    (count, token, stats) -> CompletableFuture.completedFuture(Page.empty())
+            );
         }
     }
 }

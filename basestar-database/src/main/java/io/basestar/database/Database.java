@@ -107,4 +107,6 @@ public interface Database {
         // FIXME: should not read the root object (will break in versioning scenario anyway)
         return read(caller, ReadOptions.builder().schema(Instance.getSchema(instance)).version(Instance.getVersion(instance)).expand(expand).build());
     }
+
+    CompletableFuture<?> repair(Caller caller, RepairOptions options);
 }

@@ -59,7 +59,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Slf4j
-public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHistory {
+public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHistory, Storage.WithoutRepair {
 
     private final DataSource dataSource;
 

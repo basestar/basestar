@@ -32,7 +32,7 @@ import io.basestar.util.*;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
-public class ConstantStorage implements Storage.WithoutAggregate, Storage.WithoutWrite, Storage.WithoutHistory, Storage.WithoutExpand {
+public class ConstantStorage implements Storage.WithoutAggregate, Storage.WithoutWrite, Storage.WithoutHistory, Storage.WithoutExpand, Storage.WithoutRepair {
 
     private final Map<Name, Map<String, Map<String, Object>>> data;
 

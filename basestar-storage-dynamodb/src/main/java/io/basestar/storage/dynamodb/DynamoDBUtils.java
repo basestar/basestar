@@ -21,16 +21,22 @@ package io.basestar.storage.dynamodb;
  */
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.util.CompletableFutures;
+import io.basestar.util.ISO8601;
 import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.core.BytesWrapper;
 import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.model.*;
 
 import java.io.*;
-import java.time.temporal.TemporalAccessor;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -41,6 +47,8 @@ public class DynamoDBUtils {
     public static final AttributeValue EMPTY_BINARY_ATTRIBUTE_VALUE = AttributeValue.builder().b(SdkBytes.fromByteArray(new byte[0])).build();
 
     public static final int MAX_READ_BATCH_SIZE = 100;
+
+    public static final int MAX_WRITE_BATCH_SIZE = 25;
 
     public static final int MAX_ITEM_SIZE = 400_000;
 
@@ -53,39 +61,37 @@ public class DynamoDBUtils {
     public static AttributeValue toAttributeValue(final Object value) {
 
         if(value == null) {
-            return AttributeValue.builder().nul(true).build();
+            return nul(true);
         } else if(value instanceof Boolean) {
-            return AttributeValue.builder().bool((Boolean)value).build();
+            return bool((Boolean)value);
         } else if(value instanceof Number) {
-            return AttributeValue.builder().n(value.toString()).build();
+            return n(value.toString());
         } else if(value instanceof String) {
             final String str = (String)value;
             if(str.isEmpty()) {
                 return EMPTY_STRING_ATTRIBUTE_VALUE;
             } else {
-                return AttributeValue.builder().s(str).build();
+                return s(str);
             }
         } else if(value instanceof byte[]) {
             final byte[] bytes = (byte[])value;
             if(bytes.length == 0) {
                 return EMPTY_BINARY_ATTRIBUTE_VALUE;
             } else {
-                return AttributeValue.builder().b(SdkBytes.fromByteArray(bytes)).build();
+                return b(bytes);
             }
         } else if(value instanceof Collection) {
-            return AttributeValue.builder()
-                    .l(((Collection<?>)value).stream().map(DynamoDBUtils::toAttributeValue)
-                            .collect(Collectors.toList()))
-                    .build();
-        } else if(value instanceof TemporalAccessor) {
-            return AttributeValue.builder().s(value.toString()).build();
+            return l(((Collection<?>)value).stream().map(DynamoDBUtils::toAttributeValue)
+                            .collect(Collectors.toList()));
+        } else if(value instanceof LocalDate) {
+            return s(ISO8601.toString((LocalDate)value));
+        } else if(value instanceof Instant) {
+            return s(ISO8601.toString((Instant)value));
         } else if(value instanceof Map) {
-            return AttributeValue.builder()
-                    .m(((Map<?, ?>)value).entrySet().stream()
+            return m(((Map<?, ?>)value).entrySet().stream()
                             .collect(Collectors.toMap(
                                     entry -> entry.getKey().toString(),
-                                    entry -> toAttributeValue(entry.getValue()))))
-                    .build();
+                                    entry -> toAttributeValue(entry.getValue()))));
         } else {
             throw new IllegalStateException();
         }
@@ -251,5 +257,119 @@ public class DynamoDBUtils {
     public static String schema(final Map<String, AttributeValue> values) {
 
         return (String)fromAttributeValue(values.get(ObjectSchema.SCHEMA));
+    }
+
+    public static AttributeValue nul(final Boolean v) {
+
+        return AttributeValue.builder().nul(v).build();
+    }
+
+    public static AttributeValue bool(final Boolean v) {
+
+        return AttributeValue.builder().bool(v).build();
+    }
+
+    public static AttributeValue n(final String v) {
+
+        return AttributeValue.builder().n(v).build();
+    }
+
+    public static AttributeValue s(final String v) {
+
+        return AttributeValue.builder().s(v).build();
+    }
+
+    public static AttributeValue b(final SdkBytes v) {
+
+        return AttributeValue.builder().b(v).build();
+    }
+
+    public static AttributeValue b(final byte[] v) {
+
+        return AttributeValue.builder().b(SdkBytes.fromByteArray(v)).build();
+    }
+
+    public static AttributeValue l(final List<AttributeValue> v) {
+
+        return AttributeValue.builder().l(v).build();
+    }
+
+    public static AttributeValue m(final Map<String, AttributeValue> v) {
+
+        return AttributeValue.builder().m(v).build();
+    }
+
+    private static <T> Collection<T> concat(final Collection<T> a, final Collection<T> b) {
+
+        return ImmutableList.<T>builder().addAll(a).addAll(b).build();
+    }
+
+    private static <T> List<List<T>> slice(final Collection<T> values, final int size) {
+
+        final List<List<T>> slices = new ArrayList<>();
+        List<T> slice = null;
+        for(final T value : values) {
+            if(slice == null || slice.size() == size) {
+                slice = new ArrayList<>();
+                slices.add(slice);
+            }
+            slice.add(value);
+        }
+        return slices;
+    }
+
+    public static CompletableFuture<Collection<Map<String, AttributeValue>>> batchRead(final DynamoDbAsyncClient client, final String tableName, final Collection<Map<String, AttributeValue>> keys) {
+
+        final List<List<Map<String, AttributeValue>>> slices = slice(keys, MAX_READ_BATCH_SIZE);
+        final List<CompletableFuture<Collection<Map<String, AttributeValue>>>> futures = slices.stream()
+                .map(slice -> batchReadImpl(client, tableName, KeysAndAttributes.builder().keys(slice).build()))
+                .collect(Collectors.toList());
+        return CompletableFutures.allOf(Collections.emptyList(), DynamoDBUtils::concat, futures);
+    }
+
+    private static CompletableFuture<Collection<Map<String, AttributeValue>>> batchReadImpl(final DynamoDbAsyncClient client, final String tableName, final KeysAndAttributes keys) {
+
+        final BatchGetItemRequest req = BatchGetItemRequest.builder()
+                .requestItems(Collections.singletonMap(tableName, keys))
+                .build();
+
+        return client.batchGetItem(req).thenCompose(results -> {
+
+            final List<Map<String, AttributeValue>> items = results.responses().getOrDefault(tableName, Collections.emptyList());
+
+            final KeysAndAttributes unprocessed = results.hasUnprocessedKeys() ? results.unprocessedKeys().get(tableName) : null;
+            if(unprocessed != null) {
+                return batchReadImpl(client, tableName, unprocessed)
+                        .thenApply(rest -> concat(items, rest));
+            } else {
+                return CompletableFuture.completedFuture(items);
+            }
+        });
+    }
+
+    public static CompletableFuture<Void> batchWrite(final DynamoDbAsyncClient client, final String tableName, final Collection<WriteRequest> writes) {
+
+        final List<List<WriteRequest>> slices = slice(writes, MAX_WRITE_BATCH_SIZE);
+        final List<CompletableFuture<Void>> futures = slices.stream()
+                .map(slice -> batchWriteImpl(client, tableName, slice))
+                .collect(Collectors.toList());
+        return CompletableFutures.allOf(futures);
+    }
+
+    private static CompletableFuture<Void> batchWriteImpl(final DynamoDbAsyncClient client, final String tableName, final Collection<WriteRequest> writes) {
+
+        final BatchWriteItemRequest req = BatchWriteItemRequest.builder()
+                .requestItems(Collections.singletonMap(tableName, writes))
+                .build();
+
+        return client.batchWriteItem(req).thenCompose(results -> {
+
+            final Collection<WriteRequest> unprocessed = results.hasUnprocessedItems() ? results.unprocessedItems().get(tableName) : null;
+            if(unprocessed != null) {
+                return batchWriteImpl(client, tableName, unprocessed);
+            } else {
+                return CompletableFuture.completedFuture(null);
+            }
+        });
     }
 }
