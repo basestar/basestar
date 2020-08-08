@@ -21,16 +21,25 @@ package io.basestar.schema;
  */
 
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.basestar.schema.exception.SchemaValidationException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+import java.io.IOException;
 import java.util.Arrays;
 
 @Getter
 @RequiredArgsConstructor
+@JsonSerialize(using = Version.Serializer.class)
+@JsonDeserialize(using = Version.Deserializer.class)
 public enum Version {
 
     V_2020_08_04("2020-08-04"),
@@ -40,7 +49,6 @@ public enum Version {
 
     private final String id;
 
-    @JsonCreator
     public static Version fromString(final String str) {
 
         if("LATEST".equalsIgnoreCase(str)) {
@@ -51,10 +59,27 @@ public enum Version {
         }
     }
 
-    @JsonValue
     @Override
     public String toString() {
 
         return this.getId();
+    }
+
+    public static class Deserializer extends JsonDeserializer<Version> {
+
+        @Override
+        public Version deserialize(final JsonParser parser, final DeserializationContext context) throws IOException {
+
+            return Version.fromString(parser.getValueAsString());
+        }
+    }
+
+    public static class Serializer extends JsonSerializer<Version> {
+
+        @Override
+        public void serialize(final Version version, final JsonGenerator generator, final SerializerProvider provider) throws IOException {
+
+            generator.writeString(version.getId());
+        }
     }
 }
