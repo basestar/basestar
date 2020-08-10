@@ -123,7 +123,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         return withContext(context -> context.select(selectFields(schema))
                 .from(DSL.table(historyTableName(schema)))
                 .where(idField(schema).eq(DSL.inline(id))
-                        .and(versionField(schema).eq(version)))
+                        .and(versionField(schema).eq(DSL.inline(version))))
                 .limit(DSL.inline(1)).fetchAsync().thenApply(result -> first(schema, result)));
     }
 
