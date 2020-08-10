@@ -28,4 +28,10 @@ public interface Extendable {
 
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     Map<String, Object> getExtensions();
+
+    @SuppressWarnings("unchecked")
+    default <T> T getExtension(final String name) {
+
+        return (T)getExtensions().get(name);
+    }
 }

@@ -57,9 +57,14 @@ public abstract class SchemaModel extends Model {
 
     public String getFullyQualifiedClassName() {
 
-        final Name rootPackage = getContext().getRootPackage();
-        final Name qualifiedName = getQualifiedName();
-        return rootPackage.with(qualifiedName).toString();
+        final String ext = schema.getExtension("io.basestar.package");
+        if(ext != null) {
+            return Name.parse(ext).with(schema.getName()).toString();
+        } else {
+            final Name rootPackage = getContext().getRootPackage();
+            final Name qualifiedName = getQualifiedName();
+            return rootPackage.with(qualifiedName).toString();
+        }
     }
 
     public String getQualifiedClassName() {

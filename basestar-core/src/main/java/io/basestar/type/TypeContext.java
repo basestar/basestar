@@ -23,6 +23,7 @@ package io.basestar.type;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import io.basestar.type.has.*;
+import io.basestar.util.Nullsafe;
 import io.basestar.util.Text;
 import io.leangen.geantyref.GenericTypeReflector;
 import lombok.AccessLevel;
@@ -399,6 +400,11 @@ public class TypeContext implements HasName, HasModifiers, HasAnnotations, HasTy
             }
         }
         return null;
+    }
+
+    public String packageName() {
+
+        return Nullsafe.map(erasedType.getPackage(), Package::getName);
     }
 
     @Data
