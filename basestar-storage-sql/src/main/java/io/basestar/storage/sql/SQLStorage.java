@@ -303,7 +303,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                         final Set<String> ids = entry.getValue();
                         all(schema, context.select(selectFields(schema))
                                 .from(objectTableName(schema))
-                                .where(idField(schema).in(ids))
+                                .where(idField(schema).in(literals(ids)))
                                 .fetch())
                                 .forEach(v -> results.put(BatchResponse.Key.from(schema.getQualifiedName(), v), v));
                     }
@@ -326,6 +326,11 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                 }));
             }
         };
+    }
+
+    private List<Field<?>> literals(final Collection<?> values) {
+
+        return values.stream().map(DSL::inline).collect(Collectors.toList());
     }
 
     @Data
