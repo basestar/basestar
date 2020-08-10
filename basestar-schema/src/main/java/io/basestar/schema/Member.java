@@ -69,6 +69,7 @@ public interface Member extends Named, Described, Serializable, Extendable {
 
     interface Builder extends Descriptor {
 
+        Builder setExtensions(Map<String, Object> extensions);
     }
 
     interface Resolver {

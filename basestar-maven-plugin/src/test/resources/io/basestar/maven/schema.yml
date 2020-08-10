@@ -1,4 +1,6 @@
 Test:
+  extensions:
+    "io.basestar.package": "io.basestar.maven.test"
   description: A schema description
   type: object
   properties:
@@ -32,6 +34,8 @@ Test:
       single: true
 
 a.Test:
+  extensions:
+    "io.basestar.package": "io.basestar.maven.test.a"
   type: object
   properties:
     test:
@@ -53,6 +57,8 @@ a.Test:
         - b.id
 
 b.Test:
+  extensions:
+    "io.basestar.package": "io.basestar.maven.test.b"
   type: object
   properties:
     test:
@@ -61,6 +67,8 @@ b.Test:
       type: a.Test
 
 c.Test:
+  extensions:
+    "io.basestar.package": "io.basestar.maven.test.c"
   type: view
   description: A view description
   from:

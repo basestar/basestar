@@ -20,6 +20,7 @@ package io.basestar.mapper.internal;
  * #L%
  */
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.SchemaMapper;
 import io.basestar.mapper.internal.annotation.MemberDeclaration;
@@ -53,6 +54,8 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
 
     protected final String description;
 
+    private final String packageName;
+
     protected final List<MemberMapper<B>> members;
 
     @SuppressWarnings("unchecked")
@@ -63,6 +66,7 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
         this.concrete = context.strategy().concrete(type);
         this.erasedType = type.erasedType();
         this.description = null;
+        this.packageName = type.packageName();
 
         // Filter out properties that appear in base types
         final Set<String> skipNames = context.strategy().extend(type)
@@ -120,6 +124,7 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
         this.erasedType = copy.erasedType;
         this.members = copy.members;
         this.description = description;
+        this.packageName = copy.packageName;
     }
 
     private MemberMapper<B> applyModifiers(final MappingContext context, final PropertyContext prop, final MemberMapper<B> input) throws IllegalAccessException, InstantiationException, InvocationTargetException {
@@ -153,6 +158,9 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
 
         members.forEach(m -> m.addToSchema(this, builder));
         builder.setDescription(description);
+        builder.setExtensions(ImmutableMap.of(
+                "io.basestar.package", packageName
+        ));
         return builder;
     }
 

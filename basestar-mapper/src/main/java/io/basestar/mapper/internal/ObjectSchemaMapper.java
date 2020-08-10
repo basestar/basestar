@@ -34,14 +34,11 @@ public class ObjectSchemaMapper<T> extends InstanceSchemaMapper<T, ObjectSchema.
 
     private final Map<String, Permission.Descriptor> permissions;
 
-    private final String packageName;
-
     public ObjectSchemaMapper(final MappingContext context, final Name name, final TypeContext type) {
 
         super(ObjectSchema.Builder.class, context, name, type);
         this.indexes = ImmutableMap.of();
         this.permissions = ImmutableMap.of();
-        this.packageName = type.packageName();
 
 //        for(final AnnotationContext<Permission> annot : type.annotations(Permission.class)) {
 //            final Permission perm = annot.annotation();
@@ -57,7 +54,6 @@ public class ObjectSchemaMapper<T> extends InstanceSchemaMapper<T, ObjectSchema.
         super(copy, description);
         this.indexes = indexes;
         this.permissions = permissions;
-        this.packageName = copy.packageName;
     }
 
     public ObjectSchemaMapper<T> withIndexes(final Map<String, Index.Descriptor> indexes) {
@@ -82,10 +78,7 @@ public class ObjectSchemaMapper<T> extends InstanceSchemaMapper<T, ObjectSchema.
         return addMembers(ObjectSchema.builder()
                 .setConcrete(concrete ? null : false)
                 .setExtend(extend)
-                .setIndexes(indexes.isEmpty() ? null : indexes)
-                .setExtensions(ImmutableMap.of(
-                        "io.basestar.package", packageName
-                )));
+                .setIndexes(indexes.isEmpty() ? null : indexes));
     }
 
     @Override

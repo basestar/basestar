@@ -57,7 +57,7 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
 
     interface Builder extends Schema.Builder<Instance>, Descriptor, Property.Resolver.Builder {
 
-        Builder setDescription(final String description);
+        Builder setDescription(String description);
     }
 
     SortedMap<String, Use<?>> metadataSchema();

@@ -517,7 +517,7 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
         });
     }
 
-    public Instance evaluateProperties(final Context context, final Set<Name> expand, final Instance object) {
+    public Instance evaluateProperties(final Context context, final Set<Name> expand, final Map<String, Object> object) {
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
         final Context thisContext = context.with(VAR_THIS, object);
