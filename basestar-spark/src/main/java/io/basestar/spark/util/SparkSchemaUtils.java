@@ -37,7 +37,6 @@ import scala.collection.Seq;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -539,10 +538,12 @@ public class SparkSchemaUtils {
             }
 
             @Override
+            @SuppressWarnings("deprecation")
             public Object visitDate(final UseDate type) {
 
                 final LocalDate converted = type.create(value, expand, suppress);
-                return new java.sql.Date(converted.atStartOfDay().toEpochSecond(ZoneOffset.UTC) * 1000);
+                // Deprecated, but seems more reliable than the other constructors, which end up with hrs, mins, secs embedded and breaks equals/hashcode
+                return new java.sql.Date(converted.getYear() - 1900, converted.getMonthValue() - 1, converted.getDayOfMonth());
             }
 
             @Override

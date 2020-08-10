@@ -36,8 +36,6 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -149,11 +147,10 @@ public class TestSchemaTransform extends AbstractSparkTest {
 
         final Encoder<F> encoder = Encoders.bean(F.class);
 
-        // FIXME
-        final java.sql.Date date = new java.sql.Date(LocalDate.now(ZoneOffset.UTC).atStartOfDay().toEpochSecond(ZoneOffset.UTC) * 1000);
+        final java.sql.Date date = new java.sql.Date(2020 - 1900, 10, 10);
         final java.sql.Timestamp datetime = new java.sql.Timestamp(Instant.now().toEpochMilli());
 
-        final Source<Dataset<Row>> sourceF = (Source<Dataset<Row>>) sink -> sink.accept(session.createDataset(ImmutableList.of(
+        final Source<Dataset<Row>> sourceF = sink -> sink.accept(session.createDataset(ImmutableList.of(
                 new F(date, datetime)
         ), encoder).toDF());
 
@@ -161,11 +158,11 @@ public class TestSchemaTransform extends AbstractSparkTest {
 
         final ConformTransform conform = ConformTransform.builder().structType(encoder.schema()).build();
 
-        sourceF.then(schema).then(conform).then((Sink<Dataset<Row>>) (dataset -> {
+        sourceF.then(schema).then(conform).then(dataset -> {
 
             final List<F> rows = dataset.as(Encoders.bean(F.class)).collectAsList();
             assertEquals(1, rows.size());
             assertTrue(rows.contains(new F(date, datetime)));
-        }));
+        });
     }
 }

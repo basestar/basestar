@@ -25,12 +25,14 @@ import io.basestar.storage.Storage;
 import io.basestar.storage.TestStorage;
 import io.basestar.test.Localstack;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 
 import java.net.URI;
 import java.util.UUID;
 
+@Disabled
 public class TestS3BlobStorage extends TestStorage {
 
     @BeforeAll

@@ -30,6 +30,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.*;
+import org.jooq.exception.DataAccessException;
 import org.jooq.impl.DSL;
 
 import java.util.Collection;
@@ -157,6 +158,9 @@ public interface SQLStrategy {
                         try(final CreateIndexFinalStep create = context.createIndexIfNotExists(index.getName())
                                 .on(DSL.table(objectTableName), SQLUtils.indexKeys(schema, index))) {
                             create.execute();
+                        } catch (final DataAccessException e) {
+                            // FIXME
+                            log.error("Failed to create index", e);
                         }
                     }
                 }
