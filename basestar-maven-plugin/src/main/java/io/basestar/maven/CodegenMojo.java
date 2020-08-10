@@ -38,6 +38,7 @@ import org.apache.maven.project.MavenProject;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 
 @Setter
@@ -49,6 +50,9 @@ public class CodegenMojo extends AbstractMojo {
 
     @Parameter(required = true)
     private String packageName;
+
+    @Parameter(required = false)
+    private List<String> searchPackageNames;
 
     @Parameter(required = true)
     private List<String> schemaUrls;
@@ -69,7 +73,13 @@ public class CodegenMojo extends AbstractMojo {
         System.setProperty("java.protocol.handler.pkgs", "io.basestar.protocol");
         try {
 
-            final Schema.Resolver resolver = new ClassLoadingResolver(packageName);
+            final List<String> searchPackageNames = new ArrayList<>();
+            searchPackageNames.add(packageName);
+            if(this.searchPackageNames != null) {
+                searchPackageNames.addAll(this.searchPackageNames);
+            }
+
+            final Schema.Resolver resolver = new ClassLoadingResolver(searchPackageNames);
             final Namespace ns = Namespace.load(resolver, schemaUrls.stream().map(URLs::toURLUnchecked).toArray(URL[]::new));
 
             final CodegenSettings settings = CodegenSettings.builder()
@@ -109,23 +119,25 @@ public class CodegenMojo extends AbstractMojo {
 
         private final MappingContext mappingContext = new MappingContext();
 
-        private final Name packageName;
+        private final List<Name> packageNames;
 
-        public ClassLoadingResolver(final String packageName) {
+        public ClassLoadingResolver(final List<String> packageNames) {
 
-            this.packageName = Name.parse(packageName);
+            this.packageNames = Name.parseList(packageNames);
         }
 
         @Nullable
         @Override
         public Schema<?> getSchema(final Name name) {
 
-            try {
-                final Class<?> cls = Class.forName(packageName.with(name).toString());
-                return mappingContext.schema(this, cls);
-            } catch (final ClassNotFoundException e) {
-                return null;
+            for(final Name packageName : packageNames) {
+                try {
+                    final Class<?> cls = Class.forName(packageName.with(name).toString());
+                    return mappingContext.schema(this, cls);
+                } catch (final ClassNotFoundException e) {
+                }
             }
+            return null;
         }
     }
 }

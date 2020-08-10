@@ -112,8 +112,8 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
 
         return withContext(context -> context.select(selectFields(schema))
                 .from(DSL.table(objectTableName(schema)))
-                .where(idField(schema).eq(id))
-                .limit(1).fetchAsync().thenApply(result -> first(schema, result)));
+                .where(idField(schema).eq(DSL.inline(id)))
+                .limit(DSL.inline(1)).fetchAsync().thenApply(result -> first(schema, result)));
     }
 
     @Override
@@ -121,9 +121,9 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
 
         return withContext(context -> context.select(selectFields(schema))
                 .from(DSL.table(historyTableName(schema)))
-                .where(idField(schema).eq(id)
-                        .and(versionField(schema).eq(version)))
-                .limit(1).fetchAsync().thenApply(result -> first(schema, result)));
+                .where(idField(schema).eq(DSL.inline(id))
+                        .and(versionField(schema).eq(DSL.inline(version))))
+                .limit(DSL.inline(1)).fetchAsync().thenApply(result -> first(schema, result)));
     }
 
     @Override
@@ -401,7 +401,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                 }
 
                 if(context.update(DSL.table(objectTableName(schema))).set(toRecord(schema, after))
-                        .where(condition).limit(1).execute() != 1) {
+                        .where(condition).limit(DSL.inline(1)).execute() != 1) {
 
                     throw new VersionMismatchException(schema.getQualifiedName(), id, version);
                 }
@@ -434,7 +434,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                 }
 
                 if(context.deleteFrom(DSL.table(objectTableName(schema)))
-                        .where(condition).limit(1).execute() != 1) {
+                        .where(condition).limit(DSL.inline(1)).execute() != 1) {
 
                     throw new VersionMismatchException(schema.getQualifiedName(), id, version);
                 }
