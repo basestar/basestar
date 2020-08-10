@@ -209,36 +209,45 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
 
         return name -> {
 
-            final Property prop = schema.requireProperty(name.first(), true);
-            final Name rest = name.withoutFirst();
-            if(rest.isEmpty()) {
-                return DSL.field(DSL.name(name.first()));
+            if(schema.metadataSchema().containsKey(name.first())) {
+                final Name rest = name.withoutFirst();
+                if (rest.isEmpty()) {
+                    return DSL.field(DSL.name(name.first()));
+                } else {
+                    throw new UnsupportedOperationException("Query of this type is not supported");
+                }
             } else {
-                return prop.getType().visit(new Use.Visitor.Defaulting<QueryPart>() {
-                    @Override
-                    public QueryPart visitDefault(final Use<?> type) {
+                final Property prop = schema.requireProperty(name.first(), true);
+                final Name rest = name.withoutFirst();
+                if (rest.isEmpty()) {
+                    return DSL.field(DSL.name(name.first()));
+                } else {
+                    return prop.getType().visit(new Use.Visitor.Defaulting<QueryPart>() {
+                        @Override
+                        public QueryPart visitDefault(final Use<?> type) {
 
-                        throw new UnsupportedOperationException("Query of this type is not supported");
-                    }
-
-                    @Override
-                    public QueryPart visitStruct(final UseStruct type) {
-
-                        // FIXME
-                        return DSL.field(SQLUtils.columnName(name));
-                    }
-
-                    @Override
-                    public QueryPart visitObject(final UseObject type) {
-
-                        final Field<String> sourceId = DSL.field(DSL.name(name.first()), String.class);
-                        if(rest.equals(ObjectSchema.ID_NAME)) {
-                            return sourceId;
-                        } else {
                             throw new UnsupportedOperationException("Query of this type is not supported");
                         }
-                    }
-                });
+
+                        @Override
+                        public QueryPart visitStruct(final UseStruct type) {
+
+                            // FIXME
+                            return DSL.field(SQLUtils.columnName(name));
+                        }
+
+                        @Override
+                        public QueryPart visitObject(final UseObject type) {
+
+                            final Field<String> sourceId = DSL.field(DSL.name(name.first()), String.class);
+                            if (rest.equals(ObjectSchema.ID_NAME)) {
+                                return sourceId;
+                            } else {
+                                throw new UnsupportedOperationException("Query of this type is not supported");
+                            }
+                        }
+                    });
+                }
             }
         };
     }
