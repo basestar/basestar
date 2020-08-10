@@ -113,8 +113,8 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
 
         return withContext(context -> context.select(selectFields(schema))
                 .from(DSL.table(objectTableName(schema)))
-                .where(idField(schema).eq(id))
-                .limit(1).fetchAsync().thenApply(result -> first(schema, result)));
+                .where(idField(schema).eq(DSL.inline(id)))
+                .limit(DSL.inline(1)).fetchAsync().thenApply(result -> first(schema, result)));
     }
 
     @Override
@@ -122,9 +122,9 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
 
         return withContext(context -> context.select(selectFields(schema))
                 .from(DSL.table(historyTableName(schema)))
-                .where(idField(schema).eq(id)
+                .where(idField(schema).eq(DSL.inline(id))
                         .and(versionField(schema).eq(version)))
-                .limit(1).fetchAsync().thenApply(result -> first(schema, result)));
+                .limit(DSL.inline(1)).fetchAsync().thenApply(result -> first(schema, result)));
     }
 
     @Override
@@ -210,36 +210,45 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
 
         return name -> {
 
-            final Property prop = schema.requireProperty(name.first(), true);
-            final Name rest = name.withoutFirst();
-            if(rest.isEmpty()) {
-                return DSL.field(DSL.name(name.first()));
+            if(schema.metadataSchema().containsKey(name.first())) {
+                final Name rest = name.withoutFirst();
+                if (rest.isEmpty()) {
+                    return DSL.field(DSL.name(name.first()));
+                } else {
+                    throw new UnsupportedOperationException("Query of this type is not supported");
+                }
             } else {
-                return prop.getType().visit(new Use.Visitor.Defaulting<QueryPart>() {
-                    @Override
-                    public QueryPart visitDefault(final Use<?> type) {
+                final Property prop = schema.requireProperty(name.first(), true);
+                final Name rest = name.withoutFirst();
+                if (rest.isEmpty()) {
+                    return DSL.field(DSL.name(name.first()));
+                } else {
+                    return prop.getType().visit(new Use.Visitor.Defaulting<QueryPart>() {
+                        @Override
+                        public QueryPart visitDefault(final Use<?> type) {
 
-                        throw new UnsupportedOperationException("Query of this type is not supported");
-                    }
-
-                    @Override
-                    public QueryPart visitStruct(final UseStruct type) {
-
-                        // FIXME
-                        return DSL.field(SQLUtils.columnName(name));
-                    }
-
-                    @Override
-                    public QueryPart visitObject(final UseObject type) {
-
-                        final Field<String> sourceId = DSL.field(DSL.name(name.first()), String.class);
-                        if(rest.equals(ObjectSchema.ID_NAME)) {
-                            return sourceId;
-                        } else {
                             throw new UnsupportedOperationException("Query of this type is not supported");
                         }
-                    }
-                });
+
+                        @Override
+                        public QueryPart visitStruct(final UseStruct type) {
+
+                            // FIXME
+                            return DSL.field(SQLUtils.columnName(name));
+                        }
+
+                        @Override
+                        public QueryPart visitObject(final UseObject type) {
+
+                            final Field<String> sourceId = DSL.field(DSL.name(name.first()), String.class);
+                            if (rest.equals(ObjectSchema.ID_NAME)) {
+                                return sourceId;
+                            } else {
+                                throw new UnsupportedOperationException("Query of this type is not supported");
+                            }
+                        }
+                    });
+                }
             }
         };
     }
@@ -393,7 +402,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                 }
 
                 if(context.update(DSL.table(objectTableName(schema))).set(toRecord(schema, after))
-                        .where(condition).limit(1).execute() != 1) {
+                        .where(condition).limit(DSL.inline(1)).execute() != 1) {
 
                     throw new VersionMismatchException(schema.getQualifiedName(), id, version);
                 }
@@ -426,7 +435,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                 }
 
                 if(context.deleteFrom(DSL.table(objectTableName(schema)))
-                        .where(condition).limit(1).execute() != 1) {
+                        .where(condition).limit(DSL.inline(1)).execute() != 1) {
 
                     throw new VersionMismatchException(schema.getQualifiedName(), id, version);
                 }
