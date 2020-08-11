@@ -48,7 +48,7 @@ public class TestViewTransform extends AbstractSparkTest {
         final D d2 = new D("b");
 
         final Dataset<Row> datasetB = session.createDataset(ImmutableList.of(
-                new B("1", d1, 1L), new B("2", d1, 2L), new B("3", d1, 3L),
+                new B("1", d1, 3L), new B("2", d1, 2L), new B("3", d1, 1L),
                 new B("4", d2, 2L), new B("5", d2, 4L), new B("6", d2, 6L)
         ), Encoders.bean(B.class)).toDF();
 
