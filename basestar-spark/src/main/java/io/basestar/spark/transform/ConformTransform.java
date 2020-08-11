@@ -21,47 +21,46 @@ package io.basestar.spark.transform;
  */
 
 import io.basestar.spark.util.SparkSchemaUtils;
-import io.basestar.util.Nullsafe;
-import lombok.RequiredArgsConstructor;
-import org.apache.spark.sql.Dataset;
+import lombok.AllArgsConstructor;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.catalyst.encoders.RowEncoder;
 import org.apache.spark.sql.types.StructType;
-import scala.Function1;
-import scala.runtime.AbstractFunction1;
-
-import java.io.Serializable;
 
 
 /**
  * Force the input to match the field order in the provided schema.
  */
 
-public class ConformTransform implements Transform<Dataset<Row>, Dataset<Row>> {
+public class ConformTransform implements DatasetMapTransform {
 
-    private final StructType structType;
+    private final RowTransformImpl rowTransform;
 
     @lombok.Builder(builderClassName = "Builder")
     public ConformTransform(final StructType structType) {
 
-        this.structType = Nullsafe.require(structType);
+        this.rowTransform = new RowTransformImpl(structType);
     }
 
     @Override
-    public Dataset<Row> accept(final Dataset<Row> input) {
+    public RowTransform rowTransform() {
 
-        return input.map(new ConformFunction(structType), RowEncoder.apply(structType));
+        return rowTransform;
     }
 
-    @RequiredArgsConstructor
-    public static class ConformFunction extends AbstractFunction1<Row, Row> implements Function1<Row, Row>, Serializable {
+    @AllArgsConstructor
+    private static class RowTransformImpl implements RowTransform {
 
         private final StructType structType;
 
         @Override
-        public Row apply(final Row row) {
+        public StructType schema(final StructType input) {
 
-            return SparkSchemaUtils.conform(row, structType);
+            return structType;
+        }
+
+        @Override
+        public Row accept(final Row input) {
+
+            return SparkSchemaUtils.conform(input, structType);
         }
     }
 }

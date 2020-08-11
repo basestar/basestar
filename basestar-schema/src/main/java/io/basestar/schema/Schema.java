@@ -80,8 +80,9 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         return qualifiedName.isEmpty() ? null : qualifiedName.toString(delimiter);
     }
 
-    interface Builder<T> extends Descriptor<T> {
+    interface Builder<T> extends Descriptor<T>, Extendable {
 
+        Builder setExtensions(Map<String, Object> extensions);
     }
 
     default T create(final Object value) {

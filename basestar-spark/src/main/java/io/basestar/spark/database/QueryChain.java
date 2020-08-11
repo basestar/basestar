@@ -8,6 +8,7 @@ import io.basestar.mapper.MappingContext;
 import io.basestar.schema.Reserved;
 import io.basestar.spark.transform.ConformTransform;
 import io.basestar.spark.transform.MarshallTransform;
+import io.basestar.spark.transform.Transform;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
 import org.apache.spark.sql.Dataset;
@@ -65,7 +66,7 @@ public interface QueryChain<T> {
                 .structType(encoder.schema()).build();
 
         final QueryChain<T> self = this;
-        return (expand, query, sort) -> conform.accept(self.query(expand, query, sort).toDF()).as(encoder);
+        return (query, sort, expand) -> conform.accept(self.query(query, sort, expand).toDF()).as(encoder);
     }
 
     default <T2> QueryChain<T2> as(final Class<T2> marshallAs) {
@@ -77,6 +78,11 @@ public interface QueryChain<T> {
 
         final QueryChain<T> self = this;
         final MarshallTransform<T2> marshall = MarshallTransform.<T2>builder().context(context).targetType(marshallAs).build();
-        return (expand, query, sort) -> marshall.accept(self.query(expand, query, sort).toDF());
+        return (query, sort, expand) -> marshall.accept(self.query(query, sort, expand).toDF());
+    }
+
+    default <T2> QueryChain<T2> then(final Transform<Dataset<T>, Dataset<T2>> next) {
+
+        return (query, sort, expand) -> next.accept(this.query(query, sort, expand));
     }
 }

@@ -27,11 +27,9 @@ import io.basestar.schema.use.Use;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.api.java.function.MapFunction;
-import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.catalyst.encoders.RowEncoder;
 import org.apache.spark.sql.types.StructType;
 
 import javax.annotation.Nullable;
@@ -40,39 +38,56 @@ import java.util.Map;
 import java.util.Set;
 
 @Slf4j
-public class SchemaTransform implements Transform<Dataset<Row>, Dataset<Row>> {
+public class SchemaTransform implements DatasetMapTransform {
 
-    private final InstanceSchema schema;
-
-    private final Set<Name> expand;
-
-    private final Map<String, Use<?>> extraMetadata;
-
-    private final StructType structType;
+    private final RowTransformImpl rowTransform;
 
     @lombok.Builder(builderClassName = "Builder")
     SchemaTransform(final InstanceSchema schema, final Map<String, Use<?>> extraMetadata, @Nullable final StructType structType) {
 
-        this.schema = Nullsafe.require(schema);
-        if(this.schema instanceof LinkableSchema) {
-            this.expand = ((LinkableSchema) this.schema).getExpand();
-        } else {
-            this.expand = Collections.emptySet();
-        }
-        this.extraMetadata = Nullsafe.option(extraMetadata);
-        this.structType = Nullsafe.option(structType, () -> SparkSchemaUtils.structType(this.schema, ImmutableSet.of(), this.extraMetadata));
+        this.rowTransform = new RowTransformImpl(schema, extraMetadata, structType);
     }
 
     @Override
-    public Dataset<Row> accept(final Dataset<Row> input) {
+    public RowTransform rowTransform() {
 
-        final InstanceSchema schema = this.schema;
-        final Set<Name> expand = this.expand;
-        final Map<String, Use<?>> extraMetadata = this.extraMetadata;
-        final StructType structType = this.structType;
-        return input.map((MapFunction<Row, Row>) row -> {
-            final Map<String, Object> object = schema.create(SparkSchemaUtils.fromSpark(schema, row), expand, true);
+        return rowTransform;
+    }
+
+    @AllArgsConstructor
+    private static class RowTransformImpl implements RowTransform {
+
+        private final InstanceSchema schema;
+
+        private final Set<Name> expand;
+
+        private final Map<String, Use<?>> extraMetadata;
+
+        private final StructType structType;
+
+        RowTransformImpl(final InstanceSchema schema, final Map<String, Use<?>> extraMetadata, @Nullable final StructType structType) {
+
+            this.schema = Nullsafe.require(schema);
+            if(this.schema instanceof LinkableSchema) {
+                this.expand = ((LinkableSchema) this.schema).getExpand();
+            } else {
+                this.expand = Collections.emptySet();
+            }
+            this.extraMetadata = Nullsafe.option(extraMetadata);
+            this.structType = Nullsafe.option(structType, () -> SparkSchemaUtils.structType(this.schema, ImmutableSet.of(), this.extraMetadata));
+        }
+
+        @Override
+        public StructType schema(final StructType input) {
+
+            return structType;
+        }
+
+        @Override
+        public Row accept(final Row input) {
+
+            final Map<String, Object> object = schema.create(SparkSchemaUtils.fromSpark(schema, input), expand, true);
             return SparkSchemaUtils.toSpark(schema, expand, extraMetadata, structType, object);
-        }, RowEncoder.apply(structType));
+        }
     }
 }

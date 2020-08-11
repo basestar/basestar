@@ -20,38 +20,47 @@ package io.basestar.expression.aggregate;
  * #L%
  */
 
-import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.expression.exception.InvalidAggregateException;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public interface Aggregate {
+/**
+ * Experimental
+ */
 
-    Map<String, Factory> REGISTRY = ImmutableMap.<String, Factory>builder()
-            .put(Avg.NAME, Avg::create)
-            .put(Count.NAME, Count::create)
-            // MORE COMPLICATED THAN OTHERS
-            .put(Max.NAME, Max::create)
-            .put(Min.NAME, Min::create)
-            .put(Sum.NAME, Sum::create)
-            .put(CollectArray.NAME, CollectArray::create)
-            .build();
+@Data
+@AllArgsConstructor
+public class CollectArray implements Aggregate {
 
-    <T> T visit(AggregateVisitor<T> visitor);
+    public static final String NAME = "collectArray";
 
-    // Presently only used for tests
-    Object evaluate(Context context, Stream<? extends Map<String, Object>> values);
+    private final Expression input;
 
-    interface Factory {
+    public static Aggregate create(final List<Expression> args) {
 
-        Aggregate create(List<Expression> args);
+        if(args.size() == 1) {
+            return new CollectArray(args.get(0));
+        } else {
+            throw new InvalidAggregateException(NAME);
+        }
     }
 
-    static Factory factory(final String name) {
+    @Override
+    public <T> T visit(final AggregateVisitor<T> visitor) {
 
-        return REGISTRY.get(name);
+        return visitor.visitCollectArray(this);
+    }
+
+    @Override
+    public Object evaluate(final Context context, final Stream<? extends Map<String, Object>> values) {
+
+        return values.collect(Collectors.toList());
     }
 }

@@ -48,7 +48,7 @@ public class TestViewTransform extends AbstractSparkTest {
         final D d2 = new D("b");
 
         final Dataset<Row> datasetB = session.createDataset(ImmutableList.of(
-                new B("1", d1, 1L), new B("2", d1, 2L), new B("3", d1, 3L),
+                new B("1", d1, 3L), new B("2", d1, 2L), new B("3", d1, 1L),
                 new B("4", d2, 2L), new B("5", d2, 4L), new B("6", d2, 6L)
         ), Encoders.bean(B.class)).toDF();
 
@@ -58,8 +58,8 @@ public class TestViewTransform extends AbstractSparkTest {
 
         final List<AggView> rows = view("AggView", AggView.class, datasets);
         assertEquals(2, rows.size());
-        assertTrue(rows.contains(new AggView("a", 8)));
-        assertTrue(rows.contains(new AggView("b", 14)));
+        assertTrue(rows.contains(new AggView("a", 8, ImmutableList.of(1L, 2L, 3L))));
+        assertTrue(rows.contains(new AggView("b", 14, ImmutableList.of(2L, 4L, 6L))));
     }
 
     @Test

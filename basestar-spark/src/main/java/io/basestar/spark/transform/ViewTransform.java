@@ -36,6 +36,7 @@ import io.basestar.spark.expression.SparkExpressionVisitor;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
+import io.basestar.util.Sort;
 import org.apache.spark.sql.*;
 import org.apache.spark.sql.api.java.UDF1;
 import org.apache.spark.sql.expressions.UserDefinedFunction;
@@ -83,6 +84,9 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         Dataset<Row> output = input;
         if(schema.getWhere() != null) {
             output = output.where(apply(context, output, schema.getWhere(), UseBoolean.DEFAULT));
+        }
+        if(!schema.getSort().isEmpty()) {
+            output = sort(output, schema.getSort());
         }
 
         final AggregateExtractingVisitor visitor = new AggregateExtractingVisitor();
@@ -156,6 +160,14 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
     private Function<Name, Column> columnResolver(final Dataset<Row> ds) {
 
         return path -> next(ds.col(path.get(0)), path.withoutFirst());
+    }
+
+    private Dataset<Row> sort(final Dataset<Row> ds, final List<Sort> sort) {
+
+        final Function<Name, Column> columnResolver = columnResolver(ds);
+        return ds.sort(sort.stream()
+                .map(v -> SparkSchemaUtils.order(columnResolver.apply(v.getName()), v.getOrder(), v.getNulls()))
+                .toArray(Column[]::new));
     }
 
     private Column next(final Column col, final Name rest) {

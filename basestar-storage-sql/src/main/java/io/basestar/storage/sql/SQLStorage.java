@@ -58,6 +58,11 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+/**
+ * FIXME: currently we use literals/inline everywhere because Athena doesn't like ? params, need to make this
+ * strategy-driven rather than forced on everyone.
+ */
+
 @Slf4j
 public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHistory, Storage.WithoutRepair {
 
