@@ -152,7 +152,7 @@ public abstract class TestStorage {
         final Expression expr = Expression.parse("country == 'United Kingdom' || state == 'Victoria'");
         final List<Pager.Source<Map<String, Object>>> sources = storage.query(schema, expr, Collections.emptyList(), Collections.emptySet());
         final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
-        final Page<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
+        final Page<Map<String, Object>> results = new Pager<>(comparator, sources, EnumSet.of(Page.Stat.TOTAL), null).page(100).join();
         assertEquals(8, results.size());
     }
 

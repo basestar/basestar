@@ -66,6 +66,8 @@ import java.util.stream.Stream;
 @Slf4j
 public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHistory, Storage.WithoutRepair {
 
+    private static final String COUNT_AS = "__count";
+
     private final DataSource dataSource;
 
     private final SQLDialect dialect;
@@ -132,7 +134,8 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query,
+                                                         final List<Sort> sort, final Set<Name> expand) {
 
         final Expression bound = query.bind(Context.init());
 
@@ -144,7 +147,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
             final Map<Name, Range<Object>> ranges = conjunction.visit(new RangeVisitor());
 
             Index best = null;
-            // Only multi-value indexes need to be matched
+            // Only multi-value indexes need to be matched separately
             for(final Index index : schema.getIndexes().values()) {
                 if(index.isMultiValue()) {
                     final Set<Name> names = index.getMultiValuePaths();
@@ -154,60 +157,104 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                 }
             }
 
-            final List<OrderField<?>> orderFields = sort.stream()
-                    .map(v -> {
-                        final Field<?> field = DSL.field(SQLUtils.columnName(v.getName()));
-                        return v.getOrder() == Sort.Order.ASC ? field.asc() : field.desc();
-                    })
-                    .collect(Collectors.toList());
-
             final Index index = best;
-            sources.add((count, token, stats) ->
-                    withContext(context -> {
-
-                        final Table<Record> table;
-                        final Function<Name, QueryPart> columnResolver;
-                        if(index == null) {
-                            table = DSL.table(objectTableName(schema));
-                            columnResolver = objectColumnResolver(context, schema);
-                        } else {
-                            table = DSL.table(indexTableName(schema, index));
-                            columnResolver = indexColumnResolver(context, schema, index);
-                        }
-                        final Condition condition = new SQLExpressionVisitor(columnResolver).condition(conjunction);
-
-                        log.debug("SQL condition {}", condition);
-
-                        final SelectSeekStepN<Record> select = context.select(selectFields(schema))
-                                .from(table).where(condition).orderBy(orderFields);
-
-                        final SelectForUpdateStep<Record> seek;
-                        if(token == null) {
-                            seek = select.limit(DSL.inline(count));
-                        } else {
-                            final List<Object> values = KeysetPagingUtils.keysetValues(schema, sort, token);
-                            seek = select.seek(values.toArray(new Object[0])).limit(DSL.inline(count));
-                        }
-
-                        return seek.fetchAsync().thenApply(results -> {
-
-                            final List<Map<String, Object>> objects = all(schema, results);
-
-                            final Page.Token nextToken;
-                            if(objects.size() < count) {
-                                nextToken = null;
-                            } else {
-                                final Map<String, Object> last = objects.get(objects.size() - 1);
-                                nextToken = KeysetPagingUtils.keysetPagingToken(schema, sort, last);
-                            }
-
-                            return new Page<>(objects, nextToken);
-                        });
-
-                    }));
+            sources.add((count, token, stats) -> queryImpl(schema, index, conjunction, sort, expand, count, token, stats));
         }
 
         return sources;
+    }
+
+    private Condition condition(final DSLContext context, final ObjectSchema schema, final Index index, final Expression expression) {
+
+        final Function<Name, QueryPart> columnResolver;
+        if(index == null) {
+            columnResolver = objectColumnResolver(context, schema);
+        } else {
+            columnResolver = indexColumnResolver(context, schema, index);
+        }
+        return new SQLExpressionVisitor(columnResolver).condition(expression);
+    }
+
+    private CompletableFuture<Page<Map<String, Object>>> queryImpl(final ObjectSchema schema, final Index index,
+                                                                   final Expression expression, final List<Sort> sort,
+                                                                   final Set<Name> expand, final int count,
+                                                                   final Page.Token token, final Set<Page.Stat> stats) {
+
+        final List<OrderField<?>> orderFields = sort.stream()
+                .map(v -> {
+                    final Field<?> field = DSL.field(SQLUtils.columnName(v.getName()));
+                    return v.getOrder() == Sort.Order.ASC ? field.asc() : field.desc();
+                })
+                .collect(Collectors.toList());
+
+        final Table<Record> table;
+        if(index == null) {
+            table = DSL.table(objectTableName(schema));
+        } else {
+            table = DSL.table(indexTableName(schema, index));
+        }
+
+        final CompletableFuture<Page<Map<String, Object>>> pageFuture = withContext(context -> {
+
+            final Condition condition = condition(context, schema, index, expression);
+
+            log.debug("SQL condition {}", condition);
+
+            final SelectSeekStepN<Record> select = context.select(selectFields(schema))
+                    .from(table).where(condition).orderBy(orderFields);
+
+            final SelectForUpdateStep<Record> seek;
+            if(token == null) {
+                seek = select.limit(DSL.inline(count));
+            } else {
+                final List<Object> values = KeysetPagingUtils.keysetValues(schema, sort, token);
+                seek = select.seek(values.toArray(new Object[0])).limit(DSL.inline(count));
+            }
+
+            return seek.fetchAsync().thenApply(results -> {
+
+                final List<Map<String, Object>> objects = all(schema, results);
+
+                final Page.Token nextToken;
+                if(objects.size() < count) {
+                    nextToken = null;
+                } else {
+                    final Map<String, Object> last = objects.get(objects.size() - 1);
+                    nextToken = KeysetPagingUtils.keysetPagingToken(schema, sort, last);
+                }
+
+                return new Page<>(objects, nextToken);
+            });
+
+        });
+
+        if(stats != null && (stats.contains(Page.Stat.TOTAL) || stats.contains(Page.Stat.APPROX_TOTAL))) {
+
+            // Runs in parallel with query
+            final CompletableFuture<Page.Stats> statsFuture = withContext(context -> {
+
+                final Condition condition = condition(context, schema, index, expression);
+
+                return context.select(DSL.count().as(COUNT_AS)).from(table).where(condition).fetchAsync().thenApply(results -> {
+
+                    if(results.isEmpty()) {
+                        return Page.Stats.ZERO;
+                    } else {
+                        final Record1<Integer> record = results.iterator().next();
+                        return Page.Stats.fromTotal(record.value1());
+                    }
+                });
+            });
+
+            return CompletableFuture.allOf(pageFuture, statsFuture).thenApply(ignored -> {
+
+                final Page<Map<String, Object>> page = pageFuture.getNow(Page.empty());
+                return page.withStats(statsFuture.getNow(Page.Stats.ZERO));
+            });
+
+        } else {
+            return pageFuture;
+        }
     }
 
     private Function<Name, QueryPart> objectColumnResolver(final DSLContext context, final ObjectSchema schema) {
