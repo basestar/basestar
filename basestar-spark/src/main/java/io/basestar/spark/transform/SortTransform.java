@@ -21,6 +21,7 @@ package io.basestar.spark.transform;
  */
 
 import io.basestar.spark.util.ColumnResolver;
+import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Sort;
 import org.apache.spark.sql.Column;
@@ -41,30 +42,13 @@ public class SortTransform<T> implements Transform<Dataset<T>, Dataset<T>> {
         this.columnResolver = columnResolver;
     }
 
-    protected Column order(final Column column, final Sort.Order order, final Sort.Nulls nulls) {
-
-        if(order == Sort.Order.ASC) {
-            if(nulls == Sort.Nulls.FIRST) {
-                return column.asc_nulls_first();
-            } else {
-                return column.asc_nulls_last();
-            }
-        } else {
-            if(nulls == Sort.Nulls.FIRST) {
-                return column.desc_nulls_first();
-            } else {
-                return column.desc_nulls_last();
-            }
-        }
-    }
-
     @Override
     public Dataset<T> accept(final Dataset<T> input) {
 
         final List<Sort> sort = this.sort;
         final ColumnResolver<T> columnResolver = this.columnResolver;
         return input.sort(sort.stream()
-                .map(v -> order(columnResolver.resolve(input, v.getName()), v.getOrder(), v.getNulls()))
+                .map(v -> SparkSchemaUtils.order(columnResolver.resolve(input, v.getName()), v.getOrder(), v.getNulls()))
                 .toArray(Column[]::new));
     }
 }

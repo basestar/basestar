@@ -58,8 +58,14 @@ AggView:
     key:
       type: string?
       expression: key.id
+    collect:
+      type:
+        array: integer
+      expression: collectArray(value)
   from: B
   group: key
+  sort:
+    - value
   expand:
     - agg
     - key

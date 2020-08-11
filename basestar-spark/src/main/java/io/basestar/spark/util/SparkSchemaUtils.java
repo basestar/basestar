@@ -27,6 +27,8 @@ import io.basestar.schema.*;
 import io.basestar.schema.layout.Layout;
 import io.basestar.schema.use.*;
 import io.basestar.util.Name;
+import io.basestar.util.Sort;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Encoder;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
@@ -875,5 +877,22 @@ public class SparkSchemaUtils {
                 return encoder(type.getType());
             }
         });
+    }
+
+    public static Column order(final Column column, final Sort.Order order, final Sort.Nulls nulls) {
+
+        if(order == Sort.Order.ASC) {
+            if(nulls == Sort.Nulls.FIRST) {
+                return column.asc_nulls_first();
+            } else {
+                return column.asc_nulls_last();
+            }
+        } else {
+            if(nulls == Sort.Nulls.FIRST) {
+                return column.desc_nulls_first();
+            } else {
+                return column.desc_nulls_last();
+            }
+        }
     }
 }

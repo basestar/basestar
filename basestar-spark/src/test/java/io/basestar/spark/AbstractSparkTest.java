@@ -143,6 +143,8 @@ public abstract class AbstractSparkTest {
         private String key;
 
         private long agg;
+
+        private List<Long> collect;
     }
 
     @Data

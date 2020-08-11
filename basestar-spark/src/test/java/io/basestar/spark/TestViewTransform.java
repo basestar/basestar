@@ -58,8 +58,8 @@ public class TestViewTransform extends AbstractSparkTest {
 
         final List<AggView> rows = view("AggView", AggView.class, datasets);
         assertEquals(2, rows.size());
-        assertTrue(rows.contains(new AggView("a", 8)));
-        assertTrue(rows.contains(new AggView("b", 14)));
+        assertTrue(rows.contains(new AggView("a", 8, ImmutableList.of(1L, 2L, 3L))));
+        assertTrue(rows.contains(new AggView("b", 14, ImmutableList.of(2L, 4L, 6L))));
     }
 
     @Test

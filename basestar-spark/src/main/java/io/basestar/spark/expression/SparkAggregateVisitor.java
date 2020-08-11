@@ -63,9 +63,16 @@ public class SparkAggregateVisitor implements AggregateVisitor<Column> {
     }
 
     @Override
-    public Column visitCount(final Count count) {
+    public Column visitCount(final Count aggregate) {
 
         final Column input = columnResolver.apply(new Constant(true));
         return functions.count(input);
+    }
+
+    @Override
+    public Column visitCollectArray(final CollectArray aggregate) {
+
+        final Column input = columnResolver.apply(aggregate.getInput());
+        return functions.collect_list(input);
     }
 }
