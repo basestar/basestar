@@ -14,6 +14,7 @@
         <maven-project.version>2.2.1</maven-project.version>
         <maven-plugin.version>3.6.0</maven-plugin.version>
         <guava.version>28.1-jre</guava.version>
+        <classgraph.version>4.8.87</classgraph.version>
     </properties>
 
     <dependencies>
@@ -49,6 +50,11 @@
             <groupId>io.basestar</groupId>
             <artifactId>basestar-mapper</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.classgraph</groupId>
+            <artifactId>classgraph</artifactId>
+            <version>${classgraph.version}</version>
         </dependency>
         <dependency>
             <groupId>io.basestar</groupId>

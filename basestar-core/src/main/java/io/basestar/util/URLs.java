@@ -50,7 +50,7 @@ public class URLs {
         try {
             return new URL(url);
         } catch (final MalformedURLException e) {
-            throw new UnsupportedOperationException();
+            throw new IllegalStateException(e);
         }
     }
 
