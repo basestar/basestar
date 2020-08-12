@@ -38,10 +38,13 @@ public class TestNamespaceMojo {
         FileUtils.deleteDirectory(namespaceDirectory);
 
         final NamespaceMojo mojo = new NamespaceMojo();
-        mojo.setClasses(ImmutableList.of(io.basestar.maven.test.existing.Test.class.getName()));
+        mojo.setSearchPackages(ImmutableList.of("io.basestar.maven"));
         mojo.setOutputDirectory(namespaceDirectory.toString());
         mojo.setOutputFilename("namespace.yml");
         mojo.setAddResources(false);
+        mojo.setSchemaUrls(ImmutableList.of(
+                "classpath:/io/basestar/maven/schema.yml"
+        ));
 
         mojo.execute();
 
