@@ -49,11 +49,15 @@ public class NamespaceMojo extends AbstractMojo {
     @Parameter(required = true)
     private List<String> classes;
 
-    @Parameter(required = true, defaultValue = "${project.build.directory}/generated-sources/basestar")
+    @Parameter(required = true, defaultValue = "${project.build.directory}/generated-resources/basestar")
     private String outputDirectory;
 
     @Parameter
+    private String outputFilename;
+
+    @Parameter
     private boolean addResources;
+
 
     @Parameter(defaultValue = "${project}")
     private MavenProject project;
@@ -80,18 +84,29 @@ public class NamespaceMojo extends AbstractMojo {
             final MappingContext context = new MappingContext();
 
             final Namespace.Builder all = context.namespace(classes);
-            for(final Map.Entry<Name, Schema.Descriptor<?>> entry : all.getSchemas().entrySet()) {
-                final Name name = entry.getKey();
-                final Schema.Descriptor<?> schema = entry.getValue();
-                final File output = packageOutputDirectory(name);
+            if(outputFilename == null || outputFilename.isEmpty()) {
+                for(final Map.Entry<Name, Schema.Descriptor<?>> entry : all.getSchemas().entrySet()) {
+                    final Name name = entry.getKey();
+                    final Schema.Descriptor<?> schema = entry.getValue();
+                    final File output = packageOutputDirectory(name);
+                    output.mkdirs();
+                    final File file = new File(output, name.last() + ".yml");
+                    final Namespace.Builder one = Namespace.builder()
+                            .setSchema(name, schema);
+                    try(final FileOutputStream fos = new FileOutputStream(file);
+                        final OutputStreamWriter writer = new OutputStreamWriter(fos, Charsets.UTF_8)) {
+                        getLog().info("Writing schema " + name + " to " + file.getAbsolutePath());
+                        one.yaml(writer);
+                    }
+                }
+            } else {
+                final File output = new File(outputDirectory);
                 output.mkdirs();
-                final File file = new File(output, name.last() + ".yml");
-                final Namespace.Builder one = Namespace.builder()
-                        .setSchema(name, schema);
+                final File file = new File(output, outputFilename);
                 try(final FileOutputStream fos = new FileOutputStream(file);
                     final OutputStreamWriter writer = new OutputStreamWriter(fos, Charsets.UTF_8)) {
-                    getLog().info("Writing schema " + name + " to " + file.getAbsolutePath());
-                    one.yaml(writer);
+                    getLog().info("Writing namespace to " + file.getAbsolutePath());
+                    all.yaml(writer);
                 }
             }
 
