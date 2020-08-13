@@ -293,7 +293,11 @@ public class SparkSchemaUtils {
                 if(value instanceof String) {
                     return ObjectSchema.ref((String)value);
                 } else if(value instanceof Row) {
-                    return refFromSpark((Row)value);
+                    if(expand != null) {
+                        return fromSpark(type.getSchema(), expand, (Row)value);
+                    } else {
+                        return refFromSpark((Row) value);
+                    }
                 } else {
                     throw new IllegalStateException();
                 }
@@ -354,7 +358,7 @@ public class SparkSchemaUtils {
             public Object visitStruct(final UseStruct type) {
 
                 if(value instanceof Row) {
-                    return fromSpark(type.getSchema(), (Row)value);
+                    return fromSpark(type.getSchema(), expand, (Row)value);
                 } else {
                     throw new IllegalStateException();
                 }
@@ -382,7 +386,7 @@ public class SparkSchemaUtils {
             public Object visitView(final UseView type) {
 
                 if(value instanceof Row) {
-                    return fromSpark(type.getSchema(), (Row)value);
+                    return fromSpark(type.getSchema(), expand, (Row)value);
                 } else {
                     throw new IllegalStateException();
                 }
@@ -476,7 +480,11 @@ public class SparkSchemaUtils {
             public Object visitObject(final UseObject type) {
 
                 if(value instanceof Map<?, ?> && dataType instanceof StructType) {
-                    return refToSpark((StructType)dataType, (Map<String, Object>) value);
+                    if(expand != null) {
+                        return toSpark(type.getSchema(), expand, (StructType) dataType, (Map<String, Object>) value);
+                    } else {
+                        return refToSpark((StructType) dataType, (Map<String, Object>) value);
+                    }
                 } else {
                     throw new IllegalStateException();
                 }
@@ -555,9 +563,14 @@ public class SparkSchemaUtils {
             }
 
             @Override
+            @SuppressWarnings("unchecked")
             public Object visitView(final UseView type) {
 
-                throw new UnsupportedOperationException();
+                if(value instanceof Map<?, ?> && dataType instanceof StructType) {
+                    return toSpark(type.getSchema(), expand, (StructType) dataType, (Map<String, Object>) value);
+                } else {
+                    throw new IllegalStateException();
+                }
             }
 
             @Override

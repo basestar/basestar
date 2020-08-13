@@ -192,6 +192,8 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         Dataset<Row> output = input;
         for (final RequiredRef requiredRef : requiredRefs) {
 
+//            System.out.println("Before expanding refs " + requiredRef.getSchema().getQualifiedName() + ":\n" + output.showString(10, 80, false));
+
             final Dataset<Row> refInput = cache(resolver.resolveAndConform(requiredRef.getSchema(), columnResolver, requiredRef.getExpand()));
 
             final StructField refIdField = SparkSchemaUtils.field(REF_ID_COLUMN, DataTypes.StringType);
@@ -213,8 +215,8 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
                 return ids.stream().map(id -> SparkSchemaUtils.append(row, refIdField, id)).iterator();
             };
 
-            final StructType flatMapType = SparkSchemaUtils.append(input.schema(), refIdField);
-            final Dataset<Row> withRefIds = input.flatMap(refIds, RowEncoder.apply(flatMapType));
+            final StructType flatMapType = SparkSchemaUtils.append(output.schema(), refIdField);
+            final Dataset<Row> withRefIds = output.flatMap(refIds, RowEncoder.apply(flatMapType));
 
             final String refIdColumn = requiredRef.getSchema().id();
             final Column joinCondition = refInput.col(refIdColumn).equalTo(withRefIds.col(REF_ID_COLUMN));
@@ -252,7 +254,9 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
                 });
             };
 
-            output = grouped.mapGroups(collect, RowEncoder.apply(input.schema()));
+            output = grouped.mapGroups(collect, RowEncoder.apply(output.schema()));
+
+//            System.out.println("After expanding refs " + requiredRef.getSchema().getQualifiedName() + ":\n" + output.showString(10, 80, false));
         }
 
         return output;
@@ -471,10 +475,10 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
                     if (input instanceof Row) {
                         final Row row = (Row) input;
                         final String id = (String) SparkSchemaUtils.get(row, ObjectSchema.ID);
-                        if (id != null) {
+                        if (id != null && lookup.get(id) != null) {
                             return lookup.get(id);
                         } else {
-                            return null;
+                            return (Row)input;
                         }
                     } else {
                         throw new IllegalStateException();

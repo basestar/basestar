@@ -89,6 +89,8 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
             output = sort(from, output, schema.getSort());
         }
 
+//        System.out.println("View transform input (after filter):\n" + output.showString(10, 80, false));
+
         final AggregateExtractingVisitor visitor = new AggregateExtractingVisitor();
         final Map<String, TypedExpression> columns = new HashMap<>();
         schema.getSelectProperties().forEach((name, prop) -> {
@@ -139,7 +141,11 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         }
         selectColumns.add(output.col(ViewSchema.KEY));
 
-        return output.select(selectColumns.toArray(new Column[0]));
+        output = output.select(selectColumns.toArray(new Column[0]));
+
+//        System.out.println("View transform output:\n" + output.showString(10, 80, false));
+
+        return output;
     }
 
     @Data
@@ -162,7 +168,8 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
     private Column apply(final InstanceSchema from, final Context context, final Dataset<Row> ds, final TypedExpression expression) {
 
-        return apply(from, context, ds, expression.getExpression(), expression.getType());
+        // FIXME
+        return apply(from, context, ds, expression.getExpression());//, expression.getType());
     }
 
     private Column apply(final InstanceSchema from, final Context context, final Dataset<Row> ds, final Expression expression, final Use<?> type) {

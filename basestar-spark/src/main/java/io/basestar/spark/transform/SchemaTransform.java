@@ -20,7 +20,6 @@ package io.basestar.spark.transform;
  * #L%
  */
 
-import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.use.Use;
@@ -66,13 +65,15 @@ public class SchemaTransform implements DatasetMapTransform {
         RowTransformImpl(final InstanceSchema schema, final Set<Name> expand, final Map<String, Use<?>> extraMetadata, @Nullable final StructType structType) {
 
             this.schema = Nullsafe.require(schema);
-            if(this.schema instanceof LinkableSchema) {
+            if(expand != null) {
+                this.expand = expand;
+            } else if(this.schema instanceof LinkableSchema) {
                 this.expand = ((LinkableSchema) this.schema).getExpand();
             } else {
                 this.expand = Collections.emptySet();
             }
             this.extraMetadata = Nullsafe.option(extraMetadata);
-            this.structType = Nullsafe.option(structType, () -> SparkSchemaUtils.structType(this.schema, ImmutableSet.of(), this.extraMetadata));
+            this.structType = Nullsafe.option(structType, () -> SparkSchemaUtils.structType(this.schema, this.expand, this.extraMetadata));
         }
 
         @Override
@@ -84,7 +85,7 @@ public class SchemaTransform implements DatasetMapTransform {
         @Override
         public Row accept(final Row input) {
 
-            final Map<String, Object> object = schema.create(SparkSchemaUtils.fromSpark(schema, input), expand, true);
+            final Map<String, Object> object = schema.create(SparkSchemaUtils.fromSpark(schema, expand, input), expand, true);
             return SparkSchemaUtils.toSpark(schema, expand, extraMetadata, structType, object);
         }
     }
