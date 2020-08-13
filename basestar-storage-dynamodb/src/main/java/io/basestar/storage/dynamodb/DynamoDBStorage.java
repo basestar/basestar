@@ -47,7 +47,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Slf4j
 public class DynamoDBStorage extends PartitionedStorage implements Storage.WithoutWriteHistory, Storage.WithoutExpand {
@@ -165,14 +164,14 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
                 .thenApply(bytes -> bytes == null ? null : DynamoDBUtils.fromOversizeBytes(bytes));
     }
 
-    private CompletableFuture<BatchResponse> fromItems(final Map<Map<String, AttributeValue>, ObjectSchema> keyToSchema, final Map<String, List<Map<String, AttributeValue>>> items) {
+    private CompletableFuture<BatchResponse> fromItems(final Map<Map<String, AttributeValue>, ObjectSchema> keyToSchema, final Map<String, ? extends Collection<Map<String, AttributeValue>>> items) {
 
         // could implement read-batching here, but probably not worth it since
         // probable oversize storage engine (S3) doesn't support it meaningfully
 
         final Map<BatchResponse.Key, CompletableFuture<Map<String, Object>>> oversize = new HashMap<>();
         final Map<BatchResponse.Key, Map<String, Object>> ok = new HashMap<>();
-        for(final Map.Entry<String, List<Map<String, AttributeValue>>> entry : items.entrySet()) {
+        for(final Map.Entry<String, ? extends Collection<Map<String, AttributeValue>>> entry : items.entrySet()) {
             for (final Map<String, AttributeValue> item : entry.getValue()) {
                 final Map<String, Object> object = DynamoDBUtils.fromItem(item);
                 final ObjectSchema schema = matchKeyToSchema(keyToSchema, item);
@@ -335,26 +334,17 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
             @Override
             public CompletableFuture<BatchResponse> read() {
 
-                return read(items.entrySet().stream().collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> KeysAndAttributes.builder().keys(entry.getValue()).build()
-                )));
+                return read(items);
             }
 
-            private CompletableFuture<BatchResponse> read(final Map<String, KeysAndAttributes> items) {
+            private CompletableFuture<BatchResponse> read(final Map<String, List<Map<String, AttributeValue>>> items) {
 
                 if(items.isEmpty()) {
                     return CompletableFuture.completedFuture(BatchResponse.empty());
                 }
 
-                final BatchGetItemRequest request = BatchGetItemRequest.builder()
-                        .requestItems(items)
-                        .build();
-
-                return client.batchGetItem(request)
-                        .thenCompose(result -> read(result.unprocessedKeys())
-                                .thenCompose(rest -> fromItems(keyToSchema, result.responses())
-                                        .thenApply(from -> BatchResponse.merge(Stream.of(rest, from)))));
+                return DynamoDBUtils.batchRead(client, items)
+                                .thenCompose(responses -> fromItems(keyToSchema, responses));
             }
         };
     }

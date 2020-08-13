@@ -21,22 +21,29 @@ package io.basestar.storage.dynamodb;
  */
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.util.CompletableFutures;
 import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.core.BytesWrapper;
 import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.model.*;
 
 import java.io.*;
 import java.time.temporal.TemporalAccessor;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Slf4j
 public class DynamoDBUtils {
 
     public static final int MAX_READ_BATCH_SIZE = 100;
+
+    public static final int MAX_WRITE_BATCH_SIZE = 25;
 
     public static final int MAX_ITEM_SIZE = 400_000;
 
@@ -242,5 +249,93 @@ public class DynamoDBUtils {
     public static String schema(final Map<String, AttributeValue> values) {
 
         return (String)fromAttributeValue(values.get(ObjectSchema.SCHEMA));
+    }
+
+    private static <T> Collection<T> concat(final Collection<T> a, final Collection<T> b) {
+
+        return ImmutableList.<T>builder().addAll(a).addAll(b).build();
+    }
+
+    private static <K, V> Map<K, V> concat(final Map<K, V> a, final Map<K, V> b) {
+
+        return ImmutableMap.<K, V>builder().putAll(a).putAll(b).build();
+    }
+
+    private static <T> List<List<T>> slice(final Collection<T> values, final int size) {
+
+        final List<List<T>> slices = new ArrayList<>();
+        List<T> slice = null;
+        for(final T value : values) {
+            if(slice == null || slice.size() == size) {
+                slice = new ArrayList<>();
+                slices.add(slice);
+            }
+            slice.add(value);
+        }
+        return slices;
+    }
+
+    public static CompletableFuture<Map<String, Collection<Map<String, AttributeValue>>>> batchRead(final DynamoDbAsyncClient client, final Map<String, ? extends Collection<Map<String, AttributeValue>>> keys) {
+
+        // Not optimum, but will work for now
+        final List<CompletableFuture<Map<String, Collection<Map<String, AttributeValue>>>>> futures = keys.entrySet().stream()
+                .map(entry -> batchRead(client, entry.getKey(), entry.getValue()).thenApply(v -> Collections.singletonMap(entry.getKey(), v)))
+                .collect(Collectors.toList());
+        return CompletableFutures.allOf(Collections.emptyMap(), DynamoDBUtils::concat, futures);
+    }
+
+    public static CompletableFuture<Collection<Map<String, AttributeValue>>> batchRead(final DynamoDbAsyncClient client, final String tableName, final Collection<Map<String, AttributeValue>> keys) {
+
+        final List<List<Map<String, AttributeValue>>> slices = slice(keys, MAX_READ_BATCH_SIZE);
+        final List<CompletableFuture<Collection<Map<String, AttributeValue>>>> futures = slices.stream()
+                .map(slice -> batchReadImpl(client, tableName, KeysAndAttributes.builder().keys(slice).build()))
+                .collect(Collectors.toList());
+        return CompletableFutures.allOf(Collections.emptyList(), DynamoDBUtils::concat, futures);
+    }
+
+    private static CompletableFuture<Collection<Map<String, AttributeValue>>> batchReadImpl(final DynamoDbAsyncClient client, final String tableName, final KeysAndAttributes keys) {
+
+        final BatchGetItemRequest req = BatchGetItemRequest.builder()
+                .requestItems(Collections.singletonMap(tableName, keys))
+                .build();
+
+        return client.batchGetItem(req).thenCompose(results -> {
+
+            final List<Map<String, AttributeValue>> items = results.responses().getOrDefault(tableName, Collections.emptyList());
+
+            final KeysAndAttributes unprocessed = results.hasUnprocessedKeys() ? results.unprocessedKeys().get(tableName) : null;
+            if(unprocessed != null) {
+                return batchReadImpl(client, tableName, unprocessed)
+                        .thenApply(rest -> concat(items, rest));
+            } else {
+                return CompletableFuture.completedFuture(items);
+            }
+        });
+    }
+
+    public static CompletableFuture<Void> batchWrite(final DynamoDbAsyncClient client, final String tableName, final Collection<WriteRequest> writes) {
+
+        final List<List<WriteRequest>> slices = slice(writes, MAX_WRITE_BATCH_SIZE);
+        final List<CompletableFuture<Void>> futures = slices.stream()
+                .map(slice -> batchWriteImpl(client, tableName, slice))
+                .collect(Collectors.toList());
+        return CompletableFutures.allOf(futures);
+    }
+
+    private static CompletableFuture<Void> batchWriteImpl(final DynamoDbAsyncClient client, final String tableName, final Collection<WriteRequest> writes) {
+
+        final BatchWriteItemRequest req = BatchWriteItemRequest.builder()
+                .requestItems(Collections.singletonMap(tableName, writes))
+                .build();
+
+        return client.batchWriteItem(req).thenCompose(results -> {
+
+            final Collection<WriteRequest> unprocessed = results.hasUnprocessedItems() ? results.unprocessedItems().get(tableName) : null;
+            if(unprocessed != null) {
+                return batchWriteImpl(client, tableName, unprocessed);
+            } else {
+                return CompletableFuture.completedFuture(null);
+            }
+        });
     }
 }
