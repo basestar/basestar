@@ -27,6 +27,7 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.expression.aggregate.AggregateExtractingVisitor;
 import io.basestar.schema.Property;
+import io.basestar.schema.Reserved;
 import io.basestar.schema.ViewSchema;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseBinary;
@@ -37,15 +38,13 @@ import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Sort;
+import lombok.Data;
 import org.apache.spark.sql.*;
 import org.apache.spark.sql.api.java.UDF1;
 import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.types.DataTypes;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 
 
@@ -90,10 +89,10 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         }
 
         final AggregateExtractingVisitor visitor = new AggregateExtractingVisitor();
-        final Map<String, Expression> columns = new HashMap<>();
+        final Map<String, TypedExpression> columns = new HashMap<>();
         schema.getSelectProperties().forEach((name, prop) -> {
             final Expression expr = Nullsafe.require(prop.getExpression()).bind(context);
-            columns.put(name, visitor.visit(expr));
+            columns.put(name, new TypedExpression(visitor.visit(expr), prop.getType()));
         });
         final Map<String, Aggregate> aggregates = visitor.getAggregates();
 
@@ -132,14 +131,22 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         // FIXME: creating struct is wasteful, UDF could be defined to take key columns as args
         output = output.withColumn(ViewSchema.KEY, keyFunction.apply(functions.struct(keyColumns)));
 
-        for(final Map.Entry<String, Expression> entry : columns.entrySet()) {
+        for(final Map.Entry<String, TypedExpression> entry : columns.entrySet()) {
             final String name = entry.getKey();
-            final Expression expression = entry.getValue();
+            final TypedExpression expression = entry.getValue();
             selectColumns.add(apply(context, output, expression).as(name));
         }
         selectColumns.add(output.col(ViewSchema.KEY));
 
         return output.select(selectColumns.toArray(new Column[0]));
+    }
+
+    @Data
+    private static class TypedExpression {
+
+        private final Expression expression;
+
+        private final Use<?> type;
     }
 
     private Column apply(final Context context, final Dataset<Row> ds, final Aggregate aggregate) {
@@ -152,6 +159,11 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         return new SparkExpressionVisitor(columnResolver(ds)).visit(expression.bind(context));
     }
 
+    private Column apply(final Context context, final Dataset<Row> ds, final TypedExpression expression) {
+
+        return apply(context, ds, expression.getExpression(), expression.getType());
+    }
+
     private Column apply(final Context context, final Dataset<Row> ds, final Expression expression, final Use<?> type) {
 
         return apply(context, ds, expression).cast(SparkSchemaUtils.type(type, ImmutableSet.of()));
@@ -159,7 +171,13 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
     private Function<Name, Column> columnResolver(final Dataset<Row> ds) {
 
-        return path -> next(ds.col(path.get(0)), path.withoutFirst());
+        return path -> {
+            if(path.equals(Reserved.THIS_NAME)) {
+                return functions.struct(Arrays.stream(ds.columns()).map(ds::col).toArray(Column[]::new));
+            } else {
+                return next(ds.col(path.get(0)), path.withoutFirst());
+            }
+        };
     }
 
     private Dataset<Row> sort(final Dataset<Row> ds, final List<Sort> sort) {

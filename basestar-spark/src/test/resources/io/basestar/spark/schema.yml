@@ -60,8 +60,8 @@ AggView:
       expression: key.id
     collect:
       type:
-        array: integer
-      expression: collectArray(value)
+        array: B
+      expression: collectArray(this)
   from: B
   group: key
   sort:
@@ -69,6 +69,7 @@ AggView:
   expand:
     - agg
     - key
+    - collect
 
 AliasView:
   type: view
