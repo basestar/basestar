@@ -54,12 +54,17 @@ public class TestViewTransform extends AbstractSparkTest {
         final B b5 = new B("5", d2, 4L);
         final B b6 = new B("6", d2, 6L);
 
+        final Dataset<Row> datasetD = session.createDataset(ImmutableList.of(
+                d1, d2
+        ), Encoders.bean(D.class)).toDF();
+
         final Dataset<Row> datasetB = session.createDataset(ImmutableList.of(
                 b1, b2, b3, b4, b5, b6
         ), Encoders.bean(B.class)).toDF();
 
         final Map<Name, Dataset<Row>> datasets = ImmutableMap.of(
-                Name.of("B"), datasetB
+                Name.of("B"), datasetB,
+                Name.of("D"), datasetD
         );
 
         final List<AggView> rows = view("AggView", AggView.class, datasets);

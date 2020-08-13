@@ -62,7 +62,10 @@ AggView:
       type:
         array: B
       expression: collectArray(this)
-  from: B
+  from:
+    schema: B
+    expand:
+      - key
   group: key
   sort:
     - value

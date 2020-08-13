@@ -27,7 +27,6 @@ import io.basestar.schema.use.Use;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.StructType;
@@ -43,9 +42,9 @@ public class SchemaTransform implements DatasetMapTransform {
     private final RowTransformImpl rowTransform;
 
     @lombok.Builder(builderClassName = "Builder")
-    SchemaTransform(final InstanceSchema schema, final Map<String, Use<?>> extraMetadata, @Nullable final StructType structType) {
+    SchemaTransform(final InstanceSchema schema, final Set<Name> expand, final Map<String, Use<?>> extraMetadata, @Nullable final StructType structType) {
 
-        this.rowTransform = new RowTransformImpl(schema, extraMetadata, structType);
+        this.rowTransform = new RowTransformImpl(schema, expand, extraMetadata, structType);
     }
 
     @Override
@@ -54,7 +53,6 @@ public class SchemaTransform implements DatasetMapTransform {
         return rowTransform;
     }
 
-    @AllArgsConstructor
     private static class RowTransformImpl implements RowTransform {
 
         private final InstanceSchema schema;
@@ -65,7 +63,7 @@ public class SchemaTransform implements DatasetMapTransform {
 
         private final StructType structType;
 
-        RowTransformImpl(final InstanceSchema schema, final Map<String, Use<?>> extraMetadata, @Nullable final StructType structType) {
+        RowTransformImpl(final InstanceSchema schema, final Set<Name> expand, final Map<String, Use<?>> extraMetadata, @Nullable final StructType structType) {
 
             this.schema = Nullsafe.require(schema);
             if(this.schema instanceof LinkableSchema) {

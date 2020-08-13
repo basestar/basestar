@@ -624,21 +624,24 @@ public class SparkSchemaUtils {
 
     public static Object conform(final Object source, final DataType targetType) {
 
-        if(source == null) {
+        if (source == null) {
             return null;
-        } else if(targetType instanceof ArrayType) {
+        } else if (targetType instanceof ArrayType) {
             final DataType elementType = ((ArrayType) targetType).elementType();
-            return ScalaUtils.asScalaSeq(ScalaUtils.asJavaStream((Seq<?>)source)
-                    .map(v -> conform(v, elementType)).iterator());
-        } else if(targetType instanceof MapType) {
+            final List<Object> tmp = new ArrayList<>();
+            ScalaUtils.asJavaStream((Seq<?>) source).forEach(v -> {
+                tmp.add(conform(v, elementType));
+            });
+            return ScalaUtils.asScalaSeq(tmp);
+        } else if (targetType instanceof MapType) {
             final DataType valueType = ((MapType) targetType).valueType();
-            return ScalaUtils.asScalaMap(ScalaUtils.asJavaMap((scala.collection.Map<?, ?>)source)
-                    .entrySet().stream().collect(Collectors.toMap(
-                            Map.Entry::getKey,
-                            e -> conform(e.getValue(), valueType)
-                    )));
-        } else if(targetType instanceof StructType) {
-            return conform((Row)source, (StructType)targetType);
+            final Map<Object, Object> tmp = new HashMap<>();
+            ScalaUtils.asJavaMap((scala.collection.Map<?, ?>) source).forEach((k, v) -> {
+                tmp.put(k, conform(v, valueType));
+            });
+            return ScalaUtils.asScalaMap(tmp);
+        } else if (targetType instanceof StructType) {
+            return conform((Row) source, (StructType) targetType);
         } else {
             return source;
         }
