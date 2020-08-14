@@ -21,7 +21,6 @@ package io.basestar.spark.transform;
  */
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
@@ -41,7 +40,6 @@ import org.apache.spark.sql.*;
 import org.apache.spark.sql.api.java.UDF1;
 import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.StructType;
 
 import java.util.*;
 import java.util.function.Function;
@@ -91,11 +89,12 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
 //        System.out.println("View transform input (after filter):\n" + output.showString(10, 80, false));
 
+        final Map<String, Set<Name>> branches = Name.branch(schema.getFrom().getExpand());
         final AggregateExtractingVisitor visitor = new AggregateExtractingVisitor();
         final Map<String, TypedExpression> columns = new HashMap<>();
         schema.getSelectProperties().forEach((name, prop) -> {
             final Expression expr = Nullsafe.require(prop.getExpression()).bind(context);
-            columns.put(name, new TypedExpression(visitor.visit(expr), prop.getType()));
+            columns.put(name, new TypedExpression(visitor.visit(expr), prop.getType(), branches.get(name)));
         });
         final Map<String, Aggregate> aggregates = visitor.getAggregates();
 
@@ -154,6 +153,8 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         private final Expression expression;
 
         private final Use<?> type;
+
+        private final Set<Name> expand;
     }
 
     private Column apply(final InstanceSchema from, final Context context, final Dataset<Row> ds, final Aggregate aggregate) {
@@ -168,32 +169,45 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
     private Column apply(final InstanceSchema from, final Context context, final Dataset<Row> ds, final TypedExpression expression) {
 
-        // FIXME
-        return apply(from, context, ds, expression.getExpression());//, expression.getType());
+        return apply(from, context, ds, expression.getExpression(), expression.getType(), expression.getExpand());
     }
 
     private Column apply(final InstanceSchema from, final Context context, final Dataset<Row> ds, final Expression expression, final Use<?> type) {
 
-        return apply(from, context, ds, expression).cast(SparkSchemaUtils.type(type, ImmutableSet.of()));
+        return apply(from, context, ds, expression, type, null);
+    }
+
+    private Column apply(final InstanceSchema from, final Context context, final Dataset<Row> ds, final Expression expression, final Use<?> type, final Set<Name> expand) {
+
+        return apply(from, context, ds, expression).cast(SparkSchemaUtils.type(type, expand));
     }
 
     private Function<Name, Column> columnResolver(final InstanceSchema from, final Dataset<Row> ds) {
 
         return path -> {
-            if(path.equals(Reserved.THIS_NAME)) {
-                // FIXME:
-                final Set<Name> expand;
-                if(from instanceof LinkableSchema) {
-                    expand = ((LinkableSchema) from).getExpand();
+            if(path.get(0).equals(Reserved.THIS)) {
+                final Name rest = path.withoutFirst();
+                if(rest.isEmpty()) {
+//                    final Column[] columns = Arrays.stream(ds.columns())
+//                            .filter(from::hasMember)
+//                            .map(ds::col).toArray(Column[]::new);
+                    return functions.struct(ds.col(ObjectSchema.ID));
+//                    // FIXME:
+//                    final Set<Name> expand;
+//                    if (from instanceof LinkableSchema) {
+//                        expand = ((LinkableSchema) from).getExpand();
+//                    } else {
+//                        expand = Collections.emptySet();
+//                    }
+//                    final StructType structType = SparkSchemaUtils.structType(from, expand);
+//                    final UserDefinedFunction conform = functions.udf(
+//                            (UDF1<Object, Object>) v -> SparkSchemaUtils.conform(v, structType),
+//                            structType
+//                    );
+//                    return conform.apply(functions.struct(Arrays.stream(ds.columns()).map(ds::col).toArray(Column[]::new)));
                 } else {
-                    expand = Collections.emptySet();
+                    return next(ds.col(rest.get(0)), rest.withoutFirst());
                 }
-                final StructType structType = SparkSchemaUtils.structType(from, expand);
-                final UserDefinedFunction conform = functions.udf(
-                                (UDF1<Object, Object>) v -> SparkSchemaUtils.conform(v, structType),
-                                structType
-                        );
-                return conform.apply(functions.struct(Arrays.stream(ds.columns()).map(ds::col).toArray(Column[]::new)));
             } else {
                 return next(ds.col(path.get(0)), path.withoutFirst());
             }

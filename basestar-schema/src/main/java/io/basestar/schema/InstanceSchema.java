@@ -43,6 +43,11 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
 
     Instance create(Map<String, Object> value, Set<Name> expand, boolean suppress);
 
+    default boolean hasMember(final String name) {
+
+        return metadataSchema().containsKey(name) || getMember(name, true) != null;
+    }
+
     interface Descriptor extends Schema.Descriptor<Instance> {
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
@@ -88,6 +93,11 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
     }
 
     InstanceSchema getExtend();
+
+    default Set<Name> getExpand() {
+
+        return Collections.emptySet();
+    }
 
     @Override
     UseInstance use();
