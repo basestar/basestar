@@ -133,7 +133,9 @@ FileRow:
 
 HeaderRows:
   type: view
-  from: FileRow
+  from:
+    schema: FileRow
+    expand: file
   group:
     - id
   properties:
@@ -143,7 +145,7 @@ HeaderRows:
     rows:
       type:
         array: FileRow
-      expression: "collectArray({'id':id})"
+      expression: "collectArray(this)"
   expand:
     - rows
 
