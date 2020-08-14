@@ -47,6 +47,7 @@ public class SparkDatabase {
         return (query, sort, expand) -> {
 
             final Dataset<Row> input = resolver.resolve(schema, columnResolver, expand);
+
             Dataset<Row> output = input;
             if(query != null) {
                 final Expression bound = query.bind(Context.init());
@@ -62,6 +63,9 @@ public class SparkDatabase {
                         .build();
                 output = transform.accept(output);
             }
+
+//            System.out.println("Final output for " + schema.getQualifiedName() + ":\n" + output.showString(10, 80, false));
+
             return output;
         };
     }

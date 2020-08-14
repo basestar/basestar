@@ -26,6 +26,8 @@ import io.basestar.expression.type.match.UnaryMatch;
 import io.basestar.util.Pair;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -143,6 +145,31 @@ public class Values {
         public <U> Pair<Object> defaultApplySame(final U a, final U b) {
 
             return Pair.of(a, b);
+        }
+
+        // FIXME: should promote to date on 1.2.1 can use ISO8601 utils, but this will work on 1.2.0 for compare
+        @Override
+        public Pair<Object> apply(final LocalDate a, final String b) {
+
+            return Pair.of(a.toString(), b);
+        }
+
+        @Override
+        public Pair<Object> apply(final LocalDateTime a, final String b) {
+
+            return Pair.of(a.toString(), b);
+        }
+
+        @Override
+        public Pair<Object> apply(final String a, final LocalDate b) {
+
+            return Pair.of(a, b.toString());
+        }
+
+        @Override
+        public Pair<Object> apply(final String a, final LocalDateTime b) {
+
+            return Pair.of(a, b.toString());
         }
 
         @Override

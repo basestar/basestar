@@ -60,10 +60,4 @@ public class CompletableFutures {
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]))
                 .thenApply(ignored -> futures.stream().map(v -> v.getNow(null)).reduce(accumulator));
     }
-
-//    public static <A, B, C> CompletableFuture<C> anyOf(final CompletableFuture<A> a, final CompletableFuture<B> b, final BiFunction<A, B, C> reduce) {
-//
-//        CompletableFuture.
-//        a.
-//    }
 }

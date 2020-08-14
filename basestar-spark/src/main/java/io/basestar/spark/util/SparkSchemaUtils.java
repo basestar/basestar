@@ -292,7 +292,11 @@ public class SparkSchemaUtils {
                 if(value instanceof String) {
                     return ObjectSchema.ref((String)value);
                 } else if(value instanceof Row) {
-                    return refFromSpark((Row)value);
+                    if(expand != null) {
+                        return fromSpark(type.getSchema(), expand, (Row)value);
+                    } else {
+                        return refFromSpark((Row) value);
+                    }
                 } else {
                     throw new IllegalStateException();
                 }
@@ -353,7 +357,7 @@ public class SparkSchemaUtils {
             public Object visitStruct(final UseStruct type) {
 
                 if(value instanceof Row) {
-                    return fromSpark(type.getSchema(), (Row)value);
+                    return fromSpark(type.getSchema(), expand, (Row)value);
                 } else {
                     throw new IllegalStateException();
                 }
@@ -381,7 +385,7 @@ public class SparkSchemaUtils {
             public Object visitView(final UseView type) {
 
                 if(value instanceof Row) {
-                    return fromSpark(type.getSchema(), (Row)value);
+                    return fromSpark(type.getSchema(), expand, (Row)value);
                 } else {
                     throw new IllegalStateException();
                 }
@@ -475,7 +479,11 @@ public class SparkSchemaUtils {
             public Object visitObject(final UseObject type) {
 
                 if(value instanceof Map<?, ?> && dataType instanceof StructType) {
-                    return refToSpark((StructType)dataType, (Map<String, Object>) value);
+                    if(expand != null) {
+                        return toSpark(type.getSchema(), expand, (StructType) dataType, (Map<String, Object>) value);
+                    } else {
+                        return refToSpark((StructType) dataType, (Map<String, Object>) value);
+                    }
                 } else {
                     throw new IllegalStateException();
                 }
@@ -556,9 +564,14 @@ public class SparkSchemaUtils {
             }
 
             @Override
+            @SuppressWarnings("unchecked")
             public Object visitView(final UseView type) {
 
-                throw new UnsupportedOperationException();
+                if(value instanceof Map<?, ?> && dataType instanceof StructType) {
+                    return toSpark(type.getSchema(), expand, (StructType) dataType, (Map<String, Object>) value);
+                } else {
+                    throw new IllegalStateException();
+                }
             }
 
             @Override
@@ -625,21 +638,24 @@ public class SparkSchemaUtils {
 
     public static Object conform(final Object source, final DataType targetType) {
 
-        if(source == null) {
+        if (source == null) {
             return null;
-        } else if(targetType instanceof ArrayType) {
+        } else if (targetType instanceof ArrayType) {
             final DataType elementType = ((ArrayType) targetType).elementType();
-            return ScalaUtils.asScalaSeq(ScalaUtils.asJavaStream((Seq<?>)source)
-                    .map(v -> conform(v, elementType)).iterator());
-        } else if(targetType instanceof MapType) {
+            final List<Object> tmp = new ArrayList<>();
+            ScalaUtils.asJavaStream((Seq<?>) source).forEach(v -> {
+                tmp.add(conform(v, elementType));
+            });
+            return ScalaUtils.asScalaSeq(tmp);
+        } else if (targetType instanceof MapType) {
             final DataType valueType = ((MapType) targetType).valueType();
-            return ScalaUtils.asScalaMap(ScalaUtils.asJavaMap((scala.collection.Map<?, ?>)source)
-                    .entrySet().stream().collect(Collectors.toMap(
-                            Map.Entry::getKey,
-                            e -> conform(e.getValue(), valueType)
-                    )));
-        } else if(targetType instanceof StructType) {
-            return conform((Row)source, (StructType)targetType);
+            final Map<Object, Object> tmp = new HashMap<>();
+            ScalaUtils.asJavaMap((scala.collection.Map<?, ?>) source).forEach((k, v) -> {
+                tmp.put(k, conform(v, valueType));
+            });
+            return ScalaUtils.asScalaMap(tmp);
+        } else if (targetType instanceof StructType) {
+            return conform((Row) source, (StructType) targetType);
         } else {
             return source;
         }

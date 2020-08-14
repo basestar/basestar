@@ -25,13 +25,15 @@ import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.ViewSchema;
 import io.basestar.spark.database.QueryChain;
-import io.basestar.spark.transform.*;
+import io.basestar.spark.transform.ExpandTransform;
+import io.basestar.spark.transform.ExpressionTransform;
+import io.basestar.spark.transform.SchemaTransform;
+import io.basestar.spark.transform.ViewTransform;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.RequiredArgsConstructor;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.types.StructType;
 
 import java.io.Serializable;
 import java.util.HashSet;
@@ -53,9 +55,14 @@ public interface DatasetResolver {
 
     default Dataset<Row> conform(final InstanceSchema schema, final Set<Name> expand, final Dataset<Row> input) {
 
-        final StructType structType = SparkSchemaUtils.structType(schema, expand);
-        final ConformTransform conformTransform = ConformTransform.builder().structType(structType).build();
-        return conformTransform.accept(input);
+//        final StructType structType = SparkSchemaUtils.structType(schema, expand);
+//        final ConformTransform conformTransform = ConformTransform.builder().structType(structType).build();
+//        return conformTransform.accept(input);
+
+//        System.out.println("Input for " + schema.getQualifiedName() + ":\n" + input.showString(10, 80, false));
+
+        final SchemaTransform schemaTransform = SchemaTransform.builder().schema(schema).expand(expand).build();
+        return schemaTransform.accept(input);
     }
 
     static DatasetResolver.Automatic automatic(final Automatic.Resolver resolver) {

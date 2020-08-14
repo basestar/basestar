@@ -22,6 +22,7 @@ package io.basestar.storage.dynamodb;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.util.CompletableFutures;
@@ -304,6 +305,11 @@ public class DynamoDBUtils {
         return ImmutableList.<T>builder().addAll(a).addAll(b).build();
     }
 
+    private static <K, V> Map<K, V> concat(final Map<K, V> a, final Map<K, V> b) {
+
+        return ImmutableMap.<K, V>builder().putAll(a).putAll(b).build();
+    }
+
     private static <T> List<List<T>> slice(final Collection<T> values, final int size) {
 
         final List<List<T>> slices = new ArrayList<>();
@@ -316,6 +322,15 @@ public class DynamoDBUtils {
             slice.add(value);
         }
         return slices;
+    }
+
+    public static CompletableFuture<Map<String, Collection<Map<String, AttributeValue>>>> batchRead(final DynamoDbAsyncClient client, final Map<String, ? extends Collection<Map<String, AttributeValue>>> keys) {
+
+        // Not optimum, but will work for now
+        final List<CompletableFuture<Map<String, Collection<Map<String, AttributeValue>>>>> futures = keys.entrySet().stream()
+                .map(entry -> batchRead(client, entry.getKey(), entry.getValue()).thenApply(v -> Collections.singletonMap(entry.getKey(), v)))
+                .collect(Collectors.toList());
+        return CompletableFutures.allOf(Collections.emptyMap(), DynamoDBUtils::concat, futures);
     }
 
     public static CompletableFuture<Collection<Map<String, AttributeValue>>> batchRead(final DynamoDbAsyncClient client, final String tableName, final Collection<Map<String, AttributeValue>> keys) {

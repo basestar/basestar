@@ -77,9 +77,45 @@ public abstract class AbstractSparkTest {
 
         private Long value;
 
+        private D key2;
+
         public B(final String id) {
 
             this(id, null, null);
+        }
+
+        public B(final String id, final D key, final Long value) {
+
+            this(id, key, value, null);
+        }
+
+        public B withoutKeys() {
+
+            return new B(id, key == null ? null : new D(key.getId()), value, key2 == null ? null : new D(key2.getId()));
+        }
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class BFlat {
+
+        private String id;
+
+        private String key;
+
+        private Long value;
+
+        private String key2;
+
+        public BFlat(final String id) {
+
+            this(id, null, null);
+        }
+
+        public BFlat(final String id, final String key, final Long value) {
+
+            this(id, key, value, null);
         }
     }
 
@@ -104,6 +140,13 @@ public abstract class AbstractSparkTest {
     public static class D {
 
         private String id;
+
+        private Long x;
+
+        public D(final String id) {
+
+            this(id, null);
+        }
     }
 
     @Data
@@ -142,9 +185,9 @@ public abstract class AbstractSparkTest {
 
         private String key;
 
-        private long agg;
+        private double agg;
 
-        private List<Long> collect;
+        private List<B> collect;
     }
 
     @Data
@@ -165,5 +208,50 @@ public abstract class AbstractSparkTest {
         private String id;
 
         private B record;
+
+        private D key;
+
+        private D key2;
     }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class File {
+
+        private String id;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class FileRow {
+
+        private String id;
+
+        private File file;
+
+        private Long rowIndex;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class HeaderRows {
+
+        private String id;
+
+        private List<FileRow> rows;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class LinkingViewToView {
+
+        private String id;
+
+        private HeaderRows headerRows;
+    }
+
 }

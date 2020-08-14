@@ -26,8 +26,7 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.expression.aggregate.AggregateExtractingVisitor;
-import io.basestar.schema.Property;
-import io.basestar.schema.ViewSchema;
+import io.basestar.schema.*;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseBinary;
 import io.basestar.schema.use.UseBoolean;
@@ -37,15 +36,14 @@ import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Sort;
+import lombok.Data;
 import org.apache.spark.sql.*;
 import org.apache.spark.sql.api.java.UDF1;
 import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.StructType;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 
 
@@ -81,19 +79,23 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
         final Context context = Context.init();
 
+        final InstanceSchema from = schema.getFrom().getSchema();
+
         Dataset<Row> output = input;
         if(schema.getWhere() != null) {
-            output = output.where(apply(context, output, schema.getWhere(), UseBoolean.DEFAULT));
+            output = output.where(apply(from, context, output, schema.getWhere(), UseBoolean.DEFAULT));
         }
         if(!schema.getSort().isEmpty()) {
-            output = sort(output, schema.getSort());
+            output = sort(from, output, schema.getSort());
         }
 
+//        System.out.println("View transform input (after filter):\n" + output.showString(10, 80, false));
+
         final AggregateExtractingVisitor visitor = new AggregateExtractingVisitor();
-        final Map<String, Expression> columns = new HashMap<>();
+        final Map<String, TypedExpression> columns = new HashMap<>();
         schema.getSelectProperties().forEach((name, prop) -> {
             final Expression expr = Nullsafe.require(prop.getExpression()).bind(context);
-            columns.put(name, visitor.visit(expr));
+            columns.put(name, new TypedExpression(visitor.visit(expr), prop.getType()));
         });
         final Map<String, Aggregate> aggregates = visitor.getAggregates();
 
@@ -106,7 +108,7 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
                 final String name = entry.getKey();
                 final Property prop = entry.getValue();
                 final Expression expr = Nullsafe.require(prop.getExpression());
-                groupColumns.add(apply(context, output, expr, prop.getType()).as(name));
+                groupColumns.add(apply(from, context, output, expr, prop.getType()).as(name));
             }
             final RelationalGroupedDataset groupedOutput = output.groupBy(groupColumns.toArray(new Column[0]));
 
@@ -114,7 +116,7 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
             for(final Map.Entry<String, Aggregate> entry : aggregates.entrySet()) {
                 final String name = entry.getKey();
                 final Aggregate agg = entry.getValue();
-                aggColumns.add(apply(context, output, agg).as(name));
+                aggColumns.add(apply(from, context, output, agg).as(name));
             }
             assert !aggColumns.isEmpty();
             final Column first = aggColumns.get(0);
@@ -132,39 +134,75 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         // FIXME: creating struct is wasteful, UDF could be defined to take key columns as args
         output = output.withColumn(ViewSchema.KEY, keyFunction.apply(functions.struct(keyColumns)));
 
-        for(final Map.Entry<String, Expression> entry : columns.entrySet()) {
+        for(final Map.Entry<String, TypedExpression> entry : columns.entrySet()) {
             final String name = entry.getKey();
-            final Expression expression = entry.getValue();
-            selectColumns.add(apply(context, output, expression).as(name));
+            final TypedExpression expression = entry.getValue();
+            selectColumns.add(apply(from, context, output, expression).as(name));
         }
         selectColumns.add(output.col(ViewSchema.KEY));
 
-        return output.select(selectColumns.toArray(new Column[0]));
+        output = output.select(selectColumns.toArray(new Column[0]));
+
+//        System.out.println("View transform output:\n" + output.showString(10, 80, false));
+
+        return output;
     }
 
-    private Column apply(final Context context, final Dataset<Row> ds, final Aggregate aggregate) {
+    @Data
+    private static class TypedExpression {
 
-        return new SparkAggregateVisitor(expression -> apply(context, ds, expression)).visit(aggregate);
+        private final Expression expression;
+
+        private final Use<?> type;
     }
 
-    private Column apply(final Context context, final Dataset<Row> ds, final Expression expression) {
+    private Column apply(final InstanceSchema from, final Context context, final Dataset<Row> ds, final Aggregate aggregate) {
 
-        return new SparkExpressionVisitor(columnResolver(ds)).visit(expression.bind(context));
+        return new SparkAggregateVisitor(expression -> apply(from, context, ds, expression)).visit(aggregate);
     }
 
-    private Column apply(final Context context, final Dataset<Row> ds, final Expression expression, final Use<?> type) {
+    private Column apply(final InstanceSchema from, final Context context, final Dataset<Row> ds, final Expression expression) {
 
-        return apply(context, ds, expression).cast(SparkSchemaUtils.type(type, ImmutableSet.of()));
+        return new SparkExpressionVisitor(columnResolver(from, ds)).visit(expression.bind(context));
     }
 
-    private Function<Name, Column> columnResolver(final Dataset<Row> ds) {
+    private Column apply(final InstanceSchema from, final Context context, final Dataset<Row> ds, final TypedExpression expression) {
 
-        return path -> next(ds.col(path.get(0)), path.withoutFirst());
+        // FIXME
+        return apply(from, context, ds, expression.getExpression());//, expression.getType());
     }
 
-    private Dataset<Row> sort(final Dataset<Row> ds, final List<Sort> sort) {
+    private Column apply(final InstanceSchema from, final Context context, final Dataset<Row> ds, final Expression expression, final Use<?> type) {
 
-        final Function<Name, Column> columnResolver = columnResolver(ds);
+        return apply(from, context, ds, expression).cast(SparkSchemaUtils.type(type, ImmutableSet.of()));
+    }
+
+    private Function<Name, Column> columnResolver(final InstanceSchema from, final Dataset<Row> ds) {
+
+        return path -> {
+            if(path.equals(Reserved.THIS_NAME)) {
+                // FIXME:
+                final Set<Name> expand;
+                if(from instanceof LinkableSchema) {
+                    expand = ((LinkableSchema) from).getExpand();
+                } else {
+                    expand = Collections.emptySet();
+                }
+                final StructType structType = SparkSchemaUtils.structType(from, expand);
+                final UserDefinedFunction conform = functions.udf(
+                                (UDF1<Object, Object>) v -> SparkSchemaUtils.conform(v, structType),
+                                structType
+                        );
+                return conform.apply(functions.struct(Arrays.stream(ds.columns()).map(ds::col).toArray(Column[]::new)));
+            } else {
+                return next(ds.col(path.get(0)), path.withoutFirst());
+            }
+        };
+    }
+
+    private Dataset<Row> sort(final InstanceSchema from, final Dataset<Row> ds, final List<Sort> sort) {
+
+        final Function<Name, Column> columnResolver = columnResolver(from, ds);
         return ds.sort(sort.stream()
                 .map(v -> SparkSchemaUtils.order(columnResolver.apply(v.getName()), v.getOrder(), v.getNulls()))
                 .toArray(Column[]::new));

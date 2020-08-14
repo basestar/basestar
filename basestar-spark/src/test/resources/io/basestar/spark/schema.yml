@@ -23,6 +23,8 @@ B:
   properties:
     key:
       type: D?
+    key2:
+      type: G?
     value:
       type: integer?
 
@@ -34,6 +36,9 @@ C:
 
 D:
   type: object
+  properties:
+    x:
+      type: integer
 
 E:
   type: struct
@@ -49,6 +54,12 @@ F:
     datetime:
       type: datetime?
 
+G:
+  type: object
+  properties:
+    x:
+      type: integer
+
 AggView:
   type: view
   properties:
@@ -60,15 +71,20 @@ AggView:
       expression: key.id
     collect:
       type:
-        array: integer
-      expression: collectArray(value)
-  from: B
+        array: B
+      expression: collectArray({'id':id})
+  from:
+    schema: B
+    expand:
+      - key
   group: key
   sort:
     - value
   expand:
     - agg
     - key
+    - collect
+  where: key.x == 1
 
 AliasView:
   type: view
@@ -87,11 +103,59 @@ LinkingView:
   type: view
   properties:
     id: id
-  from: B
+    key: key
+    key2: key2
+  from:
+    schema: B
+    expand:
+      - key
+      - key2
   expand:
     - record
+    - key
+    - key2
   links:
     record:
       schema: AliasView
       expression: this.id == id
       single: true
+
+File:
+  type: object
+
+FileRow:
+  type: object
+  properties:
+    file:
+      type: File
+    rowIndex:
+      type: integer
+
+HeaderRows:
+  type: view
+  from: FileRow
+  group:
+    - id
+  properties:
+    id:
+      type: string
+      expression: file.id
+    rows:
+      type:
+        array: FileRow
+      expression: "collectArray({'id':id})"
+  expand:
+    - rows
+
+LinkingViewToView:
+  type: view
+  properties:
+    id: id
+  links:
+    headerRows:
+      schema: HeaderRows
+      single: true
+      expression: "this.id == id"
+  from: File
+  expand:
+    - headerRows.rows
