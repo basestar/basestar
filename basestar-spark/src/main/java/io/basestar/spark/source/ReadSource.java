@@ -47,8 +47,8 @@ public class ReadSource implements Source<Dataset<Row>> {
     ReadSource(final SparkSession session, final Format format, final String path, final Map<String, String> options) {
 
         this.session = Nullsafe.require(session);
-        this.format = Nullsafe.option(format, Format.DEFAULT);
-        this.path = Nullsafe.option(path);
+        this.format = Nullsafe.orDefault(format, Format.DEFAULT);
+        this.path = Nullsafe.orDefault(path);
         this.options = Nullsafe.immutableCopy(options);
     }
 

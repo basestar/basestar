@@ -72,8 +72,8 @@ public class SchemaTransform implements DatasetMapTransform {
             } else {
                 this.expand = Collections.emptySet();
             }
-            this.extraMetadata = Nullsafe.option(extraMetadata);
-            this.structType = Nullsafe.option(structType, () -> SparkSchemaUtils.structType(this.schema, this.expand, this.extraMetadata));
+            this.extraMetadata = Nullsafe.orDefault(extraMetadata);
+            this.structType = Nullsafe.orDefault(structType, () -> SparkSchemaUtils.structType(this.schema, this.expand, this.extraMetadata));
         }
 
         @Override

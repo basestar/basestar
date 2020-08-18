@@ -111,7 +111,7 @@ public class ReadProcessor {
                 .add(Sort.asc(Name.of(ObjectSchema.ID)))
                 .build();
 
-        final Set<Name> queryExpand = Sets.union(Nullsafe.option(expand), Nullsafe.option(objectSchema.getExpand()));
+        final Set<Name> queryExpand = Sets.union(Nullsafe.orDefault(expand), Nullsafe.orDefault(objectSchema.getExpand()));
 
         final List<Pager.Source<Instance>> sources = storage.query(objectSchema, expression, sort, queryExpand).stream()
                 .map(source -> (Pager.Source<Instance>) (c, t, stats) -> source.page(c, t, stats)
@@ -362,7 +362,7 @@ public class ReadProcessor {
 
                 return data.map(v -> {
                     final RefKey key = RefKey.from(v);
-                    final Map<String, Object> result = Nullsafe.option(mapped.get(key), v);
+                    final Map<String, Object> result = Nullsafe.orDefault(mapped.get(key), v);
                     final ObjectSchema schema = objectSchema(Instance.getSchema(result));
                     return schema.create(result, expand, true);
                 });
@@ -416,7 +416,7 @@ public class ReadProcessor {
                 final Map<ExpandKey<RefKey>, Instance> remapped = new HashMap<>();
                 data.forEach((k, v) ->  {
                     final RefKey key = RefKey.from(v);
-                    final Map<String, Object> result = Nullsafe.option(mapped.get(key), v);
+                    final Map<String, Object> result = Nullsafe.orDefault(mapped.get(key), v);
                     final ObjectSchema schema = objectSchema(Instance.getSchema(result));
                     final Instance instance = schema.create(result);
                     remapped.put(k, instance);

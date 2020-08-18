@@ -67,13 +67,12 @@ public interface Use<T> extends Serializable {
         BINARY,
         DATE,
         DATETIME,
-        VIEW,
-        OPTIONAL
+        VIEW
     }
 
     <R> R visit(Visitor<R> visitor);
 
-    default <T2> T2 cast(final Object o, final Class<T2> as) {
+    default T cast(final Object o, final Class<T> as) {
 
         return as.cast(o);
     }
@@ -82,9 +81,14 @@ public interface Use<T> extends Serializable {
 
     T create(Object value, Set<Name> expand, boolean suppress);
 
+    default T create(final Object value, final Set<Name> expand) {
+
+        return create(value, expand, false);
+    }
+
     default T create(final Object value) {
 
-        return create(value, null, false);
+        return create(value, null);
     }
 
     Code code();
@@ -114,7 +118,7 @@ public interface Use<T> extends Serializable {
 
     Set<Constraint.Violation> validate(Context context, Name name, T value);
 
-    io.swagger.v3.oas.models.media.Schema<?> openApi();
+    io.swagger.v3.oas.models.media.Schema<?> openApi(Set<Name> expand);
 
     Set<Expression> refQueries(Name otherSchemaName, Set<Name> expand, Name name);
 
@@ -297,6 +301,11 @@ public interface Use<T> extends Serializable {
 
     interface Visitor<R> {
 
+        default <T> R visit(Use<T> type) {
+
+            return type.visit(this);
+        }
+
         R visitBoolean(UseBoolean type);
 
         R visitInteger(UseInteger type);
@@ -325,31 +334,53 @@ public interface Use<T> extends Serializable {
 
         R visitView(UseView type);
 
-        default R visitAny(UseAny useAny) {
+        <T> R visitOptional(UseOptional<T> type);
 
-            // Until properly implemented
+        default R visitAny(UseAny type) {
+
             throw new UnsupportedOperationException();
         }
 
-        <T> R visitOptional(UseOptional<T> type);
-
         interface Defaulting<R> extends Visitor<R> {
 
-            R visitDefault(Use<?> type);
+            default <T> R visitDefault(final Use<T> type) {
 
-            default R visitScalar(final UseScalar<?> type) {
+                throw new UnsupportedOperationException("Type " + type.code() + " not supported");
+            }
+
+            default <T> R visitScalar(final UseScalar<T> type) {
+
+                return visitDefault(type);
+            }
+
+            default <T> R visitStringLike(final UseStringLike<T> type) {
+
+                return visitScalar(type);
+            }
+
+            default <T extends Number> R visitNumeric(final UseNumeric<T> type) {
+
+                return visitScalar(type);
+            }
+
+            default <T> R visitContainer(final UseContainer<T, ?> type) {
 
                 return visitDefault(type);
             }
 
             default <T> R visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
 
+                return visitContainer(type);
+            }
+
+            default R visitLayout(final UseLayout type) {
+
                 return visitDefault(type);
             }
 
             default R visitInstance(final UseInstance type) {
 
-                return visitDefault(type);
+                return visitLayout(type);
             }
 
             default R visitLinkable(final UseLinkable type) {
@@ -366,25 +397,25 @@ public interface Use<T> extends Serializable {
             @Override
             default R visitInteger(final UseInteger type) {
 
-                return visitScalar(type);
+                return visitNumeric(type);
             }
 
             @Override
             default R visitNumber(final UseNumber type) {
 
-                return visitScalar(type);
+                return visitNumeric(type);
             }
 
             @Override
             default R visitString(final UseString type) {
 
-                return visitScalar(type);
+                return visitStringLike(type);
             }
 
             @Override
             default R visitEnum(final UseEnum type) {
 
-                return visitScalar(type);
+                return visitStringLike(type);
             }
 
             @Override
@@ -408,7 +439,7 @@ public interface Use<T> extends Serializable {
             @Override
             default <T> R visitMap(final UseMap<T> type) {
 
-                return visitDefault(type);
+                return visitContainer(type);
             }
 
             @Override
@@ -426,13 +457,13 @@ public interface Use<T> extends Serializable {
             @Override
             default R visitDate(final UseDate type) {
 
-                return visitScalar(type);
+                return visitStringLike(type);
             }
 
             @Override
             default R visitDateTime(final UseDateTime type) {
 
-                return visitScalar(type);
+                return visitStringLike(type);
             }
 
             @Override
@@ -442,9 +473,14 @@ public interface Use<T> extends Serializable {
             }
 
             @Override
+            default R visitAny(final UseAny type) {
+
+                return visitDefault(type);
+            }
+
+            @Override
             default <T> R visitOptional(final UseOptional<T> type) {
 
-                // Least astonishment is to unwrap so that handling is optional
                 return type.getType().visit(this);
             }
         }

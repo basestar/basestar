@@ -129,7 +129,7 @@ public class SQLUtils {
             @Override
             public DataType<?> visitDateTime(final UseDateTime type) {
 
-                return SQLDataType.LOCALDATETIME;
+                return SQLDataType.TIMESTAMP;
             }
 
             @Override

@@ -32,7 +32,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.Set;
 
-public class UseDateTime implements UseScalar<Instant> {
+public class UseDateTime implements UseStringLike<Instant> {
 
     public static final UseDateTime DEFAULT = new UseDateTime();
 
@@ -92,7 +92,7 @@ public class UseDateTime implements UseScalar<Instant> {
     }
 
     @Override
-    public io.swagger.v3.oas.models.media.Schema<?> openApi() {
+    public io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
         return new DateTimeSchema();
     }

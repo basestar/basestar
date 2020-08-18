@@ -49,8 +49,8 @@ public class JDBCSource implements Source<Dataset<Row>> {
         this.session = Nullsafe.require(session);
         this.jdbcUrl = Nullsafe.require(jdbcUrl);
         this.table = Nullsafe.require(table);
-        this.properties = Nullsafe.option(properties, Properties::new);
-        this.options = Nullsafe.option(options);
+        this.properties = Nullsafe.orDefault(properties, Properties::new);
+        this.options = Nullsafe.orDefault(options);
     }
 
     @Override

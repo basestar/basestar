@@ -327,7 +327,7 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
         resolver.constructing(this);
         this.qualifiedName = qualifiedName;
         this.slot = slot;
-        this.version = Nullsafe.option(descriptor.getVersion(), 1L);
+        this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
         if(descriptor.getExtend() != null) {
             this.extend = resolver.requireInstanceSchema(descriptor.getExtend());
         } else {
@@ -335,14 +335,14 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
         }
         this.description = descriptor.getDescription();
         this.id = descriptor.getId() == null ? null : descriptor.getId().build(qualifiedName.with(ID));
-        this.history = Nullsafe.option(descriptor.getHistory(), History.ENABLED);
+        this.history = Nullsafe.orDefault(descriptor.getHistory(), History.ENABLED);
         this.declaredProperties = Nullsafe.immutableSortedCopy(descriptor.getProperties(), (k, v) -> v.build(resolver, version, qualifiedName.with(k)));
         this.declaredTransients = Nullsafe.immutableSortedCopy(descriptor.getTransients(), (k, v) -> v.build(qualifiedName.with(k)));
         this.declaredLinks = Nullsafe.immutableSortedCopy(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
         this.declaredIndexes = Nullsafe.immutableSortedCopy(descriptor.getIndexes(), (k, v) -> v.build(qualifiedName.with(k)));
         this.declaredPermissions = Nullsafe.immutableSortedCopy(descriptor.getPermissions(), (k, v) -> v.build(k));
         this.declaredExpand = Nullsafe.immutableSortedCopy(descriptor.getExpand());
-        this.concrete = Nullsafe.option(descriptor.getConcrete(), Boolean.TRUE);
+        this.concrete = Nullsafe.orDefault(descriptor.getConcrete(), Boolean.TRUE);
         this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);

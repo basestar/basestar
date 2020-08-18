@@ -50,7 +50,7 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
     LevelDBStorage(final DB db, final Coordinator coordinator) {
 
         this.db = Nullsafe.require(db);
-        this.coordinator = Nullsafe.option(coordinator, Coordinator.Local::new);
+        this.coordinator = Nullsafe.orDefault(coordinator, Coordinator.Local::new);
     }
 
     @Override

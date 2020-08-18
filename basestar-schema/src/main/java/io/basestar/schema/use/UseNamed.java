@@ -57,7 +57,7 @@ public interface UseNamed<T> extends Use<T> {
     }
 
     @Override
-    default io.swagger.v3.oas.models.media.Schema<?> openApi() {
+    default io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
         return new io.swagger.v3.oas.models.media.ObjectSchema().$ref(getName().toString());
     }
@@ -170,7 +170,7 @@ public interface UseNamed<T> extends Use<T> {
         }
 
         @Override
-        public io.swagger.v3.oas.models.media.Schema<?> openApi() {
+        public io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
             return new io.swagger.v3.oas.models.media.ObjectSchema().$ref(name.toString());
         }

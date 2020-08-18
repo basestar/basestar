@@ -63,7 +63,7 @@ public class GraphQLAdaptor {
 
         this.database = Nullsafe.require(database);
         this.namespace = Nullsafe.require(namespace);
-        this.strategy = Nullsafe.option(strategy, GraphQLStrategy.DEFAULT);
+        this.strategy = Nullsafe.orDefault(strategy, GraphQLStrategy.DEFAULT);
     }
 
     public GraphQL graphQL() {

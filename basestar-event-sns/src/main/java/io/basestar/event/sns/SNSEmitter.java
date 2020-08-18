@@ -67,7 +67,7 @@ public class SNSEmitter implements Emitter {
 
         this.client = builder.client;
         this.topicArn = builder.topicArn;
-        this.serialization = Nullsafe.option(builder.serialization, EventSerialization.gzipBson());
+        this.serialization = Nullsafe.orDefault(builder.serialization, EventSerialization.gzipBson());
         this.oversizeStash = builder.oversizeStash;
     }
 

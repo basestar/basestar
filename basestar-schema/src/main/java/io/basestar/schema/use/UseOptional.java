@@ -87,7 +87,7 @@ public class UseOptional<T> implements Use<T> {
     @Override
     public Code code() {
 
-        return Code.OPTIONAL;
+        return type.code();
     }
 
     @Override
@@ -179,9 +179,9 @@ public class UseOptional<T> implements Use<T> {
     }
 
     @Override
-    public io.swagger.v3.oas.models.media.Schema<?> openApi() {
+    public io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
-        return type.openApi();
+        return type.openApi(expand);
     }
 
     @Override

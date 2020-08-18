@@ -141,7 +141,7 @@ public class EnumSchema implements Schema<String> {
         resolver.constructing(this);
         this.qualifiedName = qualifiedName;
         this.slot = slot;
-        this.version = Nullsafe.option(descriptor.getVersion(), 1L);
+        this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
         this.description = descriptor.getDescription();
         this.values = Nullsafe.immutableCopy(descriptor.getValues());
         this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());

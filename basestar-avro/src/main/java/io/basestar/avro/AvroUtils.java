@@ -195,7 +195,7 @@ public class AvroUtils {
         return use.visit(new Use.Visitor.Defaulting<Object>() {
 
             @Override
-            public Object visitDefault(final Use<?> type) {
+            public <T> Object visitDefault(final Use<T> type) {
 
                 return type.create(value);
             }
@@ -283,7 +283,7 @@ public class AvroUtils {
         return use.visit(new Use.Visitor.Defaulting<Object>() {
 
             @Override
-            public Object visitDefault(final Use<?> type) {
+            public <T> Object visitDefault(final Use<T> type) {
 
                 return type.create(value);
             }

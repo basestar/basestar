@@ -95,7 +95,7 @@ public class GraphQLUtils {
         return type.visit(new Use.Visitor.Defaulting<Set<Name>>() {
 
             @Override
-            public Set<Name> visitDefault(final Use<?> type) {
+            public <T> Set<Name> visitDefault(final Use<T> type) {
 
                 return ImmutableSet.of(parent);
             }
@@ -154,7 +154,7 @@ public class GraphQLUtils {
             return type.visit(new Use.Visitor.Defaulting<Object>() {
 
                 @Override
-                public Object visitDefault(final Use<?> type) {
+                public <T> Object visitDefault(final Use<T> type) {
 
                     return type.create(value);
                 }
@@ -234,7 +234,7 @@ public class GraphQLUtils {
             return type.visit(new Use.Visitor.Defaulting<Object>() {
 
                 @Override
-                public Object visitDefault(final Use<?> type) {
+                public <T> Object visitDefault(final Use<T> type) {
 
                     return type.create(value);
                 }
@@ -290,13 +290,7 @@ public class GraphQLUtils {
                 }
 
                 @Override
-                public Object visitDate(final UseDate type) {
-
-                    return type.toString(type.create(value));
-                }
-
-                @Override
-                public Object visitDateTime(final UseDateTime type) {
+                public <T> Object visitStringLike(final UseStringLike<T> type) {
 
                     return type.toString(type.create(value));
                 }
@@ -327,7 +321,7 @@ public class GraphQLUtils {
 
         } else {
 
-            return (T)type.visit(new Use.Visitor<Object>() {
+            return (T)type.visit(new Use.Visitor.Defaulting<Object>() {
                 @Override
                 public Object visitBoolean(final UseBoolean type) {
 
@@ -411,7 +405,7 @@ public class GraphQLUtils {
                     if(value instanceof ArrayValue) {
                         return ((ArrayValue)value).getValues().stream()
                                 .map(v -> fromInput(context, type.getType(), v))
-                                .collect(Collectors.toList());
+                                .collect(Collectors.toSet());
                     } else {
                         throw new IllegalStateException();
                     }
@@ -456,12 +450,6 @@ public class GraphQLUtils {
                 }
 
                 @Override
-                public <V> Object visitOptional(final UseOptional<V> type) {
-
-                    return type.getType().visit(this);
-                }
-
-                @Override
                 public Object visitBinary(final UseBinary type) {
 
                     if(value instanceof StringValue) {
@@ -472,17 +460,7 @@ public class GraphQLUtils {
                 }
 
                 @Override
-                public Object visitDate(final UseDate type) {
-
-                    if(value instanceof StringValue) {
-                        return type.create(((StringValue) value).getValue());
-                    } else {
-                        throw new IllegalStateException();
-                    }
-                }
-
-                @Override
-                public Object visitDateTime(final UseDateTime type) {
+                public <T2> Object visitStringLike(final UseStringLike<T2> type) {
 
                     if(value instanceof StringValue) {
                         return type.create(((StringValue) value).getValue());
@@ -515,7 +493,7 @@ public class GraphQLUtils {
             return (T)type.visit(new Use.Visitor.Defaulting<Object>() {
 
                 @Override
-                public Object visitDefault(final Use<?> type) {
+                public <T2> Object visitDefault(final Use<T2> type) {
 
                     return type.create(value);
                 }
@@ -648,7 +626,7 @@ public class GraphQLUtils {
             return type.visit(new Use.Visitor.Defaulting<Object>() {
 
                 @Override
-                public Object visitDefault(final Use<?> type) {
+                public <T> Object visitDefault(final Use<T> type) {
 
                     return type.create(value);
                 }
@@ -715,13 +693,7 @@ public class GraphQLUtils {
                 }
 
                 @Override
-                public Object visitDate(final UseDate type) {
-
-                    return type.create(value).toString();
-                }
-
-                @Override
-                public Object visitDateTime(final UseDateTime type) {
+                public <T> Object visitStringLike(final UseStringLike<T> type) {
 
                     return type.create(value).toString();
                 }

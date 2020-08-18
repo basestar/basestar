@@ -101,7 +101,7 @@ public class Id implements Serializable {
     public Id(final Descriptor descriptor, final Name qualifiedName) {
 
         this.expression = descriptor.getExpression();
-        this.constraints = ImmutableList.copyOf(Nullsafe.option(descriptor.getConstraints()));
+        this.constraints = ImmutableList.copyOf(Nullsafe.orDefault(descriptor.getConstraints()));
     }
 
     public String evaluate(final String value, final Context context) {

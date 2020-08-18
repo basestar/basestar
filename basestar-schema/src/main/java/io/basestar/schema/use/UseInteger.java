@@ -44,7 +44,7 @@ import java.util.Set;
 
 @Data
 @Slf4j
-public class UseInteger implements UseScalar<Long> {
+public class UseInteger implements UseNumeric<Long> {
 
     public static final UseInteger DEFAULT = new UseInteger();
 
@@ -100,7 +100,7 @@ public class UseInteger implements UseScalar<Long> {
     }
 
     @Override
-    public io.swagger.v3.oas.models.media.Schema<?> openApi() {
+    public io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
         return new IntegerSchema();
     }

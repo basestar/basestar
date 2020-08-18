@@ -143,7 +143,7 @@ public class Permission implements Serializable {
 
         this.name = name;
         this.description = descriptor.getDescription();
-        this.anonymous = Nullsafe.option(descriptor.getAnonymous(), false);
+        this.anonymous = Nullsafe.orDefault(descriptor.getAnonymous(), false);
         this.expression = Nullsafe.require(descriptor.getExpression());
         this.expand = Nullsafe.immutableSortedCopy(descriptor.getExpand());
         this.inherit = Nullsafe.immutableSortedCopy(descriptor.getInherit());

@@ -68,9 +68,9 @@ public class SQSReceiver implements Receiver {
 
         this.client = builder.client;
         this.queueUrl = builder.queueUrl;
-        this.serialization = Nullsafe.option(builder.serialization, EventSerialization.gzipBson());
+        this.serialization = Nullsafe.orDefault(builder.serialization, EventSerialization.gzipBson());
         this.oversizeStash = builder.oversizeStash;
-        this.deleteOversize = Nullsafe.option(builder.deleteOversize, true);
+        this.deleteOversize = Nullsafe.orDefault(builder.deleteOversize, true);
     }
 
     public static Builder builder() {

@@ -39,13 +39,13 @@ public class EnvelopedAPI implements API {
             @Override
             public Method getMethod() {
 
-                return Nullsafe.option(body.getMethod(), request.getMethod());
+                return Nullsafe.orDefault(body.getMethod(), request.getMethod());
             }
 
             @Override
             public String getPath() {
 
-                return Nullsafe.option(body.getPath(), request.getPath());
+                return Nullsafe.orDefault(body.getPath(), request.getPath());
             }
 
             @Override

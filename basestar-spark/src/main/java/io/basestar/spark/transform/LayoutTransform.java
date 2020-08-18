@@ -42,7 +42,7 @@ public class LayoutTransform implements DatasetMapTransform {
 
             this.inputLayout = inputLayout;
             this.outputLayout = outputLayout;
-            this.expand = Nullsafe.option(expand);
+            this.expand = Nullsafe.orDefault(expand);
             this.outputStructType = SparkSchemaUtils.structType(this.outputLayout, this.expand);
         }
 

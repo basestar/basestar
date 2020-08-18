@@ -159,7 +159,7 @@ public class Namespace implements Serializable, Schema.Resolver {
 
         public Namespace build(final Schema.Resolver resolver, final Renaming renaming) {
 
-            return new Namespace(this, Nullsafe.option(version, Version.CURRENT), resolver, renaming);
+            return new Namespace(this, Nullsafe.orDefault(version, Version.CURRENT), resolver, renaming);
         }
 
         public static Builder load(final URL... urls) throws IOException {

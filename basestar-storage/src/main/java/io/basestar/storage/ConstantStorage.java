@@ -51,7 +51,7 @@ public class ConstantStorage implements Storage.WithoutAggregate, Storage.Withou
 
     private Map<String, Object> get(final Name schema, final String id) {
 
-        return Nullsafe.option(data.get(schema)).get(id);
+        return Nullsafe.orDefault(data.get(schema)).get(id);
     }
 
     private Map<String, Object> get(final Map<String, Object> instance) {
@@ -75,7 +75,7 @@ public class ConstantStorage implements Storage.WithoutAggregate, Storage.Withou
         return ImmutableList.of((count, token, stats) -> {
             // Don't do any paging, just return all matches, this is compliant with Pager interface
             final List<Map<String, Object>> page = new ArrayList<>();
-            Nullsafe.option(data.get(schema.getQualifiedName())).forEach((id, item) -> {
+            Nullsafe.orDefault(data.get(schema.getQualifiedName())).forEach((id, item) -> {
                 if(query.evaluatePredicate(Context.init(item))) {
                     page.add(item);
                 }

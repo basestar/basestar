@@ -28,7 +28,7 @@ public class SparkDatabase {
     SparkDatabase(final DatasetResolver resolver, final ColumnResolver<Row> columnResolver, @Nullable final Namespace namespace) {
 
         this.resolver = Nullsafe.require(resolver);
-        this.columnResolver = Nullsafe.option(columnResolver, ColumnResolver::nested);
+        this.columnResolver = Nullsafe.orDefault(columnResolver, ColumnResolver::nested);
         this.namespace = namespace;
     }
 

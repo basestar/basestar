@@ -151,7 +151,7 @@ public class GraphQLWebsocketAPI implements API {
             return ExecutionInput.newExecutionInput()
                     .operationName(payload.getOperationName())
                     .query(payload.getQuery())
-                    .variables(Nullsafe.option(payload.getVariables()))
+                    .variables(Nullsafe.orDefault(payload.getVariables()))
                     .context(GraphQLContext.newContext().of("caller", caller, "subscriber", subscriberContext).build())
                     .build();
         }

@@ -44,7 +44,7 @@ public class DynamoDBDatasetOutputTransform implements Transform<Dataset<Row>, R
     DynamoDBDatasetOutputTransform(final InstanceSchema schema, final Map<String, Use<?>> extraMetadata) {
 
         this.schema = Nullsafe.require(schema);
-        this.extraMetadata = Nullsafe.option(extraMetadata);
+        this.extraMetadata = Nullsafe.orDefault(extraMetadata);
     }
 
     @Override

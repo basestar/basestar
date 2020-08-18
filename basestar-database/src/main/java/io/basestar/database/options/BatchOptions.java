@@ -41,7 +41,7 @@ public class BatchOptions implements Options {
 
     private BatchOptions(final Builder builder) {
 
-        this.consistency = Nullsafe.option(builder.consistency, Consistency.EVENTUAL);
+        this.consistency = Nullsafe.orDefault(builder.consistency, Consistency.EVENTUAL);
         this.actions = ImmutableMap.copyOf(builder.actions);
     }
 

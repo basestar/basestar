@@ -156,13 +156,13 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
     private CompletableFuture<Instance> single(final Caller caller, final Action action) {
 
         // FIXME: unspecified consistency should be passed to storage so it can define default, but that might break too many things today
-        return batch(caller, Nullsafe.option(action.getConsistency(), Consistency.ATOMIC), ImmutableMap.of(SINGLE_BATCH_ROOT, action))
+        return batch(caller, Nullsafe.orDefault(action.getConsistency(), Consistency.ATOMIC), ImmutableMap.of(SINGLE_BATCH_ROOT, action))
                 .thenApply(v -> v.get(SINGLE_BATCH_ROOT));
     }
 
     private Set<Name> permissionExpand(final ObjectSchema schema, final Permission permission) {
 
-        return permission == null ? Collections.emptySet() : Nullsafe.option(permission.getExpand());
+        return permission == null ? Collections.emptySet() : Nullsafe.orDefault(permission.getExpand());
     }
 
     private CompletableFuture<Map<String, Instance>> batch(final Caller caller, final Consistency consistency, final Map<String, Action> actions) {
@@ -261,7 +261,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         afterCallerExpand.addAll(Name.children(permissionExpand, Name.of(VAR_CALLER)));
                         final Set<Name> readExpand = Sets.union(
                                 Name.children(permissionExpand, Name.of(VAR_AFTER)),
-                                Nullsafe.option(action.afterExpand())
+                                Nullsafe.orDefault(action.afterExpand())
                         );
                         final Set<Name> transientExpand = schema.transientExpand(Name.of(), readExpand);
                         final Set<Name> writeExpand = Sets.union(transientExpand, schema.getExpand());
@@ -345,7 +345,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                             if(after == null) {
                                 restricted = null;
                             } else {
-                                final Instance expanded = schema.expand(after, Expander.noop(), Nullsafe.option(action.afterExpand()));
+                                final Instance expanded = schema.expand(after, Expander.noop(), Nullsafe.orDefault(action.afterExpand()));
                                 restricted = schema.applyVisibility(afterContext, expanded);
                             }
                             results.put(name, restricted);
@@ -463,7 +463,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final Permission read = schema.getPermission(Permission.READ);
         final Set<Name> permissionExpand = permissionExpand(schema, read);
         final Set<Name> callerExpand = Name.children(permissionExpand, Name.of(VAR_CALLER));
-        final Set<Name> readExpand = Sets.union(Name.children(permissionExpand, Name.of(VAR_THIS)), Nullsafe.option(expand));
+        final Set<Name> readExpand = Sets.union(Name.children(permissionExpand, Name.of(VAR_THIS)), Nullsafe.orDefault(expand));
         final Set<Name> transientExpand = schema.transientExpand(Name.of(), readExpand);
 
         return expandCaller(Context.init(), caller, callerExpand)
@@ -481,7 +481,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             final Permission read = schema.getPermission(Permission.READ);
             final Set<Name> permissionExpand = permissionExpand(schema, read);
             callerExpand.addAll(Name.children(permissionExpand, Name.of(VAR_CALLER)));
-            final Set<Name> readExpand = Sets.union(Name.children(permissionExpand, Name.of(VAR_THIS)), Nullsafe.option(expand));
+            final Set<Name> readExpand = Sets.union(Name.children(permissionExpand, Name.of(VAR_THIS)), Nullsafe.orDefault(expand));
             transientExpand.addAll(schema.transientExpand(Name.of(), readExpand));
         }
 
@@ -530,7 +530,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         throw new ObjectMissingException(ownerSchema.getQualifiedName(), ownerId);
                     }
 
-                    final int count = Nullsafe.option(options.getCount(), QueryLinkOptions.DEFAULT_COUNT);
+                    final int count = Nullsafe.orDefault(options.getCount(), QueryLinkOptions.DEFAULT_COUNT);
                     if(count > QueryLinkOptions.MAX_COUNT) {
                         throw new IllegalStateException("Count too high (max " +  QueryLinkOptions.MAX_COUNT + ")");
                     }
@@ -548,7 +548,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         final InstanceSchema schema = namespace.requireInstanceSchema(options.getSchema());
 
-        final int count = Nullsafe.option(options.getCount(), QueryOptions.DEFAULT_COUNT);
+        final int count = Nullsafe.orDefault(options.getCount(), QueryOptions.DEFAULT_COUNT);
         if (count > QueryOptions.MAX_COUNT) {
             throw new IllegalStateException("Count too high (max " + QueryLinkOptions.MAX_COUNT + ")");
         }
@@ -600,7 +600,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
                 //FIXME: should de-duplicate sort keys, also need to deal with empty case
                 final List<Sort> sort = ImmutableList.<Sort>builder()
-                        .addAll(Nullsafe.option(options.getSort(), viewSchema.getSort()))
+                        .addAll(Nullsafe.orDefault(options.getSort(), viewSchema.getSort()))
                         .addAll(group.keySet().stream().map(k -> Sort.asc(Name.of(k))).collect(Collectors.toList()))
                         .build();
 
@@ -644,7 +644,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
             final Expression bound = merged.bind(context);
 
-            final List<Sort> sort = Nullsafe.option(options.getSort(), Collections.emptyList());
+            final List<Sort> sort = Nullsafe.orDefault(options.getSort(), Collections.emptyList());
             final Expression unrooted = bound.bind(Context.init(), Renaming.removeExpectedPrefix(Name.of(Reserved.THIS)));
 
             return queryImpl(context, objectSchema, unrooted, sort, options.getExpand(), count, paging)

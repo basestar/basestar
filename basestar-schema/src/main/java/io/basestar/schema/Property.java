@@ -210,7 +210,7 @@ public class Property implements Member {
         this.description = builder.getDescription();
         this.type = legacyFix(qualifiedName, builder.getType().resolve(schemaResolver), builder.getRequired(), version);
         this.defaultValue = Nullsafe.map(builder.getDefault(), type::create);
-        this.immutable = Nullsafe.option(builder.getImmutable());
+        this.immutable = Nullsafe.orDefault(builder.getImmutable());
         this.expression = builder.getExpression();
         this.constraints = Nullsafe.immutableCopy(builder.getConstraints());
         this.visibility = builder.getVisibility();
@@ -220,7 +220,7 @@ public class Property implements Member {
     private Use<?> legacyFix(final Name qualifiedName, final Use<?> type, final Boolean required, final Version version) {
 
         if(version == Version.LEGACY) {
-            return type.optional(!Nullsafe.option(required));
+            return type.optional(!Nullsafe.orDefault(required));
         } else if(required != null) {
             throw new SchemaValidationException(qualifiedName, "Required is now deprecated, use optional: type instead");
         } else {
@@ -305,9 +305,10 @@ public class Property implements Member {
         }
     }
 
+    @SuppressWarnings("unchecked")
     public <T> T cast(final Object o, final Class<T> as) {
 
-        return type.cast(o, as);
+        return ((Use<T>)type).cast(o, as);
     }
 
     @SuppressWarnings("unchecked")

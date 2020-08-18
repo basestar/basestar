@@ -23,10 +23,25 @@ package io.basestar.expression.type.match;
 import io.basestar.expression.type.Values;
 import io.basestar.expression.type.exception.BadOperandsException;
 
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Map;
+
+/**
+ * Order is:
+ *
+ * void (null)
+ * boolean
+ * number
+ * string
+ * localdate
+ * instant
+ * collection
+ * map
+ *
+ * @param <T>
+ */
 
 public interface BinaryMatch<T> {
 
@@ -60,7 +75,7 @@ public interface BinaryMatch<T> {
         return defaultApply(lhs, rhs);
     }
 
-    default T apply(final Void lhs, final LocalDateTime rhs) {
+    default T apply(final Void lhs, final Instant rhs) {
 
         return defaultApply(lhs, rhs);
     }
@@ -100,7 +115,7 @@ public interface BinaryMatch<T> {
         return defaultApply(lhs, rhs);
     }
 
-    default T apply(final Boolean lhs, final LocalDateTime rhs) {
+    default T apply(final Boolean lhs, final Instant rhs) {
 
         return defaultApply(lhs, rhs);
     }
@@ -140,7 +155,7 @@ public interface BinaryMatch<T> {
         return defaultApply(lhs, rhs);
     }
 
-    default T apply(final String lhs, final LocalDateTime rhs) {
+    default T apply(final String lhs, final Instant rhs) {
 
         return defaultApply(lhs, rhs);
     }
@@ -180,7 +195,7 @@ public interface BinaryMatch<T> {
         return defaultApplySame(lhs, rhs);
     }
 
-    default T apply(final LocalDate lhs, final LocalDateTime rhs) {
+    default T apply(final LocalDate lhs, final Instant rhs) {
 
         return defaultApply(lhs, rhs);
     }
@@ -200,42 +215,42 @@ public interface BinaryMatch<T> {
         return defaultApply(lhs, rhs);
     }
 
-    default T apply(final LocalDateTime lhs, final Void rhs) {
+    default T apply(final Instant lhs, final Void rhs) {
 
         return defaultApply(lhs, rhs);
     }
 
-    default T apply(final LocalDateTime lhs, final Boolean rhs) {
+    default T apply(final Instant lhs, final Boolean rhs) {
 
         return defaultApply(lhs, rhs);
     }
 
-    default T apply(final LocalDateTime lhs, final String rhs) {
+    default T apply(final Instant lhs, final String rhs) {
 
         return defaultApply(lhs, rhs);
     }
 
-    default T apply(final LocalDateTime lhs, final LocalDate rhs) {
+    default T apply(final Instant lhs, final LocalDate rhs) {
 
         return defaultApply(lhs, rhs);
     }
 
-    default T apply(final LocalDateTime lhs, final LocalDateTime rhs) {
+    default T apply(final Instant lhs, final Instant rhs) {
 
         return defaultApplySame(lhs, rhs);
     }
 
-    default T apply(final LocalDateTime lhs, final Number rhs) {
+    default T apply(final Instant lhs, final Number rhs) {
 
         return defaultApply(lhs, rhs);
     }
 
-    default T apply(final LocalDateTime lhs, final Collection<?> rhs) {
+    default T apply(final Instant lhs, final Collection<?> rhs) {
 
         return defaultApply(lhs, rhs);
     }
 
-    default T apply(final LocalDateTime lhs, final Map<?, ?> rhs) {
+    default T apply(final Instant lhs, final Map<?, ?> rhs) {
 
         return defaultApply(lhs, rhs);
     }
@@ -260,7 +275,7 @@ public interface BinaryMatch<T> {
         return defaultApply(lhs, rhs);
     }
 
-    default T apply(final Number lhs, final LocalDateTime rhs) {
+    default T apply(final Number lhs, final Instant rhs) {
 
         return defaultApply(lhs, rhs);
     }
@@ -300,7 +315,7 @@ public interface BinaryMatch<T> {
         return defaultApply(lhs, rhs);
     }
 
-    default T apply(final Collection<?> lhs, final LocalDateTime rhs) {
+    default T apply(final Collection<?> lhs, final Instant rhs) {
 
         return defaultApply(lhs, rhs);
     }
@@ -340,7 +355,7 @@ public interface BinaryMatch<T> {
         return defaultApply(lhs, rhs);
     }
 
-    default T apply(final Map<?, ?> lhs, final LocalDateTime rhs) {
+    default T apply(final Map<?, ?> lhs, final Instant rhs) {
 
         return defaultApply(lhs, rhs);
     }
@@ -372,8 +387,8 @@ public interface BinaryMatch<T> {
             return apply(lhs, (String) rhs);
         } else if (rhs instanceof LocalDate) {
             return apply(lhs, (LocalDate) rhs);
-        } else if (rhs instanceof LocalDateTime) {
-            return apply(lhs, (LocalDateTime) rhs);
+        } else if (rhs instanceof Instant) {
+            return apply(lhs, (Instant) rhs);
         } else if (rhs instanceof Collection<?>) {
             return apply(lhs, (Collection<?>) rhs);
         } else if (rhs instanceof Map<?, ?>) {
@@ -395,8 +410,8 @@ public interface BinaryMatch<T> {
             return apply(lhs, (String) rhs);
         } else if (rhs instanceof LocalDate) {
             return apply(lhs, (LocalDate) rhs);
-        } else if (rhs instanceof LocalDateTime) {
-            return apply(lhs, (LocalDateTime) rhs);
+        } else if (rhs instanceof Instant) {
+            return apply(lhs, (Instant) rhs);
         } else if (rhs instanceof Collection<?>) {
             return apply(lhs, (Collection<?>) rhs);
         } else if (rhs instanceof Map<?, ?>) {
@@ -418,8 +433,8 @@ public interface BinaryMatch<T> {
             return apply(lhs, (String) rhs);
         } else if (rhs instanceof LocalDate) {
             return apply(lhs, (LocalDate) rhs);
-        } else if (rhs instanceof LocalDateTime) {
-            return apply(lhs, (LocalDateTime) rhs);
+        } else if (rhs instanceof Instant) {
+            return apply(lhs, (Instant) rhs);
         } else if (rhs instanceof Collection<?>) {
             return apply(lhs, (Collection<?>) rhs);
         } else if (rhs instanceof Map<?, ?>) {
@@ -441,8 +456,8 @@ public interface BinaryMatch<T> {
             return apply(lhs, (String) rhs);
         } else if (rhs instanceof LocalDate) {
             return apply(lhs, (LocalDate) rhs);
-        } else if (rhs instanceof LocalDateTime) {
-            return apply(lhs, (LocalDateTime) rhs);
+        } else if (rhs instanceof Instant) {
+            return apply(lhs, (Instant) rhs);
         } else if (rhs instanceof Collection<?>) {
             return apply(lhs, (Collection<?>) rhs);
         } else if (rhs instanceof Map<?, ?>) {
@@ -464,8 +479,8 @@ public interface BinaryMatch<T> {
             return apply(lhs, (String) rhs);
         } else if (rhs instanceof LocalDate) {
             return apply(lhs, (LocalDate) rhs);
-        } else if (rhs instanceof LocalDateTime) {
-            return apply(lhs, (LocalDateTime) rhs);
+        } else if (rhs instanceof Instant) {
+            return apply(lhs, (Instant) rhs);
         } else if (rhs instanceof Collection<?>) {
             return apply(lhs, (Collection<?>) rhs);
         } else if (rhs instanceof Map<?, ?>) {
@@ -475,7 +490,7 @@ public interface BinaryMatch<T> {
         }
     }
 
-    default T apply(final LocalDateTime lhs, final Object rhs) {
+    default T apply(final Instant lhs, final Object rhs) {
 
         if (rhs == null) {
             return apply(lhs, (Void) null);
@@ -487,8 +502,8 @@ public interface BinaryMatch<T> {
             return apply(lhs, (String) rhs);
         } else if (rhs instanceof LocalDate) {
             return apply(lhs, (LocalDate) rhs);
-        } else if (rhs instanceof LocalDateTime) {
-            return apply(lhs, (LocalDateTime) rhs);
+        } else if (rhs instanceof Instant) {
+            return apply(lhs, (Instant) rhs);
         } else if (rhs instanceof Collection<?>) {
             return apply(lhs, (Collection<?>) rhs);
         } else if (rhs instanceof Map<?, ?>) {
@@ -510,8 +525,8 @@ public interface BinaryMatch<T> {
             return apply(lhs, (String) rhs);
         } else if (rhs instanceof LocalDate) {
             return apply(lhs, (LocalDate) rhs);
-        } else if (rhs instanceof LocalDateTime) {
-            return apply(lhs, (LocalDateTime) rhs);
+        } else if (rhs instanceof Instant) {
+            return apply(lhs, (Instant) rhs);
         } else if (rhs instanceof Collection<?>) {
             return apply(lhs, (Collection<?>) rhs);
         } else if (rhs instanceof Map<?, ?>) {
@@ -533,8 +548,8 @@ public interface BinaryMatch<T> {
             return apply(lhs, (String) rhs);
         } else if (rhs instanceof LocalDate) {
             return apply(lhs, (LocalDate) rhs);
-        } else if (rhs instanceof LocalDateTime) {
-            return apply(lhs, (LocalDateTime) rhs);
+        } else if (rhs instanceof Instant) {
+            return apply(lhs, (Instant) rhs);
         } else if (rhs instanceof Collection<?>) {
             return apply(lhs, (Collection<?>) rhs);
         } else if (rhs instanceof Map<?, ?>) {
@@ -556,8 +571,8 @@ public interface BinaryMatch<T> {
             return apply((String)lhs, rhs);
         } else if (lhs instanceof LocalDate) {
             return apply((LocalDate)lhs, rhs);
-        } else if (lhs instanceof LocalDateTime) {
-            return apply((LocalDateTime)lhs, rhs);
+        } else if (lhs instanceof Instant) {
+            return apply((Instant)lhs, rhs);
         } else if(lhs instanceof Collection<?>) {
             return apply((Collection<?>)lhs, rhs);
         } else if(lhs instanceof Map<?, ?>) {

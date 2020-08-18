@@ -319,13 +319,13 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
         resolver.constructing(this);
         this.qualifiedName = qualifiedName;
         this.slot = slot;
-        this.version = Nullsafe.option(descriptor.getVersion(), 1L);
-        this.materialized = Nullsafe.option(descriptor.getMaterialized());
+        this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
+        this.materialized = Nullsafe.orDefault(descriptor.getMaterialized());
         final Descriptor.From from = Nullsafe.require(descriptor.getFrom());
         if(from.getSchema() == null) {
             throw new SchemaValidationException(qualifiedName, "View must specify from.schema");
         }
-        this.from = new From(resolver.requireInstanceSchema(from.getSchema()), Nullsafe.option(from.getExpand()));
+        this.from = new From(resolver.requireInstanceSchema(from.getSchema()), Nullsafe.orDefault(from.getExpand()));
         this.sort = Nullsafe.immutableCopy(descriptor.getSort());
         this.description = descriptor.getDescription();
         this.group = Nullsafe.immutableCopy(descriptor.getGroup());

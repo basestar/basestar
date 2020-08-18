@@ -48,7 +48,7 @@ public class BucketTransform implements Transform<Dataset<Row>, Dataset<Row>> {
     @lombok.Builder(builderClassName = "Builder")
     BucketTransform(final List<Name> inputNames, final String outputColumnName, final BucketFunction bucketFunction) {
 
-        this.inputNames = Nullsafe.option(inputNames, DEFAULT_INPUT_NAMES);
+        this.inputNames = Nullsafe.orDefault(inputNames, DEFAULT_INPUT_NAMES);
         this.outputColumnName = Nullsafe.require(outputColumnName);
         Nullsafe.require(bucketFunction);
         this.bucket = functions.udf(

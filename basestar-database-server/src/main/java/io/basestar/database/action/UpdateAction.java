@@ -76,7 +76,7 @@ public class UpdateAction implements Action {
         final String id = options.getId();
 
         final Map<String, Object> data = new HashMap<>();
-        final UpdateOptions.Mode mode = Nullsafe.option(options.getMode(), UpdateOptions.Mode.REPLACE);
+        final UpdateOptions.Mode mode = Nullsafe.orDefault(options.getMode(), UpdateOptions.Mode.REPLACE);
 
 
         final long version;
@@ -182,7 +182,7 @@ public class UpdateAction implements Action {
     public Set<Name> paths() {
 
         // FIXME: shouldn't have to bind here, need to fix multi-part path constants in parser
-        return Nullsafe.option(options.getExpressions()).values().stream()
+        return Nullsafe.orDefault(options.getExpressions()).values().stream()
                 .flatMap(e -> e.bind(Context.init()).names().stream())
                 .collect(Collectors.toSet());
     }

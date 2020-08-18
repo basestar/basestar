@@ -65,13 +65,13 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
     @Override
     public <T> AttributeType<?> visitArray(final UseArray<T> type) {
 
-        return type.getType().visit(ForArray.INSTANCE);
+        return type.getType().visit(OfArray.INSTANCE);
     }
 
     @Override
     public <T> AttributeType<?> visitSet(final UseSet<T> type) {
 
-        return type.getType().visit(ForArray.INSTANCE);
+        return type.getType().visit(OfArray.INSTANCE);
     }
 
     @Override
@@ -116,9 +116,9 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
         return type.getType().visit(this);
     }
 
-    public static class ForArray implements Use.Visitor<AttributeType<?>> {
+    public static class OfArray implements Use.Visitor<AttributeType<?>> {
 
-        public static final ForArray INSTANCE = new ForArray();
+        public static final OfArray INSTANCE = new OfArray();
 
         @Override
         public AttributeType<?> visitBoolean(final UseBoolean type) {

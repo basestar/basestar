@@ -50,9 +50,9 @@ public class JDBCSink implements Sink<Dataset<?>> {
         this.session = Nullsafe.require(session);
         this.jdbcUrl = Nullsafe.require(jdbcUrl);
         this.table = Nullsafe.require(table);
-        this.mode = Nullsafe.option(mode, SaveMode.ErrorIfExists);
-        this.properties = Nullsafe.option(properties, Properties::new);
-        this.options = Nullsafe.option(options);
+        this.mode = Nullsafe.orDefault(mode, SaveMode.ErrorIfExists);
+        this.properties = Nullsafe.orDefault(properties, Properties::new);
+        this.options = Nullsafe.orDefault(options);
     }
 
     @Override

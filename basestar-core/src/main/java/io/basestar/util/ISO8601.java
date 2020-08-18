@@ -124,4 +124,16 @@ public class ISO8601 {
 
         return DATE_TIME_OUTPUT_FORMAT.format(LocalDateTime.ofInstant(value, ZoneOffset.UTC));
     }
+
+    public static LocalDate parsePartialDate(final String value) {
+
+        // FIXME: should support non-ambiguous prefix dates, fill in missing values with firsts
+        return parseDate(value);
+    }
+
+    public static Instant parsePartialDateTime(final String value) {
+
+        // FIXME: should support non-ambiguous prefix datetimes, fill in missing values with zeros/firsts
+        return parseDateTime(value);
+    }
 }

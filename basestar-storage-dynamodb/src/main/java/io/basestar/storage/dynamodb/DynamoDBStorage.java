@@ -49,11 +49,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 public class DynamoDBStorage extends PartitionedStorage implements Storage.WithoutWriteHistory, Storage.WithoutExpand {
-
-    private static final int READ_BATCH = 100;
 
     private static final int WRITE_BATCH = 25;
 
@@ -72,7 +71,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
         this.client = builder.client;
         this.strategy = builder.strategy;
         this.oversizeStash = builder.oversizeStash;
-        this.eventStrategy = Nullsafe.option(builder.eventStrategy, EventStrategy.EMIT);
+        this.eventStrategy = Nullsafe.orDefault(builder.eventStrategy, EventStrategy.EMIT);
     }
 
     public static Builder builder() {

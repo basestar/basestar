@@ -64,13 +64,13 @@ public interface ElasticsearchStrategy {
         @Override
         public String objectIndex(final ObjectSchema schema) {
 
-            return Nullsafe.option(objectPrefix) + name(schema) +  Nullsafe.option(objectSuffix);
+            return Nullsafe.orDefault(objectPrefix) + name(schema) +  Nullsafe.orDefault(objectSuffix);
         }
 
         @Override
         public String historyIndex(final ObjectSchema schema) {
 
-            return Nullsafe.option(historyPrefix) + name(schema) + Nullsafe.option(historySuffix);
+            return Nullsafe.orDefault(historyPrefix) + name(schema) + Nullsafe.orDefault(historySuffix);
         }
 
         @Override

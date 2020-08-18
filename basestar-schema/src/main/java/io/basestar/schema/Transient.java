@@ -279,7 +279,7 @@ public class Transient implements Member {
         private final Name qualifiedName;
 
         @Override
-        public Void visitDefault(final Use<?> type) {
+        public <T> Void visitDefault(final Use<T> type) {
 
             return null;
         }

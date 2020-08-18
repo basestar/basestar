@@ -82,12 +82,12 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
         public ReplicaStorage build() {
 
             return new ReplicaStorage(namespace, emitter, Nullsafe.require(primary), Nullsafe.require(replica),
-                    Nullsafe.option(readConsistency, (consistency) -> consistency),
-                    Nullsafe.option(writeConsistency, (consistency) -> consistency),
-                    Nullsafe.option(primaryConsistency, (schema, consistency) -> consistency),
-                    Nullsafe.option(primaryVersioning, (schema, versioning) -> versioning),
-                    Nullsafe.option(replicaConsistency, (schema, consistency) -> consistency),
-                    Nullsafe.option(replicaVersioning, (schema, versioning) -> versioning));
+                    Nullsafe.orDefault(readConsistency, (consistency) -> consistency),
+                    Nullsafe.orDefault(writeConsistency, (consistency) -> consistency),
+                    Nullsafe.orDefault(primaryConsistency, (schema, consistency) -> consistency),
+                    Nullsafe.orDefault(primaryVersioning, (schema, versioning) -> versioning),
+                    Nullsafe.orDefault(replicaConsistency, (schema, consistency) -> consistency),
+                    Nullsafe.orDefault(replicaVersioning, (schema, versioning) -> versioning));
         }
     }
 
@@ -184,7 +184,7 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
                 final Map<String, Object> primary = primaryResponse.get(key);
                 final Map<String, Object> replica = replicaResponse.get(key);
 
-                final Map<String, Object> result = Nullsafe.option(primary, replica);
+                final Map<String, Object> result = Nullsafe.orDefault(primary, replica);
 
                 final ReplicaMetadata meta = ReplicaMetadata.wrap(primary, replica);
 

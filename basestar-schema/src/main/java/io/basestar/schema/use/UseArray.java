@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Array Type
@@ -63,11 +64,12 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
         return visitor.visitArray(this);
     }
 
-    public UseArray<?> transform(final Function<Use<T>, Use<?>> fn) {
+    @SuppressWarnings("unchecked")
+    public <T2> UseArray<T2> transform(final Function<Use<T>, Use<T2>> fn) {
 
-        final Use<?> type2 = fn.apply(type);
+        final Use<T2> type2 = fn.apply(type);
         if(type2 == type ) {
-            return this;
+            return (UseArray<T2>)this;
         } else {
             return new UseArray<>(type2);
         }
@@ -98,9 +100,9 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
     }
 
     @Override
-    public List<T> create(final Object value, final Set<Name> expand, final boolean suppress) {
+    public List<T> create(final Stream<T> values) {
 
-        return create(value, suppress, v -> type.create(v, expand, suppress));
+        return values.collect(Collectors.toList());
     }
 
     public static <T> List<T> create(final Object value, final boolean suppress, final Function<Object, T> fn) {
@@ -124,9 +126,9 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
     }
 
     @Override
-    public io.swagger.v3.oas.models.media.Schema<?> openApi() {
+    public io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
-        return new ArraySchema().items(type.openApi());
+        return new ArraySchema().items(type.openApi(expand));
     }
 
     @Override

@@ -90,11 +90,11 @@ public class PartitionedUpsertSink extends PartitionedUpsertUtils implements Sin
 
         this.databaseName = databaseName;
         this.tableName = tableName;
-        this.idColumns = Nullsafe.option(idColumns, ImmutableList.of(ObjectSchema.ID));
-        this.upsertId = Nullsafe.option(upsertId, PartitionedUpsertSink::defaultUpsertId);
-        this.format = Nullsafe.option(format, Format.PARQUET);
-        this.deletedColumn = Nullsafe.option(deletedColumn, Reserved.DELETED);
-        this.mergeCount = Nullsafe.option(mergeCount, DEFAULT_MERGE_COUNT);
+        this.idColumns = Nullsafe.orDefault(idColumns, ImmutableList.of(ObjectSchema.ID));
+        this.upsertId = Nullsafe.orDefault(upsertId, PartitionedUpsertSink::defaultUpsertId);
+        this.format = Nullsafe.orDefault(format, Format.PARQUET);
+        this.deletedColumn = Nullsafe.orDefault(deletedColumn, Reserved.DELETED);
+        this.mergeCount = Nullsafe.orDefault(mergeCount, DEFAULT_MERGE_COUNT);
     }
 
     private Dataset<Row> clean(final Dataset<Row> input) {

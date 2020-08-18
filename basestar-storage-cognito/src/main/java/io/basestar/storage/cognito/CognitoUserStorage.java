@@ -244,12 +244,6 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
         return use.visit(new Use.Visitor.Defaulting<Map<Name, String>>() {
 
             @Override
-            public Map<Name, String> visitDefault(final Use<?> type) {
-
-                throw new UnsupportedOperationException("Type " + type.code() + " not supported");
-            }
-
-            @Override
             public Map<Name, String> visitBoolean(final UseBoolean type) {
 
                 return value == null ? ImmutableMap.of() : ImmutableMap.of(path, Boolean.toString(type.create(value)));
@@ -352,13 +346,7 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
         return use.visit(new Use.Visitor.Defaulting<Object>() {
 
             @Override
-            public Object visitDefault(final Use<?> type) {
-
-                throw new UnsupportedOperationException("Type " + type.code() + " not supported");
-            }
-
-            @Override
-            public Object visitScalar(final UseScalar<?> type) {
+            public <T> Object visitScalar(final UseScalar<T> type) {
 
                 return type.create(attrs.get(path));
             }

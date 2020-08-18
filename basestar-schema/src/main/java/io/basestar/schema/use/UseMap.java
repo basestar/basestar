@@ -57,7 +57,7 @@ import java.util.stream.Collectors;
 
 @Data
 @Slf4j
-public class UseMap<T> implements Use<Map<String, T>> {
+public class UseMap<T> implements UseContainer<T, Map<String, T>> {
 
     public static final String NAME = "map";
 
@@ -71,11 +71,13 @@ public class UseMap<T> implements Use<Map<String, T>> {
         return visitor.visitMap(this);
     }
 
-    public UseMap<?> transform(final Function<Use<T>, Use<?>> fn) {
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T2> UseMap<T2> transform(final Function<Use<T>, Use<T2>> fn) {
 
-        final Use<?> type2 = fn.apply(type);
+        final Use<T2> type2 = fn.apply(type);
         if(type2 == type ) {
-            return this;
+            return (UseMap<T2>)this;
         } else {
             return new UseMap<>(type2);
         }
@@ -136,9 +138,10 @@ public class UseMap<T> implements Use<Map<String, T>> {
     }
 
     @Override
-    public io.swagger.v3.oas.models.media.Schema<?> openApi() {
+    public io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
-        return new MapSchema().additionalProperties(type.openApi());
+        final Map<String, Set<Name>> branches = Name.branch(expand);
+        return new MapSchema().additionalProperties(type.openApi(branches.get(EXPAND_WILDCARD)));
     }
 
     @Override
@@ -363,6 +366,24 @@ public class UseMap<T> implements Use<Map<String, T>> {
 
         final Set<Name> union = Name.branch(expand).values().stream().reduce(Collections.emptySet(), Sets::union);
         type.collectDependencies(union, out);
+    }
+
+    @Override
+    public Map<String, T> transform(final Map<String, T> value, final Function<T, T> fn) {
+
+        if(value != null) {
+            boolean changed = false;
+            final Map<String, T> result = new HashMap<>();
+            for(final Map.Entry<String, T> entry : value.entrySet()) {
+                final T before = entry.getValue();
+                final T after = fn.apply(before);
+                result.put(entry.getKey(), after);
+                changed = changed || (before != after);
+            }
+            return changed ? result : value;
+        } else {
+            return null;
+        }
     }
 
     @Override

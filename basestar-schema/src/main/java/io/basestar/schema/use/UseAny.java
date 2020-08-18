@@ -60,7 +60,7 @@ public class UseAny implements Use<Object> {
     }
 
     @Override
-    public io.swagger.v3.oas.models.media.Schema<?> openApi() {
+    public io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
         throw new IllegalStateException("FIXME");
     }

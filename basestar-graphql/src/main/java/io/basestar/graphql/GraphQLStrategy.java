@@ -372,7 +372,7 @@ public interface GraphQLStrategy {
             return "approxTotal";
         }
 
-        protected final Use.Visitor<String> TYPE_NAME_VISITOR = new Use.Visitor<String>() {
+        protected final Use.Visitor<String> TYPE_NAME_VISITOR = new Use.Visitor.Defaulting<String>() {
 
             @Override
             public String visitBoolean(final UseBoolean type) {
@@ -393,7 +393,7 @@ public interface GraphQLStrategy {
             }
 
             @Override
-            public String visitString(final UseString type) {
+            public <T> String visitStringLike(final UseStringLike<T> type) {
 
                 return GraphQLUtils.STRING_TYPE;
             }
@@ -441,27 +441,9 @@ public interface GraphQLStrategy {
             }
 
             @Override
-            public String visitDate(final UseDate type) {
-
-                return GraphQLUtils.STRING_TYPE;
-            }
-
-            @Override
-            public String visitDateTime(final UseDateTime type) {
-
-                return GraphQLUtils.STRING_TYPE;
-            }
-
-            @Override
             public String visitView(final UseView type) {
 
                 return typeName(type.getSchema());
-            }
-
-            @Override
-            public <T> String visitOptional(final UseOptional<T> type) {
-
-                return type.getType().visit(this);
             }
         };
     }

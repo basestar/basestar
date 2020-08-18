@@ -102,7 +102,7 @@ public class UseBinary implements UseScalar<byte[]> {
     }
 
     @Override
-    public io.swagger.v3.oas.models.media.Schema<?> openApi() {
+    public io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
         return new BinarySchema();
     }

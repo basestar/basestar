@@ -27,7 +27,7 @@ public class CasingLayout implements Layout {
     }
 
     @Override
-    public Map<String, Use<?>> layoutSchema(final Set<Name> expand) {
+    public Map<String, Use<?>> layout(final Set<Name> expand) {
 
         return layoutSchema(base, expand);
     }
@@ -35,7 +35,7 @@ public class CasingLayout implements Layout {
     private Map<String, Use<?>> layoutSchema(final Layout base, final Set<Name> expand) {
 
         final Map<String, Use<?>> result = new HashMap<>();
-        base.layoutSchema(expand).forEach((k, v) -> {
+        base.layout(expand).forEach((k, v) -> {
             result.put(casing.apply(k), layoutSchema(v));
         });
         return result;
@@ -46,7 +46,7 @@ public class CasingLayout implements Layout {
         return type.visit(new Use.Visitor.Defaulting<Use<?>>() {
 
             @Override
-            public Use<?> visitDefault(final Use<?> type) {
+            public <T> Use<?> visitDefault(final Use<T> type) {
 
                 return type;
             }

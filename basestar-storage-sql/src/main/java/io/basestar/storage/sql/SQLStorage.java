@@ -81,7 +81,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         this.dataSource = builder.dataSource;
         this.dialect = builder.dialect;
         this.strategy = builder.strategy;
-        this.eventStrategy = Nullsafe.option(builder.eventStrategy, EventStrategy.EMIT);
+        this.eventStrategy = Nullsafe.orDefault(builder.eventStrategy, EventStrategy.EMIT);
     }
 
     public static Builder builder() {
@@ -276,7 +276,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                 } else {
                     return prop.getType().visit(new Use.Visitor.Defaulting<QueryPart>() {
                         @Override
-                        public QueryPart visitDefault(final Use<?> type) {
+                        public <T> QueryPart visitDefault(final Use<T> type) {
 
                             throw new UnsupportedOperationException("Query of this type is not supported");
                         }

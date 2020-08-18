@@ -202,15 +202,15 @@ public interface TypeModel {
             }
 
             @Override
-            public TypeModel visitAny(final UseAny useAny) {
-
-                return () -> "Any";
-            }
-
-            @Override
             public <T> TypeModel visitOptional(final UseOptional<T> type) {
 
                 return type.getType().visit(this);
+            }
+
+            @Override
+            public TypeModel visitAny(final UseAny type) {
+
+                return () -> "Any";
             }
 
             @Override

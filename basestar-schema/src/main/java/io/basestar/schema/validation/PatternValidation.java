@@ -76,7 +76,7 @@ public class PatternValidation implements Validation {
         @SuppressWarnings("MagicConstant")
         public Validator(@JsonProperty("regex") final String regex, @JsonProperty("flags") final Set<javax.validation.constraints.Pattern.Flag> flags) {
 
-            this.regex = Pattern.compile(Nullsafe.require(regex), flags(Nullsafe.option(flags)));
+            this.regex = Pattern.compile(Nullsafe.require(regex), flags(Nullsafe.orDefault(flags)));
         }
 
         public String getRegex() {

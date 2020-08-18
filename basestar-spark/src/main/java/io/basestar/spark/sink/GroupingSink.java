@@ -45,7 +45,7 @@ public class GroupingSink<T extends Serializable, G extends Serializable> implem
 
         this.groupFunction = groupFunction;
         this.sinkFunction = sinkFunction;
-        this.threads = Nullsafe.option(threads, 1);
+        this.threads = Nullsafe.orDefault(threads, 1);
     }
 
     @Override

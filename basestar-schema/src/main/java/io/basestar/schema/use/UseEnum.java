@@ -44,7 +44,7 @@ import java.util.*;
  */
 
 @Data
-public class UseEnum implements UseScalar<String>, UseNamed<String> {
+public class UseEnum implements UseStringLike<String>, UseNamed<String> {
 
     public static final String NAME = "enum";
 
@@ -165,12 +165,12 @@ public class UseEnum implements UseScalar<String>, UseNamed<String> {
     }
 
     @Override
-    public io.swagger.v3.oas.models.media.Schema<?> openApi() {
+    public io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
         if(schema.isAnonymous()) {
             return new io.swagger.v3.oas.models.media.StringSchema()._enum(schema.getValues());
         } else {
-            return UseNamed.super.openApi();
+            return UseNamed.super.openApi(expand);
         }
     }
 }

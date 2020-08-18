@@ -23,11 +23,12 @@ package io.basestar.expression.type;
 import io.basestar.expression.type.match.BinaryMatch;
 import io.basestar.expression.type.match.BinaryNumberMatch;
 import io.basestar.expression.type.match.UnaryMatch;
+import io.basestar.util.ISO8601;
 import io.basestar.util.Pair;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -81,7 +82,7 @@ public class Values {
     @SuppressWarnings("unchecked")
     public static int compare(final Object a, final Object b) {
 
-        final Pair<Object> pair = promote(a, b);
+        final Pair<Object, Object> pair = promote(a, b);
         final Comparable<Object> first = (Comparable<Object>)pair.getFirst();
         final Comparable<Object> second = (Comparable<Object>)pair.getSecond();
         return Objects.compare(first, second, Comparator.naturalOrder());
@@ -98,12 +99,12 @@ public class Values {
 //        }
     }
 
-    public static Pair<Object> promote(final Object a, final Object b) {
+    public static Pair<Object, Object> promote(final Object a, final Object b) {
 
         return PROMOTE.apply(a, b);
     }
 
-    public static Pair<Object> coerce(final Object a, final Object b) {
+    public static Pair<Object, Object> coerce(final Object a, final Object b) {
 
         return COERCER.apply(a, b);
     }
@@ -124,16 +125,16 @@ public class Values {
                 .collect(Collectors.joining(", ")) + "}";
     }
 
-    private static final BinaryNumberMatch<Pair<Object>> NUMBER_PROMOTE = new BinaryNumberMatch.Promoting<Pair<Object>>() {
+    private static final BinaryNumberMatch<Pair<Object, Object>> NUMBER_PROMOTE = new BinaryNumberMatch.Promoting<Pair<Object, Object>>() {
 
         @Override
-        public <U extends Number> Pair<Object> defaultApplySame(final U a, final U b) {
+        public <U extends Number> Pair<Object, Object> defaultApplySame(final U a, final U b) {
 
             return Pair.of(a, b);
         }
     };
 
-    private static final BinaryMatch<Pair<Object>> PROMOTE = new BinaryMatch.Promoting<Pair<Object>>() {
+    private static final BinaryMatch<Pair<Object, Object>> PROMOTE = new BinaryMatch.Promoting<Pair<Object, Object>>() {
 
         @Override
         public String toString() {
@@ -142,38 +143,37 @@ public class Values {
         }
 
         @Override
-        public <U> Pair<Object> defaultApplySame(final U a, final U b) {
+        public <U> Pair<Object, Object> defaultApplySame(final U a, final U b) {
 
             return Pair.of(a, b);
         }
 
-        // FIXME: should promote to date on 1.2.1 can use ISO8601 utils, but this will work on 1.2.0 for compare
         @Override
-        public Pair<Object> apply(final LocalDate a, final String b) {
+        public Pair<Object, Object> apply(final LocalDate a, final String b) {
 
-            return Pair.of(a.toString(), b);
+            return Pair.of(a, ISO8601.parsePartialDate(b));
         }
 
         @Override
-        public Pair<Object> apply(final LocalDateTime a, final String b) {
+        public Pair<Object, Object> apply(final Instant a, final String b) {
 
-            return Pair.of(a.toString(), b);
+            return Pair.of(a, ISO8601.parsePartialDateTime(b));
         }
 
         @Override
-        public Pair<Object> apply(final String a, final LocalDate b) {
+        public Pair<Object, Object> apply(final String a, final LocalDate b) {
 
-            return Pair.of(a, b.toString());
+            return Pair.of(ISO8601.parsePartialDate(a), b);
         }
 
         @Override
-        public Pair<Object> apply(final String a, final LocalDateTime b) {
+        public Pair<Object, Object> apply(final String a, final Instant b) {
 
-            return Pair.of(a, b.toString());
+            return Pair.of(ISO8601.parsePartialDateTime(a), b);
         }
 
         @Override
-        public Pair<Object> apply(final Number a, final Number b) {
+        public Pair<Object, Object> apply(final Number a, final Number b) {
 
             return NUMBER_PROMOTE.apply(a, b);
         }
@@ -245,7 +245,7 @@ public class Values {
         }
     };
 
-    private static final BinaryMatch<Pair<Object>> COERCER = new BinaryMatch.Coercing<Pair<Object>>() {
+    private static final BinaryMatch<Pair<Object, Object>> COERCER = new BinaryMatch.Coercing<Pair<Object, Object>>() {
 
         @Override
         public String toString() {
@@ -254,13 +254,13 @@ public class Values {
         }
 
         @Override
-        public <U> Pair<Object> defaultApplySame(final U a, final U b) {
+        public <U> Pair<Object, Object> defaultApplySame(final U a, final U b) {
 
             return Pair.of(a, b);
         }
 
         @Override
-        public Pair<Object> apply(final Number a, final Number b) {
+        public Pair<Object, Object> apply(final Number a, final Number b) {
 
             return NUMBER_PROMOTE.apply(a, b);
         }

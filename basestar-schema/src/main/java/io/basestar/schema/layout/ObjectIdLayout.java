@@ -23,11 +23,11 @@ public class ObjectIdLayout implements Layout {
     }
 
     @Override
-    public Map<String, Use<?>> layoutSchema(final Set<Name> expand) {
+    public Map<String, Use<?>> layout(final Set<Name> expand) {
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
         final Map<String, Use<?>> result = new HashMap<>();
-        base.layoutSchema(expand).forEach((name, type) -> {
+        base.layout(expand).forEach((name, type) -> {
             result.put(name, layout(type, branches.get(name),false));
         });
         return result;
@@ -38,7 +38,7 @@ public class ObjectIdLayout implements Layout {
         return type.visit(new Use.Visitor.Defaulting<Use<?>>() {
 
             @Override
-            public Use<?> visitDefault(final Use<?> type) {
+            public <T> Use<?> visitDefault(final Use<T> type) {
 
                 return type;
             }
@@ -50,7 +50,7 @@ public class ObjectIdLayout implements Layout {
             }
 
             @Override
-            public Use<?> visitLinkable(final UseLinkable type) {
+            public Use<?> visitObject(final UseObject type) {
 
                 return UseString.DEFAULT.optional(nullable);
             }
@@ -80,7 +80,7 @@ public class ObjectIdLayout implements Layout {
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
         final Map<String, Object> result = new HashMap<>();
-        base.layoutSchema(expand).forEach((name, type) -> {
+        base.layout(expand).forEach((name, type) -> {
             final Object value = object == null ? null : object.get(name);
             result.put(name, applyLayout(type, branches.get(name), value));
         });
@@ -95,7 +95,7 @@ public class ObjectIdLayout implements Layout {
         return type.visit(new Use.Visitor.Defaulting<Object>() {
 
             @Override
-            public Object visitDefault(final Use<?> type) {
+            public <T> Object visitDefault(final Use<T> type) {
 
                 return type;
             }
@@ -138,7 +138,7 @@ public class ObjectIdLayout implements Layout {
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
         final Map<String, Object> result = new HashMap<>();
-        base.layoutSchema(expand).forEach((name, type) -> {
+        base.layout(expand).forEach((name, type) -> {
             final Object value = object == null ? null : object.get(name);
             result.put(name, unapplyLayout(type, branches.get(name), value));
         });
@@ -153,7 +153,7 @@ public class ObjectIdLayout implements Layout {
         return type.visit(new Use.Visitor.Defaulting<Object>() {
 
             @Override
-            public Object visitDefault(final Use<?> type) {
+            public <T> Object visitDefault(final Use<T> type) {
 
                 return type.create(value);
             }

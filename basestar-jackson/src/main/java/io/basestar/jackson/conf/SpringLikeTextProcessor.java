@@ -39,7 +39,7 @@ public class SpringLikeTextProcessor implements Function<String, String> {
             final String key = matcher.group(1);
             final String def = matcher.group(2);
             final String rep = lookup(key, def);
-            matcher.appendReplacement(result, Nullsafe.option(rep));
+            matcher.appendReplacement(result, Nullsafe.orDefault(rep));
         }
         matcher.appendTail(result);
         return result.toString();

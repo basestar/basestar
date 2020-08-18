@@ -690,6 +690,7 @@ public abstract class TestStorage {
         final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
 
         final Page<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
+        System.err.println(results);
         //assertEquals(?, results.size());
     }
 

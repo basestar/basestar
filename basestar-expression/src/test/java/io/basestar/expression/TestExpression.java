@@ -100,7 +100,7 @@ public class TestExpression {
 
     private void assertEqualsPromoting(final Object a, final Object b) {
 
-        final Pair<Object> pair = Values.promote(a, b);
+        final Pair<Object, Object> pair = Values.promote(a, b);
         assertEquals(pair.getFirst(), pair.getSecond());
     }
 

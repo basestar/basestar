@@ -21,7 +21,6 @@ package io.basestar.schema.use;
  */
 
 import com.google.common.base.Charsets;
-import io.basestar.schema.exception.TypeSyntaxException;
 import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.StringSchema;
@@ -32,7 +31,6 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -47,30 +45,15 @@ import java.util.Set;
 @Data
 @Slf4j
 @RequiredArgsConstructor
-public class UseString implements UseScalar<String> {
+public class UseString implements UseStringLike<String> {
 
-    public static final UseString DEFAULT = new UseString(null);
+    public static final UseString DEFAULT = new UseString();
 
     public static final String NAME = "string";
 
-    private final String pattern;
-
-    public UseString() {
-
-        this(null);
-    }
-
     public static UseString from(final Object config) {
 
-        if(config == null) {
-            return DEFAULT;
-        } else if(config instanceof String) {
-            return new UseString((String)config);
-        } else if(config instanceof Map) {
-            return new UseString((String)((Map<?, ?>)config).get("pattern"));
-        } else {
-            throw new TypeSyntaxException();
-        }
+        return DEFAULT;
     }
 
     @Override
@@ -108,7 +91,7 @@ public class UseString implements UseScalar<String> {
     }
 
     @Override
-    public io.swagger.v3.oas.models.media.Schema<?> openApi() {
+    public io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
         return new StringSchema();
     }
@@ -135,12 +118,4 @@ public class UseString implements UseScalar<String> {
 
         return NAME;
     }
-
-//    @Override
-//    public Map<String, Object> openApiType() {
-//
-//        return ImmutableMap.of(
-//                "type", "string"
-//        );
-//    }
 }

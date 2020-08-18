@@ -173,16 +173,16 @@ public class Index implements Named, Described, Serializable, Extendable {
     private Index(final Descriptor descriptor, final Name qualifiedName) {
 
         this.qualifiedName = qualifiedName;
-        this.version = Nullsafe.option(descriptor.getVersion(), 1L);
+        this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
         this.description = descriptor.getDescription();
         this.partition = Nullsafe.immutableCopy(descriptor.getPartition());
         this.sort = Nullsafe.immutableCopy(descriptor.getSort());
         this.projection = Nullsafe.immutableSortedCopy(descriptor.getProjection());
         this.over = Nullsafe.immutableSortedCopy(descriptor.getOver());
-        this.unique = Nullsafe.option(descriptor.getUnique(), false);
-        this.sparse = Nullsafe.option(descriptor.getSparse(), false);
+        this.unique = Nullsafe.orDefault(descriptor.getUnique(), false);
+        this.sparse = Nullsafe.orDefault(descriptor.getSparse(), false);
         this.consistency = descriptor.getConsistency();
-        this.max = Nullsafe.option(descriptor.getMax(), DEFAULT_MAX);
+        this.max = Nullsafe.orDefault(descriptor.getMax(), DEFAULT_MAX);
         this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());
         if (Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);

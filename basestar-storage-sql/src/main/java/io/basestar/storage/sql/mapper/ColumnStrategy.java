@@ -42,8 +42,8 @@ public interface ColumnStrategy {
         @lombok.Builder
         Simple(final DataType<String> stringDataType, final StructMode structMode) {
 
-            this.stringDataType = Nullsafe.option(stringDataType, SQLDataType.LONGVARCHAR);
-            this.structMode = Nullsafe.option(structMode, StructMode.FLAT);
+            this.stringDataType = Nullsafe.orDefault(stringDataType, SQLDataType.LONGVARCHAR);
+            this.structMode = Nullsafe.orDefault(structMode, StructMode.FLAT);
         }
 
         @Override
@@ -107,7 +107,7 @@ public interface ColumnStrategy {
                 @Override
                 public ColumnMapper<T> visitDateTime(final UseDateTime type) {
 
-                    return simple(SQLDataType.LOCALDATETIME);
+                    return simple(SQLDataType.TIMESTAMP);
                 }
 
                 @Override

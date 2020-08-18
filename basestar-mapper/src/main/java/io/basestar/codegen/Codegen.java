@@ -117,8 +117,8 @@ public class Codegen {
                 final CodegenContext context = CodegenContext.builder()
                         .rootPackage(Name.parse(settings.getPackageName()))
                         .relativePackage(relativePackage)
-                        .codebehind(Nullsafe.option(settings.getCodebehind(), Collections.emptyMap()))
-                        .codebehindPath(Nullsafe.option(settings.getCodebehindPath(), Path.of("codebehind")))
+                        .codebehind(Nullsafe.orDefault(settings.getCodebehind(), Collections.emptyMap()))
+                        .codebehindPath(Nullsafe.orDefault(settings.getCodebehindPath(), Path.of("codebehind")))
                         .build();
                 final SchemaModel model = SchemaModel.from(context, schema);
                 if(model.generate()) {

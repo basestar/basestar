@@ -35,7 +35,7 @@ import java.time.LocalDate;
 import java.util.Set;
 
 @Data
-public class UseDate implements UseScalar<LocalDate> {
+public class UseDate implements UseStringLike<LocalDate> {
 
     public static final UseDate DEFAULT = new UseDate();
 
@@ -95,7 +95,7 @@ public class UseDate implements UseScalar<LocalDate> {
     }
 
     @Override
-    public Schema<?> openApi() {
+    public Schema<?> openApi(final Set<Name> expand) {
 
         return new DateSchema();
     }

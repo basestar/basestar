@@ -143,9 +143,9 @@ public interface Member extends Named, Described, Serializable, Extendable {
         return visibility != null && visibility.isAlwaysHidden();
     }
 
-    default io.swagger.v3.oas.models.media.Schema<?> openApi() {
+    default io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
-        return getType().openApi().description(getDescription());
+        return getType().openApi(expand).description(getDescription());
     }
 
     Object create(Object value, Set<Name> expand, boolean suppress);

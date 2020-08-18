@@ -49,7 +49,7 @@ public class TestFlatStructLayout {
 
         final Layout layout = layout();
 
-        final Map<String, Use<?>> result = layout.layoutSchema(expand);
+        final Map<String, Use<?>> result = layout.layout(expand);
 
         assertEquals(4, result.size());
         assertEquals(UseString.DEFAULT.optional(true), result.get("a__b1__c__d"));

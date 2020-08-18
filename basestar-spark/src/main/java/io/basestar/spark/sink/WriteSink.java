@@ -44,9 +44,9 @@ public class WriteSink<T> implements Sink<Dataset<T>> {
     @lombok.Builder(builderClassName = "Builder")
     WriteSink(final Format format, final String path, final SaveMode mode, final Map<String, String> options, final List<String> partitionBy) {
 
-        this.format = Nullsafe.option(format, Format.DEFAULT);
-        this.path = Nullsafe.option(path);
-        this.mode = Nullsafe.option(mode, SaveMode.ErrorIfExists);
+        this.format = Nullsafe.orDefault(format, Format.DEFAULT);
+        this.path = Nullsafe.orDefault(path);
+        this.mode = Nullsafe.orDefault(mode, SaveMode.ErrorIfExists);
         this.options = Nullsafe.immutableCopy(options);
         this.partitionBy = Nullsafe.immutableCopy(partitionBy);
     }

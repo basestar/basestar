@@ -35,6 +35,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Set Type
@@ -67,11 +68,12 @@ public class UseSet<T> implements UseCollection<T, Set<T>> {
         return visitor.visitSet(this);
     }
 
-    public UseSet<?> transform(final Function<Use<T>, Use<?>> fn) {
+    @SuppressWarnings("unchecked")
+    public <T2> UseSet<T2> transform(final Function<Use<T>, Use<T2>> fn) {
 
-        final Use<?> type2 = fn.apply(type);
+        final Use<T2> type2 = fn.apply(type);
         if(type2 == type ) {
-            return this;
+            return (UseSet<T2>)this;
         } else {
             return new UseSet<>(type2);
         }
@@ -97,9 +99,9 @@ public class UseSet<T> implements UseCollection<T, Set<T>> {
     }
 
     @Override
-    public Set<T> create(final Object value, final Set<Name> expand, final boolean suppress) {
+    public Set<T> create(final Stream<T> values) {
 
-        return create(value, suppress, v -> type.create(v, expand, suppress));
+        return values.collect(Collectors.toSet());
     }
 
     public static <T> Set<T> create(final Object value, final boolean suppress, final Function<Object, T> fn) {
@@ -123,9 +125,9 @@ public class UseSet<T> implements UseCollection<T, Set<T>> {
     }
 
     @Override
-    public io.swagger.v3.oas.models.media.Schema<?> openApi() {
+    public io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
-        return new ArraySchema().items(type.openApi()).uniqueItems(true);
+        return new ArraySchema().items(type.openApi(expand)).uniqueItems(true);
     }
 
     @Override

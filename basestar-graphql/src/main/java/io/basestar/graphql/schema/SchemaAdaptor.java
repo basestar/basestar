@@ -519,7 +519,7 @@ public class SchemaAdaptor {
 
     private Type<?> typeImpl(final Use<?> type) {
 
-        return type.visit(new Use.Visitor<Type<?>>() {
+        return type.visit(new Use.Visitor.Defaulting<Type<?>>() {
 
             @Override
             public Type<?> visitBoolean(final UseBoolean type) {
@@ -540,7 +540,7 @@ public class SchemaAdaptor {
             }
 
             @Override
-            public Type<?> visitString(final UseString type) {
+            public <T> Type<?> visitStringLike(final UseStringLike<T> type) {
 
                 return new TypeName(GraphQLUtils.STRING_TYPE);
             }
@@ -552,19 +552,7 @@ public class SchemaAdaptor {
             }
 
             @Override
-            public Type<?> visitObject(final UseObject type) {
-
-                return new TypeName(strategy.typeName(type.getSchema()));
-            }
-
-            @Override
-            public <T> Type<?> visitArray(final UseArray<T> type) {
-
-                return new ListType(type(type.getType()));
-            }
-
-            @Override
-            public <T> Type<?> visitSet(final UseSet<T> type) {
+            public <T> Type<?> visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
 
                 return new ListType(type(type.getType()));
             }
@@ -576,7 +564,7 @@ public class SchemaAdaptor {
             }
 
             @Override
-            public Type<?> visitStruct(final UseStruct type) {
+            public Type<?> visitInstance(final UseInstance type) {
 
                 return new TypeName(strategy.typeName(type.getSchema()));
             }
@@ -585,31 +573,6 @@ public class SchemaAdaptor {
             public Type<?> visitBinary(final UseBinary type) {
 
                 return new TypeName(GraphQLUtils.STRING_TYPE);
-            }
-
-            @Override
-            public Type<?> visitDate(final UseDate type) {
-
-                return new TypeName(GraphQLUtils.STRING_TYPE);
-            }
-
-            @Override
-            public Type<?> visitDateTime(final UseDateTime type) {
-
-                return new TypeName(GraphQLUtils.STRING_TYPE);
-            }
-
-            @Override
-            public Type<?> visitView(final UseView type) {
-
-                return new TypeName(strategy.typeName(type.getSchema()));
-            }
-
-            @Override
-            public <T> Type<?> visitOptional(final UseOptional<T> type) {
-
-                // NonNullType handled externally
-                return type.getType().visit(this);
             }
         });
     }
@@ -626,7 +589,13 @@ public class SchemaAdaptor {
 
     public Type<?> inputTypeImpl(final Use<?> type) {
 
-        return type.visit(new Use.Visitor<Type<?>>() {
+        return type.visit(new Use.Visitor.Defaulting<Type<?>>() {
+
+            @Override
+            public <T> Type<?> visitDefault(final Use<T> type) {
+
+                return null;
+            }
 
             @Override
             public Type<?> visitBoolean(final UseBoolean type) {
@@ -711,13 +680,6 @@ public class SchemaAdaptor {
 
                 return new TypeName(strategy.inputTypeName(type.getSchema()));
             }
-
-            @Override
-            public <T> Type<?> visitOptional(final UseOptional<T> type) {
-
-                // NonNullType handled externally
-                return type.getType().visit(this);
-            }
         });
     }
 
@@ -725,40 +687,10 @@ public class SchemaAdaptor {
 
         final Map<String, Use<?>> mapTypes = new HashMap<>();
         schema.getDeclaredProperties().forEach((k, v) -> {
-            v.getType().visit(new Use.Visitor<Void>() {
+            v.getType().visit(new Use.Visitor.Defaulting<Void>() {
 
                 @Override
-                public Void visitBoolean(final UseBoolean type) {
-
-                    return null;
-                }
-
-                @Override
-                public Void visitInteger(final UseInteger type) {
-
-                    return null;
-                }
-
-                @Override
-                public Void visitNumber(final UseNumber type) {
-
-                    return null;
-                }
-
-                @Override
-                public Void visitString(final UseString type) {
-
-                    return null;
-                }
-
-                @Override
-                public Void visitEnum(final UseEnum type) {
-
-                    return null;
-                }
-
-                @Override
-                public Void visitObject(final UseObject type) {
+                public <T> Void visitDefault(final Use<T> type) {
 
                     return null;
                 }
@@ -783,42 +715,6 @@ public class SchemaAdaptor {
                     type.getType().visit(this);
                     mapTypes.put(strategy.mapEntryTypeName(type.getType()), type.getType());
                     return null;
-                }
-
-                @Override
-                public Void visitStruct(final UseStruct type) {
-
-                    return null;
-                }
-
-                @Override
-                public Void visitBinary(final UseBinary type) {
-
-                    return null;
-                }
-
-                @Override
-                public Void visitDate(final UseDate type) {
-
-                    return null;
-                }
-
-                @Override
-                public Void visitDateTime(final UseDateTime type) {
-
-                    return null;
-                }
-
-                @Override
-                public Void visitView(final UseView type) {
-
-                    return null;
-                }
-
-                @Override
-                public <T> Void visitOptional(final UseOptional<T> type) {
-
-                    return type.getType().visit(this);
                 }
             });
         });

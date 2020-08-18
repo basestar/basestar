@@ -106,8 +106,8 @@ public class SizeValidation implements Validation {
         public Size toJsr380(final Use<?> type, final Map<String, Object> values) {
 
             return new AnnotationContext<>(Size.class, ImmutableMap.<String, Object>builder().putAll(values)
-                    .put("min", Nullsafe.option(min, 0))
-                    .put("max", Nullsafe.option(max, Integer.MAX_VALUE))
+                    .put("min", Nullsafe.orDefault(min, 0))
+                    .put("max", Nullsafe.orDefault(max, Integer.MAX_VALUE))
                     .build()).annotation();
         }
 

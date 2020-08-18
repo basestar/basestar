@@ -36,79 +36,79 @@ public class Nullsafe {
     }
 
     @Nonnull
-    public static <T> T option(@Nullable final T v, @Nonnull final Supplier<T> or) {
+    public static <T> T orDefault(@Nullable final T v, @Nonnull final Supplier<T> or) {
 
         return v == null ? Objects.requireNonNull(or.get()) : v;
     }
 
     @Nonnull
-    public static <T> T option(@Nullable final T v, @Nonnull final T or) {
+    public static <T> T orDefault(@Nullable final T v, @Nonnull final T or) {
 
         return v == null ? Objects.requireNonNull(or) : v;
     }
 
     @Nonnull
-    public static String option(@Nullable final String s) {
+    public static String orDefault(@Nullable final String s) {
 
         return s == null ? "" : s;
     }
 
     @Nonnull
-    public static Boolean option(@Nullable final Boolean n) {
+    public static Boolean orDefault(@Nullable final Boolean n) {
 
         return n == null ? Boolean.FALSE : n;
     }
 
     @Nonnull
-    public static Integer option(@Nullable final Integer n) {
+    public static Integer orDefault(@Nullable final Integer n) {
 
         return n == null ? Integer.valueOf(0) : n;
     }
 
     @Nonnull
-    public static Long option(@Nullable final Long n) {
+    public static Long orDefault(@Nullable final Long n) {
 
         return n == null ? Long.valueOf(0) : n;
     }
 
     @Nonnull
-    public static Float option(@Nullable final Float n) {
+    public static Float orDefault(@Nullable final Float n) {
 
         return n == null ? Float.valueOf(0) : n;
     }
 
     @Nonnull
-    public static Double option(@Nullable final Double n) {
+    public static Double orDefault(@Nullable final Double n) {
 
         return n == null ? Double.valueOf(0) : n;
     }
 
     @Nonnull
-    public static <K, V> Map<K, V> option(@Nullable final Map<K, V> m) {
+    public static <K, V> Map<K, V> orDefault(@Nullable final Map<K, V> m) {
 
         return m == null ? Collections.emptyMap() : m;
     }
 
     @Nonnull
-    public static <V> Iterable<V> option(@Nullable final Iterable<V> i) {
+    public static <V> Iterable<V> orDefault(@Nullable final Iterable<V> i) {
 
         return i == null ? Collections.emptyList() : i;
     }
 
     @Nonnull
-    public static <V> Collection<V> option(@Nullable final Collection<V> c) {
+    public static <V> Collection<V> orDefault(@Nullable final Collection<V> c) {
 
         return c == null ? Collections.emptyList() : c;
     }
 
     @Nonnull
-    public static <V> List<V> option(@Nullable final List<V> l) {
+    public static <V> List<V> orDefault(@Nullable final List<V> l) {
         
         return l == null ? Collections.emptyList() : l;
     }
 
     @Nonnull
-    public static <V> Set<V> option(@Nullable final Set<V> s) {
+    public static <V> Set<V> orDefault(@Nullable final Set<V> s) {
 
         return s == null ? Collections.emptySet() : s;
     }

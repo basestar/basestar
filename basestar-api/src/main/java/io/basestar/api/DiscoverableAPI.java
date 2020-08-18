@@ -41,7 +41,7 @@ public class DiscoverableAPI implements API {
     DiscoverableAPI(final API api, final String path) {
 
         this.api = api;
-        this.path = Nullsafe.option(path, "/api");
+        this.path = Nullsafe.orDefault(path, "/api");
     }
 
     @Override

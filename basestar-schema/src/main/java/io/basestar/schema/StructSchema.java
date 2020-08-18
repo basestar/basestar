@@ -182,7 +182,7 @@ public class StructSchema implements InstanceSchema {
         resolver.constructing(this);
         this.qualifiedName = qualifiedName;
         this.slot = slot;
-        this.version = Nullsafe.option(descriptor.getVersion(), 1L);
+        this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
         if(descriptor.getExtend() != null) {
             this.extend = resolver.requireStructSchema(descriptor.getExtend());
         } else {
@@ -201,7 +201,7 @@ public class StructSchema implements InstanceSchema {
                 throw new SchemaValidationException(qualifiedName,"Struct types cannot have properties with custom visibility");
             }
         });
-        this.concrete = Nullsafe.option(descriptor.getConcrete(), Boolean.TRUE);
+        this.concrete = Nullsafe.orDefault(descriptor.getConcrete(), Boolean.TRUE);
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
@@ -213,7 +213,7 @@ public class StructSchema implements InstanceSchema {
         } else {
             this.properties = declaredProperties;
         }
-        this.extensions = Nullsafe.option(descriptor.getExtensions());
+        this.extensions = Nullsafe.orDefault(descriptor.getExtensions());
     }
 
     @Override

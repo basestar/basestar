@@ -15,13 +15,13 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class TestJsonCollectionLayout {
+public class TestJsonContainerLayout {
 
-    private JsonCollectionLayout layout() throws IOException {
+    private JsonContainerLayout layout() throws IOException {
 
         final Namespace namespace = Namespace.load(TestFlatStructLayout.class.getResource("jsoncollection.yml"));
         final InstanceSchema schema = namespace.requireInstanceSchema("Base");
-        return new JsonCollectionLayout(schema);
+        return new JsonContainerLayout(schema);
     }
 
     @Test
@@ -29,7 +29,7 @@ public class TestJsonCollectionLayout {
 
         final Layout layout = layout();
 
-        final Map<String, Use<?>> result = layout.layoutSchema(Collections.emptySet());
+        final Map<String, Use<?>> result = layout.layout(Collections.emptySet());
 
         assertEquals(9, result.size());
         assertEquals(UseString.DEFAULT.optional(true), result.get("a"));

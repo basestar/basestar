@@ -27,6 +27,7 @@ import io.basestar.expression.iterate.ForAny;
 import io.basestar.expression.iterate.Of;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.Schema;
+import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
@@ -36,14 +37,33 @@ import java.io.IOException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-public interface UseCollection<V, T extends Collection<V>> extends Use<T> {
-
-    Use<V> getType();
+public interface UseCollection<V, T extends Collection<V>> extends UseContainer<V, T> {
 
     T transform(T value, Function<V, V> fn);
 
-    UseCollection<?, ?> transform(Function<Use<V>, Use<?>> fn);
+    @Override
+    <V2> UseCollection<V2, ? extends Collection<V2>> transform(Function<Use<V>, Use<V2>> fn);
+
+    @Override
+    default T create(final Object value, final Set<Name> expand, final boolean suppress) {
+
+        if(value == null) {
+            return null;
+        } else if(value instanceof Collection) {
+            final Use<V> type = getType();
+            final Stream<V> values = ((Collection<?>) value).stream()
+                    .map(v -> type.create(v, expand, suppress));
+            return create(values);
+        } else if (suppress) {
+            return null;
+        } else {
+            throw new UnexpectedTypeException(this, value);
+        }
+    }
+
+    T create(Stream<V> value);
 
     @Override
     default Set<Constraint.Violation> validate(final Context context, final Name name, final T value) {

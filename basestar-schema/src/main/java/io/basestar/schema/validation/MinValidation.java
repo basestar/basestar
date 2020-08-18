@@ -87,7 +87,7 @@ public class MinValidation implements Validation {
         public Validator(@JsonProperty("value") final BigDecimal value, @JsonProperty("exclusive") final Boolean exclusive) {
 
             this.value = Nullsafe.require(value);
-            this.exclusive = Nullsafe.option(exclusive);
+            this.exclusive = Nullsafe.orDefault(exclusive);
         }
 
         @Override

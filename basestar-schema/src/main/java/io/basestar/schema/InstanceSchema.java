@@ -67,7 +67,7 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
 
     SortedMap<String, Use<?>> metadataSchema();
 
-    default SortedMap<String, Use<?>> layoutSchema(final Set<Name> expand) {
+    default SortedMap<String, Use<?>> layout(final Set<Name> expand) {
 
         // This is the canonical layout, by definition
         final SortedMap<String, Use<?>> result = new TreeMap<>();
@@ -226,12 +226,14 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
     default io.swagger.v3.oas.models.media.Schema<?> openApi() {
 
         final Map<String, io.swagger.v3.oas.models.media.Schema> properties = new HashMap<>();
+        final Set<Name> expand = getExpand();
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         metadataSchema().forEach((name, type) -> {
-            properties.put(name, type.openApi());
+            properties.put(name, type.openApi(branches.get(name)));
         });
         getMembers().forEach((name, member) -> {
             if(!member.isAlwaysHidden()) {
-                properties.put(name, member.openApi());
+                properties.put(name, member.openApi(branches.get(name)));
             }
         });
         return new io.swagger.v3.oas.models.media.ObjectSchema()

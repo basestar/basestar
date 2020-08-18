@@ -89,8 +89,8 @@ public interface DynamoDBStrategy extends Serializable {
         @lombok.Builder(builderClassName = "Builder")
         SingleTable(final String tablePrefix, final String dataPrefix) {
 
-            this.tablePrefix = Nullsafe.option(tablePrefix);
-            this.dataPrefix = Nullsafe.option(dataPrefix);
+            this.tablePrefix = Nullsafe.orDefault(tablePrefix);
+            this.dataPrefix = Nullsafe.orDefault(dataPrefix);
         }
 
         @Override

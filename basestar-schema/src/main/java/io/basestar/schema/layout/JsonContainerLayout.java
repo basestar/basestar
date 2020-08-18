@@ -14,40 +14,40 @@ import java.util.Set;
  * Layout transformation that converts collections and maps to JSON strings
  */
 
-public class JsonCollectionLayout implements Layout {
+public class JsonContainerLayout implements Layout {
 
     private final Layout base;
 
     private final ObjectMapper objectMapper;
 
-    public JsonCollectionLayout(final Layout base) {
+    public JsonContainerLayout(final Layout base) {
 
         this.base = base;
         this.objectMapper = new ObjectMapper();
     }
 
-    public JsonCollectionLayout(final Layout base, final ObjectMapper objectMapper) {
+    public JsonContainerLayout(final Layout base, final ObjectMapper objectMapper) {
 
         this.base = base;
         this.objectMapper = objectMapper;
     }
 
     @Override
-    public Map<String, Use<?>> layoutSchema(final Set<Name> expand) {
+    public Map<String, Use<?>> layout(final Set<Name> expand) {
 
         final Map<String, Use<?>> result = new HashMap<>();
-        base.layoutSchema(expand).forEach((name, type) -> {
-            result.put(name, layout(type, false));
+        base.layout(expand).forEach((name, type) -> {
+            result.put(name, layout(type));
         });
         return result;
     }
 
-    private Use<?> layout(final Use<?> type, final boolean nullable) {
+    private Use<?> layout(final Use<?> type) {
 
         return type.visit(new Use.Visitor.Defaulting<Use<?>>() {
 
             @Override
-            public Use<?> visitDefault(final Use<?> type) {
+            public <T> Use<?> visitDefault(final Use<T> type) {
 
                 return type;
             }
@@ -55,19 +55,13 @@ public class JsonCollectionLayout implements Layout {
             @Override
             public <T> Use<?> visitOptional(final UseOptional<T> type) {
 
-                return layout(type.getType(), true);
+                return layout(type.getType()).optional(true);
             }
 
             @Override
-            public <T> Use<?> visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
+            public <T> Use<?> visitContainer(final UseContainer<T, ?> type) {
 
-                return UseString.DEFAULT.optional(nullable);
-            }
-
-            @Override
-            public <T> Use<?> visitMap(final UseMap<T> type) {
-
-                return UseString.DEFAULT.optional(nullable);
+                return UseString.DEFAULT;
             }
         });
     }
@@ -76,7 +70,7 @@ public class JsonCollectionLayout implements Layout {
     public Map<String, Object> applyLayout(final Set<Name> expand, final Map<String, Object> object) {
 
         final Map<String, Object> result = new HashMap<>();
-        base.layoutSchema(expand).forEach((name, type) -> {
+        base.layout(expand).forEach((name, type) -> {
             final Object value = object == null ? null : object.get(name);
             result.put(name, applyLayout(type, value));
         });
@@ -91,23 +85,13 @@ public class JsonCollectionLayout implements Layout {
         return type.visit(new Use.Visitor.Defaulting<Object>() {
 
             @Override
-            public Object visitDefault(final Use<?> type) {
+            public <T> Object visitDefault(final Use<T> type) {
 
                 return type.create(value);
             }
 
             @Override
-            public <T> Object visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
-
-                try {
-                    return objectMapper.writeValueAsString(value);
-                } catch (final IOException e) {
-                    throw new IllegalStateException(e);
-                }
-            }
-
-            @Override
-            public <T> Object visitMap(final UseMap<T> type) {
+            public <T> Object visitContainer(final UseContainer<T, ?> type) {
 
                 try {
                     return objectMapper.writeValueAsString(value);
@@ -122,7 +106,7 @@ public class JsonCollectionLayout implements Layout {
     public Map<String, Object> unapplyLayout(final Set<Name> expand, final Map<String, Object> object) {
 
         final Map<String, Object> result = new HashMap<>();
-        base.layoutSchema(expand).forEach((name, type) -> {
+        base.layout(expand).forEach((name, type) -> {
             final Object value = object == null ? null : object.get(name);
             result.put(name, unapplyLayout(type, value));
         });
@@ -137,7 +121,7 @@ public class JsonCollectionLayout implements Layout {
         return type.visit(new Use.Visitor.Defaulting<Object>() {
 
             @Override
-            public Object visitDefault(final Use<?> type) {
+            public <T> Object visitDefault(final Use<T> type) {
 
                 return type.create(value);
             }

@@ -91,7 +91,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
 
         this.client = builder.client;
         this.strategy = builder.strategy;
-        this.eventStrategy = Nullsafe.option(builder.eventStrategy, EventStrategy.EMIT);
+        this.eventStrategy = Nullsafe.orDefault(builder.eventStrategy, EventStrategy.EMIT);
         this.createdIndices = new ConcurrentSkipListSet<>();
     }
 

@@ -56,7 +56,7 @@ public class SparkSchemaUtils {
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
         final List<StructField> fields = new ArrayList<>();
-        schema.layoutSchema(expand).forEach((name, type) -> fields.add(field(name, type, branches.get(name))));
+        schema.layout(expand).forEach((name, type) -> fields.add(field(name, type, branches.get(name))));
         extraMetadata.forEach((name, type) -> fields.add(field(name, type, branches.get(name))));
         fields.sort(Comparator.comparing(StructField::name));
         return DataTypes.createStructType(fields);
@@ -212,7 +212,7 @@ public class SparkSchemaUtils {
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
         final Map<String, Object> object = new HashMap<>();
-        schema.layoutSchema(expand).forEach((name, type) -> object.put(name, fromSpark(type, branches.get(name), get(row, name))));
+        schema.layout(expand).forEach((name, type) -> object.put(name, fromSpark(type, branches.get(name), get(row, name))));
         extraMetadata.forEach((name, type) -> object.put(name, fromSpark(type, branches.get(name), get(row, name))));
         return object;
     }
@@ -409,7 +409,7 @@ public class SparkSchemaUtils {
         final Map<String, Set<Name>> branches = Name.branch(expand);
         final StructField[] fields = structType.fields();
         final Object[] values = new Object[fields.length];
-        schema.layoutSchema(expand).forEach((name, type) -> {
+        schema.layout(expand).forEach((name, type) -> {
             final int i = structType.fieldIndex(name);
             values[i] = toSpark(type, branches.get(name), fields[i].dataType(), object.get(name));
         });
@@ -883,7 +883,7 @@ public class SparkSchemaUtils {
             }
 
             @Override
-            public Encoder<?> visitAny(final UseAny useAny) {
+            public Encoder<?> visitAny(final UseAny type) {
 
                 throw new UnsupportedOperationException();
             }

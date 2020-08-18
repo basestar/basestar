@@ -69,7 +69,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
                     @NonNull final InstanceSchema schema, @NonNull final Set<Name> expand) {
 
         this.resolver = Nullsafe.require(resolver);
-        this.columnResolver = Nullsafe.option(columnResolver, ColumnResolver::nested);
+        this.columnResolver = Nullsafe.orDefault(columnResolver, ColumnResolver::nested);
         this.schema = Nullsafe.require(schema);
         this.expand = Nullsafe.immutableCopy(expand);
     }
@@ -280,7 +280,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         return type.visit(new Use.Visitor.Defaulting<Set<RequiredRef>>() {
 
             @Override
-            public Set<RequiredRef> visitDefault(final Use<?> type) {
+            public <T> Set<RequiredRef> visitDefault(final Use<T> type) {
 
                 return ImmutableSet.of();
             }
@@ -335,7 +335,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
             return type.visit(new Use.Visitor.Defaulting<Set<String>>() {
 
                 @Override
-                public Set<String> visitDefault(final Use<?> type) {
+                public <T> Set<String> visitDefault(final Use<T> type) {
 
                     return Collections.emptySet();
                 }
@@ -413,7 +413,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
             return type.visit(new Use.Visitor.Defaulting<Object>() {
 
                 @Override
-                public Object visitDefault(final Use<?> type) {
+                public <T> Object visitDefault(final Use<T> type) {
 
                     return input;
                 }

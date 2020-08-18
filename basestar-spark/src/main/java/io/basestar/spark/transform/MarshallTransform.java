@@ -25,7 +25,7 @@ public class MarshallTransform<T> implements Transform<Dataset<Row>, Dataset<T>>
     MarshallTransform(final MappingContext context, final Class<T> targetType) {
 
         Nullsafe.require(targetType);
-        final MappingContext resolvedContext = Nullsafe.option(context, MappingContext::new);
+        final MappingContext resolvedContext = Nullsafe.orDefault(context, MappingContext::new);
         final Namespace namespace = resolvedContext.namespace(targetType).build();
         this.schema = namespace.requireInstanceSchema(resolvedContext.schemaName(targetType));
         this.mapper = resolvedContext.schemaMapper(targetType);

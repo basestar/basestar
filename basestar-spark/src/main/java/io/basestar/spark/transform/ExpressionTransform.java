@@ -47,7 +47,7 @@ public class ExpressionTransform implements Transform<Dataset<Row>, Dataset<Row>
     ExpressionTransform(final ObjectSchema schema, final Set<Name> expand) {
 
         this.schema = Nullsafe.require(schema);
-        this.expand = Nullsafe.option(expand);
+        this.expand = Nullsafe.orDefault(expand);
     }
 
     @Override

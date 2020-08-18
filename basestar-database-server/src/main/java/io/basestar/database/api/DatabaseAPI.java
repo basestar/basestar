@@ -228,7 +228,7 @@ public class DatabaseAPI implements API {
         final UpdateOptions options = UpdateOptions.builder()
                 .schema(schema).id(id).data(data)
                 .expand(parseExpand(request))
-                .mode(Nullsafe.option(parseUpdateMode(request), mode))
+                .mode(Nullsafe.orDefault(parseUpdateMode(request), mode))
                 .version(parseVersion(request))
                 .build();
 

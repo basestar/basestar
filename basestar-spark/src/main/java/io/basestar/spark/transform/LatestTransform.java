@@ -44,9 +44,9 @@ public class LatestTransform implements Transform<Dataset<Row>, Dataset<Row>> {
     @lombok.Builder(builderClassName = "Builder")
     LatestTransform(final List<String> idColumns, final String versionColumn, final Boolean dropVersionColumn)  {
 
-        this.idColumns = Nullsafe.option(idColumns, ImmutableList.of(ObjectSchema.ID));
-        this.versionColumn = Nullsafe.option(versionColumn, ObjectSchema.VERSION);
-        this.dropVersionColumn = Nullsafe.option(dropVersionColumn, false);
+        this.idColumns = Nullsafe.orDefault(idColumns, ImmutableList.of(ObjectSchema.ID));
+        this.versionColumn = Nullsafe.orDefault(versionColumn, ObjectSchema.VERSION);
+        this.dropVersionColumn = Nullsafe.orDefault(dropVersionColumn, false);
     }
 
     @Override

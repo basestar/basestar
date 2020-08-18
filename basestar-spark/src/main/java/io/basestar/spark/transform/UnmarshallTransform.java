@@ -33,7 +33,7 @@ public class UnmarshallTransform<T> implements Transform<Dataset<T>, Dataset<Row
     public UnmarshallTransform(final MappingContext context, final Class<T> sourceType) {
 
         Nullsafe.require(sourceType);
-        final MappingContext resolvedContext = Nullsafe.option(context, MappingContext::new);
+        final MappingContext resolvedContext = Nullsafe.orDefault(context, MappingContext::new);
         final Namespace namespace = resolvedContext.namespace(sourceType).build();
         this.schema = namespace.requireInstanceSchema(resolvedContext.schemaName(sourceType));
         if(this.schema instanceof LinkableSchema) {

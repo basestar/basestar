@@ -9,7 +9,7 @@ import java.util.Set;
 
 public interface Layout extends Serializable {
 
-    Map<String, Use<?>> layoutSchema(Set<Name> expand);
+    Map<String, Use<?>> layout(Set<Name> expand);
 
     Map<String, Object> applyLayout(Set<Name> expand, Map<String, Object> object);
 
