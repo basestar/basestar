@@ -1,5 +1,6 @@
 package io.basestar.graphql.api;
 
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
@@ -24,6 +25,8 @@ import io.swagger.v3.oas.models.OpenAPI;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -139,6 +142,14 @@ public class GraphQLWebsocketAPI implements API {
         private String id;
 
         private GraphQLAPI.RequestBody payload;
+
+        private final Map<String, Object> extra = new HashMap<>();
+
+        @JsonAnySetter
+        public void putExtra(final String key, final Object value) {
+
+            extra.put(key, value);
+        }
 
         public ExecutionInput toInput(final Subscribable subscribable, final Caller caller, final String sub) {
 

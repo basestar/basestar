@@ -20,6 +20,7 @@ package io.basestar.graphql.api;
  * #L%
  */
 
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import graphql.*;
 import io.basestar.api.API;
@@ -33,6 +34,7 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -100,6 +102,14 @@ public class GraphQLAPI implements API {
         private String query;
 
         private Map<String, Object> variables;
+
+        private final Map<String, Object> extra = new HashMap<>();
+
+        @JsonAnySetter
+        public void putExtra(final String key, final Object value) {
+
+            extra.put(key, value);
+        }
 
         public ExecutionInput toInput(final Caller caller) {
 

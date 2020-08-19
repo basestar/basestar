@@ -57,7 +57,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * FIXME: currently we use literals/inline everywhere because Athena doesn't like ? params, need to make this
@@ -108,9 +107,14 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
 
     private List<SelectFieldOrAsterisk> selectFields(final ObjectSchema schema) {
 
-        return Stream.concat(schema.metadataSchema().keySet().stream(), schema.getProperties().keySet().stream())
-                .map(name -> DSL.field(DSL.name(name)).as(DSL.name(name)))
-                .collect(Collectors.toList());
+        final List<SelectFieldOrAsterisk> fields = new ArrayList<>();
+        schema.metadataSchema().forEach((name, type) -> {
+            fields.add(SQLUtils.selectField(DSL.field(DSL.name(name)), type).as(DSL.name(name)));
+        });
+        schema.getProperties().forEach((name, prop) -> {
+            fields.add(SQLUtils.selectField(DSL.field(DSL.name(name)), prop.getType()).as(DSL.name(name)));
+        });
+        return fields;
     }
 
     @Override
