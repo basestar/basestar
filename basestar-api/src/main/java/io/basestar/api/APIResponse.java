@@ -22,6 +22,7 @@ package io.basestar.api;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import io.basestar.auth.Caller;
 import io.basestar.exception.ExceptionMetadata;
 import io.basestar.exception.HasExceptionMetadata;
 
@@ -122,6 +123,13 @@ public interface APIResponse {
             headers.put("Access-Control-Allow-Headers", "*");
         }
         headers.put("Access-Control-Allow-Credentials", "true");
+        final Caller caller = request.getCaller();
+        if(caller != null) {
+            if(caller.getId() != null) {
+                headers.put("X-Caller-Id", caller.getId());
+            }
+            headers.put("X-Caller-Anonymous", caller.isAnon() ? "true" : "false");
+        }
         if(extraHeaders != null) {
             headers.putAll(extraHeaders);
         }

@@ -38,6 +38,9 @@ public class GraphQLWebsocketAPI implements API {
 
     private final Subscribable subscribable;
 
+    // FIXME: TEMPORARY HACK
+    private final Map<String, Caller> callerCache = new HashMap<>();
+
     @lombok.Builder(builderClassName = "Builder")
     GraphQLWebsocketAPI(final GraphQL graphQL, final SubscriberIdSource subscriberIdSource,
                         final Subscribable subscribable) {
@@ -73,12 +76,16 @@ public class GraphQLWebsocketAPI implements API {
         try {
             switch (requestBody.getType().toLowerCase()) {
                 case "connection_init": {
-                    return CompletableFuture.completedFuture(response(request, "connection_ack"));
+                    return subscriberIdSource.subscriberId(request).thenCompose(sub -> {
+                        Nullsafe.require(sub);
+                        caller(sub, request);
+                        return CompletableFuture.completedFuture(response(request, "connection_ack"));
+                    });
                 }
                 case "connection_terminate": {
                     return subscriberIdSource.subscriberId(request).thenCompose(sub -> {
                         Nullsafe.require(sub);
-                        final Caller caller = request.getCaller();
+                        final Caller caller = caller(sub, request);
                         return subscribable.unsubscribeAll(caller, sub)
                                 .thenApply(ignored -> APIResponse.success(request));
                     });
@@ -86,7 +93,7 @@ public class GraphQLWebsocketAPI implements API {
                 case "start": {
                     return subscriberIdSource.subscriberId(request).thenCompose(sub -> {
                         Nullsafe.require(sub);
-                        final Caller caller = request.getCaller();
+                        final Caller caller = caller(sub, request);
                         final ExecutionInput input = requestBody.toInput(subscribable, caller, sub);
                         return query(request, requestBody.getId(), input);
                     });
@@ -94,7 +101,7 @@ public class GraphQLWebsocketAPI implements API {
                 case "stop": {
                     return subscriberIdSource.subscriberId(request).thenCompose(sub -> {
                         Nullsafe.require(sub);
-                        final Caller caller = request.getCaller();
+                        final Caller caller = caller(sub, request);
                         return subscribable.unsubscribe(caller, sub, requestBody.getId())
                                 .thenApply(ignored -> APIResponse.success(request));
                     });
@@ -106,6 +113,11 @@ public class GraphQLWebsocketAPI implements API {
             log.error("Uncaught: {}", e.getMessage(), e);
             return CompletableFuture.completedFuture(response(request, "connection_error", requestBody.getId(), null));
         }
+    }
+
+    private Caller caller(final String sub, final APIRequest request) {
+
+        return callerCache.computeIfAbsent(sub, ignored -> request.getCaller());
     }
 
     private CompletableFuture<APIResponse> query(final APIRequest request, final String id, final ExecutionInput input) {
