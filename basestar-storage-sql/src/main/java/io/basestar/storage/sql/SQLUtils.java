@@ -479,4 +479,39 @@ public class SQLUtils {
         index.getSort().forEach(v -> names.add(columnName(v.getName())));
         return DSL.primaryKey(names.toArray(new org.jooq.Name[0]));
     }
+
+    public static Field<?> selectField(final Field<?> field, final Use<?> type) {
+
+        return type.visit(new Use.Visitor.Defaulting<Field<?>>() {
+
+            @Override
+            public Field<?> visitDefault(final Use<?> type) {
+
+                return field;
+            }
+
+            private Field<?> toJson(final Field<?> field) {
+
+                return field.cast(JSON.class);
+            }
+
+            @Override
+            public <V> Field<?> visitCollection(final UseCollection<V, ? extends Collection<V>> type) {
+
+                return toJson(field);
+            }
+
+            @Override
+            public <V> Field<?> visitMap(final UseMap<V> type) {
+
+                return toJson(field);
+            }
+
+            @Override
+            public Field<?> visitStruct(final UseStruct type) {
+
+                return toJson(field);
+            }
+        });
+    }
 }

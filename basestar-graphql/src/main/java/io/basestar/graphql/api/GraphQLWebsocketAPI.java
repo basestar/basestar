@@ -1,5 +1,6 @@
 package io.basestar.graphql.api;
 
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
@@ -24,6 +25,8 @@ import io.swagger.v3.oas.models.OpenAPI;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -34,6 +37,9 @@ public class GraphQLWebsocketAPI implements API {
     private final SubscriberIdSource subscriberIdSource;
 
     private final Subscribable subscribable;
+
+    // FIXME: TEMPORARY HACK
+    private final Map<String, Caller> callerCache = new HashMap<>();
 
     @lombok.Builder(builderClassName = "Builder")
     GraphQLWebsocketAPI(final GraphQL graphQL, final SubscriberIdSource subscriberIdSource,
@@ -68,22 +74,30 @@ public class GraphQLWebsocketAPI implements API {
     private CompletableFuture<APIResponse> handle(final APIRequest request, final RequestBody requestBody) {
 
         try {
+            // Empty messages seem to be sent as keep-alives
+            if(requestBody.getType() == null || requestBody.getType().isEmpty()) {
+                return CompletableFuture.completedFuture(response(request, "connection_keep_alive"));
+            }
             switch (requestBody.getType().toLowerCase()) {
                 case "connection_init": {
-                    return CompletableFuture.completedFuture(response(request, "connection_ack"));
+                    return subscriberIdSource.subscriberId(request).thenCompose(sub -> {
+                        Nullsafe.require(sub);
+                        caller(sub, request);
+                        return CompletableFuture.completedFuture(response(request, "connection_ack"));
+                    });
                 }
                 case "connection_terminate": {
                     return subscriberIdSource.subscriberId(request).thenCompose(sub -> {
                         Nullsafe.require(sub);
-                        final Caller caller = request.getCaller();
+                        final Caller caller = caller(sub, request);
                         return subscribable.unsubscribeAll(caller, sub)
-                                .thenApply(ignored -> APIResponse.success(request));
+                                .thenApply(ignored -> response(request, "complete"));
                     });
                 }
                 case "start": {
                     return subscriberIdSource.subscriberId(request).thenCompose(sub -> {
                         Nullsafe.require(sub);
-                        final Caller caller = request.getCaller();
+                        final Caller caller = caller(sub, request);
                         final ExecutionInput input = requestBody.toInput(subscribable, caller, sub);
                         return query(request, requestBody.getId(), input);
                     });
@@ -91,18 +105,24 @@ public class GraphQLWebsocketAPI implements API {
                 case "stop": {
                     return subscriberIdSource.subscriberId(request).thenCompose(sub -> {
                         Nullsafe.require(sub);
-                        final Caller caller = request.getCaller();
+                        final Caller caller = caller(sub, request);
                         return subscribable.unsubscribe(caller, sub, requestBody.getId())
-                                .thenApply(ignored -> APIResponse.success(request));
+                                .thenApply(ignored -> response(request, "complete"));
                     });
                 }
                 default:
-                    throw new IllegalStateException("Received unknown message of type: " + requestBody.getType());
+                    log.info("Received unknown message of type: {}", requestBody.getType());
+                    return CompletableFuture.completedFuture(response(request, "connection_keep_alive"));
             }
         } catch (final Exception e) {
             log.error("Uncaught: {}", e.getMessage(), e);
             return CompletableFuture.completedFuture(response(request, "connection_error", requestBody.getId(), null));
         }
+    }
+
+    private Caller caller(final String sub, final APIRequest request) {
+
+        return callerCache.computeIfAbsent(sub, ignored -> request.getCaller());
     }
 
     private CompletableFuture<APIResponse> query(final APIRequest request, final String id, final ExecutionInput input) {
@@ -140,12 +160,21 @@ public class GraphQLWebsocketAPI implements API {
 
         private GraphQLAPI.RequestBody payload;
 
+        private final Map<String, Object> extra = new HashMap<>();
+
+        @JsonAnySetter
+        public void putExtra(final String key, final Object value) {
+
+            extra.put(key, value);
+        }
+
         public ExecutionInput toInput(final Subscribable subscribable, final Caller caller, final String sub) {
 
+            final String channel = this.getId();
             final SubscriberContext subscriberContext = (schema, id, alias, names) -> {
                 final Expression expression = new Eq(new NameConstant(ObjectSchema.ID_NAME), new Constant(id));
                 final GraphQLSubscriptionInfo info = new GraphQLSubscriptionInfo(alias, names);
-                return subscribable.subscribe(caller, sub, id, schema.getQualifiedName().toString(), expression, info);
+                return subscribable.subscribe(caller, sub, channel, schema.getQualifiedName().toString(), expression, info);
             };
 
             return ExecutionInput.newExecutionInput()

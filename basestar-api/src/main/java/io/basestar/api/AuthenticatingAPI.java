@@ -31,9 +31,13 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Slf4j
 public class AuthenticatingAPI implements API {
+
+    private final Pattern CUSTOM_AUTH_HEADER_PATTERN = Pattern.compile("x-(\\w+)-authorization", Pattern.CASE_INSENSITIVE);
 
     private final Authenticator authenticator;
 
@@ -45,10 +49,31 @@ public class AuthenticatingAPI implements API {
         this.api = api;
     }
 
+    protected Authorization authorization(final APIRequest request) {
+
+        final String authHeader = request.getFirstHeader("Authorization");
+        if(authHeader != null && !authHeader.isEmpty()) {
+            return Authorization.from(authHeader);
+        } else {
+            for(final Map.Entry<String, String> header : request.getHeaders().entries()) {
+                final String value = header.getValue();
+                if(value != null && !value.isEmpty()) {
+                    final Matcher matcher = CUSTOM_AUTH_HEADER_PATTERN.matcher(header.getKey());
+                    if (matcher.matches()) {
+                        final String type = matcher.group(1);
+                        return Authorization.of(type, value);
+                    }
+                }
+            }
+        }
+        return Authorization.of(null, null);
+    }
+
     @Override
     public CompletableFuture<APIResponse> handle(final APIRequest request) throws IOException {
 
-        final Authorization authorization = Authorization.from(request.getFirstHeader("Authorization"));
+        final Authorization authorization = authorization(request);
+
         if(authenticator.canAuthenticate(authorization)) {
             return authenticator.authenticate(authorization).thenCompose(caller -> {
 
