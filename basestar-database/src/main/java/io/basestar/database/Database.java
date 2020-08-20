@@ -105,6 +105,11 @@ public interface Database {
     default CompletableFuture<Instance> expand(Caller caller, Map<String, Object> instance, Set<Name> expand) {
 
         // FIXME: should not read the root object (will break in versioning scenario anyway)
-        return read(caller, ReadOptions.builder().schema(Instance.getSchema(instance)).version(Instance.getVersion(instance)).expand(expand).build());
+        return read(caller, ReadOptions.builder()
+                .id(Instance.getId(instance))
+                .schema(Instance.getSchema(instance))
+                .version(Instance.getVersion(instance))
+                .expand(expand)
+                .build());
     }
 }

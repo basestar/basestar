@@ -74,6 +74,10 @@ public class GraphQLWebsocketAPI implements API {
     private CompletableFuture<APIResponse> handle(final APIRequest request, final RequestBody requestBody) {
 
         try {
+            // Empty messages seem to be sent as keep-alives
+            if(requestBody.getType() == null || requestBody.getType().isEmpty()) {
+                return CompletableFuture.completedFuture(response(request, "connection_keep_alive"));
+            }
             switch (requestBody.getType().toLowerCase()) {
                 case "connection_init": {
                     return subscriberIdSource.subscriberId(request).thenCompose(sub -> {
@@ -87,7 +91,7 @@ public class GraphQLWebsocketAPI implements API {
                         Nullsafe.require(sub);
                         final Caller caller = caller(sub, request);
                         return subscribable.unsubscribeAll(caller, sub)
-                                .thenApply(ignored -> APIResponse.success(request));
+                                .thenApply(ignored -> response(request, "complete"));
                     });
                 }
                 case "start": {
@@ -103,11 +107,12 @@ public class GraphQLWebsocketAPI implements API {
                         Nullsafe.require(sub);
                         final Caller caller = caller(sub, request);
                         return subscribable.unsubscribe(caller, sub, requestBody.getId())
-                                .thenApply(ignored -> APIResponse.success(request));
+                                .thenApply(ignored -> response(request, "complete"));
                     });
                 }
                 default:
-                    throw new IllegalStateException("Received unknown message of type: " + requestBody.getType());
+                    log.info("Received unknown message of type: {}", requestBody.getType());
+                    return CompletableFuture.completedFuture(response(request, "connection_keep_alive"));
             }
         } catch (final Exception e) {
             log.error("Uncaught: {}", e.getMessage(), e);
@@ -165,10 +170,11 @@ public class GraphQLWebsocketAPI implements API {
 
         public ExecutionInput toInput(final Subscribable subscribable, final Caller caller, final String sub) {
 
+            final String channel = this.getId();
             final SubscriberContext subscriberContext = (schema, id, alias, names) -> {
                 final Expression expression = new Eq(new NameConstant(ObjectSchema.ID_NAME), new Constant(id));
                 final GraphQLSubscriptionInfo info = new GraphQLSubscriptionInfo(alias, names);
-                return subscribable.subscribe(caller, sub, id, schema.getQualifiedName().toString(), expression, info);
+                return subscribable.subscribe(caller, sub, channel, schema.getQualifiedName().toString(), expression, info);
             };
 
             return ExecutionInput.newExecutionInput()

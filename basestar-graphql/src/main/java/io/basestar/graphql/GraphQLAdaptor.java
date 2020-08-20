@@ -411,7 +411,7 @@ public class GraphQLAdaptor {
             final SubscriberContext subscriberContext = GraphQLUtils.subscriber(env.getContext());
             final Set<Name> names = paths(env);
             final Set<Name> expand = schema.requiredExpand(names);
-            final String alias = env.getField().getAlias();
+            final String alias = Nullsafe.option(env.getField().getAlias(), () -> strategy.subscribeMethodName(schema));
             final String id = env.getArgument(strategy.idArgumentName());
             return subscriberContext.subscribe(schema, id, alias, names)
                     .thenCompose(ignored -> read(caller, schema, id, null, expand));
@@ -444,6 +444,7 @@ public class GraphQLAdaptor {
 
         return fields.stream()
                 .map(v -> path(v.getQualifiedName()))
+                .filter(v -> !v.isEmpty())
                 .collect(Collectors.toSet());
     }
 
