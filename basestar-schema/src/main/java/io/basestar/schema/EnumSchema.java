@@ -106,9 +106,15 @@ public class EnumSchema implements Schema<String> {
         }
 
         @Override
+        default EnumSchema build(final Name qualifiedName) {
+
+            return build(Resolver.Constructing.ANONYMOUS, Version.CURRENT, qualifiedName, Schema.anonymousSlot());
+        }
+
+        @Override
         default EnumSchema build() {
 
-            return build(Resolver.Constructing.ANONYMOUS, Version.CURRENT, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
+            return build(Schema.anonymousQualifiedName());
         }
     }
 

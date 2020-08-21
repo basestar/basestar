@@ -172,9 +172,15 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
         }
 
         @Override
+        default ViewSchema build(final Name qualifiedName) {
+
+            return build(Resolver.Constructing.ANONYMOUS, Version.CURRENT, qualifiedName, Schema.anonymousSlot());
+        }
+
+        @Override
         default ViewSchema build() {
 
-            return new ViewSchema(this, Resolver.Constructing.ANONYMOUS, Version.CURRENT, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
+            return build(Schema.anonymousQualifiedName());
         }
     }
 

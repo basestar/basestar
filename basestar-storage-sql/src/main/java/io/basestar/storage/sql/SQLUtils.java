@@ -485,7 +485,7 @@ public class SQLUtils {
         return type.visit(new Use.Visitor.Defaulting<Field<?>>() {
 
             @Override
-            public Field<?> visitDefault(final Use<?> type) {
+            public <T> Field<?> visitDefault(final Use<T> type) {
 
                 return field;
             }
@@ -496,7 +496,7 @@ public class SQLUtils {
             }
 
             @Override
-            public <V> Field<?> visitCollection(final UseCollection<V, ? extends Collection<V>> type) {
+            public <V, T extends Collection<V>> Field<?> visitCollection(final UseCollection<V, T> type) {
 
                 return toJson(field);
             }

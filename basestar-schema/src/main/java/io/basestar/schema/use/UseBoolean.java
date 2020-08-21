@@ -60,9 +60,9 @@ public class UseBoolean implements UseScalar<Boolean> {
     }
 
     @Override
-    public Object toConfig() {
+    public Object toConfig(final boolean optional) {
 
-        return NAME;
+        return Use.name(NAME, optional);
     }
 
     @Override

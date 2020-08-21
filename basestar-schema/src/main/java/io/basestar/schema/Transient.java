@@ -291,7 +291,7 @@ public class Transient implements Member {
         }
 
         @Override
-        public <T> Void visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
+        public <V, T extends Collection<V>> Void visitCollection(final UseCollection<V, T> type) {
 
             return type.getType().visit(this);
         }

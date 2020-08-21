@@ -153,11 +153,11 @@ public class UseEnum implements UseStringLike<String>, UseNamed<String> {
     }
 
     @Override
-    public Object toConfig() {
+    public Object toConfig(final boolean optional) {
 
         if(schema.isAnonymous()) {
             return ImmutableMap.of(
-                    NAME, schema.getValues()
+                    Use.name(NAME, optional), schema.getValues()
             );
         } else {
             return UseNamed.super.toConfig();

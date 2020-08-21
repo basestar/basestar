@@ -32,5 +32,9 @@ User:
           - INVITED
           - JOINED
           - BANNED
-
+    stats:
+      type:
+        struct:
+          loginCount: integer
+          clickCount: integer
 

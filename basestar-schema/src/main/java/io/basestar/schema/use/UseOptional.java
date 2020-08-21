@@ -1,6 +1,5 @@
 package io.basestar.schema.use;
 
-import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Constraint;
@@ -15,12 +14,11 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 @Data
-public class UseOptional<T> implements Use<T> {
-
-    public static final String SYMBOL = "?";
+public class UseOptional<T> implements UseContainer<T, T> {
 
     public static final String NAME = "optional";
 
@@ -30,16 +28,6 @@ public class UseOptional<T> implements Use<T> {
     public <R> R visit(final Visitor<R> visitor) {
 
         return visitor.visitOptional(this);
-    }
-
-    public UseOptional<?> transform(final Function<Use<T>, Use<?>> fn) {
-
-        final Use<?> type2 = fn.apply(type);
-        if(type2 == type ) {
-            return this;
-        } else {
-            return new UseOptional<>(type2);
-        }
     }
 
     public static UseOptional<?> from(final Object config) {
@@ -109,11 +97,9 @@ public class UseOptional<T> implements Use<T> {
     }
 
     @Override
-    public Object toConfig() {
+    public Object toConfig(final boolean optional) {
 
-        return ImmutableMap.of(
-                NAME, type
-        );
+        return type.toConfig(true);
     }
 
     @Override
@@ -206,5 +192,23 @@ public class UseOptional<T> implements Use<T> {
     public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
         type.collectDependencies(expand, out);
+    }
+
+    @Override
+    public T transformValues(final T value, final BiFunction<Use<T>, T, T> fn) {
+
+        return value;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T2> UseOptional<T2> transform(final Function<Use<T>, Use<T2>> fn) {
+
+        final Use<T2> type2 = fn.apply(type);
+        if(type2 == type) {
+            return (UseOptional<T2>)this;
+        } else {
+            return new UseOptional<>(type2);
+        }
     }
 }

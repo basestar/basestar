@@ -20,12 +20,14 @@ package io.basestar.schema.use;
  * #L%
  */
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Schema;
 import io.basestar.schema.StructSchema;
+import io.basestar.schema.exception.TypeSyntaxException;
 import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
@@ -39,6 +41,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Struct Type
@@ -58,11 +61,28 @@ import java.util.Set;
 @Slf4j
 public class UseStruct implements UseInstance {
 
+    public static final String NAME = "struct";
+
     private final StructSchema schema;
 
     public static UseStruct from(final StructSchema schema, final Object config) {
 
         return new UseStruct(schema);
+    }
+
+    public static UseStruct from(final Map<String, ?> schema) {
+
+        return new UseStruct(StructSchema.from(schema));
+    }
+
+    @SuppressWarnings("unchecked")
+    public static UseStruct from(final Object config) {
+
+        if(config instanceof Map) {
+            return from((Map<String, ?>)config);
+        } else {
+            throw new TypeSyntaxException();
+        }
     }
 
     @Override
@@ -182,5 +202,20 @@ public class UseStruct implements UseInstance {
     public String toString() {
 
         return schema.getQualifiedName().toString();
+    }
+
+    @Override
+    public Object toConfig(final boolean optional) {
+
+        if(schema.isAnonymous()) {
+            return ImmutableMap.of(
+                    Use.name(NAME, optional), schema.getProperties().entrySet().stream().collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            e -> e.getValue().getType().toConfig()
+                    ))
+            );
+        } else {
+            return UseInstance.super.toConfig();
+        }
     }
 }

@@ -1,0 +1,30 @@
+$version: LATEST
+
+Base:
+  type: struct
+  properties:
+    a:
+      type: A
+
+A:
+  type: object
+  properties:
+    b1:
+      type: B?
+    b2:
+      type: B
+
+B:
+  type: object
+  properties:
+    c:
+      type: C
+
+C:
+  type: object
+  properties:
+    d:
+      type: string
+    e:
+      type: string
+

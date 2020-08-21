@@ -57,6 +57,9 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
         InstanceSchema build(Resolver.Constructing resolver, Version version, Name qualifiedName, int slot);
 
         @Override
+        InstanceSchema build(Name qualifiedName);
+
+        @Override
         InstanceSchema build();
     }
 
@@ -67,7 +70,7 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
 
     SortedMap<String, Use<?>> metadataSchema();
 
-    default SortedMap<String, Use<?>> layout(final Set<Name> expand) {
+    default SortedMap<String, Use<?>> layoutSchema(final Set<Name> expand) {
 
         // This is the canonical layout, by definition
         final SortedMap<String, Use<?>> result = new TreeMap<>();

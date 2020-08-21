@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -81,10 +82,10 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
     }
 
     @Override
-    public Object toConfig() {
+    public Object toConfig(final boolean optional) {
 
         return ImmutableMap.of(
-                NAME, type
+                Use.name(NAME, optional), type
         );
     }
 
@@ -148,13 +149,13 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
     }
 
     @Override
-    public List<T> transform(final List<T> value, final Function<T, T> fn) {
+    public List<T> transformValues(final List<T> value, final BiFunction<Use<T>, T, T> fn) {
 
         if(value != null) {
             boolean changed = false;
             final List<T> result = new ArrayList<>();
             for(final T before : value) {
-                final T after = fn.apply(before);
+                final T after = fn.apply(type, before);
                 result.add(after);
                 changed = changed || (before != after);
             }

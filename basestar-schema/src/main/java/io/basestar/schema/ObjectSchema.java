@@ -221,9 +221,15 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
         }
 
         @Override
+        default ObjectSchema build(final Name qualifiedName) {
+
+            return build(Resolver.Constructing.ANONYMOUS, Version.CURRENT, qualifiedName, Schema.anonymousSlot());
+        }
+
+        @Override
         default ObjectSchema build() {
 
-            return build(Resolver.Constructing.ANONYMOUS, Version.CURRENT, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
+            return build(Schema.anonymousQualifiedName());
         }
     }
 

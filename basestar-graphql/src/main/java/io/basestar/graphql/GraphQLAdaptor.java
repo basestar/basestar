@@ -432,7 +432,7 @@ public class GraphQLAdaptor {
             final SubscriberContext subscriberContext = GraphQLUtils.subscriber(env.getContext());
             final Set<Name> names = paths(env);
             final Set<Name> expand = schema.requiredExpand(names);
-            final String alias = Nullsafe.option(env.getField().getAlias(), () -> strategy.subscribeMethodName(schema));
+            final String alias = Nullsafe.orDefault(env.getField().getAlias(), () -> strategy.subscribeMethodName(schema));
             final String id = env.getArgument(strategy.idArgumentName());
             return subscriberContext.subscribe(schema, id, alias, names)
                     .thenCompose(ignored -> read(caller, schema, id, null, expand));

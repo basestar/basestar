@@ -6,6 +6,7 @@ import io.basestar.schema.use.UseOptional;
 import io.basestar.schema.use.UseStruct;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
+import lombok.Getter;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -18,20 +19,21 @@ import java.util.Set;
  * Structs within structs will be recursively flattened. Structs within collections/maps will not be changed.
  */
 
-public class FlatStructLayout implements Layout {
+public class FlatStructLayout implements Layout.Transforming {
 
-    private final Layout base;
+    @Getter
+    private final Layout baseLayout;
 
     private final String delimiter;
 
-    public FlatStructLayout(final Layout base) {
+    public FlatStructLayout(final Layout baseLayout) {
 
-        this(base, null);
+        this(baseLayout, null);
     }
 
-    public FlatStructLayout(final Layout base, final String delimiter) {
+    public FlatStructLayout(final Layout baseLayout, final String delimiter) {
 
-        this.base = base;
+        this.baseLayout = baseLayout;
         this.delimiter = Nullsafe.orDefault(delimiter, Reserved.PREFIX);
     }
 
@@ -41,9 +43,9 @@ public class FlatStructLayout implements Layout {
     }
 
     @Override
-    public Map<String, Use<?>> layout(final Set<Name> expand) {
+    public Map<String, Use<?>> layoutSchema(final Set<Name> expand) {
 
-        return schema(Name.empty(), base.layout(expand), expand, false);
+        return schema(Name.empty(), baseLayout.layoutSchema(expand), expand, false);
     }
 
     private Map<String, Use<?>> schema(final Name qualifiedName, final Map<String, Use<?>> schema, final Set<Name> expand, final boolean optional) {
@@ -75,7 +77,7 @@ public class FlatStructLayout implements Layout {
             @Override
             public Map<String, Use<?>> visitStruct(final UseStruct type) {
 
-                return schema(qualifiedName, type.getSchema().layout(expand), expand, optional);
+                return schema(qualifiedName, type.getSchema().layoutSchema(expand), expand, optional);
             }
         });
     }
@@ -83,7 +85,7 @@ public class FlatStructLayout implements Layout {
     @Override
     public Map<String, Object> applyLayout(final Set<Name> expand, final Map<String, Object> object) {
 
-        return apply(Name.empty(), base.layout(expand), expand, object);
+        return apply(Name.empty(), baseLayout.layoutSchema(expand), expand, object);
     }
 
     private Map<String, Object> apply(final Name qualifiedName, final Map<String, Use<?>> schema, final Set<Name> expand, final Map<String, Object> object) {
@@ -110,7 +112,7 @@ public class FlatStructLayout implements Layout {
             @Override
             public Map<String, Object> visitStruct(final UseStruct type) {
 
-                return apply(qualifiedName, type.getSchema().layout(expand), expand, type.create(value));
+                return apply(qualifiedName, type.getSchema().layoutSchema(expand), expand, type.create(value));
             }
         });
     }
@@ -118,7 +120,7 @@ public class FlatStructLayout implements Layout {
     @Override
     public Map<String, Object> unapplyLayout(final Set<Name> expand, final Map<String, Object> object) {
 
-        return unapply(Name.empty(), base.layout(expand), expand, object);
+        return unapply(Name.empty(), baseLayout.layoutSchema(expand), expand, object);
     }
 
     private Map<String, Object> unapply(final Name qualifiedName, final Map<String, Use<?>> schema, final Set<Name> expand, final Map<String, Object> object) {
@@ -145,7 +147,7 @@ public class FlatStructLayout implements Layout {
             @Override
             public Object visitStruct(final UseStruct type) {
 
-                return unapply(qualifiedName, type.getSchema().layout(expand), expand, object);
+                return unapply(qualifiedName, type.getSchema().layoutSchema(expand), expand, object);
             }
         });
     }

@@ -108,7 +108,7 @@ public class GraphQLUtils {
             }
 
             @Override
-            public <T> Set<Name> visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
+            public <V, T extends Collection<V>> Set<Name> visitCollection(final UseCollection<V, T> type) {
 
                 return paths(type.getType(), parent, selections);
             }

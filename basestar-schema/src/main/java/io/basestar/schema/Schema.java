@@ -61,6 +61,8 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
 
         Schema<T> build(Resolver.Constructing resolver, Version version, Name qualifiedName, int slot);
 
+        Schema<T> build(Name qualifiedName);
+
         Schema<T> build();
     }
 

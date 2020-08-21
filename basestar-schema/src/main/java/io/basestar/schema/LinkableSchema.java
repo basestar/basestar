@@ -23,6 +23,9 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver {
         LinkableSchema build(Resolver.Constructing resolver, Version version, Name qualifiedName, int slot);
 
         @Override
+        LinkableSchema build(Name qualifiedName);
+
+        @Override
         LinkableSchema build();
     }
 

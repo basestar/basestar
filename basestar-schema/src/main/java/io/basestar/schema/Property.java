@@ -28,7 +28,10 @@ import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.ExpressionDeserializer;
-import io.basestar.schema.exception.*;
+import io.basestar.schema.exception.ConstraintViolationException;
+import io.basestar.schema.exception.MissingPropertyException;
+import io.basestar.schema.exception.SchemaValidationException;
+import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
@@ -203,9 +206,10 @@ public class Property implements Member {
 
     public Property(final Descriptor builder, final Schema.Resolver schemaResolver, final Version version, final Name qualifiedName) {
 
-        if(Reserved.isReserved(qualifiedName.last())) {
-            throw new ReservedNameException(qualifiedName);
-        }
+        // FIXME
+//        if(Reserved.isReserved(qualifiedName.last())) {
+//            throw new ReservedNameException(qualifiedName);
+//        }
         this.qualifiedName = qualifiedName;
         this.description = builder.getDescription();
         this.type = legacyFix(qualifiedName, builder.getType().resolve(schemaResolver), builder.getRequired(), version);
@@ -222,7 +226,7 @@ public class Property implements Member {
         if(version == Version.LEGACY) {
             return type.optional(!Nullsafe.orDefault(required));
         } else if(required != null) {
-            throw new SchemaValidationException(qualifiedName, "Required is now deprecated, use optional: type instead");
+            throw new SchemaValidationException(qualifiedName, "Required is now deprecated, use 'type?' instead");
         } else {
             return type;
         }

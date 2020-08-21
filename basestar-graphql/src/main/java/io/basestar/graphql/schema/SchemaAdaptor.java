@@ -552,7 +552,7 @@ public class SchemaAdaptor {
             }
 
             @Override
-            public <T> Type<?> visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
+            public <V, T extends Collection<V>> Type<?> visitCollection(final UseCollection<V, T> type) {
 
                 return new ListType(type(type.getType()));
             }

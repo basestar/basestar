@@ -3,6 +3,7 @@ package io.basestar.schema.layout;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Namespace;
+import io.basestar.schema.StructSchema;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseString;
 import io.basestar.util.Name;
@@ -37,6 +38,12 @@ public class TestFlatStructLayout {
         );
     }
 
+    private static void printLayout(final Name name, final Map<String, Use<?>> layout) throws IOException {
+
+        final StructSchema struct = StructSchema.from(name, layout);
+        Namespace.builder().setSchema(name, struct.descriptor()).yaml(System.err);
+    }
+
     private Layout layout() throws IOException {
 
         final Namespace namespace = Namespace.load(TestFlatStructLayout.class.getResource("flatstruct.yml"));
@@ -49,7 +56,8 @@ public class TestFlatStructLayout {
 
         final Layout layout = layout();
 
-        final Map<String, Use<?>> result = layout.layout(expand);
+        final Map<String, Use<?>> result = layout.layoutSchema(expand);
+        printLayout(Name.of("Base"), result);
 
         assertEquals(4, result.size());
         assertEquals(UseString.DEFAULT.optional(true), result.get("a__b1__c__d"));

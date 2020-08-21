@@ -15,31 +15,32 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class TestJsonContainerLayout {
+public class TestJsonLayout {
 
-    private JsonContainerLayout layout() throws IOException {
+    private JsonLayout layout(final JsonLayout.Enable ... enable) throws IOException {
 
         final Namespace namespace = Namespace.load(TestFlatStructLayout.class.getResource("jsoncollection.yml"));
         final InstanceSchema schema = namespace.requireInstanceSchema("Base");
-        return new JsonContainerLayout(schema);
+        return new JsonLayout(schema, enable);
     }
 
     @Test
     public void testSchema() throws IOException {
 
-        final Layout layout = layout();
+        final Layout layout = layout(JsonLayout.Enable.CONTAINER);
 
-        final Map<String, Use<?>> result = layout.layout(Collections.emptySet());
+        final Map<String, Use<?>> result = layout.layoutSchema(Collections.emptySet());
 
         assertEquals(9, result.size());
         assertEquals(UseString.DEFAULT.optional(true), result.get("a"));
         assertEquals(UseString.DEFAULT.optional(true), result.get("b"));
         assertEquals(UseString.DEFAULT, result.get("c"));
     }
+
     @Test
     public void testApply() throws IOException {
 
-        final Layout layout = layout();
+        final Layout layout = layout(JsonLayout.Enable.CONTAINER);
 
         final Map<String, Object> object = ImmutableMap.of(
                 "a", ImmutableList.of("a", "b", "c"),
@@ -58,7 +59,7 @@ public class TestJsonContainerLayout {
     @Test
     public void testUnapply() throws IOException {
 
-        final Layout layout = layout();
+        final Layout layout = layout(JsonLayout.Enable.CONTAINER);
 
         final Map<String, Object> object = ImmutableMap.of(
                 "a", "[\"a\",\"b\",\"c\"]",

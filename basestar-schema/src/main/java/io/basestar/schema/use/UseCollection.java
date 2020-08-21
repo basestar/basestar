@@ -35,13 +35,14 @@ import io.basestar.util.Name;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public interface UseCollection<V, T extends Collection<V>> extends UseContainer<V, T> {
 
-    T transform(T value, Function<V, V> fn);
+    T transformValues(T value, BiFunction<Use<V>, V, V> fn);
 
     @Override
     <V2> UseCollection<V2, ? extends Collection<V2>> transform(Function<Use<V>, Use<V2>> fn);
@@ -127,21 +128,21 @@ public interface UseCollection<V, T extends Collection<V>> extends UseContainer<
     default T expand(final T value, final Expander expander, final Set<Name> expand) {
 
         final Use<V> type = getType();
-        return transform(value, before -> type.expand(before, expander, expand));
+        return transformValues(value, before -> type.expand(before, expander, expand));
     }
 
     @Override
     default T applyVisibility(final Context context, final T value) {
 
         final Use<V> type = getType();
-        return transform(value, before -> type.applyVisibility(context, before));
+        return transformValues(value, before -> type.applyVisibility(context, before));
     }
 
     @Override
     default T evaluateTransients(final Context context, final T value, final Set<Name> expand) {
 
         final Use<V> type = getType();
-        return transform(value, before -> type.evaluateTransients(context, before, expand));
+        return transformValues(value, before -> type.evaluateTransients(context, before, expand));
     }
 
     @Override

@@ -128,9 +128,15 @@ public class StructSchema implements InstanceSchema {
         }
 
         @Override
+        default StructSchema build(final Name qualifiedName) {
+
+            return build(Resolver.Constructing.ANONYMOUS, Version.CURRENT, qualifiedName, Schema.anonymousSlot());
+        }
+
+        @Override
         default StructSchema build() {
 
-            return build(Resolver.Constructing.ANONYMOUS, Version.CURRENT, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
+            return build(Schema.anonymousQualifiedName());
         }
     }
 
@@ -195,10 +201,10 @@ public class StructSchema implements InstanceSchema {
                 throw new SchemaValidationException(qualifiedName, "Struct types cannot have immutable properties");
             }
             if(v.getExpression() != null) {
-                throw new SchemaValidationException(qualifiedName,"Struct types cannot have properties with expressions");
+                throw new SchemaValidationException(qualifiedName, "Struct types cannot have properties with expressions");
             }
             if(v.getVisibility() != null) {
-                throw new SchemaValidationException(qualifiedName,"Struct types cannot have properties with custom visibility");
+                throw new SchemaValidationException(qualifiedName, "Struct types cannot have properties with custom visibility");
             }
         });
         this.concrete = Nullsafe.orDefault(descriptor.getConcrete(), Boolean.TRUE);
@@ -344,5 +350,34 @@ public class StructSchema implements InstanceSchema {
     public int hashCode() {
 
         return qualifiedNameHashCode();
+    }
+
+    public static StructSchema from(final Name qualifiedName, final Map<String, ?> schema) {
+
+        return StructSchema.builder()
+                .setProperties(schema.entrySet().stream().collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        e -> property(e.getValue()))))
+                .build(qualifiedName);
+    }
+
+    public static StructSchema from(final Map<String, ?> schema) {
+
+        return from(Schema.anonymousQualifiedName(), schema);
+    }
+
+    private static Property.Descriptor property(final Object config) {
+
+        if(config instanceof Property.Descriptor) {
+            return (Property.Descriptor)config;
+        } else if(config instanceof Property) {
+            return ((Property)config).descriptor();
+        } else if(config instanceof Use<?>) {
+            return Property.builder()
+                    .setType((Use<?>)config);
+        } else {
+            return Property.builder()
+                    .setType(Use.fromConfig(config));
+        }
     }
 }

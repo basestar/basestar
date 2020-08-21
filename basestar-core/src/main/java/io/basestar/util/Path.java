@@ -154,16 +154,20 @@ public class Path extends AbstractPath<Path> implements Comparable<Path> {
                 unwild.add(part);
             }
         }
-        final Path unwildPath = Path.of(unwild);
-        final Path wildPath = Path.of(wild);
-        final java.nio.file.Path systemPath = unwildPath.toPath().toAbsolutePath();
-        final Path absPath = Path.of(systemPath);
-        return Files.walk(systemPath)
-                .filter(Files::isRegularFile)
-                .map(Path::of)
-                .map(v -> v.withoutFirst(absPath.size()))
-                .filter(v -> v.matches(wildPath))
-                .map(unwildPath::with);
+        if(wild.isEmpty()) {
+            return Stream.of(this);
+        } else {
+            final Path unwildPath = Path.of(unwild);
+            final Path wildPath = Path.of(wild);
+            final java.nio.file.Path systemPath = unwildPath.toPath().toAbsolutePath();
+            final Path absPath = Path.of(systemPath);
+            return Files.walk(systemPath)
+                    .filter(Files::isRegularFile)
+                    .map(Path::of)
+                    .map(v -> v.withoutFirst(absPath.size()))
+                    .filter(v -> v.matches(wildPath))
+                    .map(unwildPath::with);
+        }
     }
 
     public Pattern toPattern() {

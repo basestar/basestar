@@ -213,7 +213,7 @@ public class AvroUtils {
             }
 
             @Override
-            public <T> List<?> visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
+            public <V, T extends Collection<V>> List<?> visitCollection(final UseCollection<V, T> type) {
 
                 if(value == null) {
                     return null;
@@ -295,7 +295,7 @@ public class AvroUtils {
             }
 
             @Override
-            public <T> List<?> visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
+            public <V, T extends Collection<V>> List<?> visitCollection(final UseCollection<V, T> type) {
 
                 if(value == null) {
                     return null;

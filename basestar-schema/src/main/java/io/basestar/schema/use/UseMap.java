@@ -48,6 +48,8 @@ import java.util.stream.Collectors;
 /**
  * Map Type
  *
+ * FIXME: map expand is inconsistent, intention is to remove it and treat maps like other containers
+ *
  * <strong>Example</strong>
  * <pre>
  * type:
@@ -89,10 +91,10 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     }
 
     @Override
-    public Object toConfig() {
+    public Object toConfig(final boolean optional) {
 
         return ImmutableMap.of(
-                NAME, type
+                Use.name(NAME, optional), type
         );
     }
 
@@ -271,7 +273,7 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     public Map<String, T> expand(final Map<String, T> value, final Expander expander, final Set<Name> expand) {
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
-        return transform(value, (key, before) -> {
+        return transformKeyValues(value, (key, before) -> {
             final Set<Name> branch = branch(branches, key);
             if(branch != null) {
                 return type.expand(before, expander, branch);
@@ -284,14 +286,14 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     @Override
     public Map<String, T> applyVisibility(final Context context, final Map<String, T> value) {
 
-        return transform(value, (key, before) -> type.applyVisibility(context, before));
+        return transformKeyValues(value, (key, before) -> type.applyVisibility(context, before));
     }
 
     @Override
     public Map<String, T> evaluateTransients(final Context context, final Map<String, T> value, final Set<Name> expand) {
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
-        return transform(value, (key, before) -> {
+        return transformKeyValues(value, (key, before) -> {
             final Set<Name> branch = branch(branches, key);
             if(branch != null) {
                 return type.evaluateTransients(context, before, branch);
@@ -322,7 +324,7 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
         }
     }
 
-    private static <T> Map<String, T> transform(final Map<String, T> value, final BiFunction<String, T, T> fn) {
+    private static <T> Map<String, T> transformKeyValues(final Map<String, T> value, final BiFunction<String, T, T> fn) {
 
         if(value != null) {
             final Map<String, T> changed = new HashMap<>();
@@ -369,14 +371,14 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     }
 
     @Override
-    public Map<String, T> transform(final Map<String, T> value, final Function<T, T> fn) {
+    public Map<String, T> transformValues(final Map<String, T> value, final BiFunction<Use<T>, T, T> fn) {
 
         if(value != null) {
             boolean changed = false;
             final Map<String, T> result = new HashMap<>();
             for(final Map.Entry<String, T> entry : value.entrySet()) {
                 final T before = entry.getValue();
-                final T after = fn.apply(before);
+                final T after = fn.apply(type, before);
                 result.put(entry.getKey(), after);
                 changed = changed || (before != after);
             }

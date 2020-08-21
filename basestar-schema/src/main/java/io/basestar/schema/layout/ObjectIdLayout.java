@@ -2,10 +2,13 @@ package io.basestar.schema.layout;
 
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.use.*;
+import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseObject;
+import io.basestar.schema.use.UseString;
 import io.basestar.util.Name;
+import lombok.Getter;
 
-import java.util.*;
+import java.util.Set;
 
 /**
  * Layout transformation that converts object and view-record references to flat string fields containing the target id.
@@ -13,91 +16,66 @@ import java.util.*;
  * This transformation works recursively through collections, maps and structs
  */
 
-public class ObjectIdLayout implements Layout {
 
-    private final Layout base;
+public class ObjectIdLayout implements Layout.Simple {
 
-    public ObjectIdLayout(final Layout base) {
+    @Getter
+    private final Layout baseLayout;
 
-        this.base = base;
+    public ObjectIdLayout(final Layout baseLayout) {
+
+        this.baseLayout = baseLayout;
     }
 
     @Override
-    public Map<String, Use<?>> layout(final Set<Name> expand) {
+    public Use<?> layoutSchema(final Use<?> type, final Set<Name> expand) {
 
-        final Map<String, Set<Name>> branches = Name.branch(expand);
-        final Map<String, Use<?>> result = new HashMap<>();
-        base.layout(expand).forEach((name, type) -> {
-            result.put(name, layout(type, branches.get(name),false));
-        });
-        return result;
-    }
-
-    private Use<?> layout(final Use<?> type, final Set<Name> expand, final boolean nullable) {
-
-        return type.visit(new Use.Visitor.Defaulting<Use<?>>() {
+        return type.visit(new Use.Visitor.Transforming() {
 
             @Override
-            public <T> Use<?> visitDefault(final Use<T> type) {
+            public Set<Name> getExpand() {
 
-                return type;
+                return expand;
             }
 
             @Override
-            public <T> Use<?> visitOptional(final UseOptional<T> type) {
+            public Use<?> transform(final Use<?> type, final Set<Name> expand) {
 
-                return layout(type.getType(), expand, true);
+                return layoutSchema(type, expand);
             }
 
             @Override
             public Use<?> visitObject(final UseObject type) {
 
-                return UseString.DEFAULT.optional(nullable);
-            }
-
-            @Override
-            public <T> Use<?> visitArray(final UseArray<T> type) {
-
-                return new UseArray<>(layout(type.getType(), expand, false)).optional(nullable);
-            }
-
-            @Override
-            public <T> Use<?> visitSet(final UseSet<T> type) {
-
-                return new UseSet<>(layout(type.getType(), expand,false)).optional(nullable);
-            }
-
-            @Override
-            public <T> Use<?> visitMap(final UseMap<T> type) {
-
-                return new UseMap<>(layout(type.getType(), expand, false)).optional(nullable);
+                return UseString.DEFAULT;
             }
         });
     }
 
     @Override
-    public Map<String, Object> applyLayout(final Set<Name> expand, final Map<String, Object> object) {
-
-        final Map<String, Set<Name>> branches = Name.branch(expand);
-        final Map<String, Object> result = new HashMap<>();
-        base.layout(expand).forEach((name, type) -> {
-            final Object value = object == null ? null : object.get(name);
-            result.put(name, applyLayout(type, branches.get(name), value));
-        });
-        return result;
-    }
-
-    private Object applyLayout(final Use<?> type, final Set<Name> expand, final Object value) {
+    public Object applyLayout(final Use<?> type, final Set<Name> expand, final Object value) {
 
         if(value == null) {
             return null;
         }
-        return type.visit(new Use.Visitor.Defaulting<Object>() {
+        return type.visit(new Use.Visitor.TransformingValue() {
 
             @Override
-            public <T> Object visitDefault(final Use<T> type) {
+            public Set<Name> getExpand() {
 
-                return type;
+                return expand;
+            }
+
+            @Override
+            public Object getValue() {
+
+                return value;
+            }
+
+            @Override
+            public Object transform(final Use<?> type, final Set<Name> expand, final Object value) {
+
+                return applyLayout(type, expand, value);
             }
 
             @Override
@@ -105,88 +83,39 @@ public class ObjectIdLayout implements Layout {
 
                 return Instance.getId(type.create(value));
             }
-
-            @Override
-            public <T> Object visitArray(final UseArray<T> type) {
-
-                final List<Object> result = new ArrayList<>();
-                type.create(value).forEach(v -> result.add(applyLayout(type.getType(), expand, v)));
-                return result;
-            }
-
-            @Override
-            public <T> Object visitSet(final UseSet<T> type) {
-
-                final Set<Object> result = new HashSet<>();
-                type.create(value).forEach(v -> result.add(applyLayout(type.getType(), expand, v)));
-                return result;
-            }
-
-            @Override
-            public <T> Object visitMap(final UseMap<T> type) {
-
-                final Map<String, Set<Name>> branches = Name.branch(expand);
-                final Map<String, Object> result = new HashMap<>();
-                type.create(value).forEach((k, v) -> result.put(k, applyLayout(type.getType(), UseMap.branch(branches, k), v)));
-                return result;
-            }
         });
     }
 
     @Override
-    public Map<String, Object> unapplyLayout(final Set<Name> expand, final Map<String, Object> object) {
-
-        final Map<String, Set<Name>> branches = Name.branch(expand);
-        final Map<String, Object> result = new HashMap<>();
-        base.layout(expand).forEach((name, type) -> {
-            final Object value = object == null ? null : object.get(name);
-            result.put(name, unapplyLayout(type, branches.get(name), value));
-        });
-        return result;
-    }
-
-    private Object unapplyLayout(final Use<?> type, final Set<Name> expand, final Object value) {
+    public Object unapplyLayout(final Use<?> type, final Set<Name> expand, final Object value) {
 
         if(value == null) {
             return null;
         }
-        return type.visit(new Use.Visitor.Defaulting<Object>() {
+        return type.visit(new Use.Visitor.TransformingValue() {
 
             @Override
-            public <T> Object visitDefault(final Use<T> type) {
+            public Set<Name> getExpand() {
 
-                return type.create(value);
+                return expand;
+            }
+
+            @Override
+            public Object getValue() {
+
+                return value;
+            }
+
+            @Override
+            public Object transform(final Use<?> type, final Set<Name> expand, final Object value) {
+
+                return applyLayout(type, expand, value);
             }
 
             @Override
             public Object visitObject(final UseObject type) {
 
                 return ObjectSchema.ref((String)value);
-            }
-
-            @Override
-            public <T> Object visitArray(final UseArray<T> type) {
-
-                final List<Object> result = new ArrayList<>();
-                type.create(value).forEach(v -> result.add(unapplyLayout(type.getType(), expand, v)));
-                return result;
-            }
-
-            @Override
-            public <T> Object visitSet(final UseSet<T> type) {
-
-                final Set<Object> result = new HashSet<>();
-                type.create(value).forEach(v -> result.add(unapplyLayout(type.getType(), expand, v)));
-                return result;
-            }
-
-            @Override
-            public <T> Object visitMap(final UseMap<T> type) {
-
-                final Map<String, Set<Name>> branches = Name.branch(expand);
-                final Map<String, Object> result = new HashMap<>();
-                type.create(value).forEach((k, v) -> result.put(k, unapplyLayout(type.getType(), UseMap.branch(branches, k), v)));
-                return result;
             }
         });
     }

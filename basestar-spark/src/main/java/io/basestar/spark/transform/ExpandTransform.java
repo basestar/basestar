@@ -286,7 +286,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
             }
 
             @Override
-            public <T> Set<RequiredRef> visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
+            public <V, T extends Collection<V>> Set<RequiredRef> visitCollection(final UseCollection<V, T> type) {
 
                 return requiredRefs(type.getType(), expand);
             }
@@ -341,7 +341,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
                 }
 
                 @Override
-                public <T> Set<String> visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
+                public <V, T extends Collection<V>> Set<String> visitCollection(final UseCollection<V, T> type) {
 
                     if (input instanceof scala.collection.Iterable<?>) {
                         final Set<String> results = new HashSet<>();
@@ -419,7 +419,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
                 }
 
                 @Override
-                public <T> scala.collection.Iterable<?> visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
+                public <V, T extends Collection<V>> scala.collection.Iterable<?> visitCollection(final UseCollection<V, T> type) {
 
                     if (input instanceof scala.collection.Iterable<?>) {
                         final List<Object> results = new ArrayList<>();

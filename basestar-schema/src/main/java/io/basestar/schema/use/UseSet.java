@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -80,10 +81,10 @@ public class UseSet<T> implements UseCollection<T, Set<T>> {
     }
 
     @Override
-    public Object toConfig() {
+    public Object toConfig(final boolean optional) {
 
         return ImmutableMap.of(
-                NAME, type
+                Use.name(NAME, optional), type
         );
     }
 
@@ -147,13 +148,13 @@ public class UseSet<T> implements UseCollection<T, Set<T>> {
     }
 
     @Override
-    public Set<T> transform(final Set<T> value, final Function<T, T> fn) {
+    public Set<T> transformValues(final Set<T> value, final BiFunction<Use<T>, T, T> fn) {
 
         if(value != null) {
             boolean changed = false;
             final Set<T> result = new HashSet<>();
             for(final T before : value) {
-                final T after = fn.apply(before);
+                final T after = fn.apply(type, before);
                 result.add(after);
                 changed = changed || (before != after);
             }

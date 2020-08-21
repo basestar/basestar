@@ -51,9 +51,9 @@ public interface UseNamed<T> extends Use<T> {
     }
 
     @Override
-    default Object toConfig() {
+    default Object toConfig(final boolean optional) {
 
-        return getName().toString();
+        return Use.name(getName().toString(), optional);
     }
 
     @Override

@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Constraint;
+import io.basestar.schema.Property;
 import io.basestar.schema.Schema;
 import io.basestar.schema.exception.TypeSyntaxException;
 import io.basestar.schema.util.Expander;
@@ -35,10 +36,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.BiFunction;
 
 /**
@@ -49,6 +47,8 @@ import java.util.function.BiFunction;
 
 //@JsonDeserialize(using = TypeUse.Deserializer.class)
 public interface Use<T> extends Serializable {
+
+    String OPTIONAL_SYMBOL = "?";
 
     enum Code {
 
@@ -100,7 +100,12 @@ public interface Use<T> extends Serializable {
     Set<Name> requiredExpand(Set<Name> names);
 
     @JsonValue
-    Object toConfig();
+    default Object toConfig() {
+
+        return toConfig(false);
+    }
+
+    Object toConfig(boolean optional);
 
     String toString();
 
@@ -143,6 +148,11 @@ public interface Use<T> extends Serializable {
         }
     }
 
+    static String name(final String name, final boolean optional) {
+
+        return optional ? (name + OPTIONAL_SYMBOL) : name;
+    }
+
     @JsonCreator
     @SuppressWarnings("unchecked")
     static Use<?> fromConfig(final Object value) {
@@ -161,8 +171,8 @@ public interface Use<T> extends Serializable {
         }
         final String type;
         final boolean optional;
-        if(typeName.endsWith(UseOptional.SYMBOL)) {
-            type = typeName.substring(0, typeName.length() - UseOptional.SYMBOL.length()).trim();
+        if(typeName.endsWith(OPTIONAL_SYMBOL)) {
+            type = typeName.substring(0, typeName.length() - OPTIONAL_SYMBOL.length()).trim();
             optional = true;
         } else {
             type = typeName;
@@ -203,6 +213,8 @@ public interface Use<T> extends Serializable {
                 return UseOptional.from(config);
             case UseEnum.NAME:
                 return UseEnum.from(config);
+            case UseStruct.NAME:
+                return UseStruct.from(config);
             default:
                 return UseNamed.from(type, config);
         }
@@ -363,12 +375,12 @@ public interface Use<T> extends Serializable {
                 return visitScalar(type);
             }
 
-            default <T> R visitContainer(final UseContainer<T, ?> type) {
+            default <V, T> R visitContainer(final UseContainer<V, T> type) {
 
                 return visitDefault(type);
             }
 
-            default <T> R visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
+            default <V, T extends Collection<V>> R visitCollection(final UseCollection<V, T> type) {
 
                 return visitContainer(type);
             }
@@ -481,7 +493,100 @@ public interface Use<T> extends Serializable {
             @Override
             default <T> R visitOptional(final UseOptional<T> type) {
 
-                return type.getType().visit(this);
+                // Least astonishment
+                return visit(type.getType());
+            }
+        }
+
+        /**
+         * Automatically transform container types (collection, map, optional) and struct types
+         */
+
+        interface Transforming extends Defaulting<Use<?>> {
+
+            Set<Name> getExpand();
+
+            Use<?> transform(Use<?> type, Set<Name> expand);
+
+            @Override
+            default <T> Use<?> visitDefault(final Use<T> type) {
+
+                return type;
+            }
+
+            @Override
+            default <V, T> Use<?> visitContainer(final UseContainer<V, T> type) {
+
+                return type.transform(v -> transform(v, getExpand()));
+            }
+
+            @Override
+            default <T> Use<?> visitOptional(final UseOptional<T> type) {
+
+                return visitContainer(type);
+            }
+
+            @Override
+            default Use<?> visitStruct(final UseStruct type) {
+
+                final Map<String, Set<Name>> branches = Name.branch(getExpand());
+                final Map<String, Use<?>> schema = new HashMap<>();
+                boolean changed = false;
+                for(final Map.Entry<String, Property> entry : type.getSchema().getProperties().entrySet()) {
+                    final String name = entry.getKey();
+                    final Property property = entry.getValue();
+                    final Use<?> value = transform(property.getType(), branches.get(name));
+                    changed = changed || (value != property.getType());
+                }
+                if(changed) {
+                    return UseStruct.from(schema);
+                } else {
+                    return type;
+                }
+            }
+        }
+
+        interface TransformingValue extends Defaulting<Object> {
+
+            Set<Name> getExpand();
+
+            Object getValue();
+
+            Object transform(Use<?> type, Set<Name> expand, Object value);
+
+            @Override
+            default <T> Object visitDefault(final Use<T> type) {
+
+                return type.create(getValue());
+            }
+
+            @Override
+            default <V, T> Object visitContainer(final UseContainer<V, T> type) {
+
+                final Set<Name> expand = getExpand();
+                final T before = type.create(getValue());
+                return type.transformValues(before, (t, v) -> t.create(transform(t, expand, v)));
+            }
+
+            @Override
+            default Object visitStruct(final UseStruct type) {
+
+                final Map<String, Object> before = type.create(getValue());
+                final Map<String, Set<Name>> branches = Name.branch(getExpand());
+                final Map<String, Object> after = new HashMap<>();
+                boolean changed = false;
+                for(final Map.Entry<String, Property> entry : type.getSchema().getProperties().entrySet()) {
+                    final String name = entry.getKey();
+                    final Property property = entry.getValue();
+                    final Object beforeValue = before.get(name);
+                    final Object afterValue = transform(property.getType(), branches.get(name), beforeValue);
+                    changed = changed || (afterValue != beforeValue);
+                }
+                if(changed) {
+                    return after;
+                } else {
+                    return before;
+                }
             }
         }
     }
