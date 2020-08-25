@@ -20,12 +20,27 @@ package io.basestar.database.event;
  * #L%
  */
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.common.collect.ImmutableMap;
 import io.basestar.event.Event;
+import io.basestar.schema.ObjectSchema;
 import io.basestar.util.Name;
+
+import java.util.Map;
 
 public interface ObjectEvent extends Event {
 
     Name getSchema();
 
     String getId();
+
+    @Override
+    @JsonIgnore
+    default Map<String, String> eventMetadata() {
+
+        return ImmutableMap.of(
+                ObjectSchema.SCHEMA, getSchema().toString(),
+                ObjectSchema.ID, getId()
+        );
+    }
 }

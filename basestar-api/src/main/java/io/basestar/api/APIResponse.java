@@ -47,13 +47,22 @@ public interface APIResponse {
 
     static APIResponse success(final APIRequest request, final Object data) {
 
+        return success(request, null, data == null ? null : Entity.from(request.getContentType(), data));
+    }
+
+    static APIResponse success(final APIRequest request, final Entity data) {
+
         return success(request, null, data);
     }
 
-    static APIResponse success(final APIRequest request, final Multimap<String, String> extraHeaders,
-                               final Object data) {
+    static APIResponse success(final APIRequest request, final Multimap<String, String> extraHeaders, final Object data) {
 
-        if(data == null) {
+        return success(request, extraHeaders, data == null ? null : Entity.from(request.getContentType(), data));
+    }
+
+    static APIResponse success(final APIRequest request, final Multimap<String, String> extraHeaders, final Entity data) {
+
+        if (data == null) {
             return response(request, 204, extraHeaders, null);
         } else {
             return response(request, 200, extraHeaders, data);
@@ -83,54 +92,69 @@ public interface APIResponse {
 
     static ExceptionMetadata exceptionMetadata(final Throwable e, final int defaultStatus) {
 
-        if(e instanceof HasExceptionMetadata) {
-            return ((HasExceptionMetadata)e).getMetadata();
-        } else if(e.getCause() != null) {
+        if (e instanceof HasExceptionMetadata) {
+            return ((HasExceptionMetadata) e).getMetadata();
+        } else if (e.getCause() != null) {
             return exceptionMetadata(e.getCause(), defaultStatus);
         } else {
             return new ExceptionMetadata().setStatus(defaultStatus).setCode("UnknownError").setMessage(e.getMessage());
         }
     }
 
+    static APIResponse response(final APIRequest request, final int status) {
+
+        return response(request, status, null);
+    }
+
     static APIResponse response(final APIRequest request, final int status, final Object data) {
+
+        return response(request, status, data == null ? null : Entity.from(request.getContentType(), data));
+    }
+
+    static APIResponse response(final APIRequest request, final int status, final Entity data) {
 
         return response(request, status, null, data);
     }
 
-    static APIResponse response(final APIRequest request, final int status,
-                                final Multimap<String, String> extraHeaders, final Object data) {
+    static APIResponse response(final APIRequest request, final int status, final Multimap<String, String> extraHeaders, final Object data) {
 
-        final APIFormat format = request.getAccept();
+        return response(request, status, extraHeaders, Entity.from(request.getContentType(), data));
+    }
+
+    static APIResponse response(final APIRequest request, final int status, final Multimap<String, String> extraHeaders, final Entity entity) {
+
         final Multimap<String, String> headers = HashMultimap.create();
-        headers.put("Content-Type", format.getContentType());
+        if(entity != null) {
+            headers.put("Content-Type", entity.getContentType());
+        }
         final String origin = request.getFirstHeader("Origin");
-        if(origin != null) {
+        if (origin != null) {
             headers.put("Access-Control-Allow-Origin", origin);
         } else {
             headers.put("Access-Control-Allow-Origin", "*");
         }
         final Multimap<String, String> requestHeaders = request.getHeaders();
         final Collection<String> allowMethods = requestHeaders.get("access-control-request-method");
-        if(!allowMethods.isEmpty()) {
+        if (!allowMethods.isEmpty()) {
             headers.put("Access-Control-Allow-Methods", String.join(",", allowMethods));
         } else {
             headers.put("Access-Control-Allow-Methods", "*");
         }
         final Collection<String> allowHeaders = requestHeaders.get("access-control-request-headers");
-        if(!allowHeaders.isEmpty()) {
+        if (!allowHeaders.isEmpty()) {
             headers.put("Access-Control-Allow-Headers", String.join(",", allowHeaders));
         } else {
             headers.put("Access-Control-Allow-Headers", "*");
         }
         headers.put("Access-Control-Allow-Credentials", "true");
         final Caller caller = request.getCaller();
-        if(caller != null) {
-            if(caller.getId() != null) {
+        if (caller != null) {
+            if (caller.getId() != null) {
                 headers.put("X-Caller-Id", caller.getId());
             }
             headers.put("X-Caller-Anonymous", caller.isAnon() ? "true" : "false");
         }
-        if(extraHeaders != null) {
+        if (extraHeaders != null) {
             headers.putAll(extraHeaders);
         }
 
@@ -150,10 +174,37 @@ public interface APIResponse {
             @Override
             public void writeTo(final OutputStream out) throws IOException {
 
-                if(data != null) {
-                    format.getMapper().writerWithDefaultPrettyPrinter().writeValue(out, data);
+                if(entity != null) {
+                    entity.writeTo(out);
                 }
             }
         };
+    }
+
+    interface Entity {
+
+        String getContentType();
+
+        void writeTo(OutputStream out) throws IOException;
+
+        static Entity from(final APIFormat format, final Object data) {
+
+            return new Entity() {
+
+                @Override
+                public String getContentType() {
+
+                    return format.getContentType();
+                }
+
+                @Override
+                public void writeTo(final OutputStream out) throws IOException {
+
+                    if (data != null) {
+                        format.getMapper().writerWithDefaultPrettyPrinter().writeValue(out, data);
+                    }
+                }
+            };
+        }
     }
 }

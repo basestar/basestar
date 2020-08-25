@@ -108,10 +108,11 @@ public class SNSEmitter implements Emitter {
                     final String eventType = event.eventType();
                     final String eventModule = event.eventModule();
 
+                    event.eventMetadata().forEach((k, v) -> attributes.put(k, stringAttribute(v)));
+                    meta.forEach((k, v) -> attributes.put(k, stringAttribute(v)));
                     attributes.put(EVENT_ATTRIBUTE, stringAttribute(eventType));
                     attributes.put(MODULE_ATTRIBUTE, stringAttribute(eventModule));
                     attributes.put(DEDUPLICATION_ATTRIBUTE, stringAttribute(id));
-                    meta.forEach((k, v) -> attributes.put(k, stringAttribute(v)));
 
                     final byte[] body = serialization.serialize(event);
                     final String encoded = BASE_ENCODING.encode(body);

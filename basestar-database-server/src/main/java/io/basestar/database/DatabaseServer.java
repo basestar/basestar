@@ -468,7 +468,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         return expandCaller(Context.init(), caller, callerExpand)
                 .thenCompose(expandedCaller -> expand(context(expandedCaller), instance, transientExpand)
-                .thenApply(v -> restrict(caller, v, expand)));
+                .thenApply(v -> restrict(expandedCaller, v, expand)));
     }
 
     // FIXME need to create a deeper permission expand for nested permissions
@@ -487,7 +487,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         return expandCaller(Context.init(), caller, callerExpand)
                 .thenCompose(expandedCaller -> expand(context(expandedCaller), instances, transientExpand)
-                .thenApply(vs -> vs.map(v -> restrict(caller, v, expand))));
+                .thenApply(vs -> vs.map(v -> restrict(expandedCaller, v, expand))));
     }
 
     @Override

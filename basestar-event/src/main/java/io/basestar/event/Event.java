@@ -22,6 +22,9 @@ package io.basestar.event;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import java.util.Collections;
+import java.util.Map;
+
 public interface Event {
 
     Event abbreviate();
@@ -48,5 +51,11 @@ public interface Event {
 
         final String eventPackage = this.getClass().getPackage().getName();
         return eventPackage.replaceAll("\\.event$", "");
+    }
+
+    @JsonIgnore
+    default Map<String, String> eventMetadata() {
+
+        return Collections.emptyMap();
     }
 }
