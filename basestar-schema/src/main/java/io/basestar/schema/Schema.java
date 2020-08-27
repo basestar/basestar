@@ -55,7 +55,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
     })
     interface Descriptor<T> extends Described, Extendable {
 
-        String type();
+        String getType();
 
         Long getVersion();
 
@@ -84,7 +84,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
 
     interface Builder<T> extends Descriptor<T>, Extendable {
 
-        Builder setExtensions(Map<String, Object> extensions);
+        Builder<T> setExtensions(Map<String, Object> extensions);
     }
 
     default T create(final Object value) {

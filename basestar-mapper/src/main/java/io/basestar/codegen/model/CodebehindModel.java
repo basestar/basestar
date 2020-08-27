@@ -49,7 +49,7 @@ public class CodebehindModel extends InstanceSchemaModel {
     @Override
     public String getSchemaType() {
 
-        return schema.descriptor().type();
+        return schema.descriptor().getType();
     }
 
     @Override

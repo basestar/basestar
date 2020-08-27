@@ -171,7 +171,7 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
         if(builder instanceof Link.Resolver.Builder) {
             ((Link.Resolver.Builder)builder).setLink(name, link);
         } else {
-            throw new IllegalStateException("Cannot add link to " + builder.type());
+            throw new IllegalStateException("Cannot add link to " + builder.getType());
         }
     }
 
@@ -180,7 +180,7 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
         if(builder instanceof Transient.Resolver.Builder) {
             ((Transient.Resolver.Builder)builder).setTransient(name, trans);
         } else {
-            throw new IllegalStateException("Cannot add link to " + builder.type());
+            throw new IllegalStateException("Cannot add link to " + builder.getType());
         }
     }
 

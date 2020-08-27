@@ -139,7 +139,8 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
             Set<Name> getExpand();
         }
 
-        default String type() {
+        @Override
+        default String getType() {
 
             return TYPE;
         }
@@ -237,11 +238,6 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
         @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private Map<String, Object> extensions;
-
-        public String getType() {
-
-            return TYPE;
-        }
 
         public Builder addGroup(final String name) {
 

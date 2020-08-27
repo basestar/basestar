@@ -165,7 +165,6 @@ public class TestMappingContext {
         final Schema.Builder<?> schema = schemaMapper.schemaBuilder();
 
         System.err.println(schema);
-
     }
 
     @Test

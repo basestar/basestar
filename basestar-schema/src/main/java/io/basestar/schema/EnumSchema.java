@@ -92,7 +92,7 @@ public class EnumSchema implements Schema<String> {
         String TYPE = "enum";
 
         @Override
-        default String type() {
+        default String getType() {
 
             return TYPE;
         }

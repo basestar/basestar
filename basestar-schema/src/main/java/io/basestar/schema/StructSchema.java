@@ -110,7 +110,8 @@ public class StructSchema implements InstanceSchema {
 
         String TYPE = "struct";
 
-        default String type() {
+        @Override
+        default String getType() {
 
             return TYPE;
         }
@@ -165,11 +166,6 @@ public class StructSchema implements InstanceSchema {
         @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private Map<String, Object> extensions;
-
-        public String getType() {
-
-            return TYPE;
-        }
 
         public Builder setProperty(final String name, final Property.Descriptor v) {
 

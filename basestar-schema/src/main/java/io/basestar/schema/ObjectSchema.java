@@ -193,7 +193,8 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
 
         String TYPE = "object";
 
-        default String type() {
+        @Override
+        default String getType() {
 
             return TYPE;
         }
@@ -283,11 +284,6 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
 
         @Nullable
         private Map<String, Object> extensions;
-
-        public String getType() {
-
-            return TYPE;
-        }
 
         @Override
         public Builder setProperty(final String name, final Property.Descriptor v) {
