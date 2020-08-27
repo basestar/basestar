@@ -86,7 +86,20 @@ public class ElasticsearchExpressionVisitor implements ExpressionVisitor.Default
 
     private QueryBuilder eq(final Name name, final Object value) {
 
-        return nest(name, QueryBuilders.termQuery(name.toString(), value));
+        if(value == null) {
+            return nest(name, QueryBuilders.boolQuery().mustNot(QueryBuilders.existsQuery(name.toString())));
+        } else {
+            return nest(name, QueryBuilders.termQuery(name.toString(), value));
+        }
+    }
+
+    private QueryBuilder ne(final Name name, final Object value) {
+
+        if(value == null) {
+            return nest(name, QueryBuilders.existsQuery(name.toString()));
+        } else {
+            return nest(name, QueryBuilders.boolQuery().mustNot(QueryBuilders.termQuery(name.toString(), value)));
+        }
     }
 
     private QueryBuilder lt(final Name name, final Object value) {
@@ -168,8 +181,15 @@ public class ElasticsearchExpressionVisitor implements ExpressionVisitor.Default
     @Override
     public QueryBuilder visitNe(final Ne expression) {
 
-        final QueryBuilder query = visitEqImpl(expression.getLhs(), expression.getRhs());
-        return query == null ? null : QueryBuilders.boolQuery().mustNot(query);
+        final Expression lhs = expression.getLhs();
+        final Expression rhs = expression.getRhs();
+        if (lhs instanceof NameConstant && rhs instanceof Constant) {
+            return ne(((NameConstant) lhs).getName(), ((Constant) rhs).getValue());
+        } else if (lhs instanceof Constant && rhs instanceof NameConstant) {
+            return ne(((NameConstant) rhs).getName(), ((Constant) lhs).getValue());
+        } else {
+            return null;
+        }
     }
 
     @Override
