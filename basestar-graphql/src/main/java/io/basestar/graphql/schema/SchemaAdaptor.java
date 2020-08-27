@@ -45,6 +45,7 @@ public class SchemaAdaptor {
     public TypeDefinitionRegistry typeDefinitionRegistry() {
 
         final TypeDefinitionRegistry registry = new TypeDefinitionRegistry();
+        registry.add(new ScalarTypeDefinition(strategy.anyTypeName()));
         final Map<String, Use<?>> mapTypes = new HashMap<>();
         namespace.getSchemas().forEach((k, schema) -> {
             registry.add(typeDefinition(schema));
@@ -578,7 +579,7 @@ public class SchemaAdaptor {
             @Override
             public Type<?> visitAny(final UseAny type) {
 
-                return new TypeName(GraphQLUtils.STRING_TYPE);
+                return new TypeName(strategy.anyTypeName());
             }
         });
     }
@@ -685,6 +686,12 @@ public class SchemaAdaptor {
             public Type<?> visitView(final UseView type) {
 
                 return new TypeName(strategy.inputTypeName(type.getSchema()));
+            }
+
+            @Override
+            public Type<?> visitAny(final UseAny type) {
+
+                return new TypeName(strategy.anyTypeName());
             }
         });
     }

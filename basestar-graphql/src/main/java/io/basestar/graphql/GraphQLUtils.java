@@ -26,11 +26,14 @@ import graphql.GraphQLContext;
 import graphql.execution.ExecutionContext;
 import graphql.language.*;
 import io.basestar.auth.Caller;
+import io.basestar.expression.type.Values;
 import io.basestar.graphql.subscription.SubscriberContext;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import io.basestar.util.Name;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -204,7 +207,7 @@ public class GraphQLUtils {
                 @Override
                 public Object visitAny(final UseAny type) {
 
-                    throw new UnsupportedOperationException();
+                    return value;
                 }
             });
         }
@@ -304,7 +307,7 @@ public class GraphQLUtils {
                 @Override
                 public Object visitAny(final UseAny type) {
 
-                    throw new UnsupportedOperationException();
+                    return value;
                 }
             });
         }
@@ -484,7 +487,7 @@ public class GraphQLUtils {
                 @Override
                 public Object visitAny(final UseAny type) {
 
-                    throw new UnsupportedOperationException();
+                    return value;
                 }
             });
         }
@@ -719,7 +722,7 @@ public class GraphQLUtils {
                 @Override
                 public Object visitAny(final UseAny type) {
 
-                    throw new UnsupportedOperationException();
+                    return value;
                 }
             });
         }
@@ -823,5 +826,73 @@ public class GraphQLUtils {
             }
         }
         throw new IllegalStateException("Subscription not available");
+    }
+
+    public static Object fromValue(final Object value, final Map<String, Object> variables) {
+
+        if(value instanceof Value<?>) {
+            return fromValue((Value<?>)value, variables);
+        } else {
+            return value;
+        }
+    }
+
+    public static Object fromValue(final Value<?> value, final Map<String, Object> variables) {
+
+        if(value == null || value instanceof NullValue) {
+            return null;
+        } else if(value instanceof ObjectValue) {
+            final Map<String, Object> result = new HashMap<>();
+            ((ObjectValue) value).getObjectFields().forEach(f -> result.put(f.getName(), fromValue(f.getValue(), variables)));
+            return result;
+        } else if(value instanceof ArrayValue) {
+            return ((ArrayValue) value).getValues().stream()
+                    .map(v -> fromValue(v, variables))
+                    .collect(Collectors.toList());
+        } else if(value instanceof StringValue) {
+            return ((StringValue) value).getValue();
+        } else if(value instanceof BooleanValue) {
+            return ((BooleanValue) value).isValue();
+        } else if(value instanceof IntValue) {
+            return ((IntValue) value).getValue().longValue();
+        } else if(value instanceof FloatValue) {
+            return ((FloatValue) value).getValue().doubleValue();
+        } else if(value instanceof EnumValue) {
+            return ((EnumValue) value).getName();
+        } else if(value instanceof VariableReference) {
+            return fromValue(variables.get(((VariableReference) value).getName()), variables);
+        } else {
+            throw new UnsupportedOperationException("Cannot understand " + value.getClass());
+        }
+    }
+
+    public static Value<?> toValue(final Object value) {
+
+        if(value instanceof Value<?>) {
+            return (Value<?>)value;
+        } else if(value == null) {
+            return NullValue.newNullValue().build();
+        } else if(value instanceof Map<?, ?>) {
+            return ObjectValue.newObjectValue().objectFields(((Map<?, ?>) value).entrySet().stream()
+                    .map(e -> ObjectField.newObjectField().name((String)e.getKey()).value(toValue(e.getValue())).build())
+                    .collect(Collectors.toList())).build();
+        } else if(value instanceof Collection<?>) {
+            return ArrayValue.newArrayValue().values(((Collection<?>) value).stream()
+                    .map(GraphQLUtils::toValue)
+                    .collect(Collectors.toList())).build();
+        } else if(value instanceof String) {
+            return StringValue.newStringValue((String)value).build();
+        } else if(value instanceof Boolean) {
+            return BooleanValue.newBooleanValue((Boolean)value).build();
+        } else if(value instanceof Number) {
+            final Number number = (Number) value;
+            if (Values.isInteger((number))) {
+                return IntValue.newIntValue(BigInteger.valueOf(number.longValue())).build();
+            } else {
+                return FloatValue.newFloatValue(BigDecimal.valueOf(number.doubleValue())).build();
+            }
+        } else {
+            throw new UnsupportedOperationException("Cannot understand " + value.getClass());
+        }
     }
 }

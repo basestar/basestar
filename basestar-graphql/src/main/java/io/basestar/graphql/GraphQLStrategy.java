@@ -112,6 +112,8 @@ public interface GraphQLStrategy {
 
     String pageApproxTotalFieldName();
 
+    String anyTypeName();
+
     class Default implements GraphQLStrategy {
 
         protected String delimiter() {
@@ -141,7 +143,7 @@ public interface GraphQLStrategy {
 
         protected String typeName(final Use<?> type) {
 
-            return type.visit(TYPE_NAME_VISITOR);
+            return type.visit(typeNameVisitor);
         }
 
         protected String inputPrefix() {
@@ -372,7 +374,13 @@ public interface GraphQLStrategy {
             return "approxTotal";
         }
 
-        protected final Use.Visitor<String> TYPE_NAME_VISITOR = new Use.Visitor.Defaulting<String>() {
+        @Override
+        public String anyTypeName() {
+
+            return "Any";
+        }
+
+        protected final Use.Visitor<String> typeNameVisitor = new Use.Visitor.Defaulting<String>() {
 
             @Override
             public String visitBoolean(final UseBoolean type) {
@@ -444,6 +452,12 @@ public interface GraphQLStrategy {
             public String visitView(final UseView type) {
 
                 return typeName(type.getSchema());
+            }
+
+            @Override
+            public String visitAny(final UseAny type) {
+
+                return anyTypeName();
             }
         };
     }

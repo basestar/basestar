@@ -19,6 +19,8 @@ Test2:
   properties:
     x:
       type: string?
+    any:
+      type: any
 
 Test3:
   type: object

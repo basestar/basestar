@@ -30,9 +30,9 @@ public class UseAny implements Use<Object> {
         return visitor.visitAny(this);
     }
 
-    public static UseMap<?> from(final Object config) {
+    public static UseAny from(final Object config) {
 
-        return Use.fromNestedConfig(config, (type, nestedConfig) -> new UseMap<>(type));
+        return DEFAULT;
     }
 
     @Override
@@ -62,13 +62,13 @@ public class UseAny implements Use<Object> {
     @Override
     public io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
-        throw new IllegalStateException("FIXME");
+        return new io.swagger.v3.oas.models.media.Schema<>();
     }
 
     @Override
     public void serializeValue(final Object value, final DataOutput out) throws IOException {
 
-        throw new IllegalStateException("FIXME");
+        //FIXME:
     }
 
     @Override
@@ -79,7 +79,8 @@ public class UseAny implements Use<Object> {
 
     public static Object deserializeAnyValue(final DataInput in) throws IOException {
 
-        throw new IllegalStateException("FIXME");
+        //FIXME:
+        return null;
     }
 
     @Override
