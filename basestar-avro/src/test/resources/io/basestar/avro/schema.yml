@@ -10,6 +10,8 @@ A:
     array:
       type:
         array?: C
+    binary:
+      type: binary
   expand:
     - array
     - struct.ref

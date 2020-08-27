@@ -28,6 +28,7 @@ import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.IndexedRecord;
 
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -271,6 +272,12 @@ public class AvroUtils {
 
                 return encode(type.getType(), unwrapOptionalSchema(schema), expand, value);
             }
+
+            @Override
+            public Object visitBinary(final UseBinary type) {
+
+                return ByteBuffer.wrap(type.create(value));
+            }
         });
     }
 
@@ -357,6 +364,16 @@ public class AvroUtils {
             public <T> Object visitOptional(final UseOptional<T> type) {
 
                 return decode(type.getType(), unwrapOptionalSchema(schema), expand, value);
+            }
+
+            @Override
+            public Object visitBinary(final UseBinary type) {
+
+                if(value instanceof ByteBuffer) {
+                    return ((ByteBuffer) value).array();
+                } else {
+                    return type.create(value);
+                }
             }
         });
     }

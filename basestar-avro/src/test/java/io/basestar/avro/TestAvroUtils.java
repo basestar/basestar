@@ -32,6 +32,7 @@ public class TestAvroUtils {
         assertSame(Schema.Type.UNION, avroSchema.getField("array").schema().getType());
         assertSame(Schema.Type.UNION, avroSchema.getField("struct").schema().getType());
         assertSame(Schema.Type.LONG, avroSchema.getField("integer").schema().getType());
+        assertSame(Schema.Type.BYTES, avroSchema.getField("binary").schema().getType());
     }
 
     @Test
@@ -65,6 +66,7 @@ public class TestAvroUtils {
                                 .put("version", 1L)
                                 .build()
                 ))
+                .put("binary", new byte[]{1, 2, 3})
                 .build(), schema.getExpand(), false);
 
         final Schema avroSchema = AvroUtils.schema(schema);
@@ -72,5 +74,6 @@ public class TestAvroUtils {
         final Map<String, Object> after = AvroUtils.decode(schema, avroSchema, record);
 
         assertEquals(before, after);
+
     }
 }
