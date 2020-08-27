@@ -1,0 +1,27 @@
+$version: LATEST
+
+A:
+  type: object
+  properties:
+    struct:
+      type: B?
+    integer:
+      type: integer
+    array:
+      type:
+        array?: C
+  expand:
+    - array
+    - struct.ref
+
+B:
+  type: struct
+  properties:
+    value:
+      type: string
+    ref:
+      type: C?
+
+C:
+  type: object
+

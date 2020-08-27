@@ -40,8 +40,8 @@ public class AvroUtils {
 
     public static Schema schema(final io.basestar.schema.Schema<?> schema) {
 
-        if(schema instanceof LinkableSchema) {
-            return schema(schema, ((LinkableSchema) schema).getExpand());
+        if(schema instanceof InstanceSchema) {
+            return schema(schema, ((InstanceSchema) schema).getExpand());
         } else {
             return schema(schema, Collections.emptySet());
         }
@@ -182,11 +182,7 @@ public class AvroUtils {
 
     public static GenericRecord encode(final InstanceSchema instanceSchema, final Schema schema, final Map<String, Object> object) {
 
-        if(schema instanceof LinkableSchema) {
-            return encode(instanceSchema, schema, ((LinkableSchema) schema).getExpand(), object);
-        } else {
-            return encode(instanceSchema, schema, Collections.emptySet(), object);
-        }
+        return encode(instanceSchema, schema, instanceSchema.getExpand(), object);
     }
 
     public static GenericRecord encode(final InstanceSchema instanceSchema, final Schema schema, final Set<Name> expand, final Map<String, Object> object) {
@@ -265,26 +261,22 @@ public class AvroUtils {
             }
 
             @Override
-            public String visitDate(final UseDate type) {
+            public <T> String visitStringLike(final UseStringLike<T> type) {
 
-                return value.toString();
+                return type.toString(type.create(value));
             }
 
             @Override
-            public String visitDateTime(final UseDateTime type) {
+            public <T> Object visitOptional(final UseOptional<T> type) {
 
-                return value.toString();
+                return encode(type.getType(), unwrapOptionalSchema(schema), expand, value);
             }
         });
     }
 
     public static Map<String, Object> decode(final InstanceSchema instanceSchema, final Schema schema, final IndexedRecord record) {
 
-        if(schema instanceof LinkableSchema) {
-            return decode(instanceSchema, schema, ((LinkableSchema) schema).getExpand(), record);
-        } else {
-            return decode(instanceSchema, schema, Collections.emptySet(), record);
-        }
+        return decode(instanceSchema, schema, instanceSchema.getExpand(), record);
     }
 
     public static Map<String, Object> decode(final InstanceSchema instanceSchema, final Schema schema, final Set<Name> expand, final IndexedRecord record) {
@@ -360,6 +352,22 @@ public class AvroUtils {
 
                 return decode(type.getSchema(), schema, expand, (IndexedRecord)value);
             }
+
+            @Override
+            public <T> Object visitOptional(final UseOptional<T> type) {
+
+                return decode(type.getType(), unwrapOptionalSchema(schema), expand, value);
+            }
         });
+    }
+
+    private static Schema unwrapOptionalSchema(final Schema schema) {
+
+        if(schema.getType() == Schema.Type.UNION) {
+            return schema.getTypes().stream().filter(v -> v.getType() != Schema.Type.NULL).findFirst()
+                    .orElseThrow(() -> new IllegalStateException("Invalid Avro schema"));
+        } else {
+            return schema;
+        }
     }
 }
