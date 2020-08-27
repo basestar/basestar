@@ -86,6 +86,8 @@ public class UseBinary implements UseScalar<byte[]> {
             return null;
         } else if(value instanceof byte[]) {
             return (byte[])value;
+        } else if(value instanceof ByteBuffer) {
+            return ((ByteBuffer) value).array();
         } else if(value instanceof String) {
             return BaseEncoding.base64().decode((String)value);
         } else if(suppress) {
@@ -99,6 +101,12 @@ public class UseBinary implements UseScalar<byte[]> {
     public Code code() {
 
         return Code.BINARY;
+    }
+
+    @Override
+    public byte[] defaultValue() {
+
+        return new byte[0];
     }
 
     @Override

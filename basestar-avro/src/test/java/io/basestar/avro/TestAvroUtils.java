@@ -43,6 +43,8 @@ public class TestAvroUtils {
 
         final Instant now = Instant.now();
 
+
+
         final Map<String, Object> before = schema.create(ImmutableMap.builder()
                 .put("id", "a")
                 .put("created", now)

@@ -43,6 +43,8 @@ public interface APIRequest {
 
     InputStream readBody() throws IOException;
 
+    String getRequestId();
+
     default <T> T readBody(final Class<T> as) throws IOException {
 
         try(final InputStream is = readBody()) {
@@ -130,6 +132,12 @@ public interface APIRequest {
         public InputStream readBody() throws IOException {
 
             return delegate.readBody();
+        }
+
+        @Override
+        public String getRequestId() {
+
+            return delegate.getRequestId();
         }
     }
 

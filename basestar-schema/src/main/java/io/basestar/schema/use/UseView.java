@@ -158,6 +158,12 @@ public class UseView implements UseLinkable {
     }
 
     @Override
+    public Instance defaultValue() {
+
+        return schema.create(Collections.emptyMap());
+    }
+
+    @Override
     public String toString() {
 
         return schema.getQualifiedName().toString();

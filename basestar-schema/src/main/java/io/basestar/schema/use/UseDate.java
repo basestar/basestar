@@ -77,6 +77,12 @@ public class UseDate implements UseStringLike<LocalDate> {
     }
 
     @Override
+    public LocalDate defaultValue() {
+
+        return LocalDate.ofEpochDay(0);
+    }
+
+    @Override
     public Object toConfig(final boolean optional) {
 
         return Use.name(NAME, optional);

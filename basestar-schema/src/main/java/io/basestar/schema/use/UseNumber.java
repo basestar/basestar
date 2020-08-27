@@ -100,6 +100,12 @@ public class UseNumber implements UseNumeric<Double> {
     }
 
     @Override
+    public Double defaultValue() {
+
+        return 0D;
+    }
+
+    @Override
     public io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
         return new NumberSchema();

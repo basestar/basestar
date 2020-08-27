@@ -74,6 +74,12 @@ public class UseDateTime implements UseStringLike<Instant> {
     }
 
     @Override
+    public Instant defaultValue() {
+
+        return Instant.ofEpochMilli(0);
+    }
+
+    @Override
     public Object toConfig(final boolean optional) {
 
         return Use.name(NAME, optional);

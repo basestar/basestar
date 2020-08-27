@@ -90,6 +90,12 @@ public class EnvelopedAPI implements API {
 
                 return new ByteArrayInputStream(bytes);
             }
+
+            @Override
+            public String getRequestId() {
+
+                return request.getRequestId();
+            }
         });
     }
 

@@ -45,6 +45,8 @@ import java.util.Map;
 
 public interface BinaryMatch<T> {
 
+    Void NULL = null;
+
     default T defaultApply(final Object lhs, final Object rhs) {
 
         throw new BadOperandsException(this + " cannot be applied to " + Values.className(lhs) + " and " + Values.className(rhs));
@@ -378,7 +380,7 @@ public interface BinaryMatch<T> {
     default T apply(final Void lhs, final Object rhs) {
 
         if (rhs == null) {
-            return apply(lhs, (Void) null);
+            return apply(lhs, NULL);
         } else if (rhs instanceof Boolean) {
             return apply(lhs, (Boolean) rhs);
         } else if (rhs instanceof Number) {
@@ -401,7 +403,7 @@ public interface BinaryMatch<T> {
     default T apply(final Boolean lhs, final Object rhs) {
 
         if (rhs == null) {
-            return apply(lhs, (Void) null);
+            return apply(lhs, NULL);
         } else if (rhs instanceof Boolean) {
             return apply(lhs, (Boolean) rhs);
         } else if (rhs instanceof Number) {
@@ -424,7 +426,7 @@ public interface BinaryMatch<T> {
     default T apply(final Number lhs, final Object rhs) {
 
         if (rhs == null) {
-            return apply(lhs, (Void) null);
+            return apply(lhs, NULL);
         } else if (rhs instanceof Boolean) {
             return apply(lhs, (Boolean) rhs);
         } else if (rhs instanceof Number) {
@@ -447,7 +449,7 @@ public interface BinaryMatch<T> {
     default T apply(final String lhs, final Object rhs) {
 
         if (rhs == null) {
-            return apply(lhs, (Void) null);
+            return apply(lhs, NULL);
         } else if (rhs instanceof Boolean) {
             return apply(lhs, (Boolean) rhs);
         } else if (rhs instanceof Number) {
@@ -470,7 +472,7 @@ public interface BinaryMatch<T> {
     default T apply(final LocalDate lhs, final Object rhs) {
 
         if (rhs == null) {
-            return apply(lhs, (Void) null);
+            return apply(lhs, NULL);
         } else if (rhs instanceof Boolean) {
             return apply(lhs, (Boolean) rhs);
         } else if (rhs instanceof Number) {
@@ -493,7 +495,7 @@ public interface BinaryMatch<T> {
     default T apply(final Instant lhs, final Object rhs) {
 
         if (rhs == null) {
-            return apply(lhs, (Void) null);
+            return apply(lhs, NULL);
         } else if (rhs instanceof Boolean) {
             return apply(lhs, (Boolean) rhs);
         } else if (rhs instanceof Number) {
@@ -516,7 +518,7 @@ public interface BinaryMatch<T> {
     default T apply(final Collection<?> lhs, final Object rhs) {
 
         if (rhs == null) {
-            return apply(lhs, (Void) null);
+            return apply(lhs, NULL);
         } else if (rhs instanceof Boolean) {
             return apply(lhs, (Boolean) rhs);
         } else if (rhs instanceof Number) {
@@ -539,7 +541,7 @@ public interface BinaryMatch<T> {
     default T apply(final Map<?, ?> lhs, final Object rhs) {
 
         if (rhs == null) {
-            return apply(lhs, (Void) null);
+            return apply(lhs, NULL);
         } else if (rhs instanceof Boolean) {
             return apply(lhs, (Boolean) rhs);
         } else if (rhs instanceof Number) {
@@ -562,7 +564,7 @@ public interface BinaryMatch<T> {
     default T apply(final Object lhs, final Object rhs) {
 
         if (lhs == null) {
-            return apply((Void)null, rhs);
+            return apply(NULL, rhs);
         } else if(lhs instanceof Boolean) {
             return apply((Boolean)lhs, rhs);
         } else if(lhs instanceof Number) {

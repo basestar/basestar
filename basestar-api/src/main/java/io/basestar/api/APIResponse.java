@@ -154,6 +154,10 @@ public interface APIResponse {
             }
             headers.put("X-Caller-Anonymous", caller.isAnon() ? "true" : "false");
         }
+        final String requestId = request.getRequestId();
+        if(requestId != null) {
+            headers.put("X-Request-Id", requestId);
+        }
         if (extraHeaders != null) {
             headers.putAll(extraHeaders);
         }

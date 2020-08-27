@@ -97,6 +97,12 @@ public class UseOptional<T> implements UseContainer<T, T> {
     }
 
     @Override
+    public T defaultValue() {
+
+        return null;
+    }
+
+    @Override
     public Object toConfig(final boolean optional) {
 
         return type.toConfig(true);

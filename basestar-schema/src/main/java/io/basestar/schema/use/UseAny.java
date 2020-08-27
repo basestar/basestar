@@ -152,6 +152,12 @@ public class UseAny implements Use<Object> {
     }
 
     @Override
+    public Object defaultValue() {
+
+        return null;
+    }
+
+    @Override
     public String toString() {
 
         return NAME;

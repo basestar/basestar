@@ -57,7 +57,7 @@ public class URLs {
     public static boolean isLocalFile(final URL url) {
 
         // Copied this check from jackson TokenStreamFactory, assume % is some network path indicator
-        if("file".equals(url.getProtocol())) {
+        if(url != null && "file".equals(url.getProtocol())) {
             final String host = url.getHost();
             if (host == null || host.length() == 0) {
                 final String path = url.getPath();

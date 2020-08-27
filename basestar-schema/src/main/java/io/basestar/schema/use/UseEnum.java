@@ -113,6 +113,13 @@ public class UseEnum implements UseStringLike<String>, UseNamed<String> {
     }
 
     @Override
+    public String defaultValue() {
+
+        final List<String> values = schema.getValues();
+        return values.isEmpty() ? null : values.get(0);
+    }
+
+    @Override
     public void serializeValue(final String value, final DataOutput out) throws IOException {
 
         UseString.DEFAULT.serializeValue(value, out);

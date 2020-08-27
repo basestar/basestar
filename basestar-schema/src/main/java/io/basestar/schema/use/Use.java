@@ -99,6 +99,8 @@ public interface Use<T> extends Serializable {
 
     Set<Name> requiredExpand(Set<Name> names);
 
+    T defaultValue();
+
     @JsonValue
     default Object toConfig() {
 

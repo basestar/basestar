@@ -100,6 +100,12 @@ public class UseInteger implements UseNumeric<Long> {
     }
 
     @Override
+    public Long defaultValue() {
+
+        return 0L;
+    }
+
+    @Override
     public io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
         return new IntegerSchema();

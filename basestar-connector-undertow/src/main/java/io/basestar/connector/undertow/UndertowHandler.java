@@ -40,6 +40,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.Collection;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 @Data
@@ -71,6 +73,14 @@ public class UndertowHandler implements HttpHandler {
                     .forEach(vs -> requestHeaders.putAll(vs.getHeaderName().toString().toLowerCase(), vs));
 
             log.debug("Handling HTTP request (method:{} path:{} query:{} headers:{})", method, path, query, requestHeaders);
+
+            final Collection<String> requestIdHeaders = requestHeaders.get("X-Request-Id");
+            final String requestId;
+            if(requestIdHeaders == null || requestIdHeaders.isEmpty()) {
+                requestId = UUID.randomUUID().toString();
+            } else {
+                requestId = requestIdHeaders.iterator().next();
+            }
 
             final APIRequest request = new APIRequest() {
 
@@ -108,6 +118,12 @@ public class UndertowHandler implements HttpHandler {
                 public InputStream readBody() {
 
                     return new ByteArrayInputStream(body);
+                }
+
+                @Override
+                public String getRequestId() {
+
+                    return requestId;
                 }
             };
 

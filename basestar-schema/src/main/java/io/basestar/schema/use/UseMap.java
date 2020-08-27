@@ -358,6 +358,12 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     }
 
     @Override
+    public Map<String, T> defaultValue() {
+
+        return Collections.emptyMap();
+    }
+
+    @Override
     public String toString() {
 
         return NAME + "<" + type + ">";

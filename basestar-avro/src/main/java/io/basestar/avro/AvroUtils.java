@@ -23,6 +23,7 @@ package io.basestar.avro;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
@@ -191,7 +192,7 @@ public class AvroUtils {
         final GenericRecord record = new GenericData.Record(schema);
         instanceSchema.metadataSchema().forEach((k, v) -> {
             final Schema.Field field = schema.getField(k);
-            record.put(k, encode(v, field.schema(), Collections.emptySet(), object.get(k)));
+            record.put(k, encode(v, field.schema(), Collections.emptySet(), Nullsafe.orDefault(object.get(k), v::defaultValue)));
         });
         final Map<String, Set<Name>> branches = Name.branch(expand);
         instanceSchema.getProperties().forEach((k, v) -> {

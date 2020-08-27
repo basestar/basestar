@@ -199,6 +199,12 @@ public class UseStruct implements UseInstance {
     }
 
     @Override
+    public Instance defaultValue() {
+
+        return schema.create(Collections.emptyMap());
+    }
+
+    @Override
     public String toString() {
 
         return schema.getQualifiedName().toString();

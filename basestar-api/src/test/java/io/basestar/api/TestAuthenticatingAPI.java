@@ -66,6 +66,12 @@ public class TestAuthenticatingAPI {
                 return HashMultimap.create();
             }
 
+            @Override
+            public String getRequestId() {
+
+                return "null";
+            }
+
         }).get();
 
         assertEquals(200, response.getStatusCode());
