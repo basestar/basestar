@@ -29,7 +29,7 @@ public class TestAvroUtils {
         assertSame(Schema.Type.STRING, avroSchema.getField(ObjectSchema.UPDATED).schema().getType());
         assertSame(Schema.Type.STRING, avroSchema.getField(ObjectSchema.HASH).schema().getType());
         assertSame(Schema.Type.LONG, avroSchema.getField(ObjectSchema.VERSION).schema().getType());
-        assertSame(Schema.Type.ARRAY, avroSchema.getField("array").schema().getType());
+        assertSame(Schema.Type.UNION, avroSchema.getField("array").schema().getType());
         assertSame(Schema.Type.UNION, avroSchema.getField("struct").schema().getType());
         assertSame(Schema.Type.LONG, avroSchema.getField("integer").schema().getType());
     }
