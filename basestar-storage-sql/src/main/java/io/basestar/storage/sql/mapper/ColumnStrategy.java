@@ -124,6 +124,12 @@ public interface ColumnStrategy {
                 }
 
                 @Override
+                public ColumnMapper<T> visitAny(final UseAny type) {
+
+                    return json();
+                }
+
+                @Override
                 public <V> ColumnMapper<T> visitArray(final UseArray<V> type) {
 
                     return json();

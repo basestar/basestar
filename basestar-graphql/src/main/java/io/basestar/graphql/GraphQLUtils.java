@@ -200,6 +200,12 @@ public class GraphQLUtils {
 
                     return type.create(BaseEncoding.base64().decode(value.toString()));
                 }
+
+                @Override
+                public Object visitAny(final UseAny type) {
+
+                    throw new UnsupportedOperationException();
+                }
             });
         }
     }
@@ -293,6 +299,12 @@ public class GraphQLUtils {
                 public <T> Object visitStringLike(final UseStringLike<T> type) {
 
                     return type.toString(type.create(value));
+                }
+
+                @Override
+                public Object visitAny(final UseAny type) {
+
+                    throw new UnsupportedOperationException();
                 }
             });
         }
@@ -467,6 +479,12 @@ public class GraphQLUtils {
                     } else {
                         throw new IllegalStateException();
                     }
+                }
+
+                @Override
+                public Object visitAny(final UseAny type) {
+
+                    throw new UnsupportedOperationException();
                 }
             });
         }
@@ -696,6 +714,12 @@ public class GraphQLUtils {
                 public <T> Object visitStringLike(final UseStringLike<T> type) {
 
                     return type.create(value).toString();
+                }
+
+                @Override
+                public Object visitAny(final UseAny type) {
+
+                    throw new UnsupportedOperationException();
                 }
             });
         }

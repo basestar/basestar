@@ -185,6 +185,12 @@ public class Mappings {
 
                         return type.getType().visit(this);
                     }
+
+                    @Override
+                    public FieldType visitAny(final UseAny type) {
+
+                        throw new UnsupportedOperationException();
+                    }
                 });
             }
         }

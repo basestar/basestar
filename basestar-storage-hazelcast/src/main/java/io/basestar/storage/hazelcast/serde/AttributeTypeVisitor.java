@@ -116,6 +116,12 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
         return type.getType().visit(this);
     }
 
+    @Override
+    public AttributeType<?> visitAny(final UseAny type) {
+
+        return AttributeType.encoded(type);
+    }
+
     public static class OfArray implements Use.Visitor<AttributeType<?>> {
 
         public static final OfArray INSTANCE = new OfArray();
@@ -208,6 +214,12 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
         public <T> AttributeType<?> visitOptional(final UseOptional<T> type) {
 
             return type.getType().visit(this);
+        }
+
+        @Override
+        public AttributeType<?> visitAny(final UseAny type) {
+
+            return AttributeType.encodedArray(type);
         }
     }
 }

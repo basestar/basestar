@@ -143,6 +143,12 @@ public class SQLUtils {
 
                 return type.getType().visit(this).nullable(true);
             }
+
+            @Override
+            public DataType<?> visitAny(final UseAny type) {
+
+                return SQLDataType.LONGVARCHAR;//JSONB;
+            }
         });
     }
 
@@ -224,6 +230,12 @@ public class SQLUtils {
 
             @Override
             public String visitStruct(final UseStruct type) {
+
+                return toJson(value);
+            }
+
+            @Override
+            public String visitAny(final UseAny type) {
 
                 return toJson(value);
             }
@@ -397,6 +409,12 @@ public class SQLUtils {
                 } else {
                     return type.getType().visit(this);
                 }
+            }
+
+            @Override
+            public Object visitAny(final UseAny type) {
+
+                return type.create(fromJson(value, new TypeReference<Object>() {}));
             }
         });
     }

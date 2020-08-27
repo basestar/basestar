@@ -191,6 +191,8 @@ public interface Use<T> extends Serializable {
     static Use<?> fromConfig(final String type, final Object config) {
 
         switch(type) {
+            case UseAny.NAME:
+                return UseAny.from(config);
             case UseBoolean.NAME:
                 return UseBoolean.from(config);
             case UseInteger.NAME:
@@ -350,10 +352,7 @@ public interface Use<T> extends Serializable {
 
         <T> R visitOptional(UseOptional<T> type);
 
-        default R visitAny(UseAny type) {
-
-            throw new UnsupportedOperationException();
-        }
+        R visitAny(UseAny type);
 
         interface Defaulting<R> extends Visitor<R> {
 

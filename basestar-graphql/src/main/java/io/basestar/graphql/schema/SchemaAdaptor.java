@@ -574,6 +574,12 @@ public class SchemaAdaptor {
 
                 return new TypeName(GraphQLUtils.STRING_TYPE);
             }
+
+            @Override
+            public Type<?> visitAny(final UseAny type) {
+
+                return new TypeName(GraphQLUtils.STRING_TYPE);
+            }
         });
     }
 

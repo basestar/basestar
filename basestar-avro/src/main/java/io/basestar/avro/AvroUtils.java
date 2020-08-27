@@ -179,6 +179,12 @@ public class AvroUtils {
 
                 return Schema.createUnion(schema(type.getType(), expand), Schema.create(Schema.Type.NULL));
             }
+
+            @Override
+            public Schema visitAny(final UseAny type) {
+
+                throw new UnsupportedOperationException();
+            }
         });
     }
 

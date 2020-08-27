@@ -195,6 +195,12 @@ public class SparkSchemaUtils {
 
                 return type.getType().visit(this);
             }
+
+            @Override
+            public DataType visitAny(final UseAny type) {
+
+                throw new UnsupportedOperationException();
+            }
         });
     }
 
@@ -396,6 +402,12 @@ public class SparkSchemaUtils {
 
                 return type.getType().visit(this);
             }
+
+            @Override
+            public Object visitAny(final UseAny type) {
+
+                throw new UnsupportedOperationException();
+            }
         });
     }
 
@@ -578,6 +590,12 @@ public class SparkSchemaUtils {
             public <T> Object visitOptional(final UseOptional<T> type) {
 
                 return type.getType().visit(this);
+            }
+
+            @Override
+            public Object visitAny(final UseAny type) {
+
+                throw new UnsupportedOperationException();
             }
         });
     }

@@ -55,9 +55,14 @@ public class Localstack {
                 .waitFor(Pattern.compile("CorsParams"))
                 .build());
 
+//        final File dataDir = Files.createTempDir();
+//        final File tmpDir = Files.createTempDir();
+
         TestContainers.ensure(ContainerSpec.builder()
                 .image("localstack/localstack:latest")
                 .env("SERVICES=s3,sqs,sns")
+//                .env("DATA_DIR=" + dataDir)
+//                .env("HOST_TMP_FOLDER=" + tmpDir)
                 .port(S3_PORT)
                 .port(SQS_PORT)
                 .port(SNS_PORT)
