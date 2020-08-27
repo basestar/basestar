@@ -38,6 +38,8 @@ import lombok.RequiredArgsConstructor;
 import java.io.Serializable;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.function.Function;
 
@@ -88,8 +90,10 @@ public interface TypeMapper extends Serializable {
             return new OfMap(type.erasedType(), context.typeMapper(valueType));
         } else if (LocalDate.class.isAssignableFrom(erased)) {
             return new OfDate(type.erasedType());
+        } else if (LocalDateTime.class.isAssignableFrom(erased)) {
+            return new OfLocalDateTime();
         } else if (Instant.class.isAssignableFrom(erased)) {
-            return new OfDateTime(type.erasedType());
+            return new OfInstant();
         } else if (Map.class.isAssignableFrom(erased)) {
             final TypeContext mapContext = type.find(Map.class);
             final TypeContext valueType = mapContext.typeParameters().get(1).type();
@@ -527,9 +531,7 @@ public interface TypeMapper extends Serializable {
     }
 
     @RequiredArgsConstructor
-    class OfDateTime implements TypeMapper {
-
-        private final Class<?> erasedType;
+    abstract class OfDateTime<T> implements TypeMapper {
 
         @Override
         public Use<?> use() {
@@ -538,27 +540,73 @@ public interface TypeMapper extends Serializable {
         }
 
         @Override
+        public abstract Class<T> erasedType();
+
+        public abstract T marshallInstant(final Instant value);
+
+        public abstract Instant unmarshallInstant(final T value);
+
+        @Override
+        @SuppressWarnings("unchecked")
         public Object unmarshall(final Object value) {
 
-            return UseDateTime.DEFAULT.create(value);
+            return unmarshallInstant((T)value);
         }
 
         @Override
         public Object marshall(final Object value) {
 
-            return Coercion.toDateTime(value);
-        }
-
-        @Override
-        public Class<?> erasedType() {
-
-            return erasedType;
+            return marshallInstant(Coercion.toDateTime(value));
         }
 
         @Override
         public Set<Class<?>> dependencies() {
 
             return Collections.emptySet();
+        }
+    }
+
+    @RequiredArgsConstructor
+    class OfInstant extends OfDateTime<Instant> {
+
+        @Override
+        public Class<Instant> erasedType() {
+
+            return Instant.class;
+        }
+
+        @Override
+        public Instant marshallInstant(final Instant value) {
+
+            return value;
+        }
+
+        @Override
+        public Instant unmarshallInstant(final Instant value) {
+
+            return value;
+        }
+    }
+
+    @RequiredArgsConstructor
+    class OfLocalDateTime extends OfDateTime<LocalDateTime> {
+
+        @Override
+        public Class<LocalDateTime> erasedType() {
+
+            return LocalDateTime.class;
+        }
+
+        @Override
+        public LocalDateTime marshallInstant(final Instant value) {
+
+            return LocalDateTime.ofInstant(value, ZoneOffset.UTC.normalized());
+        }
+
+        @Override
+        public Instant unmarshallInstant(final LocalDateTime value) {
+
+            return value.toInstant(ZoneOffset.UTC);
         }
     }
 

@@ -44,6 +44,7 @@ import javax.validation.constraints.Size;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -67,7 +68,7 @@ public class TestMappingContext {
 
         @Created
         @Nullable
-        private Instant created;
+        private LocalDateTime created;
 
         @Updated
         @Nullable
@@ -129,18 +130,19 @@ public class TestMappingContext {
         final SchemaMapper<Post, Instance> schemaMapper = mappingContext.schemaMapper(Post.class);
         final Schema.Builder<?> schema = schemaMapper.schemaBuilder();
 
-        final Post post = schemaMapper.marshall(new Instance(ImmutableMap.of(
-                io.basestar.schema.ObjectSchema.ID, "test",
-//                Reserved.VERSION, 1L,
-                "date", "2020-01-01",
-                "comments", ImmutableList.of(ImmutableMap.of(
+        final Post post = schemaMapper.marshall(new Instance(ImmutableMap.<String, Object>builder()
+                .put(io.basestar.schema.ObjectSchema.ID, "test")
+                .put("updated", Instant.now())
+                .put("created", Instant.now())
+                .put("date", "2020-01-01")
+                .put("comments", ImmutableList.of(ImmutableMap.of(
                         io.basestar.schema.ObjectSchema.ID, "c1"
-                )),
-                "comment", ImmutableMap.of(
+                )))
+                .put("comment", ImmutableMap.of(
                         io.basestar.schema.ObjectSchema.ID, "c1"
-                ),
-                "value", (byte) 12
-        )));
+                ))
+                .put("value", (byte) 12)
+                .build()));
 
         System.err.println(schema);
         System.err.println(post);
