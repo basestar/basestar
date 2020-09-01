@@ -33,6 +33,8 @@ import io.basestar.schema.exception.MissingPropertyException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseInstance;
+import io.basestar.schema.use.UseScalar;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
@@ -230,6 +232,31 @@ public class Property implements Member {
         } else {
             return type;
         }
+    }
+
+    @Override
+    public boolean supportsTrivialJoin(final Set<Name> expand) {
+
+        return type.visit(new Use.Visitor.Defaulting<Boolean>() {
+
+            @Override
+            public <T> Boolean visitDefault(final Use<T> type) {
+
+                return false;
+            }
+
+            @Override
+            public <T> Boolean visitScalar(final UseScalar<T> type) {
+
+                return true;
+            }
+
+            @Override
+            public Boolean visitInstance(final UseInstance type) {
+
+                return type.getSchema().supportsTrivialJoin(expand);
+            }
+        });
     }
 
     @Override

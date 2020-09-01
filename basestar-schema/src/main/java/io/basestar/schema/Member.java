@@ -38,6 +38,8 @@ public interface Member extends Named, Described, Serializable, Extendable {
 
     String VAR_VALUE = "value";
 
+    boolean supportsTrivialJoin(Set<Name> expand);
+
     interface Descriptor extends Described, Extendable {
 
         @JsonInclude(JsonInclude.Include.NON_DEFAULT)

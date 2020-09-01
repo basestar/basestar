@@ -22,6 +22,9 @@ package io.basestar.schema;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
+import io.basestar.schema.use.UseDateTime;
+import io.basestar.schema.use.UseInteger;
+import io.basestar.schema.use.UseString;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
 
@@ -155,7 +158,7 @@ public class Instance extends AbstractMap<String, Object> implements Serializabl
 
     public static Name getSchema(final Map<String, Object> data) {
 
-        final String qualifiedName = (String)data.get(ObjectSchema.SCHEMA);
+        final String qualifiedName = UseString.DEFAULT.create(data.get(ObjectSchema.SCHEMA));
         return qualifiedName == null ? null : Name.parse(qualifiedName);
     }
 
@@ -166,7 +169,7 @@ public class Instance extends AbstractMap<String, Object> implements Serializabl
 
     public static String getId(final Map<String, Object> object) {
 
-        return (String)object.get(ObjectSchema.ID);
+        return UseString.DEFAULT.create(object.get(ObjectSchema.ID));
     }
 
     public static void setId(final Map<String, Object> object, final String id) {
@@ -176,8 +179,7 @@ public class Instance extends AbstractMap<String, Object> implements Serializabl
 
     public static Long getVersion(final Map<String, Object> object) {
 
-        final Number number = (Number)object.get(ObjectSchema.VERSION);
-        return number == null ? null : number.longValue();
+        return UseInteger.DEFAULT.create(object.get(ObjectSchema.VERSION));
     }
 
     public static void setVersion(final Map<String, Object> object, final Long version) {
@@ -187,7 +189,7 @@ public class Instance extends AbstractMap<String, Object> implements Serializabl
 
     public static String getHash(final Map<String, Object> object) {
 
-        return (String)object.get(ObjectSchema.HASH);
+        return UseString.DEFAULT.create(object.get(ObjectSchema.HASH));
     }
 
     public static void setHash(final Map<String, Object> object, final String hash) {
@@ -197,7 +199,7 @@ public class Instance extends AbstractMap<String, Object> implements Serializabl
 
     public static Instant getCreated(final Map<String, Object> object) {
 
-        return (Instant)object.get(ObjectSchema.CREATED);
+        return UseDateTime.DEFAULT.create(object.get(ObjectSchema.CREATED));
     }
 
     public static void setCreated(final Map<String, Object> object, final Instant created) {
@@ -207,7 +209,7 @@ public class Instance extends AbstractMap<String, Object> implements Serializabl
 
     public static Instant getUpdated(final Map<String, Object> object) {
 
-        return (Instant)object.get(ObjectSchema.UPDATED);
+        return UseDateTime.DEFAULT.create(object.get(ObjectSchema.UPDATED));
     }
 
     public static void setUpdated(final Map<String, Object> object, final Instant updated) {

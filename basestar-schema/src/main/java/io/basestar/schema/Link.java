@@ -162,6 +162,12 @@ public class Link implements Member {
     }
 
     @Override
+    public boolean supportsTrivialJoin(final Set<Name> expand) {
+
+        return single;
+    }
+
+    @Override
     public Use<?> getType() {
 
         if(single) {

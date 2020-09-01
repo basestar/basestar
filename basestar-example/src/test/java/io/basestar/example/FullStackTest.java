@@ -42,6 +42,7 @@ import io.basestar.storage.dynamodb.DynamoDBUtils;
 import io.basestar.storage.s3.S3Stash;
 import io.basestar.test.Localstack;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.model.TableDescription;
@@ -72,6 +73,7 @@ public class FullStackTest {
     }
 
     @Test
+    @Disabled
     public void test() throws IOException {
 
         final S3AsyncClient s3 = S3AsyncClient.builder()

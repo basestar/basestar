@@ -24,7 +24,10 @@ import io.basestar.schema.Schema;
 import io.basestar.util.Name;
 
 import java.io.Serializable;
+import java.util.Collection;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public interface SchemaMapper<T, O> extends Serializable {
 
@@ -44,6 +47,16 @@ public interface SchemaMapper<T, O> extends Serializable {
     T marshall(Object value);
 
     O unmarshall(T value);
+
+    default List<T> marshall(Collection<?> values) {
+
+        return values.stream().map(this::marshall).collect(Collectors.toList());
+    }
+
+    default List<O> unmarshall(Collection<? extends T> values) {
+
+        return values.stream().map(this::unmarshall).collect(Collectors.toList());
+    }
 
     Set<Class<?>> dependencies();
 

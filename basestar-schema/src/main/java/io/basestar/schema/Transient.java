@@ -153,6 +153,12 @@ public class Transient implements Member {
     }
 
     @Override
+    public boolean supportsTrivialJoin(final Set<Name> expand) {
+
+        return false;
+    }
+
+    @Override
     public Optional<Use<?>> layout(final Set<Name> expand) {
 
         return Optional.empty();

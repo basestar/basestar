@@ -350,6 +350,21 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
         return versions;
     }
 
+    default boolean supportsTrivialJoin(final Set<Name> expand) {
+
+        final Map<String, Set<Name>> branches = Name.branch(expand);
+        return getMembers().entrySet().stream().allMatch(entry -> {
+            final String name = entry.getKey();
+            final Member member = entry.getValue();
+            final Set<Name> memberExpand = branches.get(name);
+            if(memberExpand != null) {
+                return member.supportsTrivialJoin(memberExpand);
+            } else {
+                return true;
+            }
+        });
+    }
+
     @Override
     Descriptor descriptor();
 }

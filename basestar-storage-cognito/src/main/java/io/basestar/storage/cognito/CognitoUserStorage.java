@@ -33,10 +33,7 @@ import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
 import io.basestar.storage.Versioning;
-import io.basestar.util.Name;
-import io.basestar.util.Page;
-import io.basestar.util.Pager;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
@@ -51,6 +48,8 @@ import java.util.stream.Collectors;
 
 @Slf4j
 public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.WithoutHistory, Storage.WithoutAggregate, Storage.WithoutExpand, Storage.WithoutRepair {
+
+    public static final int MAX_PAGE_SIZE = 50;
 
     private static final String CUSTOM_ATTR_PREFIX = "custom:";
 
@@ -131,12 +130,12 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
 
     private String decodePaging(final Page.Token token) {
 
-        return null;
+        return Nullsafe.map(token, Page.Token::toString);
     }
 
-    private Page.Token encodePaging(final String s) {
+    private Page.Token encodePaging(final String token) {
 
-        return null;
+        return Nullsafe.map(token, Page.Token::new);
     }
 
     @Override
