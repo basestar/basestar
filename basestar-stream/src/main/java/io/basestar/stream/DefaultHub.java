@@ -25,6 +25,7 @@ import com.google.common.collect.Sets;
 import io.basestar.auth.Caller;
 import io.basestar.database.event.ObjectCreatedEvent;
 import io.basestar.database.event.ObjectDeletedEvent;
+import io.basestar.database.event.ObjectRefreshedEvent;
 import io.basestar.database.event.ObjectUpdatedEvent;
 import io.basestar.event.Emitter;
 import io.basestar.event.Event;
@@ -54,6 +55,7 @@ public class DefaultHub implements Hub {
             .on(ObjectCreatedEvent.class, DefaultHub::onObjectCreated)
             .on(ObjectUpdatedEvent.class, DefaultHub::onObjectUpdated)
             .on(ObjectDeletedEvent.class, DefaultHub::onObjectDeleted)
+            .on(ObjectRefreshedEvent.class, DefaultHub::onObjectRefreshed)
             .on(SubscriptionQueryEvent.class, DefaultHub::onSubscriptionQuery)
             .on(SubscriptionPublishEvent.class, DefaultHub::onSubscriptionPublish)
             .build();
@@ -127,6 +129,15 @@ public class DefaultHub implements Hub {
         final Map<String, Object> before = event.getBefore();
         final Set<Subscription.Key> keys = keys(schema, before);
         return emitter.emit(SubscriptionQueryEvent.of(schema.getQualifiedName(), event.getId(), Change.Event.DELETE, before, null, keys));
+    }
+
+    private CompletableFuture<?> onObjectRefreshed(final ObjectRefreshedEvent event) {
+
+        final ObjectSchema schema = namespace.requireObjectSchema(event.getSchema());
+        final Map<String, Object> before = event.getBefore();
+        final Map<String, Object> after = event.getAfter();
+        final Set<Subscription.Key> keys = Sets.union(keys(schema, after), keys(schema, before));
+        return emitter.emit(SubscriptionQueryEvent.of(schema.getQualifiedName(), event.getId(), Change.Event.REFRESH, before, null, keys));
     }
 
     private CompletableFuture<?> onSubscriptionQuery(final SubscriptionQueryEvent event) {

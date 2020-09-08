@@ -32,6 +32,10 @@ import java.util.stream.Stream;
 
 public class Text {
 
+    private static Pattern NUMERIC = Pattern.compile("-?\\d+(\\.\\d+)?");
+
+    private static Pattern INTEGER = Pattern.compile("-?\\d+");
+
     private static final Set<String> PLURAL_ES = ImmutableSet.of("s", "sh", "ch", "x", "z", "o");
 
     private static final Set<String> PLURAL_VES = ImmutableSet.of("f", "fe");
@@ -157,6 +161,25 @@ public class Text {
         } else {
             // Probably some version of camelCase
             return Arrays.stream(str.split("(?<!(^|[A-Z]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])"));
+        }
+    }
+
+    public static boolean isNumber(final String str) {
+
+        return NUMERIC.matcher(str).matches();
+    }
+
+    public static boolean isInteger(final String str) {
+
+        return INTEGER.matcher(str).matches();
+    }
+
+    public static Number parseNumber(final String str) {
+
+        if(str.contains(".") || str.contains("e")) {
+            return Double.parseDouble(str);
+        } else {
+            return Long.parseLong(str);
         }
     }
 }

@@ -31,8 +31,13 @@ import io.basestar.event.Emitter;
 import io.basestar.event.Event;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.expression.compare.Eq;
+import io.basestar.expression.constant.Constant;
+import io.basestar.expression.constant.NameConstant;
+import io.basestar.expression.logical.Or;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Namespace;
+import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.schema.util.Ref;
@@ -649,7 +654,7 @@ public class TestDatabaseServer {
 
         database.onObjectCreated(ObjectCreatedEvent.of(TEAM, "t1", ok.get("team"))).join();
 
-        final RefQueryEvent queryEvent = RefQueryEvent.of(Ref.of(TEAM, "t1"), TEAM_MEMBER, Expression.parse("team.id == 't1'").bind(Context.init()));
+        final RefQueryEvent queryEvent = RefQueryEvent.of(Ref.of(TEAM, "t1"), TEAM_MEMBER, Expression.parse("team.id == 't1' || team.parent.id == 't1'").bind(Context.init()));
 
         final ArgumentCaptor<Event> queryCaptor = ArgumentCaptor.forClass(Event.class);
         verify(emitter, times(4)).emit(queryCaptor.capture());
@@ -695,7 +700,7 @@ public class TestDatabaseServer {
                         ))
                         .build())
                 .build()).get();
-        assertEquals(2, init.size());
+        assertEquals(1, update.size());
 
         final RefRefreshEvent refreshEvent = RefRefreshEvent.of(Ref.of(TEAM, "t1"), TEAM_MEMBER, member.getId());
 
@@ -704,6 +709,119 @@ public class TestDatabaseServer {
         final Page<Instance> get = database.query(Caller.SUPER, TEAM_MEMBER, Expression.parse("team.name == 'Test'")).get();
         assertEquals(1, get.size());
     }
+
+    @Test
+    public void deepExpandRefresh() throws Exception {
+
+        final Instance teamA = database.create(Caller.SUPER, CreateOptions.builder()
+                .schema(TEAM)
+                .data(ImmutableMap.of(
+                        "name", "a"
+                ))
+                .build()).get();
+
+        final Instance teamB = database.create(Caller.SUPER, CreateOptions.builder()
+                .schema(TEAM)
+                .data(ImmutableMap.of(
+                        "name", "b",
+                        "parent", ObjectSchema.ref(teamA.getId())
+                ))
+                .build()).get();
+
+        final Instance member = database.create(Caller.SUPER, CreateOptions.builder()
+                .schema(TEAM_MEMBER)
+                .data(ImmutableMap.of(
+                        "team", ObjectSchema.ref(teamB.getId())
+                ))
+                .build()).get();
+
+        final Instance updateTeamA = database.update(Caller.SUPER, UpdateOptions.builder()
+                .schema(TEAM)
+                .id(teamA.getId())
+                .data(ImmutableMap.of(
+                        "name", "a2"
+                ))
+                .build()).get();
+
+        final ObjectUpdatedEvent updated = ObjectUpdatedEvent.of(TEAM, teamA.getId(), 1L, teamA, updateTeamA);
+        database.onObjectUpdated(updated).get();
+
+        database.onRefQuery(RefQueryEvent.of(Ref.of(TEAM, teamA.getId()), TEAM_MEMBER, new Or(
+                new Eq(new NameConstant(Name.parse("team.id")), new Constant(teamA.getId())),
+                new Eq(new NameConstant(Name.parse("team.parent.id")), new Constant(teamA.getId()))))).get();
+        database.onRefRefresh(RefRefreshEvent.of(Ref.of(TEAM, teamA.getId()), TEAM_MEMBER, member.getId()));
+
+        final Instance get = database.read(Caller.SUPER, ReadOptions.builder()
+                .schema(TEAM_MEMBER)
+                .id(member.getId())
+                .expand(Name.parseSet("team.parent"))
+                .build()).get();
+
+        assertNotNull(get);
+        assertEquals("a2", Instance.get(get, Name.parse("team.parent.name")));
+    }
+
+//    @Test
+//    public void createValidation() throws Exception {
+//
+//        database.create(Caller.SUPER, CreateOptions.builder()
+//                .schema(TEAM)
+//                .id("test")
+//                .data(ImmutableMap.of(
+//                        "schema", TEAM_MEMBER.toString(),
+//                        "id", "test2"
+//                ))
+//                .build()).get();
+//    }
+//
+//    @Test
+//    public void updateValidation() throws Exception {
+//
+//        database.create(Caller.SUPER, CreateOptions.builder()
+//                .schema(TEAM)
+//                .id("test")
+//                .data(ImmutableMap.of(
+//                ))
+//                .build()).get();
+//
+//        database.update(Caller.SUPER, UpdateOptions.builder()
+//                .schema(TEAM)
+//                .id("test")
+//                .data(ImmutableMap.of(
+//                        "schema", TEAM_MEMBER.toString(),
+//                        "id", "test2"
+//                ))
+//                .build()).get();
+//    }
+
+//    @Test
+//    public void deleteBroken() throws Exception {
+//
+//        final ObjectSchema schema = database.objectSchema(TEAM);
+//
+//        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
+//                .createObject(schema, "test", ImmutableMap.of("schema", schema.getName(), "id", "test2"))
+//                .write().get();
+//
+//        final Instance getBefore = database.read(Caller.SUPER, ReadOptions.builder()
+//                .schema(TEAM)
+//                .id("test")
+//                .build()).get();
+//
+//        assertNotNull(getBefore);
+//
+//        database.delete(Caller.SUPER, DeleteOptions.builder()
+//                .schema(TEAM)
+//                .id("test")
+//                .build()).get();
+//
+//        final Instance getAfter = database.read(Caller.SUPER, ReadOptions.builder()
+//                .schema(TEAM)
+//                .id("test")
+//                .build()).get();
+//
+//        assertNull(getAfter);
+//    }
 
     @Test
     @Disabled

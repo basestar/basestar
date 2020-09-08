@@ -62,7 +62,6 @@ public class ElasticsearchStorageTraits implements StorageTraits {
     @Override
     public boolean supportsAggregation() {
 
-        // FIXME:
         return false;
     }
 

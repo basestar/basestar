@@ -22,7 +22,6 @@ package io.basestar.spark.expression;
 
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.*;
-import io.basestar.expression.constant.Constant;
 import lombok.RequiredArgsConstructor;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
@@ -65,7 +64,7 @@ public class SparkAggregateVisitor implements AggregateVisitor<Column> {
     @Override
     public Column visitCount(final Count aggregate) {
 
-        final Column input = columnResolver.apply(new Constant(true));
+        final Column input = columnResolver.apply(aggregate.getPredicate());
         return functions.count(input);
     }
 

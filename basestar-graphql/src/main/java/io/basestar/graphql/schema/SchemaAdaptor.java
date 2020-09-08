@@ -279,6 +279,7 @@ public class SchemaAdaptor {
         builder.name(GraphQLUtils.SUBSCRIPTION_TYPE);
         namespace.forEachObjectSchema((schemaName, schema) -> {
             builder.fieldDefinition(subscribeDefinition(schema));
+            builder.fieldDefinition(subscribeQueryDefinition(schema));
         });
         return builder.build();
     }
@@ -290,6 +291,16 @@ public class SchemaAdaptor {
         builder.type(new TypeName(strategy.typeName(schema)));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(strategy.idArgumentName()).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build());
+        return builder.build();
+    }
+
+    public FieldDefinition subscribeQueryDefinition(final ObjectSchema schema) {
+
+        final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
+        builder.name(strategy.subscribeQueryMethodName(schema));
+        builder.type(new TypeName(strategy.typeName(schema)));
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name(strategy.queryArgumentName()).type(new TypeName(GraphQLUtils.STRING_TYPE)).build());
         return builder.build();
     }
 

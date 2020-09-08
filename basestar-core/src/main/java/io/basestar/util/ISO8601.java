@@ -57,13 +57,23 @@ public class ISO8601 {
             return ((Date) value).toInstant();
         } else if(value instanceof String) {
             return parseDateTime((String)value);
+        } else if(value instanceof Number) {
+            return toDateTime(((Number)value).longValue());
         } else {
             throw new InvalidDateTimeException(value);
         }
     }
 
+    private static Instant toDateTime(final long value) {
+
+        return Instant.ofEpochMilli(value);
+    }
+
     public static Instant parseDateTime(final String value) {
 
+        if(Text.isInteger(value)) {
+            return toDateTime(Long.parseLong(value));
+        }
         for(final DateTimeFormatter formatter: ZONED_DATE_TIME_INPUT_FORMATS) {
             try {
                 return formatter.parse(value, ZonedDateTime::from).toInstant();
@@ -97,7 +107,7 @@ public class ISO8601 {
         } else if(value instanceof Date) {
             return toDate(((Date) value).toInstant());
         } else if(value instanceof String) {
-            return parseDate((String)value);
+            return parseDate((String) value);
         } else {
             throw new InvalidDateException(value);
         }

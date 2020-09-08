@@ -746,4 +746,15 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
 
         return qualifiedNameHashCode();
     }
+
+    public void validateObject(final String id, final Instance after) {
+
+        if(!id.equals(Instance.getId(after))) {
+            throw new IllegalStateException("Instance validation failed: id mismatch");
+        }
+        final Name schemaName = Instance.getSchema(after);
+        if(schemaName == null || !isAssignableFrom(schemaName)) {
+            throw new IllegalStateException("Instance validation failed: schema mismatch");
+        }
+    }
 }

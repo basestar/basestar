@@ -33,5 +33,6 @@ public class TestConstraints {
         assertTrue(constraints.contains(Constraint.of(new MaxValidation.Validator(BigDecimal.valueOf(100), false), "short max")));
         assertTrue(constraints.contains(Constraint.of(new PatternValidation.Validator("[\\w\\d]+", ImmutableSet.of(Pattern.Flag.CASE_INSENSITIVE)), "full pattern")));
         assertTrue(constraints.contains(Constraint.of(new PatternValidation.Validator("[\\w\\d]*"), "short pattern")));
+        assertTrue(constraints.contains(Constraint.of(new PatternValidation.Validator("[\\w\\d]*"), "short pattern")));
     }
 }

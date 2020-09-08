@@ -36,4 +36,5 @@ Constrained:
           message: "full assert"
         - assert: "value != 2"
           message: "short assert"
+        - pattern: "[^\\s]+"
 

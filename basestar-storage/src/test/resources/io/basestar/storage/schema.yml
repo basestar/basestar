@@ -161,8 +161,8 @@ Expanded:
     source:
       type: RefTarget
   expand:
-    - target.hello
-    - source.hello
+    - target
+    - source
   indexes:
     expanded:
       partition:

@@ -228,7 +228,7 @@ public class GraphQLTest {
         final GraphQL graphQL = graphQL(namespace);
 
         final SubscriberContext subscriberContext = mock(SubscriberContext.class);
-        when(subscriberContext.subscribe(any(), any(), any(), any())).thenReturn(CompletableFuture.completedFuture(null));
+        when(subscriberContext.subscribe(any(), anyString(), any(), any())).thenReturn(CompletableFuture.completedFuture(null));
 
         graphQL.execute(ExecutionInput.newExecutionInput()
                 .context(GraphQLContext.newContext().of("subscriber", subscriberContext).build())
@@ -249,7 +249,7 @@ public class GraphQLTest {
         final GraphQL graphQL = graphQL(namespace);
 
         final SubscriberContext subscriberContext = mock(SubscriberContext.class);
-        when(subscriberContext.subscribe(any(), any(), any(), any())).thenReturn(CompletableFuture.completedFuture(null));
+        when(subscriberContext.subscribe(any(), anyString(), any(), any())).thenReturn(CompletableFuture.completedFuture(null));
 
         graphQL.execute(ExecutionInput.newExecutionInput()
                 .context(GraphQLContext.newContext().of("subscriber", subscriberContext).build())

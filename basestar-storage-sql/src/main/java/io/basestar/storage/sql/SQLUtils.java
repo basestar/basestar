@@ -532,4 +532,53 @@ public class SQLUtils {
             }
         });
     }
+
+    public static <T> Field<T> field(final QueryPart part, final Class<T> type) {
+
+        if(part == null) {
+            return null;
+        } else if(part instanceof Field<?>) {
+            return cast((Field<?>) part, type);
+        } else if(part instanceof Condition){
+            return cast(DSL.field((Condition)part), type);
+        } else {
+            throw new IllegalStateException();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> Field<T> cast(final Field<?> field, final Class<T> type) {
+
+        if(type == Object.class) {
+            return (Field<T>)field;
+        } else {
+            return field.cast(type);
+        }
+    }
+
+    public static Field<?> field(final QueryPart part) {
+
+        if(part == null) {
+            return null;
+        } else if(part instanceof Field<?>) {
+            return (Field<?>)part;
+        } else if(part instanceof Condition){
+            return DSL.field((Condition)part);
+        } else {
+            throw new IllegalStateException();
+        }
+    }
+
+    public static Condition condition(final QueryPart part) {
+
+        if(part == null) {
+            return null;
+        } else if(part instanceof Field<?>) {
+            return DSL.condition(((Field<?>)part).cast(Boolean.class));
+        } else if(part instanceof Condition){
+            return (Condition)part;
+        } else {
+            throw new IllegalStateException();
+        }
+    }
 }

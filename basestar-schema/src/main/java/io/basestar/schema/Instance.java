@@ -67,6 +67,12 @@ public class Instance extends AbstractMap<String, Object> implements Serializabl
         return comparator(Sort.asc(ObjectSchema.ID_NAME));
     }
 
+    @SuppressWarnings("unchecked")
+    public static <T> T get(final Map<String, Object> instance, final Name name) {
+
+        return (T)name.apply(instance);
+    }
+
     public Name getSchema() {
 
         return getSchema(backing);

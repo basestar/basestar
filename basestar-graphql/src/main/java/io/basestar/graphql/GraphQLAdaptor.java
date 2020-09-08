@@ -446,6 +446,7 @@ public class GraphQLAdaptor {
         final Map<String, DataFetcher> results = new HashMap<>();
         namespace.forEachObjectSchema((schemaName, schema) -> {
             results.put(strategy.subscribeMethodName(schema), subscribeFetcher(schema));
+            results.put(strategy.subscribeQueryMethodName(schema), subscribeQueryFetcher(schema));
         });
         return results;
     }
@@ -461,6 +462,19 @@ public class GraphQLAdaptor {
             final String id = env.getArgument(strategy.idArgumentName());
             return subscriberContext.subscribe(schema, id, alias, names)
                     .thenCompose(ignored -> read(caller, schema, id, null, expand));
+        };
+    }
+
+    private DataFetcher<CompletableFuture<?>> subscribeQueryFetcher(final ObjectSchema schema) {
+
+        return (env) -> {
+            final SubscriberContext subscriberContext = GraphQLUtils.subscriber(env.getContext());
+            final Set<Name> names = paths(env);
+            final String alias = Nullsafe.orDefault(env.getField().getAlias(), () -> strategy.subscribeMethodName(schema));
+            final String query = env.getArgument(strategy.queryArgumentName());
+            final Expression expression = Expression.parse(query);
+            return subscriberContext.subscribe(schema, expression, alias, names)
+                    .thenApply(ignored -> Collections.emptyList());
         };
     }
 

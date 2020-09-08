@@ -207,9 +207,15 @@ public class Link implements Member {
     private Page<Instance> toArray(final Object value) {
 
         if(single) {
-            return value == null ? Page.empty() : Page.single((Instance)value);
-        } else {
+            return value == null ? Page.empty() : Page.single((Instance) value);
+        } else if(value == null) {
+            return null;
+        } else if(value instanceof Page) {
             return (Page<Instance>)value;
+        } else if(value instanceof List) {
+            return new Page<>((List<Instance>)value, null);
+        } else {
+            throw new IllegalStateException();
         }
     }
 

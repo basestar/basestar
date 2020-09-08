@@ -70,15 +70,6 @@ public class Values {
         return value instanceof Float || value instanceof Double || value instanceof BigDecimal;
     }
 
-    public static Number parseNumber(final String str) {
-
-        if(str.contains(".") || str.contains("e")) {
-            return Double.parseDouble(str);
-        } else {
-            return Long.parseLong(str);
-        }
-    }
-
     @SuppressWarnings("unchecked")
     public static int compare(final Object a, final Object b) {
 

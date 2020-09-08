@@ -7,6 +7,8 @@ Team:
       type: string?
     description:
       type: string?
+    parent:
+      type: Team?
 
   links:
     members:
@@ -54,13 +56,16 @@ TeamMember:
       type: boolean?
 
   expand:
-    - team
+    - team.parent
     - user
 
   indexes:
     team:
       partition:
         - team.id
+    parent:
+      partition:
+        - team.parent.id
     user:
       partition:
         - user.id

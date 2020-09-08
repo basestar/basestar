@@ -671,6 +671,27 @@ public abstract class TestStorage {
         return false;
     }
 
+//    @Test
+//    public void testReadBadItem() throws Exception {
+//
+//        final Storage storage = storage(namespace);
+//
+//        final ObjectSchema schema = namespace.requireObjectSchema(ADDRESS);
+//
+//        final String id1 = UUID.randomUUID().toString();
+//        final String id2 = UUID.randomUUID().toString();
+//
+//        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
+//                .createObject(schema, id1, ImmutableMap.of("id", id2, "schema", "broken", "version", 1L))
+//                .write().get();
+//
+//        final BatchResponse read = storage.read(Consistency.ATOMIC)
+//                .readObject(schema, id1, ImmutableSet.of())
+//                .read().get();
+//
+//        assertNotNull(read.getObject(schema, id1));
+//    }
+
     @Test
     public void testAggregation() throws IOException {
 
@@ -681,7 +702,8 @@ public abstract class TestStorage {
         assumeTrue(storage.storageTraits(schema).supportsAggregation(),
                 "Aggregation must be enabled for this test");
 
-        bulkLoad(storage, loadAddresses());
+        final Multimap<String, Map<String, Object>> addresses = loadAddresses();
+        bulkLoad(storage, addresses);
 
         final List<Sort> sort = ImmutableList.of(Sort.asc(Name.of("country")), Sort.asc(Name.of(ObjectSchema.ID)));
         final List<Pager.Source<Map<String, Object>>> sources = storage.aggregate(schema, Expression.parse("true"),
@@ -689,10 +711,29 @@ public abstract class TestStorage {
                 ImmutableMap.of("count", new Count()));
         final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
 
+        addresses.get(ADDRESS).forEach(object -> {
+            final String country = (String)object.get("country");
+
+        });
+
         final Page<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
         System.err.println(results);
+        assertEquals(31, results.size());
+
         //assertEquals(?, results.size());
     }
+
+//    private List<Map<String, Object>> aggregate(final Collection<Map<String, Object>> input, final Expression expression) {
+//
+//        final Map<String, Long> result = new TreeMap<>();
+//        input.forEach(object -> {
+//            final String country = (String)object.get("country");
+//            result.compute(country, (k, v) -> v == null ? 1L : v + 1L);
+//        });
+//        return result.entrySet().stream().map(
+//                v ->
+//        );
+//    }
 
     @Test
     public void testRefIndex() {

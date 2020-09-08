@@ -256,7 +256,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         }
                         resultLookup.put(name, afterKey);
                         overlay.put(name, after);
-                        assert beforeKey == null || beforeKey.equals(afterKey);
+//                        assert beforeKey == null || beforeKey.equals(afterKey);
                         final Set<Name> permissionExpand = permissionExpand(schema, action.permission(before));
                         afterCallerExpand.addAll(Name.children(permissionExpand, Name.of(VAR_CALLER)));
                         final Set<Name> readExpand = Sets.union(
@@ -385,6 +385,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
     private void writeCreate(final Storage.WriteTransaction write, final ObjectSchema schema, final String id, final Instance after) {
 
+        schema.validateObject(id, after);
         write.createObject(schema, id, after);
 
         objectHierarchy(schema).forEach(superSchema -> {
@@ -396,6 +397,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
     private void writeUpdate(final Storage.WriteTransaction write, final ObjectSchema schema, final String id, final Instance before, final Instance after) {
 
+        schema.validateObject(id, after);
         write.updateObject(schema, id, before, after);
 
         objectHierarchy(schema).forEach(superSchema -> {
@@ -841,7 +843,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         }
                     }, schema.getExpand());
                     final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC, Versioning.CHECKED);
-                    write.updateObject(schema, id, before, after);
+                    writeUpdate(write, schema, id, before, after);
                     return write.write()
                             .thenCompose(ignored -> emitter.emit(ObjectRefreshedEvent.of(schema.getQualifiedName(), id, version, before, after)));
 

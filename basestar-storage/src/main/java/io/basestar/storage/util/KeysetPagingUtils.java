@@ -53,6 +53,10 @@ public class KeysetPagingUtils {
         }
     }
 
+//    public static List<Object> keysetValues(final Map<String, Use<?>> schema, final List<Sort> sort, final Page.Token token) {
+//
+//    }
+
     public static List<Object> keysetValues(final InstanceSchema schema, final List<Sort> sort, final Page.Token token) {
 
         final byte[] bytes = token.getValue();

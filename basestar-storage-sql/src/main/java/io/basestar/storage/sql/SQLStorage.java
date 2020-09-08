@@ -20,6 +20,7 @@ package io.basestar.storage.sql;
  * #L%
  */
 
+import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
@@ -179,17 +180,22 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         return new SQLExpressionVisitor(columnResolver).condition(expression);
     }
 
-    private CompletableFuture<Page<Map<String, Object>>> queryImpl(final ObjectSchema schema, final Index index,
-                                                                   final Expression expression, final List<Sort> sort,
-                                                                   final Set<Name> expand, final int count,
-                                                                   final Page.Token token, final Set<Page.Stat> stats) {
+    private List<OrderField<?>> orderFields(final List<Sort> sort) {
 
-        final List<OrderField<?>> orderFields = sort.stream()
+        return sort.stream()
                 .map(v -> {
                     final Field<?> field = DSL.field(SQLUtils.columnName(v.getName()));
                     return v.getOrder() == Sort.Order.ASC ? field.asc() : field.desc();
                 })
                 .collect(Collectors.toList());
+    }
+
+    private CompletableFuture<Page<Map<String, Object>>> queryImpl(final ObjectSchema schema, final Index index,
+                                                                   final Expression expression, final List<Sort> sort,
+                                                                   final Set<Name> expand, final int count,
+                                                                   final Page.Token token, final Set<Page.Stat> stats) {
+
+        final List<OrderField<?>> orderFields = orderFields(sort);
 
         final Table<Record> table;
         if(index == null) {
@@ -317,7 +323,73 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
     @Override
     public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
 
-        throw new UnsupportedOperationException();
+        final Table<Record> table = DSL.table(objectTableName(schema));
+
+        return ImmutableList.of((count, token, stats) -> {
+
+            final CompletableFuture<Page<Map<String, Object>>> pageFuture = withContext(context -> {
+
+                final Function<Name, QueryPart> columnResolver = objectColumnResolver(context, schema);
+                final SQLExpressionVisitor expressionVisitor = new SQLExpressionVisitor(columnResolver);
+                final SQLAggregateVisitor aggregateVisitor = new SQLAggregateVisitor(expressionVisitor::field);
+
+                final List<GroupField> groupFields = group.entrySet().stream()
+                        .map(e -> expressionVisitor.field(e.getValue()).as(DSL.name(e.getKey())))
+                        .collect(Collectors.toList());
+
+                final List<Sort> sort = group.keySet().stream().map(Sort::asc).collect(Collectors.toList());
+
+                final List<OrderField<?>> orderFields = orderFields(sort);
+
+                final Condition condition = condition(context, schema, /* FIXME */ null, query);
+
+                log.debug("SQL aggregate condition {}", condition);
+
+                final List<SelectFieldOrAsterisk> selectFields = new ArrayList<>();
+                group.keySet().forEach(k -> {
+                    selectFields.add(DSL.field(DSL.name(k)));
+                });
+                aggregates.forEach((k, v) -> {
+                    selectFields.add(aggregateVisitor.field(v).as(DSL.name(k)));
+                });
+
+                final SelectSeekStepN<Record> select = context.select(selectFields)
+                        .from(table).where(condition).groupBy(groupFields).orderBy(orderFields);
+
+                final SelectForUpdateStep<Record> seek;
+                if (token == null) {
+                    seek = select.limit(DSL.inline(count));
+                } else {
+                    final List<Object> values = KeysetPagingUtils.keysetValues(schema, sort, token);
+                    seek = select.seek(values.toArray(new Object[0])).limit(DSL.inline(count));
+                }
+
+                return seek.fetchAsync().thenApply(results -> {
+
+                    final List<Map<String, Object>> objects = results.stream()
+                            .map(v -> {
+                                final Map<String, Object> value = new HashMap<>();
+                                group.keySet().forEach(k -> value.put(k, v.get(k)));
+                                aggregates.keySet().forEach(k -> value.put(k, v.get(k)));
+                                return value;
+                            })
+                            .collect(Collectors.toList());
+
+                    final Page.Token nextToken;
+                    if (objects.size() < count) {
+                        nextToken = null;
+                    } else {
+                        final Map<String, Object> last = objects.get(objects.size() - 1);
+                        nextToken = KeysetPagingUtils.keysetPagingToken(schema, sort, last);
+                    }
+
+                    return new Page<>(objects, nextToken);
+                });
+
+            });
+
+            return pageFuture;
+        });
     }
 
     @Override

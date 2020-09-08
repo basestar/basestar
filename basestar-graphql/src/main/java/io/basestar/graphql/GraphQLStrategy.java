@@ -72,6 +72,8 @@ public interface GraphQLStrategy {
 
     String subscribeMethodName(ObjectSchema type);
 
+    String subscribeQueryMethodName(ObjectSchema type);
+
     String queryMethodName(ObjectSchema type);
 
     String queryLinkMethodName(ObjectSchema type, Link link);
@@ -252,6 +254,12 @@ public interface GraphQLStrategy {
         public String subscribeMethodName(final ObjectSchema type) {
 
             return "subscribe" + typeName(type);
+        }
+
+        @Override
+        public String subscribeQueryMethodName(final ObjectSchema type) {
+
+            return "subscribeQuery" + typeName(type);
         }
 
         @Override

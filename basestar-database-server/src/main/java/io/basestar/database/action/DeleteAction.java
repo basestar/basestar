@@ -32,6 +32,7 @@ import io.basestar.storage.exception.ObjectMissingException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
 import java.util.Collections;
@@ -39,6 +40,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+@Slf4j
 @RequiredArgsConstructor
 public class DeleteAction implements Action {
 
@@ -75,10 +77,18 @@ public class DeleteAction implements Action {
             throw new ObjectMissingException(options.getSchema(), id);
         }
 
-        assert id.equals(Instance.getId(before));
+        if(!id.equals(Instance.getId(before))) {
+            log.warn("Allowing delete of object {} with mismatched id", id);
+        }
 
-        if(!Instance.getSchema(before).equals(schema.getQualifiedName())) {
-            throw new IllegalStateException("Must delete using actual schema");
+        final Name schemaName = Instance.getSchema(before);
+        assert schemaName != null;
+        if(!schemaName.equals(schema.getQualifiedName())) {
+            if(schema.isAssignableFrom(schemaName)) {
+                throw new IllegalStateException("Must delete using actual schema");
+            } else {
+                log.warn("Allowing delete of object {} with mismatched schema", id);
+            }
         }
 
         final Long beforeVersion = Instance.getVersion(before);

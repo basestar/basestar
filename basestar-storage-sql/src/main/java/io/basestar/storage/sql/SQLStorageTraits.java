@@ -53,6 +53,12 @@ public class SQLStorageTraits implements StorageTraits {
     }
 
     @Override
+    public boolean supportsAggregation() {
+
+        return true;
+    }
+
+    @Override
     public boolean supportsMultiObject() {
 
         return true;

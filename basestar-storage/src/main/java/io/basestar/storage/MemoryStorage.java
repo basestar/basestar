@@ -498,6 +498,12 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
         }
 
         @Override
+        public boolean supportsAggregation() {
+
+            return true;
+        }
+
+        @Override
         public boolean supportsMultiObject() {
 
             return true;

@@ -48,6 +48,20 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
         return metadataSchema().containsKey(name) || getMember(name, true) != null;
     }
 
+    default boolean isAssignableFrom(Name name) {
+
+        if(name.equals(this.getQualifiedName())) {
+            return true;
+        } else {
+            final InstanceSchema extend = getExtend();
+            if(extend != null) {
+                return extend.isAssignableFrom(name);
+            } else {
+                return false;
+            }
+        }
+    }
+
     interface Descriptor extends Schema.Descriptor<Instance> {
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
