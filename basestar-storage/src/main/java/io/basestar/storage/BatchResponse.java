@@ -113,7 +113,11 @@ public interface BatchResponse extends Map<BatchResponse.Key, Map<String, Object
         public Map<String, Object> getObject(final Name schema, final String id) {
 
             final Map.Entry<Key, Map<String, Object>> entry = items.floorEntry(new Key(schema, id, null));
-            return entry == null ? null : entry.getValue();
+            if(entry != null && (schema.equals(entry.getKey().getSchema()) && id.equals(entry.getKey().getId()))) {
+                return entry.getValue();
+            } else {
+                return null;
+            }
         }
 
         @Override
