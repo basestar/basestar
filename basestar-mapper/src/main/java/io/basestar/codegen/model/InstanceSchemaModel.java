@@ -20,35 +20,84 @@ package io.basestar.codegen.model;
  * #L%
  */
 
-import io.basestar.codegen.CodegenSettings;
-import io.basestar.schema.InstanceSchema;
-import io.basestar.schema.Reserved;
+import com.google.common.collect.ImmutableList;
+import io.basestar.codegen.Codebehind;
+import io.basestar.codegen.CodegenContext;
+import io.basestar.schema.*;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-
+@SuppressWarnings("unused")
 public abstract class InstanceSchemaModel extends SchemaModel {
 
-    private final InstanceSchema schema;
+    protected final InstanceSchema schema;
 
-    public InstanceSchemaModel(final CodegenSettings settings, final InstanceSchema schema) {
+    public InstanceSchemaModel(final CodegenContext context, final InstanceSchema schema) {
 
-        super(settings, schema);
+        super(context, schema);
         this.schema = schema;
     }
 
     public List<MemberModel> getMembers() {
 
-        return Stream.concat(
+        return Stream.concat(Stream.concat(
                 schema.getExtend() != null ? Stream.<MemberModel>empty() : schema.metadataSchema().entrySet().stream()
-                        .filter(entry -> !Reserved.SCHEMA.equals(entry.getKey()))
-                        .map(entry -> new MetadataModel(getSettings(), entry.getKey(), entry.getValue())),
+                        .filter(entry -> !ObjectSchema.SCHEMA.equals(entry.getKey()) && !entry.getKey().startsWith(Reserved.PREFIX))
+                        .map(entry -> new MetadataModel(getContext(), entry.getKey(), entry.getValue())),
                 schema.getDeclaredProperties().values().stream()
-                        .map(v -> new PropertyModel(getSettings(), v))
-        ).collect(Collectors.toList());
+                        .map(v -> new PropertyModel(getContext(), v))
+        ), getAdditionalMembers().stream()).sorted(Comparator.comparing(MemberModel::getName)).collect(Collectors.toList());
     }
 
-    public abstract InstanceSchemaModel getExtend();
+    protected List<MemberModel> getAdditionalMembers() {
+
+        return ImmutableList.of();
+    }
+
+    public boolean isAbstract() {
+
+        return !schema.isConcrete();
+    }
+
+    public InstanceSchemaModel getExtend() {
+
+        final InstanceSchema extend = schema.getExtend();
+        final CodegenContext context = getContext();
+        if(extend != null) {
+            return from(context, extend);
+        } else {
+            return null;
+        }
+    }
+
+//    @Override
+//    public List<SchemaModel> getSchemaDependencies() {
+//
+//        final List<SchemaModel> deps = new ArrayList<>(super.getSchemaDependencies());
+////        final CodegenContext context = getContext();
+////        final Name remapping = context.getCodebehind().get(schema.getQualifiedName());
+////        if(remapping != null) {
+////            deps.add(new CodebehindModel(getContext(), remapping, schema, schema.getExtend()));
+////        }
+//        return deps;
+//    }
+
+    protected static InstanceSchemaModel from(final CodegenContext context, final InstanceSchema schema) {
+
+        final Codebehind codebehind = context.getCodebehind().get(schema.getQualifiedName());
+        if(codebehind != null) {
+            return new CodebehindModel(context, codebehind, schema);
+        } else if (schema instanceof ObjectSchema) {
+            return new ObjectSchemaModel(context, (ObjectSchema) schema);
+        } else if (schema instanceof StructSchema) {
+            return new StructSchemaModel(context, (StructSchema) schema);
+        } else if (schema instanceof ViewSchema) {
+            return new ViewSchemaModel(context, (ViewSchema) schema);
+        } else {
+            return null;
+        }
+    }
 }

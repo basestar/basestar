@@ -9,9 +9,9 @@ package io.basestar.storage.sql;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,30 +20,31 @@ package io.basestar.storage.sql;
  * #L%
  */
 
-import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Index;
 import io.basestar.schema.*;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseObject;
+import io.basestar.schema.use.UseStruct;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
+import io.basestar.storage.Versioning;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.DisjunctionVisitor;
 import io.basestar.storage.query.Range;
 import io.basestar.storage.query.RangeVisitor;
 import io.basestar.storage.util.KeysetPagingUtils;
-import io.basestar.storage.util.Pager;
 import io.basestar.util.Name;
-import io.basestar.util.PagedList;
-import io.basestar.util.PagingToken;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 import lombok.Data;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import lombok.extern.slf4j.Slf4j;
 import org.jooq.*;
 import org.jooq.exception.DataAccessException;
 import org.jooq.exception.SQLStateClass;
@@ -56,9 +57,16 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHistory {
+/**
+ * FIXME: currently we use literals/inline everywhere because Athena doesn't like ? params, need to make this
+ * strategy-driven rather than forced on everyone.
+ */
+
+@Slf4j
+public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHistory, Storage.WithoutRepair {
+
+    private static final String COUNT_AS = "__count";
 
     private final DataSource dataSource;
 
@@ -73,7 +81,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         this.dataSource = builder.dataSource;
         this.dialect = builder.dialect;
         this.strategy = builder.strategy;
-        this.eventStrategy = MoreObjects.firstNonNull(builder.eventStrategy, EventStrategy.EMIT);
+        this.eventStrategy = Nullsafe.orDefault(builder.eventStrategy, EventStrategy.EMIT);
     }
 
     public static Builder builder() {
@@ -101,32 +109,38 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
 
     private List<SelectFieldOrAsterisk> selectFields(final ObjectSchema schema) {
 
-        return Stream.concat(schema.metadataSchema().keySet().stream(), schema.getProperties().keySet().stream())
-                .map(name -> DSL.field(DSL.name(name)).as(DSL.name(name)))
-                .collect(Collectors.toList());
+        final List<SelectFieldOrAsterisk> fields = new ArrayList<>();
+        schema.metadataSchema().forEach((name, type) -> {
+            fields.add(SQLUtils.selectField(DSL.field(DSL.name(name)), type).as(DSL.name(name)));
+        });
+        schema.getProperties().forEach((name, prop) -> {
+            fields.add(SQLUtils.selectField(DSL.field(DSL.name(name)), prop.getType()).as(DSL.name(name)));
+        });
+        return fields;
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
+    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
         return withContext(context -> context.select(selectFields(schema))
-                .from(objectTableName(schema))
-                .where(idField(schema).eq(id))
-                .limit(1).fetchAsync().thenApply(result -> first(schema, result)));
+                .from(DSL.table(objectTableName(schema)))
+                .where(idField(schema).eq(DSL.inline(id)))
+                .limit(DSL.inline(1)).fetchAsync().thenApply(result -> first(schema, result)));
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
         return withContext(context -> context.select(selectFields(schema))
-                    .from(historyTableName(schema))
-                    .where(idField(schema).eq(id)
-                            .and(versionField(schema).eq(version)))
-                    .limit(1).fetchAsync().thenApply(result -> first(schema, result)));
+                .from(DSL.table(historyTableName(schema)))
+                .where(idField(schema).eq(DSL.inline(id))
+                        .and(versionField(schema).eq(DSL.inline(version))))
+                .limit(DSL.inline(1)).fetchAsync().thenApply(result -> first(schema, result)));
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
+    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query,
+                                                         final List<Sort> sort, final Set<Name> expand) {
 
         final Expression bound = query.bind(Context.init());
 
@@ -138,7 +152,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
             final Map<Name, Range<Object>> ranges = conjunction.visit(new RangeVisitor());
 
             Index best = null;
-            // Only multi-value indexes need to be matched
+            // Only multi-value indexes need to be matched separately
             for(final Index index : schema.getIndexes().values()) {
                 if(index.isMultiValue()) {
                     final Set<Name> names = index.getMultiValuePaths();
@@ -148,56 +162,234 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                 }
             }
 
-            final Condition condition = new SQLExpressionVisitor().condition(conjunction);
-
-            final List<OrderField<?>> orderFields = sort.stream()
-                    .map(v -> {
-                        final Field<?> field = DSL.field(SQLUtils.columnName(v.getName()));
-                        return v.getOrder() == Sort.Order.ASC ? field.asc() : field.desc();
-                    })
-                    .collect(Collectors.toList());
-
             final Index index = best;
-            sources.add((count, token, stats) ->
-                    withContext(context -> {
-
-                        final SelectSeekStepN<Record> select = context.select(selectFields(schema))
-                                .from(index == null ? objectTableName(schema) : indexTableName(schema, index))
-                                .where(condition).orderBy(orderFields);
-
-                        final SelectForUpdateStep<Record> seek;
-                        if(token == null) {
-                            seek = select.limit(DSL.inline(count));
-                        } else {
-                            final List<Object> values = KeysetPagingUtils.keysetValues(schema, sort, token);
-                            seek = select.seek(values.toArray(new Object[0])).limit(DSL.inline(count));
-                        }
-
-                        return seek.fetchAsync().thenApply(results -> {
-
-                                    final List<Map<String, Object>> objects = all(schema, results);
-
-                                    final PagingToken nextToken;
-                                    if(objects.size() < count) {
-                                        nextToken = null;
-                                    } else {
-                                        final Map<String, Object> last = objects.get(objects.size() - 1);
-                                        nextToken = KeysetPagingUtils.keysetPagingToken(schema, sort, last);
-                                    }
-
-                                    return new PagedList<>(objects, nextToken);
-                                });
-
-                    }));
+            sources.add((count, token, stats) -> queryImpl(schema, index, conjunction, sort, expand, count, token, stats));
         }
 
         return sources;
     }
 
+    private Condition condition(final DSLContext context, final ObjectSchema schema, final Index index, final Expression expression) {
+
+        final Function<Name, QueryPart> columnResolver;
+        if(index == null) {
+            columnResolver = objectColumnResolver(context, schema);
+        } else {
+            columnResolver = indexColumnResolver(context, schema, index);
+        }
+        return new SQLExpressionVisitor(columnResolver).condition(expression);
+    }
+
+    private List<OrderField<?>> orderFields(final List<Sort> sort) {
+
+        return sort.stream()
+                .map(v -> {
+                    final Field<?> field = DSL.field(SQLUtils.columnName(v.getName()));
+                    return v.getOrder() == Sort.Order.ASC ? field.asc() : field.desc();
+                })
+                .collect(Collectors.toList());
+    }
+
+    private CompletableFuture<Page<Map<String, Object>>> queryImpl(final ObjectSchema schema, final Index index,
+                                                                   final Expression expression, final List<Sort> sort,
+                                                                   final Set<Name> expand, final int count,
+                                                                   final Page.Token token, final Set<Page.Stat> stats) {
+
+        final List<OrderField<?>> orderFields = orderFields(sort);
+
+        final Table<Record> table;
+        if(index == null) {
+            table = DSL.table(objectTableName(schema));
+        } else {
+            table = DSL.table(indexTableName(schema, index));
+        }
+
+        final CompletableFuture<Page<Map<String, Object>>> pageFuture = withContext(context -> {
+
+            final Condition condition = condition(context, schema, index, expression);
+
+            log.debug("SQL condition {}", condition);
+
+            final SelectSeekStepN<Record> select = context.select(selectFields(schema))
+                    .from(table).where(condition).orderBy(orderFields);
+
+            final SelectForUpdateStep<Record> seek;
+            if(token == null) {
+                seek = select.limit(DSL.inline(count));
+            } else {
+                final List<Object> values = KeysetPagingUtils.keysetValues(schema, sort, token);
+                seek = select.seek(values.toArray(new Object[0])).limit(DSL.inline(count));
+            }
+
+            return seek.fetchAsync().thenApply(results -> {
+
+                final List<Map<String, Object>> objects = all(schema, results);
+
+                final Page.Token nextToken;
+                if(objects.size() < count) {
+                    nextToken = null;
+                } else {
+                    final Map<String, Object> last = objects.get(objects.size() - 1);
+                    nextToken = KeysetPagingUtils.keysetPagingToken(schema, sort, last);
+                }
+
+                return new Page<>(objects, nextToken);
+            });
+
+        });
+
+        if(stats != null && (stats.contains(Page.Stat.TOTAL) || stats.contains(Page.Stat.APPROX_TOTAL))) {
+
+            // Runs in parallel with query
+            final CompletableFuture<Page.Stats> statsFuture = withContext(context -> {
+
+                final Condition condition = condition(context, schema, index, expression);
+
+                return context.select(DSL.count().as(COUNT_AS)).from(table).where(condition).fetchAsync().thenApply(results -> {
+
+                    if(results.isEmpty()) {
+                        return Page.Stats.ZERO;
+                    } else {
+                        final Record1<Integer> record = results.iterator().next();
+                        return Page.Stats.fromTotal(record.value1());
+                    }
+                });
+            });
+
+            return CompletableFuture.allOf(pageFuture, statsFuture).thenApply(ignored -> {
+
+                final Page<Map<String, Object>> page = pageFuture.getNow(Page.empty());
+                return page.withStats(statsFuture.getNow(Page.Stats.ZERO));
+            });
+
+        } else {
+            return pageFuture;
+        }
+    }
+
+    private Function<Name, QueryPart> objectColumnResolver(final DSLContext context, final ObjectSchema schema) {
+
+        return name -> {
+
+            if(schema.metadataSchema().containsKey(name.first())) {
+                final Name rest = name.withoutFirst();
+                if (rest.isEmpty()) {
+                    return DSL.field(DSL.name(name.first()));
+                } else {
+                    throw new UnsupportedOperationException("Query of this type is not supported");
+                }
+            } else {
+                final Property prop = schema.requireProperty(name.first(), true);
+                final Name rest = name.withoutFirst();
+                if (rest.isEmpty()) {
+                    return DSL.field(DSL.name(name.first()));
+                } else {
+                    return prop.getType().visit(new Use.Visitor.Defaulting<QueryPart>() {
+                        @Override
+                        public <T> QueryPart visitDefault(final Use<T> type) {
+
+                            throw new UnsupportedOperationException("Query of this type is not supported");
+                        }
+
+                        @Override
+                        public QueryPart visitStruct(final UseStruct type) {
+
+                            // FIXME
+                            return DSL.field(SQLUtils.columnName(name));
+                        }
+
+                        @Override
+                        public QueryPart visitObject(final UseObject type) {
+
+                            final Field<String> sourceId = DSL.field(DSL.name(name.first()), String.class);
+                            if (rest.equals(ObjectSchema.ID_NAME)) {
+                                return sourceId;
+                            } else {
+                                throw new UnsupportedOperationException("Query of this type is not supported");
+                            }
+                        }
+                    });
+                }
+            }
+        };
+    }
+
+    private Function<Name, QueryPart> indexColumnResolver(final DSLContext context, final ObjectSchema schema, final Index index) {
+
+        // FIXME
+        return name -> DSL.field(SQLUtils.columnName(name));
+    }
+
     @Override
     public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
 
-        throw new UnsupportedOperationException();
+        final Table<Record> table = DSL.table(objectTableName(schema));
+
+        return ImmutableList.of((count, token, stats) -> {
+
+            final CompletableFuture<Page<Map<String, Object>>> pageFuture = withContext(context -> {
+
+                final Function<Name, QueryPart> columnResolver = objectColumnResolver(context, schema);
+                final SQLExpressionVisitor expressionVisitor = new SQLExpressionVisitor(columnResolver);
+                final SQLAggregateVisitor aggregateVisitor = new SQLAggregateVisitor(expressionVisitor::field);
+
+                final List<GroupField> groupFields = group.entrySet().stream()
+                        .map(e -> expressionVisitor.field(e.getValue()).as(DSL.name(e.getKey())))
+                        .collect(Collectors.toList());
+
+                final List<Sort> sort = group.keySet().stream().map(Sort::asc).collect(Collectors.toList());
+
+                final List<OrderField<?>> orderFields = orderFields(sort);
+
+                final Condition condition = condition(context, schema, /* FIXME */ null, query);
+
+                log.debug("SQL aggregate condition {}", condition);
+
+                final List<SelectFieldOrAsterisk> selectFields = new ArrayList<>();
+                group.keySet().forEach(k -> {
+                    selectFields.add(DSL.field(DSL.name(k)));
+                });
+                aggregates.forEach((k, v) -> {
+                    selectFields.add(aggregateVisitor.field(v).as(DSL.name(k)));
+                });
+
+                final SelectSeekStepN<Record> select = context.select(selectFields)
+                        .from(table).where(condition).groupBy(groupFields).orderBy(orderFields);
+
+                final SelectForUpdateStep<Record> seek;
+                if (token == null) {
+                    seek = select.limit(DSL.inline(count));
+                } else {
+                    final List<Object> values = KeysetPagingUtils.keysetValues(schema, sort, token);
+                    seek = select.seek(values.toArray(new Object[0])).limit(DSL.inline(count));
+                }
+
+                return seek.fetchAsync().thenApply(results -> {
+
+                    final List<Map<String, Object>> objects = results.stream()
+                            .map(v -> {
+                                final Map<String, Object> value = new HashMap<>();
+                                group.keySet().forEach(k -> value.put(k, v.get(k)));
+                                aggregates.keySet().forEach(k -> value.put(k, v.get(k)));
+                                return value;
+                            })
+                            .collect(Collectors.toList());
+
+                    final Page.Token nextToken;
+                    if (objects.size() < count) {
+                        nextToken = null;
+                    } else {
+                        final Map<String, Object> last = objects.get(objects.size() - 1);
+                        nextToken = KeysetPagingUtils.keysetPagingToken(schema, sort, last);
+                    }
+
+                    return new Page<>(objects, nextToken);
+                });
+
+            });
+
+            return pageFuture;
+        });
     }
 
     @Override
@@ -210,7 +402,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
             private final Map<ObjectSchema, Set<IdVersion>> byIdVersion = new IdentityHashMap<>();
 
             @Override
-            public ReadTransaction readObject(final ObjectSchema schema, final String id) {
+            public ReadTransaction readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
                 final Set<String> target = byId.computeIfAbsent(schema, ignored -> new HashSet<>());
                 target.add(id);
@@ -218,7 +410,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
             }
 
             @Override
-            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
                 final Set<IdVersion> target = byIdVersion.computeIfAbsent(schema, ignored -> new HashSet<>());
                 target.add(new IdVersion(id, version));
@@ -239,7 +431,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                         final Set<String> ids = entry.getValue();
                         all(schema, context.select(selectFields(schema))
                                 .from(objectTableName(schema))
-                                .where(idField(schema).in(ids))
+                                .where(idField(schema).in(literals(ids)))
                                 .fetch())
                                 .forEach(v -> results.put(BatchResponse.Key.from(schema.getQualifiedName(), v), v));
                     }
@@ -264,6 +456,11 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         };
     }
 
+    private List<Field<?>> literals(final Collection<?> values) {
+
+        return values.stream().map(DSL::inline).collect(Collectors.toList());
+    }
+
     @Data
     private static class IdVersion {
 
@@ -273,7 +470,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
     }
 
     @Override
-    public WriteTransaction write(final Consistency consistency) {
+    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
         return new WriteTransaction();
     }
@@ -337,7 +534,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                 }
 
                 if(context.update(DSL.table(objectTableName(schema))).set(toRecord(schema, after))
-                        .where(condition).limit(1).execute() != 1) {
+                        .where(condition).limit(DSL.inline(1)).execute() != 1) {
 
                     throw new VersionMismatchException(schema.getQualifiedName(), id, version);
                 }
@@ -370,7 +567,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                 }
 
                 if(context.deleteFrom(DSL.table(objectTableName(schema)))
-                        .where(condition).limit(1).execute() != 1) {
+                        .where(condition).limit(DSL.inline(1)).execute() != 1) {
 
                     throw new VersionMismatchException(schema.getQualifiedName(), id, version);
                 }
@@ -469,6 +666,12 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         return SQLStorageTraits.INSTANCE;
     }
 
+    @Override
+    public Set<Name> supportedExpand(final ObjectSchema schema, final Set<Name> expand) {
+
+        return Collections.emptySet();
+    }
+
     private <T> CompletableFuture<T> withContext(final Function<DSLContext, CompletionStage<T>> with) {
 
         Connection conn = null;
@@ -502,12 +705,12 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
 
     private Field<String> idField(final ObjectSchema schema) {
 
-        return DSL.field(DSL.name(Reserved.ID), String.class);
+        return DSL.field(DSL.name(ObjectSchema.ID), String.class);
     }
 
     private Field<Long> versionField(final ObjectSchema schema) {
 
-        return DSL.field(DSL.name(Reserved.VERSION), Long.class);
+        return DSL.field(DSL.name(ObjectSchema.VERSION), Long.class);
     }
 
     private org.jooq.Name objectTableName(final ObjectSchema schema) {
@@ -558,7 +761,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         schema.metadataSchema().forEach((k, v) ->
                 result.put(DSL.field(DSL.name(k)), SQLUtils.toSQLValue(v, object.get(k))));
         schema.getProperties().forEach((k, v) ->
-            result.put(DSL.field(DSL.name(k)), SQLUtils.toSQLValue(v.getType(), object.get(k))));
+                result.put(DSL.field(DSL.name(k)), SQLUtils.toSQLValue(v.getType(), object.get(k))));
         return result;
     }
 

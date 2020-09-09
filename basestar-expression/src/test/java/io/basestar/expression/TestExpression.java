@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.call.LambdaCall;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.NameConstant;
+import io.basestar.expression.exception.BadExpressionException;
 import io.basestar.expression.function.With;
 import io.basestar.expression.iterate.ForAll;
 import io.basestar.expression.iterate.ForAny;
@@ -45,8 +46,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
 public class TestExpression {
@@ -100,7 +100,7 @@ public class TestExpression {
 
     private void assertEqualsPromoting(final Object a, final Object b) {
 
-        final Pair<Object> pair = Values.promote(a, b);
+        final Pair<Object, Object> pair = Values.promote(a, b);
         assertEquals(pair.getFirst(), pair.getSecond());
     }
 
@@ -236,9 +236,9 @@ public class TestExpression {
     @Test
     public void testLambda() {
 
-        check("(x -> x + x)(1)", 2);
-        check("((x, y) -> x * y)(2, 4)", 8);
-        check("((x, y) -> z -> z * x + y)(2, 4)(6)", 16);
+        check("(x => x + x)(1)", 2);
+        check("((x, y) => x * y)(2, 4)", 8);
+        check("((x, y) => z => z * x + y)(2, 4)(6)", 16);
     }
 
     @Test
@@ -298,7 +298,7 @@ public class TestExpression {
     @Test
     public void testComplex() {
 
-        final String expr = "this.owner.id == caller.id && this.users.anyMatch(u -> u.id == caller.id)";
+        final String expr = "this.owner.id == caller.id && this.users.anyMatch(u => u.id == caller.id)";
         check(expr, true, context(ImmutableMap.of(
                 "caller", ImmutableMap.of(
                         "id", "test"
@@ -320,11 +320,11 @@ public class TestExpression {
     @Disabled
     public void testLambdaBind() {
 
-        final Expression unbound = Expression.parse("[1].map(v -> a)").bind(context());
+        final Expression unbound = Expression.parse("[1].map(v => a)").bind(context());
         assertTrue(unbound instanceof LambdaCall);
-        final Expression bound = Expression.parse("[1].map(v -> v)").bind(context());
+        final Expression bound = Expression.parse("[1].map(v => v)").bind(context());
         assertTrue(bound instanceof Constant);
-        final Expression chained = Expression.parse("x.map(v -> v.y.map(v2 -> v2))").bind(context(ImmutableMap.of(
+        final Expression chained = Expression.parse("x.map(v => v.y.map(v2 => v2))").bind(context(ImmutableMap.of(
                 "x", ImmutableList.of(
                         ImmutableMap.of(
                                 "y", ImmutableList.of(1)
@@ -333,7 +333,7 @@ public class TestExpression {
         )));
         assertTrue(chained instanceof Constant);
 
-        final String str = "this.owner.id == caller.id || this.id in caller.projects.map(p -> p.id) || this.id in caller.teams.flatMap(t -> t.projects.map(p -> p.id))";
+        final String str = "this.owner.id == caller.id || this.id in caller.projects.map(p => p.id) || this.id in caller.teams.flatMap(t => t.projects.map(p => p.id))";
         final Expression example = Expression.parse(str).bind(context(ImmutableMap.of())).bind(context(ImmutableMap.of(
                 "this", ImmutableMap.of(
                         "id", "a",
@@ -478,6 +478,19 @@ public class TestExpression {
 
         final Expression expression = Expression.parse("'abc' like 'a%'");
         final Expression bound = expression.bind(Context.init());
+    }
+
+    @Test
+    public void testThrowOnSingleEquals() {
+
+        assertThrows(BadExpressionException.class, () -> Expression.parse("x = y"));
+    }
+
+    @Test
+    public void testExtant() {
+
+        Expression.parse("asset.fileType != 'UNKNOWN' && location.locationType == 'INBOX' && ('2018' IN asset.tags || 'student' IN asset.tags)");
+        Expression.parse("asset.fileType != 'UNKNOWN' && location.locationType == 'INBOX' && ('DSR' IN asset.fileType || 'ERN' IN asset.fileType)");
     }
 
 //    @Test

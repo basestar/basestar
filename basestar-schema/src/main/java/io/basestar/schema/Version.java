@@ -20,23 +20,66 @@ package io.basestar.schema;
  * #L%
  */
 
-import com.fasterxml.jackson.annotation.JsonValue;
-import lombok.Data;
 
-public interface Version {
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import io.basestar.schema.exception.SchemaValidationException;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
-    @JsonValue
-    String toString();
+import java.io.IOException;
+import java.util.Arrays;
 
-    @Data
-    class Simple {
+@Getter
+@RequiredArgsConstructor
+@JsonSerialize(using = Version.Serializer.class)
+@JsonDeserialize(using = Version.Deserializer.class)
+public enum Version {
 
-        private final String value;
+    V_2020_08_04("2020-08-04"),
+    LEGACY("legacy");
+
+    public static final Version CURRENT = LEGACY;
+
+    private final String id;
+
+    public static Version fromString(final String str) {
+
+        if("LATEST".equalsIgnoreCase(str)) {
+            return V_2020_08_04;
+        } else {
+            return Arrays.stream(Version.values()).filter(v -> v.id.equals(str))
+                    .findFirst().orElseThrow(() -> new SchemaValidationException("Version " + str + " is not supported"));
+        }
+    }
+
+    @Override
+    public String toString() {
+
+        return this.getId();
+    }
+
+    public static class Deserializer extends JsonDeserializer<Version> {
 
         @Override
-        public String toString() {
+        public Version deserialize(final JsonParser parser, final DeserializationContext context) throws IOException {
 
-            return value;
+            return Version.fromString(parser.getValueAsString());
+        }
+    }
+
+    public static class Serializer extends JsonSerializer<Version> {
+
+        @Override
+        public void serialize(final Version version, final JsonGenerator generator, final SerializerProvider provider) throws IOException {
+
+            generator.writeString(version.getId());
         }
     }
 }

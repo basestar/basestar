@@ -20,15 +20,16 @@ package io.basestar.codegen.model;
  * #L%
  */
 
-import io.basestar.codegen.CodegenSettings;
+import io.basestar.codegen.CodegenContext;
 
 import java.util.List;
 
+@SuppressWarnings("unused")
 public abstract class MemberModel extends Model {
 
-    public MemberModel(final CodegenSettings settings) {
+    public MemberModel(final CodegenContext context) {
 
-        super(settings);
+        super(context);
     }
 
     public abstract String getName();
@@ -38,7 +39,7 @@ public abstract class MemberModel extends Model {
         return getName();
     }
 
-    public abstract List<AnnotationModel> getAnnotations();
+    public abstract List<AnnotationModel<?>> getAnnotations();
 
     public abstract TypeModel getType();
 

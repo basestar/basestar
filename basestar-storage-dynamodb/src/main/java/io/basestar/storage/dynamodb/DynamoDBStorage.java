@@ -20,21 +20,20 @@ package io.basestar.storage.dynamodb;
  * #L%
  */
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
-import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.basestar.schema.*;
+import io.basestar.schema.use.UseBinary;
 import io.basestar.storage.*;
 import io.basestar.storage.exception.CorruptedIndexException;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.UniqueIndexViolationException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;
-import io.basestar.util.Name;
-import io.basestar.util.PagedList;
-import io.basestar.util.PagingToken;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -53,7 +52,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Slf4j
-public class DynamoDBStorage extends PartitionedStorage implements Storage.WithoutWriteHistory {
+public class DynamoDBStorage extends PartitionedStorage implements Storage.WithoutWriteHistory, Storage.WithoutExpand {
 
     private static final int WRITE_BATCH = 25;
 
@@ -72,7 +71,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
         this.client = builder.client;
         this.strategy = builder.strategy;
         this.oversizeStash = builder.oversizeStash;
-        this.eventStrategy = MoreObjects.firstNonNull(builder.eventStrategy, EventStrategy.EMIT);
+        this.eventStrategy = Nullsafe.orDefault(builder.eventStrategy, EventStrategy.EMIT);
     }
 
     public static Builder builder() {
@@ -109,7 +108,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
+    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
         final GetItemRequest request = GetItemRequest.builder()
                 .tableName(strategy.objectTableName(schema))
@@ -128,7 +127,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
         final GetItemRequest request = GetItemRequest.builder()
                 .tableName(strategy.historyTableName(schema))
@@ -168,14 +167,14 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
                 .thenApply(bytes -> bytes == null ? null : DynamoDBUtils.fromOversizeBytes(bytes));
     }
 
-    private CompletableFuture<BatchResponse> fromItems(final Map<Map<String, AttributeValue>, ObjectSchema> keyToSchema, final Map<String, List<Map<String, AttributeValue>>> items) {
+    private CompletableFuture<BatchResponse> fromItems(final Map<Map<String, AttributeValue>, ObjectSchema> keyToSchema, final Map<String, ? extends Collection<Map<String, AttributeValue>>> items) {
 
         // could implement read-batching here, but probably not worth it since
         // probable oversize storage engine (S3) doesn't support it meaningfully
 
         final Map<BatchResponse.Key, CompletableFuture<Map<String, Object>>> oversize = new HashMap<>();
         final Map<BatchResponse.Key, Map<String, Object>> ok = new HashMap<>();
-        for(final Map.Entry<String, List<Map<String, AttributeValue>>> entry : items.entrySet()) {
+        for(final Map.Entry<String, ? extends Collection<Map<String, AttributeValue>>> entry : items.entrySet()) {
             for (final Map<String, AttributeValue> item : entry.getValue()) {
                 final Map<String, Object> object = DynamoDBUtils.fromItem(item);
                 final ObjectSchema schema = matchKeyToSchema(keyToSchema, item);
@@ -227,13 +226,15 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
     }
 
     @Override
-    protected CompletableFuture<PagedList<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfy, final Map<Name, Range<Object>> query, final List<Sort> sort, final int count, final PagingToken paging) {
+    protected CompletableFuture<Page<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfy,
+                                                                      final Map<Name, Range<Object>> query, final List<Sort> sort, final Set<Name> expand,
+                                                                      final int count, final Page.Token paging) {
 
         final List<Object> mergePartitions = new ArrayList<>();
         mergePartitions.add(strategy.indexPartitionPrefix(schema, index));
         mergePartitions.addAll(satisfy.getPartition());
 
-        final SdkBytes partitionValue = SdkBytes.fromByteArray(binary(mergePartitions));
+        final SdkBytes partitionValue = SdkBytes.fromByteArray(UseBinary.binaryKey(mergePartitions));
 
         final Map<String, String> names = new HashMap<>();
         final Map<String, AttributeValue> values = new HashMap<>();
@@ -242,17 +243,17 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
 
         keyTerms.add("#__partition = :__partition");
         names.put("#__partition", strategy.indexPartitionName(schema, index));
-        values.put(":__partition", AttributeValue.builder().b(partitionValue).build());
+        values.put(":__partition", DynamoDBUtils.b(partitionValue));
 
         if(!satisfy.getSort().isEmpty()) {
 
-            final SdkBytes sortValueLo = SdkBytes.fromByteArray(binary(satisfy.getSort()));
-            final SdkBytes sortValueHi = SdkBytes.fromByteArray(binary(satisfy.getSort(), new byte[]{0}));
+            final SdkBytes sortValueLo = SdkBytes.fromByteArray(UseBinary.binaryKey(satisfy.getSort(), UseBinary.LO_PREFIX));
+            final SdkBytes sortValueHi = SdkBytes.fromByteArray(UseBinary.binaryKey(satisfy.getSort(), UseBinary.HI_PREFIX));
 
             keyTerms.add("#__sort BETWEEN :__sortLo AND :__sortHi");
             names.put("#__sort", strategy.indexSortName(schema, index));
-            values.put(":__sortLo", AttributeValue.builder().b(sortValueLo).build());
-            values.put(":__sortHi", AttributeValue.builder().b(sortValueHi).build());
+            values.put(":__sortLo", DynamoDBUtils.b(sortValueLo));
+            values.put(":__sortHi", DynamoDBUtils.b(sortValueHi));
         }
 
         final String keyExpression = Joiner.on(" AND ").join(keyTerms);
@@ -277,7 +278,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
 
         if(paging != null) {
 
-            queryBuilder = queryBuilder.exclusiveStartKey(decodeIndexPaging(schema, index, partitionValue, paging));
+            queryBuilder = queryBuilder.exclusiveStartKey(decodeIndexPagingWithPartition(schema, index, partitionValue.asByteArray(), paging));
         }
 
         final QueryRequest request = queryBuilder.build();
@@ -293,14 +294,14 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
                             .map(DynamoDBUtils::fromItem)
                             .collect(Collectors.toList());
 
-                    final PagingToken nextPaging;
+                    final Page.Token nextPaging;
                     if(result.lastEvaluatedKey().isEmpty()) {
                         nextPaging = null;
                     } else {
-                        nextPaging = encodeIndexPaging(schema, index, result.lastEvaluatedKey());
+                        nextPaging = encodeIndexPagingWithoutPartition(schema, index, result.lastEvaluatedKey());
                     }
 
-                    return new PagedList<>(results, nextPaging);
+                    return new Page<>(results, nextPaging);
                 });
     }
 
@@ -314,7 +315,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
             private final Map<Map<String, AttributeValue>, ObjectSchema> keyToSchema = new HashMap<>();
 
             @Override
-            public ReadTransaction readObject(final ObjectSchema schema, final String id) {
+            public ReadTransaction readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
                 final String tableName = strategy.objectTableName(schema);
                 final Map<String, AttributeValue> key = objectKey(strategy, schema, id);
@@ -324,7 +325,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
             }
 
             @Override
-            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
                 final String tableName = strategy.historyTableName(schema);
                 final Map<String, AttributeValue> key = historyKey(strategy, schema, id, version);
@@ -336,26 +337,17 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
             @Override
             public CompletableFuture<BatchResponse> read() {
 
-                return read(items.entrySet().stream().collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> KeysAndAttributes.builder().keys(entry.getValue()).build()
-                )));
+                return read(items);
             }
 
-            private CompletableFuture<BatchResponse> read(final Map<String, KeysAndAttributes> items) {
+            private CompletableFuture<BatchResponse> read(final Map<String, List<Map<String, AttributeValue>>> items) {
 
                 if(items.isEmpty()) {
                     return CompletableFuture.completedFuture(BatchResponse.empty());
                 }
 
-                final BatchGetItemRequest request = BatchGetItemRequest.builder()
-                        .requestItems(items)
-                        .build();
-
-                return client.batchGetItem(request)
-                        .thenCompose(result -> read(result.unprocessedKeys())
-                                .thenCompose(rest -> fromItems(keyToSchema, result.responses())
-                                        .thenApply(from -> BatchResponse.merge(Stream.of(rest, from)))));
+                return DynamoDBUtils.batchRead(client, items)
+                                .thenCompose(responses -> fromItems(keyToSchema, responses));
             }
         };
     }
@@ -363,9 +355,9 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
     private static Map<String, AttributeValue> oversizeItem(final DynamoDBStrategy strategy, final ObjectSchema schema, final String id, final Map<String, Object> data, final String key) {
 
         final Map<String, AttributeValue> item = new HashMap<>();
-        item.putAll(DynamoDBUtils.toItem(ObjectSchema.readMeta(data)));
+        item.putAll(DynamoDBUtils.toItem(schema.readMeta(data, false)));
         item.putAll(objectKey(strategy, schema, id));
-        item.put(OVERSIZE_KEY, AttributeValue.builder().s(key).build());
+        item.put(OVERSIZE_KEY, DynamoDBUtils.s(key));
         return item;
     }
 
@@ -387,7 +379,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
             partition = prefix + Reserved.DELIMITER + id;
         }
         return ImmutableMap.of(
-                strategy.objectPartitionName(schema), AttributeValue.builder().s(partition).build()
+                strategy.objectPartitionName(schema), DynamoDBUtils.s(partition)
         );
     }
 
@@ -401,19 +393,22 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
             partition = prefix + Reserved.DELIMITER + id;
         }
         return ImmutableMap.of(
-                strategy.historyPartitionName(schema), AttributeValue.builder().s(partition).build(),
-                strategy.historySortName(schema), AttributeValue.builder()
-                        .n(Long.toString(version)).build()
+                strategy.historyPartitionName(schema), DynamoDBUtils.s(partition),
+                strategy.historySortName(schema), DynamoDBUtils.n(Long.toString(version))
         );
+    }
+
+    private static byte[] indexPartitionPrefix(final DynamoDBStrategy strategy, final ObjectSchema schema, final Index index, final byte[] suffix) {
+
+        final String prefix = strategy.indexPartitionPrefix(schema, index);
+        return UseBinary.binaryKey(Collections.singletonList(prefix), suffix);
     }
 
     private static Map<String, AttributeValue> indexKey(final DynamoDBStrategy strategy, final ObjectSchema schema, final Index index, final String id, final Index.Key key) {
 
         return ImmutableMap.of(
-                strategy.indexPartitionName(schema, index), AttributeValue.builder()
-                        .b(SdkBytes.fromByteArray(partition(strategy, schema, index, id, key.getPartition()))).build(),
-                strategy.indexSortName(schema, index), AttributeValue.builder()
-                        .b(SdkBytes.fromByteArray(sort(schema, index, id, key.getSort()))).build()
+                strategy.indexPartitionName(schema, index), DynamoDBUtils.b(partition(strategy, schema, index, id, key.getPartition())),
+                strategy.indexSortName(schema, index), DynamoDBUtils.b(sort(schema, index, id, key.getSort()))
         );
     }
 
@@ -426,7 +421,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
             fullPartition.add(prefix);
         }
         fullPartition.addAll(partition);
-        return binary(fullPartition);
+        return UseBinary.binaryKey(fullPartition);
     }
 
     @SuppressWarnings("unused")
@@ -442,7 +437,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
             // Ensure non-unique indexes have a unique id
             fullSort.add(id);
         }
-        return binary(fullSort);
+        return UseBinary.binaryKey(fullSort);
     }
 
     private static Map<String, AttributeValue> indexItem(final DynamoDBStrategy strategy, final ObjectSchema schema, final Index index, final String id, final Index.Key key, final Map<String, Object> data) {
@@ -454,9 +449,9 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
     }
 
     @Override
-    public WriteTransaction write(final Consistency consistency) {
+    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
-        return new WriteTransaction(consistency);
+        return new WriteTransaction(consistency, versioning);
     }
 
     @RequiredArgsConstructor
@@ -472,6 +467,8 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
 
         private final Consistency consistency;
 
+        private final Versioning versioning;
+
         private Map<String, AttributeValue> oversize(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
             final Long afterVersion = Instance.getVersion(after);
@@ -479,6 +476,48 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
             final String key = oversizeStashKey(schema, id, afterVersion);
             oversize.put(key, DynamoDBUtils.toOversizeBytes(schema, after));
             return oversizeItem(strategy, schema, id, after, key);
+        }
+
+        private Put.Builder conditionalCreate(final String idAttribute, final Versioning versioning) {
+
+            if(versioning.isChecked()) {
+                return Put.builder().conditionExpression("attribute_not_exists(#id)")
+                        .expressionAttributeNames(ImmutableMap.of(
+                                "#id", idAttribute
+                        ));
+            } else {
+                return Put.builder();
+            }
+        }
+
+        private Put.Builder conditionalUpdate(final Long version, final Versioning versioning) {
+
+            if(versioning.isChecked()) {
+                return Put.builder().conditionExpression("#version = :version")
+                        .expressionAttributeNames(ImmutableMap.of(
+                                "#version", ObjectSchema.VERSION
+                        ))
+                        .expressionAttributeValues(ImmutableMap.of(
+                                ":version", DynamoDBUtils.n(Long.toString(version))
+                        ));
+            } else {
+                return Put.builder();
+            }
+        }
+
+        private Delete.Builder conditionalDelete(final Long version, final Versioning versioning) {
+
+            if(versioning.isChecked()) {
+                return Delete.builder().conditionExpression("#version = :version")
+                        .expressionAttributeNames(ImmutableMap.of(
+                                "#version", ObjectSchema.VERSION
+                        ))
+                        .expressionAttributeValues(ImmutableMap.of(
+                                ":version", DynamoDBUtils.n(Long.toString(version))
+                        ));
+            } else {
+                return Delete.builder();
+            }
         }
 
         @Override
@@ -495,14 +534,9 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
                 item = initialItem;
             }
             items.add(TransactWriteItem.builder()
-                    .put(Put.builder()
+                    .put(conditionalCreate(strategy.objectPartitionName(schema), versioning)
                             .tableName(strategy.objectTableName(schema))
-                            .item(item)
-                            .conditionExpression("attribute_not_exists(#id)")
-                            .expressionAttributeNames(ImmutableMap.of(
-                                    "#id", strategy.objectPartitionName(schema)
-                            ))
-                            .build())
+                            .item(item).build())
                     .build());
             items.add(TransactWriteItem.builder()
                     .put(Put.builder()
@@ -536,17 +570,9 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
                 item = initialItem;
             }
             items.add(TransactWriteItem.builder()
-                    .put(Put.builder()
+                    .put(conditionalUpdate(version, versioning)
                             .tableName(strategy.objectTableName(schema))
-                            .item(item)
-                            .conditionExpression("#version = :version")
-                            .expressionAttributeNames(ImmutableMap.of(
-                                    "#version", Reserved.VERSION
-                            ))
-                            .expressionAttributeValues(ImmutableMap.of(
-                                    ":version", AttributeValue.builder().n(Long.toString(version)).build()
-                            ))
-                            .build())
+                            .item(item).build())
                     .build());
             items.add(TransactWriteItem.builder()
                     .put(Put.builder()
@@ -570,17 +596,9 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
             assert version != null;
 
             items.add(TransactWriteItem.builder()
-                    .delete(Delete.builder()
+                    .delete(conditionalDelete(version, versioning)
                             .tableName(strategy.objectTableName(schema))
-                            .key(objectKey(strategy, schema, id))
-                            .conditionExpression("#version = :version")
-                            .expressionAttributeNames(ImmutableMap.of(
-                                    "#version", Reserved.VERSION
-                            ))
-                            .expressionAttributeValues(ImmutableMap.of(
-                                    ":version", AttributeValue.builder().n(Long.toString(version)).build()
-                            ))
-                            .build())
+                            .key(objectKey(strategy, schema, id)).build())
                     .build());
 
             exceptions.add(() -> new VersionMismatchException(schema.getQualifiedName(), id, version));
@@ -592,13 +610,9 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
         public PartitionedStorage.WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
 
             items.add(TransactWriteItem.builder()
-                    .put(Put.builder()
+                    .put(conditionalCreate(strategy.indexPartitionName(schema, index), versioning)
                             .tableName(strategy.indexTableName(schema, index))
                             .item(indexItem(strategy, schema, index, id, key, projection))
-                            .conditionExpression("attribute_not_exists(#id)")
-                            .expressionAttributeNames(ImmutableMap.of(
-                                    "#id", strategy.indexPartitionName(schema, index)
-                            ))
                             .build())
                     .build());
 
@@ -611,16 +625,9 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
         public PartitionedStorage.WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
 
             items.add(TransactWriteItem.builder()
-                    .put(Put.builder()
+                    .put(conditionalUpdate(version, Versioning.UNCHECKED)
                             .tableName(strategy.indexTableName(schema, index))
                             .item(indexItem(strategy, schema, index, id, key, projection))
-                            .conditionExpression("#version = :version")
-                            .expressionAttributeNames(ImmutableMap.of(
-                                    "#version", Reserved.VERSION
-                            ))
-                            .expressionAttributeValues(ImmutableMap.of(
-                                    ":version", AttributeValue.builder().n(Long.toString(version)).build()
-                            ))
                             .build())
                     .build());
 
@@ -633,16 +640,9 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
         public PartitionedStorage.WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
 
             items.add(TransactWriteItem.builder()
-                    .delete(Delete.builder()
+                    .delete(conditionalDelete(version, Versioning.UNCHECKED)
                             .tableName(strategy.indexTableName(schema, index))
                             .key(indexKey(strategy, schema, index, id, key))
-                            .conditionExpression("#version = :version")
-                            .expressionAttributeNames(ImmutableMap.of(
-                                    "#version", Reserved.VERSION
-                            ))
-                            .expressionAttributeValues(ImmutableMap.of(
-                                    ":version", AttributeValue.builder().n(Long.toString(version)).build()
-                            ))
                             .build())
                     .build());
 
@@ -690,7 +690,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
 
         private CompletableFuture<BatchResponse> writeImpl() {
 
-            if(consistency == Consistency.NONE) {
+            if(consistency != Consistency.ATOMIC) {
 
                 return CompletableFuture.allOf(Lists.partition(items, WRITE_BATCH).stream()
                         .map(part -> {
@@ -744,38 +744,298 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
         return DynamoDBStorageTraits.INSTANCE;
     }
 
-    private PagingToken encodeIndexPaging(final ObjectSchema schema, final Index index, final Map<String, AttributeValue> key) {
+    @Override
+    public List<Pager.Source<RepairInfo>> repair(final ObjectSchema schema) {
 
-        final byte[] indexSort = key.get(strategy.indexSortName(schema, index)).b().asByteArray();
+        return Stream.concat(
+                Stream.of(fixObjects(schema, schema.getIndexes().values())),
+                schema.getIndexes().values().stream().map(index -> cleanIndex(schema, index))
+        ).collect(Collectors.toList());
+    }
 
-        try(final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            final DataOutputStream dos = new DataOutputStream(baos)) {
+    @Override
+    public List<Pager.Source<RepairInfo>> repairIndex(final ObjectSchema schema, final Index index) {
 
-            dos.writeShort(indexSort.length);
-            dos.write(indexSort);
+        return ImmutableList.of(
+                fixObjects(schema, Collections.singleton(index)),
+                cleanIndex(schema, index)
+        );
+    }
 
-            return new PagingToken(baos.toByteArray());
+    private Map<Map<String, AttributeValue>, Map<String, AttributeValue>> indexRecords(final ObjectSchema schema, final Index index, final List<Map<String, AttributeValue>> items) {
 
+        final Map<Map<String, AttributeValue>, Map<String, AttributeValue>> indexRecords = new HashMap<>();
+        items.forEach(item -> {
+            final Map<String, Object> instance = schema.create(DynamoDBUtils.fromItem(item), schema.getExpand(), true);
+            final String id = Instance.getId(instance);
+            index.readValues(instance).forEach((key, record) -> {
+                final Map<String, AttributeValue> indexKey = indexKey(strategy, schema, index, id, key);
+                final Map<String, AttributeValue> indexValues = indexItem(strategy, schema, index, id, key, record);
+                indexRecords.put(indexKey, indexValues);
+            });
+        });
+        return indexRecords;
+    }
+
+    // Scan objects, create or update missing/incorrect records
+    protected Pager.Source<RepairInfo> fixObjects(final ObjectSchema schema, final Collection<Index> indexes) {
+
+        return (count, paging, stats) -> {
+
+            final ScanRequest req = ScanRequest.builder()
+                    .tableName(strategy.objectTableName(schema))
+                    .limit(count).filterExpression("#schema = :schema")
+                    .expressionAttributeNames(Collections.singletonMap("#schema", ObjectSchema.SCHEMA))
+                    .expressionAttributeValues(Collections.singletonMap(":schema", DynamoDBUtils.s(schema.getQualifiedName().toString())))
+                    .exclusiveStartKey(paging == null ? null : decodeScanPaging(schema, paging))
+                    .build();
+
+            return client.scan(req).thenCompose(objects -> {
+
+                final Map<String, Map<Map<String, AttributeValue>, Map<String, AttributeValue>>> indexRecords = new HashMap<>();
+                indexes.forEach(index -> indexRecords.put(strategy.indexTableName(schema, index), indexRecords(schema, index, objects.items())));
+
+                final List<CompletableFuture<RepairInfo>> futures = new ArrayList<>();
+                indexRecords.forEach((indexTableName, afterRecords) -> {
+                    futures.add(DynamoDBUtils.batchRead(client, indexTableName, afterRecords.keySet()).thenCompose(reads -> {
+
+                        // Match reads back to their keys
+                        final Map<Map<String, AttributeValue>, Map<String, AttributeValue>> beforeRecords = new HashMap<>();
+                        afterRecords.keySet().forEach(key -> reads.forEach(read -> {
+                            if(key.entrySet().stream().allMatch(entry -> Objects.equals(entry.getValue(), read.get(entry.getKey())))) {
+                                assert(!beforeRecords.containsKey(key));
+                                beforeRecords.put(key, read);
+                            }
+                        }));
+
+                        final List<WriteRequest> writes = new ArrayList<>();
+                        final RepairInfo sum = afterRecords.entrySet().stream().map(entry -> {
+                            final Map<String, AttributeValue> key = entry.getKey();
+                            final Map<String, AttributeValue> afterRecord = entry.getValue();
+                            final Map<String, AttributeValue> beforeRecord = beforeRecords.get(key);
+                            if(!Objects.equals(afterRecord, beforeRecord)) {
+                                writes.add(WriteRequest.builder()
+                                        .putRequest(PutRequest.builder()
+                                                .item(afterRecord)
+                                                .build())
+                                        .build());
+                                if(beforeRecord == null) {
+                                    log.debug("Creating missing index value: {} {}", indexTableName, key);
+                                    return RepairInfo.ZERO.withCreatedIndexRecords(1);
+                                } else {
+                                    log.debug("Overwriting corrupted index value: {} {}", indexTableName, key);
+                                    return RepairInfo.ZERO.withUpdatedIndexRecords(1);
+                                }
+                            } else {
+                                return RepairInfo.ZERO;
+                            }
+                        }).reduce(RepairInfo.ZERO, RepairInfo::sum);
+
+                        return DynamoDBUtils.batchWrite(client, indexTableName, writes)
+                                .thenApply(ignored -> sum);
+                    }));
+                });
+
+                return CompletableFutures.allOf(RepairInfo.ZERO.withScannedObjects(objects.scannedCount()), RepairInfo::sum, futures).thenApply(sum -> {
+
+                    final Page.Token nextPaging;
+                    if (objects.hasLastEvaluatedKey()) {
+                        nextPaging = encodeScanPaging(schema, objects.lastEvaluatedKey());
+                    } else {
+                        nextPaging = null;
+                    }
+                    return new Page<>(Collections.singletonList(sum), nextPaging);
+                });
+            });
+        };
+    }
+
+    // Scan index, delete redundant records
+    protected Pager.Source<RepairInfo> cleanIndex(final ObjectSchema schema, final Index index) {
+
+        if(strategy.indexType(schema, index) == DynamoDBStrategy.IndexType.EXT) {
+
+            final String objectTableName = strategy.objectTableName(schema);
+            final String indexTableName = strategy.indexTableName(schema, index);
+            final String indexPartitionName = strategy.indexPartitionName(schema, index);
+            final String indexSortName = strategy.indexSortName(schema, index);
+
+            return (count, paging, stats) -> {
+
+                final ScanRequest req = ScanRequest.builder()
+                        .tableName(indexTableName)
+                        .limit(count).filterExpression("#schema = :schema AND #partition BETWEEN :lo and :hi")
+                        .expressionAttributeNames(ImmutableMap.of(
+                                "#schema", ObjectSchema.SCHEMA,
+                                "#partition", indexPartitionName
+                        ))
+                        .expressionAttributeValues(ImmutableMap.of(
+                                ":schema", DynamoDBUtils.s(schema.getQualifiedName().toString()),
+                                ":lo", DynamoDBUtils.b(indexPartitionPrefix(strategy, schema, index, UseBinary.LO_PREFIX)),
+                                ":hi", DynamoDBUtils.b(indexPartitionPrefix(strategy, schema, index, UseBinary.HI_PREFIX))
+                        ))
+                        .exclusiveStartKey(paging == null ? null : decodeIndexPaging(schema, index, paging))
+                        .build();
+
+                return client.scan(req).thenCompose(results -> {
+
+                    final Set<Map<String, AttributeValue>> objectKeys = new HashSet<>();
+
+                    results.items().forEach(item -> {
+                        final String id = DynamoDBUtils.id(item);
+                        objectKeys.add(objectKey(strategy, schema, id));
+                    });
+
+                    return DynamoDBUtils.batchRead(client, objectTableName, objectKeys).thenCompose(objects -> {
+
+                        final Map<String, Set<Map<String, AttributeValue>>> expected = new HashMap<>();
+                        objects.forEach(item -> {
+                            final Map<String, Object> data = DynamoDBUtils.fromItem(item);
+                            final Map<String, Object> object = schema.create(data, schema.getExpand(), true);
+                            final String id = Instance.getId(object);
+                            final Set<Map<String, AttributeValue>> keys = new HashSet<>();
+                            index.readValues(object).forEach((key, record) -> keys.add(indexKey(strategy, schema, index, id, key)));
+                            expected.put(id, keys);
+                        });
+
+                        final Set<Map<String, AttributeValue>> deletes = new HashSet<>();
+
+                        results.items().forEach(item -> {
+                            final String id = DynamoDBUtils.id(item);
+                            final Set<Map<String, AttributeValue>> keys = expected.get(id);
+                            final Map<String, AttributeValue> indexKey = ImmutableMap.of(
+                                    indexPartitionName, item.get(indexPartitionName),
+                                    indexSortName, item.get(indexSortName)
+                            );
+                            if(keys == null || !keys.contains(indexKey)) {
+                                log.debug("Deleting corrupted index value: {} {}", indexTableName, indexKey);
+                                deletes.add(indexKey);
+                            }
+                        });
+
+                        final List<WriteRequest> writes = deletes.stream().map(key -> WriteRequest.builder()
+                                .deleteRequest(DeleteRequest.builder().key(key).build())
+                                .build()).collect(Collectors.toList());
+
+                        return DynamoDBUtils.batchWrite(client, indexTableName, writes)
+                                .thenApply(ignored -> RepairInfo.ZERO.withDeletedIndexRecords(writes.size()));
+
+                    }).thenApply(deletes -> {
+
+                        final RepairInfo sum = RepairInfo.sum(deletes, RepairInfo.ZERO.withScannedIndexRecords(results.scannedCount()));
+
+                        final Page.Token nextPaging;
+                        if (results.hasLastEvaluatedKey()) {
+                            nextPaging = encodeIndexPaging(schema, index, results.lastEvaluatedKey());
+                        } else {
+                            nextPaging = null;
+                        }
+                        return new Page<>(Collections.singletonList(sum), nextPaging);
+
+                    });
+                });
+            };
+
+        } else {
+            return Pager.Source.empty();
+        }
+    }
+
+    private Map<String, AttributeValue> decodeScanPaging(final ObjectSchema schema, final Page.Token paging) {
+
+        try(final ByteArrayInputStream bais = new ByteArrayInputStream(paging.getValue());
+            final DataInputStream dis = new DataInputStream(bais)) {
+            final byte[] partition = readWithLength(dis);
+            return ImmutableMap.of(
+                    strategy.objectPartitionName(schema), DynamoDBUtils.s(new String(partition, Charsets.UTF_8))
+            );
         } catch (final IOException e) {
             throw new IllegalStateException(e);
         }
     }
 
-    private Map<String, AttributeValue> decodeIndexPaging(final ObjectSchema schema, final Index index, final SdkBytes partition, final PagingToken paging) {
+    private Page.Token encodeScanPaging(final ObjectSchema schema, final Map<String, AttributeValue> key) {
+
+        final byte[] partition = key.get(strategy.objectPartitionName(schema)).s().getBytes(Charsets.UTF_8);
+
+        try(final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            final DataOutputStream dos = new DataOutputStream(baos)) {
+            writeWithLength(dos, partition);
+            return new Page.Token(baos.toByteArray());
+        } catch (final IOException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private static void writeWithLength(final DataOutputStream dos, final byte[] bytes) throws IOException {
+
+        dos.writeInt(bytes.length);
+        dos.write(bytes);
+    }
+
+    private static byte[] readWithLength(final DataInputStream dis) throws IOException {
+
+        final int len = dis.readInt();
+        final byte[] buffer = new byte[len];
+        final int read = dis.read(buffer);
+        assert(read == len);
+        return buffer;
+    }
+
+    private Map<String, AttributeValue> decodeIndexPaging(final ObjectSchema schema, final Index index, final byte[] indexPartition, final byte[] indexSort) {
+
+        return ImmutableMap.of(
+                strategy.indexPartitionName(schema, index), DynamoDBUtils.b(indexPartition),
+                strategy.indexSortName(schema, index), DynamoDBUtils.b(indexSort)
+        );
+    }
+
+    private Page.Token encodeIndexPaging(final ObjectSchema schema, final Index index, final Map<String, AttributeValue> key) {
+
+        final byte[] indexPartition = key.get(strategy.indexPartitionName(schema, index)).b().asByteArray();
+        final byte[] indexSort = key.get(strategy.indexSortName(schema, index)).b().asByteArray();
+
+        try(final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            final DataOutputStream dos = new DataOutputStream(baos)) {
+            writeWithLength(dos, indexPartition);
+            writeWithLength(dos, indexSort);
+            return new Page.Token(baos.toByteArray());
+        } catch (final IOException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private Map<String, AttributeValue> decodeIndexPaging(final ObjectSchema schema, final Index index, final Page.Token paging) {
 
         try(final ByteArrayInputStream bais = new ByteArrayInputStream(paging.getValue());
             final DataInputStream dis = new DataInputStream(bais)) {
+            final byte[] indexPartition = readWithLength(dis);
+            final byte[] indexSort = readWithLength(dis);
+            return decodeIndexPaging(schema, index, indexPartition, indexSort);
+        } catch (final IOException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 
-            final int len = dis.readUnsignedShort();
-            final byte[] indexSort = new byte[len];
-            final int read = dis.read(indexSort);
-            assert(read == len);
+    private Page.Token encodeIndexPagingWithoutPartition(final ObjectSchema schema, final Index index, final Map<String, AttributeValue> key) {
 
-            return ImmutableMap.of(
-                    strategy.indexPartitionName(schema, index), AttributeValue.builder().b(partition).build(),
-                    strategy.indexSortName(schema, index), AttributeValue.builder().b(SdkBytes.fromByteArray(indexSort)).build()
-            );
+        final byte[] indexSort = key.get(strategy.indexSortName(schema, index)).b().asByteArray();
 
+        try(final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            final DataOutputStream dos = new DataOutputStream(baos)) {
+            writeWithLength(dos, indexSort);
+            return new Page.Token(baos.toByteArray());
+        } catch (final IOException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private Map<String, AttributeValue> decodeIndexPagingWithPartition(final ObjectSchema schema, final Index index, final byte[] indexPartition, final Page.Token paging) {
+
+        try(final ByteArrayInputStream bais = new ByteArrayInputStream(paging.getValue());
+            final DataInputStream dis = new DataInputStream(bais)) {
+            final byte[] indexSort = readWithLength(dis);
+            return decodeIndexPaging(schema, index, indexPartition, indexSort);
         } catch (final IOException e) {
             throw new IllegalStateException(e);
         }

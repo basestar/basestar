@@ -4,7 +4,9 @@ package ${packageName};
 <#list annotations as annot>
 <@macros.annotation name=annot.className values=annot.values/><#nt>
 </#list>
-public class ${className} <#if extend??>extends ${extend.className}</#if> {
+@com.fasterxml.jackson.databind.annotation.JsonSerialize(using = io.basestar.mapper.jackson.UnmarshallingSerializer.class)
+@com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = io.basestar.mapper.jackson.MarshallingDeserializer.class)
+public class ${className} <#if extend??>extends ${extend.fullyQualifiedClassName}</#if> {
 
 <#list members as member>
     <#list member.annotations as annot>

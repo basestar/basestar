@@ -20,18 +20,19 @@ package io.basestar.schema.use;
  * #L%
  */
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Context;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.EnumSchema;
 import io.basestar.schema.Schema;
+import io.basestar.schema.exception.TypeSyntaxException;
 import io.basestar.util.Name;
 import lombok.Data;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Enum Type
@@ -43,12 +44,13 @@ import java.util.Set;
  */
 
 @Data
-public class UseEnum implements UseScalar<String>, UseNamed<String> {
+public class UseEnum implements UseStringLike<String>, UseNamed<String> {
+
+    public static final String NAME = "enum";
 
     private final EnumSchema schema;
 
-    @Override
-    public Name getQualifiedName() {
+    public Name getName() {
 
         return schema.getQualifiedName();
     }
@@ -79,8 +81,27 @@ public class UseEnum implements UseScalar<String>, UseNamed<String> {
         return new UseEnum(type);
     }
 
+    public static UseEnum from(final Object config) {
+
+        if(config instanceof List) {
+            final List<String> values = new ArrayList<>();
+            for(final Object value : (List<?>)config) {
+                if(value instanceof String) {
+                    values.add((String)value);
+                } else {
+                    throw new TypeSyntaxException();
+                }
+            }
+            return new UseEnum(EnumSchema.builder()
+                    .setValues(values)
+                    .build());
+        } else {
+            throw new TypeSyntaxException();
+        }
+    }
+
     @Override
-    public String create(final Object value, final boolean expand, final boolean suppress) {
+    public String create(final Object value, final Set<Name> expand, final boolean suppress) {
 
         return schema.create(value, expand, suppress);
     }
@@ -89,6 +110,13 @@ public class UseEnum implements UseScalar<String>, UseNamed<String> {
     public Code code() {
 
         return Code.ENUM;
+    }
+
+    @Override
+    public String defaultValue() {
+
+        final List<String> values = schema.getValues();
+        return values.isEmpty() ? null : values.get(0);
     }
 
     @Override
@@ -124,9 +152,32 @@ public class UseEnum implements UseScalar<String>, UseNamed<String> {
         }
     }
 
-//    @Override
-//    public Map<String, Object> openApiType() {
-//
-//        return type.openApiRef();
-//    }
+    @Override
+    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+
+        final Schema<?> schema = getSchema();
+        out.put(schema.getQualifiedName(), schema);
+    }
+
+    @Override
+    public Object toConfig(final boolean optional) {
+
+        if(schema.isAnonymous()) {
+            return ImmutableMap.of(
+                    Use.name(NAME, optional), schema.getValues()
+            );
+        } else {
+            return UseNamed.super.toConfig();
+        }
+    }
+
+    @Override
+    public io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
+
+        if(schema.isAnonymous()) {
+            return new io.swagger.v3.oas.models.media.StringSchema()._enum(schema.getValues());
+        } else {
+            return UseNamed.super.openApi(expand);
+        }
+    }
 }

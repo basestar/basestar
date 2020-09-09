@@ -77,7 +77,7 @@ All      : A L L;
 Like     : L I K E;
 ILike    : I L I K E;
 
-Arrow    : '->';
+Arrow    : '=>';
 Or       : '||';
 And      : '&&';
 BitOr    : '|';

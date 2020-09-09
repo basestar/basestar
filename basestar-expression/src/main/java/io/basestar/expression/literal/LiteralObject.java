@@ -85,10 +85,10 @@ public class LiteralObject implements Expression {
     }
 
     @Override
-    public Set<Name> paths() {
+    public Set<Name> names() {
 
         return Stream.concat(args.keySet().stream(), args.values().stream())
-                .flatMap(v -> v.paths().stream())
+                .flatMap(v -> v.names().stream())
                 .collect(Collectors.toSet());
     }
 

@@ -23,6 +23,8 @@ package io.basestar.expression.type.match;
 import io.basestar.expression.type.Values;
 import io.basestar.expression.type.exception.BadOperandsException;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.Map;
 
@@ -53,6 +55,16 @@ public interface UnaryMatch<T> {
         return defaultApply(value);
     }
 
+    default T apply(final Instant value) {
+
+        return defaultApply(value);
+    }
+
+    default T apply(final LocalDate value) {
+
+        return defaultApply(value);
+    }
+
     default T apply(final Collection<?> value) {
 
         return defaultApply(value);
@@ -73,6 +85,10 @@ public interface UnaryMatch<T> {
             return apply((Number)value);
         } else if(value instanceof String) {
             return apply((String)value);
+        } else if(value instanceof Instant) {
+            return apply((Instant)value);
+        } else if(value instanceof LocalDate) {
+            return apply((LocalDate)value);
         } else if(value instanceof Collection<?>) {
             return apply((Collection<?>)value);
         } else if(value instanceof Map<?, ?>) {

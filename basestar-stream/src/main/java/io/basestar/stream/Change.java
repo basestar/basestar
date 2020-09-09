@@ -49,6 +49,7 @@ public class Change {
 
         CREATE,
         UPDATE,
-        DELETE
+        DELETE,
+        REFRESH
     }
 }

@@ -20,12 +20,42 @@ package io.basestar.event;
  * #L%
  */
 
-//@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, property = Event.EVENT)
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import java.util.Collections;
+import java.util.Map;
+
 public interface Event {
 
-    String EVENT = "@event";
-
-//    String getUniqueId();
-
     Event abbreviate();
+
+    /**
+     * With default serialization/deserialization this must be the FQN of the event class
+     */
+
+    @JsonIgnore
+    default String eventType() {
+
+        return this.getClass().getName();
+    }
+
+    /**
+     * Module is only used for routing, default is to use the package of the event class with 'event' removed if it is
+     * the last package name element.
+     *
+     * e.g. the module of io.basestar.custom.event.MyEvent will be io.basestar.custom
+     */
+
+    @JsonIgnore
+    default String eventModule() {
+
+        final String eventPackage = this.getClass().getPackage().getName();
+        return eventPackage.replaceAll("\\.event$", "");
+    }
+
+    @JsonIgnore
+    default Map<String, String> eventMetadata() {
+
+        return Collections.emptyMap();
+    }
 }

@@ -21,10 +21,12 @@ package io.basestar.spark;
  */
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Namespace;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import io.basestar.spark.database.SparkDatabase;
+import io.basestar.spark.util.ColumnResolver;
+import io.basestar.spark.util.DatasetResolver;
+import io.basestar.util.Name;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
@@ -33,66 +35,164 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class TestViewTransform {
+public class TestViewTransform extends AbstractSparkTest {
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class A {
+    @Test
+    public void testViewTransform() throws IOException {
 
-        private String id;
-    }
+        final SparkSession session = session();
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class B {
+        final D d1 = new D("a", 1L);
+        final D d2 = new D("b", 1L);
 
-        private A key;
+        final B b1 = new B("1", d1, 3L, d2);
+        final B b2 = new B("2", d1, 2L, d2);
+        final B b3 = new B("3", d1, 1L, d2);
+        final B b4 = new B("4", d2, 2L, d1);
+        final B b5 = new B("5", d2, 4L, d1);
+        final B b6 = new B("6", d2, 6L, d1);
 
-        private int value;
-    }
+        final Dataset<Row> datasetD = session.createDataset(ImmutableList.of(
+                d1, d2
+        ), Encoders.bean(D.class)).toDF();
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class AggView {
+        final Dataset<Row> datasetB = session.createDataset(ImmutableList.of(
+                b1, b2, b3, b4, b5, b6
+        ), Encoders.bean(B.class)).toDF();
 
-        private String key;
+        final Map<Name, Dataset<Row>> datasets = ImmutableMap.of(
+                Name.of("B"), datasetB,
+                Name.of("D"), datasetD
+        );
 
-        private long agg;
+        final List<AggView> rows = view("AggView", AggView.class, datasets);
+        assertEquals(2, rows.size());
+        assertTrue(rows.contains(new AggView("a", 8, ImmutableList.of(b3.withoutKeys(), b2.withoutKeys(), b1.withoutKeys()))));
+        assertTrue(rows.contains(new AggView("b", 14, ImmutableList.of(b4.withoutKeys(), b5.withoutKeys(), b6.withoutKeys()))));
     }
 
     @Test
-    public void testView() throws IOException {
+    public void testAliasViewTransform() throws IOException {
 
-        final SparkSession session = SparkSession.builder()
-            .master("local[*]")
-            .getOrCreate();
+        final SparkSession session = session();
+
+        final D d1 = new D("a");
+        final D d2 = new D("b");
+        final D d3 = new D("c");
+
+        final Dataset<Row> datasetB = session.createDataset(ImmutableList.of(
+                new B("1", d1, 1L), new B("2", d2, 2L), new B("3", d3, 3L),
+                new B("4", d1, 1L), new B("5", d2, 2L), new B("6", d3, 3L)
+        ), Encoders.bean(B.class)).toDF();
+
+        final Map<Name, Dataset<Row>> datasets = ImmutableMap.of(
+                Name.of("B"), datasetB
+        );
+
+        final List<AliasView> rows = view("AliasView", AliasView.class, datasets);
+        assertEquals(3, rows.size());
+        rows.forEach(row -> {
+            assertNotNull(row.getId());
+            assertEquals(2L, row.getCount());
+        });
+    }
+
+    @Test
+    public void testLinkingViewTransform() throws IOException {
+
+        final SparkSession session = session();
+
+        final D d1 = new D("1", 1L);
+        final D d2 = new D("2", 2L);
+        final D d3 = new D("3", 3L);
+
+        final D g1 = new D("1", 1L);
+        final D g2 = new D("2", 2L);
+        final D g3 = new D("3", 3L);
+
+        final Dataset<Row> datasetD = session.createDataset(ImmutableList.of(
+                d1, d2, d3
+        ), Encoders.bean(D.class)).toDF();
+
+        final Dataset<Row> datasetB = session.createDataset(ImmutableList.of(
+                new BFlat("1", "1", 1L, "3"), new BFlat("2", "2", 2L, "2"), new BFlat("3", "3", 3L, "1")
+        ), Encoders.bean(BFlat.class)).toDF();
+
+        final Dataset<Row> datasetG = session.createDataset(ImmutableList.of(
+                g1, g2, g3
+        ), Encoders.bean(D.class)).toDF();
+
+        final Map<Name, Dataset<Row>> datasets = ImmutableMap.of(
+                Name.of("B"), datasetB,
+                Name.of("D"), datasetD,
+                Name.of("G"), datasetG
+        );
+
+        final List<LinkingView> rows = view("LinkingView", LinkingView.class, datasets);
+        assertEquals(3, rows.size());
+        rows.forEach(row -> {
+            assertNotNull(row.getId());
+            assertNotNull(row.getRecord());
+            assertEquals(row.getId(), row.getRecord().getId());
+            assertNotNull(row.getKey());
+            assertNotNull(row.getKey2());
+        });
+    }
+
+    @Test
+    public void testLinkingViewToViewTransform() throws IOException {
+
+        final SparkSession session = session();
+
+        final File f1 = new File("f1");
+
+        final FileRow r1 = new FileRow("r1", f1, 100L);
+
+        final Map<Name, Dataset<Row>> datasets = ImmutableMap.of(
+                Name.of("File"), session.createDataset(ImmutableList.of(f1), Encoders.bean(File.class)).toDF(),
+                Name.of("FileRow"), session.createDataset(ImmutableList.of(r1), Encoders.bean(FileRow.class)).toDF()
+        );
+
+        final List<LinkingViewToView> rows = view("LinkingViewToView", LinkingViewToView.class, datasets);
+        assertEquals(1, rows.size());
+        assertNotNull(rows.get(0).getHeaderRows().getRows().get(0).getRowIndex());
+    }
+
+    @Test
+    public void testLinkingViewToViewInnerTransform() throws IOException {
+
+        final SparkSession session = session();
+
+        final File f1 = new File("f1");
+
+        final FileRow r1 = new FileRow("r1", f1, 100L);
+
+        final Map<Name, Dataset<Row>> datasets = ImmutableMap.of(
+                Name.of("File"), session.createDataset(ImmutableList.of(f1), Encoders.bean(File.class)).toDF(),
+                Name.of("FileRow"), session.createDataset(ImmutableList.of(r1), Encoders.bean(FileRow.class)).toDF()
+        );
+
+        final List<HeaderRows> rows = view("HeaderRows", HeaderRows.class, datasets);
+        assertEquals(1, rows.size());
+        assertNotNull(rows.get(0).getRows().get(0).getRowIndex());
+    }
+
+    private <T> List<T> view(final String view, final Class<T> as,  final Map<Name, Dataset<Row>> datasets) throws IOException {
 
         final Namespace namespace = Namespace.load(TestViewTransform.class.getResourceAsStream("schema.yml"));
 
-        final A a = new A("a");
-        final A b = new A("b");
+        final DatasetResolver resolver = DatasetResolver.automatic((schema) -> datasets.get(schema.getQualifiedName()));
 
-        final Source<Dataset<Row>> sourceB = (Source<Dataset<Row>>) sink -> sink.accept(session.createDataset(ImmutableList.of(
-                new B(a, 1), new B(a, 2), new B(a, 3), new B(b, 2), new B(b, 4), new B(b, 6)
-        ), Encoders.bean(B.class)).toDF());
-
-        final ViewTransform view = ViewTransform.builder()
-                .schema(namespace.requireViewSchema("AggView"))
+        final SparkDatabase database = SparkDatabase.builder()
+                .resolver(resolver).namespace(namespace)
+                .columnResolver(ColumnResolver.lowercase(ColumnResolver::nested))
                 .build();
 
-        sourceB.then(view).then(dataset -> {
-
-            final List<AggView> rows = dataset.as(Encoders.bean(AggView.class)).collectAsList();
-            assertEquals(2, rows.size());
-            assertTrue(rows.contains(new AggView("a", 8)));
-            assertTrue(rows.contains(new AggView("b", 14)));
-        });
+        final Dataset<T> dataset = database.from(view).defaultExpand().as(as).query();
+        return dataset.collectAsList();
     }
 }

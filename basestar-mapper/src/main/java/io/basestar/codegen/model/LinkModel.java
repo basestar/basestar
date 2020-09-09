@@ -20,20 +20,21 @@ package io.basestar.codegen.model;
  * #L%
  */
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import io.basestar.codegen.CodegenSettings;
+import io.basestar.codegen.CodegenContext;
+import io.basestar.mapper.annotation.Description;
 import io.basestar.schema.Link;
 
+import java.util.ArrayList;
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class LinkModel extends MemberModel {
 
     private final Link link;
 
-    public LinkModel(final CodegenSettings settings, final Link link) {
+    public LinkModel(final CodegenContext context, final Link link) {
 
-        super(settings);
+        super(context);
 
         this.link = link;
     }
@@ -45,20 +46,21 @@ public class LinkModel extends MemberModel {
     }
 
     @Override
-    public List<AnnotationModel> getAnnotations() {
+    public List<AnnotationModel<?>> getAnnotations() {
 
-        return ImmutableList.of(
-                new AnnotationModel(getSettings(), io.basestar.mapper.annotation.Link.class, ImmutableMap.of(
-                        "name", link.getName(),
-                        "expression", link.getExpression()
-                ))
-        );
+        final List<AnnotationModel<?>> annotations = new ArrayList<>();
+        annotations.add(new AnnotationModel<>(getContext(), VALID));
+        annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.Link.Declaration.annotation(link)));
+        if(link.getDescription() != null) {
+            annotations.add(new AnnotationModel<>(getContext(), Description.Modifier.annotation(link.getDescription())));
+        }
+        return annotations;
     }
 
     @Override
     public TypeModel getType() {
 
-        return TypeModel.from(getSettings(), link.getType());
+        return TypeModel.from(getContext(), link.getType());
     }
 
     @Override

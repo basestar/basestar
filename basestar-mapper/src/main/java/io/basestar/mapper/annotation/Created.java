@@ -20,10 +20,12 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.MemberMapper;
 import io.basestar.mapper.internal.MetadataMapper;
 import io.basestar.mapper.internal.annotation.MemberDeclaration;
+import io.basestar.type.AnnotationContext;
 import io.basestar.type.PropertyContext;
 import lombok.RequiredArgsConstructor;
 
@@ -32,18 +34,24 @@ import java.lang.annotation.*;
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.METHOD})
-@MemberDeclaration(Created.Binder.class)
+@MemberDeclaration(Created.Declaration.class)
 public @interface Created {
 
     @RequiredArgsConstructor
-    class Binder implements MemberDeclaration.Declaration {
+    class Declaration implements MemberDeclaration.Declaration {
 
+        @SuppressWarnings("unused")
         private final Created annotation;
 
         @Override
         public MemberMapper<?> mapper(final MappingContext context, final PropertyContext prop) {
 
             return new MetadataMapper(context, MetadataMapper.Name.CREATED, prop);
+        }
+
+        public static Created annotation() {
+
+            return new AnnotationContext<>(Created.class, ImmutableMap.of()).annotation();
         }
     }
 }

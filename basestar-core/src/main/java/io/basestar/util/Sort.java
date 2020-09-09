@@ -21,19 +21,22 @@ package io.basestar.util;
  */
 
 import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.io.Serializable;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 
 @Data
+@AllArgsConstructor
 public class Sort implements Serializable {
 
     public static final String DELIMITER = ":";
+
+    public static final char MULTIPLE_DELIMITER = ',';
 
     private static final Splitter SPLITTER = Splitter.on(DELIMITER).trimResults().omitEmptyStrings().limit(2);
 
@@ -41,14 +44,47 @@ public class Sort implements Serializable {
 
     private final Order order;
 
+    private final Nulls nulls;
+
+    public Sort(final Name name, final Order order) {
+
+        this(name, order, Nulls.FIRST);
+    }
+
+    public static List<Sort> parseList(final Iterable<String> strs) {
+
+        return Streams.stream(strs).map(Sort::parse)
+                .collect(Collectors.toList());
+    }
+
+    public static List<Sort> parseList(final String ... strs) {
+
+        return parseList(Arrays.asList(strs));
+    }
+
+    public static List<Sort> parseList(final String str) {
+
+        return parseList(Splitter.on(MULTIPLE_DELIMITER).omitEmptyStrings().trimResults().split(str));
+    }
+
     public Sort reverse() {
 
-        return new Sort(name, order.reverse());
+        return new Sort(name, order.reverse(), nulls.reverse());
+    }
+
+    public static Sort asc(final String name) {
+
+        return asc(Name.parseNonEmpty(name));
     }
 
     public static Sort asc(final Name name) {
 
         return new Sort(name, Order.ASC);
+    }
+
+    public static Sort desc(final String name) {
+
+        return desc(Name.parseNonEmpty(name));
     }
 
     public static Sort desc(final Name name) {
@@ -59,7 +95,7 @@ public class Sort implements Serializable {
 //    @JsonCreator
     public static Sort parse(final String v) {
 
-        final List<String> parts = SPLITTER.splitToList(v);
+        final List<String> parts = Lists.newArrayList(SPLITTER.split(v));
         if(parts.size() < 1) {
             throw new IllegalStateException();
         } else {
@@ -117,6 +153,17 @@ public class Sort implements Serializable {
         public Order reverse() {
 
             return this == ASC ? DESC : ASC;
+        }
+    }
+
+    public enum Nulls {
+
+        FIRST,
+        LAST;
+
+        public Nulls reverse() {
+
+            return this == FIRST ? LAST : FIRST;
         }
     }
 }

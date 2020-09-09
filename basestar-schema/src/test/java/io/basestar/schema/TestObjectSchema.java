@@ -20,16 +20,17 @@ package io.basestar.schema;
  * #L%
  */
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.module.jsonSchema.JsonSchema;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
 import io.basestar.expression.compare.Eq;
 import io.basestar.expression.constant.NameConstant;
+import io.basestar.schema.use.UseInteger;
+import io.basestar.schema.use.UseOptional;
+import io.basestar.schema.use.UseString;
 import io.basestar.schema.util.Expander;
 import io.basestar.util.Name;
-import io.basestar.util.PagedList;
+import io.basestar.util.Page;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -57,6 +58,17 @@ public class TestObjectSchema {
     }
 
     @Test
+    public void testLegacy() throws IOException {
+
+        final Namespace namespace = Namespace.load(TestObjectSchema.class.getResource("legacy.yml"));
+
+        final ObjectSchema schema = namespace.requireObjectSchema("Legacy");
+
+        assertEquals(UseString.DEFAULT, schema.requireProperty("name", true).getType());
+        assertEquals(new UseOptional<>(UseInteger.DEFAULT), schema.requireProperty("age", true).getType());
+    }
+
+    @Test
     @SuppressWarnings("rawtypes")
     public void testExpandCollapse() throws IOException {
 
@@ -67,12 +79,12 @@ public class TestObjectSchema {
         final String id = UUID.randomUUID().toString();
         final Instance initial = schema.create(ImmutableMap.of(
                 "ref", ImmutableMap.of(
-                        Reserved.ID, id
+                        ObjectSchema.ID, id
                 )
         ));
 
         final Instance refValue = schema.create(ImmutableMap.of(
-                Reserved.ID, UUID.randomUUID().toString()
+                ObjectSchema.ID, UUID.randomUUID().toString()
         ));
 
         final Instance instance = schema.expand(initial, new Expander() {
@@ -83,7 +95,7 @@ public class TestObjectSchema {
             }
 
             @Override
-            public PagedList<Instance> expandLink(final Link link, final PagedList<Instance> value, final Set<Name> expand) {
+            public Page<Instance> expandLink(final Link link, final Page<Instance> value, final Set<Name> expand) {
 
                 return null;
             }
@@ -91,13 +103,13 @@ public class TestObjectSchema {
 
         final Instance expanded = schema.expand(instance, Expander.noop(), ImmutableSet.of(Name.of("ref")));
         final Map expandedRef = (Map)expanded.get("ref");
-        assertNotNull(expandedRef.get(Reserved.SCHEMA));
-        assertNotNull(expandedRef.get(Reserved.ID));
+        assertNotNull(expandedRef.get(ObjectSchema.SCHEMA));
+        assertNotNull(expandedRef.get(ObjectSchema.ID));
 
         final Instance collapsed = schema.expand(instance, Expander.noop(), ImmutableSet.of());
         final Map collapsedRef = (Map)collapsed.get("ref");
-        assertNull(collapsedRef.get(Reserved.SCHEMA));
-        assertNotNull(collapsedRef.get(Reserved.ID));
+        assertNull(collapsedRef.get(ObjectSchema.SCHEMA));
+        assertNotNull(collapsedRef.get(ObjectSchema.ID));
     }
 
     @Test
@@ -108,18 +120,18 @@ public class TestObjectSchema {
         final ObjectSchema schema = namespace.requireObjectSchema("Post");
 
         final Set<Expression> queries = schema.refQueries(Name.of("Post"), ImmutableSet.of(Name.of("ref")));
-        assertEquals(ImmutableSet.of(new Eq(new NameConstant(Name.of("ref", "id")), new NameConstant(Name.of(Reserved.THIS, Reserved.ID)))), queries);
+        assertEquals(ImmutableSet.of(new Eq(new NameConstant(Name.of("ref", "id")), new NameConstant(Name.of(Reserved.THIS, ObjectSchema.ID)))), queries);
 
         final Set<Expression> nonQueries = schema.refQueries(Name.of("Post"), ImmutableSet.of());
         assertEquals(ImmutableSet.of(), nonQueries);
     }
 
-    @Test
-    public void testJsonSchema() throws IOException {
-
-        final JsonSchema schema = Namespace.Builder.jsonSchema();
-        System.err.println(new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(schema));
-    }
+//    @Test
+//    public void testJsonSchema() throws IOException {
+//
+//        final JsonSchema schema = Namespace.Builder.jsonSchema();
+//        System.err.println(new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(schema));
+//    }
 
     @Test
     public void testDependencies() throws IOException {

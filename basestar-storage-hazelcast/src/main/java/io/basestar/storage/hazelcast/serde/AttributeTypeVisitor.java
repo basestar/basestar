@@ -57,7 +57,7 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
     }
 
     @Override
-    public AttributeType<?> visitRef(final UseObject type) {
+    public AttributeType<?> visitObject(final UseObject type) {
 
         return AttributeType.REF;
     }
@@ -65,13 +65,13 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
     @Override
     public <T> AttributeType<?> visitArray(final UseArray<T> type) {
 
-        return type.getType().visit(ForArray.INSTANCE);
+        return type.getType().visit(OfArray.INSTANCE);
     }
 
     @Override
     public <T> AttributeType<?> visitSet(final UseSet<T> type) {
 
-        return type.getType().visit(ForArray.INSTANCE);
+        return type.getType().visit(OfArray.INSTANCE);
     }
 
     @Override
@@ -95,18 +95,36 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
     @Override
     public AttributeType<?> visitDate(final UseDate type) {
 
-        return AttributeType.STRING;
+        return AttributeType.DATE;
     }
 
     @Override
     public AttributeType<?> visitDateTime(final UseDateTime type) {
 
-        return AttributeType.STRING;
+        return AttributeType.DATETIME;
     }
 
-    public static class ForArray implements Use.Visitor<AttributeType<?>> {
+    @Override
+    public AttributeType<?> visitView(final UseView type) {
 
-        public static final ForArray INSTANCE = new ForArray();
+        return AttributeType.struct(type.getSchema());
+    }
+
+    @Override
+    public <T> AttributeType<?> visitOptional(final UseOptional<T> type) {
+
+        return type.getType().visit(this);
+    }
+
+    @Override
+    public AttributeType<?> visitAny(final UseAny type) {
+
+        return AttributeType.encoded(type);
+    }
+
+    public static class OfArray implements Use.Visitor<AttributeType<?>> {
+
+        public static final OfArray INSTANCE = new OfArray();
 
         @Override
         public AttributeType<?> visitBoolean(final UseBoolean type) {
@@ -139,7 +157,7 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
         }
 
         @Override
-        public AttributeType<?> visitRef(final UseObject type) {
+        public AttributeType<?> visitObject(final UseObject type) {
 
             return AttributeType.REF_ARRAY;
         }
@@ -177,13 +195,31 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
         @Override
         public AttributeType<?> visitDate(final UseDate type) {
 
-            return AttributeType.STRING_ARRAY;
+            return AttributeType.DATE_ARRAY;
         }
 
         @Override
         public AttributeType<?> visitDateTime(final UseDateTime type) {
 
-            return AttributeType.STRING_ARRAY;
+            return AttributeType.DATETIME_ARRAY;
+        }
+
+        @Override
+        public AttributeType<?> visitView(final UseView type) {
+
+            return AttributeType.structArray(type.getSchema());
+        }
+
+        @Override
+        public <T> AttributeType<?> visitOptional(final UseOptional<T> type) {
+
+            return type.getType().visit(this);
+        }
+
+        @Override
+        public AttributeType<?> visitAny(final UseAny type) {
+
+            return AttributeType.encodedArray(type);
         }
     }
 }

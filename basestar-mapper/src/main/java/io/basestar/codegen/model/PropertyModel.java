@@ -20,20 +20,25 @@ package io.basestar.codegen.model;
  * #L%
  */
 
-import com.google.common.collect.ImmutableMap;
-import io.basestar.codegen.CodegenSettings;
+import io.basestar.codegen.CodegenContext;
+import io.basestar.mapper.annotation.Description;
+import io.basestar.mapper.annotation.Expression;
+import io.basestar.mapper.annotation.Immutable;
 import io.basestar.schema.Property;
 
 import java.util.ArrayList;
 import java.util.List;
 
+//import io.basestar.mapper.annotation.Required;
+
+@SuppressWarnings("unused")
 public class PropertyModel extends MemberModel {
 
     private final Property property;
 
-    public PropertyModel(final CodegenSettings settings, final Property property) {
+    public PropertyModel(final CodegenContext context, final Property property) {
 
-        super(settings);
+        super(context);
 
         this.property = property;
     }
@@ -45,23 +50,36 @@ public class PropertyModel extends MemberModel {
     }
 
     @Override
-    public List<AnnotationModel> getAnnotations() {
+    public List<AnnotationModel<?>> getAnnotations() {
 
-        final List<AnnotationModel> annotations = new ArrayList<>();
-        annotations.add(new AnnotationModel(getSettings(), io.basestar.mapper.annotation.Property.class, ImmutableMap.of("name", property.getName())));
-        annotations.add(new AnnotationModel(getSettings(), javax.validation.constraints.NotNull.class, ImmutableMap.of()));
+        final List<AnnotationModel<?>> annotations = new ArrayList<>();
+        annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.Property.Declaration.annotation(property)));
+        if(property.getExpression() != null) {
+            annotations.add(new AnnotationModel<>(getContext(), Expression.Modifier.annotation(property.getExpression())));
+        }
+        if(!property.getType().isOptional()) {
+            annotations.add(new AnnotationModel<>(getContext(), NOT_NULL));
+//            annotations.add(new AnnotationModel<>(getSettings(), Required.Modifier.annotation(true)));
+        }
+        if(property.isImmutable()) {
+            annotations.add(new AnnotationModel<>(getContext(), Immutable.Modifier.annotation(true)));
+        }
+        property.getConstraints().forEach(constraint -> annotations.add(new AnnotationModel<>(getContext(), constraint.toJsr380(property.getType()))));
+        if(property.getDescription() != null) {
+            annotations.add(new AnnotationModel<>(getContext(), Description.Modifier.annotation(property.getDescription())));
+        }
         return annotations;
     }
 
     @Override
     public TypeModel getType() {
 
-        return TypeModel.from(getSettings(), property.getType());
+        return TypeModel.from(getContext(), property.getType());
     }
 
     @Override
     public boolean isRequired() {
 
-        return property.isRequired();
+        return !property.getType().isOptional();
     }
 }

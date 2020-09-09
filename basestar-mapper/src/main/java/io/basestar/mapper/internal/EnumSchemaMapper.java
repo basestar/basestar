@@ -36,12 +36,44 @@ public class EnumSchemaMapper<T extends Enum<?>> implements SchemaMapper<T, Stri
 
     private final Name name;
 
+    private final Class<T> erasedType;
+
     private final T[] constants;
+
+    private final String description;
 
     public EnumSchemaMapper(final MappingContext context, final Name name, final TypeContext type) {
 
         this.name = name;
+        this.erasedType = type.erasedType();
         this.constants = type.enumConstants();
+        this.description = null;
+    }
+
+    private EnumSchemaMapper(final EnumSchemaMapper<T> copy, final String description) {
+
+        this.name = copy.name;
+        this.erasedType = copy.erasedType;
+        this.constants = copy.constants;
+        this.description = description;
+    }
+
+    @Override
+    public SchemaMapper<T, String> withDescription(final String description) {
+
+        return new EnumSchemaMapper<>(this, description);
+    }
+
+    @Override
+    public Class<String> unmarshalledType() {
+
+        return String.class;
+    }
+
+    @Override
+    public Class<T> marshalledType() {
+
+        return erasedType;
     }
 
     @Override
@@ -51,10 +83,11 @@ public class EnumSchemaMapper<T extends Enum<?>> implements SchemaMapper<T, Stri
     }
 
     @Override
-    public Schema.Builder<String> schema() {
+    public Schema.Builder<String> schemaBuilder() {
 
         final List<String> values = Arrays.stream(constants).map(Enum::name).collect(Collectors.toList());
         return io.basestar.schema.EnumSchema.builder()
+                .setDescription(description)
                 .setValues(values);
     }
 

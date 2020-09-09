@@ -26,19 +26,19 @@ import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
-import io.basestar.jackson.serde.ExpressionDeseriaizer;
+import io.basestar.jackson.serde.ExpressionDeserializer;
 import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseArray;
-import io.basestar.schema.use.UseObject;
 import io.basestar.schema.util.Expander;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import io.basestar.util.PagedList;
+import io.basestar.util.Page;
 import io.basestar.util.Sort;
 import lombok.Data;
 import lombok.Getter;
@@ -48,6 +48,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Link
@@ -64,10 +65,13 @@ public class Link implements Member {
     private final String description;
 
     @Nonnull
-    private final ObjectSchema schema;
+    private final InstanceSchema schema;
 
     @Nonnull
     private final Expression expression;
+
+    @Nonnull
+    private final boolean single;
 
     @Nonnull
     private final List<Sort> sort;
@@ -78,12 +82,24 @@ public class Link implements Member {
     @Nonnull
     private final Map<String, Object> extensions;
 
+//    @Override
+//    public Use<?> storageSchema(final Set<Name> expand) {
+//
+//        if(single) {
+//            return schema.storageSchema(expand);
+//        } else {
+//            return new UseArray<>();
+//        }
+//    }
+
     @JsonDeserialize(as = Builder.class)
     public interface Descriptor extends Member.Descriptor {
 
         Name getSchema();
 
         Expression getExpression();
+
+        Boolean getSingle();
 
         List<Sort> getSort();
 
@@ -106,8 +122,11 @@ public class Link implements Member {
 
         @Nullable
         @JsonSerialize(using = ToStringSerializer.class)
-        @JsonDeserialize(using = ExpressionDeseriaizer.class)
+        @JsonDeserialize(using = ExpressionDeserializer.class)
         private Expression expression;
+
+        @Nullable
+        private Boolean single;
 
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
@@ -127,34 +146,109 @@ public class Link implements Member {
         return new Builder();
     }
 
-    private Link(final Descriptor builder, final Schema.Resolver resolver, final Name qualifiedName) {
+    private Link(final Descriptor descriptor, final Schema.Resolver resolver, final Name qualifiedName) {
 
         this.qualifiedName = qualifiedName;
-        this.description = builder.getDescription();
-        this.schema = resolver.requireObjectSchema(builder.getSchema());
-        this.expression = Nullsafe.require(builder.getExpression());
-        this.sort = Nullsafe.immutableCopy(builder.getSort());
-        this.visibility = builder.getVisibility();
-        this.extensions = Nullsafe.immutableSortedCopy(builder.getExtensions());
+        this.description = descriptor.getDescription();
+        this.schema = resolver.requireInstanceSchema(descriptor.getSchema());
+        this.expression = Nullsafe.require(descriptor.getExpression());
+        this.single = Nullsafe.orDefault(descriptor.getSingle());
+        this.sort = Nullsafe.immutableCopy(descriptor.getSort());
+        this.visibility = descriptor.getVisibility();
+        this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
     }
 
     @Override
-    public Use<?> getType() {
+    public boolean supportsTrivialJoin(final Set<Name> expand) {
 
-        return new UseArray<>(new UseObject(schema));
+        return single;
     }
 
     @Override
+    public Use<?> getType() {
+
+        if(single) {
+            return schema.use();
+        } else {
+            return new UseArray<>(schema.use());
+        }
+    }
+
+    @Override
+    public Optional<Use<?>> layout(final Set<Name> expand) {
+
+        if(expand == null) {
+            return Optional.empty();
+        } else {
+            return Optional.of(getType());
+        }
+    }
+
+    public List<Sort> getEffectiveSort() {
+
+        if(sort.isEmpty()) {
+            return ImmutableList.of(Sort.asc(schema.id()));
+        } else {
+            final Sort last = sort.get(sort.size() - 1);
+            if(last.getName().equals(schema.id())) {
+                return sort;
+            } else {
+                return ImmutableList.<Sort>builder().addAll(sort)
+                        .add(Sort.asc(schema.id()))
+                        .build();
+            }
+        }
+    }
+
     @SuppressWarnings("unchecked")
+    private Page<Instance> toArray(final Object value) {
+
+        if(single) {
+            return value == null ? Page.empty() : Page.single((Instance) value);
+        } else if(value == null) {
+            return null;
+        } else if(value instanceof Page) {
+            return (Page<Instance>)value;
+        } else if(value instanceof List) {
+            return new Page<>((List<Instance>)value, null);
+        } else {
+            throw new IllegalStateException();
+        }
+    }
+
+    private Object fromArray(final Page<Instance> value) {
+
+        if(single) {
+            return value == null || value.isEmpty() ? null : value.get(0);
+        } else {
+            return value;
+        }
+    }
+
+    @Override
     public Object expand(final Object value, final Expander expander, final Set<Name> expand) {
 
         if(expand == null) {
             return null;
         } else {
-            return expander.expandLink(this, (PagedList<Instance>)value, expand);
+            return fromArray(expander.expandLink(this, toArray(value), expand));
+        }
+    }
+
+    @Override
+    public Object create(final Object value, final Set<Name> expand, final boolean suppress) {
+
+        if(value == null) {
+            return null;
+        } else if(single) {
+            return schema.create(value, expand, suppress);
+        } else {
+            return ((Collection<?>)value).stream()
+                    .map(v -> schema.create(v, expand, suppress))
+                    .collect(Collectors.toList());
         }
     }
 
@@ -184,14 +278,14 @@ public class Link implements Member {
     @SuppressWarnings("unchecked")
     public Object applyVisibility(final Context context, final Object value) {
 
-        return transform((PagedList<Instance>)value, before -> schema.applyVisibility(context, before));
+        return transform(value, before -> schema.applyVisibility(context, before));
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public Object evaluateTransients(final Context context, final Object value, final Set<Name> expand) {
 
-        return transform((PagedList<Instance>)value, before -> schema.evaluateTransients(context, before, expand));
+        return transform(value, before -> schema.evaluateTransients(context, before, expand));
     }
 
     @Override
@@ -208,7 +302,12 @@ public class Link implements Member {
         return Collections.emptySet();
     }
 
-    private PagedList<Instance> transform(final PagedList<Instance> value, final Function<Instance, Instance> fn) {
+    private Object transform(final Object value, final Function<Instance, Instance> fn) {
+
+        return fromArray(transform(toArray(value), fn));
+    }
+
+    private Page<Instance> transform(final Page<Instance> value, final Function<Instance, Instance> fn) {
 
         if(value == null) {
             return null;
@@ -221,7 +320,7 @@ public class Link implements Member {
                 changed = changed || after != before;
             }
             if(changed) {
-                return new PagedList<>(results, value.getPaging(), PagedList.Stats.UNKNOWN);
+                return new Page<>(results, value.getPaging(), value.getStats());
             } else {
                 return value;
             }
@@ -229,6 +328,13 @@ public class Link implements Member {
     }
 
     public interface Resolver {
+
+        interface Builder {
+
+            Builder setLink(String name, Link.Descriptor v);
+
+            Builder setLinks(Map<String, Link.Descriptor> vs);
+        }
 
         Map<String, Link> getDeclaredLinks();
 
@@ -282,6 +388,12 @@ public class Link implements Member {
             public Expression getExpression() {
 
                 return expression;
+            }
+
+            @Override
+            public Boolean getSingle() {
+
+                return single;
             }
 
             @Override

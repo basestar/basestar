@@ -22,6 +22,7 @@ package io.basestar.api;
 
 import io.swagger.v3.oas.models.OpenAPI;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -60,7 +61,7 @@ public class RoutingAPI implements API {
     }
 
     @Override
-    public CompletableFuture<APIResponse> handle(final APIRequest request) {
+    public CompletableFuture<APIResponse> handle(final APIRequest request) throws IOException {
 
         // FIXME: use longest match
         final String path = request.getPath();

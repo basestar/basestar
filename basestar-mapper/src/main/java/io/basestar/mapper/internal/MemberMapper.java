@@ -20,21 +20,35 @@ package io.basestar.mapper.internal;
  * #L%
  */
 
+import io.basestar.expression.Expression;
 import io.basestar.schema.InstanceSchema;
 
+import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 import java.util.Set;
 
-public interface MemberMapper<B extends InstanceSchema.Builder> {
+public interface MemberMapper<B extends InstanceSchema.Builder> extends Serializable {
 
     TypeMapper getType();
 
-    void addToSchema(B builder);
+    String memberType();
+
+    void addToSchema(InstanceSchemaMapper<?, B> mapper, B builder);
 
     void unmarshall(Object source, Map<String, Object> target) throws InvocationTargetException, IllegalAccessException;
 
     void marshall(Map<String, Object> source, Object target) throws InvocationTargetException, IllegalAccessException;
+
+    default MemberMapper<B> withExpression(final Expression expression) {
+
+        throw new UnsupportedOperationException("Cannot apply expression to " + memberType());
+    }
+
+    default MemberMapper<B> withDescription(final String description) {
+
+        throw new UnsupportedOperationException("Cannot apply description to " + memberType());
+    }
 
     default Set<Class<?>> dependencies() {
 

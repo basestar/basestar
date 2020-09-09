@@ -20,12 +20,8 @@ package io.basestar.database.api;
  * #L%
  */
 
-import com.google.common.base.MoreObjects;
 import com.google.common.base.Splitter;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Multimap;
+import com.google.common.collect.*;
 import io.basestar.BuildMetadata;
 import io.basestar.api.API;
 import io.basestar.api.APIFormat;
@@ -43,8 +39,8 @@ import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.*;
 import io.basestar.storage.exception.ObjectMissingException;
 import io.basestar.util.Name;
-import io.basestar.util.PagedList;
-import io.basestar.util.PagingToken;
+import io.basestar.util.Nullsafe;
+import io.basestar.util.Page;
 import io.basestar.util.Sort;
 import io.swagger.v3.oas.models.*;
 import io.swagger.v3.oas.models.media.Schema;
@@ -113,7 +109,7 @@ public class DatabaseAPI implements API {
             if(request.getPath().equals("/")) {
                 path = Collections.emptyList();
             } else {
-                path = PATH_SPLITTER.splitToList(request.getPath());
+                path = Lists.newArrayList(PATH_SPLITTER.split(request.getPath()));
             }
 
             final APIRequest.Method method = request.getMethod();
@@ -232,7 +228,7 @@ public class DatabaseAPI implements API {
         final UpdateOptions options = UpdateOptions.builder()
                 .schema(schema).id(id).data(data)
                 .expand(parseExpand(request))
-                .mode(MoreObjects.firstNonNull(parseUpdateMode(request), mode))
+                .mode(Nullsafe.orDefault(parseUpdateMode(request), mode))
                 .version(parseVersion(request))
                 .build();
 
@@ -321,10 +317,9 @@ public class DatabaseAPI implements API {
     private List<Sort> parseSort(final APIRequest request) {
 
         try {
-            final String expand = request.getFirstQuery(PARAM_SORT);
-            if(expand != null) {
-                return Splitter.on(",").omitEmptyStrings().trimResults().splitToList(expand).stream()
-                        .map(Sort::parse).collect(Collectors.toList());
+            final String sort = request.getFirstQuery(PARAM_SORT);
+            if(sort != null) {
+                return Sort.parseList(sort);
             } else {
                 return null;
             }
@@ -347,12 +342,12 @@ public class DatabaseAPI implements API {
         }
     }
 
-    private PagingToken parsePaging(final APIRequest request) {
+    private Page.Token parsePaging(final APIRequest request) {
 
         try {
             final String paging = request.getFirstQuery(PARAM_PAGING);
             if(paging != null) {
-                return new PagingToken(paging);
+                return new Page.Token(paging);
             } else {
                 return null;
             }
@@ -396,15 +391,15 @@ public class DatabaseAPI implements API {
                 .exceptionally(v -> APIResponse.error(request, v));
     }
 
-    private CompletableFuture<APIResponse> respondPaged(final APIRequest request, final CompletableFuture<? extends PagedList<?>> future) {
+    private CompletableFuture<APIResponse> respondPaged(final APIRequest request, final CompletableFuture<? extends Page<?>> future) {
 
         return future.thenApply(v -> APIResponse.success(request, linkHeaders(request, v), v))
                 .exceptionally(v -> APIResponse.error(request, v));
     }
 
-    private Multimap<String, String> linkHeaders(final APIRequest request, final PagedList<?> paged) {
+    private Multimap<String, String> linkHeaders(final APIRequest request, final Page<?> paged) {
 
-        if(paged.hasPaging()) {
+        if(paged.hasMore()) {
             final Multimap<String, String> headers = HashMultimap.create();
             final String path = request.getPath();
             final HashMultimap<String, String> query = HashMultimap.create(request.getQuery());

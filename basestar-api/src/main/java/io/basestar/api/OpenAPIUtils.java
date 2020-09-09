@@ -105,16 +105,16 @@ public class OpenAPIUtils {
         final Components components = new Components();
         input.stream().map(OpenAPI::getComponents).forEach(v -> {
             if (v != null) {
-                Nullsafe.option(v.getSchemas()).forEach(components::addSchemas);
-                Nullsafe.option(v.getResponses()).forEach(components::addResponses);
-                Nullsafe.option(v.getParameters()).forEach(components::addParameters);
-                Nullsafe.option(v.getExamples()).forEach(components::addExamples);
-                Nullsafe.option(v.getRequestBodies()).forEach(components::addRequestBodies);
-                Nullsafe.option(v.getHeaders()).forEach(components::addHeaders);
-                Nullsafe.option(v.getSecuritySchemes()).forEach(components::addSecuritySchemes);
-                Nullsafe.option(v.getLinks()).forEach(components::addLinks);
-                Nullsafe.option(v.getCallbacks()).forEach(components::addCallbacks);
-                Nullsafe.option(v.getExtensions()).forEach(components::addExtension);
+                Nullsafe.orDefault(v.getSchemas()).forEach(components::addSchemas);
+                Nullsafe.orDefault(v.getResponses()).forEach(components::addResponses);
+                Nullsafe.orDefault(v.getParameters()).forEach(components::addParameters);
+                Nullsafe.orDefault(v.getExamples()).forEach(components::addExamples);
+                Nullsafe.orDefault(v.getRequestBodies()).forEach(components::addRequestBodies);
+                Nullsafe.orDefault(v.getHeaders()).forEach(components::addHeaders);
+                Nullsafe.orDefault(v.getSecuritySchemes()).forEach(components::addSecuritySchemes);
+                Nullsafe.orDefault(v.getLinks()).forEach(components::addLinks);
+                Nullsafe.orDefault(v.getCallbacks()).forEach(components::addCallbacks);
+                Nullsafe.orDefault(v.getExtensions()).forEach(components::addExtension);
             }
         });
         return components;
@@ -126,7 +126,7 @@ public class OpenAPIUtils {
         input.forEach(v -> {
             if (v.getPaths() != null) {
                 v.getPaths().forEach(paths::put);
-                Nullsafe.option(v.getExtensions()).forEach(paths::addExtension);
+                Nullsafe.orDefault(v.getExtensions()).forEach(paths::addExtension);
             }
         });
         return paths;

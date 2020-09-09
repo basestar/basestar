@@ -60,8 +60,8 @@ import io.basestar.expression.logical.Or;
 import io.basestar.expression.parse.ExpressionParser.*;
 import io.basestar.expression.text.ILike;
 import io.basestar.expression.text.SLike;
-import io.basestar.expression.type.Values;
 import io.basestar.util.Name;
+import io.basestar.util.Text;
 import lombok.RequiredArgsConstructor;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.RuleContext;
@@ -356,7 +356,7 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
     public Expression visitExprNumber(final ExprNumberContext ctx) {
 
         final String text = ctx.Number().getText();
-        return Constant.valueOf(Values.parseNumber(text));
+        return Constant.valueOf(Text.parseNumber(text));
     }
 
     @Override

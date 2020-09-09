@@ -20,10 +20,12 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.MemberMapper;
 import io.basestar.mapper.internal.MetadataMapper;
 import io.basestar.mapper.internal.annotation.MemberDeclaration;
+import io.basestar.type.AnnotationContext;
 import io.basestar.type.PropertyContext;
 import lombok.RequiredArgsConstructor;
 
@@ -38,12 +40,18 @@ public @interface Updated {
     @RequiredArgsConstructor
     class Declaration implements MemberDeclaration.Declaration {
 
+        @SuppressWarnings("unused")
         private final Updated annotation;
 
         @Override
         public MemberMapper<?> mapper(final MappingContext context, final PropertyContext prop) {
 
             return new MetadataMapper(context, MetadataMapper.Name.UPDATED, prop);
+        }
+
+        public static Updated annotation() {
+
+            return new AnnotationContext<>(Updated.class, ImmutableMap.of()).annotation();
         }
     }
 }

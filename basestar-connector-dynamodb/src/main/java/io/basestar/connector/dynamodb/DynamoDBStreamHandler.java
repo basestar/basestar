@@ -26,13 +26,13 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.basestar.database.event.ObjectCreatedEvent;
 import io.basestar.database.event.ObjectDeletedEvent;
 import io.basestar.database.event.ObjectUpdatedEvent;
 import io.basestar.event.Emitter;
 import io.basestar.event.EventSerialization;
 import io.basestar.event.sns.SNSEmitter;
+import io.basestar.jackson.BasestarModule;
 import io.basestar.schema.Instance;
 import io.basestar.storage.Stash;
 import io.basestar.storage.dynamodb.DynamoDBLegacyUtils;
@@ -79,7 +79,7 @@ public class DynamoDBStreamHandler implements RequestHandler<DynamodbEvent, Void
         this.target = target;
         this.sourceOversize = sourceOversize;
         this.objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.registerModule(new BasestarModule());
     }
 
     public DynamoDBStreamHandler() {

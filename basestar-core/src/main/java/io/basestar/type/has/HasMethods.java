@@ -23,10 +23,21 @@ package io.basestar.type.has;
 import io.basestar.type.MethodContext;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface HasMethods {
 
     List<MethodContext> declaredMethods();
 
     List<MethodContext> methods();
+
+    default Optional<MethodContext> method(final String name, final Class<?> ... args) {
+
+        return methods().stream().filter(HasName.match(name)).filter(HasParameters.match(args)).findFirst();
+    }
+
+    default Optional<MethodContext> declaredMethod(final String name, final Class<?> ... args) {
+
+        return declaredMethods().stream().filter(HasName.match(name)).filter(HasParameters.match(args)).findFirst();
+    }
 }

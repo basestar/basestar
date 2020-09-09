@@ -26,6 +26,7 @@ import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.compare.*;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.NameConstant;
+import io.basestar.expression.function.In;
 import io.basestar.expression.iterate.ForAny;
 import io.basestar.expression.iterate.Of;
 import io.basestar.expression.logical.And;
@@ -44,6 +45,20 @@ public class RangeVisitor implements ExpressionVisitor.Defaulting<Map<Name, Rang
     }
 
     public Map<Name, Range<Object>> visitEq(final Eq expression) {
+
+        final Expression lhs = expression.getLhs();
+        final Expression rhs = expression.getRhs();
+        if (lhs instanceof NameConstant && rhs instanceof Constant) {
+            return ImmutableMap.of(((NameConstant) lhs).getName(), Range.eq(((Constant) rhs).getValue()));
+        } else if (lhs instanceof Constant && rhs instanceof NameConstant) {
+            return ImmutableMap.of(((NameConstant) rhs).getName(), Range.eq(((Constant) lhs).getValue()));
+        } else {
+            return ImmutableMap.of();
+        }
+    }
+
+    // FIXME: this only works because multi-value index satisfy check is not strict enough
+    public Map<Name, Range<Object>> visitIn(final In expression) {
 
         final Expression lhs = expression.getLhs();
         final Expression rhs = expression.getRhs();

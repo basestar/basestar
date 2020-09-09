@@ -20,7 +20,10 @@ package io.basestar.schema.use;
  * #L%
  */
 
-import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.exception.InvalidDateTimeException;
+import io.basestar.schema.exception.UnexpectedTypeException;
+import io.basestar.util.ISO8601;
+import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.DateSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import lombok.Data;
@@ -29,13 +32,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.TemporalAccessor;
-import java.util.Date;
+import java.util.Set;
 
 @Data
-public class UseDate implements UseScalar<LocalDate> {
+public class UseDate implements UseStringLike<LocalDate> {
 
     public static final UseDate DEFAULT = new UseDate();
 
@@ -53,20 +53,20 @@ public class UseDate implements UseScalar<LocalDate> {
     }
 
     @Override
-    public LocalDate create(final Object value, final boolean expand, final boolean suppress) {
+    public LocalDate create(final Object value, final Set<Name> expand, final boolean suppress) {
 
         if(value == null) {
             return null;
-        } else if(value instanceof String) {
-            return LocalDate.parse((String)value, DateTimeFormatter.ISO_LOCAL_DATE);
-        } else if(value instanceof TemporalAccessor) {
-            return LocalDate.from((TemporalAccessor) value);
-        } else if(value instanceof Date) {
-            return ((Date) value).toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-        } else if(suppress) {
-            return null;
         } else {
-            throw new InvalidTypeException();
+            try {
+                return ISO8601.toDate(value);
+            } catch (final InvalidDateTimeException e) {
+                if(suppress) {
+                    return null;
+                } else {
+                    throw new UnexpectedTypeException(this, value);
+                }
+            }
         }
     }
 
@@ -77,26 +77,48 @@ public class UseDate implements UseScalar<LocalDate> {
     }
 
     @Override
-    public Object toJson() {
+    public LocalDate defaultValue() {
 
-        return NAME;
+        return LocalDate.ofEpochDay(0);
+    }
+
+    @Override
+    public Object toConfig(final boolean optional) {
+
+        return Use.name(NAME, optional);
     }
 
     @Override
     public void serializeValue(final LocalDate value, final DataOutput out) throws IOException {
 
-        UseString.DEFAULT.serializeValue(value.toString(), out);
+        UseString.DEFAULT.serializeValue(ISO8601.toString(value), out);
     }
 
     @Override
     public LocalDate deserializeValue(final DataInput in) throws IOException {
 
-        return LocalDate.parse(UseString.DEFAULT.deserializeValue(in));
+        return ISO8601.parseDate(UseString.DEFAULT.deserializeValue(in));
     }
 
     @Override
-    public Schema<?> openApi() {
+    public Schema<?> openApi(final Set<Name> expand) {
 
         return new DateSchema();
+    }
+
+    @Override
+    public String toString() {
+
+        return NAME;
+    }
+
+    @Override
+    public String toString(final LocalDate value) {
+
+        if(value == null) {
+            return "null";
+        } else {
+            return ISO8601.toString(value);
+        }
     }
 }

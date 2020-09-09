@@ -20,36 +20,80 @@ package io.basestar.codegen.model;
  * #L%
  */
 
-import io.basestar.codegen.CodegenSettings;
+import com.google.common.collect.ImmutableMap;
+import io.basestar.codegen.CodegenContext;
+import io.basestar.type.AnnotationContext;
+import io.basestar.util.Name;
 
-import java.util.Collections;
+import java.lang.annotation.Annotation;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
-public class AnnotationModel extends Model {
+@SuppressWarnings("unused")
+public class AnnotationModel<A extends Annotation> extends Model {
 
-    private final Class<?> cls;
+    private final A annotation;
 
-    private final Map<String, Object> values;
+    private final Map<String, Object> override;
 
-    public AnnotationModel(final CodegenSettings settings, final Class<?> cls, final Map<String, Object> values) {
+    public AnnotationModel(final CodegenContext context, final A annotation) {
 
-        super(settings);
-        this.cls = cls;
-        this.values = values;
+        this(context, annotation, ImmutableMap.of());
     }
 
-    public AnnotationModel(final CodegenSettings settings, final Class<?> cls) {
+    public AnnotationModel(final CodegenContext context, final A annotation, final Map<String, Object> override) {
 
-        this(settings, cls, Collections.emptyMap());
+        super(context);
+        this.annotation = annotation;
+        this.override = override;
     }
 
     public String getClassName() {
 
-        return cls.getName();
+        return annotation.annotationType().getCanonicalName();
     }
 
     public Map<String, Object> getValues() {
 
-        return values;
+        final AnnotationContext<A> context =  new AnnotationContext<>(annotation);
+        final Map<String, Object> values = new HashMap<>(context.nonDefaultValues());
+        values.putAll(override);
+
+        return values.entrySet().stream().filter(e -> e.getValue() != null)
+                .collect(Collectors.toMap(Map.Entry::getKey, entry -> {
+                    final Object value = entry.getValue();
+                    if(value instanceof Annotation) {
+                        return new AnnotationModel<>(getContext(), (Annotation)value);
+                    } else if(value instanceof Class<?>) {
+                        return wrapClassName((Class<?>)value);
+                    } else {
+                        return value;
+                    }
+                }));
+    }
+
+    // Convert classes to objects with a toString method for freemarker
+
+    public static Object wrapClassName(final Class<?> cls) {
+
+        return new Object() {
+            @Override
+            public String toString() {
+
+                return cls.getCanonicalName() + ".class";
+            }
+        };
+    }
+
+    public static Object wrapClassName(final Name name) {
+
+        return new Object() {
+            @Override
+            public String toString() {
+
+                return name.toString() + ".class";
+            }
+        };
     }
 }

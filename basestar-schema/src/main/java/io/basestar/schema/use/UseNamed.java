@@ -21,7 +21,6 @@ package io.basestar.schema.use;
  */
 
 
-import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
@@ -34,11 +33,12 @@ import lombok.Data;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 public interface UseNamed<T> extends Use<T> {
 
-    Name getQualifiedName();
+    Name getName();
 
     static Lazy from(final String name) {
 
@@ -51,21 +51,21 @@ public interface UseNamed<T> extends Use<T> {
     }
 
     @Override
-    default Object toJson() {
+    default Object toConfig(final boolean optional) {
 
-        return getQualifiedName().toString();
+        return Use.name(getName().toString(), optional);
     }
 
     @Override
-    default io.swagger.v3.oas.models.media.Schema<?> openApi() {
+    default io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
-        return new io.swagger.v3.oas.models.media.ObjectSchema().$ref(getQualifiedName().toString());
+        return new io.swagger.v3.oas.models.media.ObjectSchema().$ref(getName().toString());
     }
 
     @Data
     class Lazy implements UseNamed<Object> {
 
-        private final Name qualifiedName;
+        private final Name name;
 
         private final Object config;
 
@@ -78,7 +78,7 @@ public interface UseNamed<T> extends Use<T> {
         @Override
         public Use<?> resolve(final Schema.Resolver resolver) {
 
-            final Schema<?> schema = resolver.requireSchema(qualifiedName);
+            final Schema<?> schema = resolver.requireSchema(name);
             if(schema instanceof EnumSchema) {
                 return UseEnum.from((EnumSchema) schema, config);
             } else if(schema instanceof StructSchema) {
@@ -86,12 +86,12 @@ public interface UseNamed<T> extends Use<T> {
             } else if(schema instanceof ObjectSchema) {
                 return UseObject.from((ObjectSchema) schema, config);
             } else {
-                throw new MissingSchemaException(qualifiedName);
+                throw new MissingSchemaException(name);
             }
         }
 
         @Override
-        public Object create(final Object value, final boolean expand, final boolean suppress) {
+        public Object create(final Object value, final Set<Name> expand, final boolean suppress) {
 
             throw new UnsupportedOperationException();
         }
@@ -116,8 +116,7 @@ public interface UseNamed<T> extends Use<T> {
         }
 
         @Override
-        @Deprecated
-        public Multimap<Name, Instance> refs(final Object value) {
+        public Object defaultValue() {
 
             throw new UnsupportedOperationException();
         }
@@ -155,7 +154,13 @@ public interface UseNamed<T> extends Use<T> {
         @Override
         public String toString() {
 
-            return qualifiedName.toString();
+            return name.toString();
+        }
+
+        @Override
+        public String toString(final Object value) {
+
+            return Objects.toString(value);
         }
 
         @Override
@@ -171,9 +176,9 @@ public interface UseNamed<T> extends Use<T> {
         }
 
         @Override
-        public io.swagger.v3.oas.models.media.Schema<?> openApi() {
+        public io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
-            return new io.swagger.v3.oas.models.media.ObjectSchema().$ref(qualifiedName.toString());
+            return new io.swagger.v3.oas.models.media.ObjectSchema().$ref(name.toString());
         }
 
         @Override

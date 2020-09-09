@@ -21,10 +21,11 @@ package io.basestar.schema.util;
  */
 
 import io.basestar.schema.Instance;
+import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Link;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.util.Name;
-import io.basestar.util.PagedList;
+import io.basestar.util.Page;
 
 import java.util.Set;
 
@@ -44,12 +45,12 @@ public interface Expander {
             }
 
             @Override
-            public PagedList<Instance> expandLink(final Link link, final PagedList<Instance> value, final Set<Name> expand) {
+            public Page<Instance> expandLink(final Link link, final Page<Instance> value, final Set<Name> expand) {
 
                 if(value == null) {
                     return null;
                 } else {
-                    final ObjectSchema schema = link.getSchema();
+                    final InstanceSchema schema = link.getSchema();
                     return value.map(v -> v == null ? null : schema.expand(v, this, expand));
                 }
             }
@@ -58,5 +59,5 @@ public interface Expander {
 
     Instance expandRef(ObjectSchema schema, Instance ref, Set<Name> expand);
 
-    PagedList<Instance> expandLink(Link link, PagedList<Instance> value, Set<Name> expand);
+    Page<Instance> expandLink(Link link, Page<Instance> value, Set<Name> expand);
 }

@@ -21,10 +21,10 @@ package io.basestar.expression.iterate;
  */
 
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Streams;
 import io.basestar.expression.*;
 import io.basestar.expression.type.Values;
 import io.basestar.util.Name;
+import io.basestar.util.Streams;
 import lombok.Data;
 
 import java.util.Iterator;
@@ -105,11 +105,11 @@ public class ForAny implements Binary {
     }
 
     @Override
-    public Set<Name> paths() {
+    public Set<Name> names() {
 
         return ImmutableSet.<Name>builder()
-                .addAll(lhs.paths())
-                .addAll(rhs.paths())
+                .addAll(lhs.names())
+                .addAll(rhs.names())
                 .build();
     }
 

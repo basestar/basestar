@@ -26,8 +26,9 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.basestar.expression.Context;
-import io.basestar.schema.exception.InvalidTypeException;
 import io.basestar.schema.exception.ReservedNameException;
+import io.basestar.schema.exception.UnexpectedTypeException;
+import io.basestar.schema.use.UseEnum;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.swagger.v3.oas.models.media.StringSchema;
@@ -91,7 +92,7 @@ public class EnumSchema implements Schema<String> {
         String TYPE = "enum";
 
         @Override
-        default String type() {
+        default String getType() {
 
             return TYPE;
         }
@@ -99,15 +100,21 @@ public class EnumSchema implements Schema<String> {
         List<String> getValues();
 
         @Override
-        default EnumSchema build(final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
+        default EnumSchema build(final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
             return new EnumSchema(this, resolver, qualifiedName, slot);
         }
 
         @Override
+        default EnumSchema build(final Name qualifiedName) {
+
+            return build(Resolver.Constructing.ANONYMOUS, Version.CURRENT, qualifiedName, Schema.anonymousSlot());
+        }
+
+        @Override
         default EnumSchema build() {
 
-            return build(Resolver.Constructing.ANONYMOUS, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
+            return build(Schema.anonymousQualifiedName());
         }
     }
 
@@ -140,7 +147,7 @@ public class EnumSchema implements Schema<String> {
         resolver.constructing(this);
         this.qualifiedName = qualifiedName;
         this.slot = slot;
-        this.version = Nullsafe.option(descriptor.getVersion(), 1L);
+        this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
         this.description = descriptor.getDescription();
         this.values = Nullsafe.immutableCopy(descriptor.getValues());
         this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());
@@ -150,16 +157,14 @@ public class EnumSchema implements Schema<String> {
     }
 
     @Override
-    public String create(final Object value, final boolean expand, final boolean suppress) {
+    public String create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        if(value == null) {
-            return null;
-        } else if(value instanceof String && values.contains(value)) {
+        if(value instanceof String && values.contains(value)) {
             return (String) value;
         } else if(suppress) {
             return null;
         } else {
-            throw new InvalidTypeException();
+            throw new UnexpectedTypeException(this, value);
         }
     }
 
@@ -178,6 +183,12 @@ public class EnumSchema implements Schema<String> {
     @Override
     public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
+    }
+
+    @Override
+    public UseEnum use() {
+
+        return new UseEnum(this);
     }
 
     @Override
@@ -210,5 +221,17 @@ public class EnumSchema implements Schema<String> {
                 return extensions;
             }
         };
+    }
+
+    @Override
+    public boolean equals(final Object other) {
+
+        return qualifiedNameEquals(other);
+    }
+
+    @Override
+    public int hashCode() {
+
+        return qualifiedNameHashCode();
     }
 }

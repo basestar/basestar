@@ -20,10 +20,13 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.MappingContext;
+import io.basestar.mapper.MappingStrategy;
 import io.basestar.mapper.SchemaMapper;
 import io.basestar.mapper.internal.EnumSchemaMapper;
 import io.basestar.mapper.internal.annotation.SchemaDeclaration;
+import io.basestar.type.AnnotationContext;
 import io.basestar.type.TypeContext;
 import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
@@ -36,9 +39,7 @@ import java.lang.annotation.*;
 @SchemaDeclaration(EnumSchema.Declaration.class)
 public @interface EnumSchema {
 
-    String INFER_NAME = "";
-
-    String name() default INFER_NAME;
+    String name() default MappingStrategy.INFER_NAME;
 
     @RequiredArgsConstructor
     class Declaration implements SchemaDeclaration.Declaration {
@@ -46,10 +47,22 @@ public @interface EnumSchema {
         private final EnumSchema annotation;
 
         @Override
+        public Name getQualifiedName(final MappingContext context, final TypeContext type) {
+
+            return context.strategy().schemaName(context, annotation.name(), type);
+        }
+
+        @Override
         public SchemaMapper<?, ?> mapper(final MappingContext context, final TypeContext type) {
 
-            final String name = annotation.name().equals(INFER_NAME) ? type.simpleName() : annotation.name();
-            return new EnumSchemaMapper<>(context, Name.parse(name), type);
+            return new EnumSchemaMapper<>(context, getQualifiedName(context, type), type);
+        }
+
+        public static EnumSchema annotation(final io.basestar.schema.EnumSchema schema) {
+
+            return new AnnotationContext<>(EnumSchema.class, ImmutableMap.<String, Object>builder()
+                    .put("name", schema.getQualifiedName().toString())
+                    .build()).annotation();
         }
     }
 }

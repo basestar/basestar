@@ -29,7 +29,7 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.jackson.serde.ExpressionDeseriaizer;
+import io.basestar.jackson.serde.ExpressionDeserializer;
 import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.exception.ReservedNameException;
@@ -43,6 +43,7 @@ import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.Data;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
 
 import javax.annotation.Nonnull;
@@ -107,7 +108,7 @@ public class Transient implements Member {
 
         @Nullable
         @JsonSerialize(using = ToStringSerializer.class)
-        @JsonDeserialize(using = ExpressionDeseriaizer.class)
+        @JsonDeserialize(using = ExpressionDeserializer.class)
         private Expression expression;
 
         @Nullable
@@ -141,7 +142,7 @@ public class Transient implements Member {
             throw new ReservedNameException(qualifiedName);
         }
         if(type != null) {
-            type.visit(TypeValidator.INSTANCE);
+            type.visit(new TypeValidator(qualifiedName));
         }
         this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());
     }
@@ -149,6 +150,18 @@ public class Transient implements Member {
     public boolean isTyped() {
 
         return type != null;
+    }
+
+    @Override
+    public boolean supportsTrivialJoin(final Set<Name> expand) {
+
+        return false;
+    }
+
+    @Override
+    public Optional<Use<?>> layout(final Set<Name> expand) {
+
+        return Optional.empty();
     }
 
     @Override
@@ -187,6 +200,18 @@ public class Transient implements Member {
         return Collections.emptySet();
     }
 
+    @Override
+    public Object create(final Object value, final Set<Name> expand, final boolean suppress) {
+
+        if(value == null) {
+            return null;
+        } else if(type == null) {
+            return value;
+        } else {
+            return type.create(value, expand, suppress);
+        }
+    }
+
     //FIXME
     @Override
     @SuppressWarnings("unchecked")
@@ -223,6 +248,13 @@ public class Transient implements Member {
 
     public interface Resolver {
 
+        interface Builder {
+
+            Builder setTransient(String name, Transient.Descriptor v);
+
+            Builder setTransients(Map<String, Transient.Descriptor> vs);
+        }
+
         Map<String, Transient> getDeclaredTransients();
 
         Map<String, Transient> getTransients();
@@ -247,24 +279,25 @@ public class Transient implements Member {
         }
     }
 
+    @RequiredArgsConstructor
     private static class TypeValidator implements Use.Visitor.Defaulting<Void> {
 
-        private static final TypeValidator INSTANCE = new TypeValidator();
+        private final Name qualifiedName;
 
         @Override
-        public Void visitDefault(final Use<?> type) {
+        public <T> Void visitDefault(final Use<T> type) {
 
             return null;
         }
 
         @Override
-        public Void visitRef(final UseObject type) {
+        public Void visitObject(final UseObject type) {
 
-            throw new SchemaValidationException("Transients cannot use references");
+            throw new SchemaValidationException(qualifiedName,  "Transients cannot use references");
         }
 
         @Override
-        public <T> Void visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
+        public <V, T extends Collection<V>> Void visitCollection(final UseCollection<V, T> type) {
 
             return type.getType().visit(this);
         }

@@ -3,7 +3,7 @@
     <parent>
         <artifactId>basestar</artifactId>
         <groupId>io.basestar</groupId>
-        <version>1.1.11-SNAPSHOT</version>
+        <version>1.2.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -13,9 +13,16 @@
     <properties>
         <maven-project.version>2.2.1</maven-project.version>
         <maven-plugin.version>3.6.0</maven-plugin.version>
+        <guava.version>28.1-jre</guava.version>
+        <classgraph.version>4.8.87</classgraph.version>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>${guava.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -43,6 +50,11 @@
             <groupId>io.basestar</groupId>
             <artifactId>basestar-mapper</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.classgraph</groupId>
+            <artifactId>classgraph</artifactId>
+            <version>${classgraph.version}</version>
         </dependency>
         <dependency>
             <groupId>io.basestar</groupId>

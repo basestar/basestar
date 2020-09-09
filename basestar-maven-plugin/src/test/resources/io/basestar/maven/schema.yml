@@ -1,0 +1,84 @@
+Test:
+  extensions:
+    "io.basestar.package": "io.basestar.maven.test"
+  description: A schema description
+  type: object
+  properties:
+    a:
+      description: A property description
+      type: a.Test
+    b:
+      type: b.Test
+    date:
+      type: date
+      constraints:
+        - size: 10
+        - size:
+            min: 2
+            max: 10
+          message: "Test"
+        - pattern: "hello"
+        - max: 10
+        - min: 10
+        - assert: "test"
+    datetime:
+      type: datetime
+  links:
+    multi:
+      description: A link description
+      schema: a.Test
+      expression: true
+    single:
+      schema: a.Test
+      expression: true
+      single: true
+
+a.Test:
+  extensions:
+    "io.basestar.package": "io.basestar.maven.test.a"
+  type: object
+  properties:
+    test:
+      type: Test
+    b:
+      type: b.Test
+    existing:
+      type: existing.Test
+  indexes:
+    forward:
+      partition:
+        - test.id
+      sort:
+        - b.id
+    backward:
+      partition:
+        - test.id
+      sort:
+        - b.id
+
+b.Test:
+  extensions:
+    "io.basestar.package": "io.basestar.maven.test.b"
+  type: object
+  properties:
+    test:
+      type: Test
+    a:
+      type: a.Test
+
+c.Test:
+  extensions:
+    "io.basestar.package": "io.basestar.maven.test.c"
+  type: view
+  description: A view description
+  from:
+    schema: a.Test
+  group: b
+  properties:
+    a:
+      type: a.Test
+      expression: a
+    b:
+      type: b.Test
+      expression: b
+  where: "false"

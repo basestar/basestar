@@ -22,17 +22,19 @@ package io.basestar.schema.use;
 
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Schema;
-import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.schema.exception.UnexpectedTypeException;
+import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.ArraySchema;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.DataInput;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Array Type
@@ -47,6 +49,7 @@ import java.util.stream.Collectors;
  */
 
 @Data
+@Slf4j
 public class UseArray<T> implements UseCollection<T, List<T>> {
 
     public static final String NAME = "array";
@@ -59,16 +62,27 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
         return visitor.visitArray(this);
     }
 
+    @SuppressWarnings("unchecked")
+    public <T2> UseArray<T2> transform(final Function<Use<T>, Use<T2>> fn) {
+
+        final Use<T2> type2 = fn.apply(type);
+        if(type2 == type ) {
+            return (UseArray<T2>)this;
+        } else {
+            return new UseArray<>(type2);
+        }
+    }
+
     public static UseArray<?> from(final Object config) {
 
         return Use.fromNestedConfig(config, (type, nestedConfig) -> new UseArray<>(type));
     }
 
     @Override
-    public Object toJson() {
+    public Object toConfig(final boolean optional) {
 
         return ImmutableMap.of(
-                NAME, type
+                Use.name(NAME, optional), type
         );
     }
 
@@ -84,9 +98,9 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
     }
 
     @Override
-    public List<T> create(final Object value, final boolean expand, final boolean suppress) {
+    public List<T> create(final Stream<T> values) {
 
-        return create(value, suppress, v -> type.create(v, expand, suppress));
+        return values.collect(Collectors.toList());
     }
 
     public static <T> List<T> create(final Object value, final boolean suppress, final Function<Object, T> fn) {
@@ -99,7 +113,7 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
         } else if (suppress) {
             return null;
         } else {
-            throw new InvalidTypeException();
+            throw new UnexpectedTypeException(NAME, value);
         }
     }
 
@@ -110,9 +124,15 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
     }
 
     @Override
-    public io.swagger.v3.oas.models.media.Schema<?> openApi() {
+    public List<T> defaultValue() {
 
-        return new ArraySchema().items(type.openApi());
+        return Collections.emptyList();
+    }
+
+    @Override
+    public io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
+
+        return new ArraySchema().items(type.openApi(expand));
     }
 
     @Override
@@ -132,13 +152,13 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
     }
 
     @Override
-    public List<T> transform(final List<T> value, final Function<T, T> fn) {
+    public List<T> transformValues(final List<T> value, final BiFunction<Use<T>, T, T> fn) {
 
         if(value != null) {
             boolean changed = false;
             final List<T> result = new ArrayList<>();
             for(final T before : value) {
-                final T after = fn.apply(before);
+                final T after = fn.apply(type, before);
                 result.add(after);
                 changed = changed || (before != after);
             }

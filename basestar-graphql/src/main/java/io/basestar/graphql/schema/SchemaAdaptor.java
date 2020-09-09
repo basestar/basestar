@@ -28,27 +28,24 @@ import io.basestar.graphql.GraphQLUtils;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class SchemaAdaptor {
 
     private final Namespace namespace;
 
-    private final GraphQLStrategy namingStrategy;
+    private final GraphQLStrategy strategy;
 
-    public SchemaAdaptor(final Namespace namespace, final GraphQLStrategy namingStrategy) {
-
+    public SchemaAdaptor(final Namespace namespace, final GraphQLStrategy strategy) {
 
         this.namespace = namespace;
-        this.namingStrategy = namingStrategy;
+        this.strategy = strategy;
     }
 
     public TypeDefinitionRegistry typeDefinitionRegistry() {
 
         final TypeDefinitionRegistry registry = new TypeDefinitionRegistry();
+        registry.add(new ScalarTypeDefinition(strategy.anyTypeName()));
         final Map<String, Use<?>> mapTypes = new HashMap<>();
         namespace.getSchemas().forEach((k, schema) -> {
             registry.add(typeDefinition(schema));
@@ -71,12 +68,14 @@ public class SchemaAdaptor {
         });
         registry.add(queryDefinition());
         registry.add(mutationDefinition());
-        registry.add(transactionTypeDefinition());
+        registry.add(subscriptionDefinition());
+        registry.add(batchTypeDefinition());
         registry.add(InputObjectTypeDefinition.newInputObjectDefinition()
-                .name(namingStrategy.inputRefTypeName())
+                .name(strategy.inputRefTypeName())
                 .inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                        .name(Reserved.ID).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build())
+                        .name(strategy.idArgumentName()).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build())
                 .build());
+        registry.add(consistencyTypeDefinition());
         mapTypes.forEach((k, v) -> {
             registry.add(mapEntryTypeDefinition(v));
             registry.add(inputMapEntryTypeDefinition(v));
@@ -87,14 +86,22 @@ public class SchemaAdaptor {
     private ObjectTypeDefinition pageTypeDefinition(final InstanceSchema instanceSchema) {
 
         final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
-        builder.name(namingStrategy.pageTypeName(instanceSchema));
+        builder.name(strategy.pageTypeName(instanceSchema));
         builder.fieldDefinition(FieldDefinition.newFieldDefinition()
-                .name(namingStrategy.pageItemsFieldName())
-                .type(new ListType(new TypeName(namingStrategy.typeName(instanceSchema))))
+                .name(strategy.pageItemsFieldName())
+                .type(new ListType(new TypeName(strategy.typeName(instanceSchema))))
                 .build());
         builder.fieldDefinition(FieldDefinition.newFieldDefinition()
-                .name(namingStrategy.pagePagingFieldName())
+                .name(strategy.pagePagingFieldName())
                 .type(new TypeName(GraphQLUtils.STRING_TYPE))
+                .build());
+        builder.fieldDefinition(FieldDefinition.newFieldDefinition()
+                .name(strategy.pageTotalFieldName())
+                .type(new TypeName(GraphQLUtils.INT_TYPE))
+                .build());
+        builder.fieldDefinition(FieldDefinition.newFieldDefinition()
+                .name(strategy.pageApproxTotalFieldName())
+                .type(new TypeName(GraphQLUtils.INT_TYPE))
                 .build());
         return builder.build();
     }
@@ -115,42 +122,42 @@ public class SchemaAdaptor {
     public FieldDefinition readDefinition(final ObjectSchema schema) {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
-        builder.name(namingStrategy.readMethodName(schema));
-        builder.type(new TypeName(namingStrategy.typeName(schema)));
+        builder.name(strategy.readMethodName(schema));
+        builder.type(new TypeName(strategy.typeName(schema)));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(Reserved.ID).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build());
+                .name(strategy.idArgumentName()).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(Reserved.VERSION).type(new TypeName(GraphQLUtils.INT_TYPE)).build());
+                .name(strategy.versionArgumentName()).type(new TypeName(GraphQLUtils.INT_TYPE)).build());
         return builder.build();
     }
 
     public FieldDefinition queryDefinition(final ObjectSchema schema) {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
-        builder.name(namingStrategy.queryMethodName(schema));
-        builder.type(new TypeName(namingStrategy.pageTypeName(schema)));
+        builder.name(strategy.queryMethodName(schema));
+        builder.type(new TypeName(strategy.pageTypeName(schema)));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(namingStrategy.queryArgumentName()).type(new TypeName(GraphQLUtils.STRING_TYPE)).build());
+                .name(strategy.queryArgumentName()).type(new TypeName(GraphQLUtils.STRING_TYPE)).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(namingStrategy.sortArgumentName()).type(new ListType(new TypeName(GraphQLUtils.STRING_TYPE))).build());
+                .name(strategy.sortArgumentName()).type(new ListType(new TypeName(GraphQLUtils.STRING_TYPE))).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(namingStrategy.countArgumentName()).type(new TypeName(GraphQLUtils.INT_TYPE)).build());
+                .name(strategy.countArgumentName()).type(new TypeName(GraphQLUtils.INT_TYPE)).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(namingStrategy.pagingArgumentName()).type(new TypeName(GraphQLUtils.STRING_TYPE)).build());
+                .name(strategy.pagingArgumentName()).type(new TypeName(GraphQLUtils.STRING_TYPE)).build());
         return builder.build();
     }
 
     public FieldDefinition queryLinkDefinition(final ObjectSchema schema, final Link link) {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
-        builder.name(namingStrategy.queryLinkMethodName(schema, link));
-        builder.type(new TypeName(namingStrategy.pageTypeName(link.getSchema())));
+        builder.name(strategy.queryLinkMethodName(schema, link));
+        builder.type(new TypeName(strategy.pageTypeName(link.getSchema())));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(Reserved.ID).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build());
+                .name(strategy.idArgumentName()).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(namingStrategy.countArgumentName()).type(new TypeName(GraphQLUtils.INT_TYPE)).build());
+                .name(strategy.countArgumentName()).type(new TypeName(GraphQLUtils.INT_TYPE)).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(namingStrategy.pagingArgumentName()).type(new TypeName(GraphQLUtils.STRING_TYPE)).build());
+                .name(strategy.pagingArgumentName()).type(new TypeName(GraphQLUtils.STRING_TYPE)).build());
         return builder.build();
     }
 
@@ -166,22 +173,25 @@ public class SchemaAdaptor {
             }
             builder.fieldDefinition(deleteDefinition(v));
         });
-        builder.fieldDefinition(transactionDefinition());
+        builder.fieldDefinition(batchDefinition());
         return builder.build();
     }
 
-    private FieldDefinition transactionDefinition() {
+    private FieldDefinition batchDefinition() {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
-        builder.name(namingStrategy.transactionMethodName());
-        builder.type(new TypeName(namingStrategy.transactionTypeName()));
+        builder.name(strategy.batchMethodName());
+        builder.type(new TypeName(strategy.batchTypeName()));
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name(strategy.consistencyArgumentName())
+                .type(new TypeName(strategy.consistencyTypeName())).build());
         return builder.build();
     }
 
-    private ObjectTypeDefinition transactionTypeDefinition() {
+    private ObjectTypeDefinition batchTypeDefinition() {
 
         final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
-        builder.name(namingStrategy.transactionTypeName());
+        builder.name(strategy.batchTypeName());
         namespace.forEachObjectSchema((k, v) -> {
             builder.fieldDefinition(createDefinition(v));
             if(v.hasMutableProperties()) {
@@ -193,17 +203,31 @@ public class SchemaAdaptor {
         return builder.build();
     }
 
+    private EnumTypeDefinition consistencyTypeDefinition() {
+
+        final EnumTypeDefinition.Builder builder = EnumTypeDefinition.newEnumTypeDefinition();
+        builder.name(strategy.consistencyTypeName());
+        Arrays.stream(Consistency.values()).forEach(v -> {
+            if(v != Consistency.NONE) {
+                builder.enumValueDefinition(EnumValueDefinition.newEnumValueDefinition().name(v.name()).build());
+            }
+        });
+        return builder.build();
+    }
+
     public FieldDefinition createDefinition(final ObjectSchema schema) {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
-        builder.name(namingStrategy.createMethodName(schema));
-        builder.type(new TypeName(namingStrategy.typeName(schema)));
+        builder.name(strategy.createMethodName(schema));
+        builder.type(new TypeName(strategy.typeName(schema)));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(Reserved.ID).type(new TypeName(GraphQLUtils.ID_TYPE)).build());
+                .name(strategy.idArgumentName()).type(new TypeName(GraphQLUtils.ID_TYPE)).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(namingStrategy.dataArgumentName()).type(new TypeName(namingStrategy.createInputTypeName(schema))).build());
+                .name(strategy.dataArgumentName()).type(new TypeName(strategy.createInputTypeName(schema))).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(namingStrategy.expressionsArgumentName()).type(new TypeName(namingStrategy.inputExpressionsTypeName(schema))).build());
+                .name(strategy.consistencyArgumentName()).type(new TypeName(strategy.consistencyTypeName())).build());
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name(strategy.expressionsArgumentName()).type(new TypeName(strategy.inputExpressionsTypeName(schema))).build());
         return builder.build();
     }
 
@@ -211,44 +235,79 @@ public class SchemaAdaptor {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
         builder.name(methodName);
-        builder.type(new TypeName(namingStrategy.typeName(schema)));
+        builder.type(new TypeName(strategy.typeName(schema)));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(Reserved.ID).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build());
+                .name(strategy.idArgumentName()).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(Reserved.VERSION).type(new TypeName(GraphQLUtils.INT_TYPE)).build());
+                .name(strategy.versionArgumentName()).type(new TypeName(GraphQLUtils.INT_TYPE)).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(namingStrategy.dataArgumentName()).type(new TypeName(typeName)).build());
+                .name(strategy.dataArgumentName()).type(new TypeName(typeName)).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(namingStrategy.expressionsArgumentName()).type(new TypeName(namingStrategy.inputExpressionsTypeName(schema))).build());
+                .name(strategy.consistencyArgumentName()).type(new TypeName(strategy.consistencyTypeName())).build());
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name(strategy.expressionsArgumentName()).type(new TypeName(strategy.inputExpressionsTypeName(schema))).build());
         return builder.build();
     }
 
     public FieldDefinition updateDefinition(final ObjectSchema schema) {
 
-        return updateDefinition(schema, namingStrategy.updateMethodName(schema), namingStrategy.updateInputTypeName(schema));
+        return updateDefinition(schema, strategy.updateMethodName(schema), strategy.updateInputTypeName(schema));
     }
 
     public FieldDefinition patchDefinition(final ObjectSchema schema) {
 
-        return updateDefinition(schema, namingStrategy.patchMethodName(schema), namingStrategy.patchInputTypeName(schema));
+        return updateDefinition(schema, strategy.patchMethodName(schema), strategy.patchInputTypeName(schema));
     }
 
     public FieldDefinition deleteDefinition(final ObjectSchema schema) {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
-        builder.name(namingStrategy.deleteMethodName(schema));
-        builder.type(new TypeName(namingStrategy.typeName(schema)));
+        builder.name(strategy.deleteMethodName(schema));
+        builder.type(new TypeName(strategy.typeName(schema)));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(Reserved.ID).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build());
+                .name(strategy.idArgumentName()).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(Reserved.VERSION).type(new TypeName(GraphQLUtils.INT_TYPE)).build());
+                .name(strategy.consistencyArgumentName()).type(new TypeName(strategy.consistencyTypeName())).build());
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name(strategy.versionArgumentName()).type(new TypeName(GraphQLUtils.INT_TYPE)).build());
+        return builder.build();
+    }
+
+    private ObjectTypeDefinition subscriptionDefinition() {
+
+        final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
+        builder.name(GraphQLUtils.SUBSCRIPTION_TYPE);
+        namespace.forEachObjectSchema((schemaName, schema) -> {
+            builder.fieldDefinition(subscribeDefinition(schema));
+            builder.fieldDefinition(subscribeQueryDefinition(schema));
+        });
+        return builder.build();
+    }
+
+    public FieldDefinition subscribeDefinition(final ObjectSchema schema) {
+
+        final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
+        builder.name(strategy.subscribeMethodName(schema));
+        builder.type(new TypeName(strategy.typeName(schema)));
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name(strategy.idArgumentName()).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build());
+        return builder.build();
+    }
+
+    public FieldDefinition subscribeQueryDefinition(final ObjectSchema schema) {
+
+        final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
+        builder.name(strategy.subscribeQueryMethodName(schema));
+        builder.type(new TypeName(strategy.typeName(schema)));
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name(strategy.queryArgumentName()).type(new TypeName(GraphQLUtils.STRING_TYPE)).build());
         return builder.build();
     }
 
     public InputObjectTypeDefinition inputTypeDefinition(final InstanceSchema schema) {
 
         final InputObjectTypeDefinition.Builder builder = InputObjectTypeDefinition.newInputObjectDefinition();
-        builder.name(namingStrategy.inputTypeName(schema));
+        builder.name(strategy.inputTypeName(schema));
         builder.description(description(schema.getDescription()));
         schema.getProperties()
                 .forEach((k, v) -> builder.inputValueDefinition(inputValueDefinition(v, true)));
@@ -271,23 +330,23 @@ public class SchemaAdaptor {
 
     public InputObjectTypeDefinition createInputTypeDefinition(final ObjectSchema schema) {
 
-        return inputTypeDefinition(schema, namingStrategy.createInputTypeName(schema), true, true);
+        return inputTypeDefinition(schema, strategy.createInputTypeName(schema), true, true);
     }
 
     public InputObjectTypeDefinition updateInputTypeDefinition(final ObjectSchema schema) {
 
-        return inputTypeDefinition(schema, namingStrategy.updateInputTypeName(schema), false, true);
+        return inputTypeDefinition(schema, strategy.updateInputTypeName(schema), false, true);
     }
 
     public InputObjectTypeDefinition patchInputTypeDefinition(final ObjectSchema schema) {
 
-        return inputTypeDefinition(schema, namingStrategy.patchInputTypeName(schema), true, false);
+        return inputTypeDefinition(schema, strategy.patchInputTypeName(schema), true, false);
     }
 
     private SDLDefinition<?> inputExpressionTypeDefinition(final InstanceSchema schema) {
 
         final InputObjectTypeDefinition.Builder builder = InputObjectTypeDefinition.newInputObjectDefinition();
-        builder.name(namingStrategy.inputExpressionsTypeName(schema));
+        builder.name(strategy.inputExpressionsTypeName(schema));
         builder.description(description(schema.getDescription()));
         schema.getProperties()
                 .forEach((k, v) -> builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
@@ -303,8 +362,7 @@ public class SchemaAdaptor {
         if(property.getDescription() != null) {
             builder.description(new Description(property.getDescription(), null, true));
         }
-        final Type<?> valueType = inputType(property.getType());
-        final Type<?> type = required && property.isRequired() ? new NonNullType(valueType) : valueType;
+        final Type<?> type = inputType(required ? property.getType() : property.getType().optional(true));
         builder.type(type);
         return builder.build();
     }
@@ -324,7 +382,7 @@ public class SchemaAdaptor {
 
         if(schema.isConcrete()) {
             final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
-            builder.name(namingStrategy.typeName(schema));
+            builder.name(strategy.typeName(schema));
             builder.description(description(schema.getDescription()));
             if (schema.getExtend() != null) {
                 builder.implementz(implementz(schema));
@@ -333,7 +391,7 @@ public class SchemaAdaptor {
             return builder.build();
         } else {
             final InterfaceTypeDefinition.Builder builder = InterfaceTypeDefinition.newInterfaceTypeDefinition();
-            builder.name(namingStrategy.typeName(schema));
+            builder.name(strategy.typeName(schema));
             builder.description(description(schema.getDescription()));
             fieldDefinitions(schema).forEach(builder::definition);
             return builder.build();
@@ -347,7 +405,7 @@ public class SchemaAdaptor {
         if(parent != null) {
             return ImmutableList.<Type>builder()
                     .addAll(implementz(parent))
-                    .add(new TypeName(namingStrategy.typeName(parent)))
+                    .add(new TypeName(strategy.typeName(parent)))
                     .build();
         } else {
             return ImmutableList.of();
@@ -371,9 +429,9 @@ public class SchemaAdaptor {
                         if(!v.isAlwaysHidden()) {
                             fields.add(FieldDefinition.newFieldDefinition()
                                     .name(k)
-                                    .type(new ListType(new TypeName(namingStrategy.typeName(v.getSchema()))))
+                                    .type(new ListType(new TypeName(strategy.typeName(v.getSchema()))))
                                     .inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                                            .name(namingStrategy.queryArgumentName()).type(new TypeName(GraphQLUtils.STRING_TYPE)).build())
+                                            .name(strategy.queryArgumentName()).type(new TypeName(GraphQLUtils.STRING_TYPE)).build())
                                     .build());
                         }
                     });
@@ -405,7 +463,7 @@ public class SchemaAdaptor {
     public EnumTypeDefinition typeDefinition(final EnumSchema schema) {
 
         final EnumTypeDefinition.Builder builder = EnumTypeDefinition.newEnumTypeDefinition();
-        builder.name(namingStrategy.typeName(schema));
+        builder.name(strategy.typeName(schema));
         if(schema.getDescription() != null) {
             builder.description(new Description(schema.getDescription(), null, true));
         }
@@ -430,7 +488,7 @@ public class SchemaAdaptor {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
         builder.name(name);
-        if(Reserved.ID.equals(name)) {
+        if(strategy.idArgumentName().equals(name)) {
             builder.type(new TypeName(GraphQLUtils.ID_TYPE));
         } else {
             builder.type(type(type));
@@ -441,7 +499,7 @@ public class SchemaAdaptor {
     private InputObjectTypeDefinition inputMapEntryTypeDefinition(final Use<?> type) {
 
         final InputObjectTypeDefinition.Builder builder = InputObjectTypeDefinition.newInputObjectDefinition();
-        builder.name(namingStrategy.inputMapEntryTypeName(type));
+        builder.name(strategy.inputMapEntryTypeName(type));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(GraphQLUtils.MAP_KEY).type(new NonNullType(new TypeName(GraphQLUtils.STRING_TYPE))).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
@@ -452,7 +510,7 @@ public class SchemaAdaptor {
     private ObjectTypeDefinition mapEntryTypeDefinition(final Use<?> type) {
 
         final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
-        builder.name(namingStrategy.mapEntryTypeName(type));
+        builder.name(strategy.mapEntryTypeName(type));
         builder.fieldDefinition(FieldDefinition.newFieldDefinition()
                 .name(GraphQLUtils.MAP_KEY).type(new NonNullType(new TypeName(GraphQLUtils.STRING_TYPE))).build());
         builder.fieldDefinition(FieldDefinition.newFieldDefinition()
@@ -460,9 +518,20 @@ public class SchemaAdaptor {
         return builder.build();
     }
 
+    // FIXME: generalize with inputType
+    // FIXME: review what happens when we respond null to a non-null type at GQL
     public Type<?> type(final Use<?> type) {
 
-        return type.visit(new Use.Visitor<Type<?>>() {
+        //if(optional) {
+        return typeImpl(type);
+        //} else {
+        //    return new NonNullType(typeImpl(type));
+        //}
+    }
+
+    private Type<?> typeImpl(final Use<?> type) {
+
+        return type.visit(new Use.Visitor.Defaulting<Type<?>>() {
 
             @Override
             public Type<?> visitBoolean(final UseBoolean type) {
@@ -483,7 +552,7 @@ public class SchemaAdaptor {
             }
 
             @Override
-            public Type<?> visitString(final UseString type) {
+            public <T> Type<?> visitStringLike(final UseStringLike<T> type) {
 
                 return new TypeName(GraphQLUtils.STRING_TYPE);
             }
@@ -491,37 +560,25 @@ public class SchemaAdaptor {
             @Override
             public Type<?> visitEnum(final UseEnum type) {
 
-                return new TypeName(namingStrategy.typeName(type.getSchema()));
+                return new TypeName(strategy.typeName(type.getSchema()));
             }
 
             @Override
-            public Type<?> visitRef(final UseObject type) {
+            public <V, T extends Collection<V>> Type<?> visitCollection(final UseCollection<V, T> type) {
 
-                return new TypeName(namingStrategy.typeName(type.getSchema()));
-            }
-
-            @Override
-            public <T> Type<?> visitArray(final UseArray<T> type) {
-
-                return new ListType(type.getType().visit(this));
-            }
-
-            @Override
-            public <T> Type<?> visitSet(final UseSet<T> type) {
-
-                return new ListType(type.getType().visit(this));
+                return new ListType(type(type.getType()));
             }
 
             @Override
             public <T> Type<?> visitMap(final UseMap<T> type) {
 
-                return new ListType(new TypeName(namingStrategy.mapEntryTypeName(type.getType())));
+                return new ListType(new TypeName(strategy.mapEntryTypeName(type.getType())));
             }
 
             @Override
-            public Type<?> visitStruct(final UseStruct type) {
+            public Type<?> visitInstance(final UseInstance type) {
 
-                return new TypeName(namingStrategy.typeName(type.getSchema()));
+                return new TypeName(strategy.typeName(type.getSchema()));
             }
 
             @Override
@@ -531,22 +588,32 @@ public class SchemaAdaptor {
             }
 
             @Override
-            public Type<?> visitDate(final UseDate type) {
+            public Type<?> visitAny(final UseAny type) {
 
-                return new TypeName(GraphQLUtils.STRING_TYPE);
-            }
-
-            @Override
-            public Type<?> visitDateTime(final UseDateTime type) {
-
-                return new TypeName(GraphQLUtils.STRING_TYPE);
+                return new TypeName(strategy.anyTypeName());
             }
         });
     }
 
+    // FIXME: generalize with type
     public Type<?> inputType(final Use<?> type) {
 
-        return type.visit(new Use.Visitor<Type<?>>() {
+        if(type.isOptional()) {
+            return inputTypeImpl(type);
+        } else {
+            return new NonNullType(inputTypeImpl(type));
+        }
+    }
+
+    public Type<?> inputTypeImpl(final Use<?> type) {
+
+        return type.visit(new Use.Visitor.Defaulting<Type<?>>() {
+
+            @Override
+            public <T> Type<?> visitDefault(final Use<T> type) {
+
+                return null;
+            }
 
             @Override
             public Type<?> visitBoolean(final UseBoolean type) {
@@ -575,37 +642,37 @@ public class SchemaAdaptor {
             @Override
             public Type<?> visitEnum(final UseEnum type) {
 
-                return new TypeName(namingStrategy.typeName(type.getSchema()));
+                return new TypeName(strategy.typeName(type.getSchema()));
             }
 
             @Override
-            public Type<?> visitRef(final UseObject type) {
+            public Type<?> visitObject(final UseObject type) {
 
-                return new TypeName(namingStrategy.inputRefTypeName());
+                return new TypeName(strategy.inputRefTypeName());
             }
 
             @Override
             public <T> Type<?> visitArray(final UseArray<T> type) {
 
-                return new ListType(type.getType().visit(this));
+                return new ListType(inputType(type.getType()));
             }
 
             @Override
             public <T> Type<?> visitSet(final UseSet<T> type) {
 
-                return new ListType(type.getType().visit(this));
+                return new ListType(inputType(type.getType()));
             }
 
             @Override
             public <T> Type<?> visitMap(final UseMap<T> type) {
 
-                return new ListType(new TypeName(namingStrategy.inputMapEntryTypeName(type.getType())));
+                return new ListType(new TypeName(strategy.inputMapEntryTypeName(type.getType())));
             }
 
             @Override
             public Type<?> visitStruct(final UseStruct type) {
 
-                return new TypeName(namingStrategy.inputTypeName(type.getSchema()));
+                return new TypeName(strategy.inputTypeName(type.getSchema()));
             }
 
             @Override
@@ -624,6 +691,18 @@ public class SchemaAdaptor {
             public Type<?> visitDateTime(final UseDateTime type) {
 
                 return new TypeName(GraphQLUtils.STRING_TYPE);
+            }
+
+            @Override
+            public Type<?> visitView(final UseView type) {
+
+                return new TypeName(strategy.inputTypeName(type.getSchema()));
+            }
+
+            @Override
+            public Type<?> visitAny(final UseAny type) {
+
+                return new TypeName(strategy.anyTypeName());
             }
         });
     }
@@ -632,40 +711,10 @@ public class SchemaAdaptor {
 
         final Map<String, Use<?>> mapTypes = new HashMap<>();
         schema.getDeclaredProperties().forEach((k, v) -> {
-            v.getType().visit(new Use.Visitor<Void>() {
+            v.getType().visit(new Use.Visitor.Defaulting<Void>() {
 
                 @Override
-                public Void visitBoolean(final UseBoolean type) {
-
-                    return null;
-                }
-
-                @Override
-                public Void visitInteger(final UseInteger type) {
-
-                    return null;
-                }
-
-                @Override
-                public Void visitNumber(final UseNumber type) {
-
-                    return null;
-                }
-
-                @Override
-                public Void visitString(final UseString type) {
-
-                    return null;
-                }
-
-                @Override
-                public Void visitEnum(final UseEnum type) {
-
-                    return null;
-                }
-
-                @Override
-                public Void visitRef(final UseObject type) {
+                public <T> Void visitDefault(final Use<T> type) {
 
                     return null;
                 }
@@ -688,31 +737,7 @@ public class SchemaAdaptor {
                 public <T> Void visitMap(final UseMap<T> type) {
 
                     type.getType().visit(this);
-                    mapTypes.put(namingStrategy.mapEntryTypeName(type.getType()), type.getType());
-                    return null;
-                }
-
-                @Override
-                public Void visitStruct(final UseStruct type) {
-
-                    return null;
-                }
-
-                @Override
-                public Void visitBinary(final UseBinary type) {
-
-                    return null;
-                }
-
-                @Override
-                public Void visitDate(final UseDate type) {
-
-                    return null;
-                }
-
-                @Override
-                public Void visitDateTime(final UseDateTime type) {
-
+                    mapTypes.put(strategy.mapEntryTypeName(type.getType()), type.getType());
                     return null;
                 }
             });

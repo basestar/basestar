@@ -55,7 +55,7 @@ public interface Expression extends Serializable {
 
     //    Query query();
 
-    Set<Name> paths();
+    Set<Name> names();
 
     String token();
 

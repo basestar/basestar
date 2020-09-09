@@ -20,6 +20,7 @@ package io.basestar.spark.expression;
  * #L%
  */
 
+import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.arithmetic.*;
@@ -27,6 +28,8 @@ import io.basestar.expression.compare.*;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.function.Coalesce;
+import io.basestar.expression.function.Index;
+import io.basestar.expression.literal.LiteralObject;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
@@ -51,6 +54,27 @@ public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Colu
     public Column visitDefault(final Expression expression) {
 
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Column visitIndex(final Index expression) {
+
+        // FIXME: context should be a constructor arg
+        final Context context = Context.init();
+        // FIXME better logging when the type is wrong
+        final int at = expression.getRhs().evaluateAs(Number.class, context).intValue();
+        return functions.element_at(visit(expression.getLhs()), at + 1);
+    }
+
+    @Override
+    public Column visitLiteralObject(final LiteralObject expression) {
+
+        // FIXME: context should be a constructor arg
+        final Context context = Context.init();
+        final Column[] columns = expression.getArgs().entrySet().stream()
+                .map(e -> visit(e.getValue()).as(e.getKey().evaluateAs(String.class, context)))
+                .toArray(Column[]::new);
+        return functions.struct(columns);
     }
 
     @Override
@@ -152,7 +176,7 @@ public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Colu
     }
 
     @Override
-    public Column visitPathConstant(final NameConstant expression) {
+    public Column visitNameConstant(final NameConstant expression) {
 
         return columnResolver.apply(expression.getName());
     }

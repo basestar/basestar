@@ -51,6 +51,6 @@ public class AsyncHistoryCreatedEvent implements ObjectEvent {
                 .setSchema(schema)
                 .setId(id)
                 .setVersion(version)
-                .setAfter(ObjectSchema.readMeta(after));
+                .setAfter(ObjectSchema.copyMeta(after));
     }
 }

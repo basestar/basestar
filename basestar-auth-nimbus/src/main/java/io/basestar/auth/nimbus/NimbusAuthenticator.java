@@ -20,7 +20,6 @@ package io.basestar.auth.nimbus;
  * #L%
  */
 
-import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableMap;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -38,6 +37,7 @@ import io.basestar.auth.Authorization;
 import io.basestar.auth.Caller;
 import io.basestar.auth.exception.AuthenticationFailedException;
 import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import lombok.Data;
 
@@ -64,7 +64,7 @@ public class NimbusAuthenticator implements Authenticator {
 
         try {
 
-            final String token = Verify.verifyNotNull(authorization).getCredentials();
+            final String token = Nullsafe.require(authorization).getCredentials();
 
             // FIXME: make async
             final JWKSource<SecurityContext> keySource = new RemoteJWKSet<>(jwkURL);

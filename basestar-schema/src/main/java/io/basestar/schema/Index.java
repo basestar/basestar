@@ -97,20 +97,27 @@ public class Index implements Named, Described, Serializable, Extendable {
 
         Long getVersion();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         List<Name> getPartition();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         List<Sort> getSort();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Set<String> getProjection();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Map<String, Name> getOver();
 
         Consistency getConsistency();
 
+        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         Boolean getUnique();
 
+        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         Boolean getSparse();
 
+        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         Integer getMax();
 
         default Index build(final Name qualifiedName) {
@@ -129,29 +136,24 @@ public class Index implements Named, Described, Serializable, Extendable {
 
         private String description;
 
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         @JsonSerialize(contentUsing = ToStringSerializer.class)
         @JsonDeserialize(using = AbbrevListDeserializer.class)
         private List<Name> partition;
 
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         @JsonSerialize(contentUsing = ToStringSerializer.class)
         @JsonDeserialize(using = AbbrevListDeserializer.class)
         private List<Sort> sort;
 
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         @JsonDeserialize(using = AbbrevSetDeserializer.class)
         private Set<String> projection;
 
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonSerialize(contentUsing = ToStringSerializer.class)
         @JsonDeserialize(contentUsing = NameDeserializer.class)
         private Map<String, Name> over;
 
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private Map<String, Object> extensions;
 
         private Consistency consistency;
@@ -171,16 +173,16 @@ public class Index implements Named, Described, Serializable, Extendable {
     private Index(final Descriptor descriptor, final Name qualifiedName) {
 
         this.qualifiedName = qualifiedName;
-        this.version = Nullsafe.option(descriptor.getVersion(), 1L);
+        this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
         this.description = descriptor.getDescription();
         this.partition = Nullsafe.immutableCopy(descriptor.getPartition());
         this.sort = Nullsafe.immutableCopy(descriptor.getSort());
         this.projection = Nullsafe.immutableSortedCopy(descriptor.getProjection());
         this.over = Nullsafe.immutableSortedCopy(descriptor.getOver());
-        this.unique = Nullsafe.option(descriptor.getUnique(), false);
-        this.sparse = Nullsafe.option(descriptor.getSparse(), false);
+        this.unique = Nullsafe.orDefault(descriptor.getUnique(), false);
+        this.sparse = Nullsafe.orDefault(descriptor.getSparse(), false);
         this.consistency = descriptor.getConsistency();
-        this.max = Nullsafe.option(descriptor.getMax(), DEFAULT_MAX);
+        this.max = Nullsafe.orDefault(descriptor.getMax(), DEFAULT_MAX);
         this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());
         if (Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
@@ -270,9 +272,9 @@ public class Index implements Named, Described, Serializable, Extendable {
                     .forEach((name, property) -> result.put(name, property.getType()));
             result.putAll(ObjectSchema.METADATA_SCHEMA);
         } else {
-            result.put(Reserved.SCHEMA, UseString.DEFAULT);
-            result.put(Reserved.ID, UseString.DEFAULT);
-            result.put(Reserved.VERSION, UseInteger.DEFAULT);
+            result.put(ObjectSchema.SCHEMA, UseString.DEFAULT);
+            result.put(ObjectSchema.ID, UseString.DEFAULT);
+            result.put(ObjectSchema.VERSION, UseInteger.DEFAULT);
         }
         return result;
     }
@@ -309,9 +311,9 @@ public class Index implements Named, Described, Serializable, Extendable {
         } else {
             // These properties must be projected
             final Set<String> fullProjection = new HashSet<>(projection);
-            fullProjection.add(Reserved.SCHEMA);
-            fullProjection.add(Reserved.ID);
-            fullProjection.add(Reserved.VERSION);
+            fullProjection.add(ObjectSchema.SCHEMA);
+            fullProjection.add(ObjectSchema.ID);
+            fullProjection.add(ObjectSchema.VERSION);
             partition.forEach(v -> fullProjection.add(v.first()));
             sort.forEach(v -> fullProjection.add(v.getName().first()));
             final Map<String, Object> result = new HashMap<>();

@@ -21,12 +21,12 @@ package io.basestar.event.sns;
  */
 
 import com.google.common.base.Charsets;
-import com.google.common.base.MoreObjects;
 import com.google.common.io.BaseEncoding;
 import io.basestar.event.Emitter;
 import io.basestar.event.Event;
 import io.basestar.event.EventSerialization;
 import io.basestar.storage.Stash;
+import io.basestar.util.Nullsafe;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +44,8 @@ import java.util.concurrent.CompletableFuture;
 public class SNSEmitter implements Emitter {
 
     private static final String EVENT_ATTRIBUTE = "event";
+
+    private static final String MODULE_ATTRIBUTE = "module";
 
     private static final String OVERSIZE_ATTRIBUTE = "oversize";
 
@@ -65,7 +67,7 @@ public class SNSEmitter implements Emitter {
 
         this.client = builder.client;
         this.topicArn = builder.topicArn;
-        this.serialization = MoreObjects.firstNonNull(builder.serialization, EventSerialization.gzipBson());
+        this.serialization = Nullsafe.orDefault(builder.serialization, EventSerialization.gzipBson());
         this.oversizeStash = builder.oversizeStash;
     }
 
@@ -103,9 +105,14 @@ public class SNSEmitter implements Emitter {
                     // FIXME: these need to be included in sizing
                     final Map<String, MessageAttributeValue> attributes = new HashMap<>();
 
-                    attributes.put(EVENT_ATTRIBUTE, stringAttribute(event.getClass().getName()));
-                    attributes.put(DEDUPLICATION_ATTRIBUTE, stringAttribute(id));
+                    final String eventType = event.eventType();
+                    final String eventModule = event.eventModule();
+
+                    event.eventMetadata().forEach((k, v) -> attributes.put(k, stringAttribute(v)));
                     meta.forEach((k, v) -> attributes.put(k, stringAttribute(v)));
+                    attributes.put(EVENT_ATTRIBUTE, stringAttribute(eventType));
+                    attributes.put(MODULE_ATTRIBUTE, stringAttribute(eventModule));
+                    attributes.put(DEDUPLICATION_ATTRIBUTE, stringAttribute(id));
 
                     final byte[] body = serialization.serialize(event);
                     final String encoded = BASE_ENCODING.encode(body);
@@ -136,7 +143,7 @@ public class SNSEmitter implements Emitter {
                 .message(message)
                 .build();
 
-        log.info("Publish to SNS topic {}", request);
+        log.debug("Publish to SNS topic {}", request);
 
         return client.publish(request);
     }

@@ -26,10 +26,11 @@ import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.jackson.serde.ExpressionDeseriaizer;
+import io.basestar.jackson.serde.ExpressionDeserializer;
+import io.basestar.schema.use.UseString;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.Data;
@@ -38,10 +39,8 @@ import lombok.experimental.Accessors;
 
 import java.io.Serializable;
 import java.util.HashSet;
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.stream.Collectors;
 
 /**
  * Provides (limited) customization of automatic id generation for objects, specifically a generating expression, and
@@ -64,14 +63,14 @@ public class Id implements Serializable {
 
     private final Expression expression;
 
-    private final SortedMap<String, Constraint> constraints;
+    private final List<Constraint> constraints;
 
     @JsonDeserialize(as = Builder.class)
     public interface Descriptor {
 
         Expression getExpression();
 
-        Map<String, ? extends Constraint.Descriptor> getConstraints();
+        List<? extends Constraint> getConstraints();
 
         default Id build(final Name qualifiedName) {
 
@@ -86,12 +85,12 @@ public class Id implements Serializable {
 
         @JsonInclude(JsonInclude.Include.NON_NULL)
         @JsonSerialize(using = ToStringSerializer.class)
-        @JsonDeserialize(using = ExpressionDeseriaizer.class)
+        @JsonDeserialize(using = ExpressionDeserializer.class)
         private Expression expression;
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
-        private Map<String, Constraint.Builder> constraints;
+        private List<Constraint> constraints;
     }
 
     public static Builder builder() {
@@ -102,8 +101,7 @@ public class Id implements Serializable {
     public Id(final Descriptor descriptor, final Name qualifiedName) {
 
         this.expression = descriptor.getExpression();
-        this.constraints = ImmutableSortedMap.copyOf(Nullsafe.option(descriptor.getConstraints()).entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(qualifiedName.with(e.getKey())))));
+        this.constraints = ImmutableList.copyOf(Nullsafe.orDefault(descriptor.getConstraints()));
     }
 
     public String evaluate(final String value, final Context context) {
@@ -118,17 +116,13 @@ public class Id implements Serializable {
     public Set<Constraint.Violation> validate(final Name path, final Object after, final Context context) {
 
         final Set<Constraint.Violation> violations = new HashSet<>();
-        final Name newName = path.with(Reserved.ID);
+        final Name qualifiedName = path.with(ObjectSchema.ID);
         if(after == null) {
-            violations.add(new Constraint.Violation(newName, Constraint.REQUIRED));
+            violations.add(new Constraint.Violation(qualifiedName, Constraint.REQUIRED, null));
         } else if(!constraints.isEmpty()) {
             final Context newContext = context.with(VAR_VALUE, after);
-            for(final Map.Entry<String, Constraint> entry : constraints.entrySet()) {
-                final String name = entry.getKey();
-                final Constraint constraint = entry.getValue();
-                if(!constraint.getExpression().evaluatePredicate(newContext)) {
-                    violations.add(new Constraint.Violation(newName, name));
-                }
+            for (final Constraint constraint : constraints) {
+                violations.addAll(constraint.violations(UseString.DEFAULT, newContext, qualifiedName, after));
             }
         }
         return violations;
@@ -144,12 +138,9 @@ public class Id implements Serializable {
             }
 
             @Override
-            public Map<String, ? extends Constraint.Descriptor> getConstraints() {
+            public List<? extends Constraint> getConstraints() {
 
-                return constraints.entrySet().stream().collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> entry.getValue().descriptor()
-                ));
+                return constraints;
             }
         };
     }

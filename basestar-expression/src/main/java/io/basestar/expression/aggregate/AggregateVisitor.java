@@ -2,7 +2,7 @@ package io.basestar.expression.aggregate;
 
 /*-
  * #%L
- * basestar-storage
+ * basestar-expression
  * %%
  * Copyright (C) 2019 - 2020 Basestar.IO
  * %%
@@ -37,6 +37,8 @@ public interface AggregateVisitor<T> {
 
     T visitCount(Count count);
 
+    T visitCollectArray(CollectArray collectArray);
+
     interface Defaulting<T> extends AggregateVisitor<T> {
 
         T visitDefault(Aggregate aggregate);
@@ -67,6 +69,12 @@ public interface AggregateVisitor<T> {
 
         @Override
         default T visitCount(final Count aggregate) {
+
+            return visitDefault(aggregate);
+        }
+
+        @Override
+        default T visitCollectArray(final CollectArray aggregate) {
 
             return visitDefault(aggregate);
         }

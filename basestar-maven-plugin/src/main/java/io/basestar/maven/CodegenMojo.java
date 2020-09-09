@@ -20,11 +20,13 @@ package io.basestar.maven;
  * #L%
  */
 
-import com.google.common.base.Charsets;
 import io.basestar.codegen.Codegen;
 import io.basestar.codegen.CodegenSettings;
+import io.basestar.mapper.MappingContext;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.Schema;
+import io.basestar.util.Name;
+import io.basestar.util.URLs;
 import lombok.Setter;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -33,11 +35,10 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
+import javax.annotation.Nullable;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStreamWriter;
-import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 
 @Setter
@@ -49,6 +50,9 @@ public class CodegenMojo extends AbstractMojo {
 
     @Parameter(required = true)
     private String packageName;
+
+    @Parameter(required = false)
+    private List<String> searchPackageNames;
 
     @Parameter(required = true)
     private List<String> schemaUrls;
@@ -68,13 +72,15 @@ public class CodegenMojo extends AbstractMojo {
 
         System.setProperty("java.protocol.handler.pkgs", "io.basestar.protocol");
         try {
-            final Namespace ns = Namespace.load(schemaUrls.stream().map(v -> {
-                try {
-                    return new URL(v);
-                } catch (final MalformedURLException e) {
-                    throw new IllegalStateException(e);
-                }
-            }).toArray(URL[]::new));
+
+            final List<String> searchPackageNames = new ArrayList<>();
+            searchPackageNames.add(packageName);
+            if(this.searchPackageNames != null) {
+                searchPackageNames.addAll(this.searchPackageNames);
+            }
+
+            final Schema.Resolver resolver = new ClassLoadingResolver(searchPackageNames);
+            final Namespace ns = Namespace.load(resolver, schemaUrls.stream().map(URLs::toURLUnchecked).toArray(URL[]::new));
 
             final CodegenSettings settings = CodegenSettings.builder()
                     .packageName(packageName)
@@ -82,21 +88,25 @@ public class CodegenMojo extends AbstractMojo {
 
             final Codegen codegen = new Codegen(language, settings);
 
-            final File output = packageOutputDirectory();
-            output.mkdirs();
+            final File base = new File(outputDirectory);
 
-            for(final Schema<?> schema : ns.getSchemas().values()) {
-                final File file = new File(output, schema.getQualifiedName() + ".java");
-                try(final FileOutputStream fos = new FileOutputStream(file);
-                    final OutputStreamWriter writer = new OutputStreamWriter(fos, Charsets.UTF_8)) {
-                    getLog().info("Writing schema " + schema.getQualifiedName() + " to " + file.getAbsolutePath());
-                    codegen.generate(schema, writer);
+            codegen.generate(ns, base, new Codegen.Log() {
+                @Override
+                public void info(final String message) {
+
+                    getLog().info(message);
                 }
-            }
+
+                @Override
+                public void error(final String message, final Throwable error) {
+
+                    getLog().error(message, error);
+                }
+            });
 
             if(addSources && project != null) {
-                getLog().info("Adding source directory " + output.getAbsolutePath());
-                project.addCompileSourceRoot(output.getAbsolutePath());
+                getLog().info("Adding source directory " + base.getAbsolutePath());
+                project.addCompileSourceRoot(base.getAbsolutePath());
             }
 
         } catch (final Exception e) {
@@ -105,9 +115,29 @@ public class CodegenMojo extends AbstractMojo {
         }
     }
 
-    private File packageOutputDirectory() {
+    private static class ClassLoadingResolver implements Schema.Resolver {
 
-        final File base = new File(outputDirectory);
-        return new File(base, packageName.replaceAll("\\.", File.separator));
+        private final MappingContext mappingContext = new MappingContext();
+
+        private final List<Name> packageNames;
+
+        public ClassLoadingResolver(final List<String> packageNames) {
+
+            this.packageNames = Name.parseList(packageNames);
+        }
+
+        @Nullable
+        @Override
+        public Schema<?> getSchema(final Name name) {
+
+            for(final Name packageName : packageNames) {
+                try {
+                    final Class<?> cls = Class.forName(packageName.with(name).toString());
+                    return mappingContext.schema(this, cls);
+                } catch (final ClassNotFoundException e) {
+                }
+            }
+            return null;
+        }
     }
 }

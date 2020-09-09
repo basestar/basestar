@@ -20,10 +20,13 @@ package io.basestar.schema;
  * #L%
  */
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.schema.exception.UnexpectedTypeException;
+import io.basestar.schema.layout.Layout;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseInstance;
 import io.basestar.schema.use.UseString;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
@@ -36,31 +39,92 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
-public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Property.Resolver {
+public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolver, Property.Resolver {
 
-    Instance create(Map<String, Object> value, boolean expand, boolean suppress);
+    Instance create(Map<String, Object> value, Set<Name> expand, boolean suppress);
+
+    default boolean hasMember(final String name) {
+
+        return metadataSchema().containsKey(name) || getMember(name, true) != null;
+    }
+
+    default boolean isAssignableFrom(Name name) {
+
+        if(name.equals(this.getQualifiedName())) {
+            return true;
+        } else {
+            final InstanceSchema extend = getExtend();
+            if(extend != null) {
+                return extend.isAssignableFrom(name);
+            } else {
+                return false;
+            }
+        }
+    }
 
     interface Descriptor extends Schema.Descriptor<Instance> {
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Map<String, Property.Descriptor> getProperties();
 
         @Override
-        InstanceSchema build(Resolver.Constructing resolver, Name qualifiedName, int slot);
+        InstanceSchema build(Resolver.Constructing resolver, Version version, Name qualifiedName, int slot);
+
+        @Override
+        InstanceSchema build(Name qualifiedName);
 
         @Override
         InstanceSchema build();
     }
 
-    interface Builder extends Schema.Builder<Instance>, Descriptor {
+    interface Builder extends Schema.Builder<Instance>, Descriptor, Property.Resolver.Builder {
 
-        Builder setProperty(String name, Property.Descriptor v);
-
-        Builder setProperties(Map<String, Property.Descriptor> vs);
+        Builder setDescription(String description);
     }
 
     SortedMap<String, Use<?>> metadataSchema();
 
+    default SortedMap<String, Use<?>> layoutSchema(final Set<Name> expand) {
+
+        // This is the canonical layout, by definition
+        final SortedMap<String, Use<?>> result = new TreeMap<>();
+        metadataSchema().forEach(result::put);
+        final Map<String, Set<Name>> branches = Name.branch(expand);
+        getMembers().forEach((name, member) -> {
+            final Set<Name> branch = branches.get(name);
+            member.layout(branch).ifPresent(memberLayout -> result.put(name, memberLayout));
+        });
+        return result;
+    }
+
+    @Override
+    default Map<String, Object> applyLayout(final Set<Name> expand, final Map<String, Object> object) {
+
+        return create(object, expand, true);
+    }
+
+    @Override
+    default Map<String, Object> unapplyLayout(final Set<Name> expand, final Map<String, Object> object) {
+
+        return create(object, expand, true);
+    }
+
     InstanceSchema getExtend();
+
+    default Set<Name> getExpand() {
+
+        return Collections.emptySet();
+    }
+
+    @Override
+    UseInstance use();
+
+    String id();
+
+    default Use<?> typeOfId() {
+
+        return metadataSchema().get(id());
+    }
 
     default boolean hasMutableProperties() {
 
@@ -69,14 +133,14 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
 
     @Override
     @SuppressWarnings("unchecked")
-    default Instance create(final Object value, final boolean expand, final boolean suppress) {
+    default Instance create(final Object value, final Set<Name> expand, final boolean suppress) {
 
         if(value == null) {
             return null;
         } else if(value instanceof Map) {
-            return create((Map<String, Object>)value, expand, suppress);
+            return create((Map<String, Object>) value, expand, suppress);
         } else {
-            throw new InvalidTypeException();
+            throw new UnexpectedTypeException(this, value);
         }
     }
 
@@ -140,10 +204,26 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         }
     }
 
-    default Map<String, Object> readProperties(final Map<String, Object> object, final boolean expand, final boolean suppress) {
+    default Map<String, Object> readProperties(final Map<String, Object> object, final Set<Name> expand, final boolean suppress) {
 
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         final Map<String, Object> result = new HashMap<>();
-        getProperties().forEach((k, v) -> result.put(k, v.create(object.get(k), expand, suppress)));
+        getProperties().forEach((k, v) -> result.put(k, v.create(object.get(k), branches.get(k), suppress)));
+        return Collections.unmodifiableMap(result);
+    }
+
+    default Map<String, Object> readMeta(final Map<String, Object> object, final boolean suppress) {
+
+        final Map<String, Use<?>> metadataSchema = metadataSchema();
+        final HashMap<String, Object> result = new HashMap<>();
+        object.forEach((k, v) -> {
+            final Use<?> type = metadataSchema.get(k);
+            if(type != null) {
+                result.put(k, type.create(v, null, suppress));
+            } else if(Reserved.isMeta(k)) {
+                result.put(k, v);
+            }
+        });
         return Collections.unmodifiableMap(result);
     }
 
@@ -163,12 +243,14 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
     default io.swagger.v3.oas.models.media.Schema<?> openApi() {
 
         final Map<String, io.swagger.v3.oas.models.media.Schema> properties = new HashMap<>();
+        final Set<Name> expand = getExpand();
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         metadataSchema().forEach((name, type) -> {
-            properties.put(name, type.openApi());
+            properties.put(name, type.openApi(branches.get(name)));
         });
         getMembers().forEach((name, member) -> {
             if(!member.isAlwaysHidden()) {
-                properties.put(name, member.openApi());
+                properties.put(name, member.openApi(branches.get(name)));
             }
         });
         return new io.swagger.v3.oas.models.media.ObjectSchema()
@@ -280,6 +362,21 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         final Map<Ref, Long> versions = new HashMap<>();
         getProperties().forEach((k, v) -> versions.putAll(v.refVersions(value.get(k))));
         return versions;
+    }
+
+    default boolean supportsTrivialJoin(final Set<Name> expand) {
+
+        final Map<String, Set<Name>> branches = Name.branch(expand);
+        return getMembers().entrySet().stream().allMatch(entry -> {
+            final String name = entry.getKey();
+            final Member member = entry.getValue();
+            final Set<Name> memberExpand = branches.get(name);
+            if(memberExpand != null) {
+                return member.supportsTrivialJoin(memberExpand);
+            } else {
+                return true;
+            }
+        });
     }
 
     @Override

@@ -1,48 +1,66 @@
 package io.basestar.storage;
 
+/*-
+ * #%L
+ * basestar-storage
+ * %%
+ * Copyright (C) 2019 - 2020 Basestar.IO
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Concurrency;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.storage.util.Pager;
-import io.basestar.util.PagedList;
+import io.basestar.util.Name;
+import io.basestar.util.Page;
+import io.basestar.util.Pager;
 import io.basestar.util.Sort;
 import lombok.RequiredArgsConstructor;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 @RequiredArgsConstructor
-public class NullStorage implements Storage.WithoutWriteIndex, Storage.WithoutWriteHistory {
+public class NullStorage implements Storage.WithoutWriteIndex, Storage.WithoutWriteHistory, Storage.WithoutExpand, Storage.WithoutRepair {
 
     private final EventStrategy eventStrategy;
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
+    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
         return CompletableFuture.completedFuture(null);
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
         return CompletableFuture.completedFuture(null);
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
+    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        return Collections.singletonList((count, pagingToken, stats) -> CompletableFuture.completedFuture(PagedList.empty()));
+        return Collections.singletonList((count, pagingToken, stats) -> CompletableFuture.completedFuture(Page.empty()));
     }
 
     @Override
     public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
 
-        return Collections.singletonList((count, pagingToken, stats) -> CompletableFuture.completedFuture(PagedList.empty()));
+        return Collections.singletonList((count, pagingToken, stats) -> CompletableFuture.completedFuture(Page.empty()));
     }
 
     @Override
@@ -52,7 +70,7 @@ public class NullStorage implements Storage.WithoutWriteIndex, Storage.WithoutWr
     }
 
     @Override
-    public WriteTransaction write(final Consistency consistency) {
+    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
         return new WriteTransaction() {
 

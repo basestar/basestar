@@ -20,13 +20,13 @@ package io.basestar.event.sqs;
  * #L%
  */
 
-import com.google.common.base.MoreObjects;
 import com.google.common.io.BaseEncoding;
 import io.basestar.event.Event;
 import io.basestar.event.EventSerialization;
 import io.basestar.event.Handler;
 import io.basestar.event.Receiver;
 import io.basestar.storage.Stash;
+import io.basestar.util.Nullsafe;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
@@ -60,12 +60,17 @@ public class SQSReceiver implements Receiver {
 
     private final Stash oversizeStash;
 
+    // If true (the default), oversize content will be deleted after the related message is successfully processed.
+    // This may not be desired (e.g. when using different queues to process the same messages in different modules).
+    private final boolean deleteOversize;
+
     public SQSReceiver(final Builder builder) {
 
         this.client = builder.client;
         this.queueUrl = builder.queueUrl;
-        this.serialization = MoreObjects.firstNonNull(builder.serialization, EventSerialization.gzipBson());
+        this.serialization = Nullsafe.orDefault(builder.serialization, EventSerialization.gzipBson());
         this.oversizeStash = builder.oversizeStash;
+        this.deleteOversize = Nullsafe.orDefault(builder.deleteOversize, true);
     }
 
     public static Builder builder() {
@@ -85,6 +90,8 @@ public class SQSReceiver implements Receiver {
 
         private Stash oversizeStash;
 
+        private Boolean deleteOversize;
+
         public SQSReceiver build() {
 
             return new SQSReceiver(this);
@@ -98,8 +105,6 @@ public class SQSReceiver implements Receiver {
                 .waitTimeSeconds(WAIT_SECONDS)
                 .maxNumberOfMessages(READ_COUNT)
                 .queueUrl(queueUrl)
-//                .attributeNames(QueueAttributeName.ALL)
-//                .messageAttributeNames(EVENT_ATTRIBUTE, OVERSIZE_ATTRIBUTE)
                 .messageAttributeNames(ALL_ATTRIBUTES)
                 .build();
 
@@ -133,15 +138,19 @@ public class SQSReceiver implements Receiver {
         try {
             final Class<? extends Event> eventClass = (Class<? extends Event>) Class.forName(eventType);
             if (Event.class.isAssignableFrom(eventClass)) {
-                final MessageAttributeValue refAttr = attributes.get(OVERSIZE_ATTRIBUTE);
-                if (refAttr != null) {
+                final MessageAttributeValue oversizeAttr = attributes.get(OVERSIZE_ATTRIBUTE);
+                if (oversizeAttr != null) {
 
-                    final String ref = refAttr.stringValue();
-                    return oversizeStash.read(ref)
+                    final String oversize = oversizeAttr.stringValue();
+                    return oversizeStash.read(oversize)
                             .thenCompose(bytes -> {
                                 final Event event = serialization.deserialize(eventClass, bytes);
-                                return handle(message, event, meta, handler)
-                                        .thenCompose(ignored -> oversizeStash.delete(ref));
+                                final CompletableFuture<?> handleFuture = handle(message, event, meta, handler);
+                                if(deleteOversize) {
+                                    return handleFuture.thenCompose(ignored -> oversizeStash.delete(oversize));
+                                } else {
+                                    return handleFuture.thenApply(ignored -> null);
+                                }
                             });
                 } else {
 

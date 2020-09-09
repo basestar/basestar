@@ -21,11 +21,14 @@ package io.basestar.storage.cognito;
  */
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.type.Values;
 import io.basestar.schema.*;
 import io.basestar.schema.use.UseNamed;
 import io.basestar.schema.use.UseString;
 import io.basestar.storage.Storage;
+import io.basestar.util.Name;
+import io.basestar.storage.Versioning;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.regions.Region;
@@ -80,11 +83,11 @@ public class TestCognitoStorage {
         final Instance before = schema.create(data);
 
 
-        storage.write(Consistency.ATOMIC)
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .createObject(schema, id, before)
                 .write().join();
 
-        assertValid(before, storage.readObject(schema, id).join());
+        assertValid(before, storage.readObject(schema, id, ImmutableSet.of()).join());
 
         data.put("test", "value2");
         Instance.setVersion(data, 2L);
@@ -93,17 +96,17 @@ public class TestCognitoStorage {
         ));
         final Instance after = schema.create(data);
 
-        storage.write(Consistency.ATOMIC)
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .updateObject(schema, id, before, after)
                 .write().join();
 
-        assertValid(after, storage.readObject(schema, id).join());
+        assertValid(after, storage.readObject(schema, id, ImmutableSet.of()).join());
     }
 
     private void assertValid(final Instance expected, final Map<String, Object> actual) {
 
         assertNotNull(actual);
-        assertEquals("User", Instance.getSchema(actual));
+        assertEquals(Name.of("User"), Instance.getSchema(actual));
         assertNotNull(Instance.getCreated(actual));
         assertNotNull(Instance.getUpdated(actual));
         expected.forEach((k, v) -> {
@@ -124,6 +127,6 @@ public class TestCognitoStorage {
 
         final String id = UUID.randomUUID().toString();
 
-        storage.readObject(schema, id).join();
+        storage.readObject(schema, id, ImmutableSet.of()).join();
     }
 }

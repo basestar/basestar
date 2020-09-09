@@ -25,13 +25,14 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.Reserved;
-import io.basestar.spark.SparkSchemaUtils;
 import io.basestar.spark.expression.SparkExpressionVisitor;
+import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
-import io.basestar.storage.util.Pager;
-import io.basestar.util.PagedList;
+import io.basestar.storage.Versioning;
+import io.basestar.util.Name;
+import io.basestar.util.Page;
+import io.basestar.util.Pager;
 import io.basestar.util.Sort;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -43,6 +44,7 @@ import org.apache.spark.sql.SparkSession;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -50,7 +52,7 @@ import java.util.stream.Collectors;
 
 
 @Slf4j
-public class SparkStorage implements Storage.WithoutWrite {
+public class SparkStorage implements Storage.WithoutWrite, /* FIXME */ Storage.WithoutExpand, Storage.WithoutRepair {
 
     private final SparkSession session;
 
@@ -85,12 +87,12 @@ public class SparkStorage implements Storage.WithoutWrite {
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
+    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
         return CompletableFuture.supplyAsync(() -> {
 
             Dataset<Row> ds = strategy.objectRead(session, schema);
-            ds = ds.filter(ds.col(Reserved.ID).equalTo(id));
+            ds = ds.filter(ds.col(ObjectSchema.ID).equalTo(id));
             final Row row = ds.first();
             return row == null ? null : SparkSchemaUtils.fromSpark(schema, row);
 
@@ -98,13 +100,13 @@ public class SparkStorage implements Storage.WithoutWrite {
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
         return CompletableFuture.supplyAsync(() -> {
 
             Dataset<Row> ds = strategy.historyRead(session, schema);
-            ds = ds.filter(ds.col(Reserved.ID).equalTo(id)
-                    .and(ds.col(Reserved.VERSION).equalTo(version)));
+            ds = ds.filter(ds.col(ObjectSchema.ID).equalTo(id)
+                    .and(ds.col(ObjectSchema.VERSION).equalTo(version)));
             final Row row = ds.first();
             return row == null ? null : SparkSchemaUtils.fromSpark(schema, row);
 
@@ -112,7 +114,7 @@ public class SparkStorage implements Storage.WithoutWrite {
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
+    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         return ImmutableList.of((count, paging, stats) -> CompletableFuture.supplyAsync(() -> {
 
@@ -137,7 +139,7 @@ public class SparkStorage implements Storage.WithoutWrite {
 //                nextToken = KeysetPagingUtils.keysetPagingToken(schema, sort, items.get(items.size() - 1));
 //            }
 
-            return new PagedList<>(items, null);
+            return new Page<>(items, null);
 
         }, executor));
     }
@@ -157,7 +159,7 @@ public class SparkStorage implements Storage.WithoutWrite {
     }
 
     @Override
-    public WriteTransaction write(final Consistency consistency) {
+    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
         throw new UnsupportedOperationException();
     }

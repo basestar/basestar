@@ -45,7 +45,7 @@ import java.util.stream.Collectors;
 @Data
 public class Lambda implements Expression {
 
-    public static final String TOKEN = "->";
+    public static final String TOKEN = "=>";
 
     public static final int PRECEDENCE = Of.PRECEDENCE + 1;
 
@@ -94,9 +94,9 @@ public class Lambda implements Expression {
     }
 
     @Override
-    public Set<Name> paths() {
+    public Set<Name> names() {
 
-        return yield.paths().stream()
+        return yield.names().stream()
                 .filter(v -> !args.contains(v.first()))
                 .collect(Collectors.toSet());
     }

@@ -9,9 +9,9 @@ package io.basestar.schema;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,74 +20,106 @@ package io.basestar.schema;
  * #L%
  */
 
-import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.jackson.serde.ExpressionDeseriaizer;
+import io.basestar.schema.use.Use;
+import io.basestar.schema.validation.Validation;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.Data;
-import lombok.Getter;
-import lombok.experimental.Accessors;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.validation.Payload;
+import java.io.IOException;
 import java.io.Serializable;
+import java.lang.annotation.Annotation;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
-@Getter
-public class Constraint implements Named, Described, Serializable {
+@Data
+@Slf4j
+@JsonSerialize(using = Constraint.Serializer.class)
+@JsonDeserialize(using = Constraint.Deserializer.class)
+public class Constraint implements Serializable {
+
+    private static final String MESSAGE = "message";
+
+    private static final String CONDITIONS = "when";
 
     public static final String REQUIRED = "required";
 
     public static final String IMMUTABLE = "immutable";
 
     @Nonnull
-    private final Name qualifiedName;
+    private final Validation.Validator validator;
 
     @Nullable
-    private final String description;
+    @JsonProperty(MESSAGE)
+    private final String message;
 
     @Nonnull
-    private final Expression expression;
+    @JsonProperty(CONDITIONS)
+    private final List<Expression> when;
 
-    @JsonDeserialize(as = Builder.class)
-    public interface Descriptor extends Described {
+    private Constraint(final Validation.Validator validator, final String message, final List<Expression> when) {
 
-        Expression getExpression();
+        this.validator = validator;
+        this.message = message;
+        this.when = Nullsafe.immutableCopy(when);
+    }
 
-        default Constraint build(final Name qualifiedName) {
+    public List<Violation> violations(final Use<?> type, final Context context, final Name name, final Object value) {
 
-            return new Constraint(this, qualifiedName);
+        if(validator.validate(type, context, value)) {
+            return ImmutableList.of();
+        } else {
+            return ImmutableList.of(new Violation(name, validator.type(), message));
         }
     }
 
-    @Data
-    @Accessors(chain = true)
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    public static class Builder implements Descriptor {
+    public Annotation toJsr380(final Use<?> type) {
 
-        @Nullable
-        private String description;
-
-        @Nullable
-        @JsonSerialize(using = ToStringSerializer.class)
-        @JsonDeserialize(using = ExpressionDeseriaizer.class)
-        private Expression expression;
+        return toJsr380(type, getMessage());
     }
 
-    public static Builder builder() {
+    @SuppressWarnings("unchecked")
+    public Annotation toJsr380(final Use<?> type, final String message) {
 
-        return new Builder();
+        return toJsr380(type, message, null, null);
     }
 
-    private Constraint(final Descriptor descriptor, final Name qualifiedName) {
+    public Annotation toJsr380(final Use<?> type, final String message, final Class<?>[] groups, final Class<? extends Payload>[] payload) {
 
-        this.qualifiedName = qualifiedName;
-        this.description = descriptor.getDescription();
-        this.expression = Nullsafe.require(descriptor.getExpression());
+        final ImmutableMap.Builder<String, Object> values = ImmutableMap.builder();
+        if(message != null) {
+            values.put("message", message);
+        }
+        if(groups != null) {
+            values.put("groups", groups);
+        }
+        if(payload != null) {
+            values.put("payload", payload);
+        }
+        return validator.toJsr380(type, values.build());
     }
+
 
     @Data
     public static class Violation {
@@ -95,24 +127,103 @@ public class Constraint implements Named, Described, Serializable {
         @JsonSerialize(using = ToStringSerializer.class)
         private final Name name;
 
-        private final String constraint;
+        private final String type;
+
+        @Nullable
+        private final String message;
     }
 
-    public Descriptor descriptor() {
+    public static Constraint of(final Validation.Validator validator) {
 
-        return new Descriptor() {
-            @Override
-            public Expression getExpression() {
+        return of(validator, null);
+    }
 
-                return expression;
+    public static Constraint of(final Validation.Validator validator, final String message) {
+
+        return new Constraint(validator, message, null);
+    }
+
+    public static Constraint of(final Validation.Validator validator, final String message, final List<Expression> conditions) {
+
+        return new Constraint(validator, message, conditions);
+    }
+
+    public static Optional<Constraint> fromJsr380(final Use<?> type, final Annotation annotation, final String message) {
+
+        return Validation.createJsr380Validator(type, annotation).map(validator -> of(validator, message));
+    }
+
+    public static class Serializer extends JsonSerializer<Constraint> {
+
+        @Override
+        public void serialize(final Constraint constraint, final JsonGenerator generator, final SerializerProvider serializerProvider) throws IOException {
+
+            final String message = constraint.getMessage();
+            final Validation.Validator validator = constraint.getValidator();
+            final List<Expression> when = constraint.getWhen();
+            generator.writeStartObject();
+            generator.writeObjectField(validator.type(), validator.shorthand());
+            if(message != null) {
+                generator.writeStringField(MESSAGE, message);
             }
-
-            @Nullable
-            @Override
-            public String getDescription() {
-
-                return description;
+            if(!when.isEmpty()) {
+                if(when.size() == 1) {
+                    generator.writeStringField(CONDITIONS, when.get(0).toString());
+                } else {
+                    generator.writeArrayFieldStart(CONDITIONS);
+                    for(final Expression entry : when) {
+                        generator.writeString(entry.toString());
+                    }
+                    generator.writeEndObject();
+                }
             }
-        };
+            generator.writeEndObject();
+        }
+    }
+
+    public static class Deserializer extends JsonDeserializer<Constraint> {
+
+        @Override
+        public Constraint deserialize(final JsonParser parser, final DeserializationContext context) throws IOException {
+
+            String message = null;
+            Validation.Validator validator = null;
+            final List<Expression> when = new ArrayList<>();
+
+            if(parser.getCurrentToken() != JsonToken.START_OBJECT) {
+                throw context.wrongTokenException(parser, Constraint.class, JsonToken.START_OBJECT, null);
+            }
+            while(parser.nextToken() == JsonToken.FIELD_NAME) {
+                final String name = parser.currentName();
+                parser.nextToken();
+                if (MESSAGE.equals(name)) {
+                    message = parser.getText();
+                } else if(CONDITIONS.equals(name)) {
+                    if(parser.getCurrentToken() == JsonToken.START_OBJECT) {
+                        while(parser.nextToken() != JsonToken.END_ARRAY) {
+                            when.add(parser.readValueAs(Expression.class));
+                        }
+                        if(parser.getCurrentToken() != JsonToken.END_OBJECT) {
+                            throw context.wrongTokenException(parser, Constraint.class, JsonToken.END_OBJECT, null);
+                        }
+                    } else {
+                        when.add(parser.readValueAs(Expression.class));
+                    }
+                } else if(validator == null) {
+                    final Validation validation = Validation.forType(name);
+                    validator = parser.readValueAs(validation.validatorClass());
+                } else {
+                    throw new IllegalStateException("Already have a validator of type " + validator.type() + " cannot add " + name);
+                }
+            }
+            if(parser.getCurrentToken() != JsonToken.END_OBJECT) {
+                throw context.wrongTokenException(parser, Constraint.class, JsonToken.END_OBJECT, null);
+            }
+            if(validator != null) {
+                return Constraint.of(validator, message, when);
+            } else {
+                throw new JsonParseException(parser, "Constraint must have one of: " + Validation.types());
+            }
+        }
     }
 }

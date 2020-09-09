@@ -1,0 +1,4 @@
+---
+qualifiers:
+  ts:
+    output: "{schema.package.path}{schema.name}.ts"

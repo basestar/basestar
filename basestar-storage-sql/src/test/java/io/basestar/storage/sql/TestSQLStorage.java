@@ -20,12 +20,12 @@ package io.basestar.storage.sql;
  * #L%
  */
 
-import com.google.common.collect.Multimap;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Schema;
 import io.basestar.storage.Storage;
 import io.basestar.storage.TestStorage;
+import io.basestar.storage.sql.mapper.ColumnStrategy;
 import lombok.extern.slf4j.Slf4j;
 import org.h2.jdbcx.JdbcDataSource;
 import org.jooq.DSLContext;
@@ -36,21 +36,24 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
 public class TestSQLStorage extends TestStorage {
 
     @Override
-    protected Storage storage(final Namespace namespace, final Multimap<String, Map<String, Object>> data) {
+    protected Storage storage(final Namespace namespace) {
 
         final JdbcDataSource ds = new JdbcDataSource();
         ds.setURL("jdbc:h2:mem:test;DB_CLOSE_DELAY=100");
 
         final String objectSchema = UUID.randomUUID().toString().replaceAll("-", "_");
         final String historySchema = UUID.randomUUID().toString().replaceAll("-", "_");
-        final SQLStrategy strategy = new SQLStrategy.Simple(objectSchema, historySchema);
+        final SQLStrategy strategy = SQLStrategy.Simple.builder()
+                .objectSchemaName(objectSchema)
+                .historySchemaName(historySchema)
+                .columnStrategy(ColumnStrategy.Simple.builder().build())
+                .build();
 
         final List<ObjectSchema> schemas = new ArrayList<>();
         for(final Schema<?> schema : namespace.getSchemas().values()) {
@@ -68,14 +71,15 @@ public class TestSQLStorage extends TestStorage {
             throw new IllegalStateException(e);
         }
 
-        final Storage storage = SQLStorage.builder()
+        return SQLStorage.builder()
                 .setDataSource(ds)
                 .setDialect(SQLDialect.H2)
                 .setStrategy(strategy)
                 .build();
+    }
 
-        writeAll(storage, namespace, data);
+    protected boolean supportsLike() {
 
-        return storage;
+        return true;
     }
 }

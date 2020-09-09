@@ -26,7 +26,7 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Expression;
-import io.basestar.jackson.serde.ExpressionDeseriaizer;
+import io.basestar.jackson.serde.ExpressionDeserializer;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -38,7 +38,7 @@ public class ViewGroupDeserializer extends JsonDeserializer<Map<String, Expressi
 
     public ViewGroupDeserializer() {
 
-        this(new ExpressionDeseriaizer());
+        this(new ExpressionDeserializer());
     }
 
     public ViewGroupDeserializer(final JsonDeserializer<Expression> expressionDeserializer) {

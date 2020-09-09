@@ -20,18 +20,35 @@ package io.basestar.schema;
  * #L%
  */
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.basestar.util.Name;
 
 import javax.annotation.Nonnull;
+import java.util.Objects;
 
 public interface Named {
 
     @Nonnull
+    @JsonIgnore
     default String getName() {
 
         return getQualifiedName().last();
     }
 
     @Nonnull
+    @JsonIgnore
     Name getQualifiedName();
+
+    default boolean qualifiedNameEquals(final Object o) {
+
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        final ObjectSchema that = (ObjectSchema) o;
+        return getQualifiedName().equals(that.getQualifiedName());
+    }
+
+    default int qualifiedNameHashCode() {
+
+        return Objects.hash(getQualifiedName());
+    }
 }

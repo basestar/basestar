@@ -3,12 +3,12 @@ Test1:
   description: Project
   properties:
     x:
-      type: string
+      type: string?
     y:
-      type: integer
+      type: integer?
     z:
       type:
-        map: Test4
+        map?: Test4
   links:
     a:
       schema: Test3
@@ -18,7 +18,9 @@ Test2:
   type: struct
   properties:
     x:
-      type: string
+      type: string?
+    any:
+      type: any
 
 Test3:
   type: object

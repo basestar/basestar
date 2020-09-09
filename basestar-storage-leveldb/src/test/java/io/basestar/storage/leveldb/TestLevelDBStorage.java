@@ -20,7 +20,6 @@ package io.basestar.storage.leveldb;
  * #L%
  */
 
-import com.google.common.collect.Multimap;
 import io.basestar.schema.Namespace;
 import io.basestar.storage.Storage;
 import io.basestar.storage.TestStorage;
@@ -31,7 +30,6 @@ import org.junit.jupiter.api.Disabled;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Map;
 import java.util.UUID;
 
 import static org.fusesource.leveldbjni.JniDBFactory.factory;
@@ -50,17 +48,15 @@ public class TestLevelDBStorage extends TestStorage {
     }
 
     @Override
-    protected Storage storage(final Namespace namespace, final Multimap<String, Map<String, Object>> data) {
+    protected Storage storage(final Namespace namespace) {
 
         try {
             final Options options = new Options();
             options.createIfMissing(true);
             final DB db = factory.open(new File(BASEDIR, UUID.randomUUID().toString()), options);
-            final LevelDBStorage storage =  LevelDBStorage.builder()
+            return LevelDBStorage.builder()
                     .db(db)
                     .build();
-            writeAll(storage, namespace, data);
-            return storage;
         } catch (final IOException e) {
             throw new IllegalStateException(e);
         }

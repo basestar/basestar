@@ -53,6 +53,6 @@ public class ObjectDeletedEvent implements ObjectEvent {
                 .setSchema(schema)
                 .setId(id)
                 .setVersion(version)
-                .setBefore(ObjectSchema.readMeta(before));
+                .setBefore(ObjectSchema.copyMeta(before));
     }
 }

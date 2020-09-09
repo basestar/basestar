@@ -1,19 +1,19 @@
+$version: LATEST
 
-# path: x
 Post:
   properties:
     string:
-      type: string
+      type: string?
     ref:
-      type: Post
+      type: Post?
 
-# path: x/comments/y
 Comment:
   properties:
     string:
       type: string
     post:
       type: Post
+      default: {}
   indexes:
     parent:
       over:
@@ -26,7 +26,15 @@ User:
   properties:
     email:
       type: string
+    status:
+      type:
+        enum:
+          - INVITED
+          - JOINED
+          - BANNED
+    stats:
+      type:
+        struct:
+          loginCount: integer
+          clickCount: integer
 
-#  links:
-                     ##    link:
-                     ##      schema: Simple

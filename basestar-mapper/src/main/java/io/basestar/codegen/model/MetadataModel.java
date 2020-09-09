@@ -21,22 +21,23 @@ package io.basestar.codegen.model;
  */
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import io.basestar.codegen.CodegenSettings;
-import io.basestar.schema.Reserved;
+import io.basestar.codegen.CodegenContext;
+import io.basestar.mapper.annotation.*;
 import io.basestar.schema.use.Use;
 
+import java.lang.annotation.Annotation;
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class MetadataModel extends MemberModel {
 
     private final String name;
 
     private final Use<?> type;
 
-    public MetadataModel(final CodegenSettings settings, final String name, final Use<?> type) {
+    public MetadataModel(final CodegenContext context, final String name, final Use<?> type) {
 
-        super(settings);
+        super(context);
         this.name = name;
         this.type = type;
     }
@@ -47,19 +48,19 @@ public class MetadataModel extends MemberModel {
         return name;
     }
 
-    protected Class<?> getAnnotationClass() {
+    protected Annotation getAnnotation() {
 
         switch (name) {
-            case Reserved.ID:
-                return io.basestar.mapper.annotation.Id.class;
-            case Reserved.VERSION:
-                return io.basestar.mapper.annotation.Version.class;
-            case Reserved.CREATED:
-                return io.basestar.mapper.annotation.Created.class;
-            case Reserved.UPDATED:
-                return io.basestar.mapper.annotation.Updated.class;
-            case Reserved.HASH:
-                return io.basestar.mapper.annotation.Hash.class;
+            case io.basestar.schema.ObjectSchema.ID:
+                return Id.Declaration.annotation();
+            case io.basestar.schema.ObjectSchema.VERSION:
+                return Version.Declaration.annotation();
+            case io.basestar.schema.ObjectSchema.CREATED:
+                return Created.Declaration.annotation();
+            case io.basestar.schema.ObjectSchema.UPDATED:
+                return Updated.Declaration.annotation();
+            case io.basestar.schema.ObjectSchema.HASH:
+                return Hash.Declaration.annotation();
             default:
                 throw new UnsupportedOperationException("Invalid metadata " + name);
         }
@@ -67,17 +68,17 @@ public class MetadataModel extends MemberModel {
 
 
     @Override
-    public List<AnnotationModel> getAnnotations() {
+    public List<AnnotationModel<?>> getAnnotations() {
 
         return ImmutableList.of(
-                new AnnotationModel(getSettings(), getAnnotationClass(), ImmutableMap.of())
+                new AnnotationModel<>(getContext(), getAnnotation())
         );
     }
 
     @Override
     public TypeModel getType() {
 
-        return TypeModel.from(getSettings(), type);
+        return TypeModel.from(getContext(), type);
     }
 
     @Override

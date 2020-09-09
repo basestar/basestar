@@ -25,12 +25,14 @@ import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.Index;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.storage.util.Pager;
+import io.basestar.util.Name;
+import io.basestar.util.Pager;
 import io.basestar.util.Sort;
 
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 public interface DelegatingStorage extends Storage {
@@ -50,27 +52,27 @@ public interface DelegatingStorage extends Storage {
     }
 
     @Override
-    default CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
+    default CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
-        return storage(schema).readObject(schema, id);
+        return storage(schema).readObject(schema, id, expand);
+    }
+
+    @Override
+    default CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+
+        return storage(schema).readObjectVersion(schema, id, version, expand);
+    }
+
+    @Override
+    default List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        return storage(schema).query(schema, query, sort, expand);
     }
 
     @Override
     default List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
 
         return storage(schema).aggregate(schema, query, group, aggregates);
-    }
-
-    @Override
-    default CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
-
-        return storage(schema).readObjectVersion(schema, id, version);
-    }
-
-    @Override
-    default List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
-
-        return storage(schema).query(schema, query, sort);
     }
 
     @Override
@@ -83,6 +85,12 @@ public interface DelegatingStorage extends Storage {
     default StorageTraits storageTraits(final ObjectSchema schema) {
 
         return storage(schema).storageTraits(schema);
+    }
+
+    @Override
+    default Set<Name> supportedExpand(final ObjectSchema schema, final Set<Name> expand) {
+
+        return storage(schema).supportedExpand(schema, expand);
     }
 
     @Override
@@ -110,24 +118,36 @@ public interface DelegatingStorage extends Storage {
     }
 
     @Override
+    default List<Pager.Source<RepairInfo>> repair(final ObjectSchema schema) {
+
+        return storage(schema).repair(schema);
+    }
+
+    @Override
+    default List<Pager.Source<RepairInfo>> repairIndex(final ObjectSchema schema, final Index index) {
+
+        return storage(schema).repairIndex(schema, index);
+    }
+
+    @Override
     default ReadTransaction read(final Consistency consistency) {
 
         final IdentityHashMap<Storage, ReadTransaction> transactions = new IdentityHashMap<>();
         return new ReadTransaction() {
             @Override
-            public ReadTransaction readObject(final ObjectSchema schema, final String id) {
+            public ReadTransaction readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
                 transactions.computeIfAbsent(storage(schema), v -> v.read(consistency))
-                        .readObject(schema, id);
+                        .readObject(schema, id, expand);
 
                 return this;
             }
 
             @Override
-            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
                 transactions.computeIfAbsent(storage(schema), v -> v.read(consistency))
-                        .readObjectVersion(schema, id, version);
+                        .readObjectVersion(schema, id, version, expand);
 
                 return this;
             }
@@ -141,14 +161,14 @@ public interface DelegatingStorage extends Storage {
     }
 
     @Override
-    default WriteTransaction write(final Consistency consistency) {
+    default WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
         final IdentityHashMap<Storage, WriteTransaction> transactions = new IdentityHashMap<>();
         return new WriteTransaction() {
             @Override
             public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
-                transactions.computeIfAbsent(storage(schema), v -> v.write(consistency))
+                transactions.computeIfAbsent(storage(schema), v -> v.write(consistency, versioning))
                         .createObject(schema, id, after);
 
                 return this;
@@ -157,7 +177,7 @@ public interface DelegatingStorage extends Storage {
             @Override
             public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
-                transactions.computeIfAbsent(storage(schema), v -> v.write(consistency))
+                transactions.computeIfAbsent(storage(schema), v -> v.write(consistency, versioning))
                         .updateObject(schema, id, before, after);
 
                 return this;
@@ -166,7 +186,7 @@ public interface DelegatingStorage extends Storage {
             @Override
             public WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
 
-                transactions.computeIfAbsent(storage(schema), v -> v.write(consistency))
+                transactions.computeIfAbsent(storage(schema), v -> v.write(consistency, versioning))
                         .deleteObject(schema, id, before);
 
                 return this;

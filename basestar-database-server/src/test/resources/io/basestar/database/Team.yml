@@ -4,9 +4,11 @@ Team:
 
   properties:
     name:
-      type: string
+      type: string?
     description:
-      type: string
+      type: string?
+    parent:
+      type: Team?
 
   links:
     members:
@@ -43,25 +45,27 @@ TeamMember:
 
   properties:
     team:
-      type: Team
+      type: Team?
       immutable: true
     user:
-      type: User
+      type: User?
       immutable: true
     role:
       type: TeamRole
-      required: true
     accepted:
-      type: boolean
+      type: boolean?
 
   expand:
-    - team
+    - team.parent
     - user
 
   indexes:
     team:
       partition:
         - team.id
+    parent:
+      partition:
+        - team.parent.id
     user:
       partition:
         - user.id
@@ -111,14 +115,15 @@ TeamMemberStats:
   type: view
 
   from: TeamMember
-  select:
+  properties:
     count:
-      type: integer
+      type: integer?
       expression: count()
-  group:
     team:
-      type: string
+      type: string?
       expression: team.id
+  group:
+    - team
   where: accepted
 
   permissions:

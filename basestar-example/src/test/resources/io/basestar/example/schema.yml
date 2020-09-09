@@ -16,11 +16,10 @@ Group:
     extend: Principal
     properties:
       owner:
-        type: User
-        required: true
+        type: User?
       members:
         type:
-          array: User
+          array?: User
     indexes:
       owner:
         partition:
@@ -45,7 +44,7 @@ Project:
     type: object
     properties:
       owner:
-        type: Principal
+        type: Principal?
     indexes:
       owner:
         partition:
@@ -65,7 +64,7 @@ Thing:
   type: object
   properties:
     project:
-      type: Project
+      type: Project?
 #  permissions:
 #    read:
 #      inherit:

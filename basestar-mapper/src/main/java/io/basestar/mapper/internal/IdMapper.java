@@ -27,6 +27,7 @@ import io.basestar.schema.Id;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.type.PropertyContext;
+import io.basestar.type.SerializableAccessor;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collections;
@@ -35,17 +36,40 @@ import java.util.Set;
 
 public class IdMapper implements MemberMapper<ObjectSchema.Builder> {
 
-    private final PropertyContext property;
-
-    private final Expression expression;
+    private final SerializableAccessor property;
 
     private final TypeMapper type;
 
-    public IdMapper(final MappingContext context, final PropertyContext property, final Expression expression) {
+    private final String description;
 
-        this.property = property;
+    private final Expression expression;
+
+    public IdMapper(final MappingContext context, final PropertyContext property) {
+
+        this.property = property.serializableAccessor();
+        this.type = context.typeMapper(property.type());
+        this.description = null;
+        this.expression = null;
+    }
+
+    public IdMapper(final IdMapper copy, final String description, final Expression expression) {
+
+        this.property = copy.property;
+        this.type = copy.type;
+        this.description = description;
         this.expression = expression;
-        this.type = TypeMapper.from(context, property.type());
+    }
+
+    @Override
+    public IdMapper withExpression(final Expression expression) {
+
+        return new IdMapper(this, description, expression);
+    }
+
+    @Override
+    public IdMapper withDescription(final String description) {
+
+        return new IdMapper(this, description, expression);
     }
 
     @Override
@@ -55,11 +79,16 @@ public class IdMapper implements MemberMapper<ObjectSchema.Builder> {
     }
 
     @Override
-    public void addToSchema(final ObjectSchema.Builder builder) {
+    public String memberType() {
+
+        return ObjectSchema.ID;
+    }
+
+    @Override
+    public void addToSchema(final InstanceSchemaMapper<?, ObjectSchema.Builder> mapper, final ObjectSchema.Builder builder) {
 
         if(expression != null) {
-            builder.setId(Id.builder()
-                    .setExpression(expression));
+            builder.setId(Id.builder().setExpression(expression));
         }
     }
 

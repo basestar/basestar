@@ -44,7 +44,7 @@ import io.basestar.storage.dynamodb.DynamoDBStrategy;
 import io.basestar.storage.dynamodb.DynamoDBUtils;
 import io.basestar.storage.s3.S3Stash;
 import io.basestar.util.Name;
-import io.basestar.util.PagedList;
+import io.basestar.util.Page;
 import org.apache.commons.lang.StringUtils;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.model.TableDescription;
@@ -213,7 +213,7 @@ public class Test {
             )).get();
             System.err.println(createTeamInvite);
 
-            final PagedList<Instance> queryInvites = database.query(caller, Name.of("TeamInvite"), Expression.parse("user.id == 'test'")).get();
+            final Page<Instance> queryInvites = database.query(caller, Name.of("TeamInvite"), Expression.parse("user.id == 'test'")).get();
             System.err.println(queryInvites);
 
             final Map<String, Object> createTeamMember = database.create(caller, Name.of("TeamUser"), ImmutableMap.of(
@@ -244,7 +244,7 @@ public class Test {
             final Map<String, Object> getVersion = database.read(caller, Name.of("Project"), "myproject", 1L).get();
             System.err.println(getVersion);
 
-            final PagedList<Instance> queryProject = database.query(caller, Name.of("Project"), Expression.parse("owner.id == 'test'")).get();
+            final Page<Instance> queryProject = database.query(caller, Name.of("Project"), Expression.parse("owner.id == 'test'")).get();
 
             System.err.println(queryProject);
 
@@ -269,7 +269,7 @@ public class Test {
 //        final OpenAPI openAPI = api.openApi();
         final API api = new AuthenticatingAPI(authenticator, DiscoverableAPI.builder().api(new DatabaseAPI(database)).build());
         //System.err.println(new ObjectMapper().setDefaultPropertyInclusion(JsonInclude.Include.NON_EMPTY).writerWithDefaultPrettyPrinter().writeValueAsString(openAPI));
-        final UndertowConnector connector = new UndertowConnector(api,"localhost", 5004);
+        final UndertowConnector connector = UndertowConnector.builder().api(api).host("localhost").port(5004).build();
         connector.start();
     }
 }

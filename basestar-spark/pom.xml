@@ -3,7 +3,7 @@
     <parent>
         <artifactId>basestar</artifactId>
         <groupId>io.basestar</groupId>
-        <version>1.1.11-SNAPSHOT</version>
+        <version>1.2.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -33,18 +33,22 @@
             <artifactId>basestar-schema</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.basestar</groupId>
+            <artifactId>basestar-mapper</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.apache.spark</groupId>
-            <artifactId>spark-sql_2.11</artifactId>
+            <artifactId>spark-sql_2.12</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
-            <artifactId>spark-streaming_2.11</artifactId>
+            <artifactId>spark-streaming_2.12</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.module</groupId>
-            <artifactId>jackson-module-scala_2.11</artifactId>
+            <artifactId>jackson-module-scala_2.12</artifactId>
         </dependency>
         <dependency>
             <groupId>io.basestar</groupId>

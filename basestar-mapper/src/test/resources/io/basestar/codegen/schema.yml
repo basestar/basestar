@@ -23,7 +23,6 @@ MyObject:
         array: MyEnum
     test3:
       type: MyObject
-      required: true
     mydate:
       type: date
     mydatetime:
@@ -32,6 +31,10 @@ MyObject:
     test4:
       expression: id==this.id && "test"==test1
       schema: MyObject
+    test5:
+      expression: id==this.id && "test"==test1
+      schema: MyObject
+      single: true
   indexes:
     blah:
       partition:
@@ -43,3 +46,7 @@ MyView:
   type: view
   from: MyObject
   where: a + "_" + b
+
+ns1.ns2.MyObject:
+  type: object
+  extend: MyObject

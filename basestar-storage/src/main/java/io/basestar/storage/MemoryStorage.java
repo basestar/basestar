@@ -28,13 +28,13 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.*;
+import io.basestar.schema.use.UseBinary;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;
-import io.basestar.storage.util.Pager;
 import io.basestar.util.Name;
-import io.basestar.util.PagedList;
-import io.basestar.util.PagingToken;
+import io.basestar.util.Page;
+import io.basestar.util.Pager;
 import io.basestar.util.Sort;
 import lombok.Data;
 import lombok.Setter;
@@ -49,7 +49,7 @@ import java.util.stream.Collectors;
 
 // TODO optimize, this is currently used only as a mock so not important but should be a viable implementation
 
-public class MemoryStorage extends PartitionedStorage {
+public class MemoryStorage extends PartitionedStorage implements Storage.WithoutExpand, Storage.WithoutRepair {
 
     private State state = new State();
 
@@ -75,7 +75,7 @@ public class MemoryStorage extends PartitionedStorage {
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
+    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
         return CompletableFuture.supplyAsync(() -> {
             synchronized (lock) {
@@ -85,7 +85,7 @@ public class MemoryStorage extends PartitionedStorage {
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
         return CompletableFuture.supplyAsync(() -> {
             synchronized (lock) {
@@ -126,18 +126,20 @@ public class MemoryStorage extends PartitionedStorage {
             });
 
             return ImmutableList.of(
-                    (count, token, stats) -> CompletableFuture.completedFuture(new PagedList<>(page, null))
+                    (count, token, stats) -> CompletableFuture.completedFuture(new Page<>(page, null))
             );
         }
     }
 
     @Override
-    protected CompletableFuture<PagedList<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfy, final Map<Name, Range<Object>> query, final List<Sort> sort, final int count, final PagingToken paging) {
+    protected CompletableFuture<Page<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfy,
+                                                                      final Map<Name, Range<Object>> query, final List<Sort> sort, final Set<Name> expand,
+                                                                      final int count, final Page.Token paging) {
 
         return CompletableFuture.supplyAsync(() -> {
             synchronized (lock) {
 
-                final byte[] partBinary = binary(satisfy.getPartition());
+                final byte[] partBinary = UseBinary.binaryKey(satisfy.getPartition());
                 final IndexPartition partKey = new IndexPartition(schema.getQualifiedName(), index.getName(), partBinary);
 
                 final NavigableMap<IndexSort, Map<String, Object>> partition = state.index.get(partKey);
@@ -147,8 +149,8 @@ public class MemoryStorage extends PartitionedStorage {
                     results = Collections.emptyList();
                 } else {
                     if(!satisfy.getSort().isEmpty()) {
-                        final byte[] sortLo = binary(satisfy.getSort());
-                        final byte[] sortHi = binary(satisfy.getSort(), new byte[]{0});
+                        final byte[] sortLo = UseBinary.binaryKey(satisfy.getSort());
+                        final byte[] sortHi = UseBinary.binaryKey(satisfy.getSort(), new byte[]{0});
                         results = Lists.newArrayList(partition.tailMap(new IndexSort(sortLo, null), true)
                                 .headMap(new IndexSort(sortHi, null)).values());
                     } else {
@@ -156,7 +158,7 @@ public class MemoryStorage extends PartitionedStorage {
                     }
                 }
 
-                return new PagedList<>(results, null);
+                return new Page<>(results, null);
             }
         });
     }
@@ -169,7 +171,7 @@ public class MemoryStorage extends PartitionedStorage {
             private final List<CompletableFuture<BatchResponse>> futures = new ArrayList<>();
 
             @Override
-            public ReadTransaction readObject(final ObjectSchema schema, final String id) {
+            public ReadTransaction readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
                 final CompletableFuture<Map<String, Object>> future = CompletableFuture.supplyAsync(() -> {
                     synchronized (lock) {
@@ -182,7 +184,7 @@ public class MemoryStorage extends PartitionedStorage {
             }
 
             @Override
-            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
                 final CompletableFuture<Map<String, Object>> future = CompletableFuture.supplyAsync(() -> {
                     synchronized (lock) {
@@ -230,14 +232,14 @@ public class MemoryStorage extends PartitionedStorage {
     }
 
     @Override
-    public WriteTransaction write(final Consistency consistency) {
+    public PartitionedStorage.WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
-        return new WriteTransaction() {
+        return new PartitionedStorage.WriteTransaction() {
 
             private final List<Function<State, BatchResponse>> items = new ArrayList<>();
 
             @Override
-            public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+            public PartitionedStorage.WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
                 items.add(state -> {
 
@@ -269,7 +271,7 @@ public class MemoryStorage extends PartitionedStorage {
             }
 
             @Override
-            public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
+            public PartitionedStorage.WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
                 items.add(state -> {
 
@@ -295,7 +297,7 @@ public class MemoryStorage extends PartitionedStorage {
             }
 
             @Override
-            public WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
+            public PartitionedStorage.WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
 
                 items.add(state -> {
 
@@ -315,7 +317,7 @@ public class MemoryStorage extends PartitionedStorage {
             }
 
             @Override
-            public WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+            public PartitionedStorage.WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
 
                 return withPartitionSort(schema, index, id, key, (partition, sortKey) -> {
 
@@ -328,24 +330,24 @@ public class MemoryStorage extends PartitionedStorage {
             }
 
             @Override
-            public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+            public PartitionedStorage.WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
 
                 return withPartitionSort(schema, index, id, key, (partition, sortKey) -> partition.put(sortKey, projection));
             }
 
             @Override
-            public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
+            public PartitionedStorage.WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
 
                 return withPartitionSort(schema, index, id, key, Map::remove);
             }
 
-            private WriteTransaction withPartitionSort(final ObjectSchema schema, final Index index, final String id, final Index.Key key, final BiConsumer<Map<IndexSort, Map<String, Object>>, IndexSort> consumer) {
+            private PartitionedStorage.WriteTransaction withPartitionSort(final ObjectSchema schema, final Index index, final String id, final Index.Key key, final BiConsumer<Map<IndexSort, Map<String, Object>>, IndexSort> consumer) {
 
                 items.add(state -> {
 
 
-                    final IndexPartition partKey = new IndexPartition(schema.getQualifiedName(), index.getName(), binary(key.getPartition()));
-                    final IndexSort sortKey = new IndexSort(binary(key.getSort()), index.isUnique() ? null : id);
+                    final IndexPartition partKey = new IndexPartition(schema.getQualifiedName(), index.getName(), UseBinary.binaryKey(key.getPartition()));
+                    final IndexSort sortKey = new IndexSort(UseBinary.binaryKey(key.getSort()), index.isUnique() ? null : id);
 
                     final Map<IndexSort, Map<String, Object>> partition = state.index
                             .computeIfAbsent(partKey, k -> new TreeMap<>());
@@ -491,6 +493,12 @@ public class MemoryStorage extends PartitionedStorage {
 
         @Override
         public boolean supportsPolymorphism() {
+
+            return true;
+        }
+
+        @Override
+        public boolean supportsAggregation() {
 
             return true;
         }

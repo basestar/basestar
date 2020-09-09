@@ -20,16 +20,14 @@ package io.basestar.schema.use;
  * #L%
  */
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.iterate.ForAny;
 import io.basestar.expression.iterate.Of;
 import io.basestar.schema.Constraint;
-import io.basestar.schema.Instance;
 import io.basestar.schema.Schema;
+import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
@@ -37,14 +35,36 @@ import io.basestar.util.Name;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-public interface UseCollection<V, T extends Collection<V>> extends Use<T> {
+public interface UseCollection<V, T extends Collection<V>> extends UseContainer<V, T> {
 
-    Use<V> getType();
+    T transformValues(T value, BiFunction<Use<V>, V, V> fn);
 
-    T transform(T value, Function<V, V> fn);
+    @Override
+    <V2> UseCollection<V2, ? extends Collection<V2>> transform(Function<Use<V>, Use<V2>> fn);
+
+    @Override
+    default T create(final Object value, final Set<Name> expand, final boolean suppress) {
+
+        if(value == null) {
+            return null;
+        } else if(value instanceof Collection) {
+            final Use<V> type = getType();
+            final Stream<V> values = ((Collection<?>) value).stream()
+                    .map(v -> type.create(v, expand, suppress));
+            return create(values);
+        } else if (suppress) {
+            return null;
+        } else {
+            throw new UnexpectedTypeException(this, value);
+        }
+    }
+
+    T create(Stream<V> value);
 
     @Override
     default Set<Constraint.Violation> validate(final Context context, final Name name, final T value) {
@@ -108,21 +128,21 @@ public interface UseCollection<V, T extends Collection<V>> extends Use<T> {
     default T expand(final T value, final Expander expander, final Set<Name> expand) {
 
         final Use<V> type = getType();
-        return transform(value, before -> type.expand(before, expander, expand));
+        return transformValues(value, before -> type.expand(before, expander, expand));
     }
 
     @Override
     default T applyVisibility(final Context context, final T value) {
 
         final Use<V> type = getType();
-        return transform(value, before -> type.applyVisibility(context, before));
+        return transformValues(value, before -> type.applyVisibility(context, before));
     }
 
     @Override
     default T evaluateTransients(final Context context, final T value, final Set<Name> expand) {
 
         final Use<V> type = getType();
-        return transform(value, before -> type.evaluateTransients(context, before, expand));
+        return transformValues(value, before -> type.evaluateTransients(context, before, expand));
     }
 
     @Override
@@ -138,20 +158,20 @@ public interface UseCollection<V, T extends Collection<V>> extends Use<T> {
     }
 
     @Override
-    @Deprecated
-    default Multimap<Name, Instance> refs(final T value) {
-
-        final Multimap<Name, Instance> result = HashMultimap.create();
-        if(value != null) {
-            value.forEach(v -> getType().refs(v).forEach(result::put));
-        }
-        return result;
-    }
-
-    @Override
     default void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
         getType().collectDependencies(expand, out);
+    }
+
+    @Override
+    default String toString(final T value) {
+
+        if(value == null) {
+            return "null";
+        } else {
+            final Use<V> type = getType();
+            return "[" + value.stream().map(type::toString).collect(Collectors.joining(", ")) + "]";
+        }
     }
 }
 

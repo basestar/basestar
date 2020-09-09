@@ -20,19 +20,18 @@ package io.basestar.schema.use;
  * #L%
  */
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.compare.Eq;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.schema.*;
-import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -51,16 +50,15 @@ import java.util.*;
  */
 
 @Data
-public class UseObject implements UseInstance {
-
-    public static final String NAME = "object";
+@Slf4j
+public class UseObject implements UseLinkable {
 
     private final ObjectSchema schema;
 
     @Override
     public <R> R visit(final Visitor<R> visitor) {
 
-        return visitor.visitRef(this);
+        return visitor.visitObject(this);
     }
 
     public static UseObject from(final ObjectSchema schema, final Object config) {
@@ -85,31 +83,33 @@ public class UseObject implements UseInstance {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Instance create(final Object value, final boolean expand, final boolean suppress) {
+    public Instance create(final Object value, final Set<Name> expand, final boolean suppress) {
 
         if(value == null) {
             return null;
         } else if(value instanceof Map) {
             final Map<String, Object> map = (Map<String, Object>)value;
             final String id = Instance.getId(map);
-            if(id == null) {
+            if (id == null) {
                 return null;
             } else {
-                if(expand) {
-                    return schema.create(map, true, suppress);
+                if(expand != null) {
+                    return schema.create(map, expand, suppress);
                 } else {
                     return ObjectSchema.ref(id);
                 }
             }
+        } else if(suppress) {
+            return null;
         } else {
-            throw new InvalidTypeException();
+            throw new UnexpectedTypeException(this, value);
         }
     }
 
     @Override
     public Code code() {
 
-        return Code.REF;
+        return Code.OBJECT;
     }
 
     @Override
@@ -140,7 +140,7 @@ public class UseObject implements UseInstance {
             if(expand == null) {
                 // If non-expanded, strip back to just a ref, this is needed because expand is also used to
                 // reset after expansion for permission evaluation
-                if(value.size() == 1 && value.containsKey(Reserved.ID)) {
+                if(value.size() == 1 && value.containsKey(ObjectSchema.ID)) {
                     return value;
                 } else {
                     return ObjectSchema.ref(Instance.getId(value));
@@ -165,8 +165,8 @@ public class UseObject implements UseInstance {
     public Set<Name> requiredExpand(final Set<Name> names) {
 
         final Set<Name> copy = Sets.newHashSet(names);
-        copy.remove(Name.of(Reserved.SCHEMA));
-        copy.remove(Name.of(Reserved.ID));
+        copy.remove(Name.of(ObjectSchema.SCHEMA));
+        copy.remove(Name.of(ObjectSchema.ID));
 
         if(!copy.isEmpty()) {
             final Set<Name> result = Sets.newHashSet();
@@ -179,12 +179,9 @@ public class UseObject implements UseInstance {
     }
 
     @Override
-    @Deprecated
-    public Multimap<Name, Instance> refs(final Instance value) {
+    public Instance defaultValue() {
 
-        final Multimap<Name, Instance> result = HashMultimap.create();
-        result.put(Name.empty(), value);
-        return result;
+        return schema.create(Collections.emptyMap());
     }
 
     @Override
@@ -198,7 +195,7 @@ public class UseObject implements UseInstance {
 
         final Set<Expression> queries = new HashSet<>();
         if(schema.getQualifiedName().equals(otherTypeName)) {
-            queries.add(new Eq(new NameConstant(name.with(Reserved.ID)), new NameConstant(Name.of(Reserved.THIS, Reserved.ID))));
+            queries.add(new Eq(new NameConstant(name.with(ObjectSchema.ID)), new NameConstant(Name.of(Reserved.THIS, ObjectSchema.ID))));
         }
         if(expand != null && !expand.isEmpty()) {
             queries.addAll(schema.refQueries(otherTypeName, expand, name));

@@ -23,10 +23,29 @@ package io.basestar.expression.type.match;
 import io.basestar.expression.type.Values;
 import io.basestar.expression.type.exception.BadOperandsException;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.Map;
 
+/**
+ * Order is:
+ *
+ * void (null)
+ * boolean
+ * number
+ * string
+ * localdate
+ * instant
+ * collection
+ * map
+ *
+ * @param <T>
+ */
+
 public interface BinaryMatch<T> {
+
+    Void NULL = null;
 
     default T defaultApply(final Object lhs, final Object rhs) {
 
@@ -49,6 +68,16 @@ public interface BinaryMatch<T> {
     }
 
     default T apply(final Void lhs, final String rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
+    default T apply(final Void lhs, final LocalDate rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
+    default T apply(final Void lhs, final Instant rhs) {
 
         return defaultApply(lhs, rhs);
     }
@@ -83,6 +112,16 @@ public interface BinaryMatch<T> {
         return defaultApply(lhs, rhs);
     }
 
+    default T apply(final Boolean lhs, final LocalDate rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
+    default T apply(final Boolean lhs, final Instant rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
     default T apply(final Boolean lhs, final Number rhs) {
 
         return defaultApply(lhs, rhs);
@@ -113,6 +152,16 @@ public interface BinaryMatch<T> {
         return defaultApplySame(lhs, rhs);
     }
 
+    default T apply(final String lhs, final LocalDate rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
+    default T apply(final String lhs, final Instant rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
     default T apply(final String lhs, final Number rhs) {
 
         return defaultApply(lhs, rhs);
@@ -128,6 +177,86 @@ public interface BinaryMatch<T> {
         return defaultApply(lhs, rhs);
     }
 
+    default T apply(final LocalDate lhs, final Void rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
+    default T apply(final LocalDate lhs, final Boolean rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
+    default T apply(final LocalDate lhs, final String rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
+    default T apply(final LocalDate lhs, final LocalDate rhs) {
+
+        return defaultApplySame(lhs, rhs);
+    }
+
+    default T apply(final LocalDate lhs, final Instant rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
+    default T apply(final LocalDate lhs, final Number rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
+    default T apply(final LocalDate lhs, final Collection<?> rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
+    default T apply(final LocalDate lhs, final Map<?, ?> rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
+    default T apply(final Instant lhs, final Void rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
+    default T apply(final Instant lhs, final Boolean rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
+    default T apply(final Instant lhs, final String rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
+    default T apply(final Instant lhs, final LocalDate rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
+    default T apply(final Instant lhs, final Instant rhs) {
+
+        return defaultApplySame(lhs, rhs);
+    }
+
+    default T apply(final Instant lhs, final Number rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
+    default T apply(final Instant lhs, final Collection<?> rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
+    default T apply(final Instant lhs, final Map<?, ?> rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
     default T apply(final Number lhs, final Void rhs) {
 
         return defaultApply(lhs, rhs);
@@ -139,6 +268,16 @@ public interface BinaryMatch<T> {
     }
 
     default T apply(final Number lhs, final String rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
+    default T apply(final Number lhs, final LocalDate rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
+    default T apply(final Number lhs, final Instant rhs) {
 
         return defaultApply(lhs, rhs);
     }
@@ -173,6 +312,16 @@ public interface BinaryMatch<T> {
         return defaultApply(lhs, rhs);
     }
 
+    default T apply(final Collection<?> lhs, final LocalDate rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
+    default T apply(final Collection<?> lhs, final Instant rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
     default T apply(final Collection<?> lhs, final Number rhs) {
 
         return defaultApply(lhs, rhs);
@@ -203,6 +352,16 @@ public interface BinaryMatch<T> {
         return defaultApply(lhs, rhs);
     }
 
+    default T apply(final Map<?, ?> lhs, final LocalDate rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
+    default T apply(final Map<?, ?> lhs, final Instant rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
     default T apply(final Map<?, ?> lhs, final Number rhs) {
 
         return defaultApply(lhs, rhs);
@@ -221,13 +380,17 @@ public interface BinaryMatch<T> {
     default T apply(final Void lhs, final Object rhs) {
 
         if (rhs == null) {
-            return apply(lhs, (Void) null);
+            return apply(lhs, NULL);
         } else if (rhs instanceof Boolean) {
             return apply(lhs, (Boolean) rhs);
         } else if (rhs instanceof Number) {
             return apply(lhs, (Number) rhs);
         } else if (rhs instanceof String) {
             return apply(lhs, (String) rhs);
+        } else if (rhs instanceof LocalDate) {
+            return apply(lhs, (LocalDate) rhs);
+        } else if (rhs instanceof Instant) {
+            return apply(lhs, (Instant) rhs);
         } else if (rhs instanceof Collection<?>) {
             return apply(lhs, (Collection<?>) rhs);
         } else if (rhs instanceof Map<?, ?>) {
@@ -240,13 +403,17 @@ public interface BinaryMatch<T> {
     default T apply(final Boolean lhs, final Object rhs) {
 
         if (rhs == null) {
-            return apply(lhs, (Void) null);
+            return apply(lhs, NULL);
         } else if (rhs instanceof Boolean) {
             return apply(lhs, (Boolean) rhs);
         } else if (rhs instanceof Number) {
             return apply(lhs, (Number) rhs);
         } else if (rhs instanceof String) {
             return apply(lhs, (String) rhs);
+        } else if (rhs instanceof LocalDate) {
+            return apply(lhs, (LocalDate) rhs);
+        } else if (rhs instanceof Instant) {
+            return apply(lhs, (Instant) rhs);
         } else if (rhs instanceof Collection<?>) {
             return apply(lhs, (Collection<?>) rhs);
         } else if (rhs instanceof Map<?, ?>) {
@@ -259,13 +426,17 @@ public interface BinaryMatch<T> {
     default T apply(final Number lhs, final Object rhs) {
 
         if (rhs == null) {
-            return apply(lhs, (Void) null);
+            return apply(lhs, NULL);
         } else if (rhs instanceof Boolean) {
             return apply(lhs, (Boolean) rhs);
         } else if (rhs instanceof Number) {
             return apply(lhs, (Number) rhs);
         } else if (rhs instanceof String) {
             return apply(lhs, (String) rhs);
+        } else if (rhs instanceof LocalDate) {
+            return apply(lhs, (LocalDate) rhs);
+        } else if (rhs instanceof Instant) {
+            return apply(lhs, (Instant) rhs);
         } else if (rhs instanceof Collection<?>) {
             return apply(lhs, (Collection<?>) rhs);
         } else if (rhs instanceof Map<?, ?>) {
@@ -278,13 +449,63 @@ public interface BinaryMatch<T> {
     default T apply(final String lhs, final Object rhs) {
 
         if (rhs == null) {
-            return apply(lhs, (Void) null);
+            return apply(lhs, NULL);
         } else if (rhs instanceof Boolean) {
             return apply(lhs, (Boolean) rhs);
         } else if (rhs instanceof Number) {
             return apply(lhs, (Number) rhs);
         } else if (rhs instanceof String) {
             return apply(lhs, (String) rhs);
+        } else if (rhs instanceof LocalDate) {
+            return apply(lhs, (LocalDate) rhs);
+        } else if (rhs instanceof Instant) {
+            return apply(lhs, (Instant) rhs);
+        } else if (rhs instanceof Collection<?>) {
+            return apply(lhs, (Collection<?>) rhs);
+        } else if (rhs instanceof Map<?, ?>) {
+            return apply(lhs, (Map<?, ?>) rhs);
+        } else {
+            return defaultApply(lhs, rhs);
+        }
+    }
+
+    default T apply(final LocalDate lhs, final Object rhs) {
+
+        if (rhs == null) {
+            return apply(lhs, NULL);
+        } else if (rhs instanceof Boolean) {
+            return apply(lhs, (Boolean) rhs);
+        } else if (rhs instanceof Number) {
+            return apply(lhs, (Number) rhs);
+        } else if (rhs instanceof String) {
+            return apply(lhs, (String) rhs);
+        } else if (rhs instanceof LocalDate) {
+            return apply(lhs, (LocalDate) rhs);
+        } else if (rhs instanceof Instant) {
+            return apply(lhs, (Instant) rhs);
+        } else if (rhs instanceof Collection<?>) {
+            return apply(lhs, (Collection<?>) rhs);
+        } else if (rhs instanceof Map<?, ?>) {
+            return apply(lhs, (Map<?, ?>) rhs);
+        } else {
+            return defaultApply(lhs, rhs);
+        }
+    }
+
+    default T apply(final Instant lhs, final Object rhs) {
+
+        if (rhs == null) {
+            return apply(lhs, NULL);
+        } else if (rhs instanceof Boolean) {
+            return apply(lhs, (Boolean) rhs);
+        } else if (rhs instanceof Number) {
+            return apply(lhs, (Number) rhs);
+        } else if (rhs instanceof String) {
+            return apply(lhs, (String) rhs);
+        } else if (rhs instanceof LocalDate) {
+            return apply(lhs, (LocalDate) rhs);
+        } else if (rhs instanceof Instant) {
+            return apply(lhs, (Instant) rhs);
         } else if (rhs instanceof Collection<?>) {
             return apply(lhs, (Collection<?>) rhs);
         } else if (rhs instanceof Map<?, ?>) {
@@ -297,13 +518,17 @@ public interface BinaryMatch<T> {
     default T apply(final Collection<?> lhs, final Object rhs) {
 
         if (rhs == null) {
-            return apply(lhs, (Void) null);
+            return apply(lhs, NULL);
         } else if (rhs instanceof Boolean) {
             return apply(lhs, (Boolean) rhs);
         } else if (rhs instanceof Number) {
             return apply(lhs, (Number) rhs);
         } else if (rhs instanceof String) {
             return apply(lhs, (String) rhs);
+        } else if (rhs instanceof LocalDate) {
+            return apply(lhs, (LocalDate) rhs);
+        } else if (rhs instanceof Instant) {
+            return apply(lhs, (Instant) rhs);
         } else if (rhs instanceof Collection<?>) {
             return apply(lhs, (Collection<?>) rhs);
         } else if (rhs instanceof Map<?, ?>) {
@@ -316,13 +541,17 @@ public interface BinaryMatch<T> {
     default T apply(final Map<?, ?> lhs, final Object rhs) {
 
         if (rhs == null) {
-            return apply(lhs, (Void) null);
+            return apply(lhs, NULL);
         } else if (rhs instanceof Boolean) {
             return apply(lhs, (Boolean) rhs);
         } else if (rhs instanceof Number) {
             return apply(lhs, (Number) rhs);
         } else if (rhs instanceof String) {
             return apply(lhs, (String) rhs);
+        } else if (rhs instanceof LocalDate) {
+            return apply(lhs, (LocalDate) rhs);
+        } else if (rhs instanceof Instant) {
+            return apply(lhs, (Instant) rhs);
         } else if (rhs instanceof Collection<?>) {
             return apply(lhs, (Collection<?>) rhs);
         } else if (rhs instanceof Map<?, ?>) {
@@ -335,13 +564,17 @@ public interface BinaryMatch<T> {
     default T apply(final Object lhs, final Object rhs) {
 
         if (lhs == null) {
-            return apply((Void)null, rhs);
+            return apply(NULL, rhs);
         } else if(lhs instanceof Boolean) {
             return apply((Boolean)lhs, rhs);
         } else if(lhs instanceof Number) {
             return apply((Number)lhs, rhs);
         } else if(lhs instanceof String) {
             return apply((String)lhs, rhs);
+        } else if (lhs instanceof LocalDate) {
+            return apply((LocalDate)lhs, rhs);
+        } else if (lhs instanceof Instant) {
+            return apply((Instant)lhs, rhs);
         } else if(lhs instanceof Collection<?>) {
             return apply((Collection<?>)lhs, rhs);
         } else if(lhs instanceof Map<?, ?>) {

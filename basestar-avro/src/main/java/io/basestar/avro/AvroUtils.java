@@ -22,13 +22,14 @@ package io.basestar.avro;
 
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
+import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.IndexedRecord;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -41,6 +42,15 @@ public class AvroUtils {
 
     public static Schema schema(final io.basestar.schema.Schema<?> schema) {
 
+        if(schema instanceof InstanceSchema) {
+            return schema(schema, ((InstanceSchema) schema).getExpand());
+        } else {
+            return schema(schema, Collections.emptySet());
+        }
+    }
+
+    public static Schema schema(final io.basestar.schema.Schema<?> schema, final Set<Name> expand) {
+
         if(schema instanceof EnumSchema) {
             final EnumSchema enumSchema = (EnumSchema)schema;
             final List<String> values = enumSchema.getValues();
@@ -48,10 +58,11 @@ public class AvroUtils {
         } else if(schema instanceof InstanceSchema) {
             final InstanceSchema instanceSchema = (InstanceSchema)schema;
             final List<Schema.Field> fields = new ArrayList<>();
+            final Map<String, Set<Name>> branches = Name.branch(expand);
             instanceSchema.metadataSchema()
-                    .forEach((k, v) -> fields.add(new Schema.Field(k, schema(v))));
+                    .forEach((k, v) -> fields.add(new Schema.Field(k, schema(v, Collections.emptySet()))));
             instanceSchema.getProperties()
-                    .forEach((k, v) -> fields.add(new Schema.Field(k, schema(v))));
+                    .forEach((k, v) -> fields.add(new Schema.Field(k, schema(v, branches.get(k)))));
             return Schema.createRecord(name(schema), schema.getDescription(), null, false, fields);
         } else {
             throw new IllegalStateException();
@@ -62,20 +73,16 @@ public class AvroUtils {
 
         final List<Schema.Field> fields = new ArrayList<>();
         ObjectSchema.REF_SCHEMA
-                .forEach((k, v) -> fields.add(new Schema.Field(k, schema(v))));
+                .forEach((k, v) -> fields.add(new Schema.Field(k, schema(v, Collections.emptySet()))));
         return Schema.createRecord(name(schema), schema.getDescription(), null, false, fields);
     }
 
-    public static Schema schema(final Property property) {
+    public static Schema schema(final Property property, final Set<Name> expand) {
 
-        if(property.isRequired()) {
-            return schema(property.getType());
-        } else {
-            return optional(schema(property.getType()));
-        }
+        return schema(property.getType(), expand);
     }
 
-    public static Schema schema(final Use<?> use) {
+    public static Schema schema(final Use<?> use, final Set<Name> expand) {
 
         return use.visit(new Use.Visitor<Schema>() {
 
@@ -106,40 +113,41 @@ public class AvroUtils {
             @Override
             public Schema visitEnum(final UseEnum type) {
 
-                return schema(type.getSchema());
+                return schema(type.getSchema(), expand);
             }
 
             @Override
-            public Schema visitRef(final UseObject type) {
+            public Schema visitObject(final UseObject type) {
 
-                return refSchema(type.getSchema());
+                if(expand == null) {
+                    return refSchema(type.getSchema());
+                } else {
+                    return schema(type.getSchema(), expand);
+                }
             }
 
             @Override
             public <T> Schema visitArray(final UseArray<T> type) {
 
-                // Allow null values
-                return Schema.createArray(optional(schema(type.getType())));
+                return Schema.createArray(schema(type.getType(), expand));
             }
 
             @Override
             public <T> Schema visitSet(final UseSet<T> type) {
 
-                // Allow null values
-                return Schema.createArray(optional(schema(type.getType())));
+                return Schema.createArray(schema(type.getType(), expand));
             }
 
             @Override
             public <T> Schema visitMap(final UseMap<T> type) {
 
-                // Allow null values
-                return Schema.createMap(optional(schema(type.getType())));
+                return Schema.createMap(schema(type.getType(), expand));
             }
 
             @Override
             public Schema visitStruct(final UseStruct type) {
 
-                return schema(type.getSchema());
+                return schema(type.getSchema(), expand);
             }
 
             @Override
@@ -159,24 +167,43 @@ public class AvroUtils {
 
                 return Schema.create(Schema.Type.STRING);
             }
+
+            @Override
+            public Schema visitView(final UseView type) {
+
+                return schema(type.getSchema(), expand);
+            }
+
+            @Override
+            public <T> Schema visitOptional(final UseOptional<T> type) {
+
+                return Schema.createUnion(schema(type.getType(), expand), Schema.create(Schema.Type.NULL));
+            }
+
+            @Override
+            public Schema visitAny(final UseAny type) {
+
+                throw new UnsupportedOperationException();
+            }
         });
-    }
-
-    public static Schema optional(final Schema schema) {
-
-        return Schema.createUnion(schema, Schema.create(Schema.Type.NULL));
     }
 
     public static GenericRecord encode(final InstanceSchema instanceSchema, final Schema schema, final Map<String, Object> object) {
 
+        return encode(instanceSchema, schema, instanceSchema.getExpand(), object);
+    }
+
+    public static GenericRecord encode(final InstanceSchema instanceSchema, final Schema schema, final Set<Name> expand, final Map<String, Object> object) {
+
         final GenericRecord record = new GenericData.Record(schema);
         instanceSchema.metadataSchema().forEach((k, v) -> {
             final Schema.Field field = schema.getField(k);
-            record.put(k, encode(v, field.schema(), object.get(k)));
+            record.put(k, encode(v, field.schema(), Collections.emptySet(), Nullsafe.orDefault(object.get(k), v::defaultValue)));
         });
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         instanceSchema.getProperties().forEach((k, v) -> {
             final Schema.Field field = schema.getField(k);
-            record.put(k, encode(v.getType(), field.schema(), object.get(k)));
+            record.put(k, encode(v.getType(), field.schema(), branches.get(k), object.get(k)));
         });
         return record;
     }
@@ -186,129 +213,97 @@ public class AvroUtils {
         final GenericRecord record = new GenericData.Record(schema);
         ObjectSchema.REF_SCHEMA.forEach((k, v) -> {
             final Schema.Field field = schema.getField(k);
-            record.put(k, encode(v, field.schema(), object.get(k)));
+            record.put(k, encode(v, field.schema(), Collections.emptySet(), object.get(k)));
         });
         return record;
     }
 
     @SuppressWarnings("unchecked")
-    private static Object encode(final Use<?> use, final Schema schema, final Object value) {
+    private static Object encode(final Use<?> use, final Schema schema, final Set<Name> expand, final Object value) {
 
-        return use.visit(new Use.Visitor<Object>() {
+        if(value == null) {
+            return null;
+        }
+        return use.visit(new Use.Visitor.Defaulting<Object>() {
 
             @Override
-            public Boolean visitBoolean(final UseBoolean type) {
+            public <T> Object visitDefault(final Use<T> type) {
 
                 return type.create(value);
             }
 
             @Override
-            public Long visitInteger(final UseInteger type) {
+            public GenericRecord visitObject(final UseObject type) {
 
-                return type.create(value);
-            }
-
-            @Override
-            public Double visitNumber(final UseNumber type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public String visitString(final UseString type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public String visitEnum(final UseEnum type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public GenericRecord visitRef(final UseObject type) {
-
-                return value == null ? null : encodeRef(schema, (Map<String, Object>)value);
-            }
-
-            @Override
-            public <T> List<?> visitArray(final UseArray<T> type) {
-
-                if(value == null) {
-                    return null;
+                if(expand == null) {
+                    return encodeRef(schema, (Map<String, Object>) value);
                 } else {
-                    final Collection<?> arr = (Collection<?>)value;
-                    return arr.stream()
-                            .map(v -> encode(type.getType(), schema.getElementType(), v))
-                            .collect(Collectors.toList());
+                    return encode(type.getSchema(), schema, expand, (Map<String, Object>)value);
                 }
             }
 
             @Override
-            public <T> List<?> visitSet(final UseSet<T> type) {
+            public GenericRecord visitInstance(final UseInstance type) {
 
-                if(value == null) {
-                    return null;
-                } else {
-                    final Collection<?> arr = (Collection<?>)value;
-                    return arr.stream()
-                            .map(v -> encode(type.getType(), schema.getElementType(), v))
-                            .collect(Collectors.toList());
-                }
+                return encode(type.getSchema(), schema, expand, (Map<String, Object>)value);
+            }
+
+            @Override
+            public <V, T extends Collection<V>> List<?> visitCollection(final UseCollection<V, T> type) {
+
+                final Collection<?> arr = (Collection<?>)value;
+                return arr.stream()
+                        .map(v -> encode(type.getType(), schema.getElementType(), expand, v))
+                        .collect(Collectors.toList());
             }
 
             @Override
             public <T> Map<?, ?> visitMap(final UseMap<T> type) {
 
-                if(value == null) {
-                    return null;
-                } else {
-                    final Map<?, ?> map = (Map<?, ?>)value;
-                    return map.entrySet().stream()
-                            .collect(Collectors.toMap(
-                                    Map.Entry::getKey,
-                                    e -> encode(type.getType(), schema.getValueType(), e.getValue())
-                            ));
-                }
+                final Map<?, ?> map = (Map<?, ?>)value;
+                return map.entrySet().stream()
+                        .collect(Collectors.toMap(
+                                Map.Entry::getKey,
+                                e -> encode(type.getType(), schema.getValueType(), expand, e.getValue())
+                        ));
             }
 
             @Override
-            public GenericRecord visitStruct(final UseStruct type) {
+            public <T> String visitStringLike(final UseStringLike<T> type) {
 
-                return value == null ? null : encode(type.getSchema(), schema, (Map<String, Object>)value);
+                return type.toString(type.create(value));
             }
 
             @Override
-            public byte[] visitBinary(final UseBinary type) {
+            public <T> Object visitOptional(final UseOptional<T> type) {
 
-                return type.create(value);
+                return encode(type.getType(), unwrapOptionalSchema(schema), expand, value);
             }
 
             @Override
-            public String visitDate(final UseDate type) {
+            public Object visitBinary(final UseBinary type) {
 
-                return value == null ? null : value.toString();
-            }
-
-            @Override
-            public String visitDateTime(final UseDateTime type) {
-
-                return value == null ? null : value.toString();
+                return ByteBuffer.wrap(type.create(value));
             }
         });
     }
 
     public static Map<String, Object> decode(final InstanceSchema instanceSchema, final Schema schema, final IndexedRecord record) {
 
+        return decode(instanceSchema, schema, instanceSchema.getExpand(), record);
+    }
+
+    public static Map<String, Object> decode(final InstanceSchema instanceSchema, final Schema schema, final Set<Name> expand, final IndexedRecord record) {
+
         final Map<String, Object> object = new HashMap<>();
         instanceSchema.metadataSchema().forEach((k, v) -> {
             final Schema.Field field = schema.getField(k);
-            object.put(k, decode(v, field.schema(), record.get(field.pos())));
+            object.put(k, decode(v, field.schema(), Collections.emptySet(), record.get(field.pos())));
         });
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         instanceSchema.getProperties().forEach((k, v) -> {
             final Schema.Field field = schema.getField(k);
-            object.put(k, decode(v.getType(), field.schema(), record.get(field.pos())));
+            object.put(k, decode(v.getType(), field.schema(), branches.get(k), record.get(field.pos())));
         });
         return object;
     }
@@ -318,115 +313,85 @@ public class AvroUtils {
         final Map<String, Object> object = new HashMap<>();
         ObjectSchema.REF_SCHEMA.forEach((k, v) -> {
             final Schema.Field field = schema.getField(k);
-            object.put(k, encode(v, field.schema(), record.get(field.pos())));
+            object.put(k, encode(v, field.schema(), Collections.emptySet(), record.get(field.pos())));
         });
         return object;
     }
 
-    private static Object decode(final Use<?> use, final Schema schema, final Object value) {
+    private static Object decode(final Use<?> use, final Schema schema, final Set<Name> expand, final Object value) {
 
-        return use.visit(new Use.Visitor<Object>() {
+        if(value == null) {
+            return null;
+        }
+        return use.visit(new Use.Visitor.Defaulting<Object>() {
 
             @Override
-            public Boolean visitBoolean(final UseBoolean type) {
+            public <T> Object visitDefault(final Use<T> type) {
 
                 return type.create(value);
             }
 
             @Override
-            public Long visitInteger(final UseInteger type) {
+            public Map<String, Object> visitObject(final UseObject type) {
 
-                return type.create(value);
-            }
-
-            @Override
-            public Double visitNumber(final UseNumber type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public String visitString(final UseString type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public String visitEnum(final UseEnum type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public Map<String, Object> visitRef(final UseObject type) {
-
-                return value == null ? null : decodeRef(schema, (IndexedRecord)value);
-            }
-
-            @Override
-            public <T> List<?> visitArray(final UseArray<T> type) {
-
-                if(value == null) {
-                    return null;
+                if(expand == null) {
+                    return decodeRef(schema, (IndexedRecord) value);
                 } else {
-                    final Collection<?> arr = (Collection<?>)value;
-                    return arr.stream()
-                            .map(v -> decode(type.getType(), schema.getElementType(), v))
-                            .collect(Collectors.toList());
+                    return decode(type.getSchema(), schema, expand, (IndexedRecord)value);
                 }
             }
 
             @Override
-            public <T> List<?> visitSet(final UseSet<T> type) {
+            public <V, T extends Collection<V>> List<?> visitCollection(final UseCollection<V, T> type) {
 
-                if(value == null) {
-                    return null;
-                } else {
-                    final Collection<?> arr = (Collection<?>)value;
-                    return arr.stream()
-                            .map(v -> decode(type.getType(), schema.getElementType(), v))
-                            .collect(Collectors.toList());
-                }
+                final Collection<?> arr = (Collection<?>)value;
+                return arr.stream()
+                        .map(v -> decode(type.getType(), schema.getElementType(), expand, v))
+                        .collect(Collectors.toList());
             }
 
             @Override
             public <T> Map<?, ?> visitMap(final UseMap<T> type) {
 
-                if(value == null) {
-                    return null;
+                final Map<?, ?> map = (Map<?, ?>)value;
+                return map.entrySet().stream()
+                        .collect(Collectors.toMap(
+                                Map.Entry::getKey,
+                                e -> decode(type.getType(), schema.getValueType(), expand, e.getValue())
+                        ));
+            }
+
+            @Override
+            public Map<String, Object> visitInstance(final UseInstance type) {
+
+                return decode(type.getSchema(), schema, expand, (IndexedRecord)value);
+            }
+
+            @Override
+            public <T> Object visitOptional(final UseOptional<T> type) {
+
+                return decode(type.getType(), unwrapOptionalSchema(schema), expand, value);
+            }
+
+            @Override
+            public Object visitBinary(final UseBinary type) {
+
+                if(value instanceof ByteBuffer) {
+                    return ((ByteBuffer) value).array();
                 } else {
-                    final Map<?, ?> map = (Map<?, ?>)value;
-                    return map.entrySet().stream()
-                            .collect(Collectors.toMap(
-                                    Map.Entry::getKey,
-                                    e -> decode(type.getType(), schema.getValueType(), e.getValue())
-                            ));
+                    return type.create(value);
                 }
             }
-
-            @Override
-            public Map<String, Object> visitStruct(final UseStruct type) {
-
-                return value == null ? null : decode(type.getSchema(), schema, (IndexedRecord)value);
-            }
-
-            @Override
-            public byte[] visitBinary(final UseBinary type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public LocalDate visitDate(final UseDate type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public LocalDateTime visitDateTime(final UseDateTime type) {
-
-                return type.create(value);
-            }
         });
+    }
+
+    private static Schema unwrapOptionalSchema(final Schema schema) {
+
+        if(schema.getType() == Schema.Type.UNION) {
+            return schema.getTypes().stream().filter(v -> v.getType() != Schema.Type.NULL).findFirst()
+                    .orElseThrow(() -> new IllegalStateException("Invalid Avro schema"));
+        } else {
+            return schema;
+        }
     }
 }

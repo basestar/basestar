@@ -21,15 +21,17 @@ package io.basestar.schema.use;
  */
 
 import com.google.common.base.Charsets;
-import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.schema.exception.UnexpectedTypeException;
+import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.StringSchema;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Map;
+import java.util.Set;
 
 /**
  * String Type
@@ -41,31 +43,17 @@ import java.util.Map;
  */
 
 @Data
+@Slf4j
 @RequiredArgsConstructor
-public class UseString implements UseScalar<String> {
+public class UseString implements UseStringLike<String> {
 
-    public static final UseString DEFAULT = new UseString(null);
+    public static final UseString DEFAULT = new UseString();
 
     public static final String NAME = "string";
 
-    private final String pattern;
-
-    public UseString() {
-
-        this(null);
-    }
-
     public static UseString from(final Object config) {
 
-        if(config == null) {
-            return DEFAULT;
-        } else if(config instanceof String) {
-            return new UseString((String)config);
-        } else if(config instanceof Map) {
-            return new UseString((String)((Map<?, ?>)config).get("pattern"));
-        } else {
-            throw new InvalidTypeException();
-        }
+        return DEFAULT;
     }
 
     @Override
@@ -75,13 +63,13 @@ public class UseString implements UseScalar<String> {
     }
 
     @Override
-    public Object toJson() {
+    public Object toConfig(final boolean optional) {
 
-        return NAME;
+        return Use.name(NAME, optional);
     }
 
     @Override
-    public String create(final Object value, final boolean expand, final boolean suppress) {
+    public String create(final Object value, final Set<Name> expand, final boolean suppress) {
 
         if(value == null) {
             return null;
@@ -92,7 +80,7 @@ public class UseString implements UseScalar<String> {
         } else if(suppress) {
             return null;
         } else {
-            throw new InvalidTypeException();
+            throw new UnexpectedTypeException(this, value);
         }
     }
 
@@ -103,7 +91,13 @@ public class UseString implements UseScalar<String> {
     }
 
     @Override
-    public io.swagger.v3.oas.models.media.Schema<?> openApi() {
+    public String defaultValue() {
+
+        return "";
+    }
+
+    @Override
+    public io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
         return new StringSchema();
     }
@@ -130,12 +124,4 @@ public class UseString implements UseScalar<String> {
 
         return NAME;
     }
-
-//    @Override
-//    public Map<String, Object> openApiType() {
-//
-//        return ImmutableMap.of(
-//                "type", "string"
-//        );
-//    }
 }

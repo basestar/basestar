@@ -20,13 +20,16 @@ package io.basestar.schema.use;
  * #L%
  */
 
-import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.schema.exception.UnexpectedTypeException;
+import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.IntegerSchema;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Set;
 
 /**
  * Integer Type
@@ -40,7 +43,8 @@ import java.io.IOException;
  */
 
 @Data
-public class UseInteger implements UseScalar<Long> {
+@Slf4j
+public class UseInteger implements UseNumeric<Long> {
 
     public static final UseInteger DEFAULT = new UseInteger();
 
@@ -58,13 +62,13 @@ public class UseInteger implements UseScalar<Long> {
     }
 
     @Override
-    public Object toJson() {
+    public Object toConfig(final boolean optional) {
 
-        return NAME;
+        return Use.name(NAME, optional);
     }
 
     @Override
-    public Long create(final Object value, final boolean expand, final boolean suppress) {
+    public Long create(final Object value, final Set<Name> expand, final boolean suppress) {
 
         if(value == null) {
             return null;
@@ -85,7 +89,7 @@ public class UseInteger implements UseScalar<Long> {
         } else if(suppress) {
             return null;
         } else {
-            throw new InvalidTypeException();
+            throw new UnexpectedTypeException(this, value);
         }
     }
 
@@ -96,7 +100,13 @@ public class UseInteger implements UseScalar<Long> {
     }
 
     @Override
-    public io.swagger.v3.oas.models.media.Schema<?> openApi() {
+    public Long defaultValue() {
+
+        return 0L;
+    }
+
+    @Override
+    public io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
         return new IntegerSchema();
     }

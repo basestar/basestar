@@ -22,13 +22,12 @@ package io.basestar.schema.use;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Constraint;
-import io.basestar.schema.Instance;
+import io.basestar.schema.Property;
 import io.basestar.schema.Schema;
-import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.schema.exception.TypeSyntaxException;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
@@ -37,10 +36,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.BiFunction;
 
 /**
@@ -52,9 +48,12 @@ import java.util.function.BiFunction;
 //@JsonDeserialize(using = TypeUse.Deserializer.class)
 public interface Use<T> extends Serializable {
 
+    String OPTIONAL_SYMBOL = "?";
+
     enum Code {
 
         NULL,
+        ANY,
         BOOLEAN,
         INTEGER,
         NUMBER,
@@ -63,27 +62,33 @@ public interface Use<T> extends Serializable {
         ARRAY,
         SET,
         MAP,
-        REF,
+        OBJECT,
         STRUCT,
         BINARY,
         DATE,
-        DATETIME
+        DATETIME,
+        VIEW
     }
 
     <R> R visit(Visitor<R> visitor);
 
-    default <T2> T2 cast(final Object o, final Class<T2> as) {
+    default T cast(final Object o, final Class<T> as) {
 
         return as.cast(o);
     }
 
     Use<?> resolve(Schema.Resolver resolver);
 
-    T create(Object value, boolean expand, boolean suppress);
+    T create(Object value, Set<Name> expand, boolean suppress);
+
+    default T create(final Object value, final Set<Name> expand) {
+
+        return create(value, expand, false);
+    }
 
     default T create(final Object value) {
 
-        return create(value, false, false);
+        return create(value, null);
     }
 
     Code code();
@@ -94,13 +99,19 @@ public interface Use<T> extends Serializable {
 
     Set<Name> requiredExpand(Set<Name> names);
 
-    @Deprecated
-    Multimap<Name, Instance> refs(T value);
+    T defaultValue();
 
     @JsonValue
-    Object toJson();
+    default Object toConfig() {
+
+        return toConfig(false);
+    }
+
+    Object toConfig(boolean optional);
 
     String toString();
+
+    String toString(T value);
 
     void serializeValue(T value, DataOutput out) throws IOException;
 
@@ -114,7 +125,7 @@ public interface Use<T> extends Serializable {
 
     Set<Constraint.Violation> validate(Context context, Name name, T value);
 
-    io.swagger.v3.oas.models.media.Schema<?> openApi();
+    io.swagger.v3.oas.models.media.Schema<?> openApi(Set<Name> expand);
 
     Set<Expression> refQueries(Name otherSchemaName, Set<Name> expand, Name name);
 
@@ -124,23 +135,64 @@ public interface Use<T> extends Serializable {
 
     void collectDependencies(Set<Name> expand, Map<Name, Schema<?>> out);
 
+    default boolean isOptional() {
+
+        return false;
+    }
+
+    default Use<T> optional(final boolean optional) {
+
+        // Inverse implemented in UseOptional
+        if(optional) {
+            return new UseOptional<>(this);
+        } else {
+            return this;
+        }
+    }
+
+    static String name(final String name, final boolean optional) {
+
+        return optional ? (name + OPTIONAL_SYMBOL) : name;
+    }
+
     @JsonCreator
     @SuppressWarnings("unchecked")
     static Use<?> fromConfig(final Object value) {
 
-        final String type;
+        final String typeName;
         final Object config;
-        if(value instanceof String) {
-            type = (String)value;
+        if (value instanceof String) {
+            typeName = ((String) value).trim();
             config = Collections.emptyMap();
-        } else if(value instanceof Map) {
+        } else if (value instanceof Map) {
             final Map.Entry<String, Object> entry = ((Map<String, Object>) value).entrySet().iterator().next();
-            type = entry.getKey();
+            typeName = entry.getKey().trim();
             config = entry.getValue();
         } else {
-            throw new InvalidTypeException();
+            throw new TypeSyntaxException();
         }
+        final String type;
+        final boolean optional;
+        if(typeName.endsWith(OPTIONAL_SYMBOL)) {
+            type = typeName.substring(0, typeName.length() - OPTIONAL_SYMBOL.length()).trim();
+            optional = true;
+        } else {
+            type = typeName;
+            optional = false;
+        }
+        final Use<?> result = fromConfig(type, config);
+        if(optional) {
+            return result.optional(true);
+        } else {
+            return result;
+        }
+    }
+
+    static Use<?> fromConfig(final String type, final Object config) {
+
         switch(type) {
+            case UseAny.NAME:
+                return UseAny.from(config);
             case UseBoolean.NAME:
                 return UseBoolean.from(config);
             case UseInteger.NAME:
@@ -161,6 +213,12 @@ public interface Use<T> extends Serializable {
                 return UseDate.from(config);
             case UseDateTime.NAME:
                 return UseDateTime.from(config);
+            case UseOptional.NAME:
+                return UseOptional.from(config);
+            case UseEnum.NAME:
+                return UseEnum.from(config);
+            case UseStruct.NAME:
+                return UseStruct.from(config);
             default:
                 return UseNamed.from(type, config);
         }
@@ -184,7 +242,7 @@ public interface Use<T> extends Serializable {
                 nestedConfig = null;
             }
         } else {
-            throw new InvalidTypeException();
+            throw new TypeSyntaxException();
         }
         return apply.apply((V)nestedType, nestedConfig);
     }
@@ -199,7 +257,7 @@ public interface Use<T> extends Serializable {
         }
     }
 
-    default T deseralize(final DataInput in) throws IOException {
+    default T deserialize(final DataInput in) throws IOException {
 
         final byte ordinal = in.readByte();
         final Code code = Code.values()[ordinal];
@@ -240,7 +298,7 @@ public interface Use<T> extends Serializable {
                 return (T)UseSet.deserializeAnyValue(in);
             case MAP:
                 return (T)UseMap.deserializeAnyValue(in);
-            case REF:
+            case OBJECT:
                 return (T) UseObject.deserializeAnyValue(in);
             case STRUCT:
                 return (T)UseStruct.deserializeAnyValue(in);
@@ -250,12 +308,19 @@ public interface Use<T> extends Serializable {
                 return (T)UseDate.DEFAULT.deserializeValue(in);
             case DATETIME:
                 return (T)UseDateTime.DEFAULT.deserializeValue(in);
+            case VIEW:
+                return (T) UseView.deserializeAnyValue(in);
             default:
                 throw new IllegalStateException();
         }
     }
 
     interface Visitor<R> {
+
+        default <T> R visit(Use<T> type) {
+
+            return type.visit(this);
+        }
 
         R visitBoolean(UseBoolean type);
 
@@ -267,7 +332,7 @@ public interface Use<T> extends Serializable {
 
         R visitEnum(UseEnum type);
 
-        R visitRef(UseObject type);
+        R visitObject(UseObject type);
 
         <T> R visitArray(UseArray<T> type);
 
@@ -283,18 +348,57 @@ public interface Use<T> extends Serializable {
 
         R visitDateTime(UseDateTime type);
 
+        R visitView(UseView type);
+
+        <T> R visitOptional(UseOptional<T> type);
+
+        R visitAny(UseAny type);
+
         interface Defaulting<R> extends Visitor<R> {
 
-            R visitDefault(Use<?> type);
+            default <T> R visitDefault(final Use<T> type) {
 
-            default R visitScalar(final UseScalar<?> type) {
+                throw new UnsupportedOperationException("Type " + type.code() + " not supported");
+            }
+
+            default <T> R visitScalar(final UseScalar<T> type) {
 
                 return visitDefault(type);
             }
 
-            default <T> R visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
+            default <T> R visitStringLike(final UseStringLike<T> type) {
+
+                return visitScalar(type);
+            }
+
+            default <T extends Number> R visitNumeric(final UseNumeric<T> type) {
+
+                return visitScalar(type);
+            }
+
+            default <V, T> R visitContainer(final UseContainer<V, T> type) {
 
                 return visitDefault(type);
+            }
+
+            default <V, T extends Collection<V>> R visitCollection(final UseCollection<V, T> type) {
+
+                return visitContainer(type);
+            }
+
+            default R visitLayout(final UseLayout type) {
+
+                return visitDefault(type);
+            }
+
+            default R visitInstance(final UseInstance type) {
+
+                return visitLayout(type);
+            }
+
+            default R visitLinkable(final UseLinkable type) {
+
+                return visitInstance(type);
             }
 
             @Override
@@ -306,31 +410,31 @@ public interface Use<T> extends Serializable {
             @Override
             default R visitInteger(final UseInteger type) {
 
-                return visitScalar(type);
+                return visitNumeric(type);
             }
 
             @Override
             default R visitNumber(final UseNumber type) {
 
-                return visitScalar(type);
+                return visitNumeric(type);
             }
 
             @Override
             default R visitString(final UseString type) {
 
-                return visitScalar(type);
+                return visitStringLike(type);
             }
 
             @Override
             default R visitEnum(final UseEnum type) {
 
-                return visitScalar(type);
+                return visitStringLike(type);
             }
 
             @Override
-            default R visitRef(final UseObject type) {
+            default R visitObject(final UseObject type) {
 
-                return visitDefault(type);
+                return visitLinkable(type);
             }
 
             @Override
@@ -348,13 +452,13 @@ public interface Use<T> extends Serializable {
             @Override
             default <T> R visitMap(final UseMap<T> type) {
 
-                return visitDefault(type);
+                return visitContainer(type);
             }
 
             @Override
             default R visitStruct(final UseStruct type) {
 
-                return visitDefault(type);
+                return visitInstance(type);
             }
 
             @Override
@@ -366,13 +470,124 @@ public interface Use<T> extends Serializable {
             @Override
             default R visitDate(final UseDate type) {
 
-                return visitScalar(type);
+                return visitStringLike(type);
             }
 
             @Override
             default R visitDateTime(final UseDateTime type) {
 
-                return visitScalar(type);
+                return visitStringLike(type);
+            }
+
+            @Override
+            default R visitView(final UseView type) {
+
+                return visitLinkable(type);
+            }
+
+            @Override
+            default R visitAny(final UseAny type) {
+
+                return visitDefault(type);
+            }
+
+            @Override
+            default <T> R visitOptional(final UseOptional<T> type) {
+
+                // Least astonishment
+                return visit(type.getType());
+            }
+        }
+
+        /**
+         * Automatically transform container types (collection, map, optional) and struct types
+         */
+
+        interface Transforming extends Defaulting<Use<?>> {
+
+            Set<Name> getExpand();
+
+            Use<?> transform(Use<?> type, Set<Name> expand);
+
+            @Override
+            default <T> Use<?> visitDefault(final Use<T> type) {
+
+                return type;
+            }
+
+            @Override
+            default <V, T> Use<?> visitContainer(final UseContainer<V, T> type) {
+
+                return type.transform(v -> transform(v, getExpand()));
+            }
+
+            @Override
+            default <T> Use<?> visitOptional(final UseOptional<T> type) {
+
+                return visitContainer(type);
+            }
+
+            @Override
+            default Use<?> visitStruct(final UseStruct type) {
+
+                final Map<String, Set<Name>> branches = Name.branch(getExpand());
+                final Map<String, Use<?>> schema = new HashMap<>();
+                boolean changed = false;
+                for(final Map.Entry<String, Property> entry : type.getSchema().getProperties().entrySet()) {
+                    final String name = entry.getKey();
+                    final Property property = entry.getValue();
+                    final Use<?> value = transform(property.getType(), branches.get(name));
+                    changed = changed || (value != property.getType());
+                }
+                if(changed) {
+                    return UseStruct.from(schema);
+                } else {
+                    return type;
+                }
+            }
+        }
+
+        interface TransformingValue extends Defaulting<Object> {
+
+            Set<Name> getExpand();
+
+            Object getValue();
+
+            Object transform(Use<?> type, Set<Name> expand, Object value);
+
+            @Override
+            default <T> Object visitDefault(final Use<T> type) {
+
+                return type.create(getValue());
+            }
+
+            @Override
+            default <V, T> Object visitContainer(final UseContainer<V, T> type) {
+
+                final Set<Name> expand = getExpand();
+                final T before = type.create(getValue());
+                return type.transformValues(before, (t, v) -> t.create(transform(t, expand, v)));
+            }
+
+            @Override
+            default Object visitStruct(final UseStruct type) {
+
+                final Map<String, Object> before = type.create(getValue());
+                final Map<String, Set<Name>> branches = Name.branch(getExpand());
+                final Map<String, Object> after = new HashMap<>();
+                boolean changed = false;
+                for(final Map.Entry<String, Property> entry : type.getSchema().getProperties().entrySet()) {
+                    final String name = entry.getKey();
+                    final Property property = entry.getValue();
+                    final Object beforeValue = before.get(name);
+                    final Object afterValue = transform(property.getType(), branches.get(name), beforeValue);
+                    changed = changed || (afterValue != beforeValue);
+                }
+                if(changed) {
+                    return after;
+                } else {
+                    return before;
+                }
             }
         }
     }

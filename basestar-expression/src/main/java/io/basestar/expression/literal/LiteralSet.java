@@ -99,9 +99,9 @@ public class LiteralSet implements Expression {
 //    }
 
     @Override
-    public Set<Name> paths() {
+    public Set<Name> names() {
 
-        return args.stream().flatMap(v -> v.paths().stream())
+        return args.stream().flatMap(v -> v.names().stream())
                 .collect(Collectors.toSet());
     }
 

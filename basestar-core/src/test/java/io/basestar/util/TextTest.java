@@ -38,6 +38,7 @@ public class TextTest {
         assertEquals(ImmutableList.of("HELLO"), Text.words("HELLO").collect(Collectors.toList()));
         assertEquals(ImmutableList.of("xyz", "Abc", "D0ef", "XYZ", "Lmn0"), Text.words("xyzAbcD0efXYZLmn0").collect(Collectors.toList()));
         assertEquals(ImmutableList.of("Xyz", "Abc", "D0ef", "XYZ", "Lmn0"), Text.words("XyzAbcD0efXYZLmn0").collect(Collectors.toList()));
+        assertEquals(ImmutableList.of("Sentence", "with", "hyphenated", "thing"), Text.words("Sentence, with hyphenated-thing.").collect(Collectors.toList()));
     }
 
     @Test
@@ -69,5 +70,6 @@ public class TextTest {
         assertEquals("analyses", Text.plural("analysis"));
         assertEquals("phenomena", Text.plural("phenomenon"));
         assertEquals("organizations", Text.plural("organization"));
+        assertEquals("octopuses", Text.plural("octopus"));
     }
 }

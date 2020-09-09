@@ -20,11 +20,12 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
-import io.basestar.expression.Expression;
+import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.IdMapper;
 import io.basestar.mapper.internal.MemberMapper;
 import io.basestar.mapper.internal.annotation.MemberDeclaration;
+import io.basestar.type.AnnotationContext;
 import io.basestar.type.PropertyContext;
 import lombok.RequiredArgsConstructor;
 
@@ -36,23 +37,21 @@ import java.lang.annotation.*;
 @MemberDeclaration(Id.Declaration.class)
 public @interface Id {
 
-    String expression() default "";
-
     @RequiredArgsConstructor
     class Declaration implements MemberDeclaration.Declaration {
 
+        @SuppressWarnings("unused")
         private final Id annotation;
 
         @Override
         public MemberMapper<?> mapper(final MappingContext context, final PropertyContext prop) {
 
-            final Expression expression;
-            if(annotation.expression().isEmpty()) {
-                expression = null;
-            } else {
-                expression = Expression.parse(annotation.expression());
-            }
-            return new IdMapper(context, prop, expression);
+            return new IdMapper(context, prop);
+        }
+
+        public static Id annotation() {
+
+            return new AnnotationContext<>(Id.class, ImmutableMap.of()).annotation();
         }
     }
 }

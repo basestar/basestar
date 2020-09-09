@@ -22,11 +22,15 @@ package io.basestar.storage.leveldb;
 
 import com.google.common.io.BaseEncoding;
 import io.basestar.schema.*;
+import io.basestar.schema.use.UseBinary;
 import io.basestar.storage.*;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;
-import io.basestar.util.*;
+import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
+import io.basestar.util.Page;
+import io.basestar.util.Sort;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBIterator;
 import org.iq80.leveldb.WriteBatch;
@@ -36,7 +40,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
-public class LevelDBStorage extends PartitionedStorage implements Storage.WithWriteHistory, Storage.WithoutAggregate {
+public class LevelDBStorage extends PartitionedStorage implements Storage.WithWriteHistory, Storage.WithoutAggregate, Storage.WithoutExpand, Storage.WithoutRepair {
 
     private final DB db;
 
@@ -46,11 +50,11 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
     LevelDBStorage(final DB db, final Coordinator coordinator) {
 
         this.db = Nullsafe.require(db);
-        this.coordinator = Nullsafe.option(coordinator, Coordinator.Local::new);
+        this.coordinator = Nullsafe.orDefault(coordinator, Coordinator.Local::new);
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
+    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
         return CompletableFuture.supplyAsync(() -> {
             final byte[] key = key(schema, id);
@@ -60,7 +64,7 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
         return CompletableFuture.supplyAsync(() -> {
             final byte[] key = key(schema, id, version);
@@ -70,7 +74,9 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
     }
 
     @Override
-    protected CompletableFuture<PagedList<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfyResult, final Map<Name, Range<Object>> query, final List<Sort> sort, final int count, final PagingToken paging) {
+    protected CompletableFuture<Page<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfyResult,
+                                                                      final Map<Name, Range<Object>> query, final List<Sort> sort, final Set<Name> expand,
+                                                                      final int count, final Page.Token paging) {
 
         return CompletableFuture.supplyAsync(() -> {
             final List<Object> values = new ArrayList<>();
@@ -95,15 +101,15 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
                     break;
                 }
             }
-            PagingToken newPaging = null;
+            Page.Token newPaging = null;
             if(iter.hasNext()) {
                 final Map.Entry<byte[], byte[]> entry = iter.next();
                 if(matches(entry.getKey(), key)) {
-                    newPaging = new PagingToken(entry.getKey());
+                    newPaging = new Page.Token(entry.getKey());
                 }
             }
 
-            return new PagedList<>(page, newPaging);
+            return new Page<>(page, newPaging);
         });
     }
 
@@ -114,7 +120,7 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
     }
 
     @Override
-    public WriteTransaction write(final Consistency consistency) {
+    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
         return new WriteTransaction();
     }
@@ -281,12 +287,12 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
 
     private static byte[] key(final ObjectSchema schema, final String id) {
 
-        return PartitionedStorage.binary(Arrays.asList(schema.getQualifiedName(), null, id));
+        return UseBinary.binaryKey(Arrays.asList(schema.getQualifiedName().toString(), null, id));
     }
 
     private static byte[] key(final ObjectSchema schema, final String id, final long version) {
 
-        return PartitionedStorage.binary(Arrays.asList(schema.getQualifiedName(), Reserved.PREFIX + Reserved.VERSION, id, invert(version)));
+        return UseBinary.binaryKey(Arrays.asList(schema.getQualifiedName().toString(), Reserved.PREFIX + ObjectSchema.VERSION, id, invert(version)));
     }
 
     private static byte[] key(final ObjectSchema schema, final Index index, final Index.Key key, final String id) {
@@ -301,10 +307,10 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
     private static byte[] key(final ObjectSchema schema, final Index index, final List<?> values) {
 
         final List<Object> all = new ArrayList<>();
-        all.add(schema.getQualifiedName());
+        all.add(schema.getQualifiedName().toString());
         all.add(index.getName());
         all.addAll(values);
-        return PartitionedStorage.binary(all);
+        return UseBinary.binaryKey(all);
     }
 
     private static long invert(final long version) {

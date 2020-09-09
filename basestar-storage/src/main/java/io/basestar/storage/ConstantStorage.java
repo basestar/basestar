@@ -1,5 +1,25 @@
 package io.basestar.storage;
 
+/*-
+ * #%L
+ * basestar-storage
+ * %%
+ * Copyright (C) 2019 - 2020 Basestar.IO
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+
 import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
@@ -7,16 +27,12 @@ import io.basestar.schema.Concurrency;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.storage.util.Pager;
-import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
-import io.basestar.util.PagedList;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
-public class ConstantStorage implements Storage.WithoutAggregate, Storage.WithoutWrite, Storage.WithoutHistory {
+public class ConstantStorage implements Storage.WithoutAggregate, Storage.WithoutWrite, Storage.WithoutHistory, Storage.WithoutExpand, Storage.WithoutRepair {
 
     private final Map<Name, Map<String, Map<String, Object>>> data;
 
@@ -35,7 +51,7 @@ public class ConstantStorage implements Storage.WithoutAggregate, Storage.Withou
 
     private Map<String, Object> get(final Name schema, final String id) {
 
-        return Nullsafe.option(data.get(schema)).get(id);
+        return Nullsafe.orDefault(data.get(schema)).get(id);
     }
 
     private Map<String, Object> get(final Map<String, Object> instance) {
@@ -44,7 +60,7 @@ public class ConstantStorage implements Storage.WithoutAggregate, Storage.Withou
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
+    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
         final Map<String, Object> object = get(schema.getQualifiedName(), id);
         return CompletableFuture.completedFuture(object);
@@ -52,24 +68,24 @@ public class ConstantStorage implements Storage.WithoutAggregate, Storage.Withou
 
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
+    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         // Add a source that will emit matching results
 
         return ImmutableList.of((count, token, stats) -> {
             // Don't do any paging, just return all matches, this is compliant with Pager interface
             final List<Map<String, Object>> page = new ArrayList<>();
-            Nullsafe.option(data.get(schema.getQualifiedName())).forEach((id, item) -> {
+            Nullsafe.orDefault(data.get(schema.getQualifiedName())).forEach((id, item) -> {
                 if(query.evaluatePredicate(Context.init(item))) {
                     page.add(item);
                 }
             });
 
             // Must be sorted
-            final Comparator<Map<String, Object>> comparator = Sort.comparator(sort, (t, path) -> (Comparable)path.apply(t));
+            final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
             page.sort(comparator);
 
-            return CompletableFuture.completedFuture(new PagedList<>(page, null));
+            return CompletableFuture.completedFuture(new Page<>(page, null));
         });
     }
 

@@ -20,25 +20,18 @@ package io.basestar.storage.elasticsearch;
  * #L%
  */
 
-import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.*;
-import io.basestar.storage.BatchResponse;
-import io.basestar.storage.Storage;
-import io.basestar.storage.StorageTraits;
+import io.basestar.storage.*;
 import io.basestar.storage.elasticsearch.mapping.Mappings;
 import io.basestar.storage.elasticsearch.mapping.Settings;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.util.KeysetPagingUtils;
-import io.basestar.storage.util.Pager;
-import io.basestar.util.Name;
-import io.basestar.util.PagedList;
-import io.basestar.util.PagingToken;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
@@ -69,7 +62,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Function;
 
 @Slf4j
-public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.WithoutWriteIndex {
+public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.WithoutWriteIndex, Storage.WithoutExpand, Storage.WithoutRepair {
 
     private static final String PRIMARY_TERM_KEY = "@primaryTerm";
 
@@ -98,7 +91,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
 
         this.client = builder.client;
         this.strategy = builder.strategy;
-        this.eventStrategy = MoreObjects.firstNonNull(builder.eventStrategy, EventStrategy.EMIT);
+        this.eventStrategy = Nullsafe.orDefault(builder.eventStrategy, EventStrategy.EMIT);
         this.createdIndices = new ConcurrentSkipListSet<>();
     }
 
@@ -124,7 +117,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
+    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
         final String index = strategy.objectIndex(schema);
         return getIndex(index, schema).thenCompose(ignored -> {
@@ -135,7 +128,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
         if (!strategy.historyEnabled(schema)) {
             throw new UnsupportedOperationException("History not enabled");
@@ -150,12 +143,12 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
+    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         final Expression bound = query.bind(Context.init());
         final String index = strategy.objectIndex(schema);
 
-        final List<Sort> normalizedSort = KeysetPagingUtils.normalizeSort(sort);
+        final List<Sort> normalizedSort = KeysetPagingUtils.normalizeSort(schema, sort);
 
         return ImmutableList.of(
                 (count, token, stats) -> getIndex(index, schema).thenCompose(ignored -> {
@@ -188,13 +181,13 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
                                     results.add(last);
                                 }
                                 final long total = searchResponse.getHits().getTotalHits().value;
-                                final PagingToken newPaging;
+                                final Page.Token newPaging;
                                 if (total > results.size() && last != null) {
                                     newPaging = KeysetPagingUtils.keysetPagingToken(schema, normalizedSort, last);
                                 } else {
                                     newPaging = null;
                                 }
-                                return new PagedList<>(results, newPaging);
+                                return new Page<>(results, newPaging, Page.Stats.fromTotal(total));
                             });
                 })
         );
@@ -206,7 +199,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
         throw new UnsupportedOperationException();
     }
 
-    private QueryBuilder pagingQueryBuilder(final ObjectSchema schema, final List<Sort> sort, final PagingToken token) {
+    private QueryBuilder pagingQueryBuilder(final ObjectSchema schema, final List<Sort> sort, final Page.Token token) {
 
         final List<Object> values = KeysetPagingUtils.keysetValues(schema, sort, token);
         final BoolQueryBuilder outer = QueryBuilders.boolQuery();
@@ -254,7 +247,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
             private final Map<String, ObjectSchema> indexToSchema = new HashMap<>();
 
             @Override
-            public ReadTransaction readObject(final ObjectSchema schema, final String id) {
+            public ReadTransaction readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
                 final String index = strategy.objectIndex(schema);
                 indexToSchema.put(index, schema);
@@ -263,7 +256,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
             }
 
             @Override
-            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
                 if (!strategy.historyEnabled(schema)) {
                     throw new UnsupportedOperationException("History not enabled");
@@ -304,22 +297,11 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
 
         if (item.isExists()) {
             final Map<String, Object> result = new HashMap<>(fromSource(schema, item.getSourceAsMap()));
-            result.put(PRIMARY_TERM_KEY, item.getPrimaryTerm());
-            result.put(SEQ_NO_KEY, item.getSeqNo());
+            result.put(Reserved.META, new ElasticsearchMetadata(item.getPrimaryTerm(), item.getSeqNo()));
             return result;
         } else {
             return null;
         }
-    }
-
-    private Long getPrimaryTerm(final Map<String, Object> object) {
-
-        return (Long) object.get(PRIMARY_TERM_KEY);
-    }
-
-    private Long getSeqNo(final Map<String, Object> object) {
-
-        return (Long) object.get(SEQ_NO_KEY);
     }
 
     private CompletableFuture<?> getIndex(final String name, final ObjectSchema schema) {
@@ -346,25 +328,42 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
 
         final Mappings mappings = strategy.mappings(schema);
         final Settings settings = strategy.settings(schema);
-        return ElasticsearchUtils.syncIndex(client, name, mappings, settings);
+        return ElasticsearchUtils.syncIndex(client, name, mappings, settings)
+                .exceptionally(e -> {
+                    log.error("Failed to sync index, continuing anyway", e);
+                    return null;
+                });
     }
 
     @Override
-    public WriteTransaction write(final Consistency consistency) {
+    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
-        return new WriteTransaction();
+        return new WriteTransaction(consistency, versioning);
     }
 
     protected class WriteTransaction implements WithWriteHistory.WriteTransaction {
 
-        private final WriteRequest.RefreshPolicy refreshPolicy = WriteRequest.RefreshPolicy.WAIT_UNTIL;
+        private final WriteRequest.RefreshPolicy refreshPolicy;
 
-        final BulkRequest request = new BulkRequest()
-                .setRefreshPolicy(refreshPolicy);
+        private final Versioning versioning;
 
-        final List<Function<BulkItemResponse, BatchResponse>> responders = new ArrayList<>();
+        private final BulkRequest request;
 
-        final Map<String, ObjectSchema> indices = new HashMap<>();
+        private final List<Function<BulkItemResponse, BatchResponse>> responders = new ArrayList<>();
+
+        private final Map<String, ObjectSchema> indices = new HashMap<>();
+
+        public WriteTransaction(final Consistency consistency, final Versioning versioning) {
+
+            if(consistency.isStrongerOrEqual(Consistency.QUORUM)) {
+                this.refreshPolicy = WriteRequest.RefreshPolicy.WAIT_UNTIL;
+            } else {
+                this.refreshPolicy = WriteRequest.RefreshPolicy.NONE;
+            }
+            this.versioning = versioning;
+            this.request = new BulkRequest()
+                    .setRefreshPolicy(refreshPolicy);
+        }
 
         @Override
         public Storage.WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
@@ -397,6 +396,27 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
             }
         }
 
+        private Long version(final Map<String, Object> before, final DocWriteRequest<?> req) {
+
+            final Long version;
+            if (before != null) {
+                version = Instance.getVersion(before);
+                if (version != null) {
+                    final ElasticsearchMetadata meta = Metadata.readFrom(before, ElasticsearchMetadata.class);
+                    // FIXME: should be read if not present
+                    if(meta != null) {
+                        req.setIfSeqNo(meta.getSeqNo());
+                        req.setIfPrimaryTerm(meta.getPrimaryTerm());
+                    } else {
+                        log.warn("No seqNo/primaryTerm in before state");
+                    }
+                }
+            } else {
+                version = null;
+            }
+            return version;
+        }
+
         @Override
         public Storage.WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
@@ -406,21 +426,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
             final IndexRequest req = new IndexRequest().id(id)
                     .index(index).source(toSource(schema, after));
 
-            final Long version;
-            if (before != null) {
-                version = Instance.getVersion(before);
-                if (version != null) {
-                    final Long primaryTerm = getPrimaryTerm(before);
-                    final Long seqNo = getSeqNo(before);
-                    // FIXME: should be required
-                    if(primaryTerm != null && seqNo != null) {
-                        req.setIfSeqNo(seqNo);
-                        req.setIfPrimaryTerm(primaryTerm);
-                    }
-                }
-            } else {
-                version = null;
-            }
+            final Long version = version(before, req);
 
             request.add(req);
             responders.add(response -> {
@@ -446,21 +452,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
             final DeleteRequest req = new DeleteRequest().id(id)
                     .index(index);
 
-            final Long version;
-            if (before != null) {
-                version = Instance.getVersion(before);
-                if (version != null) {
-                    final Long primaryTerm = getPrimaryTerm(before);
-                    final Long seqNo = getSeqNo(before);
-                    // FIXME: should be required
-                    if(primaryTerm != null && seqNo != null) {
-                        req.setIfSeqNo(seqNo);
-                        req.setIfPrimaryTerm(primaryTerm);
-                    }
-                }
-            } else {
-                version = null;
-            }
+            final Long version = version(before, req);
 
             request.add(req);
             responders.add(response -> {

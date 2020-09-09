@@ -20,15 +20,17 @@ package io.basestar.schema;
  * #L%
  */
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
+import io.basestar.schema.use.UseDateTime;
+import io.basestar.schema.use.UseInteger;
+import io.basestar.schema.use.UseString;
 import io.basestar.util.Name;
+import io.basestar.util.Sort;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
-import java.util.AbstractMap;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
+import java.time.Instant;
+import java.util.*;
 
 public class Instance extends AbstractMap<String, Object> implements Serializable {
 
@@ -47,6 +49,28 @@ public class Instance extends AbstractMap<String, Object> implements Serializabl
     public Instance(final Instance copy) {
 
         this.backing = Maps.newHashMap(copy.backing);
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public static Comparator<Map<String, Object>> comparator(final List<Sort> sort) {
+
+        return Sort.comparator(sort, (t, name) -> (Comparable)name.apply(t));
+    }
+
+    public static Comparator<Map<String, Object>> comparator(final Sort sort) {
+
+        return comparator(ImmutableList.of(sort));
+    }
+
+    public static Comparator<Map<String, Object>> idComparator() {
+
+        return comparator(Sort.asc(ObjectSchema.ID_NAME));
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> T get(final Map<String, Object> instance, final Name name) {
+
+        return (T)name.apply(instance);
     }
 
     public Name getSchema() {
@@ -71,23 +95,23 @@ public class Instance extends AbstractMap<String, Object> implements Serializabl
         return this;
     }
 
-    public LocalDateTime getCreated() {
+    public Instant getCreated() {
 
         return getCreated(backing);
     }
 
-    public Instance setCreated(final LocalDateTime created) {
+    public Instance setCreated(final Instant created) {
 
         setCreated(backing, created);
         return this;
     }
 
-    public LocalDateTime getUpdated() {
+    public Instant getUpdated() {
 
         return getUpdated(backing);
     }
 
-    public Instance setUpdated(final LocalDateTime updated) {
+    public Instance setUpdated(final Instant updated) {
 
         setUpdated(backing, updated);
         return this;
@@ -123,19 +147,14 @@ public class Instance extends AbstractMap<String, Object> implements Serializabl
 
     public <T> T get(final String name, final Class<T> as) {
 
-        return as.cast(backing.get(name));
+        final Object value = backing.get(name);
+        return value == null ? null : as.cast(value);
     }
 
-//    public <T> T getProperty(final String name, final Class<T> cls) {
-//
-//        return schema.getProperty(backing, name, cls);
-//    }
-//
-//    public <T> Instance setProperty(final String name, final T v) {
-//
-//        schema.setProperty(backing, name, v);
-//        return this;
-//    }
+    public Instance with(final String name, final Object value) {
+
+        return new Instance(with(backing, name, value));
+    }
 
     @Override
     public Set<Entry<String, Object>> entrySet() {
@@ -145,72 +164,94 @@ public class Instance extends AbstractMap<String, Object> implements Serializabl
 
     public static Name getSchema(final Map<String, Object> data) {
 
-        final String qualifiedName = (String)data.get(Reserved.SCHEMA);
+        final String qualifiedName = UseString.DEFAULT.create(data.get(ObjectSchema.SCHEMA));
         return qualifiedName == null ? null : Name.parse(qualifiedName);
     }
 
     public static void setSchema(final Map<String, Object> object, final Name qualifiedName) {
 
-        object.put(Reserved.SCHEMA, qualifiedName == null ? null : qualifiedName.toString());
+        object.put(ObjectSchema.SCHEMA, qualifiedName == null ? null : qualifiedName.toString());
     }
 
     public static String getId(final Map<String, Object> object) {
 
-        return (String)object.get(Reserved.ID);
+        return UseString.DEFAULT.create(object.get(ObjectSchema.ID));
     }
 
     public static void setId(final Map<String, Object> object, final String id) {
 
-        object.put(Reserved.ID, id);
+        object.put(ObjectSchema.ID, id);
     }
 
     public static Long getVersion(final Map<String, Object> object) {
 
-        final Number number = (Number)object.get(Reserved.VERSION);
-        return number == null ? null : number.longValue();
+        return UseInteger.DEFAULT.create(object.get(ObjectSchema.VERSION));
     }
 
     public static void setVersion(final Map<String, Object> object, final Long version) {
 
-        object.put(Reserved.VERSION, version);
+        object.put(ObjectSchema.VERSION, version);
     }
 
     public static String getHash(final Map<String, Object> object) {
 
-        return (String)object.get(Reserved.HASH);
+        return UseString.DEFAULT.create(object.get(ObjectSchema.HASH));
     }
 
     public static void setHash(final Map<String, Object> object, final String hash) {
 
-        object.put(Reserved.HASH, hash);
+        object.put(ObjectSchema.HASH, hash);
     }
 
-    public static LocalDateTime getCreated(final Map<String, Object> object) {
+    public static Instant getCreated(final Map<String, Object> object) {
 
-        final String str = (String)object.get(Reserved.CREATED);
-        return str == null ? null : LocalDateTime.parse(str);
+        return UseDateTime.DEFAULT.create(object.get(ObjectSchema.CREATED));
     }
 
-    public static void setCreated(final Map<String, Object> object, final LocalDateTime created) {
+    public static void setCreated(final Map<String, Object> object, final Instant created) {
 
-        object.put(Reserved.CREATED, created == null ? null : created.toString());
+        object.put(ObjectSchema.CREATED, created);
     }
 
-    public static LocalDateTime getUpdated(final Map<String, Object> object) {
+    public static Instant getUpdated(final Map<String, Object> object) {
 
-        final String str = (String)object.get(Reserved.UPDATED);
-        return str == null ? null : LocalDateTime.parse(str);
+        return UseDateTime.DEFAULT.create(object.get(ObjectSchema.UPDATED));
     }
 
-    public static void setUpdated(final Map<String, Object> object, final LocalDateTime updated) {
+    public static void setUpdated(final Map<String, Object> object, final Instant updated) {
 
-        object.put(Reserved.UPDATED, updated == null ? null : updated.toString());
+        object.put(ObjectSchema.UPDATED, updated);
+    }
+
+    public static <T> T get(final Map<String, Object> object, final String name, final Class<T> as) {
+
+        final Object value = object.get(name);
+        return value == null ? null : as.cast(value);
+    }
+
+    public static void set(final Map<String, Object> object, final String name, final Object value) {
+
+        object.put(name, value);
     }
 
     @SuppressWarnings("unchecked")
     public static Collection<? extends Map<String, Object>> getLink(final Map<String, Object> data, final String link) {
 
         return (Collection<? extends Map<String, Object>>)data.get(link);
+    }
+
+    public static Map<String, Object> with(final Map<String, Object> object, final String name, final Object value) {
+
+        final Map<String, Object> copy = new HashMap<>(object);
+        copy.put(name, value);
+        return copy;
+    }
+
+    public static Map<String, Object> without(final Map<String, Object> object, final String name) {
+
+        final Map<String, Object> copy = new HashMap<>(object);
+        copy.remove(name);
+        return copy;
     }
 }
 

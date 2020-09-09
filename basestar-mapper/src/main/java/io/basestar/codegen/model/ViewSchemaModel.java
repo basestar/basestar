@@ -21,41 +21,61 @@ package io.basestar.codegen.model;
  */
 
 import com.google.common.collect.ImmutableList;
-import io.basestar.codegen.CodegenSettings;
+import io.basestar.codegen.CodegenContext;
+import io.basestar.mapper.annotation.Description;
+import io.basestar.mapper.annotation.Group;
+import io.basestar.mapper.annotation.Where;
 import io.basestar.schema.ViewSchema;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
 
+@SuppressWarnings("unused")
 public class ViewSchemaModel extends InstanceSchemaModel {
 
     private final ViewSchema schema;
 
-    public ViewSchemaModel(final CodegenSettings settings, final ViewSchema schema) {
+    public ViewSchemaModel(final CodegenContext context, final ViewSchema schema) {
 
-        super(settings, schema);
+        super(context, schema);
         this.schema = schema;
     }
 
     @Override
-    public List<AnnotationModel> getAnnotations() {
+    public String getSchemaType() {
 
-        final Map<String, Object> values = new HashMap<>();
-        values.put("name", schema.getQualifiedName());
-        values.put("from", schema.getFrom().getQualifiedName());
-        if(schema.getWhere() != null) {
-            values.put("where", schema.getWhere().toString());
+        return ViewSchema.Descriptor.TYPE;
+    }
+
+    @Override
+    public List<AnnotationModel<?>> getAnnotations() {
+
+        final ImmutableList.Builder<AnnotationModel<?>> annotations = ImmutableList.builder();
+        annotations.add(new AnnotationModel<>(getContext(), VALID));
+        annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.ViewSchema.Declaration.annotation(schema)));
+        annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.From.Modifier.annotation(schema.getFrom())));
+        if(!schema.getGroup().isEmpty()) {
+            annotations.add(new AnnotationModel<>(getContext(), Group.Modifier.annotation(schema.getGroup())));
         }
-        return ImmutableList.of(
-                new AnnotationModel(getSettings(), javax.validation.Valid.class),
-                new AnnotationModel(getSettings(), io.basestar.mapper.annotation.ViewSchema.class, values)
-        );
+        if(schema.getWhere() != null) {
+            annotations.add(new AnnotationModel<>(getContext(), Where.Modifier.annotation(schema.getWhere())));
+        }
+        if(schema.getDescription() != null) {
+            annotations.add(new AnnotationModel<>(getContext(), Description.Modifier.annotation(schema.getDescription())));
+        }
+        return annotations.build();
     }
 
     @Override
     public InstanceSchemaModel getExtend() {
 
         return null;
+    }
+
+    @Override
+    public List<MemberModel> getAdditionalMembers() {
+
+        return schema.getDeclaredLinks().values().stream()
+                .map(v -> new LinkModel(getContext(), v)).collect(Collectors.toList());
     }
 }

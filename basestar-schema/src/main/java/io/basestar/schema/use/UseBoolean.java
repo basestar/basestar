@@ -20,13 +20,16 @@ package io.basestar.schema.use;
  * #L%
  */
 
-import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.schema.exception.UnexpectedTypeException;
+import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.BooleanSchema;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Set;
 
 /**
  * Boolean Type
@@ -38,6 +41,7 @@ import java.io.IOException;
  */
 
 @Data
+@Slf4j
 public class UseBoolean implements UseScalar<Boolean> {
 
     public static final UseBoolean DEFAULT = new UseBoolean();
@@ -56,13 +60,13 @@ public class UseBoolean implements UseScalar<Boolean> {
     }
 
     @Override
-    public Object toJson() {
+    public Object toConfig(final boolean optional) {
 
-        return NAME;
+        return Use.name(NAME, optional);
     }
 
     @Override
-    public Boolean create(final Object value, final boolean expand, final boolean suppress) {
+    public Boolean create(final Object value, final Set<Name> expand, final boolean suppress) {
 
         if(value == null) {
             return null;
@@ -75,7 +79,7 @@ public class UseBoolean implements UseScalar<Boolean> {
         } else if(suppress) {
             return null;
         } else {
-            throw new InvalidTypeException();
+            throw new UnexpectedTypeException(this, value);
         }
     }
 
@@ -86,7 +90,13 @@ public class UseBoolean implements UseScalar<Boolean> {
     }
 
     @Override
-    public io.swagger.v3.oas.models.media.Schema<?> openApi() {
+    public Boolean defaultValue() {
+
+        return false;
+    }
+
+    @Override
+    public io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
         return new BooleanSchema();
     }

@@ -36,4 +36,7 @@ public interface AccessorContext extends HasName, HasAnnotations, HasModifiers, 
     <T, V> V get(T target) throws IllegalAccessException, InvocationTargetException;
 
     <T, V> void set(T target, V value) throws IllegalAccessException, InvocationTargetException;
+
+    // Create a serializable accessor
+    SerializableAccessor serializableAccessor();
 }

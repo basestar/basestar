@@ -1,28 +1,163 @@
+$version: LATEST
+
 A:
   type: object
   properties:
     ref:
-      type: B
+      type: B?
+    arrayRef:
+      type:
+        array?: B
+    mapRef:
+      type:
+        map?: B
+    structRef:
+      type: E?
+  links:
+    multi:
+      schema: C
+      expression: this.id == owner.id
 
 B:
   type: object
   properties:
     key:
-      type: A
+      type: D?
+    key2:
+      type: G?
     value:
-      type: integer
+      type: integer?
 
 C:
   type: object
+  properties:
+    owner:
+      type: A?
+
+D:
+  type: object
+  properties:
+    x:
+      type: integer
+
+E:
+  type: struct
+  properties:
+    ref:
+      type: B?
+
+F:
+  type: object
+  properties:
+    date:
+      type: date?
+    datetime:
+      type: datetime?
+
+G:
+  type: object
+  properties:
+    x:
+      type: integer
 
 AggView:
   type: view
-  select:
+  properties:
     agg:
-      type: string
+      type: number
       expression: sum(value) + 2
-  from: B
-  group:
     key:
+      type: string?
+      expression: key.id
+    collect:
+      type:
+        array: B
+      expression: collectArray({'id':id})
+  from:
+    schema: B
+    expand:
+      - key
+  group: key
+  sort:
+    - value
+  expand:
+    - agg
+    - key
+    - collect
+  where: key.x == 1
+
+AliasView:
+  type: view
+  group:
+    - id
+  properties:
+    id:
       type: string
       expression: key.id
+    count:
+      type: integer
+      expression: count()
+  from: B
+
+LinkingView:
+  type: view
+  properties:
+    id: id
+    key: key
+    key2: key2
+  from:
+    schema: B
+    expand:
+      - key
+      - key2
+  expand:
+    - record
+    - key
+    - key2
+  links:
+    record:
+      schema: AliasView
+      expression: this.id == id
+      single: true
+
+File:
+  type: object
+
+FileRow:
+  type: object
+  properties:
+    file:
+      type: File
+    rowIndex:
+      type: integer
+
+HeaderRows:
+  type: view
+  from:
+    schema: FileRow
+    expand: file
+  group:
+    - id
+  properties:
+    id:
+      type: string
+      expression: file.id
+    rows:
+      type:
+        array: FileRow
+      expression: "collectArray(this)"
+  expand:
+    - rows
+
+LinkingViewToView:
+  type: view
+  properties:
+    id: id
+  links:
+    headerRows:
+      schema: HeaderRows
+      single: true
+      expression: "this.id == id"
+  from: File
+  expand:
+    - headerRows.rows

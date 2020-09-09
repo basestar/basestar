@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.basestar.expression.Context;
 import io.basestar.schema.exception.MissingSchemaException;
+import io.basestar.schema.use.Use;
 import io.basestar.util.Name;
 
 import javax.annotation.Nonnull;
@@ -54,25 +55,44 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
     })
     interface Descriptor<T> extends Described, Extendable {
 
-        String type();
+        String getType();
 
         Long getVersion();
 
-        Schema<T> build(Resolver.Constructing resolver, Name qualifiedName, int slot);
+        Schema<T> build(Resolver.Constructing resolver, Version version, Name qualifiedName, int slot);
+
+        Schema<T> build(Name qualifiedName);
 
         Schema<T> build();
     }
 
-    interface Builder<T> extends Descriptor<T> {
+    default Name getQualifiedPackageName() {
 
+        return getQualifiedName().withoutLast();
+    }
+
+    default String getPackageName() {
+
+        return getPackageName(Character.toString(Name.DELIMITER));
+    }
+
+    default String getPackageName(final String delimiter) {
+
+        final Name qualifiedName = getQualifiedPackageName();
+        return qualifiedName.isEmpty() ? null : qualifiedName.toString(delimiter);
+    }
+
+    interface Builder<T> extends Descriptor<T>, Extendable {
+
+        Builder<T> setExtensions(Map<String, Object> extensions);
     }
 
     default T create(final Object value) {
 
-        return create(value, false, false);
+        return create(value, Collections.emptySet(), false);
     }
 
-    T create(Object value, boolean expand, boolean suppress);
+    T create(Object value, Set<Name> expand, boolean suppress);
 
     int getSlot();
 
@@ -101,6 +121,8 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
     io.swagger.v3.oas.models.media.Schema<?> openApi();
 
     Descriptor<T> descriptor();
+
+    Use<T> use();
 
     default Map<Name, Schema<?>> dependencies() {
 

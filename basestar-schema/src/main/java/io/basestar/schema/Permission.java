@@ -28,7 +28,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.basestar.expression.Expression;
 import io.basestar.expression.logical.And;
-import io.basestar.jackson.serde.ExpressionDeseriaizer;
+import io.basestar.jackson.serde.ExpressionDeserializer;
 import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.util.Name;
@@ -118,7 +118,7 @@ public class Permission implements Serializable {
 
         @Nullable
         @JsonSerialize(using = ToStringSerializer.class)
-        @JsonDeserialize(using = ExpressionDeseriaizer.class)
+        @JsonDeserialize(using = ExpressionDeserializer.class)
         private Expression expression;
 
         @Nullable
@@ -143,7 +143,7 @@ public class Permission implements Serializable {
 
         this.name = name;
         this.description = descriptor.getDescription();
-        this.anonymous = Nullsafe.option(descriptor.getAnonymous(), false);
+        this.anonymous = Nullsafe.orDefault(descriptor.getAnonymous(), false);
         this.expression = Nullsafe.require(descriptor.getExpression());
         this.expand = Nullsafe.immutableSortedCopy(descriptor.getExpand());
         this.inherit = Nullsafe.immutableSortedCopy(descriptor.getInherit());

@@ -20,6 +20,7 @@ package io.basestar.type;
  * #L%
  */
 
+import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import io.basestar.type.has.HasModifiers;
 import io.leangen.geantyref.GenericTypeReflector;
@@ -30,10 +31,10 @@ import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.List;
-import java.util.function.Supplier;
 
 @Getter
 @Accessors(fluent = true)
+@SuppressWarnings("Guava")
 public class FieldContext implements HasModifiers, AccessorContext {
 
     private final TypeContext owner;
@@ -85,6 +86,54 @@ public class FieldContext implements HasModifiers, AccessorContext {
 
         field.setAccessible(true);
         field.set(target, value);
+    }
+
+    @Override
+    public SerializableAccessor serializableAccessor() {
+
+        return serializableAccessor(field.getDeclaringClass(), name(), canSet());
+    }
+
+    private static SerializableAccessor serializableAccessor(final Class<?> erasedOwner, final String name, final boolean canSet) {
+
+        return new SerializableAccessor() {
+            @Override
+            public boolean canGet() {
+
+                return true;
+            }
+
+            @Override
+            public boolean canSet() {
+
+                return canSet;
+            }
+
+            @Override
+            @SuppressWarnings("unchecked")
+            public <T, V> V get(final T target) throws IllegalAccessException {
+
+                try {
+                    final Field field = erasedOwner.getDeclaredField(name);
+                    field.setAccessible(true);
+                    return (V) field.get(target);
+                } catch (final NoSuchFieldException e) {
+                    throw new IllegalStateException(e);
+                }
+            }
+
+            @Override
+            public <T, V> void set(final T target, final V value) throws IllegalAccessException {
+
+                try {
+                    final Field field = erasedOwner.getDeclaredField(name);
+                    field.setAccessible(true);
+                    field.set(target, value);
+                } catch (final NoSuchFieldException e) {
+                    throw new IllegalStateException(e);
+                }
+            }
+        };
     }
 
     @Override

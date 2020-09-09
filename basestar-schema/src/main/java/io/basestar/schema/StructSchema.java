@@ -25,13 +25,12 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Multimap;
 import io.basestar.expression.Context;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseStruct;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.Data;
@@ -111,7 +110,8 @@ public class StructSchema implements InstanceSchema {
 
         String TYPE = "struct";
 
-        default String type() {
+        @Override
+        default String getType() {
 
             return TYPE;
         }
@@ -123,15 +123,21 @@ public class StructSchema implements InstanceSchema {
         Boolean getConcrete();
 
         @Override
-        default StructSchema build(final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
+        default StructSchema build(final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
-            return new StructSchema(this, resolver, qualifiedName, slot);
+            return new StructSchema(this, resolver, version, qualifiedName, slot);
+        }
+
+        @Override
+        default StructSchema build(final Name qualifiedName) {
+
+            return build(Resolver.Constructing.ANONYMOUS, Version.CURRENT, qualifiedName, Schema.anonymousSlot());
         }
 
         @Override
         default StructSchema build() {
 
-            return build(Resolver.Constructing.ANONYMOUS, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
+            return build(Schema.anonymousQualifiedName());
         }
     }
 
@@ -161,11 +167,6 @@ public class StructSchema implements InstanceSchema {
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private Map<String, Object> extensions;
 
-        public String getType() {
-
-            return TYPE;
-        }
-
         public Builder setProperty(final String name, final Property.Descriptor v) {
 
             properties = Nullsafe.immutableCopyPut(properties, name, v);
@@ -178,32 +179,31 @@ public class StructSchema implements InstanceSchema {
         return new Builder();
     }
 
-    private StructSchema(final Descriptor descriptor, final Schema.Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
+    private StructSchema(final Descriptor descriptor, final Schema.Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
         resolver.constructing(this);
         this.qualifiedName = qualifiedName;
         this.slot = slot;
-        this.version = Nullsafe.option(descriptor.getVersion(), 1L);
+        this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
         if(descriptor.getExtend() != null) {
             this.extend = resolver.requireStructSchema(descriptor.getExtend());
         } else {
             this.extend = null;
         }
         this.description = descriptor.getDescription();
-        this.declaredProperties = ImmutableSortedMap.copyOf(Nullsafe.option(descriptor.getProperties()).entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build(resolver, qualifiedName.with(e.getKey())))));
+        this.declaredProperties = Nullsafe.immutableSortedCopy(descriptor.getProperties(), (k, v) -> v.build(resolver, version, qualifiedName.with(k)));
         this.declaredProperties.forEach((k, v) -> {
             if(v.isImmutable()) {
-                throw new SchemaValidationException("Struct types cannot have immutable properties");
+                throw new SchemaValidationException(qualifiedName, "Struct types cannot have immutable properties");
             }
             if(v.getExpression() != null) {
-                throw new SchemaValidationException("Struct types cannot have properties with expressions");
+                throw new SchemaValidationException(qualifiedName, "Struct types cannot have properties with expressions");
             }
             if(v.getVisibility() != null) {
-                throw new SchemaValidationException("Struct types cannot have properties with custom visibility");
+                throw new SchemaValidationException(qualifiedName, "Struct types cannot have properties with custom visibility");
             }
         });
-        this.concrete = Nullsafe.option(descriptor.getConcrete(), Boolean.TRUE);
+        this.concrete = Nullsafe.orDefault(descriptor.getConcrete(), Boolean.TRUE);
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
@@ -215,13 +215,25 @@ public class StructSchema implements InstanceSchema {
         } else {
             this.properties = declaredProperties;
         }
-        this.extensions = Nullsafe.option(descriptor.getExtensions());
+        this.extensions = Nullsafe.orDefault(descriptor.getExtensions());
     }
 
     @Override
     public SortedMap<String, Use<?>> metadataSchema() {
 
         return ImmutableSortedMap.of();
+    }
+
+    @Override
+    public UseStruct use() {
+
+        return new UseStruct(this);
+    }
+
+    @Override
+    public String id() {
+
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -251,7 +263,7 @@ public class StructSchema implements InstanceSchema {
     }
 
     @Override
-    public Instance create(final Map<String, Object> value, final boolean expand, final boolean suppress) {
+    public Instance create(final Map<String, Object> value, final Set<Name> expand, final boolean suppress) {
 
         return new Instance(readProperties(value, expand, suppress));
     }
@@ -264,15 +276,6 @@ public class StructSchema implements InstanceSchema {
     public static Instance deserialize(final DataInput in) throws IOException {
 
         return new Instance(InstanceSchema.deserializeProperties(in));
-    }
-
-    @Deprecated
-    public Multimap<Name, Instance> refs(final Map<String, Object> object) {
-
-        final Multimap<Name, Instance> results = HashMultimap.create();
-        properties.forEach((k, v) -> v.links(object.get(k)).forEach((k2, v2) ->
-                results.put(Name.of(v.getName()).with(k2), v2)));
-        return results;
     }
 
     @Override
@@ -331,5 +334,46 @@ public class StructSchema implements InstanceSchema {
                 return extensions;
             }
         };
+    }
+
+    @Override
+    public boolean equals(final Object other) {
+
+        return qualifiedNameEquals(other);
+    }
+
+    @Override
+    public int hashCode() {
+
+        return qualifiedNameHashCode();
+    }
+
+    public static StructSchema from(final Name qualifiedName, final Map<String, ?> schema) {
+
+        return StructSchema.builder()
+                .setProperties(schema.entrySet().stream().collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        e -> property(e.getValue()))))
+                .build(qualifiedName);
+    }
+
+    public static StructSchema from(final Map<String, ?> schema) {
+
+        return from(Schema.anonymousQualifiedName(), schema);
+    }
+
+    private static Property.Descriptor property(final Object config) {
+
+        if(config instanceof Property.Descriptor) {
+            return (Property.Descriptor)config;
+        } else if(config instanceof Property) {
+            return ((Property)config).descriptor();
+        } else if(config instanceof Use<?>) {
+            return Property.builder()
+                    .setType((Use<?>)config);
+        } else {
+            return Property.builder()
+                    .setType(Use.fromConfig(config));
+        }
     }
 }

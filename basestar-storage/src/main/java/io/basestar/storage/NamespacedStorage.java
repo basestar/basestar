@@ -1,19 +1,36 @@
 package io.basestar.storage;
 
+/*-
+ * #%L
+ * basestar-storage
+ * %%
+ * Copyright (C) 2019 - 2020 Basestar.IO
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.Index;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.storage.util.Pager;
 import io.basestar.util.Name;
+import io.basestar.util.Pager;
 import io.basestar.util.Sort;
 
-import java.util.HashMap;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -74,12 +91,12 @@ public interface NamespacedStorage extends Storage {
     }
 
     @Override
-    default CompletableFuture<Map<String, Object>> readObject(final ObjectSchema absoluteSchema, final String id) {
+    default CompletableFuture<Map<String, Object>> readObject(final ObjectSchema absoluteSchema, final String id, final Set<Name> expand) {
 
         final Name namespace = namespace(absoluteSchema);
         final ObjectSchema relativeSchema = relative(namespace, absoluteSchema);
         return storage(namespace, relativeSchema)
-                .readObject(relative(namespace, relativeSchema), id)
+                .readObject(relative(namespace, relativeSchema), id, expand)
                 .thenApply(result -> absolute(namespace, relativeSchema, result));
     }
 
@@ -93,22 +110,22 @@ public interface NamespacedStorage extends Storage {
     }
 
     @Override
-    default CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema absoluteSchema, final String id, final long version) {
+    default CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema absoluteSchema, final String id, final long version, final Set<Name> expand) {
 
         final Name namespace = namespace(absoluteSchema);
         final ObjectSchema relativeSchema = relative(namespace, absoluteSchema);
         return storage(namespace, relativeSchema)
-                .readObjectVersion(relative(namespace, relativeSchema), id, version)
+                .readObjectVersion(relative(namespace, relativeSchema), id, version, expand)
                 .thenApply(result -> absolute(namespace, relativeSchema, result));
     }
 
     @Override
-    default List<Pager.Source<Map<String, Object>>> query(final ObjectSchema absoluteSchema, final Expression query, final List<Sort> sort) {
+    default List<Pager.Source<Map<String, Object>>> query(final ObjectSchema absoluteSchema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         final Name namespace = namespace(absoluteSchema);
         final ObjectSchema relativeSchema = relative(namespace, absoluteSchema);
         return absolute(namespace, relativeSchema, storage(namespace, relativeSchema)
-                .query(relative(namespace, relativeSchema), query, sort));
+                .query(relative(namespace, relativeSchema), query, sort, expand));
     }
 
     @Override
@@ -183,15 +200,15 @@ public interface NamespacedStorage extends Storage {
                                     return new Storage.ReadTransaction() {
 
                                         @Override
-                                        public ReadTransaction readObject(final ObjectSchema schema, final String id) {
+                                        public ReadTransaction readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
-                                            return delegate.readObject(schema, id);
+                                            return delegate.readObject(schema, id, expand);
                                         }
 
                                         @Override
-                                        public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version) {
+                                        public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
-                                            return delegate.readObjectVersion(schema, id, version);
+                                            return delegate.readObjectVersion(schema, id, version, expand);
                                         }
 
                                         @Override
@@ -205,20 +222,20 @@ public interface NamespacedStorage extends Storage {
             }
 
             @Override
-            public Storage.ReadTransaction readObject(final ObjectSchema absoluteSchema, final String id) {
+            public Storage.ReadTransaction readObject(final ObjectSchema absoluteSchema, final String id, final Set<Name> expand) {
 
                 final Name namespace = namespace(absoluteSchema);
                 final ObjectSchema relativeSchema = relative(namespace, absoluteSchema);
-                transaction(namespace, relativeSchema).readObject(relativeSchema, id);
+                transaction(namespace, relativeSchema).readObject(relativeSchema, id, expand);
                 return this;
             }
 
             @Override
-            public Storage.ReadTransaction readObjectVersion(final ObjectSchema absoluteSchema, final String id, final long version) {
+            public Storage.ReadTransaction readObjectVersion(final ObjectSchema absoluteSchema, final String id, final long version, final Set<Name> expand) {
 
                 final Name namespace = namespace(absoluteSchema);
                 final ObjectSchema relativeSchema = relative(namespace, absoluteSchema);
-                transaction(namespace, relativeSchema).readObjectVersion(relativeSchema, id, version);
+                transaction(namespace, relativeSchema).readObjectVersion(relativeSchema, id, version, expand);
                 return this;
             }
 
@@ -232,7 +249,7 @@ public interface NamespacedStorage extends Storage {
     }
 
     @Override
-    default Storage.WriteTransaction write(final Consistency consistency) {
+    default Storage.WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
         final IdentityHashMap<Storage, Map<Name, Storage.WriteTransaction>> transactions = new IdentityHashMap<>();
         return new Storage.WriteTransaction() {
@@ -242,7 +259,7 @@ public interface NamespacedStorage extends Storage {
                 final Storage storage = storage(namespace, relativeSchema);
                 return transactions.computeIfAbsent(storage, ignored -> new HashMap<>())
                         .computeIfAbsent(namespace, ignored -> {
-                            final Storage.WriteTransaction delegate = storage.write(consistency);
+                            final Storage.WriteTransaction delegate = storage.write(consistency, versioning);
                             return new Storage.WriteTransaction() {
 
                                 @Override

@@ -45,7 +45,7 @@ public interface Authorization {
 
     static Authorization from(final String str) {
 
-        if(str == null) {
+        if(str == null || str.isEmpty()) {
             return of(null, null);
         } else {
             final String[] parts = str.split(" ", 2);

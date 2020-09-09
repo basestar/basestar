@@ -35,8 +35,13 @@ public class Throwables {
         }
     }
 
-    public static Optional<RuntimeException> runtimeCause(final Throwable e) {
+    public static Optional<RuntimeException> findRuntimeCause(final Throwable e) {
 
         return find(e, RuntimeException.class);
+    }
+
+    public static RuntimeException toRuntimeCause(final Throwable e) {
+
+        return find(e, RuntimeException.class).orElseGet(() -> new RuntimeException(e));
     }
 }

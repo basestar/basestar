@@ -22,29 +22,73 @@ package io.basestar.mapper.internal;
 
 import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
+import io.basestar.schema.Constraint;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Property;
+import io.basestar.type.AnnotationContext;
 import io.basestar.type.PropertyContext;
+import io.basestar.type.SerializableAccessor;
+import io.basestar.type.has.HasType;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
 
     private final String name;
 
-    private final PropertyContext property;
-
-    private final Expression expression;
+    private final SerializableAccessor property;
 
     private final TypeMapper type;
 
-    public PropertyMapper(final MappingContext context, final String name, final PropertyContext property, final Expression expression) {
+    private final List<Constraint> constraints;
+
+    private final String description;
+
+    private final Expression expression;
+
+    private final boolean immutable;
+
+    public PropertyMapper(final MappingContext context, final String name, final PropertyContext property) {
 
         this.name = name;
-        this.property = property;
+        this.property = property.serializableAccessor();
+        this.type = context.typeMapper(property);
+        this.constraints = constraints(property);
+        this.description = null;
+        this.expression = null;
+        this.immutable = false;
+    }
+
+    private PropertyMapper(final PropertyMapper copy, final String description, final Expression expression, final boolean immutable) {
+
+        this.name = copy.name;
+        this.property = copy.property;
+        this.type = copy.type;
+        this.constraints = copy.constraints;
+        this.description = description;
         this.expression = expression;
-        this.type = TypeMapper.from(context, property.type());
+        this.immutable = immutable;
+    }
+
+    @Override
+    public PropertyMapper withExpression(final Expression expression) {
+
+        return new PropertyMapper(this, description, expression, immutable);
+    }
+
+    @Override
+    public PropertyMapper withDescription(final String description) {
+
+        return new PropertyMapper(this, description, expression, immutable);
+    }
+
+    public PropertyMapper withImmutable(final boolean immutable) {
+
+        return new PropertyMapper(this, description, expression, immutable);
     }
 
     @Override
@@ -54,11 +98,20 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
     }
 
     @Override
-    public void addToSchema(final InstanceSchema.Builder builder) {
+    public String memberType() {
 
-        builder.setProperty(name, Property.builder()
-                .setType(type.use())
-                .setExpression(expression));
+        return "property";
+    }
+
+    @Override
+    public void addToSchema(final InstanceSchemaMapper<?, InstanceSchema.Builder> mapper, final InstanceSchema.Builder builder) {
+
+        mapper.addProperty(builder, name, Property.builder()
+                .setExpression(expression)
+                .setImmutable(immutable ? true : null)
+                .setDescription(description)
+                .setType(this.type.use())
+                .setConstraints(constraints.isEmpty() ? null : constraints));
     }
 
     @Override
@@ -77,5 +130,20 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
             final Object value = source.get(name);
             property.set(target, type.marshall(value));
         }
+    }
+
+    private static List<Constraint> constraints(final PropertyContext property) {
+
+        final List<AnnotationContext<?>> constraintAnnotations = property.allAnnotations().stream()
+                .filter(a -> a.type().annotations().stream()
+                        .anyMatch(HasType.match(javax.validation.Constraint.class)))
+                .collect(Collectors.toList());
+
+        final List<Constraint> constraints = new ArrayList<>();
+        constraintAnnotations.forEach(annot -> {
+            final String message = annot.<String>nonDefaultValue("message").orElse(null);
+            Constraint.fromJsr380(null, annot.annotation(), message).ifPresent(constraints::add);
+        });
+        return constraints;
     }
 }

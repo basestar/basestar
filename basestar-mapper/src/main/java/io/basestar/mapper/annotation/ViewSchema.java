@@ -20,11 +20,13 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
-import io.basestar.expression.Expression;
+import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.MappingContext;
+import io.basestar.mapper.MappingStrategy;
 import io.basestar.mapper.SchemaMapper;
 import io.basestar.mapper.internal.ViewSchemaMapper;
 import io.basestar.mapper.internal.annotation.SchemaDeclaration;
+import io.basestar.type.AnnotationContext;
 import io.basestar.type.TypeContext;
 import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
@@ -37,13 +39,9 @@ import java.lang.annotation.*;
 @SchemaDeclaration(ViewSchema.Declaration.class)
 public @interface ViewSchema {
 
-    String INFER_NAME = "";
+    String name() default MappingStrategy.INFER_NAME;
 
-    String name() default INFER_NAME;
-
-    String from();
-
-    String where() default "";
+    boolean materialized() default false;
 
     @RequiredArgsConstructor
     class Declaration implements SchemaDeclaration.Declaration {
@@ -51,12 +49,24 @@ public @interface ViewSchema {
         private final ViewSchema annotation;
 
         @Override
+        public Name getQualifiedName(final MappingContext context, final TypeContext type) {
+
+            return context.strategy().schemaName(context, annotation.name(), type);
+        }
+
+        @Override
         public SchemaMapper<?, ?> mapper(final MappingContext context, final TypeContext type) {
 
-            final String name = annotation.name().equals(INFER_NAME) ? type.simpleName() : annotation.name();
-            final String from = annotation.from();
-            final Expression where = annotation.where().isEmpty() ? null : Expression.parse(annotation.where());
-            return new ViewSchemaMapper<>(context, Name.parse(name), type, Name.parse(from), where);
+            final boolean materialized = annotation.materialized();
+            return new ViewSchemaMapper<>(context, getQualifiedName(context, type), type, materialized);
+        }
+
+        public static ViewSchema annotation(final io.basestar.schema.ViewSchema schema) {
+
+            return new AnnotationContext<>(ViewSchema.class, ImmutableMap.<String, Object>builder()
+                    .put("name", schema.getQualifiedName().toString())
+                    .put("materialized", schema.isMaterialized())
+                    .build()).annotation();
         }
     }
 }

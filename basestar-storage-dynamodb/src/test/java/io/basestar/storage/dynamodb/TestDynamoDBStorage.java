@@ -20,7 +20,6 @@ package io.basestar.storage.dynamodb;
  * #L%
  */
 
-import com.google.common.collect.Multimap;
 import io.basestar.schema.Namespace;
 import io.basestar.storage.MemoryStash;
 import io.basestar.storage.Storage;
@@ -34,7 +33,10 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.model.*;
 
 import java.net.URI;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletionException;
 
 @Slf4j
@@ -74,7 +76,7 @@ public class TestDynamoDBStorage extends TestStorage {
     }
 
     @Override
-    protected Storage storage(final Namespace namespace, final Multimap<String, Map<String, Object>> data) {
+    protected Storage storage(final Namespace namespace) {
 
         final DynamoDBStrategy ddbRouting = DynamoDBStrategy.SingleTable.builder().tablePrefix(UUID.randomUUID() + "-").build();
         final Storage storage = DynamoDBStorage.builder().setClient(ddb).setStrategy(ddbRouting)
@@ -87,8 +89,6 @@ public class TestDynamoDBStorage extends TestStorage {
             waitUntilTableReady(ddb, table.tableName());
             tableNames.add(table.tableName());
         }
-
-        writeAll(storage, namespace, data);
 
         return storage;
     }
@@ -127,5 +127,11 @@ public class TestDynamoDBStorage extends TestStorage {
     @Override
     public void testNullBeforeUpdate() {
 
+    }
+
+    @Override
+    public boolean supportsRepair() {
+
+        return true;
     }
 }

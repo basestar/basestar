@@ -20,8 +20,8 @@ package io.basestar.expression.iterate;
  * #L%
  */
 
-import com.google.common.collect.Streams;
 import io.basestar.expression.*;
+import io.basestar.util.Streams;
 import lombok.Data;
 
 import java.util.Iterator;

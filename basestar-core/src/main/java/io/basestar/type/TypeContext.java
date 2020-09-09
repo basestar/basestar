@@ -20,8 +20,10 @@ package io.basestar.type;
  * #L%
  */
 
+import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import io.basestar.type.has.*;
+import io.basestar.util.Nullsafe;
 import io.basestar.util.Text;
 import io.leangen.geantyref.GenericTypeReflector;
 import lombok.AccessLevel;
@@ -36,15 +38,15 @@ import java.lang.reflect.Type;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Getter
 @Accessors(fluent = true)
-public class TypeContext implements HasName, HasModifiers, HasAnnotations,
-        HasTypeParameters, HasType, HasConstructors, HasMethods, HasFields {
+@SuppressWarnings("Guava")
+public class TypeContext implements HasName, HasModifiers, HasAnnotations, HasTypeParameters, HasType, HasConstructors,
+        HasMethods, HasFields, HasProperties {
 
     private static final ConcurrentMap<AnnotatedType, TypeContext> CACHE = new ConcurrentHashMap<>();
 
@@ -291,6 +293,11 @@ public class TypeContext implements HasName, HasModifiers, HasAnnotations,
         return annotations.get();
     }
 
+    public TypeContext enclosing() {
+
+        return TypeContext.from(erasedType.getEnclosingClass());
+    }
+
     @Override
     public int modifiers() {
 
@@ -323,6 +330,17 @@ public class TypeContext implements HasName, HasModifiers, HasAnnotations,
     public boolean isPrimitive() {
 
         return erasedType.isPrimitive();
+    }
+
+    public boolean isArray() {
+
+        return erasedType.isArray();
+    }
+
+    public TypeContext arrayComponentType() {
+
+        // FIXME: TypeContext (on class) annotations break unless we unwrap the annotated type here
+        return TypeContext.from(GenericTypeReflector.getArrayComponentType(annotatedType.getType()));
     }
 
     public TypeContext box() {
@@ -382,6 +400,11 @@ public class TypeContext implements HasName, HasModifiers, HasAnnotations,
             }
         }
         return null;
+    }
+
+    public String packageName() {
+
+        return Nullsafe.map(erasedType.getPackage(), Package::getName);
     }
 
     @Data

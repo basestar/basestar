@@ -90,13 +90,13 @@ public interface HazelcastStrategy {
         @Override
         public String objectMapName(final ObjectSchema schema) {
 
-            return Nullsafe.option(objectPrefix) + schema.getQualifiedName() + Nullsafe.option(objectSuffix);
+            return Nullsafe.orDefault(objectPrefix) + schema.getQualifiedName() + Nullsafe.orDefault(objectSuffix);
         }
 
         @Override
         public String historyMapName(final ObjectSchema schema) {
 
-            return Nullsafe.option(historyPrefix) + schema.getQualifiedName() + Nullsafe.option(historySuffix);
+            return Nullsafe.orDefault(historyPrefix) + schema.getQualifiedName() + Nullsafe.orDefault(historySuffix);
         }
 
     }

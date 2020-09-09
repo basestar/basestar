@@ -1,0 +1,14 @@
+$version: LATEST
+
+Base:
+  type: object
+  properties:
+    a:
+      type:
+        array?: string
+    b:
+      type:
+        map?: integer
+    c:
+      type:
+        set: boolean

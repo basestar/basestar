@@ -86,7 +86,7 @@ public class NameConstant implements Expression {
     }
 
     @Override
-    public Set<Name> paths() {
+    public Set<Name> names() {
 
         return ImmutableSet.of(name);
     }
@@ -112,7 +112,7 @@ public class NameConstant implements Expression {
     @Override
     public <T> T visit(final ExpressionVisitor<T> visitor) {
 
-        return visitor.visitPathConstant(this);
+        return visitor.visitNameConstant(this);
     }
 
     @Override

@@ -27,14 +27,14 @@ import io.basestar.schema.Schema;
 import io.basestar.util.Name;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
-public interface UseInstance extends UseNamed<Instance> {
+public interface UseInstance extends UseNamed<Instance>, UseLayout {
 
     InstanceSchema getSchema();
 
-    @Override
-    default Name getQualifiedName() {
+    default Name getName() {
 
         return getSchema().getQualifiedName();
     }
@@ -78,6 +78,18 @@ public interface UseInstance extends UseNamed<Instance> {
     @Override
     default void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
-        getSchema().collectDependencies(expand, out);
+        final Schema<?> schema = getSchema();
+        // FIXME:?
+        if(expand == null || expand.isEmpty()) {
+            out.put(schema.getQualifiedName(), schema);
+        } else {
+            schema.collectDependencies(expand, out);
+        }
+    }
+
+    @Override
+    default String toString(final Instance value) {
+
+        return Objects.toString(value);
     }
 }

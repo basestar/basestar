@@ -2,24 +2,24 @@
   "Simple": {
     "properties": {
       "boolean": {
-        "type": "boolean"
+        "type": "boolean?"
       },
       "number": {
-        "type": "number"
+        "type": "number?"
       },
       "string": {
-        "type": "string"
+        "type": "string?"
       },
       "array": {
         "type": {
-          "array": {
+          "array?": {
             "type": "string"
           }
         }
       },
       "map": {
         "type": {
-          "map": {
+          "map?": {
             "type": "string"
           }
         }
@@ -29,7 +29,7 @@
   "Indexed": {
     "properties": {
       "value": {
-        "type": "string"
+        "type": "string?"
       }
     },
     "indexes": {
@@ -43,7 +43,7 @@
   "RefSource": {
     "properties": {
       "target": {
-        "type": "RefTarget"
+        "type": "RefTarget?"
       }
     },
     "indexes": {
@@ -57,23 +57,28 @@
   "RefTarget": {
     "properties": {
       "value": {
-        "type": "string"
+        "type": "string?"
       },
       "target": {
-        "type": "RefTarget"
+        "type": "RefTarget?"
       }
     },
     "links": {
       "sources": {
         "schema": "RefSource",
         "expression": "target.id == this.id"
+      },
+      "source": {
+        "schema": "RefSource",
+        "expression": "target.id == this.id",
+        "single": true
       }
     }
   },
   "SimplePerms": {
     "properties": {
       "owner": {
-        "type": "User"
+        "type": "User?"
       }
     },
     "permissions": {
@@ -85,13 +90,12 @@
   "User": {
   },
   "MultiIndexed": {
-    "@merge": "./blah",
+    "@merge": "./merge",
     "properties": {
       "value": {
         "type": {
-          "array": "string"
-        },
-        "required": true
+          "array": "string?"
+        }
       }
     },
     "indexes": {
@@ -109,7 +113,7 @@
     "type": "struct",
     "properties": {
       "key": {
-        "type": "string"
+        "type": "string?"
       }
     }
   },
@@ -117,9 +121,8 @@
     "properties": {
       "value": {
         "type": {
-          "map": "MapMultiIndexedRecord"
-        },
-        "required": true
+          "map": "MapMultiIndexedRecord?"
+        }
       }
     },
     "indexes": {
@@ -136,10 +139,10 @@
   "Animal": {
     "properties": {
       "name": {
-        "type": "string"
+        "type": "string?"
       },
       "class": {
-        "type": "string"
+        "type": "string?"
       }
     },
     "indexes": {
@@ -157,10 +160,10 @@
     "extend": "Animal",
     "properties": {
       "breed": {
-        "type": "string"
+        "type": "string?"
       },
       "class": {
-        "type": "string",
+        "type": "string?",
         "expression": "'Mammal'"
       }
     }
@@ -169,10 +172,10 @@
     "extend": "Animal",
     "properties": {
       "breed": {
-        "type": "string"
+        "type": "string?"
       },
       "class": {
-        "type": "string",
+        "type": "string?",
         "expression": "'Mammal'"
       }
     }
@@ -181,7 +184,7 @@
     "properties": {
       "residents": {
         "type": {
-          "array": "Animal"
+          "array?": "Animal"
         }
       }
     }
@@ -192,14 +195,14 @@
     },
     "properties": {
       "x": {
-        "type": "string"
+        "type": "string?"
       }
     }
   },
   "Visibility": {
     "properties": {
       "x": {
-        "type": "number",
+        "type": "number?",
         "visibility": "value > 10"
       }
     }
@@ -207,11 +210,11 @@
   "Transient": {
     "properties": {
       "name": {
-        "type": "string"
+        "type": "string?"
       },
       "refs": {
         "type": {
-          "array": "Transient"
+          "array?": "Transient"
         }
       }
     },
@@ -233,7 +236,7 @@
   "WithEnum": {
     "properties": {
       "value": {
-        "type": "MyEnum"
+        "type": "MyEnum?"
       }
     }
   }

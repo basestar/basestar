@@ -22,14 +22,20 @@ package io.basestar.storage;
 
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
+import io.basestar.schema.Index;
+import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.Reserved;
 import io.basestar.storage.exception.UnsupportedQueryException;
-import io.basestar.storage.util.Pager;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
+import io.basestar.util.Pager;
 import io.basestar.util.Sort;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class QueryFallbackStorage implements DelegatingStorage {
 
@@ -50,9 +56,9 @@ public class QueryFallbackStorage implements DelegatingStorage {
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
+    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        return tryQuery(storage, schema, query, sort);
+        return tryQuery(0, schema, query, sort, expand);
     }
 
     @Override
@@ -61,16 +67,33 @@ public class QueryFallbackStorage implements DelegatingStorage {
         throw new UnsupportedOperationException();
     }
 
-    public List<Pager.Source<Map<String, Object>>> tryQuery(final List<Storage> storage, final ObjectSchema schema, final Expression query, final List<Sort> sort) {
+    protected List<Pager.Source<Map<String, Object>>> tryQuery(final int offset, final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        if (storage.isEmpty()) {
+        if (offset >= storage.size()) {
             throw new UnsupportedQueryException(schema.getQualifiedName(), query);
         } else {
             try {
-                return storage.get(0).query(schema, query, sort);
+                final List<Pager.Source<Map<String, Object>>> result = storage.get(offset).query(schema, query, sort, expand);
+                if(offset != 0) {
+                    return Pager.map(result, v -> Instance.without(v, Reserved.META));
+                } else {
+                    return result;
+                }
             } catch (final UnsupportedQueryException e) {
-                return tryQuery(storage.subList(1, storage.size()), schema, query, sort);
+                return tryQuery(offset + 1, schema, query, sort, expand);
             }
         }
+    }
+
+    @Override
+    public List<Pager.Source<RepairInfo>> repair(final ObjectSchema schema) {
+
+        return storage.stream().flatMap(v -> v.repair(schema).stream()).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Pager.Source<RepairInfo>> repairIndex(final ObjectSchema schema, final Index index) {
+
+        return storage.stream().flatMap(v -> v.repairIndex(schema, index).stream()).collect(Collectors.toList());
     }
 }

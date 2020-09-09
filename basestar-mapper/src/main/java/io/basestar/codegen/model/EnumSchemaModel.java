@@ -20,21 +20,28 @@ package io.basestar.codegen.model;
  * #L%
  */
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import io.basestar.codegen.CodegenSettings;
+import io.basestar.codegen.CodegenContext;
+import io.basestar.mapper.annotation.Description;
 import io.basestar.schema.EnumSchema;
 
+import java.util.ArrayList;
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class EnumSchemaModel extends SchemaModel {
 
     private final EnumSchema schema;
 
-    public EnumSchemaModel(final CodegenSettings settings, final EnumSchema schema) {
+    public EnumSchemaModel(final CodegenContext context, final EnumSchema schema) {
 
-        super(settings, schema);
+        super(context, schema);
         this.schema = schema;
+    }
+
+    @Override
+    public String getSchemaType() {
+
+        return EnumSchema.Descriptor.TYPE;
     }
 
     public List<String> getValues() {
@@ -43,10 +50,13 @@ public class EnumSchemaModel extends SchemaModel {
     }
 
     @Override
-    public List<AnnotationModel> getAnnotations() {
+    public List<AnnotationModel<?>> getAnnotations() {
 
-        return ImmutableList.of(
-                new AnnotationModel(getSettings(), io.basestar.mapper.annotation.EnumSchema.class, ImmutableMap.of("name", schema.getQualifiedName()))
-        );
+        final List<AnnotationModel<?>> annotations = new ArrayList<>();
+        annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.EnumSchema.Declaration.annotation(schema)));
+        if(schema.getDescription() != null) {
+            annotations.add(new AnnotationModel<>(getContext(), Description.Modifier.annotation(schema.getDescription())));
+        }
+        return annotations;
     }
 }

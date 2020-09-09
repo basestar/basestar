@@ -22,47 +22,82 @@ package io.basestar.mapper.internal;
 
 import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
-import io.basestar.mapper.SchemaMapper;
+import io.basestar.mapper.exception.MappingException;
+import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Link;
-import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.type.PropertyContext;
+import io.basestar.type.SerializableAccessor;
 import io.basestar.util.Sort;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Map;
 
-public class LinkMapper implements MemberMapper<ObjectSchema.Builder> {
+public class LinkMapper implements MemberMapper<InstanceSchema.Builder> {
 
     private final String name;
 
-    private final PropertyContext property;
-
-    private final Expression expression;
-
-    private final List<Sort> sort;
+    private final SerializableAccessor property;
 
     private final TypeMapper type;
 
     private final TypeMapper.OfCustom itemType;
 
+    private final boolean single;
+
+    private final Expression expression;
+
+    private final List<Sort> sort;
+
+    private final String description;
+
     public LinkMapper(final MappingContext context, final String name, final PropertyContext property, final Expression expression, final List<Sort> sort) {
 
         this.name = name;
-        this.property = property;
-        this.expression = expression;
-        this.sort = sort;
-        this.type = TypeMapper.from(context, property.type());
-        if(type instanceof TypeMapper.OfArray) {
-            final TypeMapper.OfArray array = (TypeMapper.OfArray)type;
+        this.property = property.serializableAccessor();
+        this.type = context.typeMapper(property);
+        final TypeMapper requiredType;
+        if(type instanceof TypeMapper.OfOptional) {
+            requiredType = ((TypeMapper.OfOptional) type).getValue();
+        } else {
+            requiredType = type;
+        }
+        if(requiredType instanceof TypeMapper.OfArray) {
+            final TypeMapper.OfArray array = (TypeMapper.OfArray)requiredType;
             if(array.getValue() instanceof TypeMapper.OfCustom) {
                 itemType = (TypeMapper.OfCustom)array.getValue();
+                single = false;
             } else {
                 throw new IllegalStateException("Cannot create link item mapper for " + array.getValue());
             }
+        } else if(requiredType instanceof TypeMapper.OfCustom) {
+            itemType = (TypeMapper.OfCustom) requiredType;
+            single = true;
         } else {
-            throw new IllegalStateException("Cannot create link mapper for " + type);
+            throw new IllegalStateException("Cannot create link mapper for " + requiredType);
         }
+        this.expression = expression;
+        this.sort = sort;
+        this.description = null;
+    }
+
+    public LinkMapper(final LinkMapper copy, final String description) {
+
+        this.name = copy.name;
+        this.property = copy.property;
+        this.type = copy.type;
+        this.itemType = copy.itemType;
+        this.single = copy.single;
+        this.expression = copy.expression;
+        this.sort = copy.sort;
+        this.description = description;
+    }
+
+    @Override
+    public LinkMapper withDescription(final String description) {
+
+        return new LinkMapper(this, description);
     }
 
     @Override
@@ -72,21 +107,32 @@ public class LinkMapper implements MemberMapper<ObjectSchema.Builder> {
     }
 
     @Override
-    public void addToSchema(final ObjectSchema.Builder builder) {
+    public String memberType() {
 
-        final SchemaMapper<?, ?> schema = itemType.getMapper();
-        builder.setLink(name, Link.builder()
-                .setSchema(schema.qualifiedName())
+        return "link";
+    }
+
+    @Override
+    public void addToSchema(final InstanceSchemaMapper<?, InstanceSchema.Builder> mapper, final InstanceSchema.Builder builder) {
+
+        mapper.addLink(builder, name, Link.builder()
                 .setExpression(expression)
-                .setSort(sort));
+                .setSingle(single ? true : null)
+                .setSchema(itemType.getQualifiedName())
+                .setSort(sort == null ? null : (sort.isEmpty() ? null : sort))
+                .setDescription(description));
     }
 
     @Override
     public void unmarshall(final Object source, final Map<String, Object> target) throws InvocationTargetException, IllegalAccessException {
 
-        if(property.canGet()) {
-            final Object value = property.get(source);
-            target.put(name, type.unmarshall(value));
+        try {
+            if (property.canGet()) {
+                final Object value = property.get(source);
+                target.put(name, type.unmarshall(value));
+            }
+        } catch (final UnexpectedTypeException e) {
+            throw new MappingException(this.name, e);
         }
     }
 

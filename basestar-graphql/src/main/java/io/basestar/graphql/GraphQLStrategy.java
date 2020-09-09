@@ -70,6 +70,10 @@ public interface GraphQLStrategy {
 
     String readMethodName(ObjectSchema type);
 
+    String subscribeMethodName(ObjectSchema type);
+
+    String subscribeQueryMethodName(ObjectSchema type);
+
     String queryMethodName(ObjectSchema type);
 
     String queryLinkMethodName(ObjectSchema type, Link link);
@@ -94,9 +98,23 @@ public interface GraphQLStrategy {
 
     String expressionsArgumentName();
 
-    String transactionMethodName();
+    String consistencyArgumentName();
 
-    String transactionTypeName();
+    String consistencyTypeName();
+
+    String batchMethodName();
+
+    String batchTypeName();
+
+    String idArgumentName();
+
+    String versionArgumentName();
+
+    String pageTotalFieldName();
+
+    String pageApproxTotalFieldName();
+
+    String anyTypeName();
 
     class Default implements GraphQLStrategy {
 
@@ -127,7 +145,7 @@ public interface GraphQLStrategy {
 
         protected String typeName(final Use<?> type) {
 
-            return type.visit(TYPE_NAME_VISITOR);
+            return type.visit(typeNameVisitor);
         }
 
         protected String inputPrefix() {
@@ -233,6 +251,18 @@ public interface GraphQLStrategy {
         }
 
         @Override
+        public String subscribeMethodName(final ObjectSchema type) {
+
+            return "subscribe" + typeName(type);
+        }
+
+        @Override
+        public String subscribeQueryMethodName(final ObjectSchema type) {
+
+            return "subscribeQuery" + typeName(type);
+        }
+
+        @Override
         public String queryMethodName(final ObjectSchema type) {
 
             return "query" + typeName(type);
@@ -305,18 +335,60 @@ public interface GraphQLStrategy {
         }
 
         @Override
-        public String transactionMethodName() {
+        public String consistencyArgumentName() {
 
-            return "transaction";
+            return "consistency";
         }
 
         @Override
-        public String transactionTypeName() {
+        public String consistencyTypeName() {
 
-            return "Transaction";
+            return "BatchConsistency";
         }
 
-        protected final Use.Visitor<String> TYPE_NAME_VISITOR = new Use.Visitor<String>() {
+        @Override
+        public String batchMethodName() {
+
+            return "batch";
+        }
+
+        @Override
+        public String batchTypeName() {
+
+            return "Batch";
+        }
+
+        @Override
+        public String idArgumentName() {
+
+            return ObjectSchema.ID;
+        }
+
+        @Override
+        public String versionArgumentName() {
+
+            return ObjectSchema.VERSION;
+        }
+
+        @Override
+        public String pageTotalFieldName() {
+
+            return "total";
+        }
+
+        @Override
+        public String pageApproxTotalFieldName() {
+
+            return "approxTotal";
+        }
+
+        @Override
+        public String anyTypeName() {
+
+            return "Any";
+        }
+
+        protected final Use.Visitor<String> typeNameVisitor = new Use.Visitor.Defaulting<String>() {
 
             @Override
             public String visitBoolean(final UseBoolean type) {
@@ -337,7 +409,7 @@ public interface GraphQLStrategy {
             }
 
             @Override
-            public String visitString(final UseString type) {
+            public <T> String visitStringLike(final UseStringLike<T> type) {
 
                 return GraphQLUtils.STRING_TYPE;
             }
@@ -349,7 +421,7 @@ public interface GraphQLStrategy {
             }
 
             @Override
-            public String visitRef(final UseObject type) {
+            public String visitObject(final UseObject type) {
 
                 return typeName(type.getSchema());
             }
@@ -385,15 +457,15 @@ public interface GraphQLStrategy {
             }
 
             @Override
-            public String visitDate(final UseDate type) {
+            public String visitView(final UseView type) {
 
-                return GraphQLUtils.STRING_TYPE;
+                return typeName(type.getSchema());
             }
 
             @Override
-            public String visitDateTime(final UseDateTime type) {
+            public String visitAny(final UseAny type) {
 
-                return GraphQLUtils.STRING_TYPE;
+                return anyTypeName();
             }
         };
     }

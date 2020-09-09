@@ -26,10 +26,7 @@ import io.basestar.database.event.ObjectUpdatedEvent;
 import io.basestar.database.options.UpdateOptions;
 import io.basestar.event.Event;
 import io.basestar.expression.Context;
-import io.basestar.schema.Constraint;
-import io.basestar.schema.Instance;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.Permission;
+import io.basestar.schema.*;
 import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.storage.exception.ObjectMissingException;
 import io.basestar.storage.exception.VersionMismatchException;
@@ -37,7 +34,8 @@ import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.RequiredArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -78,12 +76,12 @@ public class UpdateAction implements Action {
         final String id = options.getId();
 
         final Map<String, Object> data = new HashMap<>();
-        final UpdateOptions.Mode mode = Nullsafe.option(options.getMode(), UpdateOptions.Mode.REPLACE);
+        final UpdateOptions.Mode mode = Nullsafe.orDefault(options.getMode(), UpdateOptions.Mode.REPLACE);
 
 
         final long version;
-        final LocalDateTime created;
-        final LocalDateTime updated = LocalDateTime.now();
+        final Instant created;
+        final Instant updated = Instant.now();
 
         if (before == null) {
             if(mode == UpdateOptions.Mode.CREATE) {
@@ -131,7 +129,7 @@ public class UpdateAction implements Action {
         Instance.setUpdated(initial, updated);
         Instance.setHash(initial, schema.hash(initial));
 
-        final Instance evaluated = schema.evaluateProperties(context.with(CommonVars.VAR_THIS, initial), new Instance(initial));
+        final Instance evaluated = schema.evaluateProperties(context.with(CommonVars.VAR_THIS, initial), Collections.emptySet(), new Instance(initial));
 
         final Set<Constraint.Violation> violations = schema.validate(context.with(CommonVars.VAR_THIS, evaluated), before == null ? evaluated : before, evaluated);
         if(!violations.isEmpty()) {
@@ -184,8 +182,14 @@ public class UpdateAction implements Action {
     public Set<Name> paths() {
 
         // FIXME: shouldn't have to bind here, need to fix multi-part path constants in parser
-        return Nullsafe.option(options.getExpressions()).values().stream()
-                .flatMap(e -> e.bind(Context.init()).paths().stream())
+        return Nullsafe.orDefault(options.getExpressions()).values().stream()
+                .flatMap(e -> e.bind(Context.init()).names().stream())
                 .collect(Collectors.toSet());
+    }
+
+    @Override
+    public Consistency getConsistency() {
+
+        return options.getConsistency();
     }
 }

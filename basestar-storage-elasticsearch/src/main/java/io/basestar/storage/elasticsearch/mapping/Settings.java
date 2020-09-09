@@ -45,9 +45,9 @@ public class Settings {
     @lombok.Builder(builderClassName = "Builder", toBuilder = true)
     Settings(final Integer shards, final Integer replicas, final String refreshInterval) {
 
-        this.shards = Nullsafe.option(shards, DEFAULT_SHARDS);
-        this.replicas = Nullsafe.option(replicas, DEFAULT_REPLICAS);
-        this.refreshInterval = Nullsafe.option(refreshInterval, DEFAULT_REFRESH_INTERVAL);
+        this.shards = Nullsafe.orDefault(shards, DEFAULT_SHARDS);
+        this.replicas = Nullsafe.orDefault(replicas, DEFAULT_REPLICAS);
+        this.refreshInterval = Nullsafe.orDefault(refreshInterval, DEFAULT_REFRESH_INTERVAL);
     }
 
     public Map<String, ?> dynamic() {

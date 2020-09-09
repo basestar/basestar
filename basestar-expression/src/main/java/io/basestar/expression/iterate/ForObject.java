@@ -23,7 +23,6 @@ package io.basestar.expression.iterate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import com.google.common.collect.Streams;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
@@ -31,6 +30,7 @@ import io.basestar.expression.Renaming;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.function.IfElse;
 import io.basestar.util.Name;
+import io.basestar.util.Streams;
 import lombok.Data;
 
 import java.util.*;
@@ -113,12 +113,12 @@ public class ForObject implements Expression {
     }
 
     @Override
-    public Set<Name> paths() {
+    public Set<Name> names() {
 
         return ImmutableSet.<Name>builder()
-                .addAll(yieldKey.paths())
-                .addAll(yieldValue.paths())
-                .addAll(iter.paths())
+                .addAll(yieldKey.names())
+                .addAll(yieldValue.names())
+                .addAll(iter.names())
                 .build();
     }
 

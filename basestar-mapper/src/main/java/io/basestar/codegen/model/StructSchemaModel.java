@@ -21,39 +21,38 @@ package io.basestar.codegen.model;
  */
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import io.basestar.codegen.CodegenSettings;
+import io.basestar.codegen.CodegenContext;
+import io.basestar.mapper.annotation.Description;
 import io.basestar.schema.StructSchema;
 
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class StructSchemaModel extends InstanceSchemaModel {
 
     private final StructSchema schema;
 
-    public StructSchemaModel(final CodegenSettings settings, final StructSchema schema) {
+    public StructSchemaModel(final CodegenContext context, final StructSchema schema) {
 
-        super(settings, schema);
+        super(context, schema);
         this.schema = schema;
     }
 
     @Override
-    public List<AnnotationModel> getAnnotations() {
+    public String getSchemaType() {
 
-        return ImmutableList.of(
-                new AnnotationModel(getSettings(), javax.validation.Valid.class),
-                new AnnotationModel(getSettings(), io.basestar.mapper.annotation.StructSchema.class, ImmutableMap.of("name", schema.getQualifiedName()))
-        );
+        return StructSchema.Descriptor.TYPE;
     }
 
     @Override
-    public StructSchemaModel getExtend() {
+    public List<AnnotationModel<?>> getAnnotations() {
 
-        final StructSchema extend = schema.getExtend();
-        if(extend != null) {
-            return new StructSchemaModel(getSettings(), extend);
-        } else {
-            return null;
+        final ImmutableList.Builder<AnnotationModel<?>> annotations = ImmutableList.builder();
+        annotations.add(new AnnotationModel<>(getContext(), VALID));
+        annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.StructSchema.Declaration.annotation(schema)));
+        if(schema.getDescription() != null) {
+            annotations.add(new AnnotationModel<>(getContext(), Description.Modifier.annotation(schema.getDescription())));
         }
+        return annotations.build();
     }
 }

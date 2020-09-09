@@ -53,7 +53,6 @@ public class TestFullType {
 
         }
 
-        @Test
         void setAWSTest(final Integer a) {
 
         }

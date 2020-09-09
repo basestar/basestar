@@ -25,10 +25,10 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.basestar.event.Event;
 import io.basestar.expression.Expression;
-import io.basestar.jackson.serde.ExpressionDeseriaizer;
+import io.basestar.jackson.serde.ExpressionDeserializer;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
-import io.basestar.util.PagingToken;
+import io.basestar.util.Page;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -42,22 +42,22 @@ public class RefQueryEvent implements RefEvent {
     private Name schema;
 
     @JsonSerialize(using = ToStringSerializer.class)
-    @JsonDeserialize(using = ExpressionDeseriaizer.class)
+    @JsonDeserialize(using = ExpressionDeserializer.class)
     private Expression expression;
 
-    private PagingToken paging;
+    private Page.Token paging;
 
     public static RefQueryEvent of(final Ref ref, final Name schema, final Expression expression) {
 
         return of(ref, schema, expression, null);
     }
 
-    public static RefQueryEvent of(final Ref ref, final Name schema, final Expression expression, final PagingToken paging) {
+    public static RefQueryEvent of(final Ref ref, final Name schema, final Expression expression, final Page.Token paging) {
 
         return new RefQueryEvent().setRef(ref).setSchema(schema).setExpression(expression).setPaging(paging);
     }
 
-    public RefQueryEvent withPaging(final PagingToken paging) {
+    public RefQueryEvent withPaging(final Page.Token paging) {
 
         return of(ref, schema, expression, paging);
     }

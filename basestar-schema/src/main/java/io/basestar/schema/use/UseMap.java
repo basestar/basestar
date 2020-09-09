@@ -20,9 +20,7 @@ package io.basestar.schema.use;
  * #L%
  */
 
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
@@ -30,14 +28,14 @@ import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.iterate.ForAny;
 import io.basestar.expression.iterate.Of;
 import io.basestar.schema.Constraint;
-import io.basestar.schema.Instance;
 import io.basestar.schema.Schema;
-import io.basestar.schema.exception.InvalidTypeException;
+import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.MapSchema;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -50,6 +48,8 @@ import java.util.stream.Collectors;
 /**
  * Map Type
  *
+ * FIXME: map expand is inconsistent, intention is to remove it and treat maps like other containers
+ *
  * <strong>Example</strong>
  * <pre>
  * type:
@@ -58,7 +58,8 @@ import java.util.stream.Collectors;
  */
 
 @Data
-public class UseMap<T> implements Use<Map<String, T>> {
+@Slf4j
+public class UseMap<T> implements UseContainer<T, Map<String, T>> {
 
     public static final String NAME = "map";
 
@@ -72,16 +73,28 @@ public class UseMap<T> implements Use<Map<String, T>> {
         return visitor.visitMap(this);
     }
 
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T2> UseMap<T2> transform(final Function<Use<T>, Use<T2>> fn) {
+
+        final Use<T2> type2 = fn.apply(type);
+        if(type2 == type ) {
+            return (UseMap<T2>)this;
+        } else {
+            return new UseMap<>(type2);
+        }
+    }
+
     public static UseMap<?> from(final Object config) {
 
         return Use.fromNestedConfig(config, (type, nestedConfig) -> new UseMap<>(type));
     }
 
     @Override
-    public Object toJson() {
+    public Object toConfig(final boolean optional) {
 
         return ImmutableMap.of(
-                NAME, type
+                Use.name(NAME, optional), type
         );
     }
 
@@ -97,12 +110,13 @@ public class UseMap<T> implements Use<Map<String, T>> {
     }
 
     @Override
-    public Map<String, T> create(final Object value, final boolean expand, final boolean suppress) {
+    public Map<String, T> create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        return create(value, suppress, v -> type.create(v, expand, suppress));
+        final Map<String, Set<Name>> branches = Name.branch(expand);
+        return create(value, suppress, (k, v) -> type.create(v, branch(branches, k), suppress));
     }
 
-    public static <T> Map<String, T> create(final Object value, final boolean suppress, final Function<Object, T> fn) {
+    public static <T> Map<String, T> create(final Object value, final boolean suppress, final BiFunction<String, Object, T> fn) {
 
         if(value == null) {
             return null;
@@ -110,12 +124,12 @@ public class UseMap<T> implements Use<Map<String, T>> {
             return ((Map<?, ?>) value).entrySet().stream()
                     .collect(Collectors.toMap(
                             entry -> entry.getKey().toString(),
-                            entry -> fn.apply(entry.getValue())
+                            entry -> fn.apply(entry.getKey().toString(), entry.getValue())
                     ));
         } else if(suppress) {
             return null;
         } else {
-            throw new InvalidTypeException();
+            throw new UnexpectedTypeException(NAME, value);
         }
     }
 
@@ -126,9 +140,10 @@ public class UseMap<T> implements Use<Map<String, T>> {
     }
 
     @Override
-    public io.swagger.v3.oas.models.media.Schema<?> openApi() {
+    public io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
-        return new MapSchema().additionalProperties(type.openApi());
+        final Map<String, Set<Name>> branches = Name.branch(expand);
+        return new MapSchema().additionalProperties(type.openApi(branches.get(EXPAND_WILDCARD)));
     }
 
     @Override
@@ -244,7 +259,7 @@ public class UseMap<T> implements Use<Map<String, T>> {
 //        }
 //    }
 
-    private static Set<Name> branch(final Map<String, Set<Name>> branches, final String key) {
+    public static Set<Name> branch(final Map<String, Set<Name>> branches, final String key) {
 
         final Set<Name> branch = branches.get(key);
         if(branch == null) {
@@ -258,7 +273,7 @@ public class UseMap<T> implements Use<Map<String, T>> {
     public Map<String, T> expand(final Map<String, T> value, final Expander expander, final Set<Name> expand) {
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
-        return transform(value, (key, before) -> {
+        return transformKeyValues(value, (key, before) -> {
             final Set<Name> branch = branch(branches, key);
             if(branch != null) {
                 return type.expand(before, expander, branch);
@@ -271,14 +286,14 @@ public class UseMap<T> implements Use<Map<String, T>> {
     @Override
     public Map<String, T> applyVisibility(final Context context, final Map<String, T> value) {
 
-        return transform(value, (key, before) -> type.applyVisibility(context, before));
+        return transformKeyValues(value, (key, before) -> type.applyVisibility(context, before));
     }
 
     @Override
     public Map<String, T> evaluateTransients(final Context context, final Map<String, T> value, final Set<Name> expand) {
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
-        return transform(value, (key, before) -> {
+        return transformKeyValues(value, (key, before) -> {
             final Set<Name> branch = branch(branches, key);
             if(branch != null) {
                 return type.evaluateTransients(context, before, branch);
@@ -309,7 +324,7 @@ public class UseMap<T> implements Use<Map<String, T>> {
         }
     }
 
-    private static <T> Map<String, T> transform(final Map<String, T> value, final BiFunction<String, T, T> fn) {
+    private static <T> Map<String, T> transformKeyValues(final Map<String, T> value, final BiFunction<String, T, T> fn) {
 
         if(value != null) {
             final Map<String, T> changed = new HashMap<>();
@@ -343,14 +358,9 @@ public class UseMap<T> implements Use<Map<String, T>> {
     }
 
     @Override
-    public Multimap<Name, Instance> refs(final Map<String, T> value) {
+    public Map<String, T> defaultValue() {
 
-        final Multimap<Name, Instance> result = HashMultimap.create();
-        if(value != null) {
-            value.forEach((k, v) -> type.refs(v).forEach((k2, v2) ->
-                    result.put(Name.of(k).with(k2), v2)));
-        }
-        return result;
+        return Collections.emptyMap();
     }
 
     @Override
@@ -364,5 +374,36 @@ public class UseMap<T> implements Use<Map<String, T>> {
 
         final Set<Name> union = Name.branch(expand).values().stream().reduce(Collections.emptySet(), Sets::union);
         type.collectDependencies(union, out);
+    }
+
+    @Override
+    public Map<String, T> transformValues(final Map<String, T> value, final BiFunction<Use<T>, T, T> fn) {
+
+        if(value != null) {
+            boolean changed = false;
+            final Map<String, T> result = new HashMap<>();
+            for(final Map.Entry<String, T> entry : value.entrySet()) {
+                final T before = entry.getValue();
+                final T after = fn.apply(type, before);
+                result.put(entry.getKey(), after);
+                changed = changed || (before != after);
+            }
+            return changed ? result : value;
+        } else {
+            return null;
+        }
+    }
+
+    @Override
+    public String toString(final Map<String, T> value) {
+
+        if(value == null) {
+            return "null";
+        } else {
+            final Use<T> type = getType();
+            return "{" + value.entrySet().stream()
+                    .map(v -> v.getKey() + ": " + type.toString(v.getValue()))
+                    .collect(Collectors.joining(", ")) + "}";
+        }
     }
 }

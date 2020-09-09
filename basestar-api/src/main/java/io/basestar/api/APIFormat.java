@@ -23,6 +23,7 @@ package io.basestar.api;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
+import io.basestar.jackson.BasestarModule;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -34,11 +35,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public enum APIFormat {
 
-    JSON("application/json", new ObjectMapper().setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)),
-    YAML("application/yaml", new YAMLMapper().setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL));
-
-    //,
-    //XML("application/xml", new ObjectMapper());
+    JSON("application/json", new ObjectMapper().registerModule(BasestarModule.INSTANCE).setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)),
+    YAML("application/yaml", new YAMLMapper().registerModule(BasestarModule.INSTANCE).setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL));
 
     private final String contentType;
 

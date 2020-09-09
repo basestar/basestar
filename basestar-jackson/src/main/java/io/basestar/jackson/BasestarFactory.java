@@ -27,7 +27,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TreeTraversingParser;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Streams;
+import io.basestar.util.Streams;
 import lombok.experimental.Delegate;
 
 import java.io.*;

@@ -30,6 +30,7 @@ import io.basestar.util.Name;
 import lombok.Data;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -58,6 +59,11 @@ public class LiteralArray implements Expression {
     public LiteralArray(final List<Expression> args) {
 
         this.args = args;
+    }
+
+    public LiteralArray(final Expression ... args) {
+
+        this(Arrays.asList(args));
     }
 
     @Override
@@ -100,9 +106,9 @@ public class LiteralArray implements Expression {
 //    }
 
     @Override
-    public Set<Name> paths() {
+    public Set<Name> names() {
 
-        return args.stream().flatMap(v -> v.paths().stream())
+        return args.stream().flatMap(v -> v.names().stream())
                 .collect(Collectors.toSet());
     }
 

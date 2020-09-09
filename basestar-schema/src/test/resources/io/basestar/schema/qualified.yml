@@ -1,3 +1,5 @@
+$version: LATEST
+
 source.A:
   properties:
     target:

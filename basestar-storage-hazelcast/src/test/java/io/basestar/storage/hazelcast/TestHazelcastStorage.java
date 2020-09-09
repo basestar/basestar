@@ -20,7 +20,6 @@ package io.basestar.storage.hazelcast;
  * #L%
  */
 
-import com.google.common.collect.Multimap;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
@@ -29,7 +28,6 @@ import io.basestar.storage.Storage;
 import io.basestar.storage.TestStorage;
 import io.basestar.storage.hazelcast.serde.PortableSchemaFactory;
 
-import java.util.Map;
 import java.util.UUID;
 
 
@@ -54,7 +52,7 @@ public class TestHazelcastStorage extends TestStorage {
     }
 
     @Override
-    protected Storage storage(final Namespace namespace, final Multimap<String, Map<String, Object>> data) {
+    protected Storage storage(final Namespace namespace) {
 
         final String suffix = "-" + UUID.randomUUID().toString();
 
@@ -128,8 +126,6 @@ public class TestHazelcastStorage extends TestStorage {
                 .setStrategy(strategy)
                 .setSchemaFactory(recordFactory)
                 .build();
-
-        writeAll(storage, namespace, data);
 
         return storage;
     }

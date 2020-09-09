@@ -6,7 +6,6 @@ User:
       type:
         string:
           pattern: email
-        required: true
         visibility:
           expression: this.id == caller.id
     owner:

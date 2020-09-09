@@ -1,0 +1,40 @@
+$version: LATEST
+
+Constrained:
+  properties:
+    name:
+      type: string
+      constraints:
+        - size:
+            min: 1
+            max: 10
+          message: "full size"
+#          when: this.x == 5
+        - size: 50
+          message: "short size"
+        - min:
+            value: 20
+            exclusive: true
+          message: "full min"
+        - min: 10
+          message: "short min"
+        - max:
+            value: 200
+            exclusive: true
+          message: "full max"
+        - max: 100
+          message: "short max"
+        - pattern:
+            regex: "[\\w\\d]+"
+            flags:
+              - CASE_INSENSITIVE
+          message: "full pattern"
+        - pattern: "[\\w\\d]*"
+          message: "short pattern"
+        - assert:
+            expression: "value != 1"
+          message: "full assert"
+        - assert: "value != 2"
+          message: "short assert"
+        - pattern: "[^\\s]+"
+

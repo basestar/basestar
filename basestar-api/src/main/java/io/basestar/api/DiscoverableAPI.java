@@ -20,13 +20,15 @@ package io.basestar.api;
  * #L%
  */
 
+import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import io.basestar.util.Nullsafe;
 import io.swagger.v3.oas.models.OpenAPI;
 
+import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Supplier;
 
+@SuppressWarnings("Guava")
 public class DiscoverableAPI implements API {
 
     private final API api;
@@ -39,11 +41,11 @@ public class DiscoverableAPI implements API {
     DiscoverableAPI(final API api, final String path) {
 
         this.api = api;
-        this.path = Nullsafe.option(path, "/api");
+        this.path = Nullsafe.orDefault(path, "/api");
     }
 
     @Override
-    public CompletableFuture<APIResponse> handle(final APIRequest request) {
+    public CompletableFuture<APIResponse> handle(final APIRequest request) throws IOException {
 
         if(request.getPath().equals(path)) {
             return openApi().thenApply(v -> APIResponse.success(request, v));

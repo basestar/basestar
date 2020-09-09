@@ -20,7 +20,10 @@ package io.basestar.util;
  * #L%
  */
 
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BinaryOperator;
 
 public class CompletableFutures {
 
@@ -39,5 +42,22 @@ public class CompletableFutures {
         final CompletableFuture<T> future = new CompletableFuture<>();
         future.completeExceptionally(err);
         return future;
+    }
+
+    public static CompletableFuture<Void> allOf(final List<? extends CompletableFuture<?>> futures) {
+
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]));
+    }
+
+    public static <T> CompletableFuture<T> allOf(final T identity, final BinaryOperator<T> accumulator, final List<CompletableFuture<T>> futures) {
+
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]))
+                .thenApply(ignored -> futures.stream().map(v -> v.getNow(null)).reduce(identity, accumulator));
+    }
+
+    public static <T> CompletableFuture<Optional<T>> allOf(final BinaryOperator<T> accumulator, final List<CompletableFuture<T>> futures) {
+
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]))
+                .thenApply(ignored -> futures.stream().map(v -> v.getNow(null)).reduce(accumulator));
     }
 }

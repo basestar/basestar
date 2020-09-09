@@ -31,6 +31,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.UUID;
 
 public class TestRequests {
 
@@ -64,7 +65,8 @@ public class TestRequests {
     public static APIRequest request(final APIRequest.Method method, final String path, final Multimap<String, String> query, final Multimap<String, String> headers, final Object body) {
 
         final Multimap<String, String> requestHeaders = HashMultimap.create();
-        headers.forEach((k, v) -> requestHeaders.put(k.toLowerCase(), v));
+        headers.entries().forEach(e -> requestHeaders.put(e.getKey().toLowerCase(), e.getValue()));
+        final String requestId = UUID.randomUUID().toString();
         return new APIRequest() {
             @Override
             public Caller getCaller() {
@@ -104,6 +106,12 @@ public class TestRequests {
                 } else {
                     return null;
                 }
+            }
+
+            @Override
+            public String getRequestId() {
+
+                return requestId;
             }
         };
     }

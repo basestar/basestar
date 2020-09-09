@@ -25,13 +25,13 @@ import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.Reserved;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
-import io.basestar.storage.util.Pager;
-import io.basestar.util.PagedList;
-import io.basestar.util.PagingToken;
+import io.basestar.storage.Versioning;
+import io.basestar.util.Name;
+import io.basestar.util.Page;
+import io.basestar.util.Pager;
 import io.basestar.util.Sort;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -41,11 +41,12 @@ import software.amazon.awssdk.services.cognitoidentityprovider.model.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.WithoutHistory, Storage.WithoutAggregate {
+public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.WithoutHistory, Storage.WithoutAggregate, Storage.WithoutExpand, Storage.WithoutRepair {
 
     private static final String DESCRIPTION_KEY = "description";
 
@@ -79,7 +80,7 @@ public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.W
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
+    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
         final String userPoolId = strategy.getUserPoolId(schema);
         return client.getGroup(GetGroupRequest.builder()
@@ -90,7 +91,7 @@ public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.W
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
+    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         return ImmutableList.of(
                 (count, token, stats) -> {
@@ -101,19 +102,19 @@ public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.W
                             .nextToken(decodePaging(token))
                             .build()).thenApply(response -> {
                         final List<GroupType> groups = response.groups();
-                        return new PagedList<>(groups.stream().map(this::fromGroup)
+                        return new Page<>(groups.stream().map(this::fromGroup)
                                 .collect(Collectors.toList()), encodePaging(response.nextToken()));
 
                     });
                 });
     }
 
-    private String decodePaging(final PagingToken token) {
+    private String decodePaging(final Page.Token token) {
 
         return null;
     }
 
-    private PagingToken encodePaging(final String s) {
+    private Page.Token encodePaging(final String s) {
 
         return null;
     }
@@ -125,7 +126,7 @@ public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.W
     }
 
     @Override
-    public WriteTransaction write(final Consistency consistency) {
+    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
         return new WriteTransaction() {
 
@@ -205,7 +206,7 @@ public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.W
     private Map<String, Object> fromGroup(final GroupType group) {
 
         return ImmutableMap.of(
-                Reserved.ID, group.groupName(),
+                ObjectSchema.ID, group.groupName(),
                 DESCRIPTION_KEY, group.description()
         );
     }

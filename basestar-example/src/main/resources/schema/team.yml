@@ -19,14 +19,14 @@ Team:
   permissions:
     read:
       expression: this.owner.id == caller.id
-        || this.id in caller.invites.map(t -> t.team.id)
-        || this.id in caller.teams.map(t -> t.team.id)
+        || this.id in caller.invites.map(t => t.team.id)
+        || this.id in caller.teams.map(t => t.team.id)
       expand:
         - caller.invites
         - caller.teams
     update:
       expression: (before.owner.id == caller.id && after.owner.id == before.owner.id)
-        || before.users.anyMatch(u -> u.id == caller.id && u.permissions.contains("UPDATE"))
+        || before.users.anyMatch(u => u.id == caller.id && u.permissions.contains("UPDATE"))
       expand:
         - before.users
     delete:
@@ -68,22 +68,22 @@ TeamUser:
 
   permissions:
     read:
-      expression: this.id in caller.teams.map(t -> t.team.id)
+      expression: this.id in caller.teams.map(t => t.team.id)
       expand:
         - caller.teams
     create:
       expression: after.user.id == caller.id
-#        && after.team.invites.anyMatch(i -> i.user.id == after.user.id && i.team.id == after.team.id && i.permissions.containsAll(after.permissions))
+#        && after.team.invites.anyMatch(i => i.user.id == after.user.id && i.team.id == after.team.id && i.permissions.containsAll(after.permissions))
       expand:
         - after.team.invites
     update:
       expression: before.team.owner.id == caller.id
-        || before.team.users.anyMatch(u -> u.user.id == caller.id && u.project.id && u.permissions.contains("UPDATE"))
+        || before.team.users.anyMatch(u => u.user.id == caller.id && u.project.id && u.permissions.contains("UPDATE"))
       expand:
         - before.team.users
     delete:
       expression: before.team.owner.id == caller.id
-        || before.team.users.anyMatch(u -> u.user.id == caller.id && u.project.id && u.permissions.contains("UPDATE"))
+        || before.team.users.anyMatch(u => u.user.id == caller.id && u.project.id && u.permissions.contains("UPDATE"))
       expand:
         - before.team.users
 
@@ -118,23 +118,23 @@ TeamInvite:
 
   permissions:
     read:
-      expression: this.team.id in caller.teams.map(t -> t.id)
-        || this.team.id in caller.invites.map(t -> t.team.id)
+      expression: this.team.id in caller.teams.map(t => t.id)
+        || this.team.id in caller.invites.map(t => t.team.id)
       expand:
         - caller.teams
         - caller.invites
     create:
       expression: after.team.owner.id == caller.id
-        || after.team.users.anyMatch(u -> u.id == caller.id && u.permissions.contains("UPDATE"))
+        || after.team.users.anyMatch(u => u.id == caller.id && u.permissions.contains("UPDATE"))
       expand:
         - after.team.users
     update:
       expression: before.team.owner.id == caller.id
-        || before.team.users.anyMatch(u -> u.id == caller.id && u.permissions.contains("UPDATE"))
+        || before.team.users.anyMatch(u => u.id == caller.id && u.permissions.contains("UPDATE"))
       expand:
         - before.team.users
     delete:
       expression: before.team.owner.id == caller.id
-        || before.team.users.anyMatch(u -> u.id == caller.id && u.permissions.contains("UPDATE"))
+        || before.team.users.anyMatch(u => u.id == caller.id && u.permissions.contains("UPDATE"))
       expand:
         - before.team.users

@@ -24,16 +24,16 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
-import io.basestar.schema.*;
+import io.basestar.schema.Consistency;
+import io.basestar.schema.Instance;
+import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.Property;
 import io.basestar.schema.use.*;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
-import io.basestar.storage.util.Pager;
-import io.basestar.util.Name;
-import io.basestar.util.PagedList;
-import io.basestar.util.PagingToken;
-import io.basestar.util.Sort;
+import io.basestar.storage.Versioning;
+import io.basestar.util.*;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
@@ -41,22 +41,22 @@ import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityPr
 import software.amazon.awssdk.services.cognitoidentityprovider.model.*;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.WithoutHistory, Storage.WithoutAggregate {
+public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.WithoutHistory, Storage.WithoutAggregate, Storage.WithoutExpand, Storage.WithoutRepair {
+
+    public static final int MAX_PAGE_SIZE = 50;
 
     private static final String CUSTOM_ATTR_PREFIX = "custom:";
 
     private static final Set<String> REQUIRED_ATTRS = ImmutableSet.of(
             "address", "birthdate", "email", "family_name", "gender", "given_name", "locale", "middle_name",
             "name", "nickname", "phone_number", "picture", "preferred_username", "profile", "updated_at",
-            "website", "zoneinfo"
+            "username", "website", "zoneinfo"
     );
 
     private final CognitoIdentityProviderAsyncClient client;
@@ -89,7 +89,7 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id) {
+    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
         final String userPoolId = strategy.getUserPoolId(schema);
         return client.adminGetUser(AdminGetUserRequest.builder()
@@ -111,7 +111,7 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort) {
+    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         return ImmutableList.of(
                 (count, token, stats) -> {
@@ -122,20 +122,20 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
                             .paginationToken(decodePaging(token))
                             .build()).thenApply(response -> {
                         final List<UserType> users = response.users();
-                        return new PagedList<>(users.stream().map(v -> fromUser(schema, v))
+                        return new Page<>(users.stream().map(v -> fromUser(schema, v))
                                 .collect(Collectors.toList()), encodePaging(response.paginationToken()));
                     });
                 });
     }
 
-    private String decodePaging(final PagingToken token) {
+    private String decodePaging(final Page.Token token) {
 
-        return null;
+        return Nullsafe.map(token, Page.Token::toString);
     }
 
-    private PagingToken encodePaging(final String s) {
+    private Page.Token encodePaging(final String token) {
 
-        return null;
+        return Nullsafe.map(token, Page.Token::new);
     }
 
     @Override
@@ -145,7 +145,7 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
     }
 
     @Override
-    public WriteTransaction write(final Consistency consistency) {
+    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
         return new WriteTransaction() {
 
@@ -222,7 +222,7 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
         final List<AttributeType> result = new ArrayList<>();
         final Long version = Instance.getVersion(after);
         if(version != null) {
-            result.add(AttributeType.builder().name(CUSTOM_ATTR_PREFIX + Reserved.VERSION).value(Long.toString(version)).build());
+            result.add(AttributeType.builder().name(CUSTOM_ATTR_PREFIX + ObjectSchema.VERSION).value(Long.toString(version)).build());
         }
         for(final Map.Entry<String, Property> entry : schema.getProperties().entrySet()) {
             final String name = entry.getKey();
@@ -241,12 +241,6 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
     public Map<Name, String> attributes(final Name path, final Use<?> use, final Object value) {
 
         return use.visit(new Use.Visitor.Defaulting<Map<Name, String>>() {
-
-            @Override
-            public Map<Name, String> visitDefault(final Use<?> type) {
-
-                throw new UnsupportedOperationException("Type " + type.code() + " not supported");
-            }
 
             @Override
             public Map<Name, String> visitBoolean(final UseBoolean type) {
@@ -282,11 +276,11 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
             }
 
             @Override
-            public Map<Name, String> visitRef(final UseObject type) {
+            public Map<Name, String> visitObject(final UseObject type) {
 
                 final Instance instance = type.create(value);
                 if(instance != null) {
-                    return ImmutableMap.of(path.with(Reserved.ID), Instance.getId(instance));
+                    return ImmutableMap.of(path.with(ObjectSchema.ID), Instance.getId(instance));
                 } else {
                     return ImmutableMap.of();
                 }
@@ -314,10 +308,10 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
         Instance.setSchema(result, schema.getQualifiedName());
         Instance.setId(result, username);
         if(created != null) {
-            Instance.setCreated(result, LocalDateTime.ofInstant(created, ZoneOffset.UTC));
+            Instance.setCreated(result, created);
         }
         if(updated != null) {
-            Instance.setUpdated(result, LocalDateTime.ofInstant(updated, ZoneOffset.UTC));
+            Instance.setUpdated(result, updated);
         }
         final Map<Name, String> attrs = new HashMap<>();
         attributes.forEach(attr -> {
@@ -329,7 +323,7 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
             }
             attrs.put(Name.parse(name), attr.value());
         });
-        final String version = attrs.get(Name.of(Reserved.VERSION));
+        final String version = attrs.get(Name.of(ObjectSchema.VERSION));
         if(version == null) {
             Instance.setVersion(result, 1L);
         } else {
@@ -351,13 +345,7 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
         return use.visit(new Use.Visitor.Defaulting<Object>() {
 
             @Override
-            public Object visitDefault(final Use<?> type) {
-
-                throw new UnsupportedOperationException("Type " + type.code() + " not supported");
-            }
-
-            @Override
-            public Object visitScalar(final UseScalar<?> type) {
+            public <T> Object visitScalar(final UseScalar<T> type) {
 
                 return type.create(attrs.get(path));
             }
@@ -377,9 +365,9 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
             }
 
             @Override
-            public Map<String, Object> visitRef(final UseObject type) {
+            public Map<String, Object> visitObject(final UseObject type) {
 
-                final String id = attrs.get(path.with(Reserved.ID));
+                final String id = attrs.get(path.with(ObjectSchema.ID));
                 return id == null ? null : ObjectSchema.ref(id);
             }
         });

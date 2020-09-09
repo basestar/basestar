@@ -31,13 +31,20 @@ import io.basestar.event.Emitter;
 import io.basestar.event.Event;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.expression.compare.Eq;
+import io.basestar.expression.constant.Constant;
+import io.basestar.expression.constant.NameConstant;
+import io.basestar.expression.logical.Or;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Namespace;
+import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.Reserved;
+import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.schema.util.Ref;
 import io.basestar.storage.MemoryStorage;
 import io.basestar.storage.Storage;
 import io.basestar.util.Name;
-import io.basestar.util.PagedList;
+import io.basestar.util.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -247,11 +254,11 @@ public class TestDatabaseServer {
         final Map<String, Object> readB = database.read(caller, INDEXED, idB).get();
         assertEquals(createB, readB);
 
-        final PagedList<Instance> queryA = database.query(caller, INDEXED, Expression.parse("value == 'a'")).get();
+        final Page<Instance> queryA = database.query(caller, INDEXED, Expression.parse("value == 'a'")).get();
         assertEquals(1, queryA.size());
         assertEquals(readA, queryA.get(0));
 
-        final PagedList<Instance> queryB = database.query(caller, INDEXED, Expression.parse("value == 'b'")).get();
+        final Page<Instance> queryB = database.query(caller, INDEXED, Expression.parse("value == 'b'")).get();
         assertEquals(1, queryB.size());
         assertEquals(readB, queryB.get(0));
     }
@@ -272,7 +279,7 @@ public class TestDatabaseServer {
         final Map<String, Object> readA = database.read(caller, MULTI_INDEXED, idA).get();
         assertEquals(createA, readA);
 
-        final PagedList<Instance> queryA = database.query(caller, MULTI_INDEXED, Expression.parse("v == 'a' for any v of value")).get();
+        final Page<Instance> queryA = database.query(caller, MULTI_INDEXED, Expression.parse("v == 'a' for any v of value")).get();
         assertEquals(1, queryA.size());
         assertEquals(readA, queryA.get(0));
     }
@@ -295,7 +302,7 @@ public class TestDatabaseServer {
         final Map<String, Object> readA = database.read(caller, MAP_MULTI_INDEXED, idA).get();
         assertEquals(createA, readA);
 
-        final PagedList<Instance> queryA = database.query(caller, MAP_MULTI_INDEXED, Expression.parse("v.key == 'a' for any v of value")).get();
+        final Page<Instance> queryA = database.query(caller, MAP_MULTI_INDEXED, Expression.parse("v.key == 'a' for any v of value")).get();
         assertEquals(1, queryA.size());
         assertEquals(readA, queryA.get(0));
     }
@@ -322,17 +329,19 @@ public class TestDatabaseServer {
                 .id(idA).expand(Name.parseSet("target")).build()).get();
         assertEquals(createRefA, readA.get("target"));
 
-        final PagedList<Instance> linkA = database.queryLink(caller, REF_TARGET, refA, "sources").get();
+        final Page<Instance> linkA = database.queryLink(caller, REF_TARGET, refA, "sources").get();
         assertEquals(1, linkA.size());
         assertEquals(createA, linkA.get(0));
 
         final Map<String, Object> expandLinkA = database.read(caller, ReadOptions.builder().schema(REF_TARGET)
-                .id(refA).expand(Name.parseSet("sources")).build()).get();
-        final PagedList<?> source = (PagedList<?>)expandLinkA.get("sources");
-        assertEquals(1, source.size());
-        assertEquals(createA, source.get(0));
+                .id(refA).expand(Name.parseSet("sources,source")).build()).get();
+        final Page<?> sources = (Page<?>)expandLinkA.get("sources");
+        final Object source = expandLinkA.get("source");
+        assertEquals(1, sources.size());
+        assertEquals(createA, sources.get(0));
+        assertEquals(createA, source);
 
-        final PagedList<Instance> expandQuery = database.query(caller, QueryOptions.builder()
+        final Page<Instance> expandQuery = database.query(caller, QueryOptions.builder()
                 .schema(REF_SOURCE)
                 .expression(Expression.parse("target.id == \"" + refA + "\""))
                 .expand(ImmutableSet.of(Name.of("target")))
@@ -344,6 +353,7 @@ public class TestDatabaseServer {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     public void nestedRef() throws Exception {
 
         final String idA = "a";
@@ -361,7 +371,7 @@ public class TestDatabaseServer {
         )).expand(Name.parseSet("target")).build()).get();
         // Check reading refs doesn't wipe properties
         assertNotNull(createRefB.get("value"));
-        assertEquals(createRefA, createRefB.get("target"));
+        assertEquals(createRefA, Instance.without((Map<String, Object>)createRefB.get("target"), Reserved.META));
 
         //System.err.println(Path.parseSet("target.target"));
 
@@ -373,7 +383,7 @@ public class TestDatabaseServer {
                         "id", idB
                 )
         )).expand(Name.parseSet("target.target")).build()).get();
-        assertEquals(createRefB, createRefC.get("target"));
+        assertEquals(createRefB, Instance.without((Map<String, Object>)createRefC.get("target"), Reserved.META));
     }
 
     @Test
@@ -456,15 +466,15 @@ public class TestDatabaseServer {
         assertEquals(DOG, readB.getSchema());
         assertEquals("Labrador", readB.get("breed"));
 
-        final PagedList<Instance> queryA = database.query(caller, ANIMAL, Expression.parse("name == 'Pippa'")).join();
+        final Page<Instance> queryA = database.query(caller, ANIMAL, Expression.parse("name == 'Pippa'")).join();
         assertEquals(1, queryA.size());
         assertEquals(CAT, queryA.get(0).getSchema());
         assertEquals("Bengal", queryA.get(0).get("breed"));
 
-        final PagedList<Instance> queryB = database.query(caller, ANIMAL, Expression.parse("class == 'Mammal'")).join();
+        final Page<Instance> queryB = database.query(caller, ANIMAL, Expression.parse("class == 'Mammal'")).join();
         assertEquals(2, queryB.size());
 
-        final PagedList<Instance> queryC = database.query(caller, CAT, Expression.parse("class == 'Mammal'")).join();
+        final Page<Instance> queryC = database.query(caller, CAT, Expression.parse("class == 'Mammal'")).join();
         assertEquals(1, queryC.size());
 
         final String idC = UUID.randomUUID().toString();
@@ -491,7 +501,7 @@ public class TestDatabaseServer {
     @Test
     public void batch() {
 
-        final Map<String, Instance> results = database.transaction(caller, TransactionOptions.builder()
+        final Map<String, Instance> results = database.batch(caller, BatchOptions.builder()
                 .action("a", CreateOptions.builder()
                         .schema(SIMPLE)
                         .expressions(ImmutableMap.of(
@@ -524,7 +534,7 @@ public class TestDatabaseServer {
         when(caller.getSchema()).thenReturn(USER);
         when(caller.getId()).thenReturn("test");
 
-        final Map<String, Instance> ok = database.transaction(caller, TransactionOptions.builder()
+        final Map<String, Instance> ok = database.batch(caller, BatchOptions.builder()
                 .action("team", CreateOptions.builder()
                         .schema(TEAM)
                         .id("t1")
@@ -541,7 +551,7 @@ public class TestDatabaseServer {
         assertEquals(2, ok.size());
 
         assertThrows(PermissionDeniedException.class, cause(() ->
-                database.transaction(caller, TransactionOptions.builder()
+                database.batch(caller, BatchOptions.builder()
                         .action("team", CreateOptions.builder()
                                 .schema(TEAM)
                                 .id("t2")
@@ -619,7 +629,7 @@ public class TestDatabaseServer {
     @Test
     public void expand() throws Exception {
 
-        final Map<String, Instance> ok = database.transaction(Caller.SUPER, TransactionOptions.builder()
+        final Map<String, Instance> ok = database.batch(Caller.SUPER, BatchOptions.builder()
                 .action("team", CreateOptions.builder()
                         .schema(TEAM)
                         .id("t1")
@@ -644,7 +654,7 @@ public class TestDatabaseServer {
 
         database.onObjectCreated(ObjectCreatedEvent.of(TEAM, "t1", ok.get("team"))).join();
 
-        final RefQueryEvent queryEvent = RefQueryEvent.of(Ref.of(TEAM, "t1"), TEAM_MEMBER, Expression.parse("team.id == 't1'").bind(Context.init()));
+        final RefQueryEvent queryEvent = RefQueryEvent.of(Ref.of(TEAM, "t1"), TEAM_MEMBER, Expression.parse("team.id == 't1' || team.parent.id == 't1'").bind(Context.init()));
 
         final ArgumentCaptor<Event> queryCaptor = ArgumentCaptor.forClass(Event.class);
         verify(emitter, times(4)).emit(queryCaptor.capture());
@@ -662,7 +672,7 @@ public class TestDatabaseServer {
     @Test
     public void refRefresh() throws Exception {
 
-        final Map<String, Instance> init = database.transaction(Caller.SUPER, TransactionOptions.builder()
+        final Map<String, Instance> init = database.batch(Caller.SUPER, BatchOptions.builder()
                 .action("team", CreateOptions.builder()
                         .schema(TEAM)
                         .id("t1")
@@ -681,7 +691,7 @@ public class TestDatabaseServer {
         final Instance member = init.get("member");
         assertNotNull(member);
 
-        final Map<String, Instance> update = database.transaction(Caller.SUPER, TransactionOptions.builder()
+        final Map<String, Instance> update = database.batch(Caller.SUPER, BatchOptions.builder()
                 .action("team", UpdateOptions.builder()
                         .schema(TEAM)
                         .id("t1")
@@ -690,21 +700,134 @@ public class TestDatabaseServer {
                         ))
                         .build())
                 .build()).get();
-        assertEquals(2, init.size());
+        assertEquals(1, update.size());
 
         final RefRefreshEvent refreshEvent = RefRefreshEvent.of(Ref.of(TEAM, "t1"), TEAM_MEMBER, member.getId());
 
-        database.onRefRefresh(refreshEvent).join();
+        database.onRefRefresh(refreshEvent).get();
 
-        final PagedList<Instance> get = database.query(Caller.SUPER, TEAM_MEMBER, Expression.parse("team.name == 'Test'")).join();
+        final Page<Instance> get = database.query(Caller.SUPER, TEAM_MEMBER, Expression.parse("team.name == 'Test'")).get();
         assertEquals(1, get.size());
     }
+
+    @Test
+    public void deepExpandRefresh() throws Exception {
+
+        final Instance teamA = database.create(Caller.SUPER, CreateOptions.builder()
+                .schema(TEAM)
+                .data(ImmutableMap.of(
+                        "name", "a"
+                ))
+                .build()).get();
+
+        final Instance teamB = database.create(Caller.SUPER, CreateOptions.builder()
+                .schema(TEAM)
+                .data(ImmutableMap.of(
+                        "name", "b",
+                        "parent", ObjectSchema.ref(teamA.getId())
+                ))
+                .build()).get();
+
+        final Instance member = database.create(Caller.SUPER, CreateOptions.builder()
+                .schema(TEAM_MEMBER)
+                .data(ImmutableMap.of(
+                        "team", ObjectSchema.ref(teamB.getId())
+                ))
+                .build()).get();
+
+        final Instance updateTeamA = database.update(Caller.SUPER, UpdateOptions.builder()
+                .schema(TEAM)
+                .id(teamA.getId())
+                .data(ImmutableMap.of(
+                        "name", "a2"
+                ))
+                .build()).get();
+
+        final ObjectUpdatedEvent updated = ObjectUpdatedEvent.of(TEAM, teamA.getId(), 1L, teamA, updateTeamA);
+        database.onObjectUpdated(updated).get();
+
+        database.onRefQuery(RefQueryEvent.of(Ref.of(TEAM, teamA.getId()), TEAM_MEMBER, new Or(
+                new Eq(new NameConstant(Name.parse("team.id")), new Constant(teamA.getId())),
+                new Eq(new NameConstant(Name.parse("team.parent.id")), new Constant(teamA.getId()))))).get();
+        database.onRefRefresh(RefRefreshEvent.of(Ref.of(TEAM, teamA.getId()), TEAM_MEMBER, member.getId()));
+
+        final Instance get = database.read(Caller.SUPER, ReadOptions.builder()
+                .schema(TEAM_MEMBER)
+                .id(member.getId())
+                .expand(Name.parseSet("team.parent"))
+                .build()).get();
+
+        assertNotNull(get);
+        assertEquals("a2", Instance.get(get, Name.parse("team.parent.name")));
+    }
+
+//    @Test
+//    public void createValidation() throws Exception {
+//
+//        database.create(Caller.SUPER, CreateOptions.builder()
+//                .schema(TEAM)
+//                .id("test")
+//                .data(ImmutableMap.of(
+//                        "schema", TEAM_MEMBER.toString(),
+//                        "id", "test2"
+//                ))
+//                .build()).get();
+//    }
+//
+//    @Test
+//    public void updateValidation() throws Exception {
+//
+//        database.create(Caller.SUPER, CreateOptions.builder()
+//                .schema(TEAM)
+//                .id("test")
+//                .data(ImmutableMap.of(
+//                ))
+//                .build()).get();
+//
+//        database.update(Caller.SUPER, UpdateOptions.builder()
+//                .schema(TEAM)
+//                .id("test")
+//                .data(ImmutableMap.of(
+//                        "schema", TEAM_MEMBER.toString(),
+//                        "id", "test2"
+//                ))
+//                .build()).get();
+//    }
+
+//    @Test
+//    public void deleteBroken() throws Exception {
+//
+//        final ObjectSchema schema = database.objectSchema(TEAM);
+//
+//        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
+//                .createObject(schema, "test", ImmutableMap.of("schema", schema.getName(), "id", "test2"))
+//                .write().get();
+//
+//        final Instance getBefore = database.read(Caller.SUPER, ReadOptions.builder()
+//                .schema(TEAM)
+//                .id("test")
+//                .build()).get();
+//
+//        assertNotNull(getBefore);
+//
+//        database.delete(Caller.SUPER, DeleteOptions.builder()
+//                .schema(TEAM)
+//                .id("test")
+//                .build()).get();
+//
+//        final Instance getAfter = database.read(Caller.SUPER, ReadOptions.builder()
+//                .schema(TEAM)
+//                .id("test")
+//                .build()).get();
+//
+//        assertNull(getAfter);
+//    }
 
     @Test
     @Disabled
     public void aggregate() throws Exception {
 
-        database.transaction(Caller.SUPER, TransactionOptions.builder()
+        database.batch(Caller.SUPER, BatchOptions.builder()
                 .action("a", CreateOptions.builder()
                         .schema(TEAM_MEMBER)
                         .data(ImmutableMap.of(
@@ -715,7 +838,7 @@ public class TestDatabaseServer {
                         )).build())
                 .build()).get();
 
-        final PagedList<Instance> results = database.query(Caller.SUPER, QueryOptions.builder()
+        final Page<Instance> results = database.query(Caller.SUPER, QueryOptions.builder()
                 .schema(Name.of("TeamMemberStats"))
                 .build()).get();
 
@@ -780,6 +903,32 @@ public class TestDatabaseServer {
                         "goodbye", "blue sky"
                 )
         ), deepMerged);
+    }
+
+    @Test
+    public void testInvalidRefError() {
+
+        assertThrows(ConstraintViolationException.class, cause(() -> {
+            database.create(Caller.SUPER, CreateOptions.builder()
+                    .schema(REF_SOURCE)
+                    .data(ImmutableMap.of(
+                            "target", "x"
+                    ))
+                    .build()).get();
+        }));
+    }
+
+    @Test
+    public void testInvalidEnumError() {
+
+        assertThrows(ConstraintViolationException.class, cause(() -> {
+            database.create(Caller.SUPER, CreateOptions.builder()
+                    .schema(WITH_ENUM)
+                    .data(ImmutableMap.of(
+                            "value", "C"
+                    ))
+                    .build()).get();
+        }));
     }
 
 //    @Test

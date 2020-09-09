@@ -20,6 +20,8 @@ package io.basestar.schema;
  * #L%
  */
 
+import io.basestar.util.Name;
+
 public class Reserved {
 
     public static final String DELIMITER = "/";
@@ -28,39 +30,34 @@ public class Reserved {
 
     public static final String META_PREFIX = "@";
 
-    public static final String ID = "id";
-
-    public static final String SCHEMA = "schema";
-
-    public static final String CREATED = "created";
-
-    public static final String UPDATED = "updated";
-
-    public static final String VERSION = "version";
+    public static final String META = "@meta";
 
     public static final String DELETED = Reserved.PREFIX + "deleted";
 
-    public static final String HASH = "hash";
-
     public static final String THIS = "this";
+
+    public static final String VALUE = "value";
+
+    public static final Name THIS_NAME = Name.of(THIS);
+
+    public static final Name VALUE_NAME = Name.of(VALUE);
 
     public static boolean isReserved(final String name) {
 
-        if(name.startsWith(PREFIX) || (name.indexOf('\0') != -1)) {
+        if(name.contains(PREFIX) || name.startsWith(META_PREFIX) || (name.indexOf('\0') != -1)) {
             return true;
         } else {
             switch (name) {
-//                case ID:
-//                case SCHEMA:
-//                case CREATED:
-//                case UPDATED:
-//                case VERSION:
-//                case HASH:
                 case THIS:
                     return true;
                 default:
                     return false;
             }
         }
+    }
+
+    public static boolean isMeta(final String name) {
+
+        return name.startsWith(META_PREFIX);
     }
 }

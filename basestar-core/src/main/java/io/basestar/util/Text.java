@@ -26,11 +26,15 @@ import com.google.common.collect.ImmutableSet;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 public class Text {
+
+    private static Pattern NUMERIC = Pattern.compile("-?\\d+(\\.\\d+)?");
+
+    private static Pattern INTEGER = Pattern.compile("-?\\d+");
 
     private static final Set<String> PLURAL_ES = ImmutableSet.of("s", "sh", "ch", "x", "z", "o");
 
@@ -145,12 +149,37 @@ public class Text {
 
         if(str.isEmpty()) {
             return Stream.empty();
+        } else if(str.contains(" ")) {
+            // Probably sentence case
+            return Streams.stream(Splitter.on(Pattern.compile("[^A-Za-z0-9]+")).omitEmptyStrings().split(str));
         } else if(str.contains("-")) {
-            return StreamSupport.stream(Splitter.on("-").split(str).spliterator(), false);
+            // Probably kebab-case
+            return Streams.stream(Splitter.on("-").omitEmptyStrings().split(str));
         } else if(str.contains("_")) {
-            return StreamSupport.stream(Splitter.on("_").split(str).spliterator(), false);
+            // Probably snake-case
+            return Streams.stream(Splitter.on("_").omitEmptyStrings().split(str));
         } else {
+            // Probably some version of camelCase
             return Arrays.stream(str.split("(?<!(^|[A-Z]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])"));
+        }
+    }
+
+    public static boolean isNumber(final String str) {
+
+        return NUMERIC.matcher(str).matches();
+    }
+
+    public static boolean isInteger(final String str) {
+
+        return INTEGER.matcher(str).matches();
+    }
+
+    public static Number parseNumber(final String str) {
+
+        if(str.contains(".") || str.contains("e")) {
+            return Double.parseDouble(str);
+        } else {
+            return Long.parseLong(str);
         }
     }
 }

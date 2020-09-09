@@ -25,21 +25,15 @@ import io.basestar.database.event.ObjectCreatedEvent;
 import io.basestar.database.options.CreateOptions;
 import io.basestar.event.Event;
 import io.basestar.expression.Context;
-import io.basestar.schema.Constraint;
-import io.basestar.schema.Instance;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.Permission;
+import io.basestar.schema.*;
 import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.RequiredArgsConstructor;
 
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.time.Instant;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
@@ -84,7 +78,7 @@ public class CreateAction implements Action {
 
         final Map<String, Object> initial = new HashMap<>(schema.create(data));
 
-        final LocalDateTime now = LocalDateTime.now();
+        final Instant now = Instant.now();
 
         // FIXME: split validation so that required validation can be applied here
         // FIXME: or make evaluation (including id evaluation) respect dependencies
@@ -107,7 +101,7 @@ public class CreateAction implements Action {
         Instance.setUpdated(initial, now);
         Instance.setHash(initial, schema.hash(initial));
 
-        final Instance evaluated = schema.evaluateProperties(context.with(CommonVars.VAR_THIS, initial), new Instance(initial));
+        final Instance evaluated = schema.evaluateProperties(context.with(CommonVars.VAR_THIS, initial), Collections.emptySet(), new Instance(initial));
 
         final Set<Constraint.Violation> violations = schema.validate(context.with(CommonVars.VAR_THIS, evaluated), evaluated, evaluated);
         if(!violations.isEmpty()) {
@@ -135,8 +129,14 @@ public class CreateAction implements Action {
     public Set<Name> paths() {
 
         // FIXME: shouldn't have to bind here, need to fix multi-part path constants in parser
-        return Nullsafe.option(options.getExpressions()).values().stream()
-                .flatMap(e -> e.bind(Context.init()).paths().stream())
+        return Nullsafe.orDefault(options.getExpressions()).values().stream()
+                .flatMap(e -> e.bind(Context.init()).names().stream())
                 .collect(Collectors.toSet());
+    }
+
+    @Override
+    public Consistency getConsistency() {
+
+        return options.getConsistency();
     }
 }

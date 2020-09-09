@@ -23,6 +23,7 @@ package io.basestar.storage.sql;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
+import io.basestar.jackson.BasestarModule;
 import io.basestar.schema.Index;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
@@ -36,8 +37,8 @@ import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -47,7 +48,7 @@ import java.util.stream.Stream;
 
 public class SQLUtils {
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper objectMapper = new ObjectMapper().registerModule(BasestarModule.INSTANCE);
 
     public static DataType<?> dataType(final Use<?> type) {
 
@@ -84,7 +85,7 @@ public class SQLUtils {
             }
 
             @Override
-            public DataType<?> visitRef(final UseObject type) {
+            public DataType<?> visitObject(final UseObject type) {
 
                 return SQLDataType.LONGVARCHAR;
             }
@@ -128,7 +129,25 @@ public class SQLUtils {
             @Override
             public DataType<?> visitDateTime(final UseDateTime type) {
 
-                return SQLDataType.LOCALDATETIME;
+                return SQLDataType.TIMESTAMP;
+            }
+
+            @Override
+            public DataType<?> visitView(final UseView type) {
+
+                return SQLDataType.LONGVARCHAR;//JSONB;
+            }
+
+            @Override
+            public <T> DataType<?> visitOptional(final UseOptional<T> type) {
+
+                return type.getType().visit(this).nullable(true);
+            }
+
+            @Override
+            public DataType<?> visitAny(final UseAny type) {
+
+                return SQLDataType.LONGVARCHAR;//JSONB;
             }
         });
     }
@@ -169,7 +188,7 @@ public class SQLUtils {
 
             @Override
             @SuppressWarnings("unchecked")
-            public String visitRef(final UseObject type) {
+            public String visitObject(final UseObject type) {
 
                 if(value == null) {
                     return null;
@@ -216,6 +235,12 @@ public class SQLUtils {
             }
 
             @Override
+            public String visitAny(final UseAny type) {
+
+                return toJson(value);
+            }
+
+            @Override
             public byte[] visitBinary(final UseBinary type) {
 
                 return type.create(value);
@@ -231,6 +256,22 @@ public class SQLUtils {
             public Object visitDateTime(final UseDateTime type) {
 
                 return type.create(value);
+            }
+
+            @Override
+            public Object visitView(final UseView type) {
+
+                return toJson(value);
+            }
+
+            @Override
+            public <T> Object visitOptional(final UseOptional<T> type) {
+
+                if(value == null) {
+                    return null;
+                } else {
+                    return type.getType().visit(this);
+                }
             }
         });
     }
@@ -270,7 +311,7 @@ public class SQLUtils {
             }
 
             @Override
-            public Map<String, Object> visitRef(final UseObject type) {
+            public Map<String, Object> visitObject(final UseObject type) {
 
                 if(value == null) {
                     return null;
@@ -313,13 +354,15 @@ public class SQLUtils {
             @Override
             public <T> Collection<T> visitArray(final UseArray<T> type) {
 
-                return type.create(fromJson(value, new TypeReference<Collection<?>>() {}));
+                final Collection<?> results = fromJson(value, new TypeReference<Collection<?>>() {});
+                return type.create(results);
             }
 
             @Override
             public <T> Collection<T> visitSet(final UseSet<T> type) {
 
-                return type.create(fromJson(value, new TypeReference<Collection<?>>() {}));
+                final Collection<?> results = fromJson(value, new TypeReference<Collection<?>>() {});
+                return type.create(results);
             }
 
             @Override
@@ -347,9 +390,31 @@ public class SQLUtils {
             }
 
             @Override
-            public LocalDateTime visitDateTime(final UseDateTime type) {
+            public Instant visitDateTime(final UseDateTime type) {
 
                 return type.create(value);
+            }
+
+            @Override
+            public Object visitView(final UseView type) {
+
+                return type.create(fromJson(value, new TypeReference<Map<String, Object>>() {}));
+            }
+
+            @Override
+            public <T> Object visitOptional(final UseOptional<T> type) {
+
+                if(value == null) {
+                    return null;
+                } else {
+                    return type.getType().visit(this);
+                }
+            }
+
+            @Override
+            public Object visitAny(final UseAny type) {
+
+                return type.create(fromJson(value, new TypeReference<Object>() {}));
             }
         });
     }
@@ -361,7 +426,7 @@ public class SQLUtils {
                         .map(e -> DSL.field(DSL.name(e.getKey()), dataType(e.getValue()))),
                 schema.getProperties().entrySet().stream()
                         .map(e -> DSL.field(DSL.name(e.getKey()),
-                                dataType(e.getValue().getType()).nullable(!e.getValue().isRequired())))
+                                dataType(e.getValue().getType())))
         ).collect(Collectors.toList());
     }
 
@@ -374,18 +439,28 @@ public class SQLUtils {
 //
 //        return Stream.concat(
 //                index.getPartition().stream().map(v -> DSL.field(DSL.name(v.toString()))),
-//                index.getSort().stream().map(v -> DSL.field(DSL.name(v.getPath().toString()))
+//                index.getSort().stream().map(v -> DSL.field(DSL.name(v.getName().toString()))
 //                        .sort(sort(v.getOrder())))
 //        ).collect(Collectors.toList());
 //    }
 
-    public static List<OrderField<?>> indexKeys(final Index index) {
+    public static List<OrderField<?>> indexKeys(final ObjectSchema schema, final Index index) {
 
         return Stream.concat(
-                index.getPartition().stream().map(v -> DSL.field(DSL.name(v.toString()))),
-                index.getSort().stream().map(v -> DSL.field(DSL.name(v.getName().toString()))
+                index.getPartition().stream().map(v -> indexField(schema, index, v)),
+                index.getSort().stream().map(v -> indexField(schema, index, v.getName())
                         .sort(sort(v.getOrder())))
         ).collect(Collectors.toList());
+    }
+
+    private static Field<Object> indexField(final ObjectSchema schema, final Index index, final Name name) {
+
+        // FIXME: BUG: hacky heuristic
+        if(ObjectSchema.ID.equals(name.last())) {
+            return DSL.field(DSL.name(name.withoutLast().toString()));
+        } else {
+            return DSL.field(DSL.name(name.toString()));
+        }
     }
 
     public static List<Field<?>> fields(final ObjectSchema schema, final Index index) {
@@ -421,5 +496,89 @@ public class SQLUtils {
         index.resolvePartitionPaths().forEach(v -> names.add(columnName(v)));
         index.getSort().forEach(v -> names.add(columnName(v.getName())));
         return DSL.primaryKey(names.toArray(new org.jooq.Name[0]));
+    }
+
+    public static Field<?> selectField(final Field<?> field, final Use<?> type) {
+
+        return type.visit(new Use.Visitor.Defaulting<Field<?>>() {
+
+            @Override
+            public <T> Field<?> visitDefault(final Use<T> type) {
+
+                return field;
+            }
+
+            private Field<?> toJson(final Field<?> field) {
+
+                return field.cast(JSON.class);
+            }
+
+            @Override
+            public <V, T extends Collection<V>> Field<?> visitCollection(final UseCollection<V, T> type) {
+
+                return toJson(field);
+            }
+
+            @Override
+            public <V> Field<?> visitMap(final UseMap<V> type) {
+
+                return toJson(field);
+            }
+
+            @Override
+            public Field<?> visitStruct(final UseStruct type) {
+
+                return toJson(field);
+            }
+        });
+    }
+
+    public static <T> Field<T> field(final QueryPart part, final Class<T> type) {
+
+        if(part == null) {
+            return null;
+        } else if(part instanceof Field<?>) {
+            return cast((Field<?>) part, type);
+        } else if(part instanceof Condition){
+            return cast(DSL.field((Condition)part), type);
+        } else {
+            throw new IllegalStateException();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> Field<T> cast(final Field<?> field, final Class<T> type) {
+
+        if(type == Object.class) {
+            return (Field<T>)field;
+        } else {
+            return field.cast(type);
+        }
+    }
+
+    public static Field<?> field(final QueryPart part) {
+
+        if(part == null) {
+            return null;
+        } else if(part instanceof Field<?>) {
+            return (Field<?>)part;
+        } else if(part instanceof Condition){
+            return DSL.field((Condition)part);
+        } else {
+            throw new IllegalStateException();
+        }
+    }
+
+    public static Condition condition(final QueryPart part) {
+
+        if(part == null) {
+            return null;
+        } else if(part instanceof Field<?>) {
+            return DSL.condition(((Field<?>)part).cast(Boolean.class));
+        } else if(part instanceof Condition){
+            return (Condition)part;
+        } else {
+            throw new IllegalStateException();
+        }
     }
 }

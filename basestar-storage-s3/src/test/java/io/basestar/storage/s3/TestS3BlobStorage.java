@@ -20,19 +20,19 @@ package io.basestar.storage.s3;
  * #L%
  */
 
-import com.google.common.collect.Multimap;
 import io.basestar.schema.Namespace;
 import io.basestar.storage.Storage;
 import io.basestar.storage.TestStorage;
 import io.basestar.test.Localstack;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 
 import java.net.URI;
-import java.util.Map;
 import java.util.UUID;
 
+@Disabled
 public class TestS3BlobStorage extends TestStorage {
 
     @BeforeAll
@@ -42,7 +42,7 @@ public class TestS3BlobStorage extends TestStorage {
     }
 
     @Override
-    protected Storage storage(final Namespace namespace, final Multimap<String, Map<String, Object>> data) {
+    protected Storage storage(final Namespace namespace) {
 
         final S3AsyncClient client = S3AsyncClient.builder()
                 .endpointOverride(URI.create(Localstack.S3_ENDPOINT))
@@ -57,8 +57,6 @@ public class TestS3BlobStorage extends TestStorage {
         final Storage storage = S3BlobStorage.builder()
                 .setClient(client).setStrategy(strategy)
                 .build();
-
-        writeAll(storage, namespace, data);
 
         return storage;
     }

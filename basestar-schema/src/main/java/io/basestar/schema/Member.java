@@ -21,6 +21,7 @@ package io.basestar.schema;
  */
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.exception.MissingMemberException;
@@ -30,19 +31,47 @@ import io.basestar.util.Name;
 
 import java.io.Serializable;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 public interface Member extends Named, Described, Serializable, Extendable {
 
     String VAR_VALUE = "value";
 
+    boolean supportsTrivialJoin(Set<Name> expand);
+
     interface Descriptor extends Described, Extendable {
 
+        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         Visibility getVisibility();
+
+        interface Delegating extends Descriptor {
+
+            Descriptor delegate();
+
+            @Override
+            default Visibility getVisibility() {
+
+                return delegate().getVisibility();
+            }
+
+            @Override
+            default String getDescription() {
+
+                return delegate().getDescription();
+            }
+
+            @Override
+            default Map<String, Object> getExtensions() {
+
+                return delegate().getExtensions();
+            }
+        }
     }
 
     interface Builder extends Descriptor {
 
+        Builder setExtensions(Map<String, Object> extensions);
     }
 
     interface Resolver {
@@ -67,6 +96,8 @@ public interface Member extends Named, Described, Serializable, Extendable {
     }
 
     Use<?> getType();
+
+    Optional<Use<?>> layout(Set<Name> expand);
 
     Visibility getVisibility();
 
@@ -114,10 +145,12 @@ public interface Member extends Named, Described, Serializable, Extendable {
         return visibility != null && visibility.isAlwaysHidden();
     }
 
-    default io.swagger.v3.oas.models.media.Schema<?> openApi() {
+    default io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
-        return getType().openApi().description(getDescription());
+        return getType().openApi(expand).description(getDescription());
     }
+
+    Object create(Object value, Set<Name> expand, boolean suppress);
 
     Descriptor descriptor();
 }

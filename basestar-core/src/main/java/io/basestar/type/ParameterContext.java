@@ -20,6 +20,7 @@ package io.basestar.type;
  * #L%
  */
 
+import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import io.basestar.type.has.HasAnnotations;
 import io.basestar.type.has.HasModifiers;
@@ -34,10 +35,10 @@ import java.lang.reflect.Executable;
 import java.lang.reflect.Parameter;
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Supplier;
 
 @Getter
 @Accessors(fluent = true)
+@SuppressWarnings("Guava")
 public class ParameterContext implements HasName, HasModifiers, HasAnnotations, HasType {
 
     private final Parameter parameter;

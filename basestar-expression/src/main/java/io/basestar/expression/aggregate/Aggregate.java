@@ -37,6 +37,7 @@ public interface Aggregate {
             .put(Max.NAME, Max::create)
             .put(Min.NAME, Min::create)
             .put(Sum.NAME, Sum::create)
+            .put(CollectArray.NAME, CollectArray::create)
             .build();
 
     <T> T visit(AggregateVisitor<T> visitor);

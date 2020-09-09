@@ -24,20 +24,29 @@ import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.basestar.expression.Expression;
-import io.basestar.jackson.serde.ExpressionDeseriaizer;
-import io.basestar.jackson.serde.NameDeserializer;
-import io.basestar.jackson.serde.NameKeyDeserializer;
-import io.basestar.jackson.serde.SortDeserializer;
+import io.basestar.jackson.serde.*;
 import io.basestar.util.Name;
+import io.basestar.util.Page;
 import io.basestar.util.Sort;
 
+import java.time.Instant;
+import java.time.LocalDate;
+
 public class BasestarModule extends SimpleModule {
+
+    public static BasestarModule INSTANCE = new BasestarModule();
 
     public BasestarModule() {
 
         super("Basestar", new Version(1, 0, 0, null, null, null));
 
         final ToStringSerializer toString = new ToStringSerializer();
+
+        addSerializer(Instant.class, new DateTimeSerializer());
+        addDeserializer(Instant.class, new DateTimeDeserializer());
+
+        addSerializer(LocalDate.class, new DateSerializer());
+        addDeserializer(LocalDate.class, new DateDeserializer());
 
         addSerializer(Name.class, toString);
         addDeserializer(Name.class, new NameDeserializer());
@@ -49,6 +58,12 @@ public class BasestarModule extends SimpleModule {
         addDeserializer(Sort.class, new SortDeserializer());
 
         addSerializer(Expression.class, toString);
-        addDeserializer(Expression.class, new ExpressionDeseriaizer());
+        addDeserializer(Expression.class, new ExpressionDeserializer());
+
+        addSerializer(Page.Token.class, toString);
+        addDeserializer(Page.Token.class, new PagingTokenDeserializer());
+
+        addSerializer(Enum.class, new EnumSerializer());
+        addDeserializer(Enum.class, new EnumDeserializer());
     }
 }

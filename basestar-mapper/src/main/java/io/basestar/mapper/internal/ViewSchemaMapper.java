@@ -20,28 +20,90 @@ package io.basestar.mapper.internal;
  * #L%
  */
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
 import io.basestar.schema.ViewSchema;
 import io.basestar.type.TypeContext;
 import io.basestar.util.Name;
 
+import java.util.List;
+import java.util.Set;
+
 public class ViewSchemaMapper<T> extends InstanceSchemaMapper<T, ViewSchema.Builder> {
 
-    private final Name from;
+    private final boolean materialized;
+
+    private final Name fromSchema;
+
+    private final Set<Name> fromExpand;
+
+    private final List<String> group;
 
     private final Expression where;
 
-    public ViewSchemaMapper(final MappingContext context, final Name name, final TypeContext type, final Name from, final Expression where) {
+    public ViewSchemaMapper(final MappingContext context, final Name name, final TypeContext type, final boolean materialized) {
 
-        super(context, name, type, ViewSchema.Builder.class);
-        this.from = from;
+        super(ViewSchema.Builder.class, context, name, type);
+        this.materialized = materialized;
+        this.fromSchema = null;
+        this.fromExpand = ImmutableSet.of();
+        this.group = ImmutableList.of();
+        this.where = null;
+    }
+
+    private ViewSchemaMapper(final ViewSchemaMapper<T> copy, final String description, final Name fromSchema,
+                             final Set<Name> fromExpand, final List<String> group, final Expression where) {
+
+        super(copy, description);
+        this.materialized = copy.materialized;
+        this.fromSchema = fromSchema;
+        this.fromExpand = fromExpand;
+        this.group = group;
         this.where = where;
     }
 
-    @Override
-    public ViewSchema.Builder schema() {
+    public ViewSchemaMapper<T> withFrom(final Name fromSchema, final Set<Name> fromExpand) {
 
-        return addMembers(ViewSchema.builder().setFrom(from).setWhere(where));
+        return new ViewSchemaMapper<>(this, description, fromSchema, fromExpand, group, where);
     }
+
+    public ViewSchemaMapper<T> withWhere(final Expression where) {
+
+        return new ViewSchemaMapper<>(this, description, fromSchema, fromExpand, group, where);
+    }
+
+    public ViewSchemaMapper<T> withGroup(final List<String> group) {
+
+        return new ViewSchemaMapper<>(this, description, fromSchema, fromExpand, group, where);
+    }
+
+    @Override
+    public ViewSchemaMapper<T> withDescription(final String description) {
+
+        return new ViewSchemaMapper<>(this, description, fromSchema, fromExpand, group, where);
+    }
+
+    @Override
+    public ViewSchema.Builder schemaBuilder() {
+
+        final ViewSchema.From.Builder from = ViewSchema.From.builder()
+                .setSchema(fromSchema)
+                .setExpand(fromExpand.isEmpty() ? null : fromExpand);
+
+        return addMembers(ViewSchema.builder()
+                .setFrom(from)
+                .setGroup(group)
+                .setWhere(where));
+    }
+
+//    protected void addProperty(final ViewSchema.Builder builder, final String name, final Property.Builder property) {
+//
+//        if(group.contains(name)) {
+//            builder.setGroup(name, property);
+//        } else {
+//            builder.setSelect(name, property);
+//        }
+//    }
 }

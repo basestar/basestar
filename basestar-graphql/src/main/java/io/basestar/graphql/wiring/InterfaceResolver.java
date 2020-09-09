@@ -30,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 import java.util.Map;
 
 @RequiredArgsConstructor
+public
 class InterfaceResolver implements TypeResolver {
 
     private final GraphQLStrategy strategy;

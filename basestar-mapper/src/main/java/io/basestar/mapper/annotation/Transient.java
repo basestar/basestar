@@ -20,11 +20,12 @@ package io.basestar.mapper.annotation;
  * #L%
  */
 
-import io.basestar.expression.Expression;
+import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.internal.MemberMapper;
 import io.basestar.mapper.internal.PropertyMapper;
 import io.basestar.mapper.internal.annotation.MemberDeclaration;
+import io.basestar.type.AnnotationContext;
 import io.basestar.type.PropertyContext;
 import lombok.RequiredArgsConstructor;
 
@@ -40,10 +41,6 @@ public @interface Transient {
 
     String name() default INFER_NAME;
 
-    String expression() default "";
-
-    String[] expand() default {};
-
     @RequiredArgsConstructor
     class Declaration implements MemberDeclaration.Declaration {
 
@@ -54,8 +51,14 @@ public @interface Transient {
 
             //FIXME
             final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
-            final Expression expression = annotation.expression().isEmpty() ? null : Expression.parse(annotation.expression());
-            return new PropertyMapper(context, name, prop, expression);
+            return new PropertyMapper(context, name, prop);
+        }
+
+        public static Transient annotation(final io.basestar.schema.Transient trans) {
+
+            return new AnnotationContext<>(Transient.class, ImmutableMap.<String, Object>builder()
+                    .put("name", trans.getQualifiedName().toString())
+                    .build()).annotation();
         }
     }
 }
