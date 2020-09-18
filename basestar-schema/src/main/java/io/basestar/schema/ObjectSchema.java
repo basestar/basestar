@@ -178,6 +178,9 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
     private final SortedMap<String, Permission> permissions;
 
     @Nonnull
+    private final List<Constraint> constraints;
+
+    @Nonnull
     private final SortedSet<Name> declaredExpand;
 
     @Nonnull
@@ -214,6 +217,9 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Map<String, Index.Descriptor> getIndexes();
+
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        List<? extends Constraint> getConstraints();
 
         @Override
         default ObjectSchema build(final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
@@ -272,6 +278,9 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         private Map<String, Index.Descriptor> indexes;
+
+        @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
+        private List<? extends Constraint> constraints;
 
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
@@ -342,6 +351,7 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
         this.declaredTransients = Nullsafe.immutableSortedCopy(descriptor.getTransients(), (k, v) -> v.build(qualifiedName.with(k)));
         this.declaredLinks = Nullsafe.immutableSortedCopy(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
         this.declaredIndexes = Nullsafe.immutableSortedCopy(descriptor.getIndexes(), (k, v) -> v.build(qualifiedName.with(k)));
+        this.constraints = Nullsafe.immutableCopy(descriptor.getConstraints());
         this.declaredPermissions = Nullsafe.immutableSortedCopy(descriptor.getPermissions(), (k, v) -> v.build(k));
         this.declaredExpand = Nullsafe.immutableSortedCopy(descriptor.getExpand());
         this.concrete = Nullsafe.orDefault(descriptor.getConcrete(), Boolean.TRUE);
@@ -703,6 +713,12 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
                         Map.Entry::getKey,
                         entry -> entry.getValue().descriptor()
                 ));
+            }
+
+            @Override
+            public List<? extends Constraint> getConstraints() {
+
+                return constraints;
             }
 
             @Override

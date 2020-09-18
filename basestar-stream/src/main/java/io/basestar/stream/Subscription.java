@@ -34,6 +34,7 @@ import lombok.NoArgsConstructor;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -74,5 +75,19 @@ public class Subscription {
         private String index;
 
         private List<Object> partition;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Term {
+
+        @JsonDeserialize(using = NameDeserializer.class)
+        @JsonSerialize(using = ToStringSerializer.class)
+        private Name schema;
+
+        private Expression expression;
+
+        private Set<Name> expand;
     }
 }

@@ -14,7 +14,8 @@ import io.basestar.auth.Caller;
 import io.basestar.graphql.subscription.GraphQLSubscriptionInfo;
 import io.basestar.graphql.subscription.SubscriberContext;
 import io.basestar.graphql.subscription.SubscriberIdSource;
-import io.basestar.stream.Subscribable;
+import io.basestar.stream.Hub;
+import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.swagger.v3.oas.models.OpenAPI;
 import lombok.Data;
@@ -22,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -31,18 +33,17 @@ public class GraphQLWebsocketAPI implements API {
 
     private final SubscriberIdSource subscriberIdSource;
 
-    private final Subscribable subscribable;
+    private final Hub hub;
 
     // FIXME: TEMPORARY HACK
     private final Map<String, Caller> callerCache = new HashMap<>();
 
     @lombok.Builder(builderClassName = "Builder")
-    GraphQLWebsocketAPI(final GraphQL graphQL, final SubscriberIdSource subscriberIdSource,
-                        final Subscribable subscribable) {
+    GraphQLWebsocketAPI(final GraphQL graphQL, final SubscriberIdSource subscriberIdSource, final Hub hub) {
 
         this.graphQL = Nullsafe.require(graphQL);
         this.subscriberIdSource = Nullsafe.require(subscriberIdSource);
-        this.subscribable = Nullsafe.require(subscribable);
+        this.hub = Nullsafe.require(hub);
     }
 
     @Override
@@ -85,7 +86,7 @@ public class GraphQLWebsocketAPI implements API {
                     return subscriberIdSource.subscriberId(request).thenCompose(sub -> {
                         Nullsafe.require(sub);
                         final Caller caller = caller(sub, request);
-                        return subscribable.unsubscribeAll(caller, sub)
+                        return hub.unsubscribeAll(caller, sub)
                                 .thenApply(ignored -> response(request, "complete"));
                     });
                 }
@@ -93,7 +94,7 @@ public class GraphQLWebsocketAPI implements API {
                     return subscriberIdSource.subscriberId(request).thenCompose(sub -> {
                         Nullsafe.require(sub);
                         final Caller caller = caller(sub, request);
-                        final ExecutionInput input = requestBody.toInput(subscribable, caller, sub);
+                        final ExecutionInput input = requestBody.toInput(hub, caller, sub);
                         return query(request, requestBody.getId(), input);
                     });
                 }
@@ -101,7 +102,7 @@ public class GraphQLWebsocketAPI implements API {
                     return subscriberIdSource.subscriberId(request).thenCompose(sub -> {
                         Nullsafe.require(sub);
                         final Caller caller = caller(sub, request);
-                        return subscribable.unsubscribe(caller, sub, requestBody.getId())
+                        return hub.unsubscribe(caller, sub, requestBody.getId())
                                 .thenApply(ignored -> response(request, "complete"));
                     });
                 }
@@ -163,12 +164,13 @@ public class GraphQLWebsocketAPI implements API {
             extra.put(key, value);
         }
 
-        public ExecutionInput toInput(final Subscribable subscribable, final Caller caller, final String sub) {
+        public ExecutionInput toInput(final Hub hub, final Caller caller, final String sub) {
 
             final String channel = this.getId();
             final SubscriberContext subscriberContext = (schema, expression, alias, names) -> {
                 final GraphQLSubscriptionInfo info = new GraphQLSubscriptionInfo(alias, names);
-                return subscribable.subscribe(caller, sub, channel, schema.getQualifiedName().toString(), expression, info);
+                final Set<Name> expand = schema.requiredExpand(names);
+                return hub.subscribe(caller, sub, channel, schema.getQualifiedName().toString(), expression, expand, info);
             };
 
             return ExecutionInput.newExecutionInput()
