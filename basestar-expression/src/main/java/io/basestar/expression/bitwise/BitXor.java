@@ -28,6 +28,8 @@ import io.basestar.expression.type.match.BinaryMatch;
 import io.basestar.expression.type.match.BinaryNumberMatch;
 import lombok.Data;
 
+import java.lang.reflect.Type;
+
 /**
  * Bitwise Xor
  */
@@ -66,6 +68,12 @@ public class BitXor implements Binary {
     public Long evaluate(final Context context) {
 
         return VISITOR.apply(lhs.evaluate(context), rhs.evaluate(context));
+    }
+
+    @Override
+    public Type type(final Context context) {
+
+        return Long.class;
     }
 
 //    @Override

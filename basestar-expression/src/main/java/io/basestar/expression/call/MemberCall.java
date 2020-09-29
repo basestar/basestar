@@ -32,6 +32,7 @@ import io.basestar.expression.function.Member;
 import io.basestar.util.Name;
 import lombok.Data;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -98,6 +99,14 @@ public class MemberCall implements Expression {
         final Object with = this.with.evaluate(context);
         final Object[] args = this.args.stream().map(v -> v.evaluate(context)).toArray();
         return context.call(with, member, args);
+    }
+
+    @Override
+    public Type type(final Context context) {
+
+        final Type with = this.with.type(context);
+        final Type[] args = this.args.stream().map(v -> v.type(context)).toArray(Type[]::new);
+        return context.callType(with, member, args);
     }
 
     @Override

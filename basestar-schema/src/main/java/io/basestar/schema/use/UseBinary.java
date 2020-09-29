@@ -32,6 +32,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -101,6 +102,12 @@ public class UseBinary implements UseScalar<byte[]> {
     public Code code() {
 
         return Code.BINARY;
+    }
+
+    @Override
+    public Type type(final Name name) {
+
+        return byte[].class;
     }
 
     @Override

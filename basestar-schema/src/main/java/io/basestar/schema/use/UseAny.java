@@ -11,6 +11,7 @@ import io.basestar.util.Name;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -109,6 +110,12 @@ public class UseAny implements Use<Object> {
         } else {
             throw new IllegalStateException();
         }
+    }
+
+    @Override
+    public Type type(final Name name) {
+
+        return Object.class;
     }
 
     private static Set<Name> branch(final Map<String, Set<Name>> branches, final String key) {

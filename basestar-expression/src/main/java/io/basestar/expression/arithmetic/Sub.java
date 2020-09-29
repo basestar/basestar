@@ -24,9 +24,12 @@ import io.basestar.expression.Binary;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
+import io.basestar.expression.type.Values;
 import io.basestar.expression.type.match.BinaryMatch;
 import io.basestar.expression.type.match.BinaryNumberMatch;
 import lombok.Data;
+
+import java.lang.reflect.Type;
 
 /**
  * Subtract
@@ -66,6 +69,12 @@ public class Sub implements Binary {
     public Number evaluate(final Context context) {
 
         return VISITOR.apply(lhs.evaluate(context), rhs.evaluate(context));
+    }
+
+    @Override
+    public Type type(final Context context) {
+
+        return VISITOR.apply(Values.defaultValue(lhs.type(context)), Values.defaultValue(rhs.type(context))).getClass();
     }
 
 //    @Override

@@ -31,6 +31,7 @@ import io.basestar.expression.iterate.Of;
 import io.basestar.util.Name;
 import lombok.Data;
 
+import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -83,14 +84,38 @@ public class Lambda implements Expression {
     public Object evaluate(final Context context) {
 
         // FIXME closure?
-        return (Callable) args -> {
-            final Map<String, Object> with = new HashMap<>();
-            final int argC = Math.min(args.length, this.args.size());
-            for(int i = 0; i != argC; ++i) {
-                with.put(this.args.get(i), args[i]);
+        return new Callable() {
+            @Override
+            public Object call(final Object... args) {
+
+                final Map<String, Object> with = new HashMap<>();
+                final int argC = Math.min(args.length, Lambda.this.args.size());
+                for(int i = 0; i != argC; ++i) {
+                    with.put(Lambda.this.args.get(i), args[i]);
+                }
+                return yield.evaluate(context.with(with));
             }
-            return yield.evaluate(context.with(with));
+
+            @Override
+            public Type type() {
+
+                // FIXME
+                return Object.class;
+            }
+
+            @Override
+            public Type[] args() {
+
+                // FIXME
+                return args.stream().map(v -> Object.class).toArray(Type[]::new);
+            }
         };
+    }
+
+    @Override
+    public Type type(final Context context) {
+
+        return Callable.class;
     }
 
     @Override
@@ -178,9 +203,16 @@ public class Lambda implements Expression {
         }
 
         @Override
-        public Object call(final Object target, final String method, final Object... args) {
+        public Callable callable(final Type target, final String method, final Type... args) {
 
-            return context.call(target, method, args);
+            return context.callable(target, method, args);
+        }
+
+        @Override
+        public Type memberType(final Type target, final String member) {
+
+            //FIXME
+            return context.memberType(target, member);
         }
     }
 }

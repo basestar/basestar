@@ -40,12 +40,14 @@ import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Page;
 import io.basestar.util.Sort;
+import io.leangen.geantyref.TypeFactory;
 import lombok.Data;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.lang.reflect.Type;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -174,6 +176,16 @@ public class Link implements Member {
             return schema.use();
         } else {
             return new UseArray<>(schema.use());
+        }
+    }
+
+    @Override
+    public Type type(final Name name) {
+
+        if(single) {
+            return schema.type(name);
+        } else {
+            return TypeFactory.parameterizedClass(List.class, schema.type(name));
         }
     }
 

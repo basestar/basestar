@@ -23,20 +23,21 @@ package io.basestar.spark.util;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import io.basestar.expression.call.Callable;
 import io.basestar.schema.*;
 import io.basestar.schema.layout.Layout;
 import io.basestar.schema.use.*;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Encoder;
-import org.apache.spark.sql.Encoders;
-import org.apache.spark.sql.Row;
+import org.apache.spark.sql.*;
+import org.apache.spark.sql.api.java.*;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
+import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.types.*;
 import scala.collection.Seq;
 
+import java.lang.reflect.Type;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
@@ -100,6 +101,11 @@ public class SparkSchemaUtils {
         } else {
             throw new IllegalStateException();
         }
+    }
+
+    public static DataType type(final Type type) {
+
+        return type(Use.fromType(type), Collections.emptySet());
     }
 
     public static DataType type(final Use<?> type, final Set<Name> expand) {
@@ -929,5 +935,37 @@ public class SparkSchemaUtils {
                 return column.desc_nulls_last();
             }
         }
+    }
+
+    public static UserDefinedFunction udf(final Callable callable) {
+
+        final DataType returnType = type(callable.type());
+        switch (callable.args().length) {
+            case 0:
+                return functions.udf((UDF0<?>) callable::call, returnType);
+            case 1:
+                return functions.udf((UDF1<?, ?>) callable::call, returnType);
+            case 2:
+                return functions.udf((UDF2<?, ?, ?>) callable::call, returnType);
+            case 3:
+                return functions.udf((UDF3<?, ?, ?, ?>) callable::call, returnType);
+            case 4:
+                return functions.udf((UDF4<?, ?, ?, ?, ?>) callable::call, returnType);
+            case 5:
+                return functions.udf((UDF5<?, ?, ?, ?, ?, ?>) callable::call, returnType);
+            case 6:
+                return functions.udf((UDF6<?, ?, ?, ?, ?, ?, ?>) callable::call, returnType);
+            case 7:
+                return functions.udf((UDF7<?, ?, ?, ?, ?, ?, ?, ?>) callable::call, returnType);
+            case 8:
+                return functions.udf((UDF8<?, ?, ?, ?, ?, ?, ?, ?, ?>) callable::call, returnType);
+            case 9:
+                return functions.udf((UDF9<?, ?, ?, ?, ?, ?, ?, ?, ?, ?>) callable::call, returnType);
+            case 10:
+                return functions.udf((UDF10<?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?>) callable::call, returnType);
+            default:
+                throw new IllegalStateException("Too many UDF parameters");
+        }
+
     }
 }

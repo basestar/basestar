@@ -24,6 +24,8 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.arithmetic.*;
+import io.basestar.expression.call.Callable;
+import io.basestar.expression.call.MemberCall;
 import io.basestar.expression.compare.*;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.NameConstant;
@@ -33,14 +35,19 @@ import io.basestar.expression.literal.LiteralObject;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
+import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StringType;
 
+import java.lang.reflect.Type;
+import java.util.Arrays;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
@@ -49,6 +56,14 @@ import static org.apache.spark.sql.functions.lit;
 public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Column> {
 
     private final Function<Name, Column> columnResolver;
+
+    private final Context context;
+
+    public SparkExpressionVisitor(final Function<Name, Column> columnResolver) {
+
+        this.columnResolver = columnResolver;
+        this.context = Context.init();
+    }
 
     @Override
     public Column visitDefault(final Expression expression) {
@@ -59,8 +74,6 @@ public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Colu
     @Override
     public Column visitIndex(final Index expression) {
 
-        // FIXME: context should be a constructor arg
-        final Context context = Context.init();
         // FIXME better logging when the type is wrong
         final int at = expression.getRhs().evaluateAs(Number.class, context).intValue();
         return functions.element_at(visit(expression.getLhs()), at + 1);
@@ -69,8 +82,6 @@ public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Colu
     @Override
     public Column visitLiteralObject(final LiteralObject expression) {
 
-        // FIXME: context should be a constructor arg
-        final Context context = Context.init();
         final Column[] columns = expression.getArgs().entrySet().stream()
                 .map(e -> visit(e.getValue()).as(e.getKey().evaluateAs(String.class, context)))
                 .toArray(Column[]::new);
@@ -179,6 +190,20 @@ public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Colu
     public Column visitNameConstant(final NameConstant expression) {
 
         return columnResolver.apply(expression.getName());
+    }
+
+    @Override
+    public Column visitMemberCall(final MemberCall expression) {
+
+        final Column with = this.visit(expression.getWith());
+        final Column[] args = expression.getArgs().stream().map(this::visit).toArray(Column[]::new);
+        final Type withType = SparkSchemaUtils.type(with.expr().dataType()).type();
+        final Type[] argTypes = Arrays.stream(args).map(v -> SparkSchemaUtils.type(v.expr().dataType()).type()).toArray(Type[]::new);
+        final Callable callable = context.callable(withType, expression.getMember(), argTypes);
+
+        final UserDefinedFunction udf = SparkSchemaUtils.udf(callable);
+        final Column[] mergedArgs = Stream.concat(Stream.of(with), Arrays.stream(args)).toArray(Column[]::new);
+        return udf.apply(mergedArgs);
     }
 
     @Override

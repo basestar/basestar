@@ -31,6 +31,7 @@ import io.basestar.expression.type.Values;
 import io.basestar.util.Name;
 import lombok.Data;
 
+import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -69,6 +70,12 @@ public class Constant implements Expression {
     public Object evaluate(final Context context) {
 
         return value;
+    }
+
+    @Override
+    public Type type(final Context context) {
+
+        return value == null ? Void.class : value.getClass();
     }
 
 //    @Override

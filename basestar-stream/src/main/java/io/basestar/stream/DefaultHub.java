@@ -85,12 +85,12 @@ public class DefaultHub implements Hub {
     }
 
     @Override
-    public CompletableFuture<?> subscribe(final Caller caller, final String sub, final String channel, final String schemaName, final Expression expression, final SubscriptionInfo info) {
+    public CompletableFuture<?> subscribe(final Caller caller, final String sub, final String channel, final String schemaName, final Expression expression, final Set<Name> expand, final SubscriptionInfo info) {
 
         final ObjectSchema schema = namespace.requireObjectSchema(schemaName);
 
         final Expression bound = expression.bind(Context.init());
-        final Set<Subscription.Key> keys = keys(schema, expression);
+        final Set<Subscription.Key> keys = keys(schema, expression, expand);
         return subscriptions.subscribe(caller, sub, channel, keys, bound, info);
     }
 
@@ -192,7 +192,7 @@ public class DefaultHub implements Hub {
         return new Subscription.Key(schema.getQualifiedName(), Reserved.PREFIX + ObjectSchema.ID, ImmutableList.of(id));
     }
 
-    private static Set<Subscription.Key> keys(final ObjectSchema schema, final Expression expression) {
+    private static Set<Subscription.Key> keys(final ObjectSchema schema, final Expression expression, final Set<Name> expand) {
 
         final Set<Expression> disjunction = expression.visit(new DisjunctionVisitor());
 

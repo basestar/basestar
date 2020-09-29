@@ -22,9 +22,10 @@ package io.basestar.expression.methods;
 
 import io.basestar.expression.type.Values;
 
+import java.io.Serializable;
 import java.util.Map;
 
-public class MapMethods {
+public class MapMethods implements Serializable {
 
     public int size(final Map<?, ?> target) {
 

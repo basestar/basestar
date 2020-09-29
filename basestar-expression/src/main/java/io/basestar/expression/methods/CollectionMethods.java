@@ -24,12 +24,13 @@ import com.google.common.collect.Lists;
 import io.basestar.expression.call.Callable;
 import io.basestar.expression.type.Values;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
 
-public abstract class CollectionMethods<T extends Collection<?>> {
+public abstract class CollectionMethods<T extends Collection<?>> implements Serializable {
 
     public int size(final T target) {
 

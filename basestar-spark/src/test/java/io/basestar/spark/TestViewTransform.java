@@ -181,6 +181,23 @@ public class TestViewTransform extends AbstractSparkTest {
         assertNotNull(rows.get(0).getRows().get(0).getRowIndex());
     }
 
+    @Test
+    public void testExpressionTransform() throws IOException {
+
+        final SparkSession session = session();
+
+        final File f1 = new File("loremipsum");
+
+        final Map<Name, Dataset<Row>> datasets = ImmutableMap.of(
+                Name.of("File"), session.createDataset(ImmutableList.of(f1), Encoders.bean(File.class)).toDF()
+        );
+
+        final List<Expressions> rows = view("Expressions", Expressions.class, datasets);
+        assertEquals(1, rows.size());
+        assertEquals("remi", rows.get(0).getSubstr1());
+        assertEquals("ipsum", rows.get(0).getSubstr2());
+    }
+
     private <T> List<T> view(final String view, final Class<T> as,  final Map<Name, Dataset<Row>> datasets) throws IOException {
 
         final Namespace namespace = Namespace.load(TestViewTransform.class.getResourceAsStream("schema.yml"));

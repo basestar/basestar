@@ -22,11 +22,14 @@ package io.basestar.expression.methods;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ObjectArrays;
+import io.basestar.expression.call.Callable;
+import io.leangen.geantyref.GenericTypeReflector;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -43,35 +46,137 @@ public class Methods {
 
     private final boolean whitelist;
 
-    public Object call(final Object target, final String method, final Object ... args) {
+    public Callable callable(final Type target, final String method, final Type[] args) {
 
-        try {
-            final Class<?> targetType = target.getClass();
-            final Class<?>[] argTypes = Arrays.stream(args).map(Object::getClass).toArray(Class<?>[]::new);
+        final Class<?> targetType = GenericTypeReflector.erase(target);
+        final Class<?>[] argTypes = Arrays.stream(args).map(GenericTypeReflector::erase).toArray(Class<?>[]::new);
 
-            for(final Object filter : filters) {
-                final Class<?>[] mergedTypes = ObjectArrays.concat(targetType, argTypes);
-                final Method resolved = findMethod(filter.getClass(), method, mergedTypes);
-                if(resolved != null) {
-                    final Object[] mergedArgs = ObjectArrays.concat(target, args);
-                    return resolved.invoke(filter, mergedArgs);
-                }
+        for(final Object filter : filters) {
+            final Class<?>[] mergedTypes = ObjectArrays.concat(targetType, argTypes);
+            final Method resolved = findMethod(filter.getClass(), method, mergedTypes);
+            if(resolved != null) {
+                return callable(resolved, filter);
             }
+        }
 
-            if(whitelist) {
-                throw new IllegalStateException("Cannot call " + method + " (restricted)");
+        if(whitelist) {
+            throw new IllegalStateException("Cannot call " + method + " (restricted)");
+        } else {
+            final Method resolved = findMethod(targetType, method, argTypes);
+            if(resolved != null) {
+                return callable(resolved, null);
             } else {
-                final Method resolved = findMethod(targetType, method, argTypes);
-                if(resolved != null) {
-                    return resolved.invoke(target, args);
-                } else {
-                    throw new IllegalStateException("method not found");
-                }
+                throw new IllegalStateException("method not found");
             }
-        } catch (final Exception e) {
-            throw new IllegalStateException("Cannot call method " + method + " on object " + target, e);
         }
     }
+
+    private static Callable callable(final Method method, final Object target) {
+
+        // Callable must be serializable, so have to re-acquire it
+        final String name = method.getName();
+        final Class<?> declaring = method.getDeclaringClass();
+        final Class<?>[] argTypes = method.getParameterTypes();
+
+        return new Callable() {
+
+            private Method method() {
+
+                try {
+                    return declaring.getMethod(name, argTypes);
+                } catch (final NoSuchMethodException e) {
+                    throw new IllegalStateException("Cannot acquire method " + name, e);
+                }
+            }
+
+            @Override
+            public Object call(final Object... args) {
+
+                final Method method = method();
+                final Object actualTarget;
+                final Object[] actualArgs;
+                if(target == null) {
+                    actualTarget = args[0];
+                    actualArgs = Arrays.stream(args).skip(1).toArray();
+                } else {
+                    actualTarget = target;
+                    actualArgs = args;
+                }
+                try {
+                    return method.invoke(actualTarget, actualArgs);
+                } catch (final Exception e) {
+                    throw new IllegalStateException("Cannot call method " + method + " on object " + actualTarget, e);
+                }
+            }
+
+            @Override
+            public Type type() {
+
+                return GenericTypeReflector.getReturnType(method(), declaring);
+            }
+
+            @Override
+            public Type[] args() {
+
+                return GenericTypeReflector.getParameterTypes(method(), declaring);
+            }
+        };
+    }
+
+//    public Type type(final Type target, final String method, final Type ... args) {
+//
+//        final Class<?> targetType = GenericTypeReflector.erase(target);
+//        final Class<?>[] argTypes = Arrays.stream(args).map(GenericTypeReflector::erase).toArray(Class<?>[]::new);
+//
+//        for(final Object filter : filters) {
+//            final Class<?>[] mergedTypes = ObjectArrays.concat(targetType, argTypes);
+//            final Method resolved = findMethod(filter.getClass(), method, mergedTypes);
+//            if(resolved != null) {
+//                return resolved.getGenericReturnType();
+//            }
+//        }
+//
+//        if(whitelist) {
+//            throw new IllegalStateException("Cannot call " + method + " (restricted)");
+//        } else {
+//            final Method resolved = findMethod(targetType, method, argTypes);
+//            if(resolved != null) {
+//                return resolved.getGenericReturnType();
+//            } else {
+//                throw new IllegalStateException("method not found");
+//            }
+//        }
+//    }
+//
+//    public Object call(final Object target, final String method, final Object ... args) {
+//
+//        final Class<?> targetType = target.getClass();
+//        final Class<?>[] argTypes = Arrays.stream(args).map(Object::getClass).toArray(Class<?>[]::new);
+//
+//        try {
+//            for(final Object filter : filters) {
+//                final Class<?>[] mergedTypes = ObjectArrays.concat(targetType, argTypes);
+//                final Method resolved = findMethod(filter.getClass(), method, mergedTypes);
+//                if(resolved != null) {
+//                    final Object[] mergedArgs = ObjectArrays.concat(target, args);
+//                    return resolved.invoke(filter, mergedArgs);
+//                }
+//            }
+//
+//            if(whitelist) {
+//                throw new IllegalStateException("Cannot call " + method + " (restricted)");
+//            } else {
+//                final Method resolved = findMethod(targetType, method, argTypes);
+//                if(resolved != null) {
+//                    return resolved.invoke(target, args);
+//                } else {
+//                    throw new IllegalStateException("method not found");
+//                }
+//            }
+//        } catch (final Exception e) {
+//            throw new IllegalStateException("Cannot call method " + method + " on object " + target, e);
+//        }
+//    }
 
     private static Method findMethod(final Class<?> type, final String name, final Class<?>... args) {
 

@@ -20,7 +20,14 @@ package io.basestar.expression.call;
  * #L%
  */
 
-public interface Callable {
+import java.io.Serializable;
+import java.lang.reflect.Type;
+
+public interface Callable extends Serializable {
 
     Object call(Object ... args);
+
+    Type type();
+
+    Type[] args();
 }

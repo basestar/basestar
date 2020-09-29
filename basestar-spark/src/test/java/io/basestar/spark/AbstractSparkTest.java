@@ -254,4 +254,13 @@ public abstract class AbstractSparkTest {
         private HeaderRows headerRows;
     }
 
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Expressions {
+
+        private String substr1;
+
+        private String substr2;
+    }
 }

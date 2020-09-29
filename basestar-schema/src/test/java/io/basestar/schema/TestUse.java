@@ -21,13 +21,12 @@ package io.basestar.schema;
  */
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.basestar.schema.use.Use;
-import io.basestar.schema.use.UseArray;
-import io.basestar.schema.use.UseMap;
-import io.basestar.schema.use.UseString;
+import io.basestar.schema.use.*;
+import io.leangen.geantyref.TypeToken;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -44,5 +43,15 @@ public class TestUse {
 
         final Use<?> map = new ObjectMapper().readValue("{\"map\": \"string\"}", Use.class);
         assertEquals(new UseMap<>(UseString.DEFAULT), map);
+    }
+
+    @Test
+    public void fromType() {
+
+        final Use<?> intMap = Use.fromType((new TypeToken<Map<String, Integer>>() {}).getType());
+        assertEquals(UseMap.from(UseInteger.DEFAULT), intMap);
+
+        final Use<?> anyMap = Use.fromType(Map.class);
+        assertEquals(UseMap.from(UseAny.DEFAULT), anyMap);
     }
 }

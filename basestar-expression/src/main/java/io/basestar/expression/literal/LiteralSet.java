@@ -25,9 +25,12 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.Renaming;
 import io.basestar.expression.constant.Constant;
+import io.basestar.expression.type.Values;
 import io.basestar.util.Name;
+import io.leangen.geantyref.TypeFactory;
 import lombok.Data;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -90,6 +93,13 @@ public class LiteralSet implements Expression {
 
         return args.stream()
                 .map(v -> v.evaluate(context)).collect(Collectors.toSet());
+    }
+
+    @Override
+    public Type type(final Context context) {
+
+        return TypeFactory.parameterizedClass(Set.class, Values.commonType(args.stream()
+                .map(v -> v.type(context)).toArray(Type[]::new)));
     }
 
 //    @Override

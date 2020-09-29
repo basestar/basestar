@@ -29,8 +29,13 @@ import io.basestar.expression.Renaming;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.literal.LiteralObject;
 import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
+import io.leangen.geantyref.GenericTypeReflector;
+import io.leangen.geantyref.TypeFactory;
 import lombok.Data;
 
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.util.*;
 
 /**
@@ -138,6 +143,22 @@ public class Of implements Expression {
             }
         } else {
             throw new IllegalStateException();
+        }
+    }
+
+    @Override
+    public Type type(final Context context) {
+
+        final Type with = this.expr.type(context);
+        final Class<?> erased = GenericTypeReflector.erase(with);
+        if(Collection.class.isAssignableFrom(erased)) {
+            final TypeVariable<? extends Class<?>> var = Collection.class.getTypeParameters()[0];
+            final Type valueType = Nullsafe.orDefault(GenericTypeReflector.getTypeParameter(with, var), Object.class);
+            return TypeFactory.parameterizedClass(Iterator.class, valueType);
+        } else if(Map.class.isAssignableFrom(erased)) {
+            return TypeFactory.parameterizedClass(Map.class, String.class, Object.class);
+        } else {
+            return Iterator.class;
         }
     }
 

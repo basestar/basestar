@@ -25,7 +25,9 @@ import io.basestar.expression.type.match.BinaryNumberMatch;
 import io.basestar.expression.type.match.UnaryMatch;
 import io.basestar.util.ISO8601;
 import io.basestar.util.Pair;
+import io.leangen.geantyref.GenericTypeReflector;
 
+import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -290,4 +292,33 @@ public class Values {
         return value == null ? "null" : value.getClass().getName();
     }
 
+    public static Object defaultValue(final Type of) {
+
+        return defaultValue(GenericTypeReflector.erase(of));
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> T defaultValue(final Class<T> of) {
+
+        if(Boolean.class.isAssignableFrom(of) || boolean.class.isAssignableFrom(of)) {
+            return (T)(Boolean)false;
+        } else if(String.class.isAssignableFrom(of)) {
+            return (T)"";
+        } else if(Number.class.isAssignableFrom(of)) {
+            return Numbers.zero(of);
+        } else if(List.class.isAssignableFrom(of)) {
+            return (T)Collections.emptyList();
+        } else if(Set.class.isAssignableFrom(of)) {
+            return (T)Collections.emptySet();
+        } else if(Map.class.isAssignableFrom(of)) {
+            return (T)Collections.emptyMap();
+        } else {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    public static Type commonType(final Type ... types) {
+
+        return Object.class;
+    }
 }
