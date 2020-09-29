@@ -35,6 +35,7 @@ import io.basestar.util.Name;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
@@ -186,6 +187,22 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
             } else {
                 final Member member = requireMember(first, true);
                 return member.typeOf(name.withoutFirst());
+            }
+        }
+    }
+
+    default Type type(final Name name) {
+
+        if(name.isEmpty()) {
+            return Object.class;
+        } else {
+            final String first = name.first();
+            final Map<String, Use<?>> metadataSchema = metadataSchema();
+            if(metadataSchema.containsKey(first)) {
+                return metadataSchema.get(first).type(name.withoutFirst());
+            } else {
+                final Member member = requireMember(first, true);
+                return member.type(name.withoutFirst());
             }
         }
     }

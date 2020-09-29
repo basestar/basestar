@@ -12,6 +12,7 @@ import lombok.Data;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -82,6 +83,12 @@ public class UseOptional<T> implements UseContainer<T, T> {
     public Use<?> typeOf(final Name name) {
 
         return type.typeOf(name);
+    }
+
+    @Override
+    public Type type(final Name name) {
+
+        return type.type(name);
     }
 
     @Override

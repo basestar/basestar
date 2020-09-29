@@ -33,6 +33,7 @@ import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
+import io.leangen.geantyref.TypeFactory;
 import io.swagger.v3.oas.models.media.MapSchema;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +41,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -210,7 +212,17 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
         if(name.isEmpty()) {
             return this;
         } else {
-            return type.typeOf(name);
+            return type.typeOf(name.withoutFirst());
+        }
+    }
+
+    @Override
+    public Type type(final Name name) {
+
+        if(name.isEmpty()) {
+            return TypeFactory.parameterizedClass(Map.class, type.type());
+        } else {
+            return type.type(name.withoutFirst());
         }
     }
 

@@ -34,10 +34,7 @@ import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
-import io.basestar.schema.use.Use;
-import io.basestar.schema.use.UseCollection;
-import io.basestar.schema.use.UseMap;
-import io.basestar.schema.use.UseObject;
+import io.basestar.schema.use.*;
 import io.basestar.schema.util.Expander;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -48,6 +45,7 @@ import lombok.experimental.Accessors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.lang.reflect.Type;
 import java.util.*;
 
 /**
@@ -212,7 +210,6 @@ public class Transient implements Member {
         }
     }
 
-    //FIXME
     @Override
     @SuppressWarnings("unchecked")
     public <T> Use<T> typeOf(final Name name) {
@@ -220,7 +217,17 @@ public class Transient implements Member {
         if(type != null) {
             return (Use<T>)type.typeOf(name);
         } else {
-            throw new UnsupportedOperationException();
+            return (Use<T>)UseAny.DEFAULT;
+        }
+    }
+
+    @Override
+    public Type type(final Name name) {
+
+        if(type != null) {
+            return type.type(name);
+        } else {
+            return Object.class;
         }
     }
 

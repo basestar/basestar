@@ -49,6 +49,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.util.*;
 
 /**
@@ -284,6 +285,12 @@ public class Property implements Member {
     public <T> Use<T> typeOf(final Name name) {
 
         return (Use<T>)type.typeOf(name);
+    }
+
+    @Override
+    public Type type(final Name name) {
+
+        return type.type(name);
     }
 
     @Override

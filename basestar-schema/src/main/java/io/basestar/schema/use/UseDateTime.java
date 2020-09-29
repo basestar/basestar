@@ -29,6 +29,7 @@ import io.swagger.v3.oas.models.media.DateTimeSchema;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.time.Instant;
 import java.util.Set;
 
@@ -71,6 +72,12 @@ public class UseDateTime implements UseStringLike<Instant> {
     public Code code() {
 
         return Code.DATETIME;
+    }
+
+    @Override
+    public Type type(final Name name) {
+
+        return Instant.class;
     }
 
     @Override

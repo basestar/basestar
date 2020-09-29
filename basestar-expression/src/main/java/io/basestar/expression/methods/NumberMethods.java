@@ -20,7 +20,9 @@ package io.basestar.expression.methods;
  * #L%
  */
 
-public class NumberMethods {
+import java.io.Serializable;
+
+public class NumberMethods implements Serializable {
 
     public Number round(final Number a, final Number places) {
 

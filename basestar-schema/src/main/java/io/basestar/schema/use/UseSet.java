@@ -24,12 +24,14 @@ import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Schema;
 import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.util.Name;
+import io.leangen.geantyref.TypeFactory;
 import io.swagger.v3.oas.models.media.ArraySchema;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.DataInput;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -124,6 +126,16 @@ public class UseSet<T> implements UseCollection<T, Set<T>> {
     public Code code() {
 
         return Code.SET;
+    }
+
+    @Override
+    public Type type(final Name name) {
+
+        if(name.isEmpty()) {
+            return TypeFactory.parameterizedClass(Set.class, type.type());
+        } else {
+            return type.type(name.withoutFirst());
+        }
     }
 
     @Override

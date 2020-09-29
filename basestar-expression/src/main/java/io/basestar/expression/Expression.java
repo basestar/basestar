@@ -25,6 +25,7 @@ import io.basestar.expression.type.Values;
 import io.basestar.util.Name;
 
 import java.io.Serializable;
+import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -41,6 +42,8 @@ public interface Expression extends Serializable {
     }
 
     Object evaluate(Context context);
+
+    Type type(Context context);
 
     default boolean evaluatePredicate(final Context context) {
 

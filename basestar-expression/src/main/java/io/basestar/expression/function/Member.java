@@ -30,6 +30,7 @@ import io.basestar.expression.constant.NameConstant;
 import io.basestar.util.Name;
 import lombok.Data;
 
+import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Set;
 
@@ -87,6 +88,13 @@ public class Member implements Expression {
 //        } else {
         return context.member(with, member);
 //        }
+    }
+
+    @Override
+    public Type type(final Context context) {
+
+        final Type with = this.with.type(context);
+        return context.memberType(with, member);
     }
 
     @Override

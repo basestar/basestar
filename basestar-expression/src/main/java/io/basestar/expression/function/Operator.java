@@ -26,6 +26,8 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import lombok.Data;
 
+import java.lang.reflect.Type;
+
 @Data
 public class Operator implements Binary {
 
@@ -48,6 +50,12 @@ public class Operator implements Binary {
 
         // FIXME:
         throw new UnsupportedOperationException("operator " + name + " is not defined");
+    }
+
+    @Override
+    public Type type(final Context context) {
+
+        return Object.class;
     }
 
     @Override

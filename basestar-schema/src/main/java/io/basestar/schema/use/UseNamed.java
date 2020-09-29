@@ -32,6 +32,7 @@ import lombok.Data;
 
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.lang.reflect.Type;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -104,6 +105,12 @@ public interface UseNamed<T> extends Use<T> {
 
         @Override
         public Use<?> typeOf(final Name name) {
+
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Type type(final Name name) {
 
             throw new UnsupportedOperationException();
         }

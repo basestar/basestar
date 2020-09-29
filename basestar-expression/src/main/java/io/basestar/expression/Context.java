@@ -20,13 +20,17 @@ package io.basestar.expression;
  * #L%
  */
 
+import io.basestar.expression.call.Callable;
 import io.basestar.expression.exception.MemberNotFoundException;
 import io.basestar.expression.methods.Methods;
 
 import java.io.Serializable;
+import java.lang.reflect.Type;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Stream;
 
 public interface Context extends Serializable {
 
@@ -67,9 +71,15 @@ public interface Context extends Serializable {
             }
 
             @Override
-            public Object call(final Object target, final String method, final Object... args) {
+            public Callable callable(final Type target, final String method, final Type... args) {
 
-                return methods.call(target, method, args);
+                return methods.callable(target, method, args);
+            }
+
+            @Override
+            public Type memberType(final Type target, final String member) {
+
+                return Object.class;
             }
         };
     }
@@ -96,9 +106,15 @@ public interface Context extends Serializable {
             }
 
             @Override
-            public Object call(final Object target, final String method, final Object... args) {
+            public Callable callable(final Type target, final String method, final Type... args) {
 
-                return delegate.call(target, method, args);
+                return delegate.callable(target, method, args);
+            }
+
+            @Override
+            public Type memberType(final Type target, final String member) {
+
+                return delegate.memberType(target, member);
             }
         };
     }
@@ -117,7 +133,21 @@ public interface Context extends Serializable {
         return with(Collections.singletonMap(name, value));
     }
 
-    Object call(Object target, String method, Object... args);
+    default Object call(final Object target, final String method, final Object... args) {
+
+        final Object[] mergedArgs = Stream.concat(Stream.of(target), Arrays.stream(args)).toArray();
+        return callable(target.getClass(), method, Arrays.stream(args).map(Object::getClass).toArray(Type[]::new))
+                .call(mergedArgs);
+    }
+
+    default Type callType(final Type target, final String method, final Type... args) {
+
+        return callable(target, method, args).type();
+    }
+
+    Callable callable(Type target, String method, Type... args);
+
+    Type memberType(Type target, String member);
 
     default Object member(final Object target, final String member) {
 

@@ -28,6 +28,8 @@ import io.basestar.expression.bitwise.BitLsh;
 import io.basestar.expression.type.Values;
 import lombok.Data;
 
+import java.lang.reflect.Type;
+
 /**
  * Compare
  */
@@ -66,6 +68,12 @@ public class Cmp implements Binary {
     public Integer evaluate(final Context context) {
 
         return Values.compare(lhs.evaluate(context), rhs.evaluate(context));
+    }
+
+    @Override
+    public Type type(final Context context) {
+
+        return Integer.class;
     }
 
 //    @Override

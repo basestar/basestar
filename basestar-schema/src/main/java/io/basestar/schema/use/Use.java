@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.expression.type.Numbers;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.Property;
 import io.basestar.schema.Schema;
@@ -31,11 +32,17 @@ import io.basestar.schema.exception.TypeSyntaxException;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
+import io.leangen.geantyref.GenericTypeReflector;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.Serializable;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.function.BiFunction;
 
@@ -94,6 +101,13 @@ public interface Use<T> extends Serializable {
     Code code();
 
     Use<?> typeOf(Name name);
+
+    default Type type() {
+
+        return type(Name.empty());
+    }
+
+    Type type(Name name);
 
     T expand(T value, Expander expander, Set<Name> expand);
 
@@ -188,6 +202,38 @@ public interface Use<T> extends Serializable {
         }
     }
 
+    static Use<?> fromType(final Type type) {
+
+        final Class<?> erased = GenericTypeReflector.erase(type);
+        if(Boolean.class.isAssignableFrom(erased)) {
+            return UseBoolean.DEFAULT;
+        } else if(Numbers.isIntegerType(erased)) {
+            return UseInteger.DEFAULT;
+        } else if(Numbers.isNumberType(erased)) {
+            return UseNumber.DEFAULT;
+        } else if(String.class.isAssignableFrom(erased)) {
+            return UseString.DEFAULT;
+        } else if(LocalDate.class.isAssignableFrom(erased)) {
+            return UseDate.DEFAULT;
+        } else if(Instant.class.isAssignableFrom(erased)) {
+            return UseDateTime.DEFAULT;
+        } else if(List.class.isAssignableFrom(erased)) {
+            final TypeVariable<? extends Class<?>> var = List.class.getTypeParameters()[0];
+            final Type arg = Nullsafe.orDefault(GenericTypeReflector.getTypeParameter(type, var), Object.class);
+            return UseArray.from(arg);
+        } else if(Set.class.isAssignableFrom(erased)) {
+            final TypeVariable<? extends Class<?>> var = Set.class.getTypeParameters()[0];
+            final Type arg = Nullsafe.orDefault(GenericTypeReflector.getTypeParameter(type, var), Object.class);
+            return UseSet.from(arg);
+        } else if(Map.class.isAssignableFrom(erased)) {
+            final TypeVariable<? extends Class<?>> var = Map.class.getTypeParameters()[1];
+            final Type arg = Nullsafe.orDefault(GenericTypeReflector.getTypeParameter(type, var), Object.class);
+            return UseMap.from(arg);
+        } else {
+            return UseAny.DEFAULT;
+        }
+    }
+
     static Use<?> fromConfig(final String type, final Object config) {
 
         switch(type) {
@@ -229,7 +275,13 @@ public interface Use<T> extends Serializable {
 
         final Use<?> nestedType;
         final Map<String, Object> nestedConfig;
-        if(config instanceof String) {
+        if(config instanceof Use<?>) {
+            nestedType = (Use<?>)config;
+            nestedConfig = null;
+        } else if(config instanceof Type) {
+            nestedType = Use.fromType((Type)config);
+            nestedConfig = null;
+        } else if(config instanceof String) {
             nestedType = Use.fromConfig(config);
             nestedConfig = null;
         } else if(config instanceof Map) {

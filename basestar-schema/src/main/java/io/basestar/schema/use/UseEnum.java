@@ -32,6 +32,7 @@ import lombok.Data;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.util.*;
 
 /**
@@ -110,6 +111,12 @@ public class UseEnum implements UseStringLike<String>, UseNamed<String> {
     public Code code() {
 
         return Code.ENUM;
+    }
+
+    @Override
+    public Type type(final Name name) {
+
+        return String.class;
     }
 
     @Override

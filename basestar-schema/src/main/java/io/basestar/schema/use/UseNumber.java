@@ -29,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.util.Set;
 
 /**
@@ -97,6 +98,12 @@ public class UseNumber implements UseNumeric<Double> {
     public Code code() {
 
         return Code.NUMBER;
+    }
+
+    @Override
+    public Type type(final Name name) {
+
+        return Double.class;
     }
 
     @Override

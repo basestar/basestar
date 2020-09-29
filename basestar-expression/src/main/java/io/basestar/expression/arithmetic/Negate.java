@@ -29,6 +29,8 @@ import io.basestar.expression.type.match.UnaryMatch;
 import io.basestar.expression.type.match.UnaryNumberMatch;
 import lombok.Data;
 
+import java.lang.reflect.Type;
+
 /**
  * Negate
  */
@@ -64,6 +66,12 @@ public class Negate implements Unary {
     public Number evaluate(final Context context) {
 
         return VISITOR.apply(operand.evaluate(context));
+    }
+
+    @Override
+    public Type type(final Context context) {
+
+        return operand.type(context);
     }
 
 //    @Override

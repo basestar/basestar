@@ -31,6 +31,7 @@ import lombok.Data;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.time.LocalDate;
 import java.util.Set;
 
@@ -74,6 +75,12 @@ public class UseDate implements UseStringLike<LocalDate> {
     public Code code() {
 
         return Code.DATE;
+    }
+
+    @Override
+    public Type type(final Name name) {
+
+        return LocalDate.class;
     }
 
     @Override

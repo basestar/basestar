@@ -26,6 +26,7 @@ import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Schema;
 import io.basestar.util.Name;
 
+import java.lang.reflect.Type;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -46,6 +47,16 @@ public interface UseInstance extends UseNamed<Instance>, UseLayout {
             return this;
         } else {
             return getSchema().typeOf(name);
+        }
+    }
+
+    @Override
+    default Type type(final Name name) {
+
+        if(name.isEmpty()) {
+            return Object.class;
+        } else {
+            return getSchema().type(name);
         }
     }
 

@@ -30,6 +30,7 @@ import io.basestar.schema.util.Expander;
 import io.basestar.util.Name;
 
 import java.io.Serializable;
+import java.lang.reflect.Type;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -106,6 +107,8 @@ public interface Member extends Named, Described, Serializable, Extendable {
     Set<Name> requiredExpand(Set<Name> names);
 
     <T> Use<T> typeOf(Name name);
+
+    Type type(Name name);
 
     Set<Name> transientExpand(Name name, Set<Name> expand);
 

@@ -184,11 +184,11 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
                 final Map<String, Object> primary = primaryResponse.get(key);
                 final Map<String, Object> replica = replicaResponse.get(key);
 
-                final Map<String, Object> result = Nullsafe.orDefault(primary, replica);
+                if(primary != null) {
 
-                final ReplicaMetadata meta = ReplicaMetadata.wrap(primary, replica);
-
-                results.put(key, meta.applyTo(result));
+                    final ReplicaMetadata meta = ReplicaMetadata.wrap(primary, replica);
+                    results.put(key, meta.applyTo(primary));
+                }
             });
 
             return new BatchResponse.Basic(results);

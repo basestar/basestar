@@ -20,7 +20,9 @@ package io.basestar.expression.methods;
  * #L%
  */
 
-public class StringMethods {
+import java.io.Serializable;
+
+public class StringMethods implements Serializable {
 
     public boolean isEmpty(final String target) {
 
@@ -32,4 +34,13 @@ public class StringMethods {
         return target.length();
     }
 
+    public String substr(final String target, final Number begin) {
+
+        return target.substring(begin.intValue());
+    }
+
+    public String substr(final String target, final Number begin, final Number end) {
+
+        return target.substring(begin.intValue(), end.intValue());
+    }
 }

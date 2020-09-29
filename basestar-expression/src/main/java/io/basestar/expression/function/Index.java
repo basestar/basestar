@@ -24,8 +24,12 @@ import io.basestar.expression.Binary;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
+import io.basestar.util.Nullsafe;
+import io.leangen.geantyref.GenericTypeReflector;
 import lombok.Data;
 
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -83,6 +87,26 @@ public class Index implements Binary {
             return Character.toString(str.charAt(at));
         } else {
             throw new IllegalStateException();
+        }
+    }
+
+    @Override
+    public Type type(final Context context) {
+
+        final Type lhs = this.lhs.type(context);
+        final Class<?> erased = GenericTypeReflector.erase(lhs);
+        if(List.class.isAssignableFrom(erased)) {
+            final TypeVariable<? extends Class<?>> var = List.class.getTypeParameters()[0];
+            return Nullsafe.orDefault(GenericTypeReflector.getTypeParameter(lhs, var), Object.class);
+        } else if(Set.class.isAssignableFrom(erased)) {
+            return Boolean.class;
+        } else if(Map.class.isAssignableFrom(erased)) {
+            final TypeVariable<? extends Class<?>> var = Map.class.getTypeParameters()[1];
+            return Nullsafe.orDefault(GenericTypeReflector.getTypeParameter(lhs, var), Object.class);
+        } else if(String.class.isAssignableFrom(erased)) {
+            return String.class;
+        } else {
+            return Object.class;
         }
     }
 

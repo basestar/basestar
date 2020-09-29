@@ -560,6 +560,10 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
             violations.addAll(id.validate(name, Instance.getId(after), context));
         }
 
+        violations.addAll(this.getConstraints().stream()
+                .flatMap(v -> v.violations(new UseObject(this), context, name, after).stream())
+                .collect(Collectors.toSet()));
+
         violations.addAll(this.getProperties().values().stream()
                 .flatMap(v -> v.validate(context, name, before.get(v.getName()), after.get(v.getName())).stream())
                 .collect(Collectors.toSet()));

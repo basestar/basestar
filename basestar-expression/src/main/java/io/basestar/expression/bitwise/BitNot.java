@@ -29,6 +29,8 @@ import io.basestar.expression.type.match.UnaryMatch;
 import io.basestar.expression.type.match.UnaryNumberMatch;
 import lombok.Data;
 
+import java.lang.reflect.Type;
+
 /**
  * Bitwise Not
  */
@@ -63,6 +65,12 @@ public class BitNot implements Unary {
     public Long evaluate(final Context context) {
 
         return VISITOR.apply(operand.evaluate(context));
+    }
+
+    @Override
+    public Type type(final Context context) {
+
+        return Long.class;
     }
 
 //    @Override

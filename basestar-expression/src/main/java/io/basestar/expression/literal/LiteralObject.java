@@ -25,9 +25,12 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.Renaming;
 import io.basestar.expression.constant.Constant;
+import io.basestar.expression.type.Values;
 import io.basestar.util.Name;
+import io.leangen.geantyref.TypeFactory;
 import lombok.Data;
 
+import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -82,6 +85,13 @@ public class LiteralObject implements Expression {
             result.put(key.toString(), value);
         });
         return result;
+    }
+
+    @Override
+    public Type type(final Context context) {
+
+        return TypeFactory.parameterizedClass(Map.class, String.class, Values.commonType(args.values().stream()
+                .map(v -> v.type(context)).toArray(Type[]::new)));
     }
 
     @Override

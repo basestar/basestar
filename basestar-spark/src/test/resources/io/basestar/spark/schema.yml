@@ -161,3 +161,14 @@ LinkingViewToView:
   from: File
   expand:
     - headerRows.rows
+
+Expressions:
+  type: view
+  properties:
+    substr1:
+      expression: id.substr(2, 6)
+      type: string
+    substr2:
+      expression: id.substr(5)
+      type: string
+  from: File

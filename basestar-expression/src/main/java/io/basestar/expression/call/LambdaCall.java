@@ -31,6 +31,7 @@ import io.basestar.expression.function.IfElse;
 import io.basestar.util.Name;
 import lombok.Data;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -97,6 +98,12 @@ public class LambdaCall implements Expression {
         } else {
             throw new IllegalStateException();
         }
+    }
+
+    @Override
+    public Type type(final Context context) {
+
+        return Object.class;
     }
 
     @Override
