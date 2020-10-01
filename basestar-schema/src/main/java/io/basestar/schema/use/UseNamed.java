@@ -110,7 +110,7 @@ public interface UseNamed<T> extends Use<T> {
         }
 
         @Override
-        public Type type(final Name name) {
+        public Type javaType(final Name name) {
 
             throw new UnsupportedOperationException();
         }

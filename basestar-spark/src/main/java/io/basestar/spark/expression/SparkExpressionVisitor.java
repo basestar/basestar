@@ -29,6 +29,7 @@ import io.basestar.expression.call.MemberCall;
 import io.basestar.expression.compare.*;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.NameConstant;
+import io.basestar.expression.exception.BadExpressionException;
 import io.basestar.expression.function.Coalesce;
 import io.basestar.expression.function.Index;
 import io.basestar.expression.literal.LiteralObject;
@@ -74,9 +75,15 @@ public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Colu
     @Override
     public Column visitIndex(final Index expression) {
 
-        // FIXME better logging when the type is wrong
-        final int at = expression.getRhs().evaluateAs(Number.class, context).intValue();
-        return functions.element_at(visit(expression.getLhs()), at + 1);
+        final Object rhs = expression.getRhs().evaluate(context);
+        if(rhs instanceof Number) {
+            final int at = expression.getRhs().evaluateAs(Number.class, context).intValue();
+            return functions.element_at(visit(expression.getLhs()), at + 1);
+        } else if(rhs instanceof String) {
+            return visit(expression.getLhs()).getField((String)rhs);
+        } else {
+            throw new BadExpressionException("RHS must be constant number or string");
+        }
     }
 
     @Override
@@ -197,8 +204,8 @@ public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Colu
 
         final Column with = this.visit(expression.getWith());
         final Column[] args = expression.getArgs().stream().map(this::visit).toArray(Column[]::new);
-        final Type withType = SparkSchemaUtils.type(with.expr().dataType()).type();
-        final Type[] argTypes = Arrays.stream(args).map(v -> SparkSchemaUtils.type(v.expr().dataType()).type()).toArray(Type[]::new);
+        final Type withType = SparkSchemaUtils.type(with.expr().dataType()).javaType();
+        final Type[] argTypes = Arrays.stream(args).map(v -> SparkSchemaUtils.type(v.expr().dataType()).javaType()).toArray(Type[]::new);
         final Callable callable = context.callable(withType, expression.getMember(), argTypes);
 
         final UserDefinedFunction udf = SparkSchemaUtils.udf(callable);

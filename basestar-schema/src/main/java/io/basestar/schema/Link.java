@@ -180,12 +180,12 @@ public class Link implements Member {
     }
 
     @Override
-    public Type type(final Name name) {
+    public Type javaType(final Name name) {
 
         if(single) {
-            return schema.type(name);
+            return schema.javaType(name);
         } else {
-            return TypeFactory.parameterizedClass(List.class, schema.type(name));
+            return TypeFactory.parameterizedClass(List.class, schema.javaType(name));
         }
     }
 

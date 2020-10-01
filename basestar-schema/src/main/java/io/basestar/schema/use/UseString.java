@@ -92,7 +92,7 @@ public class UseString implements UseStringLike<String> {
     }
 
     @Override
-    public Type type(final Name name) {
+    public Type javaType(final Name name) {
 
         return String.class;
     }

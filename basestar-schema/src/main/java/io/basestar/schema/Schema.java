@@ -30,6 +30,7 @@ import io.basestar.util.Name;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
+import java.lang.reflect.Type;
 import java.util.*;
 
 /**
@@ -117,6 +118,8 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
     }
 
     Set<Constraint.Violation> validate(Context context, Name name, T after);
+
+    Type javaType(Name name);
 
     io.swagger.v3.oas.models.media.Schema<?> openApi();
 

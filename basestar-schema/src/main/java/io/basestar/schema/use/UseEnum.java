@@ -114,7 +114,7 @@ public class UseEnum implements UseStringLike<String>, UseNamed<String> {
     }
 
     @Override
-    public Type type(final Name name) {
+    public Type javaType(final Name name) {
 
         return String.class;
     }

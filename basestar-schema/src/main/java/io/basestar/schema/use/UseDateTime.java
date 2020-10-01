@@ -75,7 +75,7 @@ public class UseDateTime implements UseStringLike<Instant> {
     }
 
     @Override
-    public Type type(final Name name) {
+    public Type javaType(final Name name) {
 
         return Instant.class;
     }
