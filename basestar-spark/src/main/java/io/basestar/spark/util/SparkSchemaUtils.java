@@ -353,12 +353,23 @@ public class SparkSchemaUtils {
                 if(value instanceof scala.collection.Map<?, ?>) {
                     final Map<String, Set<Name>> branches = Name.branch(expand);
                     final Map<String, T> result = new HashMap<>();
-                    ((scala.collection.Map<?, ?>)value).foreach(ScalaUtils.scalaFunction(e -> {
-                        final String k = (String)e._1();
+                    ((scala.collection.Map<?, ?>) value).foreach(ScalaUtils.scalaFunction(e -> {
+                        final String k = (String) e._1();
                         final Object v = e._2();
-                        result.put(k, (T)fromSpark(type.getType(), branches.get(k), v, suppress));
+                        result.put(k, (T) fromSpark(type.getType(), branches.get(k), v, suppress));
                         return null;
                     }));
+                    return result;
+                } else if(value instanceof Row) {
+                    final Map<String, Set<Name>> branches = Name.branch(expand);
+                    final Map<String, T> result = new HashMap<>();
+                    final Row row = (Row)value;
+                    final StructField[] fields = row.schema().fields();
+                    for(int i = 0; i != fields.length; ++i) {
+                        final String k = fields[i].name();
+                        final Object v = row.get(i);
+                        result.put(k, (T) fromSpark(type.getType(), branches.get(k), v, suppress));
+                    }
                     return result;
                 } else {
                     throw new IllegalStateException();
