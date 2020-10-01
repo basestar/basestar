@@ -105,7 +105,7 @@ public class UseBinary implements UseScalar<byte[]> {
     }
 
     @Override
-    public Type type(final Name name) {
+    public Type javaType(final Name name) {
 
         return byte[].class;
     }

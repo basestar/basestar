@@ -78,7 +78,7 @@ public class UseDate implements UseStringLike<LocalDate> {
     }
 
     @Override
-    public Type type(final Name name) {
+    public Type javaType(final Name name) {
 
         return LocalDate.class;
     }

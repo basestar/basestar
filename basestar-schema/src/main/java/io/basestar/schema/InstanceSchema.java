@@ -31,6 +31,7 @@ import io.basestar.schema.use.UseString;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
+import io.leangen.geantyref.TypeFactory;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -191,18 +192,19 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
         }
     }
 
-    default Type type(final Name name) {
+    @Override
+    default Type javaType(final Name name) {
 
         if(name.isEmpty()) {
-            return Object.class;
+            return TypeFactory.parameterizedClass(Map.class, String.class, Object.class);
         } else {
             final String first = name.first();
             final Map<String, Use<?>> metadataSchema = metadataSchema();
             if(metadataSchema.containsKey(first)) {
-                return metadataSchema.get(first).type(name.withoutFirst());
+                return metadataSchema.get(first).javaType(name.withoutFirst());
             } else {
                 final Member member = requireMember(first, true);
-                return member.type(name.withoutFirst());
+                return member.javaType(name.withoutFirst());
             }
         }
     }

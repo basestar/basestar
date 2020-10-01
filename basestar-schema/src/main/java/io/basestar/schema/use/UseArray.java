@@ -126,12 +126,12 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
     }
 
     @Override
-    public Type type(final Name name) {
+    public Type javaType(final Name name) {
 
         if(name.isEmpty()) {
-            return TypeFactory.parameterizedClass(List.class, type.type());
+            return TypeFactory.parameterizedClass(List.class, type.javaType());
         } else {
-            return type.type(name.withoutFirst());
+            return type.javaType(name.withoutFirst());
         }
     }
 

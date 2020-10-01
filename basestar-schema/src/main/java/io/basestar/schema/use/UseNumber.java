@@ -101,7 +101,7 @@ public class UseNumber implements UseNumeric<Double> {
     }
 
     @Override
-    public Type type(final Name name) {
+    public Type javaType(final Name name) {
 
         return Double.class;
     }

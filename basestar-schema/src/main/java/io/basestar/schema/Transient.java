@@ -222,10 +222,10 @@ public class Transient implements Member {
     }
 
     @Override
-    public Type type(final Name name) {
+    public Type javaType(final Name name) {
 
         if(type != null) {
-            return type.type(name);
+            return type.javaType(name);
         } else {
             return Object.class;
         }

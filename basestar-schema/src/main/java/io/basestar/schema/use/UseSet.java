@@ -129,12 +129,12 @@ public class UseSet<T> implements UseCollection<T, Set<T>> {
     }
 
     @Override
-    public Type type(final Name name) {
+    public Type javaType(final Name name) {
 
         if(name.isEmpty()) {
-            return TypeFactory.parameterizedClass(Set.class, type.type());
+            return TypeFactory.parameterizedClass(Set.class, type.javaType());
         } else {
-            return type.type(name.withoutFirst());
+            return type.javaType(name.withoutFirst());
         }
     }
 

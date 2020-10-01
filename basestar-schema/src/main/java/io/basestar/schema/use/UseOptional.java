@@ -86,9 +86,9 @@ public class UseOptional<T> implements UseContainer<T, T> {
     }
 
     @Override
-    public Type type(final Name name) {
+    public Type javaType(final Name name) {
 
-        return type.type(name);
+        return type.javaType(name);
     }
 
     @Override

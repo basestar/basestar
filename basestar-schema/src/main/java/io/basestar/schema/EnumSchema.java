@@ -38,6 +38,7 @@ import lombok.experimental.Accessors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -172,6 +173,16 @@ public class EnumSchema implements Schema<String> {
     public Set<Constraint.Violation> validate(final Context context, final Name name, final String after) {
 
         return Collections.emptySet();
+    }
+
+    @Override
+    public Type javaType(final Name name) {
+
+        if(name.isEmpty()) {
+            return String.class;
+        } else {
+            throw new UnsupportedOperationException();
+        }
     }
 
     @Override

@@ -51,12 +51,12 @@ public interface UseInstance extends UseNamed<Instance>, UseLayout {
     }
 
     @Override
-    default Type type(final Name name) {
+    default Type javaType(final Name name) {
 
         if(name.isEmpty()) {
             return Object.class;
         } else {
-            return getSchema().type(name);
+            return getSchema().javaType(name);
         }
     }
 

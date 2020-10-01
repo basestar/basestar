@@ -108,7 +108,7 @@ public interface Member extends Named, Described, Serializable, Extendable {
 
     <T> Use<T> typeOf(Name name);
 
-    Type type(Name name);
+    Type javaType(Name name);
 
     Set<Name> transientExpand(Name name, Set<Name> expand);
 

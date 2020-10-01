@@ -102,12 +102,12 @@ public interface Use<T> extends Serializable {
 
     Use<?> typeOf(Name name);
 
-    default Type type() {
+    default Type javaType() {
 
-        return type(Name.empty());
+        return javaType(Name.empty());
     }
 
-    Type type(Name name);
+    Type javaType(Name name);
 
     T expand(T value, Expander expander, Set<Name> expand);
 

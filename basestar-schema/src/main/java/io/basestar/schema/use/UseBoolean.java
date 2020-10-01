@@ -91,7 +91,7 @@ public class UseBoolean implements UseScalar<Boolean> {
     }
 
     @Override
-    public Type type(final Name name) {
+    public Type javaType(final Name name) {
 
         return Boolean.class;
     }

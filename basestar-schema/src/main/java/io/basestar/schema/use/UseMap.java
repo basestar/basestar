@@ -218,12 +218,12 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     }
 
     @Override
-    public Type type(final Name name) {
+    public Type javaType(final Name name) {
 
         if(name.isEmpty()) {
-            return TypeFactory.parameterizedClass(Map.class, type.type());
+            return TypeFactory.parameterizedClass(Map.class, type.javaType());
         } else {
-            return type.type(name.withoutFirst());
+            return type.javaType(name.withoutFirst());
         }
     }
 
