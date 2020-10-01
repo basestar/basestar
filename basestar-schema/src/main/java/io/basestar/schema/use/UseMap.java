@@ -123,11 +123,12 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
         if(value == null) {
             return null;
         } else if(value instanceof Map) {
-            return ((Map<?, ?>) value).entrySet().stream()
-                    .collect(Collectors.toMap(
-                            entry -> entry.getKey().toString(),
-                            entry -> fn.apply(entry.getKey().toString(), entry.getValue())
-                    ));
+            final Map<String, T> result = new HashMap<>();
+            ((Map<?, ?>) value).forEach((k, v) -> {
+                final String key = k.toString();
+                result.put(key, fn.apply(key, v));
+            });
+            return result;
         } else if(suppress) {
             return null;
         } else {
