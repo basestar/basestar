@@ -122,6 +122,10 @@ LinkingView:
 
 File:
   type: object
+  properties:
+    tags:
+      type:
+        map?: string
 
 FileRow:
   type: object
@@ -170,5 +174,8 @@ Expressions:
       type: string
     substr2:
       expression: id.substr(5)
+      type: string
+    mapValue:
+      expression: "tags['a']"
       type: string
   from: File

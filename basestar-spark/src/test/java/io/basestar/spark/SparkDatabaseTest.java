@@ -4,8 +4,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Namespace;
 import io.basestar.spark.database.SparkDatabase;
-import io.basestar.spark.util.ColumnResolver;
-import io.basestar.spark.util.DatasetResolver;
+import io.basestar.spark.resolver.ColumnResolver;
+import io.basestar.spark.resolver.SchemaResolver;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
 import org.apache.spark.sql.Dataset;
@@ -40,7 +40,7 @@ public class SparkDatabaseTest extends AbstractSparkTest {
                 Name.of("A"), datasetA
         );
 
-        final DatasetResolver resolver = DatasetResolver.automatic((schema) -> datasets.get(schema.getQualifiedName()));
+        final SchemaResolver resolver = SchemaResolver.automatic((schema) -> datasets.get(schema.getQualifiedName()));
 
         final SparkDatabase database = SparkDatabase.builder()
                 .resolver(resolver).namespace(namespace)

@@ -21,6 +21,7 @@ package io.basestar.auth;
  */
 
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import lombok.Data;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -41,5 +42,41 @@ public interface Authenticator {
     default Caller superuser() {
 
         return Caller.SUPER;
+    }
+
+    @Data
+    class Delegating implements Authenticator {
+
+        private final Authenticator delegate;
+
+        @Override
+        public boolean canAuthenticate(final Authorization auth) {
+
+            return delegate.canAuthenticate(auth);
+        }
+
+        @Override
+        public CompletableFuture<Caller> authenticate(final Authorization auth) {
+
+            return delegate.authenticate(auth);
+        }
+
+        @Override
+        public Map<String, SecurityScheme> openApi() {
+
+            return delegate.openApi();
+        }
+
+        @Override
+        public Caller anon() {
+
+            return delegate.anon();
+        }
+
+        @Override
+        public Caller superuser() {
+
+            return delegate.superuser();
+        }
     }
 }

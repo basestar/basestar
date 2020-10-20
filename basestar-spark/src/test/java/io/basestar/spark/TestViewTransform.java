@@ -24,8 +24,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Namespace;
 import io.basestar.spark.database.SparkDatabase;
-import io.basestar.spark.util.ColumnResolver;
-import io.basestar.spark.util.DatasetResolver;
+import io.basestar.spark.resolver.ColumnResolver;
+import io.basestar.spark.resolver.SchemaResolver;
 import io.basestar.util.Name;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
@@ -186,7 +186,7 @@ public class TestViewTransform extends AbstractSparkTest {
 
         final SparkSession session = session();
 
-        final File f1 = new File("loremipsum");
+        final File f1 = new File("loremipsum", ImmutableMap.of("a", "b"));
 
         final Map<Name, Dataset<Row>> datasets = ImmutableMap.of(
                 Name.of("File"), session.createDataset(ImmutableList.of(f1), Encoders.bean(File.class)).toDF()
@@ -194,15 +194,17 @@ public class TestViewTransform extends AbstractSparkTest {
 
         final List<Expressions> rows = view("Expressions", Expressions.class, datasets);
         assertEquals(1, rows.size());
-        assertEquals("remi", rows.get(0).getSubstr1());
-        assertEquals("ipsum", rows.get(0).getSubstr2());
+        final Expressions row = rows.get(0);
+        assertEquals("remi", row.getSubstr1());
+        assertEquals("ipsum", row.getSubstr2());
+        assertEquals("b", row.getMapValue());
     }
 
     private <T> List<T> view(final String view, final Class<T> as,  final Map<Name, Dataset<Row>> datasets) throws IOException {
 
         final Namespace namespace = Namespace.load(TestViewTransform.class.getResourceAsStream("schema.yml"));
 
-        final DatasetResolver resolver = DatasetResolver.automatic((schema) -> datasets.get(schema.getQualifiedName()));
+        final SchemaResolver resolver = SchemaResolver.automatic((schema) -> datasets.get(schema.getQualifiedName()));
 
         final SparkDatabase database = SparkDatabase.builder()
                 .resolver(resolver).namespace(namespace)

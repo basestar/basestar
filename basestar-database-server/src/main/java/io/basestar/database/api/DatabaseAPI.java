@@ -29,7 +29,6 @@ import io.basestar.api.APIRequest;
 import io.basestar.api.APIResponse;
 import io.basestar.api.exception.InvalidBodyException;
 import io.basestar.api.exception.InvalidQueryException;
-import io.basestar.api.exception.NotFoundException;
 import io.basestar.api.exception.UnsupportedMethodException;
 import io.basestar.auth.Caller;
 import io.basestar.database.Database;
@@ -167,7 +166,7 @@ public class DatabaseAPI implements API {
                             throw new UnsupportedMethodException(ImmutableSet.of(APIRequest.Method.GET));
                     }
                 default:
-                    throw new NotFoundException();
+                    return CompletableFuture.completedFuture(APIResponse.response(request, 404));
             }
 
         } catch (final Exception e) {

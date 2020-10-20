@@ -21,7 +21,6 @@ package io.basestar.schema;
  */
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -105,7 +104,8 @@ public class Namespace implements Serializable, Schema.Resolver {
 
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper(new BasestarFactory())
             .registerModule(new BasestarModule())
-            .setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)
+            // Do not use, Spark compatibility issue
+            //.setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)
             .configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
 
     private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new BasestarFactory(new YAMLFactory()
@@ -114,7 +114,8 @@ public class Namespace implements Serializable, Schema.Resolver {
             .configure(YAMLGenerator.Feature.SPLIT_LINES, false)))
             .registerModule(new BasestarModule())
             .configure(JsonParser.Feature.ALLOW_COMMENTS, true)
-            .setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)
+            // Do not use, Spark compatibility issue
+            //.setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)
             .configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
 
     private final Version version;

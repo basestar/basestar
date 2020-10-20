@@ -21,10 +21,7 @@ package io.basestar.spark.transform;
  */
 
 import io.basestar.expression.Expression;
-import io.basestar.schema.Id;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.Property;
-import io.basestar.schema.Reserved;
+import io.basestar.schema.*;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseString;
 import io.basestar.spark.expression.SparkExpressionVisitor;
@@ -39,12 +36,12 @@ import java.util.Set;
 
 public class ExpressionTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
-    private final ObjectSchema schema;
+    private final InstanceSchema schema;
 
     private final Set<Name> expand;
 
     @lombok.Builder(builderClassName = "Builder")
-    ExpressionTransform(final ObjectSchema schema, final Set<Name> expand) {
+    ExpressionTransform(final InstanceSchema schema, final Set<Name> expand) {
 
         this.schema = Nullsafe.require(schema);
         this.expand = Nullsafe.orDefault(expand);
@@ -54,10 +51,13 @@ public class ExpressionTransform implements Transform<Dataset<Row>, Dataset<Row>
     public Dataset<Row> accept(final Dataset<Row> input) {
 
         Dataset<Row> output = input;
-        final Id id = schema.getId();
-        if(id != null && id.getExpression() != null) {
-            final Column col = apply(input, id.getExpression(), UseString.DEFAULT);
-            output = output.withColumn(ObjectSchema.ID, col);
+        if(schema instanceof ObjectSchema) {
+            final ObjectSchema objectSchema = (ObjectSchema)schema;
+            final Id id = objectSchema.getId();
+            if (id != null && id.getExpression() != null) {
+                final Column col = apply(input, id.getExpression(), UseString.DEFAULT);
+                output = output.withColumn(ObjectSchema.ID, col);
+            }
         }
         for(final Property property : schema.getProperties().values()) {
             if(property.getExpression() != null) {

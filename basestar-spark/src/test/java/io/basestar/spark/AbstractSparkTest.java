@@ -220,6 +220,13 @@ public abstract class AbstractSparkTest {
     public static class File {
 
         private String id;
+
+        private Map<String, String> tags;
+
+        public File(final String id) {
+
+            this(id, null);
+        }
     }
 
     @Data
@@ -262,5 +269,7 @@ public abstract class AbstractSparkTest {
         private String substr1;
 
         private String substr2;
+
+        private String mapValue;
     }
 }
