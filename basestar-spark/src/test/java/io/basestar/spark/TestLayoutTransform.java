@@ -5,9 +5,9 @@ import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.layout.ObjectIdLayout;
+import io.basestar.spark.resolver.ColumnResolver;
+import io.basestar.spark.resolver.SchemaResolver;
 import io.basestar.spark.transform.LayoutTransform;
-import io.basestar.spark.util.ColumnResolver;
-import io.basestar.spark.util.DatasetResolver;
 import io.basestar.util.Name;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -52,7 +52,7 @@ public class TestLayoutTransform extends AbstractSparkTest {
                 Name.of("A"), datasetA
         );
 
-        final DatasetResolver resolver = DatasetResolver.automatic((schema) -> datasets.get(schema.getQualifiedName()));
+        final SchemaResolver resolver = SchemaResolver.automatic((schema) -> datasets.get(schema.getQualifiedName()));
         final ColumnResolver<Row> columnResolver = ColumnResolver.lowercase(ColumnResolver::nested);
 
         final Dataset<Row> ds = resolver.resolve(a, columnResolver);

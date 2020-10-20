@@ -25,8 +25,8 @@ import io.basestar.expression.Expression;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import io.basestar.spark.expression.SparkExpressionVisitor;
-import io.basestar.spark.util.ColumnResolver;
-import io.basestar.spark.util.DatasetResolver;
+import io.basestar.spark.resolver.ColumnResolver;
+import io.basestar.spark.resolver.SchemaResolver;
 import io.basestar.spark.util.ScalaUtils;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.util.Name;
@@ -53,7 +53,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
     private static final String REF_ID_COLUMN = Reserved.PREFIX + Reserved.PREFIX + ObjectSchema.ID;
 
     @NonNull
-    private final DatasetResolver resolver;
+    private final SchemaResolver resolver;
 
     @NonNull
     private final ColumnResolver<Row> columnResolver;
@@ -65,7 +65,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
     private final Set<Name> expand;
 
     @lombok.Builder(builderClassName = "Builder")
-    ExpandTransform(@NonNull final DatasetResolver resolver, @Nullable final ColumnResolver<Row> columnResolver,
+    ExpandTransform(@NonNull final SchemaResolver resolver, @Nullable final ColumnResolver<Row> columnResolver,
                     @NonNull final InstanceSchema schema, @NonNull final Set<Name> expand) {
 
         this.resolver = Nullsafe.require(resolver);

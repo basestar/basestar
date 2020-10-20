@@ -1,6 +1,7 @@
 package io.basestar.schema;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.google.common.collect.ImmutableMap;
 import io.basestar.util.Name;
 
 import java.util.Map;
@@ -32,4 +33,12 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver {
     Set<Name> getDeclaredExpand();
 
     Set<Name> getExpand();
+
+    default Instance deleted(final String id) {
+
+        return new Instance(ImmutableMap.of(
+                id(), id,
+                Reserved.DELETED, true
+        ));
+    }
 }

@@ -5,9 +5,9 @@ import io.basestar.expression.Expression;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Namespace;
 import io.basestar.spark.expression.SparkExpressionVisitor;
+import io.basestar.spark.resolver.ColumnResolver;
+import io.basestar.spark.resolver.SchemaResolver;
 import io.basestar.spark.transform.SortTransform;
-import io.basestar.spark.util.ColumnResolver;
-import io.basestar.spark.util.DatasetResolver;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import org.apache.spark.sql.Dataset;
@@ -17,7 +17,7 @@ import javax.annotation.Nullable;
 
 public class SparkDatabase {
 
-    private final DatasetResolver resolver;
+    private final SchemaResolver resolver;
 
     private final ColumnResolver<Row> columnResolver;
 
@@ -25,7 +25,7 @@ public class SparkDatabase {
     private final Namespace namespace;
 
     @lombok.Builder(builderClassName = "Builder")
-    SparkDatabase(final DatasetResolver resolver, final ColumnResolver<Row> columnResolver, @Nullable final Namespace namespace) {
+    SparkDatabase(final SchemaResolver resolver, final ColumnResolver<Row> columnResolver, @Nullable final Namespace namespace) {
 
         this.resolver = Nullsafe.require(resolver);
         this.columnResolver = Nullsafe.orDefault(columnResolver, ColumnResolver::nested);

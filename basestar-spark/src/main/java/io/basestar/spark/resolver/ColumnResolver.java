@@ -1,4 +1,4 @@
-package io.basestar.spark.util;
+package io.basestar.spark.resolver;
 
 /*-
  * #%L

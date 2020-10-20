@@ -48,8 +48,13 @@ public abstract class BasicAuthenticator implements Authenticator {
             return verify(username, password);
 
         } else {
-            throw new AuthenticationFailedException("Authorization header did not match declared format");
+            return throwFailure(authorization);
         }
+    }
+
+    protected CompletableFuture<Caller> throwFailure(final Authorization authorization) {
+
+        throw new AuthenticationFailedException("Authorization header did not match declared format");
     }
 
     protected abstract CompletableFuture<Caller> verify(final String username, final String password);

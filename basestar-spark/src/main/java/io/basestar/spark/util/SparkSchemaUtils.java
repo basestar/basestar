@@ -222,6 +222,9 @@ public class SparkSchemaUtils {
 
     public static Map<String, Object> fromSpark(final Layout schema, final Set<Name> expand, final Map<String, Use<?>> extraMetadata, final Row row) {
 
+        if(row == null) {
+            return null;
+        }
         final Map<String, Set<Name>> branches = Name.branch(expand);
         final Map<String, Object> object = new HashMap<>();
         schema.layoutSchema(expand).forEach((name, type) -> object.put(name, fromSpark(type, branches.get(name), get(row, name))));
@@ -435,6 +438,9 @@ public class SparkSchemaUtils {
 
     public static Row toSpark(final Layout schema, final Set<Name> expand, final Map<String, Use<?>> extraMetadata, final StructType structType, final Map<String, Object> object) {
 
+        if(object == null) {
+            return null;
+        }
         final Map<String, Set<Name>> branches = Name.branch(expand);
         final StructField[] fields = structType.fields();
         final Object[] values = new Object[fields.length];

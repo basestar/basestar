@@ -20,7 +20,7 @@ package io.basestar.spark.transform;
  * #L%
  */
 
-import io.basestar.spark.util.ColumnResolver;
+import io.basestar.spark.resolver.ColumnResolver;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Sort;
