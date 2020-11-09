@@ -310,4 +310,18 @@ public class GraphQLTest {
         final SubscriptionPublishEvent event = EventSerialization.gzipBson().deserialize(SubscriptionPublishEvent.class, inputBytes);
         System.err.println(event);
     }
+
+//    @Test
+//    public void testGenerator() throws Exception {
+//
+//        final Namespace namespace = namespace();
+//
+//        final TypeDefinitionRegistry registry = new SchemaAdaptor(namespace, GraphQLStrategy.DEFAULT).typeDefinitionRegistry();
+//
+//        final SchemaGenerator generator = new SchemaGenerator();
+//        final GraphQLSchema schema = generator.makeExecutableSchema(registry, RuntimeWiring.newRuntimeWiring().build());
+//
+//        final SchemaPrinter printer = new SchemaPrinter();
+//        System.out.println(printer.print(schema));
+//    }
 }

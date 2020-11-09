@@ -27,6 +27,7 @@ import io.basestar.schema.ViewSchema;
 import io.basestar.schema.use.Use;
 import io.basestar.spark.database.QueryChain;
 import io.basestar.spark.transform.*;
+import io.basestar.spark.util.NamingConvention;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -40,23 +41,20 @@ import org.apache.spark.sql.types.StructType;
 import scala.Tuple2;
 
 import java.io.Serializable;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public interface SchemaResolver {
 
-    Dataset<Row> resolve(InstanceSchema schema, ColumnResolver<Row> columnResolver, Set<Name> expand);
+    Dataset<Row> resolve(InstanceSchema schema, Set<Name> expand);
 
-    default Dataset<Row> resolve(final InstanceSchema schema, final ColumnResolver<Row> columnResolver) {
+    default Dataset<Row> resolve(final InstanceSchema schema) {
 
-        return resolve(schema, columnResolver, ImmutableSet.of());
+        return resolve(schema, ImmutableSet.of());
     }
 
-    default Dataset<Row> resolveAndConform(final InstanceSchema schema, final ColumnResolver<Row> columnResolver, final Set<Name> expand) {
+    default Dataset<Row> resolveAndConform(final InstanceSchema schema, final Set<Name> expand) {
 
-        return conform(schema, expand, resolve(schema, columnResolver, expand));
+        return conform(schema, expand, resolve(schema, expand));
     }
 
     default Dataset<Row> conform(final InstanceSchema schema, final Set<Name> expand, final Dataset<Row> input) {
@@ -65,61 +63,66 @@ public interface SchemaResolver {
         return schemaTransform.accept(input);
     }
 
-    static SchemaResolver.Automatic automatic(final Automatic.Resolver resolver) {
-
-        return new Automatic(resolver);
-    }
-
     default SchemaResolver then(final Transform<Dataset<Row>, Dataset<Row>> transform) {
 
-        return (schema, columnResolver, expand) -> transform.accept(SchemaResolver.this.resolve(schema, columnResolver, expand));
+        return (schema, expand) -> transform.accept(SchemaResolver.this.resolve(schema, expand));
     }
 
     @RequiredArgsConstructor
     class Automatic implements SchemaResolver {
 
-        public interface Resolver extends Serializable {
+        public interface ObjectReader {
 
-            Dataset<Row> resolve(InstanceSchema schema);
+            Dataset<Row> read(ObjectSchema schema);
         }
 
-        private final Resolver resolver;
+        private final ObjectReader objectReader;
+
+        private final NamingConvention naming;
+
+        public Automatic(final ObjectReader objectReader) {
+
+            this(objectReader, NamingConvention.DEFAULT);
+        }
+
+        protected Dataset<Row> object(final ObjectSchema schema, final Set<Name> expand) {
+
+            final Set<Name> mergedExpand = expand(schema, expand);
+            final SchemaTransform schemaTransform = SchemaTransform.builder().schema(schema).naming(naming).build();
+            final ExpressionTransform expressionTransform = ExpressionTransform.builder().schema(schema).expand(mergedExpand).build();
+            final ExpandTransform expandTransform = ExpandTransform.builder().resolver(this).schema(schema).expand(mergedExpand).build();
+            final Dataset<Row> base = Nullsafe.require(objectReader.read(schema));
+            return schemaTransform.then(expressionTransform).then(expandTransform).accept(base);
+        }
+
+        protected Dataset<Row> view(final ViewSchema schema, final Set<Name> expand) {
+
+            final Set<Name> mergedExpand = expand(schema, expand);
+            final ViewTransform viewTransform = ViewTransform.builder().schema(schema).build();
+            final ExpandTransform expandTransform = ExpandTransform.builder().resolver(this).schema(schema).expand(mergedExpand).build();
+            final ViewSchema.From from = schema.getFrom();
+            final Dataset<Row> base = resolve(from.getSchema(), from.getExpand());
+            return viewTransform.then(expandTransform).accept(base);
+        }
 
         @Override
-        public Dataset<Row> resolve(final InstanceSchema schema, final ColumnResolver<Row> columnResolver, final Set<Name> expand) {
+        public Dataset<Row> resolve(final InstanceSchema schema, final Set<Name> expand) {
 
             if(schema instanceof ObjectSchema) {
-
-                final ObjectSchema objectSchema = (ObjectSchema)schema;
-                final Set<Name> mergedExpand = mergedExpand(expand, objectSchema.getExpand());
-                final ExpressionTransform expressionTransform = ExpressionTransform.builder().schema(objectSchema).expand(mergedExpand).build();
-                final SchemaTransform schemaTransform = SchemaTransform.builder().schema(schema).build();
-                final ExpandTransform expandTransform = ExpandTransform.builder().resolver(this).columnResolver(columnResolver).schema(schema).expand(mergedExpand).build();
-                final Dataset<Row> base = Nullsafe.require(resolver.resolve(schema));
-                return schemaTransform.then(expressionTransform).then(expandTransform).accept(base);
-
+                return object((ObjectSchema)schema, expand);
             } else if(schema instanceof ViewSchema) {
-
-                final ViewSchema viewSchema = (ViewSchema)schema;
-                final Set<Name> mergedExpand = mergedExpand(expand, viewSchema.getExpand());
-                final ViewTransform viewTransform = ViewTransform.builder().schema(viewSchema).build();
-                final ExpandTransform expandTransform = ExpandTransform.builder().resolver(this).columnResolver(columnResolver).schema(schema).expand(mergedExpand).build();
-                final ViewSchema.From from = viewSchema.getFrom();
-                final Dataset<Row> base = resolve(from.getSchema(), columnResolver, from.getExpand());
-                return viewTransform.then(expandTransform).accept(base);
-
+                return view((ViewSchema)schema, expand);
             } else {
-
                 throw new IllegalStateException("Cannot resolve dataset for schema: " + schema.getQualifiedName());
             }
         }
 
-        private Set<Name> mergedExpand(final Set<Name> expand, final Set<Name> defaultExpand) {
+        protected Set<Name> expand(final InstanceSchema schema, final Set<Name> expand) {
 
             if(expand.contains(QueryChain.DEFAULT_EXPAND)) {
                 final Set<Name> mergedExpand = new HashSet<>(expand);
                 mergedExpand.remove(QueryChain.DEFAULT_EXPAND);
-                mergedExpand.addAll(defaultExpand);
+                mergedExpand.addAll(schema.getExpand());
                 return mergedExpand;
             } else {
                 return expand;
@@ -170,10 +173,10 @@ public interface SchemaResolver {
         private final Combiner combiner;
 
         @Override
-        public Dataset<Row> resolve(final InstanceSchema schema, final ColumnResolver<Row> columnResolver, final Set<Name> expand) {
+        public Dataset<Row> resolve(final InstanceSchema schema, final Set<Name> expand) {
 
-            final Dataset<Row> baseline = this.baseline.resolve(schema, columnResolver, expand);
-            final Dataset<Row> overlay = this.overlay.resolve(schema, columnResolver, expand);
+            final Dataset<Row> baseline = this.baseline.resolve(schema, expand);
+            final Dataset<Row> overlay = this.overlay.resolve(schema, expand);
             final Combiner combiner = this.combiner;
             final StructType structType = combiner.outputType(schema);
             final Column condition = combiner.condition(schema, baseline, overlay);
@@ -188,6 +191,24 @@ public interface SchemaResolver {
                         }
 
                     }, RowEncoder.apply(structType));
+        }
+    }
+
+    @RequiredArgsConstructor
+    class Caching implements SchemaResolver {
+
+        private final Map<Name, Dataset<Row>> cache = new HashMap<>();
+
+        private final SchemaResolver delegate;
+
+        @Override
+        public Dataset<Row> resolve(final InstanceSchema schema, final Set<Name> expand) {
+
+            return cache.computeIfAbsent(schema.getQualifiedName(), name -> {
+
+                final Dataset<Row> result = delegate.resolve(schema, expand);
+                return result.cache();
+            });
         }
     }
 }

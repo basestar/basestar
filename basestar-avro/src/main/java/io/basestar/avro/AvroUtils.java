@@ -74,7 +74,7 @@ public class AvroUtils {
         final List<Schema.Field> fields = new ArrayList<>();
         ObjectSchema.REF_SCHEMA
                 .forEach((k, v) -> fields.add(new Schema.Field(k, schema(v, Collections.emptySet()))));
-        return Schema.createRecord(name(schema), schema.getDescription(), null, false, fields);
+        return Schema.createRecord(Reserved.PREFIX + "Ref", "Ref", null, false, fields);
     }
 
     public static Schema schema(final Property property, final Set<Name> expand) {

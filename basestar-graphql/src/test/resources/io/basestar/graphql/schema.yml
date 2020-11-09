@@ -35,3 +35,10 @@ Test3:
 Test4:
   extend: Test3
   type: object
+
+Test5:
+  type: object
+  properties:
+    abstractRef:
+      type: Test4
+

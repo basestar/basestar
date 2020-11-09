@@ -335,7 +335,6 @@ public class PartitionedUpsertSink extends PartitionedUpsertUtils implements Sin
                 entry -> {
                     final Set<String> state = entry.getValue();
                     final CatalogTablePartition existing = existingPartitions.get(entry.getKey());
-                    // If only creates then append to existing partition
                     if(existing == null) {
                         create.incrementAndGet();
                         return upsertId;
@@ -356,6 +355,7 @@ public class PartitionedUpsertSink extends PartitionedUpsertUtils implements Sin
                             log.error("Failed to check file count for {}", existing.location(), e);
                         }
                         append.incrementAndGet();
+                        // If only creates then append to existing partition
                         return extractUpsertId(existing.location());
                     }
                 }
@@ -383,6 +383,9 @@ public class PartitionedUpsertSink extends PartitionedUpsertUtils implements Sin
                 .partitionBy(outputPartitionNames)
                 .save(tableLocation.toString());
 
+        final List<CatalogTablePartition> createPartitions = new ArrayList<>();
+        final List<CatalogTablePartition> updatePartitions = new ArrayList<>();
+
         upsertIds.forEach((partition, upsertId) -> {
 
             if(this.upsertId.equals(upsertId)) {
@@ -393,13 +396,23 @@ public class PartitionedUpsertSink extends PartitionedUpsertUtils implements Sin
                 final CatalogTablePartition existing = existingPartitions.get(partition);
                 if(existing == null) {
                     log.info("Creating partition {} with location {}", partition, newPartitionLocation);
-                    catalog.createPartitions(databaseName, tableName, Option.apply(newPartition).toList(), false);
-                } else {
+                    createPartitions.add(newPartition);
+                } else if(!newPartitionLocation.equals(existing.location())) {
                     log.info("Updating partition {} with location {}", partition, newPartitionLocation);
-                    catalog.alterPartitions(databaseName, tableName, Option.apply(newPartition).toList());
+                    updatePartitions.add(newPartition);
+                } else {
+                    log.info("Skipping partition {} with location {}", partition, newPartitionLocation);
                 }
             }
         });
+
+        if(!createPartitions.isEmpty()) {
+            catalog.createPartitions(databaseName, tableName, ScalaUtils.asScalaSeq(createPartitions), false);
+        }
+
+        if(!updatePartitions.isEmpty()) {
+            catalog.alterPartitions(databaseName, tableName, ScalaUtils.asScalaSeq(updatePartitions));
+        }
 
         joined.unpersist(true);
         changes.unpersist(true);

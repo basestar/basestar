@@ -258,7 +258,7 @@ public class ReadProcessor {
                         final Name schemaName = Instance.getSchema(initial);
                         final String id = Instance.getId(initial);
                         final ObjectSchema schema = objectSchema(schemaName);
-                        final Instance object = schema.create(initial);
+                        final Instance object = create(schema, initial);
 
                         refs.forEach(ref -> {
                             final RefKey refKey = ref.getKey();
@@ -320,14 +320,19 @@ public class ReadProcessor {
         }
         final Name castSchemaName = Instance.getSchema(data);
         if(baseSchema.getQualifiedName().equals(castSchemaName)) {
-            return CompletableFuture.completedFuture(baseSchema.create(data));
+            return CompletableFuture.completedFuture(create(baseSchema, data));
         } else {
             final String id = Instance.getId(data);
             final Long version = Instance.getVersion(data);
             final ObjectSchema castSchema = objectSchema(castSchemaName);
             return readRaw(castSchema, id, version, expand)
-                    .thenApply(castSchema::create);
+                    .thenApply(v -> create(castSchema, v));
         }
+    }
+
+    protected Instance create(final InstanceSchema schema, final Map<String, Object> data) {
+
+        return schema.create(data, Collections.emptySet(), true);
     }
 
     protected CompletableFuture<Page<Instance>> cast(final ObjectSchema baseSchema, final Page<? extends Map<String, Object>> data, final Set<Name> expand) {
@@ -391,7 +396,7 @@ public class ReadProcessor {
             final Map<ExpandKey<RefKey>, Instance> results = new HashMap<>();
             data.forEach((k, v) -> {
                 final ObjectSchema schema = objectSchema(Instance.getSchema(v));
-                final Instance instance = schema.create(v);
+                final Instance instance = create(schema, v);
                 results.put(k, instance);
             });
             return CompletableFuture.completedFuture(results);
@@ -418,7 +423,7 @@ public class ReadProcessor {
                     final RefKey key = RefKey.from(v);
                     final Map<String, Object> result = Nullsafe.orDefault(mapped.get(key), v);
                     final ObjectSchema schema = objectSchema(Instance.getSchema(result));
-                    final Instance instance = schema.create(result);
+                    final Instance instance = create(schema, result);
                     remapped.put(k, instance);
                 });
                 return remapped;
