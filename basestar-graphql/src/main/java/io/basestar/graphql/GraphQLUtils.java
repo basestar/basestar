@@ -36,6 +36,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class GraphQLUtils {
 
@@ -70,17 +71,17 @@ public class GraphQLUtils {
 
     public static Set<Name> paths(final InstanceSchema schema, final Selection<?> selection) {
 
-        if(selection instanceof Field) {
-            final Field field = (Field)selection;
+        if (selection instanceof Field) {
+            final Field field = (Field) selection;
             final String name = field.getName();
 
-            if(schema.metadataSchema().containsKey(name)) {
+            if (schema.metadataSchema().containsKey(name)) {
                 return Collections.singleton(Name.of(name));
             }
 
-            if(schema instanceof Link.Resolver) {
+            if (schema instanceof Link.Resolver) {
                 final Link link = ((Link.Resolver) schema).getLink(name, true);
-                if(link != null) {
+                if (link != null) {
                     return paths(link.getSchema(), field.getSelectionSet()).stream()
                             .map(v -> Name.of(name).with(v)).collect(Collectors.toSet());
                 }
@@ -88,7 +89,7 @@ public class GraphQLUtils {
             final Property property = schema.requireProperty(name, true);
             return paths(property.getType(), Name.of(name), field.getSelectionSet());
 
-        } else{
+        } else {
             throw new IllegalStateException();
         }
     }
@@ -120,12 +121,12 @@ public class GraphQLUtils {
             public <T> Set<Name> visitMap(final UseMap<T> type) {
 
                 final Set<Name> names = new HashSet<>();
-                for(final Selection<?> selection : selections.getSelections()) {
-                    final Field field = (Field)selection;
+                for (final Selection<?> selection : selections.getSelections()) {
+                    final Field field = (Field) selection;
                     final String name = field.getName();
-                    if(MAP_KEY.equals(name)) {
+                    if (MAP_KEY.equals(name)) {
                         names.add(parent.with("*"));
-                    } else if(MAP_VALUE.equals(name)) {
+                    } else if (MAP_VALUE.equals(name)) {
                         names.addAll(paths(type.getType(), parent.with("*"), field.getSelectionSet()));
                     }
                 }
@@ -136,12 +137,12 @@ public class GraphQLUtils {
 
     public static Map<String, Object> fromRequest(final InstanceSchema schema, final Map<String, Object> input) {
 
-        if(input == null) {
+        if (input == null) {
             return null;
         } else {
             final Map<String, Object> result = new HashMap<>();
             schema.getProperties().forEach((k, prop) -> {
-                if(input.containsKey(k)) {
+                if (input.containsKey(k)) {
                     result.put(k, fromRequest(prop.getType(), input.get(k)));
                 }
             });
@@ -151,7 +152,7 @@ public class GraphQLUtils {
 
     protected static Object fromRequest(final Use<?> type, final Object value) {
 
-        if(value == null) {
+        if (value == null) {
             return null;
         } else {
             return type.visit(new Use.Visitor.Defaulting<Object>() {
@@ -165,7 +166,7 @@ public class GraphQLUtils {
                 @Override
                 public <T> Object visitArray(final UseArray<T> type) {
 
-                    return ((Collection<?>)value).stream()
+                    return ((Collection<?>) value).stream()
                             .map(v -> fromRequest(type.getType(), v))
                             .collect(Collectors.toList());
                 }
@@ -173,7 +174,7 @@ public class GraphQLUtils {
                 @Override
                 public <T> Object visitSet(final UseSet<T> type) {
 
-                    return ((Collection<?>)value).stream()
+                    return ((Collection<?>) value).stream()
                             .map(v -> fromRequest(type.getType(), v))
                             .collect(Collectors.toSet());
                 }
@@ -183,8 +184,8 @@ public class GraphQLUtils {
                 public <T> Object visitMap(final UseMap<T> type) {
 
                     final Map<String, Object> result = new HashMap<>();
-                    ((Collection<Map<String, ?>>)value).forEach(v -> {
-                        final String key = (String)v.get(GraphQLUtils.MAP_KEY);
+                    ((Collection<Map<String, ?>>) value).forEach(v -> {
+                        final String key = (String) v.get(GraphQLUtils.MAP_KEY);
                         final Object value = fromRequest(type.getType(), v.get(GraphQLUtils.MAP_VALUE));
                         result.put(key, value);
                     });
@@ -195,7 +196,7 @@ public class GraphQLUtils {
                 @SuppressWarnings("unchecked")
                 public Object visitStruct(final UseStruct type) {
 
-                    return fromRequest(type.getSchema(), (Map<String, Object>)value);
+                    return fromRequest(type.getSchema(), (Map<String, Object>) value);
                 }
 
                 @Override
@@ -216,12 +217,12 @@ public class GraphQLUtils {
     @SuppressWarnings("unchecked")
     public static Map<String, Object> toResponse(final Namespace namespace, final InstanceSchema schema, final Map<String, Object> input) {
 
-        if(input == null) {
+        if (input == null) {
             return null;
         } else {
             final InstanceSchema resolvedSchema;
             final Name schemaName = Instance.getSchema(input);
-            if(schemaName != null) {
+            if (schemaName != null) {
                 resolvedSchema = namespace.requireInstanceSchema(schemaName);
             } else {
                 resolvedSchema = schema;
@@ -244,7 +245,7 @@ public class GraphQLUtils {
 
     public static Object toResponse(final Namespace namespace, final Use<?> type, final Object value) {
 
-        if(value == null) {
+        if (value == null) {
             return null;
         } else {
             return type.visit(new Use.Visitor.Defaulting<Object>() {
@@ -259,13 +260,13 @@ public class GraphQLUtils {
                 @SuppressWarnings("unchecked")
                 public Object visitObject(final UseObject type) {
 
-                    return toResponse(namespace, type.getSchema(), (Map<String, Object>)value);
+                    return toResponse(namespace, type.getSchema(), (Map<String, Object>) value);
                 }
 
                 @Override
                 public <T> Object visitArray(final UseArray<T> type) {
 
-                    return ((Collection<?>)value).stream()
+                    return ((Collection<?>) value).stream()
                             .map(v -> toResponse(namespace, type.getType(), v))
                             .collect(Collectors.toList());
                 }
@@ -273,7 +274,7 @@ public class GraphQLUtils {
                 @Override
                 public <T> Object visitSet(final UseSet<T> type) {
 
-                    return ((Collection<?>)value).stream()
+                    return ((Collection<?>) value).stream()
                             .map(v -> toResponse(namespace, type.getType(), v))
                             .collect(Collectors.toSet());
                 }
@@ -282,7 +283,7 @@ public class GraphQLUtils {
                 @SuppressWarnings("unchecked")
                 public <T> Object visitMap(final UseMap<T> type) {
 
-                    return ((Map<String, ?>)value).entrySet().stream()
+                    return ((Map<String, ?>) value).entrySet().stream()
                             .map(e -> {
                                 final Map<String, Object> result = new HashMap<>();
                                 result.put(MAP_KEY, e.getKey());
@@ -296,7 +297,7 @@ public class GraphQLUtils {
                 @SuppressWarnings("unchecked")
                 public Object visitStruct(final UseStruct type) {
 
-                    return toResponse(namespace, type.getSchema(), (Map<String, Object>)value);
+                    return toResponse(namespace, type.getSchema(), (Map<String, Object>) value);
                 }
 
                 @Override
@@ -322,7 +323,7 @@ public class GraphQLUtils {
 
     public static Map<String, Object> fromInput(final ExecutionContext context, final InstanceSchema schema, final ObjectValue input) {
 
-        if(input == null) {
+        if (input == null) {
             return null;
         } else {
             final Map<String, Object> result = new HashMap<>();
@@ -334,20 +335,20 @@ public class GraphQLUtils {
     @SuppressWarnings("unchecked")
     public static <T> T fromInput(final ExecutionContext context, final Use<T> type, final Value<?> value) {
 
-        if(value == null) {
+        if (value == null) {
             return null;
-        } else if(value instanceof VariableReference) {
+        } else if (value instanceof VariableReference) {
 
             final String name = ((VariableReference) value).getName();
             return fromInput(type, context.getVariables().get(name));
 
         } else {
 
-            return (T)type.visit(new Use.Visitor.Defaulting<Object>() {
+            return (T) type.visit(new Use.Visitor.Defaulting<Object>() {
                 @Override
                 public Object visitBoolean(final UseBoolean type) {
 
-                    if(value instanceof BooleanValue) {
+                    if (value instanceof BooleanValue) {
                         return ((BooleanValue) value).isValue();
                     } else {
                         throw new IllegalStateException();
@@ -357,9 +358,9 @@ public class GraphQLUtils {
                 @Override
                 public Object visitInteger(final UseInteger type) {
 
-                    if(value instanceof IntValue) {
+                    if (value instanceof IntValue) {
                         return ((IntValue) value).getValue().longValue();
-                    } else if(value instanceof FloatValue) {
+                    } else if (value instanceof FloatValue) {
                         return ((FloatValue) value).getValue().longValue();
                     } else {
                         throw new IllegalStateException();
@@ -369,9 +370,9 @@ public class GraphQLUtils {
                 @Override
                 public Object visitNumber(final UseNumber type) {
 
-                    if(value instanceof IntValue) {
+                    if (value instanceof IntValue) {
                         return ((IntValue) value).getValue().doubleValue();
-                    } else if(value instanceof FloatValue) {
+                    } else if (value instanceof FloatValue) {
                         return ((FloatValue) value).getValue().doubleValue();
                     } else {
                         throw new IllegalStateException();
@@ -381,7 +382,7 @@ public class GraphQLUtils {
                 @Override
                 public Object visitString(final UseString type) {
 
-                    if(value instanceof StringValue) {
+                    if (value instanceof StringValue) {
                         return ((StringValue) value).getValue();
                     } else {
                         throw new IllegalStateException();
@@ -391,7 +392,7 @@ public class GraphQLUtils {
                 @Override
                 public Object visitEnum(final UseEnum type) {
 
-                    if(value instanceof EnumValue) {
+                    if (value instanceof EnumValue) {
                         return ((EnumValue) value).getName();
                     } else {
                         throw new IllegalStateException();
@@ -401,8 +402,8 @@ public class GraphQLUtils {
                 @Override
                 public Object visitObject(final UseObject type) {
 
-                    if(value instanceof ObjectValue) {
-                        final String id = fromInput(context, UseString.DEFAULT, get((ObjectValue)value, ObjectSchema.ID));
+                    if (value instanceof ObjectValue) {
+                        final String id = fromInput(context, UseString.DEFAULT, get((ObjectValue) value, ObjectSchema.ID));
                         return ObjectSchema.ref(id);
                     } else {
                         throw new IllegalStateException();
@@ -412,8 +413,8 @@ public class GraphQLUtils {
                 @Override
                 public <T2> Object visitArray(final UseArray<T2> type) {
 
-                    if(value instanceof ArrayValue) {
-                        return ((ArrayValue)value).getValues().stream()
+                    if (value instanceof ArrayValue) {
+                        return ((ArrayValue) value).getValues().stream()
                                 .map(v -> fromInput(context, type.getType(), v))
                                 .collect(Collectors.toList());
                     } else {
@@ -424,8 +425,8 @@ public class GraphQLUtils {
                 @Override
                 public <T2> Object visitSet(final UseSet<T2> type) {
 
-                    if(value instanceof ArrayValue) {
-                        return ((ArrayValue)value).getValues().stream()
+                    if (value instanceof ArrayValue) {
+                        return ((ArrayValue) value).getValues().stream()
                                 .map(v -> fromInput(context, type.getType(), v))
                                 .collect(Collectors.toSet());
                     } else {
@@ -436,12 +437,12 @@ public class GraphQLUtils {
                 @Override
                 public <T2> Object visitMap(final UseMap<T2> type) {
 
-                    if(value instanceof ArrayValue) {
+                    if (value instanceof ArrayValue) {
                         final Map<String, Object> result = new HashMap<>();
-                        ((ArrayValue)value).getValues().forEach(v -> {
-                            final ObjectValue entry = (ObjectValue)v;
+                        ((ArrayValue) value).getValues().forEach(v -> {
+                            final ObjectValue entry = (ObjectValue) v;
                             final Value<?> keyValue = get(entry, GraphQLUtils.MAP_KEY);
-                            final String key = ((StringValue)keyValue).getValue();
+                            final String key = ((StringValue) keyValue).getValue();
                             final Object value = fromInput(context, type.getType(), get(entry, GraphQLUtils.MAP_VALUE));
                             result.put(key, value);
                         });
@@ -454,7 +455,7 @@ public class GraphQLUtils {
                 @Override
                 public Object visitStruct(final UseStruct type) {
 
-                    if(value instanceof ObjectValue) {
+                    if (value instanceof ObjectValue) {
                         return fromInput(context, type.getSchema(), (ObjectValue) value);
                     } else {
                         throw new IllegalStateException();
@@ -464,7 +465,7 @@ public class GraphQLUtils {
                 @Override
                 public Object visitView(final UseView type) {
 
-                    if(value instanceof ObjectValue) {
+                    if (value instanceof ObjectValue) {
                         return fromInput(context, type.getSchema(), (ObjectValue) value);
                     } else {
                         throw new IllegalStateException();
@@ -474,7 +475,7 @@ public class GraphQLUtils {
                 @Override
                 public Object visitBinary(final UseBinary type) {
 
-                    if(value instanceof StringValue) {
+                    if (value instanceof StringValue) {
                         return BaseEncoding.base64().decode(((StringValue) value).getValue());
                     } else {
                         throw new IllegalStateException();
@@ -484,7 +485,7 @@ public class GraphQLUtils {
                 @Override
                 public <T2> Object visitStringLike(final UseStringLike<T2> type) {
 
-                    if(value instanceof StringValue) {
+                    if (value instanceof StringValue) {
                         return type.create(((StringValue) value).getValue());
                     } else {
                         throw new IllegalStateException();
@@ -502,7 +503,7 @@ public class GraphQLUtils {
 
     public static Map<String, Object> fromInput(final InstanceSchema schema, final Map<String, Object> input) {
 
-        if(input == null) {
+        if (input == null) {
             return null;
         } else {
             final Map<String, Object> result = new HashMap<>();
@@ -514,11 +515,11 @@ public class GraphQLUtils {
     @SuppressWarnings("unchecked")
     public static <T> T fromInput(final Use<T> type, final Object value) {
 
-        if(value == null) {
+        if (value == null) {
             return null;
         } else {
 
-            return (T)type.visit(new Use.Visitor.Defaulting<Object>() {
+            return (T) type.visit(new Use.Visitor.Defaulting<Object>() {
 
                 @Override
                 public <T2> Object visitDefault(final Use<T2> type) {
@@ -530,7 +531,7 @@ public class GraphQLUtils {
                 @SuppressWarnings("unchecked")
                 public Object visitObject(final UseObject type) {
 
-                    if(value instanceof Map) {
+                    if (value instanceof Map) {
                         return ObjectSchema.ref(Instance.getId((Map<String, Object>) value));
                     } else {
                         throw new IllegalStateException();
@@ -540,8 +541,8 @@ public class GraphQLUtils {
                 @Override
                 public <T2> Object visitArray(final UseArray<T2> type) {
 
-                    if(value instanceof Collection) {
-                        return ((Collection<?>)value).stream()
+                    if (value instanceof Collection) {
+                        return ((Collection<?>) value).stream()
                                 .map(v -> fromInput(type.getType(), v))
                                 .collect(Collectors.toList());
                     } else {
@@ -552,8 +553,8 @@ public class GraphQLUtils {
                 @Override
                 public <T2> Object visitSet(final UseSet<T2> type) {
 
-                    if(value instanceof Collection) {
-                        return ((Collection<?>)value).stream()
+                    if (value instanceof Collection) {
+                        return ((Collection<?>) value).stream()
                                 .map(v -> fromInput(type.getType(), v))
                                 .collect(Collectors.toList());
                     } else {
@@ -565,10 +566,10 @@ public class GraphQLUtils {
                 @SuppressWarnings("unchecked")
                 public <T2> Object visitMap(final UseMap<T2> type) {
 
-                    if(value instanceof Collection) {
+                    if (value instanceof Collection) {
                         final Map<String, Object> result = new HashMap<>();
-                        ((Collection<Map<String, ?>>)value).forEach(entry -> {
-                            final String key = (String)entry.get(GraphQLUtils.MAP_KEY);
+                        ((Collection<Map<String, ?>>) value).forEach(entry -> {
+                            final String key = (String) entry.get(GraphQLUtils.MAP_KEY);
                             final Object value = fromInput(type.getType(), entry.get(GraphQLUtils.MAP_VALUE));
                             result.put(key, value);
                         });
@@ -582,7 +583,7 @@ public class GraphQLUtils {
                 @SuppressWarnings("unchecked")
                 public Object visitStruct(final UseStruct type) {
 
-                    if(value instanceof Map) {
+                    if (value instanceof Map) {
                         return fromInput(type.getSchema(), (Map<String, Object>) value);
                     } else {
                         throw new IllegalStateException();
@@ -593,7 +594,7 @@ public class GraphQLUtils {
                 @SuppressWarnings("unchecked")
                 public Object visitView(final UseView type) {
 
-                    if(value instanceof Map) {
+                    if (value instanceof Map) {
                         return fromInput(type.getSchema(), (Map<String, Object>) value);
                     } else {
                         throw new IllegalStateException();
@@ -603,7 +604,7 @@ public class GraphQLUtils {
                 @Override
                 public Object visitBinary(final UseBinary type) {
 
-                    if(value instanceof String) {
+                    if (value instanceof String) {
                         return BaseEncoding.base64().decode((String) value);
                     } else {
                         throw new IllegalStateException();
@@ -616,24 +617,24 @@ public class GraphQLUtils {
     @SuppressWarnings("unchecked")
     public static Map<String, Object> toResponse(final InstanceSchema schema, final SelectionSet selections, final Map<String, Object> input) {
 
-        if(input == null) {
+        if (input == null) {
             return null;
         } else {
             final Map<String, Object> result = new HashMap<>();
 
             schema.metadataSchema().forEach((k, use) -> {
-                if(selected(selections, k)) {
+                if (selected(selections, k)) {
                     result.put(k, toResponse(use, select(selections, k), input.get(k)));
                 }
             });
             schema.getProperties().forEach((k, prop) -> {
-                if(selected(selections, k)) {
+                if (selected(selections, k)) {
                     result.put(k, toResponse(prop.getType(), select(selections, k), input.get(k)));
                 }
             });
             if (schema instanceof Link.Resolver) {
                 ((Link.Resolver) schema).getLinks().forEach((k, link) -> {
-                    if(selected(selections, k)) {
+                    if (selected(selections, k)) {
                         final List<Map<String, Object>> values = (List<Map<String, Object>>) input.get(k);
                         if (values != null) {
                             result.put(k, values.stream().map(value -> toResponse(link.getSchema(), select(selections, k), value))
@@ -648,7 +649,7 @@ public class GraphQLUtils {
 
     public static Object toResponse(final Use<?> type, final SelectionSet selections, final Object value) {
 
-        if(value == null) {
+        if (value == null) {
             return null;
         } else {
             return type.visit(new Use.Visitor.Defaulting<Object>() {
@@ -663,13 +664,13 @@ public class GraphQLUtils {
                 @SuppressWarnings("unchecked")
                 public Object visitObject(final UseObject type) {
 
-                    return toResponse(type.getSchema(), selections, (Map<String, Object>)value);
+                    return toResponse(type.getSchema(), selections, (Map<String, Object>) value);
                 }
 
                 @Override
                 public <T> Object visitArray(final UseArray<T> type) {
 
-                    return ((Collection<?>)value).stream()
+                    return ((Collection<?>) value).stream()
                             .map(v -> toResponse(type.getType(), selections, v))
                             .collect(Collectors.toList());
                 }
@@ -677,7 +678,7 @@ public class GraphQLUtils {
                 @Override
                 public <T> Object visitSet(final UseSet<T> type) {
 
-                    return ((Collection<?>)value).stream()
+                    return ((Collection<?>) value).stream()
                             .map(v -> toResponse(type.getType(), selections, v))
                             .collect(Collectors.toSet());
                 }
@@ -686,13 +687,13 @@ public class GraphQLUtils {
                 @SuppressWarnings("unchecked")
                 public <T> Object visitMap(final UseMap<T> type) {
 
-                    return ((Map<String, ?>)value).entrySet().stream()
+                    return ((Map<String, ?>) value).entrySet().stream()
                             .map(e -> {
                                 final Map<String, Object> result = new HashMap<>();
-                                if(selected(selections, MAP_KEY)) {
+                                if (selected(selections, MAP_KEY)) {
                                     result.put(MAP_KEY, e.getKey());
                                 }
-                                if(selected(selections, MAP_VALUE)) {
+                                if (selected(selections, MAP_VALUE)) {
                                     result.put(MAP_VALUE, toResponse(type.getType(), select(selections, MAP_VALUE), e.getValue()));
                                 }
                                 return result;
@@ -704,14 +705,14 @@ public class GraphQLUtils {
                 @SuppressWarnings("unchecked")
                 public Object visitStruct(final UseStruct type) {
 
-                    return toResponse(type.getSchema(), selections, (Map<String, Object>)value);
+                    return toResponse(type.getSchema(), selections, (Map<String, Object>) value);
                 }
 
                 @Override
                 @SuppressWarnings("unchecked")
                 public Object visitView(final UseView type) {
 
-                    return toResponse(type.getSchema(), selections, (Map<String, Object>)value);
+                    return toResponse(type.getSchema(), selections, (Map<String, Object>) value);
                 }
 
                 @Override
@@ -790,8 +791,8 @@ public class GraphQLUtils {
 
     private static SelectionSet select(final SelectionSet selections, final String k) {
 
-        for(final Selection<?> v : selections.getSelections()) {
-            if(v instanceof Field && ((Field) v).getName().equals(k)) {
+        for (final Selection<?> v : selections.getSelections()) {
+            if (v instanceof Field && ((Field) v).getName().equals(k)) {
                 return ((Field) v).getSelectionSet();
             }
         }
@@ -800,7 +801,7 @@ public class GraphQLUtils {
 
     private static boolean selected(final SelectionSet selections, final String k) {
 
-        if(selections == null) {
+        if (selections == null) {
             return false;
         } else {
             return selections.getSelections().stream().anyMatch(v -> {
@@ -815,9 +816,9 @@ public class GraphQLUtils {
 
     public static Caller caller(final GraphQLContext context) {
 
-        if(context != null) {
+        if (context != null) {
             final Caller caller = context.get("caller");
-            if(caller != null) {
+            if (caller != null) {
                 return caller;
             }
         }
@@ -826,9 +827,9 @@ public class GraphQLUtils {
 
     public static SubscriberContext subscriber(final GraphQLContext context) {
 
-        if(context != null) {
+        if (context != null) {
             final SubscriberContext sub = context.get("subscriber");
-            if(sub != null) {
+            if (sub != null) {
                 return sub;
             }
         }
@@ -837,8 +838,8 @@ public class GraphQLUtils {
 
     public static Object fromValue(final Object value, final Map<String, Object> variables) {
 
-        if(value instanceof Value<?>) {
-            return fromValue((Value<?>)value, variables);
+        if (value instanceof Value<?>) {
+            return fromValue((Value<?>) value, variables);
         } else {
             return value;
         }
@@ -846,27 +847,27 @@ public class GraphQLUtils {
 
     public static Object fromValue(final Value<?> value, final Map<String, Object> variables) {
 
-        if(value == null || value instanceof NullValue) {
+        if (value == null || value instanceof NullValue) {
             return null;
-        } else if(value instanceof ObjectValue) {
+        } else if (value instanceof ObjectValue) {
             final Map<String, Object> result = new HashMap<>();
             ((ObjectValue) value).getObjectFields().forEach(f -> result.put(f.getName(), fromValue(f.getValue(), variables)));
             return result;
-        } else if(value instanceof ArrayValue) {
+        } else if (value instanceof ArrayValue) {
             return ((ArrayValue) value).getValues().stream()
                     .map(v -> fromValue(v, variables))
                     .collect(Collectors.toList());
-        } else if(value instanceof StringValue) {
+        } else if (value instanceof StringValue) {
             return ((StringValue) value).getValue();
-        } else if(value instanceof BooleanValue) {
+        } else if (value instanceof BooleanValue) {
             return ((BooleanValue) value).isValue();
-        } else if(value instanceof IntValue) {
+        } else if (value instanceof IntValue) {
             return ((IntValue) value).getValue().longValue();
-        } else if(value instanceof FloatValue) {
+        } else if (value instanceof FloatValue) {
             return ((FloatValue) value).getValue().doubleValue();
-        } else if(value instanceof EnumValue) {
+        } else if (value instanceof EnumValue) {
             return ((EnumValue) value).getName();
-        } else if(value instanceof VariableReference) {
+        } else if (value instanceof VariableReference) {
             return fromValue(variables.get(((VariableReference) value).getName()), variables);
         } else {
             throw new UnsupportedOperationException("Cannot understand " + value.getClass());
@@ -875,23 +876,23 @@ public class GraphQLUtils {
 
     public static Value<?> toValue(final Object value) {
 
-        if(value instanceof Value<?>) {
-            return (Value<?>)value;
-        } else if(value == null) {
+        if (value instanceof Value<?>) {
+            return (Value<?>) value;
+        } else if (value == null) {
             return NullValue.newNullValue().build();
-        } else if(value instanceof Map<?, ?>) {
+        } else if (value instanceof Map<?, ?>) {
             return ObjectValue.newObjectValue().objectFields(((Map<?, ?>) value).entrySet().stream()
-                    .map(e -> ObjectField.newObjectField().name((String)e.getKey()).value(toValue(e.getValue())).build())
+                    .map(e -> ObjectField.newObjectField().name((String) e.getKey()).value(toValue(e.getValue())).build())
                     .collect(Collectors.toList())).build();
-        } else if(value instanceof Collection<?>) {
+        } else if (value instanceof Collection<?>) {
             return ArrayValue.newArrayValue().values(((Collection<?>) value).stream()
                     .map(GraphQLUtils::toValue)
                     .collect(Collectors.toList())).build();
-        } else if(value instanceof String) {
-            return StringValue.newStringValue((String)value).build();
-        } else if(value instanceof Boolean) {
-            return BooleanValue.newBooleanValue((Boolean)value).build();
-        } else if(value instanceof Number) {
+        } else if (value instanceof String) {
+            return StringValue.newStringValue((String) value).build();
+        } else if (value instanceof Boolean) {
+            return BooleanValue.newBooleanValue((Boolean) value).build();
+        } else if (value instanceof Number) {
             final Number number = (Number) value;
             if (Values.isInteger((number))) {
                 return IntValue.newIntValue(BigInteger.valueOf(number.longValue())).build();
@@ -901,5 +902,61 @@ public class GraphQLUtils {
         } else {
             throw new UnsupportedOperationException("Cannot understand " + value.getClass());
         }
+    }
+
+    public static Set<Name> expand(final Namespace namespace, final InstanceSchema schema, final SelectionSet selections) {
+
+        if (selections == null || selections.getSelections() == null) {
+            return Collections.emptySet();
+        }
+        return selections.getSelections().stream()
+                .flatMap(selection -> {
+                    if (selection instanceof Field) {
+                        final Field field = (Field) selection;
+                        final Name name = Name.of(field.getName());
+                        final Member member = schema.getMember(field.getName(), true);
+                        return expand(namespace, member.getType(), field.getSelectionSet()).stream().map(name::with);
+                    } else if (selection instanceof InlineFragment) {
+                        final InlineFragment fragment = (InlineFragment) selection;
+                        if(fragment.getTypeCondition() != null) {
+                            final String name = fragment.getTypeCondition().getName();
+                            final InstanceSchema resolvedSchema = namespace.requireInstanceSchema(name);
+                            return expand(namespace, resolvedSchema, fragment.getSelectionSet()).stream();
+                        } else {
+                            return expand(namespace, schema, fragment.getSelectionSet()).stream();
+                        }
+                    } else {
+                        return Stream.empty();
+                    }
+                })
+                .filter(v -> !v.isEmpty())
+                .collect(Collectors.toSet());
+    }
+
+    public static Set<Name> expand(final Namespace namespace, final Use<?> type, final SelectionSet selections) {
+
+        return type.visit(new Use.Visitor.Defaulting<Set<Name>>() {
+
+            @Override
+            public <T> Set<Name> visitDefault(final Use<T> type) {
+
+                return Collections.emptySet();
+            }
+
+            @Override
+            public <V, T> Set<Name> visitContainer(final UseContainer<V, T> type) {
+
+                return expand(namespace, type.getType(), selections);
+            }
+
+            @Override
+            public Set<Name> visitLinkable(final UseLinkable type) {
+
+                final Set<Name> result = new HashSet<>();
+                result.add(Name.empty());
+                result.addAll(expand(namespace, type.getSchema(), selections));
+                return result;
+            }
+        });
     }
 }

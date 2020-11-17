@@ -27,7 +27,6 @@ import io.basestar.graphql.GraphQLStrategy;
 import io.basestar.schema.Instance;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
 import lombok.RequiredArgsConstructor;
 
 import java.util.Map;
@@ -44,7 +43,11 @@ class InterfaceResolver implements TypeResolver {
     public GraphQLObjectType getType(final TypeResolutionEnvironment env) {
 
         final Map<String, Object> object = env.getObject();
-        final Name schemaName = Nullsafe.orDefault(Instance.getSchema(object), schema.getQualifiedName());
-        return env.getSchema().getObjectType(strategy.typeName(schemaName));
+        final Name schemaName = Instance.getSchema(object);
+        if(schemaName != null) {
+            return env.getSchema().getObjectType(strategy.typeName(schemaName));
+        } else {
+            return env.getSchema().getObjectType(strategy.missingInterfaceRefTypeName(schema));
+        }
     }
 }

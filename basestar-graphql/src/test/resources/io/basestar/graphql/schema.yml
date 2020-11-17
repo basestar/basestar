@@ -43,5 +43,5 @@ Test5:
   type: object
   properties:
     abstractRef:
-      type: Test4
+      type: Test3
 
