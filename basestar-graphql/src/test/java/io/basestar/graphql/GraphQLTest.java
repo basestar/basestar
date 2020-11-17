@@ -69,6 +69,9 @@ public class GraphQLTest {
                 .data(ImmutableMap.of(
                         "test", ImmutableMap.of(
                                 "id","test1"
+                        ),
+                        "test2", ImmutableMap.of(
+                                "id","test1"
                         )
                 ))
                 .build()).get();
@@ -77,6 +80,7 @@ public class GraphQLTest {
                 .schema(Name.of("Test1"))
                 .id("test1")
                 .data(ImmutableMap.of(
+                        "x", "test1",
                         "z", ImmutableMap.of(
                                 "test", ImmutableMap.of(
                                         "id", "test4"
@@ -300,6 +304,27 @@ public class GraphQLTest {
 
         System.err.println((Object)result.getData());
         System.err.println(result.getErrors());
+    }
+
+    @Test
+    public void testPolymorphic() throws Exception {
+
+        final Namespace namespace = namespace();
+        final GraphQL graphQL = graphQL(namespace);
+
+        final ExecutionResult result = graphQL.execute(ExecutionInput.newExecutionInput()
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
+                .query("query { readTest3(id: \"test4\") { id, ... on Test4 { test2 { x } } } }")
+                .build());
+
+        assertEquals(ImmutableMap.of(
+                "readTest3", ImmutableMap.of(
+                        "id", "test4",
+                        "test2", ImmutableMap.of(
+                                "x", "test1"
+                        )
+                )
+        ), result.getData());
     }
 
     @Test

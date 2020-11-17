@@ -50,14 +50,14 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
         return metadataSchema().containsKey(name) || getMember(name, true) != null;
     }
 
-    default boolean isAssignableFrom(Name name) {
+    default boolean isSubclassOf(Name name) {
 
         if(name.equals(this.getQualifiedName())) {
             return true;
         } else {
             final InstanceSchema extend = getExtend();
             if(extend != null) {
-                return extend.isAssignableFrom(name);
+                return extend.isSubclassOf(name);
             } else {
                 return false;
             }

@@ -758,7 +758,7 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
             throw new IllegalStateException("Instance validation failed: id mismatch");
         }
         final Name schemaName = Instance.getSchema(after);
-        if(schemaName == null || !isAssignableFrom(schemaName)) {
+        if(schemaName == null || !isSubclassOf(schemaName)) {
             throw new IllegalStateException("Instance validation failed: schema mismatch");
         }
     }

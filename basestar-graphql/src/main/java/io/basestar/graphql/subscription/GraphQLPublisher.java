@@ -50,7 +50,7 @@ public class GraphQLPublisher implements TransportPublisher<GraphQLWebsocketAPI.
                 return database.expand(caller, change.getAfter(), expand)
                         .thenApply(after -> {
                             final Map<String, Object> data = new HashMap<>();
-                            data.put(alias, GraphQLUtils.toResponse(schema, after));
+                            data.put(alias, GraphQLUtils.toResponse(database.namespace(), schema, after));
                             final GraphQLAPI.ResponseBody payload = new GraphQLAPI.ResponseBody(data, null, null);
                             final GraphQLWebsocketAPI.ResponseBody response = new GraphQLWebsocketAPI.ResponseBody();
                             response.setId(channel);

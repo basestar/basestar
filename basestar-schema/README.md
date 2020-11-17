@@ -197,8 +197,21 @@ MyEnum:
 - `extensions` **map of java.lang.Object**
 
   
+### View Schema
 
+View schemas filter/transform or calculate aggregates for a source Object or View.
 
+<strong>Example</strong>
+<pre>
+MyView:
+  type: view
+  values:
+  - VALUE1
+  - VALUE2
+  - VALUE3
+</pre>
+
+Each view property must have an expression.
 
 ## Property
 

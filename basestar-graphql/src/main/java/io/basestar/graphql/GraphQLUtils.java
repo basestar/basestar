@@ -214,19 +214,26 @@ public class GraphQLUtils {
     }
 
     @SuppressWarnings("unchecked")
-    public static Map<String, Object> toResponse(final InstanceSchema schema, final Map<String, Object> input) {
+    public static Map<String, Object> toResponse(final Namespace namespace, final InstanceSchema schema, final Map<String, Object> input) {
 
         if(input == null) {
             return null;
         } else {
+            final InstanceSchema resolvedSchema;
+            final Name schemaName = Instance.getSchema(input);
+            if(schemaName != null) {
+                resolvedSchema = namespace.requireInstanceSchema(schemaName);
+            } else {
+                resolvedSchema = schema;
+            }
             final Map<String, Object> result = new HashMap<>();
-            schema.metadataSchema().forEach((k, use) -> result.put(k, toResponse(use, input.get(k))));
-            schema.getProperties().forEach((k, prop) -> result.put(k, toResponse(prop.getType(), input.get(k))));
-            if (schema instanceof Link.Resolver) {
-                ((Link.Resolver) schema).getLinks().forEach((k, link) -> {
+            resolvedSchema.metadataSchema().forEach((k, use) -> result.put(k, toResponse(namespace, use, input.get(k))));
+            resolvedSchema.getProperties().forEach((k, prop) -> result.put(k, toResponse(namespace, prop.getType(), input.get(k))));
+            if (resolvedSchema instanceof Link.Resolver) {
+                ((Link.Resolver) resolvedSchema).getLinks().forEach((k, link) -> {
                     final List<Map<String, Object>> values = (List<Map<String, Object>>) input.get(k);
                     if (values != null) {
-                        result.put(k, values.stream().map(value -> toResponse(link.getSchema(), value))
+                        result.put(k, values.stream().map(value -> toResponse(namespace, link.getSchema(), value))
                                 .collect(Collectors.toList()));
                     }
                 });
@@ -235,7 +242,7 @@ public class GraphQLUtils {
         }
     }
 
-    public static Object toResponse(final Use<?> type, final Object value) {
+    public static Object toResponse(final Namespace namespace, final Use<?> type, final Object value) {
 
         if(value == null) {
             return null;
@@ -252,14 +259,14 @@ public class GraphQLUtils {
                 @SuppressWarnings("unchecked")
                 public Object visitObject(final UseObject type) {
 
-                    return toResponse(type.getSchema(), (Map<String, Object>)value);
+                    return toResponse(namespace, type.getSchema(), (Map<String, Object>)value);
                 }
 
                 @Override
                 public <T> Object visitArray(final UseArray<T> type) {
 
                     return ((Collection<?>)value).stream()
-                            .map(v -> toResponse(type.getType(), v))
+                            .map(v -> toResponse(namespace, type.getType(), v))
                             .collect(Collectors.toList());
                 }
 
@@ -267,7 +274,7 @@ public class GraphQLUtils {
                 public <T> Object visitSet(final UseSet<T> type) {
 
                     return ((Collection<?>)value).stream()
-                            .map(v -> toResponse(type.getType(), v))
+                            .map(v -> toResponse(namespace, type.getType(), v))
                             .collect(Collectors.toSet());
                 }
 
@@ -279,7 +286,7 @@ public class GraphQLUtils {
                             .map(e -> {
                                 final Map<String, Object> result = new HashMap<>();
                                 result.put(MAP_KEY, e.getKey());
-                                result.put(MAP_VALUE, toResponse(type.getType(), e.getValue()));
+                                result.put(MAP_VALUE, toResponse(namespace, type.getType(), e.getValue()));
                                 return result;
                             })
                             .collect(Collectors.toList());
@@ -289,7 +296,7 @@ public class GraphQLUtils {
                 @SuppressWarnings("unchecked")
                 public Object visitStruct(final UseStruct type) {
 
-                    return toResponse(type.getSchema(), (Map<String, Object>)value);
+                    return toResponse(namespace, type.getSchema(), (Map<String, Object>)value);
                 }
 
                 @Override
