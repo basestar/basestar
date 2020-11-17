@@ -915,7 +915,11 @@ public class GraphQLUtils {
                         final Field field = (Field) selection;
                         final Name name = Name.of(field.getName());
                         final Member member = schema.getMember(field.getName(), true);
-                        return expand(namespace, member.getType(), field.getSelectionSet()).stream().map(name::with);
+                        if(member != null) {
+                            return expand(namespace, member.getType(), field.getSelectionSet()).stream().map(name::with);
+                        } else {
+                            return Stream.empty();
+                        }
                     } else if (selection instanceof InlineFragment) {
                         final InlineFragment fragment = (InlineFragment) selection;
                         if(fragment.getTypeCondition() != null) {
@@ -944,7 +948,18 @@ public class GraphQLUtils {
             }
 
             @Override
-            public <V, T> Set<Name> visitContainer(final UseContainer<V, T> type) {
+            public <T> Set<Name> visitMap(final UseMap<T> type) {
+
+                final Field field = findField(selections, GraphQLUtils.MAP_VALUE);
+                if(field != null) {
+                    return expand(namespace, type.getType(), field.getSelectionSet());
+                } else {
+                    return Collections.emptySet();
+                }
+            }
+
+            @Override
+            public <V, T extends Collection<V>> Set<Name> visitCollection(final UseCollection<V, T> type) {
 
                 return expand(namespace, type.getType(), selections);
             }
@@ -958,5 +973,27 @@ public class GraphQLUtils {
                 return result;
             }
         });
+    }
+
+    public static Field findField(final SelectionSet selections, final String name) {
+
+        if(selections == null || selections.getSelections() == null) {
+            return null;
+        }
+        for(final Selection<?> selection : selections.getSelections()) {
+            if(selection instanceof Field) {
+                final Field field = (Field)selection;
+                if(field.getName().equals(name)) {
+                    return field;
+                }
+            } else if(selection instanceof InlineFragment) {
+                final InlineFragment fragment = (InlineFragment)selection;
+                final Field field = findField(fragment.getSelectionSet(), name);
+                if(field != null) {
+                    return field;
+                }
+            }
+        }
+        return null;
     }
 }

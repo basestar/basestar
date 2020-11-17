@@ -216,11 +216,11 @@ public class GraphQLAdaptor {
     private Set<Page.Stat> stats(final DataFetchingEnvironment env) {
 
         final Set<Page.Stat> stats = new HashSet<>();
-        final Set<Name> names = paths(env);
-        if(names.contains(Name.of(strategy.pageTotalFieldName()))) {
+        final SelectionSet selections = env.getMergedField().getSingleField().getSelectionSet();
+        if(GraphQLUtils.findField(selections, strategy.pageTotalFieldName()) != null) {
             stats.add(Page.Stat.TOTAL);
         }
-        if(names.contains(Name.of(strategy.pageApproxTotalFieldName()))) {
+        if(GraphQLUtils.findField(selections, strategy.pageApproxTotalFieldName()) != null) {
             stats.add(Page.Stat.APPROX_TOTAL);
         }
         return stats;
