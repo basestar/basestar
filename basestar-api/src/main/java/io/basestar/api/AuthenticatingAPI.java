@@ -57,7 +57,7 @@ public class AuthenticatingAPI implements API {
         } else {
             for(final Map.Entry<String, String> header : request.getHeaders().entries()) {
                 final String value = header.getValue();
-                if(value != null && !value.isEmpty()) {
+                if(value != null && !value.isEmpty() && !value.equalsIgnoreCase("null")) {
                     final Matcher matcher = CUSTOM_AUTH_HEADER_PATTERN.matcher(header.getKey());
                     if (matcher.matches()) {
                         final String type = matcher.group(1);

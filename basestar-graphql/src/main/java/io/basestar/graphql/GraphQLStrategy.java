@@ -46,6 +46,11 @@ public interface GraphQLStrategy {
         return typeName(type.getQualifiedName());
     }
 
+    default String missingInterfaceRefTypeName(final Schema<?> type) {
+
+        return typeName(type) + Reserved.PREFIX;
+    }
+
     String inputRefTypeName();
 
     String inputTypeName(Schema<?> type);

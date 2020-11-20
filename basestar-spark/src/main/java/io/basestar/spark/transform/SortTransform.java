@@ -39,7 +39,7 @@ public class SortTransform<T> implements Transform<Dataset<T>, Dataset<T>> {
     SortTransform(final List<Sort> sort, final ColumnResolver<T> columnResolver) {
 
         this.sort = Nullsafe.require(sort);
-        this.columnResolver = columnResolver;
+        this.columnResolver = Nullsafe.orDefault(columnResolver, ColumnResolver::nested);
     }
 
     @Override

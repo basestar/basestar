@@ -20,8 +20,10 @@ package io.basestar.graphql;
  * #L%
  */
 
+import com.google.common.collect.ImmutableMap;
 import graphql.GraphQL;
 import graphql.execution.AsyncExecutionStrategy;
+import graphql.language.*;
 import graphql.schema.*;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaGenerator;
@@ -117,7 +119,7 @@ public class GraphQLAdaptor {
             if(schema instanceof InstanceSchema) {
                 if(!((InstanceSchema) schema).isConcrete()) {
                     builder.type(TypeRuntimeWiring.newTypeWiring(strategy.typeName(schema))
-                            .typeResolver(new InterfaceResolver(strategy)));
+                            .typeResolver(new InterfaceResolver((InstanceSchema)schema, strategy)));
                 }
             }
         });
@@ -142,8 +144,7 @@ public class GraphQLAdaptor {
 
         return (env) -> {
             final Caller caller = GraphQLUtils.caller(env.getContext());
-            final Set<Name> names = paths(env);
-            final Set<Name> expand = schema.requiredExpand(names);
+            final Set<Name> expand = expand(schema, env);
             final String id = env.getArgument(strategy.idArgumentName());
             final Long version = version(env);
             return read(caller, schema, id, version, expand);
@@ -157,35 +158,31 @@ public class GraphQLAdaptor {
                 .version(version).expand(expand)
                 .build();
         return database.read(caller, options)
-                .thenApply(object -> GraphQLUtils.toResponse(schema, object));
+                .thenApply(object -> GraphQLUtils.toResponse(namespace, schema, object));
     }
 
     private DataFetcher<CompletableFuture<?>> queryFetcher(final ObjectSchema schema) {
 
         return (env) -> {
             final Caller caller = GraphQLUtils.caller(env.getContext());
-            final Set<Name> names = Name.children(paths(env), strategy.pageItemsFieldName());
-            final Set<Name> expand = schema.requiredExpand(names);
+            final Set<Name> expand = expand(schema, env, strategy.pageItemsFieldName());
             final String query = env.getArgument(strategy.queryArgumentName());
-//            if(query != null) {
-//                log.debug("Query expression is ({})", query);
-//                log.debug("System charset representation of expression is ({})", Arrays.toString(query.getBytes()));
-//                log.debug("UTF-8 representation of expression is ({})", Arrays.toString(query.getBytes(Charsets.UTF_8)));
-//            }
             final Expression expression = query == null ? Constant.TRUE : Expression.parse(query);
             final Page.Token paging = paging(env);
             final Integer count = count(env);
             final List<Sort> sort = sort(env);
+            final Set<Page.Stat> stats = stats(env);
             final QueryOptions options = QueryOptions.builder()
                     .schema(schema.getQualifiedName())
                     .expression(expression)
                     .paging(paging)
                     .count(count)
+                    .stats(stats)
                     .sort(sort)
                     .expand(expand)
                     .build();
             return database.query(caller, options)
-                    .thenApply(objects -> objects.map(object -> GraphQLUtils.toResponse(schema, object)))
+                    .thenApply(objects -> objects.map(object -> GraphQLUtils.toResponse(namespace, schema, object)))
                     .thenApply(this::toPage);
         };
     }
@@ -196,19 +193,11 @@ public class GraphQLAdaptor {
 
             final Caller caller = GraphQLUtils.caller(env.getContext());
             final InstanceSchema linkSchema = link.getSchema();
-            final Set<Name> names = paths(env);
-            final Set<Name> itemNames = Name.children(names, strategy.pageItemsFieldName());
-            final Set<Name> expand = linkSchema.requiredExpand(itemNames);
+            final Set<Name> expand = expand(linkSchema, env, strategy.pageItemsFieldName());
             final String id = env.getArgument(strategy.idArgumentName());
             final Page.Token paging = paging(env);
             final Integer count = count(env);
-            final Set<Page.Stat> stats = new HashSet<>();
-            if(names.contains(Name.of(strategy.pageTotalFieldName()))) {
-                stats.add(Page.Stat.TOTAL);
-            }
-            if(names.contains(Name.of(strategy.pageApproxTotalFieldName()))) {
-                stats.add(Page.Stat.APPROX_TOTAL);
-            }
+            final Set<Page.Stat> stats = stats(env);
             final QueryLinkOptions options = QueryLinkOptions.builder()
                     .schema(schema.getQualifiedName())
                     .link(link.getName())
@@ -219,9 +208,22 @@ public class GraphQLAdaptor {
                     .stats(stats)
                     .build();
             return database.queryLink(caller, options)
-                    .thenApply(objects -> objects.map(object -> GraphQLUtils.toResponse(linkSchema, object)))
+                    .thenApply(objects -> objects.map(object -> GraphQLUtils.toResponse(namespace, linkSchema, object)))
                     .thenApply(this::toPage);
         };
+    }
+
+    private Set<Page.Stat> stats(final DataFetchingEnvironment env) {
+
+        final Set<Page.Stat> stats = new HashSet<>();
+        final SelectionSet selections = env.getMergedField().getSingleField().getSelectionSet();
+        if(GraphQLUtils.findField(selections, strategy.pageTotalFieldName()) != null) {
+            stats.add(Page.Stat.TOTAL);
+        }
+        if(GraphQLUtils.findField(selections, strategy.pageApproxTotalFieldName()) != null) {
+            stats.add(Page.Stat.APPROX_TOTAL);
+        }
+        return stats;
     }
 
     private Map<String, Object> toPage(final Page<?> page) {
@@ -264,8 +266,7 @@ public class GraphQLAdaptor {
 
         return (env) -> {
             final Caller caller = GraphQLUtils.caller(env.getContext());
-            final Set<Name> names = paths(env);
-            final Set<Name> expand = schema.requiredExpand(names);
+            final Set<Name> expand = expand(schema, env);
             final String id = env.getArgumentOrDefault(strategy.idArgumentName(), null);
             final Map<String, Object> data = GraphQLUtils.fromRequest(schema, env.getArgument(strategy.dataArgumentName()));
             final Consistency consistency = consistency(env);
@@ -276,7 +277,7 @@ public class GraphQLAdaptor {
                     .expressions(expressions)
                     .build();
             return database.create(caller, options)
-                    .thenApply(object -> GraphQLUtils.toResponse(schema, object));
+                    .thenApply(object -> GraphQLUtils.toResponse(namespace, schema, object));
         };
     }
 
@@ -284,8 +285,7 @@ public class GraphQLAdaptor {
 
         return (env) -> {
             final Caller caller = GraphQLUtils.caller(env.getContext());
-            final Set<Name> names = paths(env);
-            final Set<Name> expand = schema.requiredExpand(names);
+            final Set<Name> expand = expand(schema, env);
             final String id = env.getArgument(strategy.idArgumentName());
             final Long version = version(env);
             final Map<String, Object> data = GraphQLUtils.fromRequest(schema, env.getArgument(strategy.dataArgumentName()));
@@ -294,13 +294,13 @@ public class GraphQLAdaptor {
 
             final UpdateOptions options = UpdateOptions.builder()
                     .schema(schema.getQualifiedName()).id(id)
-                    .mode(mode)
+                    .mode(mode).consistency(consistency)
                     .data(data).version(version)
                     .expressions(expressions)
                     .expand(expand)
                     .build();
             return database.update(caller, options)
-                    .thenApply(object -> GraphQLUtils.toResponse(schema, object));
+                    .thenApply(object -> GraphQLUtils.toResponse(namespace, schema, object));
         };
     }
 
@@ -323,22 +323,30 @@ public class GraphQLAdaptor {
             final Consistency consistency = consistency(env);
             final DeleteOptions options = DeleteOptions.builder()
                     .schema(schema.getQualifiedName()).id(id)
-                    .version(version)
+                    .version(version).consistency(consistency)
                     .build();
             return database.delete(caller, options)
-                    .thenApply(object -> GraphQLUtils.toResponse(schema, object));
+                    .thenApply(object -> GraphQLUtils.toResponse(namespace, schema, object));
         };
     }
 
     private interface BatchHandler {
 
-        ActionOptions actionOptions(DataFetchingEnvironment env, SelectedField field);
+        ActionOptions actionOptions(DataFetchingEnvironment env, Field field);
     }
 
     @SuppressWarnings("unchecked")
-    private <T> T argument(final SelectedField field, final String name) {
+    private <T> T argument(final Field field, final String name) {
 
-        return field.getArguments() == null ? null : (T)field.getArguments().get(name);
+        if(field != null && field.getArguments() != null) {
+            for (final Argument argument : field.getArguments()) {
+                if (argument.getName().equals(name)) {
+                    final Value<?> value = argument.getValue();
+                    return (T) GraphQLUtils.fromValue(value, ImmutableMap.of());
+                }
+            }
+        }
+        return null;
     }
 
     // FIXME: merge with createFetcher
@@ -346,8 +354,7 @@ public class GraphQLAdaptor {
 
         return (env, field) -> {
 
-            final Set<Name> names = paths(field);
-            final Set<Name> expand = schema.requiredExpand(names);
+            final Set<Name> expand = expand(schema, field);
             final String id = argument(field, strategy.idArgumentName());
             final Map<String, Object> data = GraphQLUtils.fromRequest(schema, argument(field, strategy.dataArgumentName()));
             final Map<String, Expression> expressions = parseExpressions(argument(field, strategy.expressionsArgumentName()));
@@ -363,8 +370,8 @@ public class GraphQLAdaptor {
     private BatchHandler updateBatchHandler(final ObjectSchema schema, final UpdateOptions.Mode mode) {
 
         return (env, field) -> {
-            final Set<Name> names = paths(field);
-            final Set<Name> expand = schema.requiredExpand(names);
+
+            final Set<Name> expand = expand(schema, field);
             final String id = argument(field, strategy.idArgumentName());
             final Long version = version(field);
             final Map<String, Object> data = GraphQLUtils.fromRequest(schema, argument(field, strategy.dataArgumentName()));
@@ -421,10 +428,11 @@ public class GraphQLAdaptor {
             final BatchOptions.Builder builder = BatchOptions.builder()
                     .consistency(consistency);
 
-            env.getSelectionSet().getFields().forEach(field -> {
-                if(!field.getQualifiedName().contains("/")) {
+            env.getMergedField().getSingleField().getSelectionSet().getSelections().forEach(selection -> {
+                if(selection instanceof Field) {
+                    final Field field = (Field)selection;
                     final BatchHandler handler = handlers.get(field.getName());
-                    builder.action(field.getQualifiedName(), handler.actionOptions(env, field));
+                    builder.action(field.getName(), handler.actionOptions(env, field));
                 }
             });
 
@@ -433,7 +441,7 @@ public class GraphQLAdaptor {
                         final Map<String, Object> response = new HashMap<>();
                         results.forEach((k, v) -> {
                             final ObjectSchema schema = namespace.requireObjectSchema(Instance.getSchema(v));
-                            response.put(k, GraphQLUtils.toResponse(schema, v));
+                            response.put(k, GraphQLUtils.toResponse(namespace, schema, v));
                         });
                         return response;
                     });
@@ -457,7 +465,7 @@ public class GraphQLAdaptor {
             final Caller caller = GraphQLUtils.caller(env.getContext());
             final SubscriberContext subscriberContext = GraphQLUtils.subscriber(env.getContext());
             final Set<Name> names = paths(env);
-            final Set<Name> expand = schema.requiredExpand(names);
+            final Set<Name> expand = expand(schema, env);
             final String alias = Nullsafe.orDefault(env.getField().getAlias(), () -> strategy.subscribeMethodName(schema));
             final String id = env.getArgument(strategy.idArgumentName());
             return subscriberContext.subscribe(schema, id, alias, names)
@@ -480,7 +488,7 @@ public class GraphQLAdaptor {
 
     private static Map<String, Expression> parseExpressions(final Map<String, String> exprs) {
 
-        if(exprs == null) {
+        if (exprs == null) {
             return null;
         } else {
             return exprs.entrySet().stream().collect(Collectors.toMap(
@@ -490,20 +498,58 @@ public class GraphQLAdaptor {
         }
     }
 
+    private Set<Name> expand(final InstanceSchema schema, final DataFetchingEnvironment env, final String fieldName) {
+
+        final SelectionSet selectionSet = env.getMergedField().getSingleField().getSelectionSet();
+        for(final Selection<?> selection : selectionSet.getSelections()) {
+            if(selection instanceof Field) {
+                final Field field = (Field)selection;
+                if(fieldName.equals(field.getName())) {
+                    return GraphQLUtils.expand(namespace, schema, field.getSelectionSet());
+                }
+            }
+        }
+        return Collections.emptySet();
+    }
+
+    private Set<Name> expand(final InstanceSchema schema, final DataFetchingEnvironment env) {
+
+        return GraphQLUtils.expand(namespace, schema, env.getMergedField().getSingleField().getSelectionSet());
+    }
+
+    private Set<Name> expand(final InstanceSchema schema, final Field field) {
+
+        return GraphQLUtils.expand(namespace, schema, field.getSelectionSet());
+    }
+
+    @Deprecated
     private static Set<Name> paths(final DataFetchingEnvironment env) {
 
-        return paths(env.getSelectionSet().getFields());
+        return paths(env.getMergedField().getSingleField().getSelectionSet());
     }
 
-    private static Set<Name> paths(final SelectedField field) {
+    @Deprecated
+    private static Set<Name> paths(final SelectionSet selections) {
 
-        return paths(field.getSelectionSet().getFields());
-    }
-
-    private static Set<Name> paths(final List<SelectedField> fields) {
-
-        return fields.stream()
-                .map(v -> path(v.getQualifiedName()))
+        if(selections == null || selections.getSelections() == null) {
+            return Collections.emptySet();
+        }
+        return selections.getSelections().stream()
+                .flatMap(selection -> {
+                    final Set<Name> paths = new HashSet<>();
+                    if(selection instanceof Field) {
+                        final Field field = (Field)selection;
+                        final Name path = path(field.getName());
+                        paths.add(path);
+                        paths(field.getSelectionSet()).forEach(v -> paths.add(path.with(v)));
+                    } else if(selection instanceof InlineFragment) {
+                        final InlineFragment fragment = (InlineFragment)selection;
+                        paths.addAll(paths(fragment.getSelectionSet()));
+                    } else {
+                        log.warn("Skipping selection {}", selection);
+                    }
+                    return paths.stream();
+                })
                 .filter(v -> !v.isEmpty())
                 .collect(Collectors.toSet());
     }
@@ -522,7 +568,7 @@ public class GraphQLAdaptor {
                 .toArray(String[]::new));
     }
 
-    private Long version(final SelectedField field) {
+    private Long version(final Field field) {
 
         final Number value = argument(field, strategy.versionArgumentName());
         if(value == null) {

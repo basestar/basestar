@@ -23,6 +23,7 @@ package io.basestar.spark.transform;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.use.Use;
+import io.basestar.spark.util.NamingConvention;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -41,9 +42,10 @@ public class SchemaTransform implements DatasetMapTransform {
     private final RowTransformImpl rowTransform;
 
     @lombok.Builder(builderClassName = "Builder")
-    SchemaTransform(final InstanceSchema schema, final Set<Name> expand, final Map<String, Use<?>> extraMetadata, @Nullable final StructType structType) {
+    SchemaTransform(final InstanceSchema schema, @Nullable final NamingConvention naming, final Set<Name> expand,
+                    final Map<String, Use<?>> extraMetadata, @Nullable final StructType structType) {
 
-        this.rowTransform = new RowTransformImpl(schema, expand, extraMetadata, structType);
+        this.rowTransform = new RowTransformImpl(schema, naming, expand, extraMetadata, structType);
     }
 
     @Override
@@ -56,15 +58,18 @@ public class SchemaTransform implements DatasetMapTransform {
 
         private final InstanceSchema schema;
 
+        private final NamingConvention naming;
+
         private final Set<Name> expand;
 
         private final Map<String, Use<?>> extraMetadata;
 
         private final StructType structType;
 
-        RowTransformImpl(final InstanceSchema schema, final Set<Name> expand, final Map<String, Use<?>> extraMetadata, @Nullable final StructType structType) {
+        RowTransformImpl(final InstanceSchema schema, @Nullable final NamingConvention naming, final Set<Name> expand, final Map<String, Use<?>> extraMetadata, @Nullable final StructType structType) {
 
             this.schema = Nullsafe.require(schema);
+            this.naming = Nullsafe.orDefault(naming, NamingConvention.DEFAULT);
             if(expand != null) {
                 this.expand = expand;
             } else if(this.schema instanceof LinkableSchema) {
@@ -85,7 +90,7 @@ public class SchemaTransform implements DatasetMapTransform {
         @Override
         public Row accept(final Row input) {
 
-            final Map<String, Object> object = schema.create(SparkSchemaUtils.fromSpark(schema, expand, input), expand, true);
+            final Map<String, Object> object = schema.create(SparkSchemaUtils.fromSpark(schema, naming, expand, input), expand, true);
             return SparkSchemaUtils.toSpark(schema, expand, extraMetadata, structType, object);
         }
     }

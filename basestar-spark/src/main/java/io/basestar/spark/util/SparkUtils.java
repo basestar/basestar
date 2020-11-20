@@ -20,7 +20,6 @@ package io.basestar.spark.util;
  * #L%
  */
 
-import com.google.common.collect.Sets;
 import org.apache.spark.sql.catalyst.catalog.CatalogStorageFormat;
 import org.apache.spark.sql.catalyst.catalog.CatalogTablePartition;
 import org.apache.spark.sql.catalyst.catalog.ExternalCatalog;
@@ -63,7 +62,10 @@ public class SparkUtils {
         final List<CatalogTablePartition> alter = new ArrayList<>();
         final Set<scala.collection.immutable.Map<String, String>> drop = new HashSet<>();
 
-        for(final scala.collection.immutable.Map<String, String> spec : Sets.union(target.keySet(), source.keySet())) {
+        final Set<scala.collection.immutable.Map<String, String>> union = new HashSet<>();
+        union.addAll(target.keySet());
+        union.addAll(source.keySet());
+        for(final scala.collection.immutable.Map<String, String> spec : union) {
             final CatalogTablePartition before = target.get(spec);
             final CatalogTablePartition after = source.get(spec);
             if(after == null) {
@@ -85,4 +87,5 @@ public class SparkUtils {
             catalog.dropPartitions(databaseName, tableName, ScalaUtils.asScalaSeq(drop), false, true, false);
         }
     }
+
 }

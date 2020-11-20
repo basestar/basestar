@@ -20,6 +20,7 @@ package io.basestar.storage.cognito;
  * #L%
  */
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -33,10 +34,14 @@ import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
 import io.basestar.storage.Versioning;
+import io.basestar.storage.query.DisjunctionVisitor;
+import io.basestar.storage.query.Range;
+import io.basestar.storage.query.RangeVisitor;
 import io.basestar.util.*;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.text.StringEscapeUtils;
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderAsyncClient;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.*;
 
@@ -118,6 +123,7 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
                     final String userPoolId = strategy.getUserPoolId(schema);
                     return client.listUsers(ListUsersRequest.builder()
                             .userPoolId(userPoolId)
+                            .filter(filter(query))
                             .limit(count)
                             .paginationToken(decodePaging(token))
                             .build()).thenApply(response -> {
@@ -128,14 +134,35 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
                 });
     }
 
+    private String filter(final Expression query) {
+
+        final Set<Expression> dis = query.visit(new DisjunctionVisitor());
+        if(dis.size() == 1) {
+            final Map<Name, Object> terms = new HashMap<>();
+            final Expression sub = dis.iterator().next();
+            final Map<Name, Range<Object>> ranges = sub.visit(new RangeVisitor());
+            ranges.forEach((path, range) -> {
+                if(range instanceof Range.Eq) {
+                    final Object eq = ((Range.Eq<Object>) range).getEq();
+                    terms.put(path, eq);
+                }
+            });
+            final Object email = terms.get(Name.of("email"));
+            if(email instanceof String) {
+                return "email=\"" + StringEscapeUtils.escapeJava((String)email) + "\"";
+            }
+        }
+        return null;
+    }
+
     private String decodePaging(final Page.Token token) {
 
-        return Nullsafe.map(token, Page.Token::toString);
+        return Nullsafe.map(token, v -> new String(v.getValue(), Charsets.UTF_8));
     }
 
     private Page.Token encodePaging(final String token) {
 
-        return Nullsafe.map(token, Page.Token::new);
+        return Nullsafe.map(token, v -> new Page.Token(token.getBytes(Charsets.UTF_8)));
     }
 
     @Override

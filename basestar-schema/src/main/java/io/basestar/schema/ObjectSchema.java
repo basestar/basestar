@@ -27,8 +27,6 @@ import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.hash.Hashing;
-import com.google.common.io.BaseEncoding;
 import io.basestar.expression.Context;
 import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
@@ -41,7 +39,9 @@ import lombok.experimental.Accessors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.*;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -571,21 +571,6 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
         return violations;
     }
 
-    public String hash(final Map<String, Object> object) {
-
-        try {
-            try (final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                final DataOutputStream daos = new DataOutputStream(baos)) {
-                serializeProperties(object, daos);
-                @SuppressWarnings("all")
-                final byte[] bytes = Hashing.md5().newHasher().putBytes(baos.toByteArray()).hash().asBytes();
-                return BaseEncoding.base64().encode(bytes);
-            }
-        } catch (final IOException e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
     public void serialize(final Map<String, Object> object, final DataOutput out) throws IOException {
 
         final Name schema = Instance.getSchema(object);
@@ -773,7 +758,7 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
             throw new IllegalStateException("Instance validation failed: id mismatch");
         }
         final Name schemaName = Instance.getSchema(after);
-        if(schemaName == null || !isAssignableFrom(schemaName)) {
+        if(schemaName == null || !isSubclassOf(schemaName)) {
             throw new IllegalStateException("Instance validation failed: schema mismatch");
         }
     }

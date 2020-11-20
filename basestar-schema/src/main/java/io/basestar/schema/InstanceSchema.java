@@ -21,6 +21,8 @@ package io.basestar.schema;
  */
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.google.common.hash.Hashing;
+import com.google.common.io.BaseEncoding;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.exception.UnexpectedTypeException;
@@ -33,9 +35,7 @@ import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
 import io.leangen.geantyref.TypeFactory;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
+import java.io.*;
 import java.lang.reflect.Type;
 import java.util.*;
 import java.util.function.BiFunction;
@@ -50,14 +50,14 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
         return metadataSchema().containsKey(name) || getMember(name, true) != null;
     }
 
-    default boolean isAssignableFrom(Name name) {
+    default boolean isSubclassOf(Name name) {
 
         if(name.equals(this.getQualifiedName())) {
             return true;
         } else {
             final InstanceSchema extend = getExtend();
             if(extend != null) {
-                return extend.isAssignableFrom(name);
+                return extend.isSubclassOf(name);
             } else {
                 return false;
             }
@@ -85,6 +85,14 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
     }
 
     SortedMap<String, Use<?>> metadataSchema();
+
+    default SortedMap<String, Use<?>> schema() {
+
+        final SortedMap<String, Use<?>> result = new TreeMap<>();
+        metadataSchema().forEach(result::put);
+        getMembers().forEach((name, member) -> result.put(name, member.getType()));
+        return result;
+    }
 
     default SortedMap<String, Use<?>> layoutSchema(final Set<Name> expand) {
 
@@ -254,6 +262,21 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
             UseString.DEFAULT.serializeValue(entry.getKey(), out);
             final Object value = object.get(entry.getKey());
             entry.getValue().serialize(value, out);
+        }
+    }
+
+    default String hash(final Map<String, Object> object) {
+
+        try {
+            try (final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                 final DataOutputStream daos = new DataOutputStream(baos)) {
+                serializeProperties(object, daos);
+                @SuppressWarnings("all")
+                final byte[] bytes = Hashing.md5().newHasher().putBytes(baos.toByteArray()).hash().asBytes();
+                return BaseEncoding.base64().encode(bytes);
+            }
+        } catch (final IOException e) {
+            throw new IllegalStateException(e);
         }
     }
 

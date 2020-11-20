@@ -614,7 +614,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                                         values.put(name, column.evaluate(context.with(row)));
                                     });
                                     group.keySet().forEach(name -> values.put(name, row.get(name)));
-                                    return viewSchema.create(values);
+                                    return create(viewSchema, values);
                                 })))
                         .collect(Collectors.toList());
 

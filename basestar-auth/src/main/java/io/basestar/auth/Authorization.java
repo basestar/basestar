@@ -64,11 +64,16 @@ public interface Authorization {
 
     default boolean isBasic() {
 
-        return "Basic".equalsIgnoreCase(getType());
+        return is("Basic");
     }
 
     default boolean isBearer() {
 
-        return "Bearer".equalsIgnoreCase(getType());
+        return is("Bearer");
+    }
+
+    default boolean is(final String type) {
+
+        return type.equalsIgnoreCase(getType());
     }
 }

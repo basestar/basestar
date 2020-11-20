@@ -5,7 +5,6 @@ import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.layout.ObjectIdLayout;
-import io.basestar.spark.resolver.ColumnResolver;
 import io.basestar.spark.resolver.SchemaResolver;
 import io.basestar.spark.transform.LayoutTransform;
 import io.basestar.util.Name;
@@ -52,10 +51,10 @@ public class TestLayoutTransform extends AbstractSparkTest {
                 Name.of("A"), datasetA
         );
 
-        final SchemaResolver resolver = SchemaResolver.automatic((schema) -> datasets.get(schema.getQualifiedName()));
-        final ColumnResolver<Row> columnResolver = ColumnResolver.lowercase(ColumnResolver::nested);
+        final SchemaResolver resolver = new SchemaResolver.Automatic((schema) -> datasets.get(schema.getQualifiedName()));
+//        final ColumnResolver<Row> columnResolver = ColumnResolver.lowercase(ColumnResolver::nested);
 
-        final Dataset<Row> ds = resolver.resolve(a, columnResolver);
+        final Dataset<Row> ds = resolver.resolve(a);
 
         final LayoutTransform layout = LayoutTransform.builder()
                 .inputLayout(a)

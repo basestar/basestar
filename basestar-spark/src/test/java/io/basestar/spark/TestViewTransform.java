@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Namespace;
 import io.basestar.spark.database.SparkDatabase;
-import io.basestar.spark.resolver.ColumnResolver;
 import io.basestar.spark.resolver.SchemaResolver;
 import io.basestar.util.Name;
 import org.apache.spark.sql.Dataset;
@@ -204,11 +203,10 @@ public class TestViewTransform extends AbstractSparkTest {
 
         final Namespace namespace = Namespace.load(TestViewTransform.class.getResourceAsStream("schema.yml"));
 
-        final SchemaResolver resolver = SchemaResolver.automatic((schema) -> datasets.get(schema.getQualifiedName()));
+        final SchemaResolver resolver = new SchemaResolver.Automatic((schema) -> datasets.get(schema.getQualifiedName()));
 
         final SparkDatabase database = SparkDatabase.builder()
                 .resolver(resolver).namespace(namespace)
-                .columnResolver(ColumnResolver.lowercase(ColumnResolver::nested))
                 .build();
 
         final Dataset<T> dataset = database.from(view).defaultExpand().as(as).query();

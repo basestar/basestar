@@ -61,6 +61,9 @@ public class SchemaAdaptor {
                         registry.add(updateInputTypeDefinition(objectSchema));
                         registry.add(patchInputTypeDefinition(objectSchema));
                     }
+                    if(!objectSchema.isConcrete()) {
+                        registry.add(missingInterfaceRefDefinition(objectSchema));
+                    }
                 } else {
                     registry.add(inputTypeDefinition(instanceSchema));
                 }
@@ -364,6 +367,16 @@ public class SchemaAdaptor {
         }
         final Type<?> type = inputType(required ? property.getType() : property.getType().optional(true));
         builder.type(type);
+        return builder.build();
+    }
+
+    public TypeDefinition<?> missingInterfaceRefDefinition(final ObjectSchema schema) {
+
+        final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
+        builder.name(strategy.missingInterfaceRefTypeName(schema));
+        builder.description(description("Generated stub for missing interface references"));
+        builder.implementz(new TypeName(strategy.typeName(schema)));
+        fieldDefinitions(schema).forEach(builder::fieldDefinition);
         return builder.build();
     }
 

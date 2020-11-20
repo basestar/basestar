@@ -63,6 +63,62 @@ public class SparkSchemaUtils {
         return DataTypes.createStructType(fields);
     }
 
+    public static Set<Name> names(final InstanceSchema schema, final StructType structType) {
+
+        // FIXME: remove
+        final SortedMap<String, Use<?>> tmp = new TreeMap<>();
+        schema.metadataSchema().forEach(tmp::put);
+        schema.getMembers().forEach((name, member) -> tmp.put(name, member.getType()));
+
+        final Set<Name> names = new HashSet<>();
+        tmp.forEach((name, type) -> findField(structType, name)
+                    .ifPresent(field -> names(type, field.dataType())
+                                .forEach(rest -> names.add(Name.of(name).with(rest)))));
+        return names;
+    }
+
+    public static Set<Name> names(final Use<?> type, final DataType dataType) {
+
+        return type.visit(new Use.Visitor.Defaulting<Set<Name>>() {
+
+            @Override
+            public <T> Set<Name> visitDefault(final Use<T> type) {
+
+                return ImmutableSet.of(Name.of());
+            }
+
+            @Override
+            public <V, T extends Collection<V>> Set<Name> visitCollection(final UseCollection<V, T> type) {
+
+                if(dataType instanceof ArrayType) {
+                    return names(type.getType(), ((ArrayType) dataType).elementType());
+                } else {
+                    return ImmutableSet.of();
+                }
+            }
+
+            @Override
+            public <T> Set<Name> visitMap(final UseMap<T> type) {
+
+                if(dataType instanceof MapType) {
+                    return names(type.getType(), ((MapType) dataType).valueType());
+                } else {
+                    return ImmutableSet.of();
+                }
+            }
+
+            @Override
+            public Set<Name> visitInstance(final UseInstance type) {
+
+                if(dataType instanceof StructType) {
+                    return names(type.getSchema(), (StructType)dataType);
+                } else {
+                    return ImmutableSet.of();
+                }
+            }
+        });
+    }
+
     public static StructType refType(final ObjectSchema schema, final Set<Name> expand) {
 
         if(expand == null) {
@@ -212,59 +268,69 @@ public class SparkSchemaUtils {
 
     public static Map<String, Object> fromSpark(final Layout schema, final Row row) {
 
-        return fromSpark(schema, ImmutableSet.of(), ImmutableMap.of(), row);
+        return fromSpark(schema, NamingConvention.DEFAULT, ImmutableSet.of(), ImmutableMap.of(), row);
     }
 
     public static Map<String, Object> fromSpark(final Layout schema, final Set<Name> expand, final Row row) {
 
-        return fromSpark(schema, expand, Collections.emptyMap(), row);
+        return fromSpark(schema, NamingConvention.DEFAULT, expand, Collections.emptyMap(), row);
     }
 
     public static Map<String, Object> fromSpark(final Layout schema, final Set<Name> expand, final Map<String, Use<?>> extraMetadata, final Row row) {
+
+        return fromSpark(schema, NamingConvention.DEFAULT, expand, extraMetadata, row);
+    }
+
+    public static Map<String, Object> fromSpark(final Layout schema, final NamingConvention naming, final Row row) {
+
+        return fromSpark(schema, naming, ImmutableSet.of(), ImmutableMap.of(), row);
+    }
+
+    public static Map<String, Object> fromSpark(final Layout schema, final NamingConvention naming, final Set<Name> expand, final Row row) {
+
+        return fromSpark(schema, naming, expand, Collections.emptyMap(), row);
+    }
+
+    public static Map<String, Object> fromSpark(final Layout schema, final NamingConvention naming, final Set<Name> expand, final Map<String, Use<?>> extraMetadata, final Row row) {
 
         if(row == null) {
             return null;
         }
         final Map<String, Set<Name>> branches = Name.branch(expand);
         final Map<String, Object> object = new HashMap<>();
-        schema.layoutSchema(expand).forEach((name, type) -> object.put(name, fromSpark(type, branches.get(name), get(row, name))));
-        extraMetadata.forEach((name, type) -> object.put(name, fromSpark(type, branches.get(name), get(row, name))));
+        schema.layoutSchema(expand).forEach((name, type) -> object.put(name, fromSpark(type, naming, branches.get(name), get(naming, row, name))));
+        extraMetadata.forEach((name, type) -> object.put(name, fromSpark(type, naming, branches.get(name), get(naming, row, name))));
         return object;
     }
 
-    protected static Object fromSpark(final Link link, final Set<Name> expand, final Object value) {
+    protected static Object fromSpark(final Link link, final NamingConvention naming, final Set<Name> expand, final Object value) {
 
         if(link.isSingle()) {
-            return fromSpark(link.getSchema(), expand, (Row)value);
+            return fromSpark(link.getSchema(), naming, expand, (Row)value);
         } else {
             final List<Map<String, Object>> results = new ArrayList<>();
             ((scala.collection.Iterable<?>)value).foreach(ScalaUtils.scalaFunction(v -> {
-                results.add(fromSpark(link.getSchema(), expand, (Row)v));
+                results.add(fromSpark(link.getSchema(), naming, expand, (Row)v));
                 return null;
             }));
             return results;
         }
     }
 
-    public static Map<String, Object> refFromSpark(final Row row) {
+    public static Map<String, Object> refFromSpark(final NamingConvention naming, final Row row) {
 
         final Map<String, Object> object = new HashMap<>();
         ObjectSchema.REF_SCHEMA
-                .forEach((name, type) -> object.put(name, fromSpark(type, Collections.emptySet(), get(row, name))));
+                .forEach((name, type) -> object.put(name, fromSpark(type, naming, Collections.emptySet(), get(naming, row, name))));
         return object;
     }
 
-//    public static Object fromSpark(final Use<?> type, final Object value) {
-//
-//        return fromSpark(type, Collections.emptySet(), value);
-//    }
+    public static Object fromSpark(final Use<?> type, final NamingConvention naming, final Set<Name> expand, final Object value) {
 
-    public static Object fromSpark(final Use<?> type, final Set<Name> expand, final Object value) {
-
-        return fromSpark(type, expand, value, true);
+        return fromSpark(type, naming, expand, value, true);
     }
 
-    public static Object fromSpark(final Use<?> type, final Set<Name> expand, final Object value, final boolean suppress) {
+    public static Object fromSpark(final Use<?> type, final NamingConvention naming, final Set<Name> expand, final Object value, final boolean suppress) {
 
         if(value == null) {
             return null;
@@ -308,9 +374,9 @@ public class SparkSchemaUtils {
                     return ObjectSchema.ref((String)value);
                 } else if(value instanceof Row) {
                     if(expand != null) {
-                        return fromSpark(type.getSchema(), expand, (Row)value);
+                        return fromSpark(type.getSchema(), naming, expand, (Row)value);
                     } else {
-                        return refFromSpark((Row) value);
+                        return refFromSpark(naming, (Row) value);
                     }
                 } else {
                     throw new IllegalStateException();
@@ -324,7 +390,7 @@ public class SparkSchemaUtils {
                 if(value instanceof Seq<?>) {
                     final List<T> result = new ArrayList<>();
                     ((Seq<?>)value).foreach(ScalaUtils.scalaFunction(v -> {
-                        result.add((T)fromSpark(type.getType(), expand, v, suppress));
+                        result.add((T)fromSpark(type.getType(), naming, expand, v, suppress));
                         return null;
                     }));
                     return result;
@@ -340,7 +406,7 @@ public class SparkSchemaUtils {
                 if(value instanceof Seq<?>) {
                     final Set<T> result = new HashSet<>();
                     ((Seq<?>)value).foreach(ScalaUtils.scalaFunction(v -> {
-                        result.add((T)fromSpark(type.getType(), expand, v, suppress));
+                        result.add((T)fromSpark(type.getType(), naming, expand, v, suppress));
                         return null;
                     }));
                     return result;
@@ -359,7 +425,7 @@ public class SparkSchemaUtils {
                     ((scala.collection.Map<?, ?>) value).foreach(ScalaUtils.scalaFunction(e -> {
                         final String k = (String) e._1();
                         final Object v = e._2();
-                        result.put(k, (T) fromSpark(type.getType(), branches.get(k), v, suppress));
+                        result.put(k, (T) fromSpark(type.getType(), naming, branches.get(k), v, suppress));
                         return null;
                     }));
                     return result;
@@ -371,7 +437,7 @@ public class SparkSchemaUtils {
                     for(int i = 0; i != fields.length; ++i) {
                         final String k = fields[i].name();
                         final Object v = row.get(i);
-                        result.put(k, (T) fromSpark(type.getType(), branches.get(k), v, suppress));
+                        result.put(k, (T) fromSpark(type.getType(), naming, branches.get(k), v, suppress));
                     }
                     return result;
                 } else {
@@ -383,7 +449,7 @@ public class SparkSchemaUtils {
             public Object visitStruct(final UseStruct type) {
 
                 if(value instanceof Row) {
-                    return fromSpark(type.getSchema(), expand, (Row)value);
+                    return fromSpark(type.getSchema(), naming, expand, (Row)value);
                 } else {
                     throw new IllegalStateException();
                 }
@@ -411,7 +477,7 @@ public class SparkSchemaUtils {
             public Object visitView(final UseView type) {
 
                 if(value instanceof Row) {
-                    return fromSpark(type.getSchema(), expand, (Row)value);
+                    return fromSpark(type.getSchema(), naming, expand, (Row)value);
                 } else {
                     throw new IllegalStateException();
                 }
@@ -782,14 +848,18 @@ public class SparkSchemaUtils {
         });
     }
 
-    // Case insensitive
     public static Object get(final Row source, final String name) {
+
+        return get(NamingConvention.DEFAULT, source, name);
+    }
+
+    public static Object get(final NamingConvention naming, final Row source, final String name) {
 
         final StructType sourceType = source.schema();
         final StructField[] sourceFields = sourceType.fields();
         for (int i = 0; i != sourceFields.length; ++i) {
             final StructField sourceField = sourceFields[i];
-            if(name.equalsIgnoreCase(sourceField.name())) {
+            if(naming.equals(name, sourceField.name())) {
                 return source.get(i);
             }
         }
@@ -983,6 +1053,30 @@ public class SparkSchemaUtils {
             default:
                 throw new IllegalStateException("Too many UDF parameters");
         }
+    }
 
+    public static String getId(final Row row) {
+
+        return (String)SparkSchemaUtils.get(row, ObjectSchema.ID);
+    }
+
+    public static Long getVersion(final Row row) {
+
+        return (Long)SparkSchemaUtils.get(row, ObjectSchema.VERSION);
+    }
+
+    public static java.sql.Timestamp getCreated(final Row row) {
+
+        return (java.sql.Timestamp)SparkSchemaUtils.get(row, ObjectSchema.CREATED);
+    }
+
+    public static java.sql.Timestamp getUpdated(final Row row) {
+
+        return (java.sql.Timestamp)SparkSchemaUtils.get(row, ObjectSchema.UPDATED);
+    }
+
+    public static String getHash(final Row row) {
+
+        return (String)SparkSchemaUtils.get(row, ObjectSchema.HASH);
     }
 }

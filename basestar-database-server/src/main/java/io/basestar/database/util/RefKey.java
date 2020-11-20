@@ -23,6 +23,7 @@ package io.basestar.database.util;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
@@ -47,7 +48,16 @@ public class RefKey {
     public static RefKey from(final ObjectSchema schema, final Map<String, Object> item) {
 
         final String id = Instance.getId(item);
+        final Name instanceSchemaName = Instance.getSchema(item);
         assert id != null;
-        return new RefKey(schema.getQualifiedName(), id);
+        return new RefKey(Nullsafe.orDefault(instanceSchemaName, schema.getQualifiedName()), id);
+    }
+
+    public static RefKey from(final Name schema, final Map<String, Object> item) {
+
+        final String id = Instance.getId(item);
+        final Name instanceSchemaName = Instance.getSchema(item);
+        assert id != null;
+        return new RefKey(Nullsafe.orDefault(instanceSchemaName, schema), id);
     }
 }

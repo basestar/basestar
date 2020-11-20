@@ -115,7 +115,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
         final InstanceSchema linkSchema = link.getSchema();
 
-        final Dataset<Row> linkInput = resolver.resolveAndConform(linkSchema, columnResolver, expand);
+        final Dataset<Row> linkInput = resolver.resolveAndConform(linkSchema, expand);
 
         final Expression expression = link.getExpression();
         final Column joinCondition = expression.visit(new SparkExpressionVisitor(name -> {
@@ -150,7 +150,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
                 if (_2 != null) {
                     values.add(_2);
                 }
-                assert (root == null || root.equals(_1));
+//                assert (root == null || root.equals(_1));
                 root = _1;
             }
             assert root != null;
@@ -194,7 +194,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
 //            System.out.println("Before expanding refs " + requiredRef.getSchema().getQualifiedName() + ":\n" + output.showString(10, 80, false));
 
-            final Dataset<Row> refInput = cache(resolver.resolveAndConform(requiredRef.getSchema(), columnResolver, requiredRef.getExpand()));
+            final Dataset<Row> refInput = cache(resolver.resolveAndConform(requiredRef.getSchema(), requiredRef.getExpand()));
 
             final StructField refIdField = SparkSchemaUtils.field(REF_ID_COLUMN, DataTypes.StringType);
 
@@ -236,7 +236,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
                     if (_2 != null) {
                         lookup.put((String) SparkSchemaUtils.get(_2, refIdColumn), _2);
                     }
-                    assert (root == null || root.equals(_1));
+//                    assert (root == null || root.equals(_1));
                     root = _1;
                 }
                 assert root != null;
