@@ -203,8 +203,10 @@ public class ReadProcessor {
 
         items.forEach((ref, object) -> {
             if(!ref.getExpand().isEmpty()) {
-                final ObjectSchema schema = objectSchema(ref.getKey().getSchema());
-                schema.expand(object, new Expander() {
+                final Name baseSchemaName = ref.getKey().getSchema();
+                final Name instanceSchemaName = Instance.getSchema(object);
+                final ObjectSchema resolvedSchema = objectSchema(Nullsafe.orDefault(instanceSchemaName, baseSchemaName));
+                resolvedSchema.expand(object, new Expander() {
                     @Override
                     public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
 
@@ -274,9 +276,11 @@ public class ReadProcessor {
 
                         items.forEach((ref, object) -> {
                             final RefKey refKey = ref.getKey();
-                            final ObjectSchema schema = objectSchema(refKey.getSchema());
+                            final Name baseSchemaName = ref.getKey().getSchema();
+                            final Name instanceSchemaName = Instance.getSchema(object);
+                            final ObjectSchema resolvedSchema = objectSchema(Nullsafe.orDefault(instanceSchemaName, baseSchemaName));
 
-                            result.put(ref, schema.expand(object, new Expander() {
+                            result.put(ref, resolvedSchema.expand(object, new Expander() {
                                 @Override
                                 public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
 

@@ -23,9 +23,12 @@ package io.basestar.codegen;
 import io.basestar.schema.Namespace;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
 import java.io.IOException;
 
 public class TestJavaCodegen {
+
+    private static final File base = new File("target/codegen");
 
     public Namespace namespace() throws IOException {
 
@@ -40,12 +43,6 @@ public class TestJavaCodegen {
         final CodegenSettings settings = CodegenSettings.builder().packageName("io.basestar.test").build();
         final Codegen codegen = new Codegen("java", settings);
 
-//        final StringWriter stringWriter = new StringWriter();
-//        codegen.generate(namespace.requireSchema("MyEnum"), "java", stringWriter);
-//        codegen.generate(namespace.requireSchema("MyBase"), "java", stringWriter);
-//        codegen.generate(namespace.requireSchema("MyObject"), "java", stringWriter);
-//        codegen.generate(namespace.requireSchema("MyView"), "java", stringWriter);
-//        codegen.generate(namespace.requireSchema("ns1.ns2.MyObject"), "java", stringWriter);
-//        System.err.println(stringWriter);
+        codegen.generate(namespace, base);
     }
 }

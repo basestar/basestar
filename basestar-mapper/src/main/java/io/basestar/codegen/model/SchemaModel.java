@@ -27,7 +27,6 @@ import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Schema;
 import io.basestar.util.Name;
 import io.basestar.util.Path;
-import io.basestar.util.Text;
 
 import java.io.File;
 import java.util.List;
@@ -52,7 +51,7 @@ public abstract class SchemaModel extends Model {
 
     public String getClassName() {
 
-        return Text.upperCamel(getQualifiedName().last());
+        return getQualifiedName().last();
     }
 
     public String getFullyQualifiedClassName() {

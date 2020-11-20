@@ -94,6 +94,16 @@ public class GraphQLTest {
                 .id("test5")
                 .data(ImmutableMap.of(
                         "abstractRef", ImmutableMap.of(
+                                "id", "test4"
+                        )
+                ))
+                .build()).get();
+
+        databaseServer.create(Caller.SUPER, CreateOptions.builder()
+                .schema(Name.of("Test5"))
+                .id("testMissing")
+                .data(ImmutableMap.of(
+                        "abstractRef", ImmutableMap.of(
                                 "id", "missing"
                         )
                 ))
@@ -343,6 +353,30 @@ public class GraphQLTest {
     }
 
     @Test
+    public void testPolymorphicRef() throws Exception {
+
+        final Namespace namespace = namespace();
+        final GraphQL graphQL = graphQL(namespace);
+
+        final ExecutionResult result = graphQL.execute(ExecutionInput.newExecutionInput()
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
+                .query("query { readTest5(id: \"test5\") { id abstractRef { ... on Test4 { test2 { id x } } } } }")
+                .build());
+
+        assertEquals(ImmutableMap.of(
+                "readTest5", ImmutableMap.of(
+                        "id", "test5",
+                        "abstractRef", ImmutableMap.of(
+                                "test2", ImmutableMap.of(
+                                        "id", "test1",
+                                        "x", "test1"
+                                )
+                        )
+                )
+        ), result.getData());
+    }
+
+    @Test
     public void testMissingPolymorphicRef() throws Exception {
 
         final Namespace namespace = namespace();
@@ -350,7 +384,7 @@ public class GraphQLTest {
 
         final ExecutionResult result = graphQL.execute(ExecutionInput.newExecutionInput()
                 .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
-                .query("query { readTest5(id: \"test5\") { abstractRef { id __typename } } }")
+                .query("query { readTest5(id: \"testMissing\") { abstractRef { id __typename } } }")
                 .build());
 
         assertEquals(ImmutableMap.of(
