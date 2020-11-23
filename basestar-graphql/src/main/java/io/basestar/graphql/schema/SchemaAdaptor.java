@@ -53,17 +53,20 @@ public class SchemaAdaptor {
                 final InstanceSchema instanceSchema = (InstanceSchema)schema;
                 mapTypes.putAll(mapTypes(instanceSchema));
                 if(schema instanceof ObjectSchema) {
-                    final ObjectSchema objectSchema = (ObjectSchema)instanceSchema;
+                    final ObjectSchema objectSchema = (ObjectSchema) instanceSchema;
                     registry.add(inputExpressionTypeDefinition(objectSchema));
                     registry.add(pageTypeDefinition(objectSchema));
                     registry.add(createInputTypeDefinition(objectSchema));
-                    if(objectSchema.hasMutableProperties()) {
+                    if (objectSchema.hasMutableProperties()) {
                         registry.add(updateInputTypeDefinition(objectSchema));
                         registry.add(patchInputTypeDefinition(objectSchema));
                     }
-                    if(!objectSchema.isConcrete()) {
+                    if (!objectSchema.isConcrete()) {
                         registry.add(missingInterfaceRefDefinition(objectSchema));
                     }
+                } else if(schema instanceof ViewSchema) {
+                    final ViewSchema viewSchema = (ViewSchema) instanceSchema;
+                    registry.add(pageTypeDefinition(viewSchema));
                 } else {
                     registry.add(inputTypeDefinition(instanceSchema));
                 }
@@ -113,8 +116,10 @@ public class SchemaAdaptor {
 
         final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
         builder.name(GraphQLUtils.QUERY_TYPE);
-        namespace.forEachObjectSchema((schemaName, schema) -> {
-            builder.fieldDefinition(readDefinition(schema));
+        namespace.forEachLinkableSchema((schemaName, schema) -> {
+            if(schema instanceof ObjectSchema) {
+                builder.fieldDefinition(readDefinition((ObjectSchema)schema));
+            }
             builder.fieldDefinition(queryDefinition(schema));
             schema.getLinks()
                     .forEach((linkName, link) -> builder.fieldDefinition(queryLinkDefinition(schema, link)));
@@ -134,7 +139,7 @@ public class SchemaAdaptor {
         return builder.build();
     }
 
-    public FieldDefinition queryDefinition(final ObjectSchema schema) {
+    public FieldDefinition queryDefinition(final LinkableSchema schema) {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
         builder.name(strategy.queryMethodName(schema));
@@ -150,7 +155,7 @@ public class SchemaAdaptor {
         return builder.build();
     }
 
-    public FieldDefinition queryLinkDefinition(final ObjectSchema schema, final Link link) {
+    public FieldDefinition queryLinkDefinition(final LinkableSchema schema, final Link link) {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
         builder.name(strategy.queryLinkMethodName(schema, link));
@@ -429,7 +434,11 @@ public class SchemaAdaptor {
 
         final List<FieldDefinition> fields = new ArrayList<>();
         schema.metadataSchema()
-                .forEach((k, v) -> fields.add(metadataFieldDefinition(k, v)));
+                .forEach((k, v) -> {
+                    if(!Reserved.isReserved(k)) {
+                        fields.add(metadataFieldDefinition(k, v));
+                    }
+                });
         schema.getProperties()
                 .forEach((k, v) -> {
                     if(!v.isAlwaysHidden()) {

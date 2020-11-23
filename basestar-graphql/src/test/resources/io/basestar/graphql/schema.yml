@@ -45,4 +45,10 @@ Test5:
     abstractRef:
       type: Test3
 
-
+Test6:
+  type: view
+  properties:
+    x:
+      expression: x
+  from:
+    schema: Test1

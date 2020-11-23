@@ -24,7 +24,10 @@ import com.google.common.collect.ImmutableMap;
 import graphql.GraphQL;
 import graphql.execution.AsyncExecutionStrategy;
 import graphql.language.*;
-import graphql.schema.*;
+import graphql.schema.DataFetcher;
+import graphql.schema.DataFetchingEnvironment;
+import graphql.schema.GraphQLScalarType;
+import graphql.schema.GraphQLSchema;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.TypeDefinitionRegistry;
@@ -36,6 +39,7 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.constant.Constant;
 import io.basestar.graphql.schema.SchemaAdaptor;
 import io.basestar.graphql.subscription.SubscriberContext;
+import io.basestar.graphql.wiring.AnyCoercing;
 import io.basestar.graphql.wiring.InterfaceResolver;
 import io.basestar.schema.*;
 import io.basestar.util.Name;
@@ -89,31 +93,7 @@ public class GraphQLAdaptor {
                 .dataFetchers(subscriptionFetchers()));
         builder.scalar(GraphQLScalarType.newScalar()
                 .name(strategy.anyTypeName())
-                .coercing(new Coercing<Object, Object>() {
-                    @Override
-                    public Object serialize(final Object input) throws CoercingSerializeException {
-
-                        return GraphQLUtils.toValue(input);
-                    }
-
-                    @Override
-                    public Object parseValue(final Object input) throws CoercingParseValueException {
-
-                        return GraphQLUtils.fromValue(input, Collections.emptyMap());
-                    }
-
-                    @Override
-                    public Object parseLiteral(final Object input) throws CoercingParseLiteralException {
-
-                        return parseLiteral(input, Collections.emptyMap());
-                    }
-
-                    @Override
-                    public Object parseLiteral(final Object input, final Map<String, Object> variables) throws CoercingParseLiteralException {
-
-                        return GraphQLUtils.fromValue(input, variables);
-                    }
-                })
+                .coercing(new AnyCoercing())
                 .build());
         namespace.getSchemas().forEach((k, schema) -> {
             if(schema instanceof InstanceSchema) {
@@ -130,8 +110,11 @@ public class GraphQLAdaptor {
     private Map<String, DataFetcher> queryFetchers() {
 
         final Map<String, DataFetcher> results = new HashMap<>();
-        namespace.forEachObjectSchema((schemaName, schema) -> {
-            results.put(strategy.readMethodName(schema), readFetcher(schema));
+        namespace.forEachLinkableSchema((schemaName, schema) -> {
+            if(schema instanceof ObjectSchema) {
+                final ObjectSchema objectSchema = (ObjectSchema)schema;
+                results.put(strategy.readMethodName(objectSchema), readFetcher(objectSchema));
+            }
             results.put(strategy.queryMethodName(schema), queryFetcher(schema));
             schema.getLinks().forEach((linkName, link) -> {
                 results.put(strategy.queryLinkMethodName(schema, link), queryLinkFetcher(schema, link));
@@ -161,7 +144,7 @@ public class GraphQLAdaptor {
                 .thenApply(object -> GraphQLUtils.toResponse(namespace, schema, object));
     }
 
-    private DataFetcher<CompletableFuture<?>> queryFetcher(final ObjectSchema schema) {
+    private DataFetcher<CompletableFuture<?>> queryFetcher(final LinkableSchema schema) {
 
         return (env) -> {
             final Caller caller = GraphQLUtils.caller(env.getContext());
@@ -187,7 +170,7 @@ public class GraphQLAdaptor {
         };
     }
 
-    private DataFetcher<CompletableFuture<?>> queryLinkFetcher(final ObjectSchema schema, final Link link) {
+    private DataFetcher<CompletableFuture<?>> queryLinkFetcher(final LinkableSchema schema, final Link link) {
 
         return (env) -> {
 
