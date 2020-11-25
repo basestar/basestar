@@ -20,19 +20,22 @@ package io.basestar.spark.aws.transform;
  * #L%
  */
 
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.Index;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.spark.aws.DynamoDBSparkSchemaUtils;
 import io.basestar.spark.transform.Transform;
 import io.basestar.spark.util.SparkSchemaUtils;
+import io.basestar.storage.dynamodb.DynamoDBLegacyUtils;
+import io.basestar.storage.dynamodb.DynamoDBStorage;
 import io.basestar.storage.dynamodb.DynamoDBStrategy;
+import io.basestar.util.Nullsafe;
 import lombok.Builder;
-import org.apache.spark.api.java.function.FlatMapFunction;
+import org.apache.spark.rdd.RDD;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.catalyst.encoders.RowEncoder;
-import org.apache.spark.sql.types.StructType;
 
 import java.util.Map;
 
@@ -41,7 +44,7 @@ import java.util.Map;
  */
 
 @Builder(builderClassName = "Builder")
-public class DynamoDBIndexTransform implements Transform<Dataset<Row>, Dataset<Row>> {
+public class DynamoDBIndexTransform implements Transform<Dataset<Row>, RDD<Map<String, AttributeValue>>> {
 
     private final DynamoDBStrategy strategy;
 
@@ -49,21 +52,26 @@ public class DynamoDBIndexTransform implements Transform<Dataset<Row>, Dataset<R
 
     private final Index index;
 
+    @lombok.Builder(builderClassName = "Builder")
+    DynamoDBIndexTransform(final DynamoDBStrategy strategy, final ObjectSchema schema, final Index index) {
+
+        this.strategy = Nullsafe.require(strategy);
+        this.schema = Nullsafe.require(schema);
+        this.index = Nullsafe.require(index);
+    }
+
     @Override
-    public Dataset<Row> accept(final Dataset<Row> df) {
+    public RDD<Map<String, AttributeValue>> accept(final Dataset<Row> input) {
 
-        final StructType structType = DynamoDBSparkSchemaUtils.type(strategy, schema, index);
-
-        return df.flatMap((FlatMapFunction<Row, Row>) row -> {
-
-            final Map<String, Object> initial = SparkSchemaUtils.fromSpark(schema, row);
-            final String id = Instance.getId(initial);
-            final Map<Index.Key, Map<String, Object>> records = index.readValues(initial);
+        return input.toJavaRDD().flatMap(row -> {
+            final Map<String, Object> data = SparkSchemaUtils.fromSpark(schema, ImmutableSet.of(), ImmutableMap.of(), row);
+            final String id = Instance.getId(data);
+            final Map<Index.Key, Map<String, Object>> records = index.readValues(data);
 
             return records.entrySet().stream()
-                    .map(e -> DynamoDBSparkSchemaUtils.toSpark(strategy, schema, index, structType, id, e.getKey(), e.getValue()))
+                    .map(e -> DynamoDBLegacyUtils.toLegacy(DynamoDBStorage.indexItem(strategy, schema, index, id, e.getKey(), e.getValue())))
                     .iterator();
 
-        }, RowEncoder.apply(structType));
+        }).rdd();
     }
 }

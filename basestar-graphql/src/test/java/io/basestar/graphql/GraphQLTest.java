@@ -28,14 +28,19 @@ import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
 import graphql.GraphQLContext;
-import graphql.schema.idl.SchemaParser;
-import graphql.schema.idl.TypeDefinitionRegistry;
+import graphql.schema.GraphQLScalarType;
+import graphql.schema.GraphQLSchema;
+import graphql.schema.idl.*;
 import io.basestar.auth.Caller;
 import io.basestar.database.DatabaseServer;
 import io.basestar.database.options.CreateOptions;
 import io.basestar.event.EventSerialization;
+import io.basestar.graphql.schema.SchemaAdaptor;
 import io.basestar.graphql.schema.SchemaConverter;
 import io.basestar.graphql.subscription.SubscriberContext;
+import io.basestar.graphql.wiring.AnyCoercing;
+import io.basestar.graphql.wiring.InterfaceResolver;
+import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Namespace;
 import io.basestar.storage.MemoryStorage;
 import io.basestar.stream.event.SubscriptionPublishEvent;
@@ -430,17 +435,33 @@ public class GraphQLTest {
 //        ), result.getData());
 //    }
 
-//    @Test
-//    public void testGenerator() throws Exception {
-//
-//        final Namespace namespace = namespace();
-//
-//        final TypeDefinitionRegistry registry = new SchemaAdaptor(namespace, GraphQLStrategy.DEFAULT).typeDefinitionRegistry();
-//
-//        final SchemaGenerator generator = new SchemaGenerator();
-//        final GraphQLSchema schema = generator.makeExecutableSchema(registry, RuntimeWiring.newRuntimeWiring().build());
-//
-//        final SchemaPrinter printer = new SchemaPrinter();
-//        System.out.println(printer.print(schema));
-//    }
+    @Test
+    public void testGenerator() throws Exception {
+
+        final Namespace namespace = namespace();
+
+        final TypeDefinitionRegistry registry = new SchemaAdaptor(namespace, GraphQLStrategy.DEFAULT).typeDefinitionRegistry();
+
+        final SchemaGenerator generator = new SchemaGenerator();
+
+        final RuntimeWiring.Builder builder = RuntimeWiring.newRuntimeWiring();
+        builder.scalar(GraphQLScalarType.newScalar()
+                .name(GraphQLStrategy.DEFAULT.anyTypeName())
+                .coercing(new AnyCoercing())
+                .build());
+        namespace.getSchemas().forEach((k, schema) -> {
+            if(schema instanceof InstanceSchema) {
+                if(!((InstanceSchema) schema).isConcrete()) {
+                    builder.type(TypeRuntimeWiring.newTypeWiring(GraphQLStrategy.DEFAULT.typeName(schema))
+                            .typeResolver(new InterfaceResolver((InstanceSchema)schema, GraphQLStrategy.DEFAULT)));
+                }
+            }
+        });
+        final RuntimeWiring wiring = builder.build();
+
+        final GraphQLSchema schema = generator.makeExecutableSchema(registry, wiring);
+
+        final SchemaPrinter printer = new SchemaPrinter();
+        System.out.println(printer.print(schema));
+    }
 }

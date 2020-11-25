@@ -21,10 +21,7 @@ package io.basestar.graphql;
  */
 
 import io.basestar.database.options.UpdateOptions;
-import io.basestar.schema.Link;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.Reserved;
-import io.basestar.schema.Schema;
+import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import io.basestar.util.Name;
 import io.basestar.util.Text;
@@ -79,9 +76,9 @@ public interface GraphQLStrategy {
 
     String subscribeQueryMethodName(ObjectSchema type);
 
-    String queryMethodName(ObjectSchema type);
+    String queryMethodName(LinkableSchema type);
 
-    String queryLinkMethodName(ObjectSchema type, Link link);
+    String queryLinkMethodName(LinkableSchema type, Link link);
 
     String createMethodName(ObjectSchema type);
 
@@ -268,13 +265,13 @@ public interface GraphQLStrategy {
         }
 
         @Override
-        public String queryMethodName(final ObjectSchema type) {
+        public String queryMethodName(final LinkableSchema type) {
 
             return "query" + typeName(type);
         }
 
         @Override
-        public String queryLinkMethodName(final ObjectSchema type, final Link link) {
+        public String queryLinkMethodName(final LinkableSchema type, final Link link) {
 
             return queryMethodName(type) + Text.upperCamel(link.getName());
         }

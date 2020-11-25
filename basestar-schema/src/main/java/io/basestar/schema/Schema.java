@@ -162,6 +162,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
                 @Nullable
                 @Override
                 public Schema<?> getSchema(final Name qualifiedName) {
+
                     return null;
                 }
             };

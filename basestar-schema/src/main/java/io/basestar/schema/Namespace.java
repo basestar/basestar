@@ -357,6 +357,15 @@ public class Namespace implements Serializable, Schema.Resolver {
         });
     }
 
+    public void forEachLinkableSchema(final BiConsumer<? super Name, ? super LinkableSchema> fn) {
+
+        schemas.forEach((k, v) -> {
+            if(v instanceof LinkableSchema) {
+                fn.accept(k, (LinkableSchema)v);
+            }
+        });
+    }
+
     public Descriptor descriptor() {
 
         return () -> schemas.entrySet().stream().collect(Collectors.toMap(

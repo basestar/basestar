@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.Reserved;
 import io.basestar.util.CompletableFutures;
 import io.basestar.util.ISO8601;
 import lombok.extern.slf4j.Slf4j;
@@ -386,5 +387,14 @@ public class DynamoDBUtils {
                 return CompletableFuture.completedFuture(null);
             }
         });
+    }
+
+    public static String concat(final String prefix, final String id) {
+
+        if(prefix == null) {
+            return id;
+        } else {
+            return prefix + Reserved.DELIMITER + id;
+        }
     }
 }

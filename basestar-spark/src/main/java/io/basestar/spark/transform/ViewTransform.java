@@ -179,7 +179,7 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
     private Column apply(final InstanceSchema from, final Context context, final Dataset<Row> ds, final Expression expression, final Use<?> type, final Set<Name> expand) {
 
-        return apply(from, context, ds, expression).cast(SparkSchemaUtils.type(type, expand));
+        return SparkSchemaUtils.cast(apply(from, context, ds, expression), type, expand);
     }
 
     private Function<Name, Column> columnResolver(final InstanceSchema from, final Dataset<Row> ds) {
