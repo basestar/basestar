@@ -29,6 +29,11 @@ public class StringMethods implements Serializable {
         return target.isEmpty();
     }
 
+    public boolean isBlank(final String target) {
+
+        return target.trim().isEmpty();
+    }
+
     public int size(final String target) {
 
         return target.length();
@@ -42,5 +47,10 @@ public class StringMethods implements Serializable {
     public String substr(final String target, final Number begin, final Number end) {
 
         return target.substring(begin.intValue(), end.intValue());
+    }
+
+    public String trim(final String target) {
+
+        return target.trim();
     }
 }
