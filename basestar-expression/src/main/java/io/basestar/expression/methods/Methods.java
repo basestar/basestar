@@ -39,7 +39,7 @@ import java.util.List;
 public class Methods {
 
     public static final List<Object> DEFAULT_FILTERS = ImmutableList.of(
-            new StringMethods(), new ListMethods(), new SetMethods(), new MapMethods()
+            new StringMethods(), new ListMethods(), new SetMethods(), new MapMethods(), new DateMethods(), new DateTimeMethods()
     );
 
     private final List<Object> filters;

@@ -40,6 +40,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -491,6 +492,14 @@ public class TestExpression {
 
         Expression.parse("asset.fileType != 'UNKNOWN' && location.locationType == 'INBOX' && ('2018' IN asset.tags || 'student' IN asset.tags)");
         Expression.parse("asset.fileType != 'UNKNOWN' && location.locationType == 'INBOX' && ('DSR' IN asset.fileType || 'ERN' IN asset.fileType)");
+    }
+
+    @Test
+    public void testDateTimeFormat() {
+
+        check("v.format('YYYY')", "2020", context(ImmutableMap.of(
+                "v", LocalDate.parse("2020-01-01")
+        )));
     }
 
 //    @Test

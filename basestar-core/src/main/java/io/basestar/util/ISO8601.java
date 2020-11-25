@@ -88,7 +88,11 @@ public class ISO8601 {
                 // suppress
             }
         }
-        return Instant.parse(value);
+        try {
+            return Instant.parse(value);
+        } catch (final DateTimeParseException e) {
+            throw new InvalidDateTimeException(value);
+        }
     }
 
     public static LocalDate toDate(final TemporalAccessor value) {
