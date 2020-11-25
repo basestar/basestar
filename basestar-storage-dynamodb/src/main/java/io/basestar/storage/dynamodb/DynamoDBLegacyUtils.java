@@ -41,6 +41,18 @@ public class DynamoDBLegacyUtils {
         return result;
     }
 
+    // FIXME: implement properly
+    public static Map<String, AttributeValue> toLegacy(final Map<String, software.amazon.awssdk.services.dynamodb.model.AttributeValue> values) {
+
+        return toItem(DynamoDBUtils.fromItem(values));
+    }
+
+    // FIXME: implement properly
+    public static Map<String, software.amazon.awssdk.services.dynamodb.model.AttributeValue> fromLegacy(final Map<String, AttributeValue> values) {
+
+        return DynamoDBUtils.toItem(fromItem(values));
+    }
+
     public static Object fromAttributeValue(final AttributeValue value) {
 
         if(value == null || value.isNULL() != null) {

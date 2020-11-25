@@ -21,12 +21,14 @@ package io.basestar.spark.aws.transform;
  */
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.google.common.collect.ImmutableSet;
-import io.basestar.schema.InstanceSchema;
+import io.basestar.schema.Instance;
+import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.use.Use;
 import io.basestar.spark.transform.Transform;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.storage.dynamodb.DynamoDBLegacyUtils;
+import io.basestar.storage.dynamodb.DynamoDBStorage;
+import io.basestar.storage.dynamodb.DynamoDBStrategy;
 import io.basestar.util.Nullsafe;
 import org.apache.spark.rdd.RDD;
 import org.apache.spark.sql.Dataset;
@@ -34,15 +36,18 @@ import org.apache.spark.sql.Row;
 
 import java.util.Map;
 
-public class DynamoDBDatasetOutputTransform implements Transform<Dataset<Row>, RDD<Map<String, AttributeValue>>> {
+public class DynamoDBObjectTransform implements Transform<Dataset<Row>, RDD<Map<String, AttributeValue>>> {
 
-    private final InstanceSchema schema;
+    private final DynamoDBStrategy strategy;
+
+    private final ObjectSchema schema;
 
     private final Map<String, Use<?>> extraMetadata;
 
     @lombok.Builder(builderClassName = "Builder")
-    DynamoDBDatasetOutputTransform(final InstanceSchema schema, final Map<String, Use<?>> extraMetadata) {
+    DynamoDBObjectTransform(final DynamoDBStrategy strategy, final ObjectSchema schema, final Map<String, Use<?>> extraMetadata) {
 
+        this.strategy = Nullsafe.require(strategy);
         this.schema = Nullsafe.require(schema);
         this.extraMetadata = Nullsafe.orDefault(extraMetadata);
     }
@@ -51,8 +56,9 @@ public class DynamoDBDatasetOutputTransform implements Transform<Dataset<Row>, R
     public RDD<Map<String, AttributeValue>> accept(final Dataset<Row> input) {
 
         return input.toJavaRDD().map(row -> {
-            final Map<String, Object> data = SparkSchemaUtils.fromSpark(schema, ImmutableSet.of(), extraMetadata, row);
-            return DynamoDBLegacyUtils.toItem(data);
+            final Map<String, Object> data = SparkSchemaUtils.fromSpark(schema, schema.getExpand(), extraMetadata, row);
+            final String id = Instance.getId(data);
+            return DynamoDBLegacyUtils.toLegacy(DynamoDBStorage.objectItem(strategy, schema, id, data));
         }).rdd();
     }
 }

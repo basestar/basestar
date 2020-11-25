@@ -29,9 +29,11 @@ import io.basestar.schema.layout.Layout;
 import io.basestar.schema.use.*;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.*;
 import org.apache.spark.sql.api.java.*;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
+import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.types.*;
@@ -46,6 +48,7 @@ import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@Slf4j
 public class SparkSchemaUtils {
 
     public static StructType structType(final Layout schema, final Set<Name> expand) {
@@ -1078,5 +1081,35 @@ public class SparkSchemaUtils {
     public static String getHash(final Row row) {
 
         return (String)SparkSchemaUtils.get(row, ObjectSchema.HASH);
+    }
+
+    public static Column cast(final Column column, final Use<?> type, final Set<Name> expand) {
+
+        final DataType sourceType = columnType(column);
+        final DataType targetType = type(type, expand);
+        if(targetType.equals(sourceType)) {
+            return column;
+        } else {
+            final UserDefinedFunction udf = functions.udf((UDF1<Object, Object>) sparkValue -> {
+
+                final Object value = fromSpark(type, NamingConvention.DEFAULT, expand, sparkValue);
+                return toSpark(type, expand, targetType, value);
+
+            }, targetType);
+            return udf.apply(column);
+        }
+    }
+
+    private static DataType columnType(final Column column) {
+
+        final Expression expr = column.expr();
+        if(expr.resolved()) {
+            try {
+                return expr.dataType();
+            } catch (final Exception e) {
+                log.error("Failed to determine column type", e);
+            }
+        }
+        return null;
     }
 }

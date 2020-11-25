@@ -39,7 +39,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
-public class DynamoDBDatasetInputTransform implements Transform<RDD<Map<String, AttributeValue>>, Dataset<Row>> {
+public class DynamoDBInputTransform implements Transform<RDD<Map<String, AttributeValue>>, Dataset<Row>> {
 
     private final InstanceSchema schema;
 
@@ -50,11 +50,11 @@ public class DynamoDBDatasetInputTransform implements Transform<RDD<Map<String, 
     private final StructType structType;
 
     @lombok.Builder(builderClassName = "Builder")
-    public DynamoDBDatasetInputTransform(final InstanceSchema schema, final Map<String, Use<?>> extraMetadata) {
+    public DynamoDBInputTransform(final InstanceSchema schema, final Map<String, Use<?>> extraMetadata) {
 
         this.schema = Nullsafe.require(schema);
         if(this.schema instanceof LinkableSchema) {
-            this.expand = ((LinkableSchema) this.schema).getExpand();
+            this.expand = this.schema.getExpand();
         } else {
             this.expand = Collections.emptySet();
         }

@@ -28,6 +28,7 @@ public class TestISO8601 {
     @Test
     public void testParseDate() {
 
+        assertEquals("2019-09-24", ISO8601.toString(ISO8601.parseDate("20190924")));
         assertEquals("2020-01-01", ISO8601.toString(ISO8601.parseDate("20200101")));
         assertEquals("2020-01-01", ISO8601.toString(ISO8601.parseDate("2020-01-01")));
         assertEquals("2020-01-01", ISO8601.toString(ISO8601.parseDate("2020-W01-1")));

@@ -69,7 +69,7 @@ public class ExpressionTransform implements Transform<Dataset<Row>, Dataset<Row>
 
     private Column apply(final Dataset<Row> ds, final Expression expression, final Use<?> type) {
 
-        return visitor(ds).visit(expression).cast(SparkSchemaUtils.type(type, expand));
+        return SparkSchemaUtils.cast(visitor(ds).visit(expression), type, expand);
     }
 
     private SparkExpressionVisitor visitor(final Dataset<Row> ds) {

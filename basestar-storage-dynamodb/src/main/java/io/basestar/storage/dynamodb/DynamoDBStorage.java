@@ -352,7 +352,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
         };
     }
 
-    private static Map<String, AttributeValue> oversizeItem(final DynamoDBStrategy strategy, final ObjectSchema schema, final String id, final Map<String, Object> data, final String key) {
+    public static Map<String, AttributeValue> oversizeItem(final DynamoDBStrategy strategy, final ObjectSchema schema, final String id, final Map<String, Object> data, final String key) {
 
         final Map<String, AttributeValue> item = new HashMap<>();
         item.putAll(DynamoDBUtils.toItem(schema.readMeta(data, false)));
@@ -361,7 +361,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
         return item;
     }
 
-    private static Map<String, AttributeValue> objectItem(final DynamoDBStrategy strategy, final ObjectSchema schema, final String id, final Map<String, Object> data) {
+    public static Map<String, AttributeValue> objectItem(final DynamoDBStrategy strategy, final ObjectSchema schema, final String id, final Map<String, Object> data) {
 
         final Map<String, AttributeValue> item = new HashMap<>();
         item.putAll(DynamoDBUtils.toItem(data));
@@ -369,42 +369,32 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
         return item;
     }
 
-    private static Map<String, AttributeValue> objectKey(final DynamoDBStrategy strategy, final ObjectSchema schema, final String id) {
+    public static Map<String, AttributeValue> objectKey(final DynamoDBStrategy strategy, final ObjectSchema schema, final String id) {
 
         final String prefix = strategy.objectPartitionPrefix(schema);
-        final String partition;
-        if(prefix == null) {
-            partition = id;
-        } else {
-            partition = prefix + Reserved.DELIMITER + id;
-        }
+        final String partition = DynamoDBUtils.concat(prefix, id);
         return ImmutableMap.of(
                 strategy.objectPartitionName(schema), DynamoDBUtils.s(partition)
         );
     }
 
-    private static Map<String, AttributeValue> historyKey(final DynamoDBStrategy strategy, final ObjectSchema schema, final String id, final long version) {
+    public static Map<String, AttributeValue> historyKey(final DynamoDBStrategy strategy, final ObjectSchema schema, final String id, final long version) {
 
         final String prefix = strategy.historyPartitionPrefix(schema);
-        final String partition;
-        if(prefix == null) {
-            partition = id;
-        } else {
-            partition = prefix + Reserved.DELIMITER + id;
-        }
+        final String partition = DynamoDBUtils.concat(prefix, id);
         return ImmutableMap.of(
                 strategy.historyPartitionName(schema), DynamoDBUtils.s(partition),
                 strategy.historySortName(schema), DynamoDBUtils.n(Long.toString(version))
         );
     }
 
-    private static byte[] indexPartitionPrefix(final DynamoDBStrategy strategy, final ObjectSchema schema, final Index index, final byte[] suffix) {
+    public static byte[] indexPartitionPrefix(final DynamoDBStrategy strategy, final ObjectSchema schema, final Index index, final byte[] suffix) {
 
         final String prefix = strategy.indexPartitionPrefix(schema, index);
         return UseBinary.binaryKey(Collections.singletonList(prefix), suffix);
     }
 
-    private static Map<String, AttributeValue> indexKey(final DynamoDBStrategy strategy, final ObjectSchema schema, final Index index, final String id, final Index.Key key) {
+    public static Map<String, AttributeValue> indexKey(final DynamoDBStrategy strategy, final ObjectSchema schema, final Index index, final String id, final Index.Key key) {
 
         return ImmutableMap.of(
                 strategy.indexPartitionName(schema, index), DynamoDBUtils.b(partition(strategy, schema, index, id, key.getPartition())),
@@ -440,7 +430,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
         return UseBinary.binaryKey(fullSort);
     }
 
-    private static Map<String, AttributeValue> indexItem(final DynamoDBStrategy strategy, final ObjectSchema schema, final Index index, final String id, final Index.Key key, final Map<String, Object> data) {
+    public static Map<String, AttributeValue> indexItem(final DynamoDBStrategy strategy, final ObjectSchema schema, final Index index, final String id, final Index.Key key, final Map<String, Object> data) {
 
         final ImmutableMap.Builder<String, AttributeValue> builder = ImmutableMap.builder();
         builder.putAll(DynamoDBUtils.toItem(data));
