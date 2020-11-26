@@ -502,6 +502,10 @@ public class TestExpression {
                 "v", LocalDate.parse("2020-01-01")
         )));
 
+        check("v.toString()", "2020-01-01T01:02:03Z", context(ImmutableMap.of(
+                "v", Instant.parse("2020-01-01T01:02:03Z")
+        )));
+
         check("v.toDate()", LocalDate.parse("2020-01-01"), context(ImmutableMap.of(
                 "v", "2020-01-01"
         )));

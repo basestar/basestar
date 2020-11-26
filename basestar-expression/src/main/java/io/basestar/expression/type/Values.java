@@ -34,6 +34,7 @@ import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.TemporalAccessor;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -123,6 +124,8 @@ public class Values {
         if(value == null) {
             return null;
         } else if(value instanceof Boolean || value instanceof Number) {
+            return value.toString();
+        } else if(value instanceof TemporalAccessor) {
             return value.toString();
         } else if(value instanceof String) {
             return (String) value;
