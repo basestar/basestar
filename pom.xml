@@ -45,6 +45,13 @@
         <lombok.version>1.18.12</lombok.version>
         <junit.version>5.4.0</junit.version>
         <skipDocs>false</skipDocs>
+        <sonar.projectKey>basestar</sonar.projectKey>
+        <sonar.moduleKey>
+            ${project.groupId}:${project.artifactId}
+        </sonar.moduleKey>
+        <sonar.organization>basestar</sonar.organization>
+        <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+        <sonar.scanner.force-deprecated-java-version>true</sonar.scanner.force-deprecated-java-version>
     </properties>
 
     <scm>
