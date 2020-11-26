@@ -498,7 +498,7 @@ public class TestExpression {
     @Test
     public void testDateTimeFormat() {
 
-        check("v.format('YYYY')", "2020", context(ImmutableMap.of(
+        check("v.toString('YYYY')", "2020", context(ImmutableMap.of(
                 "v", LocalDate.parse("2020-01-01")
         )));
 

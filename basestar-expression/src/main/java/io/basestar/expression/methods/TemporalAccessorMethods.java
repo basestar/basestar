@@ -6,7 +6,7 @@ import java.time.temporal.TemporalAccessor;
 @SuppressWarnings("unused")
 public abstract class TemporalAccessorMethods<T extends TemporalAccessor> {
 
-    public String format(final T target, final String format) {
+    public String toString(final T target, final String format) {
 
         return DateTimeFormatter.ofPattern(format).format(target);
     }
