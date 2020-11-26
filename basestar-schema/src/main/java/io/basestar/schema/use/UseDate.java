@@ -21,7 +21,7 @@ package io.basestar.schema.use;
  */
 
 import io.basestar.exception.InvalidDateTimeException;
-import io.basestar.schema.exception.UnexpectedTypeException;
+import io.basestar.expression.type.exception.TypeConversionException;
 import io.basestar.util.ISO8601;
 import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.DateSchema;
@@ -56,17 +56,13 @@ public class UseDate implements UseStringLike<LocalDate> {
     @Override
     public LocalDate create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        if(value == null) {
-            return null;
-        } else {
-            try {
-                return ISO8601.toDate(value);
-            } catch (final InvalidDateTimeException e) {
-                if(suppress) {
-                    return null;
-                } else {
-                    throw new UnexpectedTypeException(this, value);
-                }
+        try {
+            return ISO8601.toDate(value);
+        } catch (final InvalidDateTimeException e) {
+            if(suppress) {
+                return null;
+            } else {
+                throw new TypeConversionException(LocalDate.class, value);
             }
         }
     }

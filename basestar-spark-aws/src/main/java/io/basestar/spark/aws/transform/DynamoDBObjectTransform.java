@@ -42,13 +42,40 @@ public class DynamoDBObjectTransform implements Transform<Dataset<Row>, RDD<Map<
 
     private final ObjectSchema schema;
 
+    private final Format format;
+
     private final Map<String, Use<?>> extraMetadata;
 
+    public interface Format {
+
+        Map<String, AttributeValue> item(DynamoDBStrategy strategy, ObjectSchema schema, Map<String, Object> data);
+
+        Format ITEM = (strategy, schema, data) -> {
+
+            final String id = Instance.getId(data);
+            return DynamoDBLegacyUtils.toLegacy(DynamoDBStorage.objectItem(strategy, schema, id, data));
+        };
+
+        Format OBJECT_KEY = (strategy, schema, data) -> {
+
+            final String id = Instance.getId(data);
+            return DynamoDBLegacyUtils.toLegacy(DynamoDBStorage.objectKey(strategy, schema, id));
+        };
+
+        Format HISTORY_KEY = (strategy, schema, data) -> {
+
+            final String id = Instance.getId(data);
+            final Long version = Instance.getVersion(data);
+            return DynamoDBLegacyUtils.toLegacy(DynamoDBStorage.historyKey(strategy, schema, id, version));
+        };
+    }
+
     @lombok.Builder(builderClassName = "Builder")
-    DynamoDBObjectTransform(final DynamoDBStrategy strategy, final ObjectSchema schema, final Map<String, Use<?>> extraMetadata) {
+    DynamoDBObjectTransform(final DynamoDBStrategy strategy, final ObjectSchema schema, final Format format, final Map<String, Use<?>> extraMetadata) {
 
         this.strategy = Nullsafe.require(strategy);
         this.schema = Nullsafe.require(schema);
+        this.format = Nullsafe.orDefault(format, Format.ITEM);
         this.extraMetadata = Nullsafe.orDefault(extraMetadata);
     }
 
@@ -57,8 +84,7 @@ public class DynamoDBObjectTransform implements Transform<Dataset<Row>, RDD<Map<
 
         return input.toJavaRDD().map(row -> {
             final Map<String, Object> data = SparkSchemaUtils.fromSpark(schema, schema.getExpand(), extraMetadata, row);
-            final String id = Instance.getId(data);
-            return DynamoDBLegacyUtils.toLegacy(DynamoDBStorage.objectItem(strategy, schema, id, data));
+            return format.item(strategy, schema, data);
         }).rdd();
     }
 }

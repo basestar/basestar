@@ -22,6 +22,7 @@ package io.basestar.expression.methods;
 
 import java.io.Serializable;
 
+@SuppressWarnings("unused")
 public class NumberMethods implements Serializable {
 
     public Number round(final Number a, final Number places) {

@@ -25,6 +25,7 @@ import io.basestar.expression.type.Values;
 import java.io.Serializable;
 import java.util.Map;
 
+@SuppressWarnings("unused")
 public class MapMethods implements Serializable {
 
     public int size(final Map<?, ?> target) {

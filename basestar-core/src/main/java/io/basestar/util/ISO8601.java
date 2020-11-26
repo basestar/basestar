@@ -49,7 +49,9 @@ public class ISO8601 {
 
     public static Instant toDateTime(final Object value) {
 
-        if(value instanceof TemporalAccessor) {
+        if(value == null) {
+            return null;
+        } else if(value instanceof TemporalAccessor) {
             return toDateTime((TemporalAccessor) value);
         } else if(value instanceof java.sql.Timestamp) {
             return ((java.sql.Timestamp) value).toInstant();
@@ -95,6 +97,21 @@ public class ISO8601 {
         }
     }
 
+    public static Instant parseDateTime(final String value, final String format) {
+
+        final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(format);
+        try {
+            return formatter.parse(value, Instant::from);
+        } catch (final DateTimeParseException e) {
+            // suppress
+        }
+        try {
+            return formatter.parse(value, LocalDateTime::from).toInstant(ZoneOffset.UTC);
+        } catch (final DateTimeParseException e) {
+            throw new InvalidDateTimeException(value);
+        }
+    }
+
     public static LocalDate toDate(final TemporalAccessor value) {
 
         return LocalDate.from(value);
@@ -102,7 +119,9 @@ public class ISO8601 {
 
     public static LocalDate toDate(final Object value) {
 
-        if(value instanceof TemporalAccessor) {
+        if(value == null) {
+            return null;
+        } else if(value instanceof TemporalAccessor) {
             return toDate((TemporalAccessor) value);
         } else if(value instanceof java.sql.Timestamp) {
             return toDate(((java.sql.Timestamp) value).toInstant());
@@ -127,6 +146,15 @@ public class ISO8601 {
             }
         }
         return parseDateTime(value).atZone(ZoneOffset.UTC).toLocalDate();
+    }
+
+    public static LocalDate parseDate(final String value, final String format) {
+
+        try {
+            return DateTimeFormatter.ofPattern(format).parse(value, LocalDate::from);
+        } catch (final DateTimeParseException e) {
+            throw new InvalidDateException(value);
+        }
     }
 
     public static String toString(final LocalDate value) {

@@ -136,7 +136,7 @@ public interface Context extends Serializable {
     default Object call(final Object target, final String method, final Object... args) {
 
         final Object[] mergedArgs = Stream.concat(Stream.of(target), Arrays.stream(args)).toArray();
-        return callable(target.getClass(), method, Arrays.stream(args).map(Object::getClass).toArray(Type[]::new))
+        return callable(target == null ? Void.class : target.getClass(), method, Arrays.stream(args).map(Object::getClass).toArray(Type[]::new))
                 .call(mergedArgs);
     }
 

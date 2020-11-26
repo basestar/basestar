@@ -20,8 +20,13 @@ package io.basestar.expression.methods;
  * #L%
  */
 
-import java.io.Serializable;
+import io.basestar.util.ISO8601;
 
+import java.io.Serializable;
+import java.time.Instant;
+import java.time.LocalDate;
+
+@SuppressWarnings("unused")
 public class StringMethods implements Serializable {
 
     public boolean isEmpty(final String target) {
@@ -52,5 +57,15 @@ public class StringMethods implements Serializable {
     public String trim(final String target) {
 
         return target.trim();
+    }
+
+    public LocalDate toDate(final String value, final String format) {
+
+        return ISO8601.parseDate(value, format);
+    }
+
+    public Instant toDatetime(final String value, final String format) {
+
+        return ISO8601.parseDateTime(value, format);
     }
 }
