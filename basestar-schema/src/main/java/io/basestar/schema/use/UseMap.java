@@ -63,6 +63,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class UseMap<T> implements UseContainer<T, Map<String, T>> {
 
+    public static UseMap<Object> DEFAULT = new UseMap<>(UseAny.DEFAULT);
+
     public static final String NAME = "map";
 
     public static final String EXPAND_WILDCARD = "*";

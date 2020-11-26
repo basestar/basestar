@@ -20,6 +20,8 @@ package io.basestar.expression.type;
  * #L%
  */
 
+import com.google.common.io.BaseEncoding;
+import io.basestar.expression.type.exception.TypeConversionException;
 import io.basestar.expression.type.match.BinaryMatch;
 import io.basestar.expression.type.match.BinaryNumberMatch;
 import io.basestar.expression.type.match.UnaryMatch;
@@ -29,8 +31,10 @@ import io.leangen.geantyref.GenericTypeReflector;
 
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.TemporalAccessor;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -59,6 +63,89 @@ public class Values {
             return ((Map<?, ?>)value).size() > 0;
         } else {
             throw new IllegalStateException();
+        }
+    }
+
+    public static Boolean toBoolean(final Object value) {
+
+        if(value == null) {
+            return null;
+        } else if(value instanceof Boolean) {
+            return (Boolean)value;
+        } else if(value instanceof Number) {
+            return ((Number)value).intValue() != 0;
+        } else if(value instanceof String) {
+            return !(((String) value).isEmpty() || value.equals("false"));
+        } else {
+            throw new TypeConversionException(Boolean.class, value);
+        }
+    }
+
+    public static Long toInteger(final Object value) {
+
+        if(value == null) {
+            return null;
+        } else if(value instanceof Boolean) {
+            return ((Boolean)value) ? 1L : 0L;
+        } else if(value instanceof Number) {
+            return ((Number)value).longValue();
+        } else if(value instanceof String) {
+            try {
+                return Long.parseLong((String) value);
+            } catch (final NumberFormatException e) {
+                throw new TypeConversionException(Long.class, value);
+            }
+        } else {
+            throw new TypeConversionException(Long.class, value);
+        }
+    }
+
+    public static Double toFloat(final Object value) {
+
+        if(value == null) {
+            return null;
+        } else if(value instanceof Boolean) {
+            return ((Boolean)value) ? 1.0 : 0.0;
+        } else if(value instanceof Number) {
+            return ((Number)value).doubleValue();
+        } else if(value instanceof String) {
+            try {
+                return Double.parseDouble((String)value);
+            } catch (final NumberFormatException e) {
+                throw new TypeConversionException(Double.class, value);
+            }
+        } else {
+            throw new TypeConversionException(Double.class, value);
+        }
+    }
+
+    public static String toString(final Object value) {
+
+        if(value == null) {
+            return null;
+        } else if(value instanceof Boolean || value instanceof Number) {
+            return value.toString();
+        } else if(value instanceof TemporalAccessor) {
+            return value.toString();
+        } else if(value instanceof String) {
+            return (String) value;
+        } else {
+            throw new TypeConversionException(String.class, value);
+        }
+    }
+
+    public static byte[] toBinary(final Object value) {
+
+        if(value == null) {
+            return null;
+        } else if(value instanceof byte[]) {
+            return (byte[])value;
+        } else if(value instanceof ByteBuffer) {
+            return ((ByteBuffer) value).array();
+        } else if(value instanceof String) {
+            return BaseEncoding.base64().decode((String)value);
+        } else {
+            throw new TypeConversionException(byte[].class, value);
         }
     }
 

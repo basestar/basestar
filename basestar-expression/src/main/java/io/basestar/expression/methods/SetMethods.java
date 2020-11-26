@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@SuppressWarnings("unused")
 public class SetMethods extends CollectionMethods<Set<?>> {
 
     protected Set<?> collect(final Stream<?> stream) {

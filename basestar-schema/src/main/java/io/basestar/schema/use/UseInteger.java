@@ -20,7 +20,8 @@ package io.basestar.schema.use;
  * #L%
  */
 
-import io.basestar.schema.exception.UnexpectedTypeException;
+import io.basestar.expression.type.Values;
+import io.basestar.expression.type.exception.TypeConversionException;
 import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.IntegerSchema;
 import lombok.Data;
@@ -71,26 +72,14 @@ public class UseInteger implements UseNumeric<Long> {
     @Override
     public Long create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        if(value == null) {
-            return null;
-        } else if(value instanceof Boolean) {
-            return ((Boolean)value) ? 1L : 0L;
-        } else if(value instanceof Number) {
-            return ((Number)value).longValue();
-        } else if(value instanceof String) {
-            try {
-                return Long.parseLong((String) value);
-            } catch (final NumberFormatException e) {
-                if(suppress) {
-                    return null;
-                } else {
-                    throw e;
-                }
+        try {
+            return Values.toInteger(value);
+        } catch (final TypeConversionException e) {
+            if(suppress) {
+                return null;
+            } else {
+                throw e;
             }
-        } else if(suppress) {
-            return null;
-        } else {
-            throw new UnexpectedTypeException(this, value);
         }
     }
 

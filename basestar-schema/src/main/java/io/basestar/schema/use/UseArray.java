@@ -54,6 +54,8 @@ import java.util.stream.Stream;
 @Slf4j
 public class UseArray<T> implements UseCollection<T, List<T>> {
 
+    public static UseArray<Object> DEFAULT = new UseArray<>(UseAny.DEFAULT);
+
     public static final String NAME = "array";
 
     private final Use<T> type;

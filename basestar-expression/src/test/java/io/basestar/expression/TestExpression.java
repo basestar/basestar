@@ -40,6 +40,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Collections;
@@ -497,9 +498,31 @@ public class TestExpression {
     @Test
     public void testDateTimeFormat() {
 
-        check("v.format('YYYY')", "2020", context(ImmutableMap.of(
+        check("v.toString('YYYY')", "2020", context(ImmutableMap.of(
                 "v", LocalDate.parse("2020-01-01")
         )));
+
+        check("v.toString()", "2020-01-01T01:02:03Z", context(ImmutableMap.of(
+                "v", Instant.parse("2020-01-01T01:02:03Z")
+        )));
+
+        check("v.toDate()", LocalDate.parse("2020-01-01"), context(ImmutableMap.of(
+                "v", "2020-01-01"
+        )));
+
+        check("v.toDate('dd-MM-yyyy')", LocalDate.parse("2020-01-01"), context(ImmutableMap.of(
+                "v", "01-01-2020"
+        )));
+
+        check("v.toDatetime('dd-MM-yyyy HH:mm:ss X')", Instant.parse("2020-01-01T01:02:03Z"), context(ImmutableMap.of(
+                "v", "01-01-2020 01:02:03 Z"
+        )));
+
+        check("v.toDatetime('dd-MM-yyyy HH:mm:ss')", Instant.parse("2020-01-01T01:02:03Z"), context(ImmutableMap.of(
+                "v", "01-01-2020 01:02:03"
+        )));
+
+        check("null.toDatetime()", null, context(ImmutableMap.of()));
     }
 
 //    @Test

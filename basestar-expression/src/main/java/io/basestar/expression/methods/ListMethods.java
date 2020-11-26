@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@SuppressWarnings("unused")
 public class ListMethods extends CollectionMethods<List<?>> {
 
     protected List<?> collect(final Stream<?> stream) {

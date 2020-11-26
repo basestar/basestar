@@ -57,6 +57,8 @@ import java.util.stream.Stream;
 @Slf4j
 public class UseSet<T> implements UseCollection<T, Set<T>> {
 
+    public static UseSet<Object> DEFAULT = new UseSet<>(UseAny.DEFAULT);
+
     public static final String NAME = "set";
 
     private final Use<T> type;

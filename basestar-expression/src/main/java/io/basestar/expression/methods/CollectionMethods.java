@@ -30,6 +30,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
 
+@SuppressWarnings("unused")
 public abstract class CollectionMethods<T extends Collection<?>> implements Serializable {
 
     public int size(final T target) {

@@ -495,7 +495,13 @@ public class SparkSchemaUtils {
             @Override
             public Object visitAny(final UseAny type) {
 
-                throw new UnsupportedOperationException();
+                if(value instanceof Row || value instanceof scala.collection.Map<?, ?>) {
+                    return visitMap(UseMap.DEFAULT);
+                } else if(value instanceof Seq<?>) {
+                    return visitArray(UseArray.DEFAULT);
+                } else {
+                    return value;
+                }
             }
         });
     }
@@ -684,10 +690,17 @@ public class SparkSchemaUtils {
                 return type.getType().visit(this);
             }
 
+
             @Override
             public Object visitAny(final UseAny type) {
 
-                throw new UnsupportedOperationException();
+                if(value instanceof Map<?, ?>) {
+                    return visitMap(UseMap.DEFAULT);
+                } else if(value instanceof Collection<?>) {
+                    return visitArray(UseArray.DEFAULT);
+                } else {
+                    return value;
+                }
             }
         });
     }

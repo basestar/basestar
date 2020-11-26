@@ -50,13 +50,25 @@ public class DynamoDBIndexTransform implements Transform<Dataset<Row>, RDD<Map<S
 
     private final ObjectSchema schema;
 
+    private final Format format;
+
     private final Index index;
 
+    public interface Format {
+
+        Map<String, AttributeValue> item(DynamoDBStrategy strategy, ObjectSchema schema, Index index, String id, Index.Key key, Map<String, Object> projection);
+
+        Format INDEX_ITEM = (strategy, schema, index, id, key, projection) -> DynamoDBLegacyUtils.toLegacy(DynamoDBStorage.indexItem(strategy, schema, index, id, key, projection));
+
+        Format INDEX_KEY = (strategy, schema, index, id, key, projection) -> DynamoDBLegacyUtils.toLegacy(DynamoDBStorage.indexKey(strategy, schema, index, id, key));
+    }
+
     @lombok.Builder(builderClassName = "Builder")
-    DynamoDBIndexTransform(final DynamoDBStrategy strategy, final ObjectSchema schema, final Index index) {
+    DynamoDBIndexTransform(final DynamoDBStrategy strategy, final ObjectSchema schema, final Format format, final Index index) {
 
         this.strategy = Nullsafe.require(strategy);
         this.schema = Nullsafe.require(schema);
+        this.format = Nullsafe.orDefault(format, Format.INDEX_ITEM);
         this.index = Nullsafe.require(index);
     }
 
@@ -69,7 +81,7 @@ public class DynamoDBIndexTransform implements Transform<Dataset<Row>, RDD<Map<S
             final Map<Index.Key, Map<String, Object>> records = index.readValues(data);
 
             return records.entrySet().stream()
-                    .map(e -> DynamoDBLegacyUtils.toLegacy(DynamoDBStorage.indexItem(strategy, schema, index, id, e.getKey(), e.getValue())))
+                    .map(e -> format.item(strategy, schema, index, id, e.getKey(), e.getValue()))
                     .iterator();
 
         }).rdd();

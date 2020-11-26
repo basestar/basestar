@@ -37,6 +37,8 @@ public class DynamoDBSink implements Sink<RDD<Map<String, AttributeValue>>> {
 
     private final String tableName;
 
+    private final boolean delete;
+
     @Override
     public void accept(final RDD<Map<String, AttributeValue>> input) {
 
@@ -44,6 +46,9 @@ public class DynamoDBSink implements Sink<RDD<Map<String, AttributeValue>>> {
 
         final JobConf jobConf = new JobConf(sc.hadoopConfiguration());
         jobConf.set("dynamodb.output.tableName", tableName);
+        if(delete) {
+            jobConf.set("dynamodb.deletion.mode", "true");
+        }
 
         jobConf.set("mapred.output.format.class", "org.apache.hadoop.dynamodb.write.DynamoDBOutputFormat");
 
