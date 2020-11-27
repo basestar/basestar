@@ -17,7 +17,7 @@ jobs:
           settings-path: ${{ github.workspace }} # location for the settings.xml file
 
       - name: Build with Maven
-        run: mvn -B --no-transfer-progress install --file pom.xml
+        run: mvn -B --no-transfer-progress -DskipDocs=true install --file pom.xml
       - name: Sonarcloud
         run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
         env:
