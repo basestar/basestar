@@ -56,14 +56,21 @@ class TestDynamoDBStorage extends TestStorage {
     @BeforeAll
     static void startLocalStack() {
 
-        Localstack.startDynamoDB();
-        ddb = DynamoDbAsyncClient.builder()
-                .endpointOverride(URI.create(Localstack.DDB_ENDPOINT))
-                .region(Region.US_EAST_1)
-                .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create("local", "stack")
-                ))
-                .build();
+        try {
+
+            Localstack.startDynamoDB();
+            ddb = DynamoDbAsyncClient.builder()
+                    .endpointOverride(URI.create(Localstack.DDB_ENDPOINT))
+                    .region(Region.US_EAST_1)
+                    .credentialsProvider(StaticCredentialsProvider.create(
+                            AwsBasicCredentials.create("local", "stack")
+                    ))
+                    .build();
+
+        } catch (final Exception e) {
+            log.error("Failed to initialize DynamoDB", e);
+            throw e;
+        }
     }
 
     @AfterAll
