@@ -34,9 +34,7 @@ class TestLayoutTransform extends AbstractSparkTest {
     @Test
     void testObjectIdLayout() throws Exception {
 
-        final SparkSession session = SparkSession.builder()
-                .master("local[*]")
-                .getOrCreate();
+        final SparkSession session = session();
 
         final Namespace namespace = Namespace.load(SparkDatabaseTest.class.getResourceAsStream("schema.yml"));
 

@@ -54,9 +54,7 @@ class TestSchemaTransform extends AbstractSparkTest {
     @Test
     void testSchemaTransform() throws IOException {
 
-        final SparkSession session = SparkSession.builder()
-                .master("local[*]")
-                .getOrCreate();
+        final SparkSession session = session();
 
         final Namespace namespace = Namespace.load(TestSchemaTransform.class.getResourceAsStream("schema.yml"));
 
@@ -82,9 +80,7 @@ class TestSchemaTransform extends AbstractSparkTest {
     @Test
     void testSchemaTransformInvalid2() throws IOException {
 
-        final SparkSession session = SparkSession.builder()
-                .master("local[*]")
-                .getOrCreate();
+        final SparkSession session = session();
 
         final Namespace namespace = Namespace.load(TestExpandTransform.class.getResourceAsStream("schema.yml"));
 
@@ -111,9 +107,7 @@ class TestSchemaTransform extends AbstractSparkTest {
     @Test
     void testSchemaTransformInvalid() throws IOException {
 
-        final SparkSession session = SparkSession.builder()
-                .master("local[*]")
-                .getOrCreate();
+        final SparkSession session = session();
 
         final Namespace namespace = Namespace.load(TestExpandTransform.class.getResourceAsStream("schema.yml"));
 
@@ -137,9 +131,7 @@ class TestSchemaTransform extends AbstractSparkTest {
     @Test
     void testDateTimes() throws IOException {
 
-        final SparkSession session = SparkSession.builder()
-                .master("local[*]")
-                .getOrCreate();
+        final SparkSession session = session();
 
         final Namespace namespace = Namespace.load(TestExpandTransform.class.getResourceAsStream("schema.yml"));
 

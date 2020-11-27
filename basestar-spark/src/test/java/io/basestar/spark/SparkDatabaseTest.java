@@ -33,9 +33,7 @@ class SparkDatabaseTest extends AbstractSparkTest {
     @Test
     void testDatabase() throws IOException {
 
-        final SparkSession session = SparkSession.builder()
-                .master("local[*]")
-                .getOrCreate();
+        final SparkSession session = session();
 
         final Namespace namespace = Namespace.load(SparkDatabaseTest.class.getResourceAsStream("schema.yml"));
 
@@ -64,9 +62,7 @@ class SparkDatabaseTest extends AbstractSparkTest {
     @Test
     void testOverlay() throws IOException {
 
-        final SparkSession session = SparkSession.builder()
-                .master("local[*]")
-                .getOrCreate();
+        final SparkSession session = session();
 
         final Namespace namespace = Namespace.load(SparkDatabaseTest.class.getResourceAsStream("schema.yml"));
 

@@ -72,9 +72,7 @@ public class TestExpandTransform extends AbstractSparkTest {
     @Test
     void testExpandTransform() throws IOException {
 
-        final SparkSession session = SparkSession.builder()
-            .master("local[*]")
-            .getOrCreate();
+        final SparkSession session = session();
 
         final Namespace namespace = Namespace.load(TestExpandTransform.class.getResourceAsStream("schema.yml"));
 
