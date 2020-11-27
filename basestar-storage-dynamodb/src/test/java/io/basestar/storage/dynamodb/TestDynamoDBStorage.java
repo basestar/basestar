@@ -29,6 +29,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.model.*;
 
@@ -56,6 +59,10 @@ class TestDynamoDBStorage extends TestStorage {
         Localstack.startDynamoDB();
         ddb = DynamoDbAsyncClient.builder()
                 .endpointOverride(URI.create(Localstack.DDB_ENDPOINT))
+                .region(Region.US_EAST_1)
+                .credentialsProvider(StaticCredentialsProvider.create(
+                        AwsBasicCredentials.create("local", "stack")
+                ))
                 .build();
     }
 
