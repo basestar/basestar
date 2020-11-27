@@ -19,6 +19,8 @@ jobs:
         run: docker pull localstack/localstack:latest
       - name: Pull DynamoDBLocal docker image
         run: docker pull amazon/dynamodb-local:latest
+      - name: Pull Elasticsearch docker image
+        run: docker pull docker.elastic.co/elasticsearch/elasticsearch:7.4.0
       - name: Build with Maven
         run: mvn -B --no-transfer-progress -DskipDocs=true install --file pom.xml
       - name: Sonarcloud
