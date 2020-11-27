@@ -124,12 +124,4 @@ public class UseInteger implements UseNumeric<Long> {
 
         return NAME;
     }
-
-//    @Override
-//    public Map<String, Object> openApiType() {
-//
-//        return ImmutableMap.of(
-//                "type", "number"
-//        );
-//    }
 }

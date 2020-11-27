@@ -31,7 +31,7 @@ import io.basestar.storage.hazelcast.serde.PortableSchemaFactory;
 import java.util.UUID;
 
 
-public class TestHazelcastStorage extends TestStorage {
+class TestHazelcastStorage extends TestStorage {
 
     private static HazelcastInstance INSTANCE;
 
@@ -40,13 +40,6 @@ public class TestHazelcastStorage extends TestStorage {
         if(INSTANCE == null) {
 
             INSTANCE = Hazelcast.newHazelcastInstance(config);
-
-
-
-//                    .setSerializationConfig(new SerializationConfig()
-//                            .setPortableFactories(ImmutableMap.of(
-//                                    1, recordFactory
-//                            ))));
         }
         return INSTANCE;
     }
@@ -69,57 +62,8 @@ public class TestHazelcastStorage extends TestStorage {
         final Config config = new Config()
                 .setSerializationConfig(recordFactory.serializationConfig())
                 .setMapConfigs(strategy.mapConfigs(namespace));
-//                .addMapConfig(new MapConfig()
-//                        .setName("*")
-//                        .addEntryListenerConfig(new EntryListenerConfig()
-//                        .setImplementation(new EntryListener<Void, Void>() {
-//                            @Override
-//                            public void mapEvicted(final MapEvent mapEvent) {
-//
-//                            }
-//
-//                            @Override
-//                            public void mapCleared(final MapEvent mapEvent) {
-//
-//                            }
-//
-//                            @Override
-//                            public void entryUpdated(final EntryEvent entryEvent) {
-//
-//                            }
-//
-//                            @Override
-//                            public void entryRemoved(final EntryEvent entryEvent) {
-//
-//                            }
-//
-//                            @Override
-//                            public void entryExpired(final EntryEvent entryEvent) {
-//
-//                            }
-//
-//                            @Override
-//                            public void entryEvicted(final EntryEvent entryEvent) {
-//
-//                            }
-//
-//                            @Override
-//                            public void entryAdded(final EntryEvent entryEvent) {
-//
-//                            }
-//                        })));
 
         final HazelcastInstance instance = instance(config);
-
-//        for(final Schema<?> schema : namespace.getSchemas().values()) {
-//            if(schema instanceof ObjectSchema) {
-//                final ObjectSchema objectSchema = (ObjectSchema)schema;
-//                final String name = strategy.objectMapName(objectSchema);
-//                final IMap<BatchResponse.Key, Map<String, Object>> map = instance.getMap(name);
-//                final List<IndexConfig> indexes = PortableSchemaFactory.indexes(objectSchema);
-//                indexes.forEach(map::addIndex);
-//            }
-//        }
 
         final Storage storage = HazelcastStorage.builder()
                 .setInstance(instance)
@@ -131,18 +75,18 @@ public class TestHazelcastStorage extends TestStorage {
     }
 
     @Override
-    public void testMultiValueIndex() {
+    protected void testMultiValueIndex() {
 
     }
 
     @Override
-    public void testLarge() {
+    protected void testLarge() {
 
     }
 
     // FIXME
     @Override
-    public void testSortAndPaging() {
+    protected void testSortAndPaging() {
 
     }
 }

@@ -33,10 +33,10 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class TestIndex {
+class TestIndex {
 
     @Test
-    public void testReadRecords() {
+    void testReadRecords() {
 
         final Index index = Index.builder()
                 .setConsistency(Consistency.ASYNC)

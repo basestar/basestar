@@ -126,12 +126,6 @@ public class Lambda implements Expression {
                 .collect(Collectors.toSet());
     }
 
-//    @Override
-//    public Query query() {
-//
-//        return Query.and();
-//    }
-
     @Override
     public String token() {
 

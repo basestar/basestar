@@ -127,7 +127,7 @@ public class UseDate implements UseStringLike<LocalDate> {
     }
 
     @Override
-    public boolean equal(final LocalDate a, final LocalDate b) {
+    public boolean areEqual(final LocalDate a, final LocalDate b) {
 
         return Objects.equals(a, b);
     }

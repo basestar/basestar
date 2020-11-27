@@ -19,12 +19,6 @@ public class CodebehindModel extends InstanceSchemaModel {
         this.codebehind = codebehind;
     }
 
-//    @Override
-//    public Name getQualifiedName() {
-//
-//        return name;
-//    }
-
     @Override
     public String getRelativeClassFile() {
 
@@ -34,17 +28,6 @@ public class CodebehindModel extends InstanceSchemaModel {
         final Path classFile = Path.of(codebehind.getName());
         return Path.empty().up(relative.size()).with(codebehindPath).with(classFile).toString(File.separatorChar);
     }
-
-//    @Override
-//    public InstanceSchemaModel getExtend() {
-//
-//        if(codebehind.isExtend()) {
-//            final InstanceSchema extend = schema.getExtend();
-//            return extend == null ? null : InstanceSchemaModel.from(getContext(), extend);
-//        } else {
-//            return null;
-//        }
-//    }
 
     @Override
     public String getSchemaType() {

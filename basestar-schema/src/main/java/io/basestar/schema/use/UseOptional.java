@@ -226,8 +226,8 @@ public class UseOptional<T> implements UseContainer<T, T> {
     }
 
     @Override
-    public boolean equal(final T a, final T b) {
+    public boolean areEqual(final T a, final T b) {
 
-        return type.equal(a, b);
+        return type.areEqual(a, b);
     }
 }

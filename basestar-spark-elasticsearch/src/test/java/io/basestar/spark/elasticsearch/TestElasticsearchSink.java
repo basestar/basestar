@@ -43,12 +43,12 @@
 //import java.util.UUID;
 //import java.util.regex.Pattern;
 //
-//public class TestElasticsearchSink {
+//class TestElasticsearchSink {
 //
 //    private static final int PORT = 9200;
 //
 //    @BeforeAll
-//    public static void startLocalStack() {
+//    static void startLocalStack() {
 //
 //        TestContainers.ensure(ContainerSpec.builder()
 //                .image("docker.elastic.co/elasticsearch/elasticsearch:7.4.0")
@@ -59,7 +59,7 @@
 //    }
 //
 //    @Test
-//    public void testImport() {
+//    void testImport() {
 //
 //        final SparkSession session = SparkSession.builder()
 //                .master("local[*]")
@@ -100,7 +100,7 @@
 //
 //    @Data
 //    @NoArgsConstructor
-//    public static class Test1 {
+//    static class Test1 {
 //
 //        private String id;
 //
@@ -116,7 +116,7 @@
 //
 //        private Long version;
 //
-//        public Test1(final String hello) {
+//        Test1(final String hello) {
 //
 //            this.id = UUID.randomUUID().toString();
 //            this.hello = hello;

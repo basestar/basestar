@@ -151,7 +151,7 @@ public interface Combiner extends Serializable {
         @Override
         public Optional<Map<String, Object>> apply(final LinkableSchema schema, final Map<String, Object> before, final Map<String, Object> after) {
 
-            if(schema.equal(before, after)) {
+            if(schema.areEqual(before, after)) {
                 return Optional.empty();
             } else if(after == null) {
                 return Optional.of(schema.deleted(Instance.getId(before)));

@@ -27,10 +27,10 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class TestAggregatesVisitor {
+class TestAggregatesVisitor {
 
     @Test
-    public void testAggregates() {
+    void testAggregates() {
 
         final Expression expr = Expression.parse("sum(y) + round(sum(x))").bind(Context.init());
 

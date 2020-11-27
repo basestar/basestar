@@ -73,12 +73,6 @@ public class Not implements Unary {
         return Boolean.class;
     }
 
-//    @Override
-//    public Query query() {
-//
-//        return Query.and();
-//    }
-
     @Override
     public String token() {
 

@@ -60,8 +60,6 @@ public class SparkDatabase {
                 output = transform.accept(output);
             }
 
-//            System.out.println("Final output for " + schema.getQualifiedName() + ":\n" + output.showString(10, 80, false));
-
             return output;
         };
     }

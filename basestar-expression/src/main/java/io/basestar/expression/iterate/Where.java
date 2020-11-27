@@ -95,12 +95,6 @@ public class Where implements Binary {
         return lhs.type(context);
     }
 
-//    @Override
-//    public Query query() {
-//
-//        return Query.and();
-//    }
-
     @Override
     public String token() {
 

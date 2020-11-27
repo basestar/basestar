@@ -76,7 +76,7 @@ public class UndertowHandler implements HttpHandler {
 
             final Collection<String> requestIdHeaders = requestHeaders.get("X-Request-Id");
             final String requestId;
-            if(requestIdHeaders == null || requestIdHeaders.isEmpty()) {
+            if (requestIdHeaders == null || requestIdHeaders.isEmpty()) {
                 requestId = UUID.randomUUID().toString();
             } else {
                 requestId = requestIdHeaders.iterator().next();
@@ -162,7 +162,11 @@ public class UndertowHandler implements HttpHandler {
                 }
             });
 
-        } catch (final InterruptedException | ExecutionException | IOException e) {
+        } catch (final InterruptedException e) {
+            log.warn("Interrupted during request handling", e);
+            exchange.endExchange();
+            Thread.currentThread().interrupt();
+        } catch (final ExecutionException | IOException e) {
             log.warn("Exception caught during request handling", e);
             exchange.endExchange();
             throw new IllegalStateException(e);

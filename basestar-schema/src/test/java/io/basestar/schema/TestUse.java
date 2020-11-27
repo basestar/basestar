@@ -30,10 +30,10 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class TestUse {
+class TestUse {
 
     @Test
-    public void deserialize() throws IOException {
+    void deserialize() throws IOException {
 
         final Use<?> string = new ObjectMapper().readValue("\"string\"", Use.class);
         assertEquals(UseString.DEFAULT, string);
@@ -46,7 +46,7 @@ public class TestUse {
     }
 
     @Test
-    public void fromType() {
+    void fromType() {
 
         final Use<?> intMap = Use.fromType((new TypeToken<Map<String, Integer>>() {}).getType());
         assertEquals(UseMap.from(UseInteger.DEFAULT), intMap);

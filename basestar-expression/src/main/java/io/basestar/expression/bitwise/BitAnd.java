@@ -77,12 +77,6 @@ public class BitAnd implements Binary {
         return Long.class;
     }
 
-//    @Override
-//    public Query query() {
-//
-//        return Query.and();
-//    }
-
     @Override
     public String token() {
 

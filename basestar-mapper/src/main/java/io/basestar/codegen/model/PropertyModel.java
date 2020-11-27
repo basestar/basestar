@@ -29,8 +29,6 @@ import io.basestar.schema.Property;
 import java.util.ArrayList;
 import java.util.List;
 
-//import io.basestar.mapper.annotation.Required;
-
 @SuppressWarnings("unused")
 public class PropertyModel extends MemberModel {
 

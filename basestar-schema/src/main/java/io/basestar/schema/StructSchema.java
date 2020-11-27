@@ -45,8 +45,6 @@ import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-//import io.basestar.util.Key;
-
 /**
  * Struct Schema
  *

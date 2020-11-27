@@ -17,12 +17,12 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public abstract class TestSubscriptions {
+abstract class TestSubscriptions {
 
     protected abstract Subscriptions subscriber();
 
     @Test
-    public void testSubscriber() {
+    void testSubscriber() {
 
         final Subscriptions subscriptions = subscriber();
 

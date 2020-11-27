@@ -44,7 +44,7 @@ public class Member implements Expression {
 
     public static final String TOKEN = ".";
 
-    public static final int PRECEDENCE = 0;//MemberCall.PRECEDENCE + 1;
+    public static final int PRECEDENCE = 0;
 
     private final Expression with;
 
@@ -102,12 +102,6 @@ public class Member implements Expression {
 
         return with.names();
     }
-
-//    @Override
-//    public Query query() {
-//
-//        return Query.and();
-//    }
 
     @Override
     public String token() {

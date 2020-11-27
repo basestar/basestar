@@ -13,7 +13,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class TestExpandedLayout {
+class TestExpandedLayout {
 
     private Layout layout() throws IOException {
 
@@ -29,7 +29,7 @@ public class TestExpandedLayout {
     }
 
     @Test
-    public void testSchema() throws IOException {
+    void testSchema() throws IOException {
 
         final Layout layout = layout();
 

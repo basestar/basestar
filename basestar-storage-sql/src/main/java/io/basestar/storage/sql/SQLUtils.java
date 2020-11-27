@@ -435,15 +435,6 @@ public class SQLUtils {
         return order == Sort.Order.ASC ? SortOrder.ASC : SortOrder.DESC;
     }
 
-//    public static List<OrderField<?>> orderFields(final Index index) {
-//
-//        return Stream.concat(
-//                index.getPartition().stream().map(v -> DSL.field(DSL.name(v.toString()))),
-//                index.getSort().stream().map(v -> DSL.field(DSL.name(v.getName().toString()))
-//                        .sort(sort(v.getOrder())))
-//        ).collect(Collectors.toList());
-//    }
-
     public static List<OrderField<?>> indexKeys(final ObjectSchema schema, final Index index) {
 
         return Stream.concat(

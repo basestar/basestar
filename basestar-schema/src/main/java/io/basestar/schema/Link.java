@@ -84,16 +84,6 @@ public class Link implements Member {
     @Nonnull
     private final Map<String, Object> extensions;
 
-//    @Override
-//    public Use<?> storageSchema(final Set<Name> expand) {
-//
-//        if(single) {
-//            return schema.storageSchema(expand);
-//        } else {
-//            return new UseArray<>();
-//        }
-//    }
-
     @JsonDeserialize(as = Builder.class)
     public interface Descriptor extends Member.Descriptor {
 
@@ -205,7 +195,7 @@ public class Link implements Member {
             return ImmutableList.of(Sort.asc(schema.id()));
         } else {
             final Sort last = sort.get(sort.size() - 1);
-            if(last.getName().equals(schema.id())) {
+            if(last.getName().equals(Name.of(schema.id()))) {
                 return sort;
             } else {
                 return ImmutableList.<Sort>builder().addAll(sort)

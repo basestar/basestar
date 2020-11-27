@@ -14,10 +14,10 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
-public class TestAvroUtils {
+class TestAvroUtils {
 
     @Test
-    public void testSchema() throws Exception {
+    void testSchema() throws Exception {
 
         final Namespace namespace = Namespace.load(TestAvroUtils.class.getResource("schema.yml"));
         final ObjectSchema schema = namespace.requireObjectSchema("A");
@@ -36,7 +36,7 @@ public class TestAvroUtils {
     }
 
     @Test
-    public void testEncodeDecode() throws Exception {
+    void testEncodeDecode() throws Exception {
 
         final Namespace namespace = Namespace.load(TestAvroUtils.class.getResource("schema.yml"));
         final ObjectSchema schema = namespace.requireObjectSchema("A");

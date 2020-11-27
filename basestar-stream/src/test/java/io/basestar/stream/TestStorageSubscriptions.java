@@ -2,7 +2,7 @@ package io.basestar.stream;
 
 import io.basestar.storage.MemoryStorage;
 
-public class TestStorageSubscriptions extends TestSubscriptions {
+class TestStorageSubscriptions extends TestSubscriptions {
 
     @Override
     protected Subscriptions subscriber() {

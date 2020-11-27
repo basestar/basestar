@@ -12,8 +12,6 @@ import java.util.stream.Collectors;
 
 public interface RowMapper<T> {
 
-//    Name ROOT = Name.of(Reserved.PREFIX);
-
     List<Field<?>> columns();
 
     T fromRecord(Record record);
@@ -71,10 +69,7 @@ public interface RowMapper<T> {
 
             @Override
             public List<SelectFieldOrAsterisk> select()  {
-//
-//                // Select-as-name to avoid issue with athena lowercased column names
-//                return columns().stream().map(field -> field.as(DSL.name(field.getName())))
-//                        .collect(Collectors.toList());
+
                 final List<SelectFieldOrAsterisk> result = new ArrayList<>();
                 mappers.forEach((k, v) -> v.select(rootTable, Name.of(k)).forEach((k2, v2) -> {
                     result.add(DSL.field(DSL.name(k2.toArray())).as(v2));

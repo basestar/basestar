@@ -27,10 +27,10 @@ import java.net.URI;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class TestPartitionedUpsertUtils {
+class TestPartitionedUpsertUtils {
 
     @Test
-    public void testExtractUpsertId() {
+    void testExtractUpsertId() {
 
         assertEquals("xyz", PartitionedUpsertUtils.extractUpsertId(URI.create("s3://blah/blah/__upsert=xyz")));
         assertEquals("xyz", PartitionedUpsertUtils.extractUpsertId(URI.create("s3://blah/blah/__upsert=xyz/")));

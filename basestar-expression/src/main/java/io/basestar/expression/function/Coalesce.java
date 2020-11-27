@@ -83,12 +83,6 @@ public class Coalesce implements Binary {
         return Values.commonType(lhs.type(context), rhs.type(context));
     }
 
-//    @Override
-//    public Query query() {
-//
-//        throw new UnsupportedOperationException(TOKEN);
-//    }
-
     @Override
     public String token() {
 

@@ -9,10 +9,10 @@ import java.io.IOException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
-public class TestCaller {
+class TestCaller {
 
     @Test
-    public void testDeserialize() throws IOException {
+    void testDeserialize() throws IOException {
 
         final String json = "{\"super\":false, \"schema\":\"User\", \"id\":\"matt\"}";
 

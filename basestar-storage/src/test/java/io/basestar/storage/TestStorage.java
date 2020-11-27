@@ -64,7 +64,7 @@ public abstract class TestStorage {
 
     private final Namespace namespace;
 
-    public TestStorage() {
+    protected TestStorage() {
 
         try {
             this.namespace = Namespace.load(TestStorage.class.getResource("schema.yml"));
@@ -72,11 +72,6 @@ public abstract class TestStorage {
             throw new IllegalStateException(e);
         }
     }
-
-//    protected Storage storage(final Namespace namespace) {
-//
-//        return storage(namespace, HashMultimap.create());
-//    }
 
     protected abstract Storage storage(Namespace namespace);
 
@@ -134,7 +129,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    public void testIndexes() throws IOException {
+    protected void testIndexes() throws IOException {
 
         final Storage storage = storage(namespace);
 
@@ -159,7 +154,7 @@ public abstract class TestStorage {
     // FIXME: needs to cover non-trivial case(s)
 
     @Test
-    public void testSortAndPaging() {
+    protected void testSortAndPaging() {
 
         final Instant now = Instant.now();
 
@@ -216,7 +211,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    public void testCreate() {
+    protected void testCreate() {
 
         final Storage storage = storage(namespace);
 
@@ -248,7 +243,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    public void testEmptyString() {
+    protected void testEmptyString() {
 
         final Storage storage = storage(namespace);
 
@@ -303,7 +298,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    public void testUpdate() {
+    protected void testUpdate() {
 
         final Storage storage = storage(namespace);
 
@@ -344,7 +339,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    public void testDelete() {
+    protected void testDelete() {
 
         final Storage storage = storage(namespace);
 
@@ -374,7 +369,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    public void testLarge() {
+    protected void testLarge() {
 
         final Storage storage = storage(namespace);
 
@@ -405,7 +400,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    public void testCreateConflict() {
+    protected void testCreateConflict() {
 
         final Storage storage = storage(namespace);
 
@@ -427,7 +422,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    public void testUpdateMissing() {
+    protected void testUpdateMissing() {
 
         final Storage storage = storage(namespace);
 
@@ -457,7 +452,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    public void testDeleteMissing() {
+    protected void testDeleteMissing() {
 
         final Storage storage = storage(namespace);
 
@@ -485,7 +480,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    public void testDeleteWrongVersion() {
+    protected void testDeleteWrongVersion() {
 
         final Storage storage = storage(namespace);
 
@@ -515,7 +510,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    public void testUpdateWrongVersion() {
+    protected void testUpdateWrongVersion() {
 
         final Storage storage = storage(namespace);
 
@@ -549,7 +544,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    public void testMultiValueIndex() {
+    protected void testMultiValueIndex() {
 
         final Storage storage = storage(namespace);
 
@@ -580,7 +575,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    public void testNullBeforeUpdate() {
+    protected void testNullBeforeUpdate() {
 
         final Storage storage = storage(namespace);
 
@@ -600,7 +595,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    public void testNullBeforeDelete() {
+    protected void testNullBeforeDelete() {
 
         final Storage storage = storage(namespace);
 
@@ -620,7 +615,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    public void testLike() throws IOException {
+    protected void testLike() throws IOException {
 
         assumeTrue(supportsLike());
 
@@ -671,29 +666,8 @@ public abstract class TestStorage {
         return false;
     }
 
-//    @Test
-//    public void testReadBadItem() throws Exception {
-//
-//        final Storage storage = storage(namespace);
-//
-//        final ObjectSchema schema = namespace.requireObjectSchema(ADDRESS);
-//
-//        final String id1 = UUID.randomUUID().toString();
-//        final String id2 = UUID.randomUUID().toString();
-//
-//        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
-//                .createObject(schema, id1, ImmutableMap.of("id", id2, "schema", "broken", "version", 1L))
-//                .write().get();
-//
-//        final BatchResponse read = storage.read(Consistency.ATOMIC)
-//                .readObject(schema, id1, ImmutableSet.of())
-//                .read().get();
-//
-//        assertNotNull(read.getObject(schema, id1));
-//    }
-
     @Test
-    public void testAggregation() throws IOException {
+    protected void testAggregation() throws IOException {
 
         final Storage storage = storage(namespace);
 
@@ -719,24 +693,10 @@ public abstract class TestStorage {
         final Page<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
         System.err.println(results);
         assertEquals(31, results.size());
-
-        //assertEquals(?, results.size());
     }
 
-//    private List<Map<String, Object>> aggregate(final Collection<Map<String, Object>> input, final Expression expression) {
-//
-//        final Map<String, Long> result = new TreeMap<>();
-//        input.forEach(object -> {
-//            final String country = (String)object.get("country");
-//            result.compute(country, (k, v) -> v == null ? 1L : v + 1L);
-//        });
-//        return result.entrySet().stream().map(
-//                v ->
-//        );
-//    }
-
     @Test
-    public void testRefIndex() {
+    protected void testRefIndex() {
 
         final Storage storage = storage(namespace);
 
@@ -759,7 +719,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    public void testRefExpandQuery() {
+    protected void testRefExpandQuery() {
 
         final Storage storage = storage(namespace);
 
@@ -785,7 +745,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    public void testRefDeepExpandQuery() {
+    protected void testRefDeepExpandQuery() {
 
         final Storage storage = storage(namespace);
 
@@ -815,7 +775,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    public void testDateSort() {
+    protected void testDateSort() {
 
         final Storage storage = storage(namespace);
 
@@ -842,7 +802,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    public void testRepair() throws IOException {
+    protected void testRepair() throws IOException {
 
         assumeTrue(supportsRepair());
 

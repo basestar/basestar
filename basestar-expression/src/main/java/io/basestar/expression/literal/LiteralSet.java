@@ -102,12 +102,6 @@ public class LiteralSet implements Expression {
                 .map(v -> v.type(context)).toArray(Type[]::new)));
     }
 
-//    @Override
-//    public Query query() {
-//
-//        return Query.and();
-//    }
-
     @Override
     public Set<Name> names() {
 

@@ -62,7 +62,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @Slf4j
-public class TestDatabaseServer {
+class TestDatabaseServer {
 
     private static final Name SIMPLE = Name.of("Simple");
 
@@ -110,7 +110,7 @@ public class TestDatabaseServer {
 
     @BeforeEach
     @SuppressWarnings("unchecked")
-    public void setUp() throws Exception {
+    void setUp() throws Exception {
 
         final Namespace namespace = Namespace.load(
                 TestDatabaseServer.class.getResource("/io/basestar/database/schema.json"),
@@ -143,7 +143,7 @@ public class TestDatabaseServer {
     }
 
     @Test
-    public void createSimple() throws Exception {
+    void createSimple() throws Exception {
 
         final String id = UUID.randomUUID().toString();
 
@@ -169,7 +169,7 @@ public class TestDatabaseServer {
     }
 
     @Test
-    public void updateSimple() throws Exception {
+    void updateSimple() throws Exception {
 
         final String id = UUID.randomUUID().toString();
 
@@ -208,7 +208,7 @@ public class TestDatabaseServer {
     }
 
     @Test
-    public void deleteSimple() throws Exception {
+    void deleteSimple() throws Exception {
 
         final String id = UUID.randomUUID().toString();
 
@@ -229,7 +229,7 @@ public class TestDatabaseServer {
     }
 
     @Test
-    public void createIndexed() throws Exception {
+    void createIndexed() throws Exception {
 
         final String idA = UUID.randomUUID().toString();
         final Map<String, Object> dataA = ImmutableMap.of(
@@ -263,7 +263,7 @@ public class TestDatabaseServer {
     }
 
     @Test
-    public void createMultiIndexed() throws Exception {
+    void createMultiIndexed() throws Exception {
 
         final String idA = UUID.randomUUID().toString();
         final Map<String, Object> dataA = ImmutableMap.of(
@@ -284,7 +284,7 @@ public class TestDatabaseServer {
     }
 
     @Test
-    public void createMapMultiIndexed() throws Exception {
+    void createMapMultiIndexed() throws Exception {
 
         final String idA = UUID.randomUUID().toString();
         final Map<String, Object> dataA = ImmutableMap.of(
@@ -307,7 +307,7 @@ public class TestDatabaseServer {
     }
 
     @Test
-    public void createRef() throws Exception {
+    void createRef() throws Exception {
 
         final String refA = UUID.randomUUID().toString();
         final Map<String, Object> createRefA = database.create(caller, REF_TARGET, refA, ImmutableMap.of(
@@ -353,7 +353,7 @@ public class TestDatabaseServer {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void nestedRef() throws Exception {
+    void nestedRef() throws Exception {
 
         final String idA = "a";
         final Map<String, Object> createRefA = database.create(caller, REF_TARGET, idA, ImmutableMap.of(
@@ -386,7 +386,7 @@ public class TestDatabaseServer {
     }
 
     @Test
-    public void missingRefNotNull() throws Exception {
+    void missingRefNotNull() throws Exception {
 
         final String missing = UUID.randomUUID().toString();
         final String refA = UUID.randomUUID().toString();
@@ -405,7 +405,7 @@ public class TestDatabaseServer {
     }
 
     @Test
-    public void simplePerms() throws Exception {
+    void simplePerms() throws Exception {
 
         when(caller.getSchema()).thenReturn(USER);
         when(caller.getId()).thenReturn("test");
@@ -429,7 +429,7 @@ public class TestDatabaseServer {
     }
 
     @Test
-    public void customId() throws Exception {
+    void customId() throws Exception {
 
         final Map<String, Object> createA = database.create(Caller.SUPER, CUSTOM_ID, ImmutableMap.of(
                 "x", "x"
@@ -440,7 +440,7 @@ public class TestDatabaseServer {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void polymorphicCreate() {
+    void polymorphicCreate() {
 
         when(caller.getSchema()).thenReturn(USER);
         when(caller.getId()).thenReturn("test");
@@ -498,7 +498,7 @@ public class TestDatabaseServer {
     }
 
     @Test
-    public void batch() {
+    void batch() {
 
         final Map<String, Instance> results = database.batch(caller, BatchOptions.builder()
                 .action("a", CreateOptions.builder()
@@ -528,7 +528,7 @@ public class TestDatabaseServer {
     }
 
     @Test
-    public void advancedPerms() throws Exception {
+    void advancedPerms() throws Exception {
 
         when(caller.getSchema()).thenReturn(USER);
         when(caller.getId()).thenReturn("test");
@@ -567,7 +567,7 @@ public class TestDatabaseServer {
     }
 
     @Test
-    public void visibility() throws Exception {
+    void visibility() throws Exception {
 
         final Instance createA = database.create(Caller.SUPER, CreateOptions.builder()
                 .schema(VISIBILITY)
@@ -599,7 +599,7 @@ public class TestDatabaseServer {
     }
 
     @Test
-    public void transients() throws Exception {
+    void transients() throws Exception {
 
         final Instance createA = database.create(Caller.SUPER, CreateOptions.builder()
                 .schema(TRANSIENT)
@@ -626,7 +626,7 @@ public class TestDatabaseServer {
     }
 
     @Test
-    public void expand() throws Exception {
+    void expand() throws Exception {
 
         final Map<String, Instance> ok = database.batch(Caller.SUPER, BatchOptions.builder()
                 .action("team", CreateOptions.builder()
@@ -669,7 +669,7 @@ public class TestDatabaseServer {
     }
 
     @Test
-    public void refRefresh() throws Exception {
+    void refRefresh() throws Exception {
 
         final Map<String, Instance> init = database.batch(Caller.SUPER, BatchOptions.builder()
                 .action("team", CreateOptions.builder()
@@ -710,7 +710,7 @@ public class TestDatabaseServer {
     }
 
     @Test
-    public void deepExpandRefresh() throws Exception {
+    void deepExpandRefresh() throws Exception {
 
         final Instance teamA = database.create(Caller.SUPER, CreateOptions.builder()
                 .schema(TEAM)
@@ -760,70 +760,8 @@ public class TestDatabaseServer {
         assertEquals("a2", Instance.get(get, Name.parse("team.parent.name")));
     }
 
-//    @Test
-//    public void createValidation() throws Exception {
-//
-//        database.create(Caller.SUPER, CreateOptions.builder()
-//                .schema(TEAM)
-//                .id("test")
-//                .data(ImmutableMap.of(
-//                        "schema", TEAM_MEMBER.toString(),
-//                        "id", "test2"
-//                ))
-//                .build()).get();
-//    }
-//
-//    @Test
-//    public void updateValidation() throws Exception {
-//
-//        database.create(Caller.SUPER, CreateOptions.builder()
-//                .schema(TEAM)
-//                .id("test")
-//                .data(ImmutableMap.of(
-//                ))
-//                .build()).get();
-//
-//        database.update(Caller.SUPER, UpdateOptions.builder()
-//                .schema(TEAM)
-//                .id("test")
-//                .data(ImmutableMap.of(
-//                        "schema", TEAM_MEMBER.toString(),
-//                        "id", "test2"
-//                ))
-//                .build()).get();
-//    }
-
-//    @Test
-//    public void deleteBroken() throws Exception {
-//
-//        final ObjectSchema schema = database.objectSchema(TEAM);
-//
-//        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
-//                .createObject(schema, "test", ImmutableMap.of("schema", schema.getName(), "id", "test2"))
-//                .write().get();
-//
-//        final Instance getBefore = database.read(Caller.SUPER, ReadOptions.builder()
-//                .schema(TEAM)
-//                .id("test")
-//                .build()).get();
-//
-//        assertNotNull(getBefore);
-//
-//        database.delete(Caller.SUPER, DeleteOptions.builder()
-//                .schema(TEAM)
-//                .id("test")
-//                .build()).get();
-//
-//        final Instance getAfter = database.read(Caller.SUPER, ReadOptions.builder()
-//                .schema(TEAM)
-//                .id("test")
-//                .build()).get();
-//
-//        assertNull(getAfter);
-//    }
-
     @Test
-    public void aggregate() throws Exception {
+    void aggregate() throws Exception {
 
         database.batch(Caller.SUPER, BatchOptions.builder()
                 .action("a", CreateOptions.builder()
@@ -844,7 +782,7 @@ public class TestDatabaseServer {
     }
 
     @Test
-    public void merge() throws Exception {
+    void merge() throws Exception {
 
         final String id = UUID.randomUUID().toString();
 
@@ -904,7 +842,7 @@ public class TestDatabaseServer {
     }
 
     @Test
-    public void testInvalidRefError() {
+    void testInvalidRefError() {
 
         assertThrows(ConstraintViolationException.class, cause(() -> {
             database.create(Caller.SUPER, CreateOptions.builder()
@@ -917,7 +855,7 @@ public class TestDatabaseServer {
     }
 
     @Test
-    public void testInvalidEnumError() {
+    void testInvalidEnumError() {
 
         assertThrows(ConstraintViolationException.class, cause(() -> {
             database.create(Caller.SUPER, CreateOptions.builder()
@@ -928,20 +866,6 @@ public class TestDatabaseServer {
                     .build()).get();
         }));
     }
-
-//    @Test
-//    public void enumException() throws Exception {
-//
-//        final String id = UUID.randomUUID().toString();
-//
-//        database.create(Caller.SUPER, CreateOptions.builder()
-//                .schema(WITH_ENUM)
-//                .id(id)
-//                .data(ImmutableMap.of(
-//                        "value", "C"
-//                ))
-//                .build()).get();
-//    }
 
     private Executable cause(final Executable target) {
 

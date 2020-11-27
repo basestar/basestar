@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class TestFullType {
+class TestFullType {
 
     interface B<F> {
 
@@ -45,7 +45,7 @@ public class TestFullType {
         }
     }
 
-    public static class A implements B<Integer> {
+    static class A implements B<Integer> {
 
         Integer b;
 
@@ -63,7 +63,7 @@ public class TestFullType {
     }
 
     @Test
-    public void testSimple() {
+    void testSimple() {
 
         final TypeContext a = TypeContext.from(A.class);
         final List<PropertyContext> props = a.properties().stream()

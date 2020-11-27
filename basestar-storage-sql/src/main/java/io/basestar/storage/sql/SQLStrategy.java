@@ -92,28 +92,6 @@ public interface SQLStrategy {
             return RowMapper.forInstance(columnStrategy, schema, expand);
         }
 
-//        private List<Field<?>> columns(final ObjectSchema schema) {
-//
-//            final List<Field<?>> result = new ArrayList<>();
-//            schema.metadataSchema().forEach((name, type) -> {
-//                columnStrategy.columnMapper(type).toColumns(name).forEach((col, dt) -> {
-//                    result.add(DSL.field(DSL.name(col), dt));
-//                });
-//            });
-//            schema.getProperties().forEach((name, property) -> {
-//                final Use<?> type = property.getType();
-//                columnStrategy.columnMapper(type).toColumns(name).forEach((col, dt) -> {
-//                    result.add(DSL.field(DSL.name(col), dt));
-//                });
-//            });
-//            return result;
-//        }
-//
-//        private List<Field<?>> columns(final ObjectSchema schema, final Index index) {
-//
-//            return columns(schema);
-//        }
-
         @Override
         public void createTables(final DSLContext context, final Collection<ObjectSchema> schemas) {
 

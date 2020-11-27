@@ -344,7 +344,7 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
         });
     }
 
-    /*private*/ default Instance transformMembers(final Instance object, final BiFunction<Member, Object, Object> fn) {
+    default Instance transformMembers(final Instance object, final BiFunction<Member, Object, Object> fn) {
 
         final HashMap<String, Object> changed = new HashMap<>();
         getMembers().forEach((name, member) -> {
@@ -422,18 +422,18 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
     }
 
     @SuppressWarnings("unchecked")
-    default boolean equal(final Map<String, Object> a, final Map<String, Object> b) {
+    default boolean areEqual(final Map<String, Object> a, final Map<String, Object> b) {
 
         if(a == null || b == null) {
             return a == null && b == null;
         } else {
             for(final Map.Entry<String, Use<?>> entry : metadataSchema().entrySet()) {
-                if(!((Use<Object>)entry.getValue()).equal(a.get(entry.getKey()), b.get(entry.getKey()))) {
+                if(!((Use<Object>)entry.getValue()).areEqual(a.get(entry.getKey()), b.get(entry.getKey()))) {
                     return false;
                 }
             }
             for(final Map.Entry<String, ? extends Member> entry : getMembers().entrySet()) {
-                if(!((Use<Object>)entry.getValue().getType()).equal(a.get(entry.getKey()), b.get(entry.getKey()))) {
+                if(!((Use<Object>)entry.getValue().getType()).areEqual(a.get(entry.getKey()), b.get(entry.getKey()))) {
                     return false;
                 }
             }

@@ -200,18 +200,6 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
             public CompletableFuture<BatchResponse> read() {
 
                 return BatchResponse.mergeFutures(futures.stream());
-//
-//                return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]))
-//                        .thenApply(ignored -> {
-//                                final List<Map<String, Object>> results = new ArrayList<>();
-//                                futures.forEach(future -> {
-//                                    final Map<String, Object> result = future.getNow(null);
-//                                    if(result != null) {
-//                                        results.add(result);
-//                                    }
-//                                });
-//                                return new BatchResponse.Basic(results);
-//                        });
             }
         };
     }
@@ -441,15 +429,6 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
                 }
             }
             return Comparator.<String>nullsFirst(Comparator.naturalOrder()).compare(id, other.id);
-//            if(id == null && other.id == null) {
-//                return 0;
-//            } else if(id == null && other.id != null) {
-//                return -1;
-//            } else if(other.id == null) {
-//                return 1;
-//            } else {
-//                return id.compareTo(other.id);
-//            }
         }
     }
 

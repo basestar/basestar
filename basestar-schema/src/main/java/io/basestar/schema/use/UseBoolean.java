@@ -125,16 +125,8 @@ public class UseBoolean implements UseScalar<Boolean> {
     }
 
     @Override
-    public boolean equal(final Boolean a, final Boolean b) {
+    public boolean areEqual(final Boolean a, final Boolean b) {
 
         return Objects.equals(a, b);
     }
-
-//    @Override
-//    public Map<String, Object> openApiType() {
-//
-//        return ImmutableMap.of(
-//                "type", "boolean"
-//        );
-//    }
 }

@@ -209,10 +209,6 @@ public class Property implements Member {
 
     public Property(final Descriptor builder, final Schema.Resolver schemaResolver, final Version version, final Name qualifiedName) {
 
-        // FIXME
-//        if(Reserved.isReserved(qualifiedName.last())) {
-//            throw new ReservedNameException(qualifiedName);
-//        }
         this.qualifiedName = qualifiedName;
         this.description = builder.getDescription();
         this.type = legacyFix(qualifiedName, builder.getType().resolve(schemaResolver), builder.getRequired(), version);

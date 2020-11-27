@@ -11,10 +11,10 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class TestConstraints {
+class TestConstraints {
 
     @Test
-    public void testConstraintSyntax() throws IOException {
+    void testConstraintSyntax() throws IOException {
 
         final Namespace namespace = Namespace.load(TestViewSchema.class.getResource("constraints.yml"));
 

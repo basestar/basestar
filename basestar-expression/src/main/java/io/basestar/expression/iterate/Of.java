@@ -168,12 +168,6 @@ public class Of implements Expression {
         return expr.names();
     }
 
-//    @Override
-//    public Query query() {
-//
-//        return Query.and();
-//    }
-
     @Override
     public String token() {
 

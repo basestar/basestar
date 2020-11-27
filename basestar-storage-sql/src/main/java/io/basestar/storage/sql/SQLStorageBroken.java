@@ -235,87 +235,6 @@ public class SQLStorageBroken implements Storage.WithWriteIndex, Storage.WithWri
         return sources;
     }
 
-//    private Table<Record> objectTable(final ObjectSchema schema, final Set<Name> expand) {
-//
-//        return objectTable(schema, Name.of(), expand);
-//    }
-
-//    private Table<Record> objectTable(final ObjectSchema schema, final Name name, final Set<Name> expand) {
-//
-//        final Table<Record> rootTable = DSL.table(objectTableName(schema)).as(tableName(name));
-//        return join(schema, rootTable, expand);
-//    }
-
-//    private Table<Record> historyTable(final ObjectSchema schema, final Set<Name> expand) {
-//
-//        return historyTable(schema, Name.of(), expand);
-//    }
-//
-//    private Table<Record> historyTable(final ObjectSchema schema, final Name name, final Set<Name> expand) {
-//
-//        final Table<Record> rootTable = DSL.table(historyTableName(schema)).as(tableName(name));
-//        return join(schema, rootTable, expand);
-//    }
-
-//    private Table<Record> join(final InstanceSchema schema, final Table<Record> sourceTable, final Set<Name> expand) {
-//
-//        return join(schema, sourceTable, expand, Name.of());
-//    }
-//
-//    private Table<Record> join(final InstanceSchema schema, final Table<Record> sourceTable, final Set<Name> expand, final Name name) {
-//
-//        Table<Record> table = sourceTable;
-//        final Map<String, Set<Name>> branches = Name.branch(expand);
-//        for(final Map.Entry<String, Property> entry : schema.getProperties().entrySet()) {
-//            final String propertyName = entry.getKey();
-//            final Property property = entry.getValue();
-//            final Set<Name> branch = branches.get(propertyName);
-//            if(branch != null) {
-//                table = join(table, property.getType(), branch, name.with(propertyName));
-//            }
-//        }
-//        return table;
-//    }
-//
-//    private Table<Record> join(final Table<Record> sourceTable, final Use<?> type, final Set<Name> expand, final Name name) {
-//
-//        return type.visit(new Use.Visitor.Defaulting<Table<Record>>() {
-//
-//            @Override
-//            public Table<Record> visitDefault(final Use<?> type) {
-//
-//                return sourceTable;
-//            }
-//
-//            @Override
-//            public <T> Table<Record> visitCollection(final UseCollection<T, ? extends Collection<T>> type) {
-//
-//                throw new UnsupportedOperationException("Joins through collections are not supported yet");
-//            }
-//
-//            @Override
-//            public <T> Table<Record> visitMap(final UseMap<T> type) {
-//
-//                throw new UnsupportedOperationException("Joins through maps are not supported yet");
-//            }
-//
-//            @Override
-//            public Table<Record> visitStruct(final UseStruct type) {
-//
-//                return join(type.getSchema(), sourceTable, expand, name);
-//            }
-//
-//            @Override
-//            public Table<Record> visitObject(final UseObject type) {
-//
-//                final Table<Record> targetTable = objectTable(type.getSchema(), name, expand);
-//                final Field<String> targetId = DSL.field(DSL.name(targetTable.getUnqualifiedName(), DSL.name(Reserved.ID)), String.class);
-//                final Field<String> sourceId = DSL.field(DSL.name(sourceTable.getUnqualifiedName(), columnName(name)), String.class);
-//                return sourceTable.leftJoin(targetTable).on(targetId.eq(sourceId));
-//            }
-//        });
-//    }
-
     private org.jooq.Name tableName(final Name name) {
 
         return DSL.name(Reserved.PREFIX + name.toString(Reserved.PREFIX));
@@ -725,36 +644,6 @@ public class SQLStorageBroken implements Storage.WithWriteIndex, Storage.WithWri
 
         return strategy.indexTableName(schema, index);
     }
-
-
-
-//    private List<Map<String, Object>> all(final ObjectSchema schema, final Result<Record> result) {
-//
-//        return result.stream()
-//                .map(v -> fromRecord(schema, v))
-//                .collect(Collectors.toList());
-//    }
-
-//    private Map<String, Object> fromRecord(final ObjectSchema schema, final Record record) {
-//
-//        final Map<String, Object> data = record.intoMap();
-//        final Map<String, Object> result = new HashMap<>();
-//        schema.metadataSchema().forEach((k, v) ->
-//                result.put(k, SQLUtils.fromSQLValue(v, data.get(k))));
-//        schema.getProperties().forEach((k, v) ->
-//                result.put(k, SQLUtils.fromSQLValue(v.getType(), data.get(k))));
-//        return result;
-//    }
-//
-//    private Map<Field<?>, Object> toRecord(final ObjectSchema schema, final Map<String, Object> object) {
-//
-//        final Map<Field<?>, Object> result = new HashMap<>();
-//        schema.metadataSchema().forEach((k, v) ->
-//                result.put(DSL.field(DSL.name(k)), SQLUtils.toSQLValue(v, object.get(k))));
-//        schema.getProperties().forEach((k, v) ->
-//            result.put(DSL.field(DSL.name(k)), SQLUtils.toSQLValue(v.getType(), object.get(k))));
-//        return result;
-//    }
 
     private Map<Field<?>, Object> toRecord(final ObjectSchema schema, final Index index, final Index.Key key, final Map<String, Object> object) {
 

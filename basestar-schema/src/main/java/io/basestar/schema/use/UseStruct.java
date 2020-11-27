@@ -185,12 +185,6 @@ public class UseStruct implements UseInstance {
         return schema.refVersions(value);
     }
 
-//    @Override
-//    public Map<String, Object> openApiType() {
-//
-//        return schema.openApiRef();
-//    }
-
     @Override
     @Deprecated
     public Set<Name> requiredExpand(final Set<Name> names) {

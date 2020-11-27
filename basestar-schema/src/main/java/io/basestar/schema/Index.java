@@ -340,13 +340,6 @@ public class Index implements Named, Described, Serializable, Extendable {
         }
     }
 
-//    public List<Use<?>> resolveSortPaths(final ObjectSchema schema) {
-//
-//        return sort.stream()
-//                .map(v -> schema.typeOf(v.getPath()))
-//                .collect(Collectors.toList());
-//    }
-
     public Map<String, Object> readProjection(final Map<String, Object> data) {
 
         if(projection.isEmpty()) {

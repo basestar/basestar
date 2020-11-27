@@ -90,11 +90,5 @@ public interface ElasticsearchStrategy {
 
             return historyEnabled;
         }
-//
-//        @Override
-//        public Mode mode(final ObjectSchema schema) {
-//
-//            return mode;
-//        }
     }
 }

@@ -11,10 +11,10 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class TestPath {
+class TestPath {
 
     @Test
-    public void testCanonical() {
+    void testCanonical() {
 
         assertEquals(Path.parse("abc/xyz/Type"), Path.parse("abc").with(Path.parse("xyz/Type")).canonical());
         assertEquals(Path.parse("xyz/abc/Type"), Path.parse("abc/xyz").with(Path.parse("../../xyz/abc/Type")).canonical());
@@ -22,7 +22,7 @@ public class TestPath {
     }
 
     @Test
-    public void testFiles() throws IOException {
+    void testFiles() throws IOException {
 
         final Path target = Path.parse("target/test/path");
         Files.createDirectories(target.with(Path.parse("a/b/c")).toPath());

@@ -233,7 +233,7 @@ public abstract class AbstractSparkTest {
 
         private Map<String, String> tags;
 
-        public File(final String id) {
+        File(final String id) {
 
             this(id, null);
         }

@@ -227,8 +227,6 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
 
         final Name name = expression.getName();
         return columnResolver.apply(name);
-//        DSL.field(DSL.name(name.stream()
-//                .map(DSL::name).toArray(org.jooq.Name[]::new)));
     }
 
     @Override
@@ -276,8 +274,6 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
                     final Expression bound = lhs.bind(Context.init(), path -> {
                         if(first.equals(path.first())) {
                             return rhsName.with(path.withoutFirst());
-//                            return columnResolver.apply(name);
-//                            return SQLUtils.columnPath(rhsName.with(path.withoutFirst()));
                         } else {
                             return path;
                         }

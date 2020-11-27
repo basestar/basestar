@@ -31,11 +31,11 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-public class TestEventSerialization {
+class TestEventSerialization {
 
     @Data
     @Accessors(chain = true)
-    public static class ObjectUpdatedEvent implements Event {
+    static class ObjectUpdatedEvent implements Event {
 
         private Name schema;
 
@@ -55,7 +55,7 @@ public class TestEventSerialization {
     }
 
     @Test
-    public void testGzipBson() {
+    void testGzipBson() {
 
         final String input = "H4sIAAAAAAAAAM2QvU/DMBDFr6kEksdOMDIwValst/mUOnTJBlJFxcDmxJfWUh1XthsEfz1uChMwICTETfb5vXvnHxkDRK7ZoRZwAQAr59BDpCTchhtLapYXCY2TVMh4wXMRizovYl5nLF9kGBoSJj1ap0w3+E81rrE1FuFhBECMVVvViX2l9ngvNH6RRs6dx/cxUWNReJRwFRScchrTLGbphvGSp2XCZ5Sx4DFH2+DncOLF1gGRaFUvvOrRwcSpV4TRh2B4QllZoyHCIB+8N6cKY32I/tn/SWP0waI7L388yG+WT2jJ2CxNF0DaAKMyVgt/Pm9eDiF0J9wOroPvOE9b3T3ptZu2q3073d4V1D0vlwGtaD3avyV7+c/JzsskL1kRyPJfkIU3k871MQoDAAA=";
         final byte[] inputBytes = BaseEncoding.base64().decode(input);

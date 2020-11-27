@@ -78,12 +78,6 @@ public class Constant implements Expression {
         return value == null ? Void.class : value.getClass();
     }
 
-//    @Override
-//    public Query query() {
-//
-//        return Query.and();
-//    }
-
     @Override
     public Set<Name> names() {
 

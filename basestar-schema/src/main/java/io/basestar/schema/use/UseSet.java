@@ -192,7 +192,7 @@ public class UseSet<T> implements UseCollection<T, Set<T>> {
     }
 
     @Override
-    public boolean equal(final Set<T> a, final Set<T> b) {
+    public boolean areEqual(final Set<T> a, final Set<T> b) {
 
         if(a == null || b == null) {
             return a == null && b == null;

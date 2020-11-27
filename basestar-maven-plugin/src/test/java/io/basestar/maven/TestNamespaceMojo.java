@@ -28,12 +28,12 @@ import java.io.File;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class TestNamespaceMojo {
+class TestNamespaceMojo {
 
     private final File namespaceDirectory = new File("target/test/namespace");
 
     @Test
-    public void testNamespaceMojo() throws Exception {
+    void testNamespaceMojo() throws Exception {
 
         FileUtils.deleteDirectory(namespaceDirectory);
 

@@ -34,8 +34,6 @@ import java.util.concurrent.CompletableFuture;
 
 public interface Database {
 
-//    void register(Registry registry);
-
     Namespace namespace();
 
     CompletableFuture<Instance> read(Caller caller, ReadOptions options);

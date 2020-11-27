@@ -12,11 +12,11 @@ import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class TestPager {
+class TestPager {
 
     private final Page.Token page1 = new Page.Token(new byte[]{1});
 
-    public Page<String> source1(final Page.Token token) {
+    Page<String> source1(final Page.Token token) {
 
         if(token == null) {
             return new Page<>(ImmutableList.of("a", "c"), page1, Page.Stats.fromTotal(10));
@@ -27,7 +27,7 @@ public class TestPager {
         }
     }
 
-    public Page<String> source2(final Page.Token token) {
+    Page<String> source2(final Page.Token token) {
 
         if(token == null) {
             return new Page<>(ImmutableList.of("b", "d"), page1, Page.Stats.fromTotal(10));
@@ -39,7 +39,7 @@ public class TestPager {
     }
 
     @Test
-    public void testStats() throws ExecutionException, InterruptedException {
+    void testStats() throws ExecutionException, InterruptedException {
 
 
         final Pager.Source<String> a = (count, token, stats) -> CompletableFuture.completedFuture(source1(token));
@@ -72,7 +72,7 @@ public class TestPager {
     }
 
     @Test
-    public void testPaging() {
+    void testPaging() {
 
         final Page<Integer> page1 = sort(null).page(3).join();
         assertEquals(Lists.newArrayList(1, 2, 3), page1.getPage());

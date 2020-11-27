@@ -16,7 +16,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class TestFlatStructLayout {
+class TestFlatStructLayout {
 
     private final Set<Name> expand = Collections.emptySet();
 
@@ -52,7 +52,7 @@ public class TestFlatStructLayout {
     }
 
     @Test
-    public void testSchema() throws IOException {
+    void testSchema() throws IOException {
 
         final Layout layout = layout();
 
@@ -67,7 +67,7 @@ public class TestFlatStructLayout {
     }
 
     @Test
-    public void testApply() throws IOException {
+    void testApply() throws IOException {
 
         final Layout layout = layout();
 
@@ -85,7 +85,7 @@ public class TestFlatStructLayout {
     }
 
     @Test
-    public void testUnapply() throws IOException {
+    void testUnapply() throws IOException {
 
         final Layout layout = layout();
 

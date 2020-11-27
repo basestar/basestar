@@ -7,7 +7,7 @@ import io.basestar.storage.TestStorage;
 import org.junit.jupiter.api.Disabled;
 
 @Disabled
-public class TestOverlayStorage extends TestStorage {
+class TestOverlayStorage extends TestStorage {
 
     @Override
     protected Storage storage(final Namespace namespace) {

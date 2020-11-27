@@ -183,7 +183,7 @@ public class UseAny implements Use<Object> {
     }
 
     @Override
-    public boolean equal(final Object a, final Object b) {
+    public boolean areEqual(final Object a, final Object b) {
 
         return Objects.equals(a, b);
     }

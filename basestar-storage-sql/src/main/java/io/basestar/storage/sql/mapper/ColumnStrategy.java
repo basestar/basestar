@@ -193,7 +193,6 @@ public interface ColumnStrategy {
                             final Map<Name, String> result = new HashMap<>();
                             result.put(qualifiedName(table, name), selectName(table, name));
                             mappers.forEach((k, v) -> {
-//                                final Name nextName = name.with(k);
                                 final String newTable = tableName(table, k);
                                 result.putAll(v.select(newTable, Name.of(k)));
                             });

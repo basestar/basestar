@@ -40,7 +40,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletionException;
 
 @Slf4j
-public class TestDynamoDBStorage extends TestStorage {
+class TestDynamoDBStorage extends TestStorage {
 
     private static final int WAIT_ATTEMPTS = 10;
 
@@ -51,7 +51,7 @@ public class TestDynamoDBStorage extends TestStorage {
     private final List<String> tableNames = new ArrayList<>();
 
     @BeforeAll
-    public static void startLocalStack() {
+    static void startLocalStack() {
 
         Localstack.start();
         ddb = DynamoDbAsyncClient.builder()
@@ -60,7 +60,7 @@ public class TestDynamoDBStorage extends TestStorage {
     }
 
     @AfterAll
-    public static void close() {
+    static void close() {
 
         if(ddb != null) {
             ddb.close();
@@ -69,7 +69,7 @@ public class TestDynamoDBStorage extends TestStorage {
     }
 
     @AfterEach
-    public void cleanup() {
+    void cleanup() {
 
         // If we don't do this, localstack eventually falls over
         tableNames.forEach(tableName -> ddb.deleteTable(DeleteTableRequest.builder().tableName(tableName).build()));
@@ -120,17 +120,17 @@ public class TestDynamoDBStorage extends TestStorage {
     }
 
     @Override
-    public void testNullBeforeDelete() {
+    protected void testNullBeforeDelete() {
 
     }
 
     @Override
-    public void testNullBeforeUpdate() {
+    protected void testNullBeforeUpdate() {
 
     }
 
     @Override
-    public boolean supportsRepair() {
+    protected boolean supportsRepair() {
 
         return true;
     }

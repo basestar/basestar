@@ -41,7 +41,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class TestSchemaTransform extends AbstractSparkTest {
+class TestSchemaTransform extends AbstractSparkTest {
 
     @Data
     @NoArgsConstructor
@@ -52,7 +52,7 @@ public class TestSchemaTransform extends AbstractSparkTest {
     }
 
     @Test
-    public void testSchemaTransform() throws IOException {
+    void testSchemaTransform() throws IOException {
 
         final SparkSession session = SparkSession.builder()
                 .master("local[*]")
@@ -80,7 +80,7 @@ public class TestSchemaTransform extends AbstractSparkTest {
     }
 
     @Test
-    public void testSchemaTransformInvalid2() throws IOException {
+    void testSchemaTransformInvalid2() throws IOException {
 
         final SparkSession session = SparkSession.builder()
                 .master("local[*]")
@@ -109,7 +109,7 @@ public class TestSchemaTransform extends AbstractSparkTest {
     }
 
     @Test
-    public void testSchemaTransformInvalid() throws IOException {
+    void testSchemaTransformInvalid() throws IOException {
 
         final SparkSession session = SparkSession.builder()
                 .master("local[*]")
@@ -135,7 +135,7 @@ public class TestSchemaTransform extends AbstractSparkTest {
     }
 
     @Test
-    public void testDateTimes() throws IOException {
+    void testDateTimes() throws IOException {
 
         final SparkSession session = SparkSession.builder()
                 .master("local[*]")

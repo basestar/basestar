@@ -225,7 +225,7 @@ public class UseBinary implements UseScalar<byte[]> {
     }
 
     @Override
-    public boolean equal(final byte[] a, final byte[] b) {
+    public boolean areEqual(final byte[] a, final byte[] b) {
 
         if(a == null || b == null) {
             return a == null && b == null;

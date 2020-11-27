@@ -62,6 +62,10 @@ public class GraphQLUtils {
 
     private static final SelectionSet EMPTY_SELECTION = SelectionSet.newSelectionSet().build();
 
+    private GraphQLUtils() {
+
+    }
+
     public static Set<Name> paths(final InstanceSchema schema, final SelectionSet selections) {
 
         return selections.getSelections().stream()
@@ -735,39 +739,6 @@ public class GraphQLUtils {
             });
         }
     }
-
-//    public static <T> T argValue(final ExecutionContext context, final Use<T> type, final Field field, final String name) {
-//
-//        return fromInput(context, type, argValue(field, name));
-//    }
-//
-//    public static Map<String, Object> argInput(final ExecutionContext context, final InstanceSchema schema, final Field field, final String name) {
-//
-//        return fromInput(context, schema, (ObjectValue)argValue(field, name));
-//    }
-//
-//    public static Map<String, Expression> argInputExpr(final ExecutionContext context, final ObjectSchema schema, final Field field, final String name) {
-//
-//        final ObjectValue object = (ObjectValue)argValue(field, name);
-//        if(object == null) {
-//            return null;
-//        } else {
-//            final Map<String, Expression> result = new HashMap<>();
-//            schema.getProperties().forEach((k, prop) -> {
-//                final Value<?> value = get(object, k);
-//                if(value instanceof VariableReference) {
-//                    final String var = ((VariableReference) value).getName();
-//                    final String str = (String)context.getVariables().get(var);
-//                    final Expression expr = Expression.parse(str);
-//                    result.put(k, expr);
-//                } else if(value instanceof StringValue) {
-//                    final Expression expr = Expression.parse(((StringValue) value).getValue());
-//                    result.put(k, expr);
-//                }
-//            });
-//            return result;
-//        }
-//    }
 
     public static Value<?> argValue(final Field field, final String name) {
 

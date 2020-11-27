@@ -419,15 +419,4 @@ public class TypeContext implements HasName, HasModifiers, HasAnnotations, HasTy
             return new Signature(m.name(), m.erasedParameterTypes());
         }
     }
-
-//    private static String lowerCamel(final String v) {
-//
-//        if(v.length() < 2) {
-//            return v.toLowerCase();
-//        } else if(Character.isUpperCase(v.charAt(1))) {
-//            return v;
-//        } else {
-//            return Character.toString(v.charAt(0)).toLowerCase() + v.substring(1);
-//        }
-//    }
 }

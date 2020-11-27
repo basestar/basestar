@@ -229,51 +229,6 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
         }
     }
 
-//    @Override
-//    public void serialize(final Map<String, T> value, final DataOutput out) throws IOException {
-//
-//        if(value != null) {
-//            out.writeInt(Code.MAP.ordinal());
-//            for(final Map.Entry<String, T> entry : new TreeMap<>(value).entrySet()) {
-//                out.write((entry.getKey()).getBytes(Charsets.UTF_8));
-//                type.serialize(entry.getValue(), out);
-//            }
-//        } else {
-//            out.writeInt(Code.NULL.ordinal());
-//        }
-//    }
-
-//    @Override
-//    public Map<String, T> expand(final Map<String, T> value, final Expander expander, final Set<Path> expand) {
-//
-//        if(value != null) {
-//            final Map<String, T> changed = new HashMap<>();
-//            final Map<String, Set<Path>> branch = Path.branch(expand);
-//            for(final Map.Entry<String, T> entry : value.entrySet()) {
-//                Set<Path> branchExpand = branch.get(entry.getKey());
-//                if(branchExpand == null) {
-//                    branchExpand = branch.get(EXPAND_WILDCARD);
-//                }
-////                if(branchExpand != null) {
-//                final T before = entry.getValue();
-//                final T after = type.expand(before, expander, branchExpand);
-//                if(before != after) {
-//                    changed.put(entry.getKey(), after);
-//                }
-////                }
-//            }
-//            if(changed.isEmpty()) {
-//                return value;
-//            } else {
-//                final Map<String, T> copy = new HashMap<>(value);
-//                copy.putAll(changed);
-//                return copy;
-//            }
-//        } else {
-//            return null;
-//        }
-//    }
-
     public static Set<Name> branch(final Map<String, Set<Name>> branches, final String key) {
 
         final Set<Name> branch = branches.get(key);
@@ -423,13 +378,13 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     }
 
     @Override
-    public boolean equal(final Map<String, T> a, final Map<String, T> b) {
+    public boolean areEqual(final Map<String, T> a, final Map<String, T> b) {
 
         if(a == null || b == null) {
             return a == null && b == null;
         } else if(a.size() == b.size()) {
             for(final Map.Entry<String, T> entry : a.entrySet()) {
-                if(!(b.containsKey(entry.getKey()) && type.equal(entry.getValue(), b.get(entry.getKey())))) {
+                if(!(b.containsKey(entry.getKey()) && type.areEqual(entry.getValue(), b.get(entry.getKey())))) {
                     return false;
                 }
             }

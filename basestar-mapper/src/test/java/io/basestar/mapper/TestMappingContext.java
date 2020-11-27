@@ -123,7 +123,7 @@ public class TestMappingContext {
     }
 
     @Test
-    public void testCreateSchema() {
+    void testCreateSchema() {
 
         final MappingContext mappingContext = new MappingContext();
 
@@ -157,7 +157,7 @@ public class TestMappingContext {
     }
 
     @Test
-    public void testViewSchema() {
+    void testViewSchema() {
 
         final MappingContext mappingContext = new MappingContext();
 
@@ -168,7 +168,7 @@ public class TestMappingContext {
     }
 
     @Test
-    public void testUnmarshall() throws JsonProcessingException {
+    void testUnmarshall() throws JsonProcessingException {
 
         final ObjectMapper objectMapper = new ObjectMapper();
         final String json = objectMapper.writeValueAsString(new Post());
@@ -178,7 +178,7 @@ public class TestMappingContext {
     }
 
     @Test
-    public void testSchemaOfSchema() throws IOException {
+    void testSchemaOfSchema() throws IOException {
 
         final MappingContext mappingContext = new MappingContext(new MappingStrategy.Default() {
             @Override

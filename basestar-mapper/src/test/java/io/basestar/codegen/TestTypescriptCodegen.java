@@ -24,16 +24,16 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public class TestTypescriptCodegen {
+class TestTypescriptCodegen {
 
-    public Namespace namespace() throws IOException {
+    Namespace namespace() throws IOException {
 
         return Namespace.load(TestJavaCodegen.class.getResource("schema.yml"));
     }
 
     @Test
     @Disabled
-    public void testAdvancedCodegen() throws IOException {
+    void testAdvancedCodegen() throws IOException {
 
         final MappingContext mappingContext = new MappingContext(new MappingStrategy() {
 
@@ -87,7 +87,6 @@ public class TestTypescriptCodegen {
 
             @Override
             public boolean isOptional(final PropertyContext property) {
-
 
                 return true;
             }

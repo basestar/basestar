@@ -68,12 +68,6 @@ public interface Binary extends Expression {
         return str.toString();
     }
 
-//    @Override
-//    default String toString(final int precedence) {
-//
-//        return "(" + getLhs().toString(precedence) + token() + getRhs().toString(precedence) + ")";
-//    }
-
     @Override
     default Expression bind(final Context context, final Renaming root) {
 

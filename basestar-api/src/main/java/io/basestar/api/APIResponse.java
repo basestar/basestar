@@ -76,7 +76,6 @@ public interface APIResponse {
 
     static APIResponse error(final APIRequest request, final int defaultStatus, final Throwable e) {
 
-        e.printStackTrace(System.err);
         final ExceptionMetadata metadata = exceptionMetadata(e, defaultStatus);
         return error(request, metadata);
     }

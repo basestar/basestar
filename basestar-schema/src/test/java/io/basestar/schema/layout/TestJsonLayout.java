@@ -15,7 +15,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class TestJsonLayout {
+class TestJsonLayout {
 
     private JsonLayout layout(final JsonLayout.Enable ... enable) throws IOException {
 
@@ -25,7 +25,7 @@ public class TestJsonLayout {
     }
 
     @Test
-    public void testSchema() throws IOException {
+    void testSchema() throws IOException {
 
         final Layout layout = layout(JsonLayout.Enable.CONTAINER);
 
@@ -38,7 +38,7 @@ public class TestJsonLayout {
     }
 
     @Test
-    public void testApply() throws IOException {
+    void testApply() throws IOException {
 
         final Layout layout = layout(JsonLayout.Enable.CONTAINER);
 
@@ -57,7 +57,7 @@ public class TestJsonLayout {
     }
 
     @Test
-    public void testUnapply() throws IOException {
+    void testUnapply() throws IOException {
 
         final Layout layout = layout(JsonLayout.Enable.CONTAINER);
 

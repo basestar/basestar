@@ -123,12 +123,6 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
         throw new UnsupportedOperationException();
     }
 
-//    @Override
-//    public Expression visitPath(final ExprPathContext ctx) {
-//
-//        throw new UnsupportedOperationException();
-//    }
-
     @Override
     public Expression visitExprMember(final ExprMemberContext ctx) {
 
@@ -136,15 +130,6 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
         final String property = ctx.Identifier().getText();
         return new Member(with, property);
     }
-
-//    @Override
-//    public Expression visitExprStarMember(final ExprStarMemberContext ctx) {
-//
-//        throw new UnsupportedOperationException();
-////        final Expression with = visit(ctx.expr());
-////        final String property = ctx.Identifier().getText();
-////        return new StarMember(with, property);
-//    }
 
     @Override
     public Expression visitExprCall(final ExprCallContext ctx) {

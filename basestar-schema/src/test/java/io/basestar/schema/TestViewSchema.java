@@ -29,10 +29,10 @@ import java.io.IOException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class TestViewSchema {
+class TestViewSchema {
 
     @Test
-    public void testShorthandProperties() throws IOException {
+    void testShorthandProperties() throws IOException {
 
         final Namespace namespace = Namespace.load(TestViewSchema.class.getResource("view.yml"));
 

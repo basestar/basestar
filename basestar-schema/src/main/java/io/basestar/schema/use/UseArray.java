@@ -189,13 +189,13 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
     }
 
     @Override
-    public boolean equal(final List<T> a, final List<T> b) {
+    public boolean areEqual(final List<T> a, final List<T> b) {
 
         if(a == null || b == null) {
             return a == null && b == null;
         } else if(a.size() == b.size()) {
             for(int i = 0; i != a.size(); ++i) {
-                if(!type.equal(a.get(i), b.get(i))) {
+                if(!type.areEqual(a.get(i), b.get(i))) {
                     return false;
                 }
             }

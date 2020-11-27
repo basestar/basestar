@@ -38,10 +38,6 @@ public interface Action {
 
     Permission permission(Instance before);
 
-//    RefKey beforeKey();
-
-//    Set<Path> beforeCallerExpand();
-
     Instance after(Context context, Instance before);
 
     Set<Name> afterExpand();
@@ -51,8 +47,4 @@ public interface Action {
     Set<Name> paths();
 
     Consistency getConsistency();
-
-//    ExpandKey<RefKey> afterKey(Instance after);
-//
-//    Set<Path> afterCallerExpand();
 }

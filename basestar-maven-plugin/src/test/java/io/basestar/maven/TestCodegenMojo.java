@@ -39,13 +39,13 @@ import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class TestCodegenMojo {
+class TestCodegenMojo {
 
     private final File codegenDirectory = new File("target/test/codegen");
     private final File namespaceDirectory = new File("target/test/namespace");
 
     @Test
-    public void testCodegenMojo() throws MojoExecutionException, Exception {
+    void testCodegenMojo() throws MojoExecutionException, Exception {
 
         FileUtils.deleteDirectory(codegenDirectory);
         FileUtils.deleteDirectory(namespaceDirectory);

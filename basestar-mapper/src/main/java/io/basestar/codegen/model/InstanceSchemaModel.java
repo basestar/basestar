@@ -73,18 +73,6 @@ public abstract class InstanceSchemaModel extends SchemaModel {
         }
     }
 
-//    @Override
-//    public List<SchemaModel> getSchemaDependencies() {
-//
-//        final List<SchemaModel> deps = new ArrayList<>(super.getSchemaDependencies());
-////        final CodegenContext context = getContext();
-////        final Name remapping = context.getCodebehind().get(schema.getQualifiedName());
-////        if(remapping != null) {
-////            deps.add(new CodebehindModel(getContext(), remapping, schema, schema.getExtend()));
-////        }
-//        return deps;
-//    }
-
     protected static InstanceSchemaModel from(final CodegenContext context, final InstanceSchema schema) {
 
         final Codebehind codebehind = context.getCodebehind().get(schema.getQualifiedName());

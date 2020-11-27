@@ -29,6 +29,10 @@ import java.util.function.Supplier;
 
 public class Nullsafe {
 
+    private Nullsafe() {
+
+    }
+
     @Nonnull
     public static <T> T require(@Nullable final T v) {
 

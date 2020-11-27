@@ -34,6 +34,10 @@ import java.util.Map;
 
 public class KeysetPagingUtils {
 
+    private KeysetPagingUtils() {
+
+    }
+
     public static List<Sort> normalizeSort(final InstanceSchema schema, final List<Sort> sort) {
 
         final Name id = Name.of(schema.id());
@@ -52,10 +56,6 @@ public class KeysetPagingUtils {
             return result;
         }
     }
-
-//    public static List<Object> keysetValues(final Map<String, Use<?>> schema, final List<Sort> sort, final Page.Token token) {
-//
-//    }
 
     public static List<Object> keysetValues(final InstanceSchema schema, final List<Sort> sort, final Page.Token token) {
 

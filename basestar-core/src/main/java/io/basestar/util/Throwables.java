@@ -24,6 +24,10 @@ import java.util.Optional;
 
 public class Throwables {
 
+    private Throwables() {
+
+    }
+
     public static <X> Optional<X> find(final Throwable e, final Class<X> of) {
 
         if(of.isAssignableFrom(e.getClass())) {

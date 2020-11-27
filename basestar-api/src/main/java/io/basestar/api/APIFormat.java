@@ -62,8 +62,6 @@ public enum APIFormat {
     public static APIFormat bestMatch(final String contentType, final APIFormat defaultValue) {
 
         return APIFormat.JSON;
-//        final String bestMatch = MIMEParse.bestMatch(APIFormat.contentTypes(), contentType);
-//        return APIFormat.forContentType(bestMatch);
     }
 
     public static APIFormat forFormat(final String format) {

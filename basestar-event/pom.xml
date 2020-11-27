@@ -36,10 +36,6 @@
             <groupId>io.basestar</groupId>
             <artifactId>basestar-jackson</artifactId>
         </dependency>
-        <!--<dependency>-->
-            <!--<groupId>com.fasterxml.uuid</groupId>-->
-            <!--<artifactId>java-uuid-generator</artifactId>-->
-        <!--</dependency>-->
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-core</artifactId>

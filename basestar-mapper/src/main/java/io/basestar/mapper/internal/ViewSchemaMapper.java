@@ -97,13 +97,4 @@ public class ViewSchemaMapper<T> extends InstanceSchemaMapper<T, ViewSchema.Buil
                 .setGroup(group)
                 .setWhere(where));
     }
-
-//    protected void addProperty(final ViewSchema.Builder builder, final String name, final Property.Builder property) {
-//
-//        if(group.contains(name)) {
-//            builder.setGroup(name, property);
-//        } else {
-//            builder.setSelect(name, property);
-//        }
-//    }
 }

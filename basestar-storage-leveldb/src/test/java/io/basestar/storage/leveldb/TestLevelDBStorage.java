@@ -36,13 +36,13 @@ import static org.fusesource.leveldbjni.JniDBFactory.factory;
 
 //FIXME
 @Disabled
-public class TestLevelDBStorage extends TestStorage {
+class TestLevelDBStorage extends TestStorage {
 
     private static final File BASEDIR = new File("target/db");
 
     @BeforeAll
     @SuppressWarnings("ResultOfMethodCallIgnored")
-    public static void beforeAll() {
+    static void beforeAll() {
 
         BASEDIR.mkdirs();
     }
