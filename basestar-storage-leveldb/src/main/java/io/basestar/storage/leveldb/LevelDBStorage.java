@@ -34,6 +34,7 @@ import io.basestar.util.Sort;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBIterator;
 import org.iq80.leveldb.WriteBatch;
+import org.iq80.leveldb.WriteOptions;
 
 import java.io.*;
 import java.util.*;
@@ -265,7 +266,7 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
 
                     writes.forEach(write -> write.accept(batch));
 
-                    db.write(batch);
+                    db.write(batch, new WriteOptions().sync(true));
 
                     return new BatchResponse.Basic(changes);
                 }
