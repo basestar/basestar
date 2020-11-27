@@ -85,7 +85,7 @@ public class Index implements Named, Described, Serializable, Extendable {
     private final Consistency consistency;
 
     @Nonnull
-    private final SortedMap<String, Object> extensions;
+    private final SortedMap<String, Serializable> extensions;
 
     private final boolean unique;
 
@@ -155,7 +155,7 @@ public class Index implements Named, Described, Serializable, Extendable {
         @JsonDeserialize(contentUsing = NameDeserializer.class)
         private Map<String, Name> over;
 
-        private Map<String, Object> extensions;
+        private Map<String, Serializable> extensions;
 
         private Consistency consistency;
 
@@ -500,7 +500,7 @@ public class Index implements Named, Described, Serializable, Extendable {
         return new Descriptor() {
 
             @Override
-            public Map<String, Object> getExtensions() {
+            public Map<String, Serializable> getExtensions() {
 
                 return extensions;
             }

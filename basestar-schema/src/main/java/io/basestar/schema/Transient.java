@@ -45,6 +45,7 @@ import lombok.experimental.Accessors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.util.*;
 
@@ -77,7 +78,7 @@ public class Transient implements Member {
     private final SortedSet<Name> expand;
 
     @Nonnull
-    private final Map<String, Object> extensions;
+    private final Map<String, Serializable> extensions;
 
     @JsonDeserialize(as = Builder.class)
     public interface Descriptor extends Member.Descriptor {
@@ -120,7 +121,7 @@ public class Transient implements Member {
 
         @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        private Map<String, Object> extensions;
+        private Map<String, Serializable> extensions;
     }
 
     public static Builder builder() {
@@ -352,7 +353,7 @@ public class Transient implements Member {
             }
 
             @Override
-            public Map<String, Object> getExtensions() {
+            public Map<String, Serializable> getExtensions() {
 
                 return extensions;
             }

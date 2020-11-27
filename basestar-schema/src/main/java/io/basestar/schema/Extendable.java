@@ -22,15 +22,16 @@ package io.basestar.schema;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
+import java.io.Serializable;
 import java.util.Map;
 
 public interface Extendable {
 
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    Map<String, Object> getExtensions();
+    Map<String, Serializable> getExtensions();
 
     @SuppressWarnings("unchecked")
-    default <T> T getExtension(final String name) {
+    default <T extends Serializable> T getExtension(final String name) {
 
         return (T)getExtensions().get(name);
     }

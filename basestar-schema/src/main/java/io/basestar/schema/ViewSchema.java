@@ -237,7 +237,7 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
 
         @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        private Map<String, Object> extensions;
+        private Map<String, Serializable> extensions;
 
         public Builder addGroup(final String name) {
 
@@ -309,7 +309,7 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
     private final SortedSet<Name> declaredExpand;
 
     @Nonnull
-    private final SortedMap<String, Object> extensions;
+    private final SortedMap<String, Serializable> extensions;
 
     public static Builder builder() {
 
@@ -494,7 +494,7 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
         return (new Property.Descriptor() {
 
             @Override
-            public Map<String, Object> getExtensions() {
+            public Map<String, Serializable> getExtensions() {
 
                 return descriptor.getExtensions();
             }
@@ -650,7 +650,7 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
             }
 
             @Override
-            public Map<String, Object> getExtensions() {
+            public Map<String, Serializable> getExtensions() {
 
                 return extensions;
             }

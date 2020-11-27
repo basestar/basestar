@@ -52,21 +52,15 @@ public class Localstack {
         TestContainers.ensure(ContainerSpec.builder()
                 .image("amazon/dynamodb-local:latest")
                 .port(DDB_PORT)
-                .waitFor(Pattern.compile("CorsParams"))
-                .build());
-
-//        final File dataDir = Files.createTempDir();
-//        final File tmpDir = Files.createTempDir();
+                .waitFor(Pattern.compile("CorsParams:.*"))
+                .build()).join();
 
         TestContainers.ensure(ContainerSpec.builder()
                 .image("localstack/localstack:latest")
                 .env("SERVICES=s3,sqs,sns")
-//                .env("DATA_DIR=" + dataDir)
-//                .env("HOST_TMP_FOLDER=" + tmpDir)
                 .port(S3_PORT)
                 .port(SQS_PORT)
                 .port(SNS_PORT)
-//                .port(KINESIS_PORT)
                 .waitFor(Pattern.compile("Ready\\."))
                 .build()).join();
     }

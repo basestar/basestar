@@ -42,6 +42,7 @@ import javax.annotation.Nullable;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.io.Serializable;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -187,7 +188,7 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
     private final boolean concrete;
 
     @Nonnull
-    private final SortedMap<String, Object> extensions;
+    private final SortedMap<String, Serializable> extensions;
 
     @JsonDeserialize(as = Builder.class)
     public interface Descriptor extends LinkableSchema.Descriptor {
@@ -290,7 +291,7 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
         private Set<Name> expand;
 
         @Nullable
-        private Map<String, Object> extensions;
+        private Map<String, Serializable> extensions;
 
         @Override
         public Builder setProperty(final String name, final Property.Descriptor v) {
@@ -731,7 +732,7 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
             }
 
             @Override
-            public Map<String, Object> getExtensions() {
+            public Map<String, Serializable> getExtensions() {
 
                 return extensions;
             }

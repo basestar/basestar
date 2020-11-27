@@ -63,7 +63,7 @@ public interface Member extends Named, Described, Serializable, Extendable {
             }
 
             @Override
-            default Map<String, Object> getExtensions() {
+            default Map<String, Serializable> getExtensions() {
 
                 return delegate().getExtensions();
             }
@@ -72,7 +72,7 @@ public interface Member extends Named, Described, Serializable, Extendable {
 
     interface Builder extends Descriptor {
 
-        Builder setExtensions(Map<String, Object> extensions);
+        Builder setExtensions(Map<String, Serializable> extensions);
     }
 
     interface Resolver {

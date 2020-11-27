@@ -42,6 +42,7 @@ import javax.annotation.Nullable;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -101,7 +102,7 @@ public class StructSchema implements InstanceSchema {
     private final boolean concrete;
 
     @Nonnull
-    private final Map<String, Object> extensions;
+    private final Map<String, Serializable> extensions;
 
     @JsonDeserialize(as = Builder.class)
     public interface Descriptor extends InstanceSchema.Descriptor {
@@ -163,7 +164,7 @@ public class StructSchema implements InstanceSchema {
 
         @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        private Map<String, Object> extensions;
+        private Map<String, Serializable> extensions;
 
         public Builder setProperty(final String name, final Property.Descriptor v) {
 
@@ -327,7 +328,7 @@ public class StructSchema implements InstanceSchema {
             }
 
             @Override
-            public Map<String, Object> getExtensions() {
+            public Map<String, Serializable> getExtensions() {
 
                 return extensions;
             }
