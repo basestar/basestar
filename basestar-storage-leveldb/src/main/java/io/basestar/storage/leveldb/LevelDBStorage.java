@@ -31,6 +31,7 @@ import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Page;
 import io.basestar.util.Sort;
+import lombok.RequiredArgsConstructor;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBIterator;
 import org.iq80.leveldb.WriteBatch;
@@ -123,14 +124,19 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
     @Override
     public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
-        return new WriteTransaction();
+        return new WriteTransaction(consistency);
     }
 
+    @RequiredArgsConstructor
     protected class WriteTransaction extends PartitionedStorage.WriteTransaction implements WithWriteHistory.WriteTransaction {
+
+        private final Consistency consistency;
 
         private final List<Consumer<WriteBatch>> writes = new ArrayList<>();
 
-        private final Map<String, Consumer<DB>> checks = new HashMap<>();
+        private final List<Consumer<DB>> checks = new ArrayList<>();
+
+        private final Set<String> checkedKeys = new HashSet<>();
 
         private final SortedMap<BatchResponse.Key, Map<String, Object>> changes = new TreeMap<>();
 
@@ -155,7 +161,7 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
             final Long beforeVersion = before == null ? null : Instance.getVersion(before);
             final byte[] key = key(schema, id);
             if(beforeVersion != null) {
-                checkVersion(schema, id, beforeVersion);
+                checkExisting(schema, id, beforeVersion);
             }
             writes.add(batch -> batch.delete(key));
             return deleteIndexes(schema, id, before);
@@ -166,7 +172,11 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
             final long afterVersion = Nullsafe.require(Instance.getVersion(after));
             final byte[] key = key(schema, id);
             if(beforeVersion != null) {
-                checkVersion(schema, id, beforeVersion);
+                if(beforeVersion == 0L) {
+                    checkNew(schema, id);
+                } else {
+                    checkExisting(schema, id, beforeVersion);
+                }
             }
             writes.add(batch -> {
                 final byte[] data = toBytes(schema, afterVersion, after);
@@ -176,23 +186,30 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
             changes.put(BatchResponse.Key.version(schema.getQualifiedName(), id, afterVersion), after);
         }
 
-        private void checkVersion(final ObjectSchema schema, final String id, final long version) {
+        private void checkNew(final ObjectSchema schema, final String id) {
 
             final byte[] key = key(schema, id);
+            checkNew(schema, id, key);
+        }
+
+        private void checkNew(final ObjectSchema schema, final String id, final byte[] key) {
+
             check(key, db -> {
                 final byte[] data = db.get(key);
                 final long recordVersion = versionFromBytes(data);
-                if(recordVersion != version) {
-                    if(version == 0L) {
-                        throw new ObjectExistsException(schema.getQualifiedName(), id);
-                    } else {
-                        throw new VersionMismatchException(schema.getQualifiedName(), id, version);
-                    }
+                if(recordVersion != 0L) {
+                    throw new ObjectExistsException(schema.getQualifiedName(), id);
                 }
             });
         }
 
-        private void checkVersion(final ObjectSchema schema, final String id, final long version, final byte[] key) {
+        private void checkExisting(final ObjectSchema schema, final String id, final long version) {
+
+            final byte[] key = key(schema, id);
+            checkExisting(schema, id, version, key);
+        }
+
+        private void checkExisting(final ObjectSchema schema, final String id, final long version, final byte[] key) {
 
             check(key, db -> {
                 final byte[] data = db.get(key);
@@ -206,17 +223,19 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
         private void check(final byte[] key, final Consumer<DB> check) {
 
             final String lock = BaseEncoding.base64().encode(key);
-            if(checks.containsKey(lock)) {
+            if(checkedKeys.contains(lock)) {
                 throw new IllegalStateException("Transaction cannot refer to same object twice");
+            } else {
+                checkedKeys.add(lock);
             }
-            checks.put(lock, check);
+            checks.add(check);
         }
 
         @Override
         public WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
 
             final byte[] indexKey = key(schema, index, key, id);
-            checkVersion(schema, id, version, indexKey);
+            checkExisting(schema, id, 0L, indexKey);
             writes.add(batch -> {
                 final byte[] data = toBytes(schema, version, projection);
                 batch.put(indexKey, data);
@@ -234,7 +253,7 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
         public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
 
             final byte[] indexKey = key(schema, index, key, id);
-            checkVersion(schema, id, version, indexKey);
+            checkExisting(schema, id, version, indexKey);
             writes.add(batch -> batch.delete(indexKey));
             return this;
         }
@@ -243,7 +262,7 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
         public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
 
             final byte[] key = key(schema, id, version);
-            checkVersion(schema, id, 0L, key);
+            checkExisting(schema, id, 0L, key);
             writes.add(batch -> {
                 final byte[] data = toBytes(schema, version, after);
                 batch.put(key, data);
@@ -255,18 +274,15 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
         public CompletableFuture<BatchResponse> write() {
 
             return CompletableFuture.supplyAsync(() -> {
-                final Set<String> locks = checks.keySet();
-                try (final CloseableLock ignored = coordinator.lock(locks)) {
+                try (final CloseableLock ignored = coordinator.lock(checkedKeys)) {
 
-                    checks.forEach((k, check) -> {
-                        check.accept(db);
-                    });
+                    checks.forEach(check -> check.accept(db));
 
                     final WriteBatch batch = db.createWriteBatch();
 
                     writes.forEach(write -> write.accept(batch));
 
-                    db.write(batch, new WriteOptions().sync(true));
+                    db.write(batch, new WriteOptions().sync(consistency.isStrongerOrEqual(Consistency.QUORUM)));
 
                     return new BatchResponse.Basic(changes);
                 }
