@@ -53,7 +53,7 @@ class TestDynamoDBStorage extends TestStorage {
     @BeforeAll
     static void startLocalStack() {
 
-        Localstack.start();
+        Localstack.startDynamoDB();
         ddb = DynamoDbAsyncClient.builder()
                 .endpointOverride(URI.create(Localstack.DDB_ENDPOINT))
                 .build();

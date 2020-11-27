@@ -46,7 +46,7 @@ public class Localstack {
 
     public static final String KINESIS_ENDPOINT = ENDPOINT_PREFIX + KINESIS_PORT;
 
-    public static void start() {
+    public static void startDynamoDB() {
 
         // Localstack's Dynamodb is total crap - fails and requires a restart after a handful of requests.
         TestContainers.ensure(ContainerSpec.builder()
@@ -54,6 +54,11 @@ public class Localstack {
                 .port(DDB_PORT)
                 .waitFor(Pattern.compile("CorsParams:.*"))
                 .build()).join();
+    }
+
+    public static void start() {
+
+        startDynamoDB();
 
         TestContainers.ensure(ContainerSpec.builder()
                 .image("localstack/localstack:latest")
