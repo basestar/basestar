@@ -21,6 +21,7 @@ jobs:
       - name: Sonarcloud
         run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
 #      - name: Publish to GitHub Packages Apache Maven

@@ -103,7 +103,7 @@ public class TestContainers {
             log.info("Creating container ({})", spec);
 
             // FIXME: deprecated port bindings
-            final CreateContainerResponse createResponse = docker.createContainerCmd(spec.getImage())
+            final CreateContainerResponse createResponse = docker.createContainerCmd(spec.getImage()) // NOSONAR
                     .withEnv(spec.getEnv())
                     .withPortBindings(spec.getPorts().stream()
                             .map(v -> PortBinding.parse(v.toString()))
