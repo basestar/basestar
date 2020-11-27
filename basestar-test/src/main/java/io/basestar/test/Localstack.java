@@ -58,6 +58,7 @@ public class Localstack {
         TestContainers.ensure(ContainerSpec.builder()
                 .image("localstack/localstack:latest")
                 .env("SERVICES=s3,sqs,sns")
+                .env("DEFAULT_REGION=us-east-1")
                 .port(S3_PORT)
                 .port(SQS_PORT)
                 .port(SNS_PORT)
