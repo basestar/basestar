@@ -114,7 +114,7 @@ public class TestExpandTransform extends AbstractSparkTest {
 
         final Set<Name> expand = Name.parseSet("ref,single,multi,structRef.ref,arrayRef,mapRef.*");
 
-        final SchemaResolver resolver = new SchemaResolver.Automatic((schema) -> datasets.get(schema.getQualifiedName()));
+        final SchemaResolver resolver = new SchemaResolver.Automatic((schema, exp) -> datasets.get(schema.getQualifiedName()));
 
         final Dataset<Row> dataset = resolver.resolve(a, expand);
 

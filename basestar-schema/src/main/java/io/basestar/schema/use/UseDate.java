@@ -33,6 +33,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.time.LocalDate;
+import java.util.Objects;
 import java.util.Set;
 
 @Data
@@ -123,5 +124,11 @@ public class UseDate implements UseStringLike<LocalDate> {
         } else {
             return ISO8601.toString(value);
         }
+    }
+
+    @Override
+    public boolean equal(final LocalDate a, final LocalDate b) {
+
+        return Objects.equals(a, b);
     }
 }

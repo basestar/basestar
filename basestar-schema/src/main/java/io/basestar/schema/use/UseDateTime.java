@@ -31,6 +31,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.Set;
 
 public class UseDateTime implements UseStringLike<Instant> {
@@ -120,5 +121,11 @@ public class UseDateTime implements UseStringLike<Instant> {
         } else {
             return ISO8601.toString(value);
         }
+    }
+
+    @Override
+    public boolean equal(final Instant a, final Instant b) {
+
+        return Objects.equals(a, b);
     }
 }

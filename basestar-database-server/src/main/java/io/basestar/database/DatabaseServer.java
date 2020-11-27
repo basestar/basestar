@@ -53,7 +53,6 @@ import io.basestar.schema.util.Ref;
 import io.basestar.storage.*;
 import io.basestar.storage.exception.ObjectMissingException;
 import io.basestar.storage.overlay.OverlayStorage;
-import io.basestar.storage.util.IndexRecordDiff;
 import io.basestar.util.*;
 import lombok.extern.slf4j.Slf4j;
 
@@ -905,7 +904,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         events.addAll(schema.getIndexes().values().stream().flatMap(index -> {
             final Consistency best = traits.getIndexConsistency(index.isMultiValue());
             if(index.getConsistency(best).isAsync()) {
-                final IndexRecordDiff diff = IndexRecordDiff.from(index.readValues(before), index.readValues(after));
+                final Index.Diff diff = Index.Diff.from(index.readValues(before), index.readValues(after));
                 final Stream<Event> create = diff.getCreate().entrySet().stream()
                         .map(e -> AsyncIndexCreatedEvent.of(schema.getQualifiedName(), index.getName(), id, beforeVersion, e.getKey(), e.getValue()));
                 final Stream<Event> update = diff.getUpdate().entrySet().stream()

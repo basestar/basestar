@@ -69,7 +69,7 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
     public static class From implements Serializable {
 
         @Nonnull
-        private final InstanceSchema schema;
+        private final LinkableSchema schema;
 
         @Nonnull
         private final Set<Name> expand;
@@ -327,7 +327,7 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
         if(from.getSchema() == null) {
             throw new SchemaValidationException(qualifiedName, "View must specify from.schema");
         }
-        this.from = new From(resolver.requireInstanceSchema(from.getSchema()), Nullsafe.orDefault(from.getExpand()));
+        this.from = new From(resolver.requireLinkableSchema(from.getSchema()), Nullsafe.orDefault(from.getExpand()));
         this.sort = Nullsafe.immutableCopy(descriptor.getSort());
         this.description = descriptor.getDescription();
         this.group = Nullsafe.immutableCopy(descriptor.getGroup());

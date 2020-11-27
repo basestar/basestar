@@ -31,6 +31,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -121,6 +122,12 @@ public class UseBoolean implements UseScalar<Boolean> {
     public String toString() {
 
         return NAME;
+    }
+
+    @Override
+    public boolean equal(final Boolean a, final Boolean b) {
+
+        return Objects.equals(a, b);
     }
 
 //    @Override

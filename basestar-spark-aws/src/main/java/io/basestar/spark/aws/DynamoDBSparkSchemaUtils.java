@@ -22,6 +22,7 @@ package io.basestar.spark.aws;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.Index;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
@@ -44,7 +45,7 @@ public class DynamoDBSparkSchemaUtils {
 
     public static StructType streamRecordStructType(final ObjectSchema schema) {
 
-        final StructType type = SparkSchemaUtils.structType(schema, null);
+        final StructType type = SparkSchemaUtils.structType(schema, ImmutableSet.of());
         final List<StructField> fields = new ArrayList<>();
         fields.add(SparkSchemaUtils.field(ObjectSchema.SCHEMA, DataTypes.StringType));
         fields.add(SparkSchemaUtils.field(ObjectSchema.ID, DataTypes.StringType));

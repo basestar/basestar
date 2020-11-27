@@ -69,6 +69,16 @@ public abstract class AbstractSparkTest {
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
+    public static class StatsA {
+
+        private String refId;
+
+        private Long count;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class B {
 
         private String id;

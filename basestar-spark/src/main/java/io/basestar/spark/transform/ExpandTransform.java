@@ -59,14 +59,14 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
     private final ColumnResolver<Row> columnResolver;
 
     @NonNull
-    private final InstanceSchema schema;
+    private final LinkableSchema schema;
 
     @NonNull
     private final Set<Name> expand;
 
     @lombok.Builder(builderClassName = "Builder")
     ExpandTransform(@NonNull final SchemaResolver resolver, @Nullable final ColumnResolver<Row> columnResolver,
-                    @NonNull final InstanceSchema schema, @NonNull final Set<Name> expand) {
+                    @NonNull final LinkableSchema schema, @NonNull final Set<Name> expand) {
 
         this.resolver = Nullsafe.require(resolver);
         this.columnResolver = Nullsafe.orDefault(columnResolver, ColumnResolver::nested);
@@ -80,7 +80,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         return instanceExpand(input, schema, expand);
     }
 
-    private Dataset<Row> instanceExpand(final Dataset<Row> input, final InstanceSchema schema, final Set<Name> expand) {
+    private Dataset<Row> instanceExpand(final Dataset<Row> input, final LinkableSchema schema, final Set<Name> expand) {
 
         Dataset<Row> output = resolver.conform(schema, expand, input);
 
@@ -113,7 +113,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
         final String linkName = link.getName();
 
-        final InstanceSchema linkSchema = link.getSchema();
+        final LinkableSchema linkSchema = link.getSchema();
 
         final Dataset<Row> linkInput = resolver.resolveAndConform(linkSchema, expand);
 
@@ -270,7 +270,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
     @Data
     private static class RequiredRef {
 
-        private final InstanceSchema schema;
+        private final LinkableSchema schema;
 
         private final Set<Name> expand;
     }
@@ -319,7 +319,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
             }
 
             @Override
-            public Set<RequiredRef> visitInstance(final UseInstance type) {
+            public Set<RequiredRef> visitObject(final UseObject type) {
 
                 return ImmutableSet.of(new RequiredRef(type.getSchema(), expand));
             }

@@ -2,7 +2,7 @@ package io.basestar.spark.database;
 
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.schema.InstanceSchema;
+import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Namespace;
 import io.basestar.spark.expression.SparkExpressionVisitor;
 import io.basestar.spark.resolver.ColumnResolver;
@@ -31,15 +31,15 @@ public class SparkDatabase {
 
     public QueryChain<Row> from(final String schema) {
 
-        return from(Nullsafe.require(namespace).requireInstanceSchema(schema));
+        return from(Nullsafe.require(namespace).requireLinkableSchema(schema));
     }
 
     public QueryChain<Row> from(final Name schema) {
 
-        return from(Nullsafe.require(namespace).requireInstanceSchema(schema));
+        return from(Nullsafe.require(namespace).requireLinkableSchema(schema));
     }
 
-    public QueryChain<Row> from(final InstanceSchema schema) {
+    public QueryChain<Row> from(final LinkableSchema schema) {
 
         return (query, sort, expand) -> {
 

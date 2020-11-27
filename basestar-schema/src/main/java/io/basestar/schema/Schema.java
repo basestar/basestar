@@ -266,5 +266,21 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
 
             return requireViewSchema(Name.parse(name));
         }
+
+        @Nonnull
+        default LinkableSchema requireLinkableSchema(final Name qualifiedName) {
+
+            final Schema<?> schema = requireSchema(qualifiedName);
+            if (schema instanceof LinkableSchema) {
+                return (LinkableSchema) schema;
+            } else {
+                throw new IllegalStateException(qualifiedName + " is not a linkable schema");
+            }
+        }
+
+        default LinkableSchema requireLinkableSchema(final String name) {
+
+            return requireLinkableSchema(Name.parse(name));
+        }
     }
 }

@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Sets;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.jackson.serde.AbbrevSetDeserializer;
 import io.basestar.jackson.serde.NameDeserializer;
@@ -254,14 +255,55 @@ public class Index implements Named, Described, Serializable, Extendable {
 
     public List<Object> readPartition(final Map<String, Object> data) {
 
-        return partition.stream().map(k -> k.apply(data))
+        return partition.stream().map(k -> k.get(data))
                 .collect(Collectors.toList());
     }
 
     public List<Object> readSort(final Map<String, Object> data) {
 
-        return sort.stream().map(k -> k.getName().apply(data))
+        return sort.stream().map(k -> k.getName().get(data))
                 .collect(Collectors.toList());
+    }
+
+    public Map<String, Object> writePartition(final Map<String, Object> data, final List<Object> values) {
+
+        Map<String, Object> result = new HashMap<>();
+        final List<Name> partition = resolvePartitionPaths();
+        for(int i = 0; i != partition.size(); ++i) {
+            result = partition.get(i).set(result, values.get(i));
+        }
+        return result;
+    }
+
+    public Map<String, Object> writeSort(final Map<String, Object> data, final List<Object> values) {
+
+        Map<String, Object> result = new HashMap<>();
+        for(int i = 0; i != sort.size(); ++i) {
+            result = sort.get(i).getName().set(result, values.get(i));
+        }
+        return result;
+    }
+
+    public Map<String, Use<?>> keySchema(final ObjectSchema schema) {
+
+        final Map<String, Use<?>> result = new HashMap<>();
+        result.putAll(partitionSchema(schema));
+        result.putAll(sortSchema(schema));
+        return result;
+    }
+
+    public Map<String, Use<?>> partitionSchema(final ObjectSchema schema) {
+
+        final Map<String, Use<?>> result = new HashMap<>();
+        resolvePartitionPaths().forEach(schema::typeOf);
+        return result;
+    }
+
+    public Map<String, Use<?>> sortSchema(final ObjectSchema schema) {
+
+        final Map<String, Use<?>> result = new HashMap<>();
+        sort.forEach(sort -> schema.typeOf(sort.getName()));
+        return result;
     }
 
     public Map<String, Use<?>> projectionSchema(final ObjectSchema schema) {
@@ -272,6 +314,7 @@ public class Index implements Named, Described, Serializable, Extendable {
                     .forEach((name, property) -> result.put(name, property.getType()));
             result.putAll(ObjectSchema.METADATA_SCHEMA);
         } else {
+            projection.forEach(name -> result.put(name, schema.requireProperty(name, true).getType()));
             result.put(ObjectSchema.SCHEMA, UseString.DEFAULT);
             result.put(ObjectSchema.ID, UseString.DEFAULT);
             result.put(ObjectSchema.VERSION, UseInteger.DEFAULT);
@@ -314,7 +357,7 @@ public class Index implements Named, Described, Serializable, Extendable {
             fullProjection.add(ObjectSchema.SCHEMA);
             fullProjection.add(ObjectSchema.ID);
             fullProjection.add(ObjectSchema.VERSION);
-            partition.forEach(v -> fullProjection.add(v.first()));
+            resolvePartitionPaths().forEach(v -> fullProjection.add(v.first()));
             sort.forEach(v -> fullProjection.add(v.getName().first()));
             final Map<String, Object> result = new HashMap<>();
             fullProjection.forEach(k -> {
@@ -337,7 +380,9 @@ public class Index implements Named, Described, Serializable, Extendable {
 
     public Map<Key, Map<String, Object>> readValues(final Map<String, Object> data) {
 
-        if(over.isEmpty()) {
+        if(data == null) {
+            return Collections.emptyMap();
+        } else if(over.isEmpty()) {
             final List<Object> partition = readPartition(data);
             final List<Object> sort = readSort(data);
             if(shouldIndex(partition, sort)) {
@@ -349,7 +394,7 @@ public class Index implements Named, Described, Serializable, Extendable {
             final Map<String, Collection<?>> values = new HashMap<>();
             for (final Map.Entry<String, Name> entry : over.entrySet()) {
                 final Name name = entry.getValue();
-                final Object value = name.apply(data);
+                final Object value = name.get(data);
                 if (value instanceof Collection<?>) {
                     values.put(entry.getKey(), (Collection<?>) value);
                 } else if(value instanceof Map<?, ?>) {
@@ -396,6 +441,21 @@ public class Index implements Named, Described, Serializable, Extendable {
             }
             return results;
         }
+    }
+
+    public Key valueToKey(final Map<String, Object> data) {
+
+        return Key.of(readPartition(data), readSort(data));
+    }
+
+    public Map<String, Object> keyToValue(final Key key, final Map<String, Object> merge) {
+
+        return writeSort(writePartition(merge, key.getPartition()), key.getSort());
+    }
+
+    public Map<String, Object> keyToValue(final Key key) {
+
+        return keyToValue(key, ImmutableMap.of());
     }
 
     @Data
@@ -513,5 +573,33 @@ public class Index implements Named, Described, Serializable, Extendable {
                 return max;
             }
         };
+    }
+
+    public Diff diff(final Map<String, Object> before,
+                     final Map<String, Object> after) {
+
+        return Diff.from(readValues(before), readValues(after));
+    }
+
+    @Data
+    public static class Diff {
+
+        private final Map<Key, Map<String, Object>> create;
+
+        private final Map<Key, Map<String, Object>> update;
+
+        private final Set<Key> delete;
+
+        public static Diff from(final Map<Key, Map<String, Object>> before,
+                                final Map<Key, Map<String, Object>> after) {
+
+            return new Diff(
+                    Sets.difference(after.keySet(), before.keySet()).stream()
+                            .collect(Collectors.toMap(k -> k, after::get)),
+                    Sets.intersection(after.keySet(), before.keySet()).stream()
+                            .collect(Collectors.toMap(k -> k, after::get)),
+                    Sets.difference(before.keySet(), after.keySet())
+            );
+        }
     }
 }

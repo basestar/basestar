@@ -13,10 +13,27 @@ A:
         map?: B
     structRef:
       type: E?
+  indexes:
+    ref:
+      partition: ref.id
   links:
     multi:
       schema: C
       expression: this.id == owner.id
+
+StatsA:
+  type: view
+  from:
+    schema: A
+  group:
+    - refId
+  properties:
+    refId:
+      expression: ref.id
+      type: string
+    count:
+      expression: count()
+      type: integer
 
 B:
   type: object

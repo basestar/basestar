@@ -22,42 +22,41 @@ package io.basestar.spark.resolver;
 
 import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.InstanceSchema;
+import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.ViewSchema;
-import io.basestar.schema.use.Use;
+import io.basestar.spark.combiner.Combiner;
 import io.basestar.spark.database.QueryChain;
+import io.basestar.spark.source.Source;
 import io.basestar.spark.transform.*;
 import io.basestar.spark.util.NamingConvention;
-import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
-import org.apache.spark.api.java.function.FlatMapFunction;
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.catalyst.encoders.RowEncoder;
-import org.apache.spark.sql.types.StructType;
-import scala.Tuple2;
 
-import java.io.Serializable;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public interface SchemaResolver {
 
-    Dataset<Row> resolve(InstanceSchema schema, Set<Name> expand);
+    Dataset<Row> resolve(LinkableSchema schema, Set<Name> expand);
 
-    default Dataset<Row> resolve(final InstanceSchema schema) {
+    default Dataset<Row> resolve(final LinkableSchema schema) {
 
         return resolve(schema, ImmutableSet.of());
     }
 
-    default Dataset<Row> resolveAndConform(final InstanceSchema schema, final Set<Name> expand) {
+    default Dataset<Row> resolveAndConform(final LinkableSchema schema, final Set<Name> expand) {
 
         return conform(schema, expand, resolve(schema, expand));
     }
 
-    default Dataset<Row> conform(final InstanceSchema schema, final Set<Name> expand, final Dataset<Row> input) {
+    default Dataset<Row> conform(final LinkableSchema schema, final Set<Name> expand, final Dataset<Row> input) {
 
         final SchemaTransform schemaTransform = SchemaTransform.builder().schema(schema).expand(expand).build();
         return schemaTransform.accept(input);
@@ -68,21 +67,26 @@ public interface SchemaResolver {
         return (schema, expand) -> transform.accept(SchemaResolver.this.resolve(schema, expand));
     }
 
+    default Source<Dataset<Row>> source(final LinkableSchema schema) {
+
+        return source(schema, ImmutableSet.of());
+    }
+
+    default Source<Dataset<Row>> source(final LinkableSchema schema, final Set<Name> expand) {
+
+        return sink -> sink.accept(resolve(schema, expand));
+    }
+
     @RequiredArgsConstructor
     class Automatic implements SchemaResolver {
 
-        public interface ObjectReader {
-
-            Dataset<Row> read(ObjectSchema schema);
-        }
-
-        private final ObjectReader objectReader;
+        private final SchemaResolver resolver;
 
         private final NamingConvention naming;
 
-        public Automatic(final ObjectReader objectReader) {
+        public Automatic(final SchemaResolver resolver) {
 
-            this(objectReader, NamingConvention.DEFAULT);
+            this(resolver, NamingConvention.DEFAULT);
         }
 
         protected Dataset<Row> object(final ObjectSchema schema, final Set<Name> expand) {
@@ -91,7 +95,7 @@ public interface SchemaResolver {
             final SchemaTransform schemaTransform = SchemaTransform.builder().schema(schema).naming(naming).build();
             final ExpressionTransform expressionTransform = ExpressionTransform.builder().schema(schema).expand(mergedExpand).build();
             final ExpandTransform expandTransform = ExpandTransform.builder().resolver(this).schema(schema).expand(mergedExpand).build();
-            final Dataset<Row> base = Nullsafe.require(objectReader.read(schema));
+            final Dataset<Row> base = Nullsafe.require(resolver.resolve(schema, schema.getExpand()));
             return schemaTransform.then(expressionTransform).then(expandTransform).accept(base);
         }
 
@@ -106,7 +110,7 @@ public interface SchemaResolver {
         }
 
         @Override
-        public Dataset<Row> resolve(final InstanceSchema schema, final Set<Name> expand) {
+        public Dataset<Row> resolve(final LinkableSchema schema, final Set<Name> expand) {
 
             if(schema instanceof ObjectSchema) {
                 return object((ObjectSchema)schema, expand);
@@ -130,41 +134,7 @@ public interface SchemaResolver {
         }
     }
 
-    @RequiredArgsConstructor
-    class Overlaying implements SchemaResolver {
-
-        public interface Combiner extends Serializable {
-
-            default Column condition(final InstanceSchema schema, final Dataset<Row> baseline, final Dataset<Row> overlay) {
-
-                return baseline.col(schema.id()).equalTo(overlay.col(schema.id()));
-            }
-
-            default String joinType() {
-
-                return "full_outer";
-            }
-
-            default Map<String, Use<?>> extraMetadataSchema(final InstanceSchema schema) {
-
-                return Collections.emptyMap();
-            }
-
-            default StructType outputType(final InstanceSchema schema) {
-
-                return SparkSchemaUtils.structType(schema, schema.getExpand(), extraMetadataSchema(schema));
-            }
-
-            default Row combine(final InstanceSchema schema, final StructType structType, final Row baseline, final Row overlay) {
-
-                final Map<String, Object> baselineInstance = SparkSchemaUtils.fromSpark(schema, schema.getExpand(), baseline);
-                final Map<String, Object> overlayInstance = SparkSchemaUtils.fromSpark(schema, schema.getExpand(), overlay);
-                final Map<String, Object> resultInstance = combine(schema, baselineInstance, overlayInstance);
-                return SparkSchemaUtils.toSpark(schema, schema.getExpand(), structType, resultInstance);
-            }
-
-             Map<String, Object> combine(InstanceSchema schema, Map<String, Object> baseline, Map<String, Object> overlay);
-        }
+    class Combining implements SchemaResolver {
 
         private final SchemaResolver baseline;
 
@@ -172,43 +142,58 @@ public interface SchemaResolver {
 
         private final Combiner combiner;
 
+        private final String joinType;
+
+        public Combining(final SchemaResolver baseline, final SchemaResolver overlay) {
+
+            this(baseline, overlay, null);
+        }
+
+        public Combining(final SchemaResolver baseline, final SchemaResolver overlay, final Combiner combiner) {
+
+            this(baseline, overlay, combiner, null);
+        }
+
+        public Combining(final SchemaResolver baseline, final SchemaResolver overlay, final Combiner combiner, final String joinType) {
+
+            this.baseline = Nullsafe.require(baseline);
+            this.overlay = Nullsafe.require(overlay);
+            this.combiner = Nullsafe.orDefault(combiner, Combiner.SIMPLE);
+            this.joinType = Nullsafe.orDefault(joinType, Combiner.DEFAULT_JOIN_TYPE);
+        }
+
         @Override
-        public Dataset<Row> resolve(final InstanceSchema schema, final Set<Name> expand) {
+        public Dataset<Row> resolve(final LinkableSchema schema, final Set<Name> expand) {
 
             final Dataset<Row> baseline = this.baseline.resolve(schema, expand);
             final Dataset<Row> overlay = this.overlay.resolve(schema, expand);
-            final Combiner combiner = this.combiner;
-            final StructType structType = combiner.outputType(schema);
-            final Column condition = combiner.condition(schema, baseline, overlay);
-            return baseline.joinWith(overlay, condition, combiner.joinType())
-                    .flatMap((FlatMapFunction<Tuple2<Row, Row>, Row>) v -> {
-
-                        final Row result = combiner.combine(schema, structType, v._1(), v._2());
-                        if(result == null) {
-                            return Collections.emptyIterator();
-                        } else {
-                            return Collections.singleton(result).iterator();
-                        }
-
-                    }, RowEncoder.apply(structType));
+            return combiner.apply(schema, expand, baseline, overlay, joinType);
         }
     }
 
     @RequiredArgsConstructor
     class Caching implements SchemaResolver {
 
-        private final Map<Name, Dataset<Row>> cache = new HashMap<>();
+        private final Map<Key, Dataset<Row>> cache = new HashMap<>();
 
         private final SchemaResolver delegate;
 
         @Override
-        public Dataset<Row> resolve(final InstanceSchema schema, final Set<Name> expand) {
+        public Dataset<Row> resolve(final LinkableSchema schema, final Set<Name> expand) {
 
-            return cache.computeIfAbsent(schema.getQualifiedName(), name -> {
+            return cache.computeIfAbsent(new Key(schema.getQualifiedName(), expand), ignored -> {
 
                 final Dataset<Row> result = delegate.resolve(schema, expand);
                 return result.cache();
             });
+        }
+
+        @Data
+        private static class Key {
+
+            private final Name name;
+
+            private final Set<Name> expand;
         }
     }
 }

@@ -32,7 +32,6 @@ import io.basestar.storage.exception.UnsupportedQueryException;
 import io.basestar.storage.query.DisjunctionVisitor;
 import io.basestar.storage.query.Range;
 import io.basestar.storage.query.RangeVisitor;
-import io.basestar.storage.util.IndexRecordDiff;
 import io.basestar.util.Name;
 import io.basestar.util.Page;
 import io.basestar.util.Pager;
@@ -266,7 +265,7 @@ public abstract class PartitionedStorage implements Storage.WithWriteIndex {
                 indexes.forEach((indexName, index) -> {
                     final Consistency best = traits.getIndexConsistency(index.isMultiValue());
                     if (!index.getConsistency(best).isAsync()) {
-                        final IndexRecordDiff diff = IndexRecordDiff.from(index.readValues(before), index.readValues(after));
+                        final Index.Diff diff = Index.Diff.from(index.readValues(before), index.readValues(after));
                         diff.getCreate().forEach((key, projection) -> createIndex(schema, index, id, version, key, projection));
                         diff.getUpdate().forEach((key, projection) -> updateIndex(schema, index, id, version, key, projection));
                         diff.getDelete().forEach((key) -> deleteIndex(schema, index, id, version, key));

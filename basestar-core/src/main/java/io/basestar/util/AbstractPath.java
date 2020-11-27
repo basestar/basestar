@@ -176,16 +176,33 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
     }
 
     @SuppressWarnings("unchecked")
-    public Object apply(final Map<String, Object> data) {
+    public Object get(final Map<String, Object> data) {
 
         final Object target = data.get(first());
         final AbstractPath<SELF> tail = withoutFirst();
         if(tail.isEmpty()) {
             return target;
         } else if(target instanceof Map) {
-            return tail.apply((Map<String, Object>)target);
+            return tail.get((Map<String, Object>)target);
         } else {
             return null;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> set(final Map<String, Object> data, final Object value) {
+
+        final String first = first();
+        final Object target = data.get(first);
+        final AbstractPath<SELF> tail = withoutFirst();
+        if(tail.isEmpty()) {
+            return Nullsafe.immutableCopyPut(data, first, value);
+        } else if(target instanceof Map) {
+            return Nullsafe.immutableCopyPut(data, first, tail.set((Map<String, Object>)target, value));
+        } else if(target == null) {
+            return Nullsafe.immutableCopyPut(data, first, tail.set(ImmutableMap.of(), value));
+        } else {
+            throw new IllegalStateException();
         }
     }
 

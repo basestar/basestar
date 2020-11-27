@@ -37,6 +37,7 @@ import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -221,5 +222,15 @@ public class UseBinary implements UseScalar<byte[]> {
             throw new IllegalStateException("String used in index cannot contain NULL byte");
         }
         return str.getBytes(Charsets.UTF_8);
+    }
+
+    @Override
+    public boolean equal(final byte[] a, final byte[] b) {
+
+        if(a == null || b == null) {
+            return a == null && b == null;
+        } else {
+            return Arrays.equals(a, b);
+        }
     }
 }
