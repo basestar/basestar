@@ -20,6 +20,7 @@ package io.basestar.spark.transform;
  * #L%
  */
 
+import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.migration.Migration;
 import io.basestar.schema.use.UseAny;
@@ -49,7 +50,7 @@ public class MigrateTransform implements Transform<Dataset<Row>, Dataset<Row>> {
     public Dataset<Row> accept(final Dataset<Row> df) {
 
         final ObjectSchema targetSchema = this.targetSchema;
-        final StructType targetType = SparkSchemaUtils.structType(targetSchema, null);
+        final StructType targetType = SparkSchemaUtils.structType(targetSchema, ImmutableSet.of());
         return df.map((MapFunction<Row, Row>) row -> {
 
             @SuppressWarnings("unchecked")

@@ -224,4 +224,10 @@ public class UseOptional<T> implements UseContainer<T, T> {
             return new UseOptional<>(type2);
         }
     }
+
+    @Override
+    public boolean equal(final T a, final T b) {
+
+        return type.equal(a, b);
+    }
 }

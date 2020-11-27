@@ -181,4 +181,10 @@ public class UseAny implements Use<Object> {
     public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
     }
+
+    @Override
+    public boolean equal(final Object a, final Object b) {
+
+        return Objects.equals(a, b);
+    }
 }

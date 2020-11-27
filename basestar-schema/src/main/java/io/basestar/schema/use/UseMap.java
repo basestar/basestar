@@ -421,4 +421,21 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
                     .collect(Collectors.joining(", ")) + "}";
         }
     }
+
+    @Override
+    public boolean equal(final Map<String, T> a, final Map<String, T> b) {
+
+        if(a == null || b == null) {
+            return a == null && b == null;
+        } else if(a.size() == b.size()) {
+            for(final Map.Entry<String, T> entry : a.entrySet()) {
+                if(!(b.containsKey(entry.getKey()) && type.equal(entry.getValue(), b.get(entry.getKey())))) {
+                    return false;
+                }
+            }
+            return true;
+        } else {
+            return false;
+        }
+    }
 }

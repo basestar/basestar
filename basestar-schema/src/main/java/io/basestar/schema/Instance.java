@@ -54,7 +54,7 @@ public class Instance extends AbstractMap<String, Object> implements Serializabl
     @SuppressWarnings({"rawtypes", "unchecked"})
     public static Comparator<Map<String, Object>> comparator(final List<Sort> sort) {
 
-        return Sort.comparator(sort, (t, name) -> (Comparable)name.apply(t));
+        return Sort.comparator(sort, (t, name) -> (Comparable)name.get(t));
     }
 
     public static Comparator<Map<String, Object>> comparator(final Sort sort) {
@@ -70,7 +70,7 @@ public class Instance extends AbstractMap<String, Object> implements Serializabl
     @SuppressWarnings("unchecked")
     public static <T> T get(final Map<String, Object> instance, final Name name) {
 
-        return (T)name.apply(instance);
+        return (T)name.get(instance);
     }
 
     public Name getSchema() {

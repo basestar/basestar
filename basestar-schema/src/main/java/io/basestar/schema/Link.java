@@ -67,7 +67,7 @@ public class Link implements Member {
     private final String description;
 
     @Nonnull
-    private final InstanceSchema schema;
+    private final LinkableSchema schema;
 
     @Nonnull
     private final Expression expression;
@@ -152,7 +152,7 @@ public class Link implements Member {
 
         this.qualifiedName = qualifiedName;
         this.description = descriptor.getDescription();
-        this.schema = resolver.requireInstanceSchema(descriptor.getSchema());
+        this.schema = resolver.requireLinkableSchema(descriptor.getSchema());
         this.expression = Nullsafe.require(descriptor.getExpression());
         this.single = Nullsafe.orDefault(descriptor.getSingle());
         this.sort = Nullsafe.immutableCopy(descriptor.getSort());

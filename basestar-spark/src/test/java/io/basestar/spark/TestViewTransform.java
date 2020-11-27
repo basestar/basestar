@@ -203,7 +203,7 @@ public class TestViewTransform extends AbstractSparkTest {
 
         final Namespace namespace = Namespace.load(TestViewTransform.class.getResourceAsStream("schema.yml"));
 
-        final SchemaResolver resolver = new SchemaResolver.Automatic((schema) -> datasets.get(schema.getQualifiedName()));
+        final SchemaResolver resolver = new SchemaResolver.Automatic((schema, expand) -> datasets.get(schema.getQualifiedName()));
 
         final SparkDatabase database = SparkDatabase.builder()
                 .resolver(resolver).namespace(namespace)

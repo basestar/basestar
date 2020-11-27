@@ -190,4 +190,21 @@ public class UseSet<T> implements UseCollection<T, Set<T>> {
 
         return NAME + "<" + type + ">";
     }
+
+    @Override
+    public boolean equal(final Set<T> a, final Set<T> b) {
+
+        if(a == null || b == null) {
+            return a == null && b == null;
+        } else if(a.size() == b.size()) {
+            for(final T v : a) {
+                if(!b.contains(v)) {
+                    return false;
+                }
+            }
+            return true;
+        } else {
+            return false;
+        }
+    }
 }

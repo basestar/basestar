@@ -51,7 +51,7 @@ public class TestLayoutTransform extends AbstractSparkTest {
                 Name.of("A"), datasetA
         );
 
-        final SchemaResolver resolver = new SchemaResolver.Automatic((schema) -> datasets.get(schema.getQualifiedName()));
+        final SchemaResolver resolver = new SchemaResolver.Automatic((schema, expand) -> datasets.get(schema.getQualifiedName()));
 //        final ColumnResolver<Row> columnResolver = ColumnResolver.lowercase(ColumnResolver::nested);
 
         final Dataset<Row> ds = resolver.resolve(a);

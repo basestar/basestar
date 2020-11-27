@@ -66,6 +66,21 @@ public class SparkSchemaUtils {
         return DataTypes.createStructType(fields);
     }
 
+    public static StructType structType(final ObjectSchema schema, final Index index) {
+
+        return structType(schema, index, ImmutableMap.of());
+    }
+
+    public static StructType structType(final ObjectSchema schema, final Index index, final Map<String, Use<?>> extraMetadata) {
+
+        final List<StructField> fields = new ArrayList<>();
+        index.keySchema(schema).forEach((name, type) -> fields.add(field(name, type, null)));
+        index.projectionSchema(schema).forEach((name, type) -> fields.add(field(name, type, null)));
+        extraMetadata.forEach((name, type) -> fields.add(field(name, type, null)));
+        fields.sort(Comparator.comparing(StructField::name));
+        return DataTypes.createStructType(fields);
+    }
+
     public static Set<Name> names(final InstanceSchema schema, final StructType structType) {
 
         // FIXME: remove
@@ -303,7 +318,7 @@ public class SparkSchemaUtils {
         final Map<String, Object> object = new HashMap<>();
         schema.layoutSchema(expand).forEach((name, type) -> object.put(name, fromSpark(type, naming, branches.get(name), get(naming, row, name))));
         extraMetadata.forEach((name, type) -> object.put(name, fromSpark(type, naming, branches.get(name), get(naming, row, name))));
-        return object;
+        return new Instance(object);
     }
 
     protected static Object fromSpark(final Link link, final NamingConvention naming, final Set<Name> expand, final Object value) {
@@ -325,7 +340,7 @@ public class SparkSchemaUtils {
         final Map<String, Object> object = new HashMap<>();
         ObjectSchema.REF_SCHEMA
                 .forEach((name, type) -> object.put(name, fromSpark(type, naming, Collections.emptySet(), get(naming, row, name))));
-        return object;
+        return new Instance(object);
     }
 
     public static Object fromSpark(final Use<?> type, final NamingConvention naming, final Set<Name> expand, final Object value) {
@@ -504,6 +519,22 @@ public class SparkSchemaUtils {
                 }
             }
         });
+    }
+
+    public static Row toSpark(final ObjectSchema schema, final Index index, final Map<String, Use<?>> extraMetadata, final StructType structType, final Map<String, Object> object) {
+
+        if(object == null) {
+            return null;
+        }
+        final StructField[] fields = structType.fields();
+        final Object[] values = new Object[fields.length];
+        Stream.of(index.keySchema(schema), index.projectionSchema(schema), extraMetadata).forEach(source -> {
+            source.forEach((name, type) -> {
+                final int i = structType.fieldIndex(name);
+                values[i] = toSpark(type, null, fields[i].dataType(), object.get(name));
+            });
+        });
+        return new GenericRowWithSchema(values, structType);
     }
 
     public static Row toSpark(final Layout schema, final Set<Name> expand, final StructType structType, final Map<String, Object> object) {

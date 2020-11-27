@@ -103,4 +103,10 @@ public interface UseInstance extends UseNamed<Instance>, UseLayout {
 
         return Objects.toString(value);
     }
+
+    @Override
+    default boolean equal(final Instance a, final Instance b) {
+
+        return getSchema().equal(a, b);
+    }
 }
