@@ -27,7 +27,6 @@ import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Index;
 import io.basestar.schema.*;
 import io.basestar.schema.use.Use;
-import io.basestar.schema.use.UseBinary;
 import io.basestar.schema.use.UseObject;
 import io.basestar.schema.use.UseStruct;
 import io.basestar.storage.BatchResponse;
@@ -769,9 +768,27 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
     private Map<Field<?>, Object> toRecord(final ObjectSchema schema, final Index index, final Index.Key key, final Map<String, Object> object) {
 
         final Map<Field<?>, Object> result = new HashMap<>();
-        index.projectionSchema(schema).forEach((k, v) -> result.put(DSL.field(DSL.name(k)), SQLUtils.toSQLValue(v, object.get(k))));
-        result.put(DSL.field(DSL.name(SQLUtils.PARTITION)), SQLUtils.toSQLValue(UseBinary.DEFAULT, key.getPartition()));
-        result.put(DSL.field(DSL.name(SQLUtils.SORT)), SQLUtils.toSQLValue(UseBinary.DEFAULT, key.getSort()));
+        index.projectionSchema(schema).forEach((k, v) ->
+                result.put(DSL.field(DSL.name(k)), SQLUtils.toSQLValue(v, object.get(k))));
+
+        final List<Name> partitionNames = index.resolvePartitionNames();
+        final List<Object> partition = key.getPartition();
+        assert partitionNames.size() == partition.size();
+        for(int i = 0; i != partition.size(); ++i) {
+            final Name name = partitionNames.get(i);
+            final Object value = partition.get(i);
+            final Use<?> type = schema.typeOf(name);
+            result.put(DSL.field(SQLUtils.columnName(name)), SQLUtils.toSQLValue(type, value));
+        }
+        final List<Sort> sortPaths = index.getSort();
+        final List<Object> sort = key.getSort();
+        assert sortPaths.size() == sort.size();
+        for(int i = 0; i != sort.size(); ++i) {
+            final Name name = sortPaths.get(i).getName();
+            final Object value = sort.get(i);
+            final Use<?> type = schema.typeOf(name);
+            result.put(DSL.field(SQLUtils.columnName(name)), SQLUtils.toSQLValue(type, value));
+        }
         return result;
     }
 }

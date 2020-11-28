@@ -68,7 +68,7 @@ public class DynamoDBSparkSchemaUtils {
     }
 
     public static Row toSpark(final DynamoDBStrategy strategy, final ObjectSchema schema, final Index index,
-                              final StructType structType, final String id, final Index.Key key,
+                              final StructType structType, final String id, final Index.Key.Binary key,
                               final Map<String, Object> projection) {
 
         final Map<String, Set<Name>> branches = Name.branch(schema.getExpand());

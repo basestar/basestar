@@ -223,7 +223,7 @@ public class DefaultHub implements Hub {
         keys.add(idKey(schema, Instance.getId(object)));
         for(final Index index : schema.getIndexes().values()) {
             index.readValues(object).forEach((k, projection) -> {
-                keys.add(new Subscription.Key(schema.getQualifiedName(), index.getName(), k.getPartition()));
+                keys.add(new Subscription.Key(schema.getQualifiedName(), index.getName(), k.binary().getPartition()));
             });
         }
         return keys;

@@ -235,7 +235,7 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
         @Override
         public WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
 
-            final byte[] indexKey = key(schema, index, key, id);
+            final byte[] indexKey = key(schema, index, key.binary(), id);
             checkExisting(schema, id, 0L, indexKey);
             writes.add(batch -> {
                 final byte[] data = toBytes(schema, version, projection);
@@ -253,7 +253,7 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
         @Override
         public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
 
-            final byte[] indexKey = key(schema, index, key, id);
+            final byte[] indexKey = key(schema, index, key.binary(), id);
             checkExisting(schema, id, version, indexKey);
             writes.add(batch -> batch.delete(indexKey));
             return this;
@@ -313,7 +313,7 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
         return UseBinary.binaryKey(Arrays.asList(schema.getQualifiedName().toString(), Reserved.PREFIX + ObjectSchema.VERSION, id, invert(version)));
     }
 
-    private static byte[] key(final ObjectSchema schema, final Index index, final Index.Key key, final String id) {
+    private static byte[] key(final ObjectSchema schema, final Index index, final Index.Key.Binary key, final String id) {
 
         final byte[] partition = key.getPartition();
         final byte[] sort;

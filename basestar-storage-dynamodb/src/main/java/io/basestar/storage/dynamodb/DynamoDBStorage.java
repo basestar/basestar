@@ -394,7 +394,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
         return UseBinary.concat(UseBinary.binaryKey(Collections.singletonList(prefix)), suffix);
     }
 
-    public static Map<String, AttributeValue> indexKey(final DynamoDBStrategy strategy, final ObjectSchema schema, final Index index, final String id, final Index.Key key) {
+    public static Map<String, AttributeValue> indexKey(final DynamoDBStrategy strategy, final ObjectSchema schema, final Index index, final String id, final Index.Key.Binary key) {
 
         return ImmutableMap.of(
                 strategy.indexPartitionName(schema, index), DynamoDBUtils.b(partition(strategy, schema, index, id, key.getPartition())),
@@ -433,7 +433,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
 
         final ImmutableMap.Builder<String, AttributeValue> builder = ImmutableMap.builder();
         builder.putAll(DynamoDBUtils.toItem(data));
-        builder.putAll(indexKey(strategy, schema, index, id, key));
+        builder.putAll(indexKey(strategy, schema, index, id, key.binary()));
         return builder.build();
     }
 
@@ -631,7 +631,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
             items.add(TransactWriteItem.builder()
                     .delete(conditionalDelete(version, Versioning.UNCHECKED)
                             .tableName(strategy.indexTableName(schema, index))
-                            .key(indexKey(strategy, schema, index, id, key))
+                            .key(indexKey(strategy, schema, index, id, key.binary()))
                             .build())
                     .build());
 
@@ -758,7 +758,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
             final Map<String, Object> instance = schema.create(DynamoDBUtils.fromItem(item), schema.getExpand(), true);
             final String id = Instance.getId(instance);
             index.readValues(instance).forEach((key, record) -> {
-                final Map<String, AttributeValue> indexKey = indexKey(strategy, schema, index, id, key);
+                final Map<String, AttributeValue> indexKey = indexKey(strategy, schema, index, id, key.binary());
                 final Map<String, AttributeValue> indexValues = indexItem(strategy, schema, index, id, key, record);
                 indexRecords.put(indexKey, indexValues);
             });
@@ -883,7 +883,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
                             final Map<String, Object> object = schema.create(data, schema.getExpand(), true);
                             final String id = Instance.getId(object);
                             final Set<Map<String, AttributeValue>> keys = new HashSet<>();
-                            index.readValues(object).forEach((key, record) -> keys.add(indexKey(strategy, schema, index, id, key)));
+                            index.readValues(object).forEach((key, record) -> keys.add(indexKey(strategy, schema, index, id, key.binary())));
                             expected.put(id, keys);
                         });
 

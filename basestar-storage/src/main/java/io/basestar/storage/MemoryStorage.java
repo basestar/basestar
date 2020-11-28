@@ -333,9 +333,9 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
 
                 items.add(state -> {
 
-
-                    final IndexPartition partKey = new IndexPartition(schema.getQualifiedName(), index.getName(), key.getPartition());
-                    final IndexSort sortKey = new IndexSort(key.getSort(), index.isUnique() ? null : id);
+                    final Index.Key.Binary binaryKey = key.binary();
+                    final IndexPartition partKey = new IndexPartition(schema.getQualifiedName(), index.getName(), binaryKey.getPartition());
+                    final IndexSort sortKey = new IndexSort(binaryKey.getSort(), index.isUnique() ? null : id);
 
                     final Map<IndexSort, Map<String, Object>> partition = state.index
                             .computeIfAbsent(partKey, k -> new TreeMap<>());

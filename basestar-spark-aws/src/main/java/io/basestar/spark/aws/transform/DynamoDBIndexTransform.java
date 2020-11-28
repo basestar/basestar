@@ -60,7 +60,7 @@ public class DynamoDBIndexTransform implements Transform<Dataset<Row>, RDD<Map<S
 
         Format INDEX_ITEM = (strategy, schema, index, id, key, projection) -> DynamoDBLegacyUtils.toLegacy(DynamoDBStorage.indexItem(strategy, schema, index, id, key, projection));
 
-        Format INDEX_KEY = (strategy, schema, index, id, key, projection) -> DynamoDBLegacyUtils.toLegacy(DynamoDBStorage.indexKey(strategy, schema, index, id, key));
+        Format INDEX_KEY = (strategy, schema, index, id, key, projection) -> DynamoDBLegacyUtils.toLegacy(DynamoDBStorage.indexKey(strategy, schema, index, id, key.binary()));
     }
 
     @lombok.Builder(builderClassName = "Builder")

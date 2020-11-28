@@ -53,7 +53,7 @@ public class IndexDeltaTransform implements Transform<Dataset<Tuple2<Row, Row>>,
                     .flatMap(source -> source.entrySet().stream())
                     .map(entry -> {
                         final Map<String, Object> data = Nullsafe.immutableCopyPut(entry.getValue(), Reserved.DELETED, false);
-                        return SparkSchemaUtils.toSpark(schema, index, extraMetadata, structType, entry.getKey(), data);
+                        return SparkSchemaUtils.toSpark(schema, index, extraMetadata, structType, entry.getKey().binary(), data);
                     });
 
             final Stream<Row> delete = diff.getDelete().stream()
@@ -62,7 +62,7 @@ public class IndexDeltaTransform implements Transform<Dataset<Tuple2<Row, Row>>,
                                 ObjectSchema.ID, Instance.getId(before),
                                 Reserved.DELETED, true
                         );
-                        return SparkSchemaUtils.toSpark(schema, index, extraMetadata, structType, key, data);
+                        return SparkSchemaUtils.toSpark(schema, index, extraMetadata, structType, key.binary(), data);
                     });
 
             return Stream.concat(upsert, delete).iterator();

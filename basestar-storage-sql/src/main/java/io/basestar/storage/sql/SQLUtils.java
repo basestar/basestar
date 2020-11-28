@@ -9,9 +9,9 @@ package io.basestar.storage.sql;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -39,6 +39,7 @@ import org.jooq.impl.SQLDataType;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -47,15 +48,7 @@ import java.util.stream.Stream;
 
 public class SQLUtils {
 
-    public static final String PARTITION = "__partition";
-
-    public static final String SORT = "__sort";
-
     private static final ObjectMapper objectMapper = new ObjectMapper().registerModule(BasestarModule.INSTANCE);
-
-    private SQLUtils() {
-
-    }
 
     public static DataType<?> dataType(final Use<?> type) {
 
@@ -463,11 +456,15 @@ public class SQLUtils {
 
     public static List<Field<?>> fields(final ObjectSchema schema, final Index index) {
 
+        final List<Name> partitionNames = index.resolvePartitionNames();
+        final List<Sort> sortPaths = index.getSort();
+
         return Stream.of(
-                Stream.of(
-                        DSL.field(DSL.name(PARTITION), dataType(UseBinary.DEFAULT)),
-                        DSL.field(DSL.name(SORT), dataType(UseBinary.DEFAULT))
-                ),
+                partitionNames.stream()
+                        .map(v -> DSL.field(columnName(v), dataType(schema.typeOf(v)).nullable(true))),
+                sortPaths.stream()
+                        .map(Sort::getName)
+                        .map(v -> DSL.field(columnName(v), dataType(schema.typeOf(v)).nullable(true))),
                 index.projectionSchema(schema).entrySet().stream()
                         .map(e -> DSL.field(DSL.name(e.getKey()), dataType(e.getValue()).nullable(true)))
 
@@ -484,9 +481,12 @@ public class SQLUtils {
         return DSL.name(v.toString(Reserved.PREFIX));
     }
 
-    public static Constraint indexPrimaryKey() {
+    public static Constraint primaryKey(final ObjectSchema schema, final Index index) {
 
-        return DSL.primaryKey(DSL.name(PARTITION), DSL.name(SORT));
+        final List<org.jooq.Name> names = new ArrayList<>();
+        index.resolvePartitionNames().forEach(v -> names.add(columnName(v)));
+        index.getSort().forEach(v -> names.add(columnName(v.getName())));
+        return DSL.primaryKey(names.toArray(new org.jooq.Name[0]));
     }
 
     public static Field<?> selectField(final Field<?> field, final Use<?> type) {

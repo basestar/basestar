@@ -530,7 +530,7 @@ public class SparkSchemaUtils {
         });
     }
 
-    public static Row toSpark(final ObjectSchema schema, final Index index, final Map<String, Use<?>> extraMetadata, final StructType structType, final Index.Key key, final Map<String, Object> object) {
+    public static Row toSpark(final ObjectSchema schema, final Index index, final Map<String, Use<?>> extraMetadata, final StructType structType, final Index.Key.Binary key, final Map<String, Object> object) {
 
         if(object == null) {
             return null;

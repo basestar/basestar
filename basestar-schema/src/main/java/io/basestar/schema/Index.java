@@ -400,13 +400,49 @@ public class Index implements Named, Described, Serializable, Extendable {
     @Data
     public static class Key {
 
-        private final byte[] partition;
+        private final List<Object> partition;
 
-        private final byte[] sort;
+        private final List<Object> sort;
 
         public static Key of(final List<?> partition, final List<?> sort) {
 
-            return new Key(UseBinary.binaryKey(partition), UseBinary.binaryKey(sort));
+            return new Key(Nullsafe.immutableCopy(partition), Nullsafe.immutableCopy(sort));
+        }
+
+        public Binary binary() {
+
+            return new Binary(UseBinary.binaryKey(partition), UseBinary.binaryKey(sort));
+        }
+
+        @Data
+        public static class Binary {
+
+            private final byte[] partition;
+
+            private final byte[] sort;
+
+            public static Binary of(final byte[] partition, final byte[] sort) {
+
+                return new Binary(partition, sort);
+            }
+
+            @Override
+            public int hashCode() {
+
+                return 31 * Arrays.hashCode(partition) + Arrays.hashCode(sort);
+            }
+
+            @Override
+            public boolean equals(final Object o) {
+
+                if(o instanceof Binary) {
+                    final Binary other = (Binary)o;
+                    return Arrays.equals(partition, other.partition)
+                            && Arrays.equals(sort, other.sort);
+                } else {
+                    return false;
+                }
+            }
         }
     }
 
