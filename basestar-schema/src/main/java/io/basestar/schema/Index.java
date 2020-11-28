@@ -36,6 +36,7 @@ import io.basestar.schema.exception.IndexValidationException;
 import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseBinary;
 import io.basestar.schema.use.UseInteger;
 import io.basestar.schema.use.UseString;
 import io.basestar.util.Name;
@@ -50,7 +51,6 @@ import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Index
@@ -265,56 +265,17 @@ public class Index implements Named, Described, Serializable, Extendable {
                 .collect(Collectors.toList());
     }
 
-    public Map<String, Object> writePartition(final Map<String, Object> data, final List<Object> values) {
-
-        Map<String, Object> result = new HashMap<>();
-        final List<Name> partition = resolvePartitionPaths();
-        for(int i = 0; i != partition.size(); ++i) {
-            result = partition.get(i).set(result, values.get(i));
-        }
-        return result;
-    }
-
-    public Map<String, Object> writeSort(final Map<String, Object> data, final List<Object> values) {
-
-        Map<String, Object> result = new HashMap<>();
-        for(int i = 0; i != sort.size(); ++i) {
-            result = sort.get(i).getName().set(result, values.get(i));
-        }
-        return result;
-    }
-
-    public Map<String, Use<?>> keySchema(final ObjectSchema schema) {
-
-        final Map<String, Use<?>> result = new HashMap<>();
-        result.putAll(partitionSchema(schema));
-        result.putAll(sortSchema(schema));
-        return result;
-    }
-
-    public Map<String, Use<?>> partitionSchema(final ObjectSchema schema) {
-
-        final Map<String, Use<?>> result = new HashMap<>();
-        resolvePartitionPaths().forEach(schema::typeOf);
-        return result;
-    }
-
-    public Map<String, Use<?>> sortSchema(final ObjectSchema schema) {
-
-        final Map<String, Use<?>> result = new HashMap<>();
-        sort.forEach(sort -> schema.typeOf(sort.getName()));
-        return result;
-    }
-
     public Map<String, Use<?>> projectionSchema(final ObjectSchema schema) {
 
         final Map<String, Use<?>> result = new HashMap<>();
         if(projection.isEmpty()) {
-            schema.getProperties()
-                    .forEach((name, property) -> result.put(name, property.getType()));
+            schema.getProperties().forEach((name, property) -> result.put(name, property.getType()));
             result.putAll(ObjectSchema.METADATA_SCHEMA);
         } else {
-            projection.forEach(name -> result.put(name, schema.requireProperty(name, true).getType()));
+            final Set<String> members = new HashSet<>(projection);
+            resolvePartitionNames().forEach(name -> members.add(name.first()));
+            sort.forEach(sort -> members.add(sort.getName().first()));
+            members.forEach(name -> result.put(name, schema.typeOf(Name.of(name))));
             result.put(ObjectSchema.SCHEMA, UseString.DEFAULT);
             result.put(ObjectSchema.ID, UseString.DEFAULT);
             result.put(ObjectSchema.VERSION, UseInteger.DEFAULT);
@@ -322,7 +283,7 @@ public class Index implements Named, Described, Serializable, Extendable {
         return result;
     }
 
-    public List<Name> resolvePartitionPaths() {
+    public List<Name> resolvePartitionNames() {
 
         if(over.isEmpty()) {
             return partition;
@@ -350,7 +311,7 @@ public class Index implements Named, Described, Serializable, Extendable {
             fullProjection.add(ObjectSchema.SCHEMA);
             fullProjection.add(ObjectSchema.ID);
             fullProjection.add(ObjectSchema.VERSION);
-            resolvePartitionPaths().forEach(v -> fullProjection.add(v.first()));
+            resolvePartitionNames().forEach(v -> fullProjection.add(v.first()));
             sort.forEach(v -> fullProjection.add(v.getName().first()));
             final Map<String, Object> result = new HashMap<>();
             fullProjection.forEach(k -> {
@@ -436,36 +397,16 @@ public class Index implements Named, Described, Serializable, Extendable {
         }
     }
 
-    public Key valueToKey(final Map<String, Object> data) {
-
-        return Key.of(readPartition(data), readSort(data));
-    }
-
-    public Map<String, Object> keyToValue(final Key key, final Map<String, Object> merge) {
-
-        return writeSort(writePartition(merge, key.getPartition()), key.getSort());
-    }
-
-    public Map<String, Object> keyToValue(final Key key) {
-
-        return keyToValue(key, ImmutableMap.of());
-    }
-
     @Data
     public static class Key {
 
-        private final List<Object> partition;
+        private final byte[] partition;
 
-        private final List<Object> sort;
+        private final byte[] sort;
 
-        public List<Object> keys() {
+        public static Key of(final List<?> partition, final List<?> sort) {
 
-            return Stream.of(partition, sort).flatMap(List::stream).collect(Collectors.toList());
-        }
-
-        public static Key of(final List<Object> partition, final List<Object> sort) {
-
-            return new Key(partition, sort);
+            return new Key(UseBinary.binaryKey(partition), UseBinary.binaryKey(sort));
         }
     }
 

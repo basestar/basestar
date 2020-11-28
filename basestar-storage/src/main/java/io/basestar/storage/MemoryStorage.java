@@ -150,7 +150,7 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
                 } else {
                     if(!satisfy.getSort().isEmpty()) {
                         final byte[] sortLo = UseBinary.binaryKey(satisfy.getSort());
-                        final byte[] sortHi = UseBinary.binaryKey(satisfy.getSort(), new byte[]{0});
+                        final byte[] sortHi = UseBinary.concat(UseBinary.binaryKey(satisfy.getSort()), new byte[]{0});
                         results = Lists.newArrayList(partition.tailMap(new IndexSort(sortLo, null), true)
                                 .headMap(new IndexSort(sortHi, null)).values());
                     } else {
@@ -334,8 +334,8 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
                 items.add(state -> {
 
 
-                    final IndexPartition partKey = new IndexPartition(schema.getQualifiedName(), index.getName(), UseBinary.binaryKey(key.getPartition()));
-                    final IndexSort sortKey = new IndexSort(UseBinary.binaryKey(key.getSort()), index.isUnique() ? null : id);
+                    final IndexPartition partKey = new IndexPartition(schema.getQualifiedName(), index.getName(), key.getPartition());
+                    final IndexSort sortKey = new IndexSort(key.getSort(), index.isUnique() ? null : id);
 
                     final Map<IndexSort, Map<String, Object>> partition = state.index
                             .computeIfAbsent(partKey, k -> new TreeMap<>());

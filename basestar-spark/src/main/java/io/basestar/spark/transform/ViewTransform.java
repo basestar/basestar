@@ -87,8 +87,6 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
             output = sort(from, output, schema.getSort());
         }
 
-//        System.out.println("View transform input (after filter):\n" + output.showString(10, 80, false));
-
         final Map<String, Set<Name>> branches = Name.branch(schema.getFrom().getExpand());
         final AggregateExtractingVisitor visitor = new AggregateExtractingVisitor();
         final Map<String, TypedExpression> columns = new HashMap<>();
@@ -141,8 +139,6 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         selectColumns.add(output.col(ViewSchema.KEY));
 
         output = output.select(selectColumns.toArray(new Column[0]));
-
-//        System.out.println("View transform output:\n" + output.showString(10, 80, false));
 
         return output;
     }

@@ -524,7 +524,7 @@ class TestDatabaseServer {
                         .build())
                 .build()).join();
 
-        System.err.println(results);
+        log.debug("Batch results {}", results);
     }
 
     @Test
@@ -778,7 +778,7 @@ class TestDatabaseServer {
                 .schema(Name.of("TeamMemberStats"))
                 .build()).get();
 
-        System.err.println(results);
+        log.debug("Aggregate results: {}", results);
     }
 
     @Test

@@ -31,6 +31,7 @@ import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.util.Streams;
 import io.basestar.util.*;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.junit.jupiter.api.Test;
@@ -44,6 +45,7 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+@Slf4j
 public abstract class TestStorage {
 
     private static final int RECORD_COUNT = 100;
@@ -691,7 +693,7 @@ public abstract class TestStorage {
         });
 
         final Page<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
-        System.err.println(results);
+        log.debug("Aggregation results: {}", results);
         assertEquals(31, results.size());
     }
 

@@ -20,6 +20,7 @@ package io.basestar.storage.leveldb;
  * #L%
  */
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.BaseEncoding;
 import io.basestar.schema.*;
 import io.basestar.schema.use.UseBinary;
@@ -81,11 +82,11 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
                                                                       final int count, final Page.Token paging) {
 
         return CompletableFuture.supplyAsync(() -> {
-            final List<Object> values = new ArrayList<>();
-            values.addAll(satisfyResult.getPartition());
-            values.addAll(satisfyResult.getSort());
 
-            final byte[] key = key(schema, index, values);
+            final byte[] partitionKey = UseBinary.binaryKey(satisfyResult.getPartition());
+            final byte[] sortKey = UseBinary.binaryKey(satisfyResult.getSort());
+
+            final byte[] key = key(schema, index, partitionKey, sortKey);
 
             final DBIterator iter = db.iterator();
             if(paging != null) {
@@ -314,20 +315,22 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
 
     private static byte[] key(final ObjectSchema schema, final Index index, final Index.Key key, final String id) {
 
-        final List<Object> all = new ArrayList<>(key.keys());
-        if(!index.isUnique()) {
-            all.add(id);
+        final byte[] partition = key.getPartition();
+        final byte[] sort;
+        if(index.isUnique()) {
+            sort = key.getSort();
+        } else {
+            sort = UseBinary.concat(key.getSort(), UseBinary.binaryKey(ImmutableList.of(id)));
         }
-        return key(schema, index, all);
+        return key(schema, index, partition, sort);
     }
 
-    private static byte[] key(final ObjectSchema schema, final Index index, final List<?> values) {
+    private static byte[] key(final ObjectSchema schema, final Index index, final byte[] partition, final byte[] sort) {
 
-        final List<Object> all = new ArrayList<>();
-        all.add(schema.getQualifiedName().toString());
-        all.add(index.getName());
-        all.addAll(values);
-        return UseBinary.binaryKey(all);
+        final List<Object> prefix = new ArrayList<>();
+        prefix.add(schema.getQualifiedName().toString());
+        prefix.add(index.getName());
+        return UseBinary.concat(UseBinary.binaryKey(prefix), partition, sort);
     }
 
     private static long invert(final long version) {

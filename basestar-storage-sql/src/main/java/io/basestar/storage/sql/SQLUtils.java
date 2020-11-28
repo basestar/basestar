@@ -39,7 +39,6 @@ import org.jooq.impl.SQLDataType;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -48,7 +47,15 @@ import java.util.stream.Stream;
 
 public class SQLUtils {
 
+    public static final String PARTITION = "__partition";
+
+    public static final String SORT = "__sort";
+
     private static final ObjectMapper objectMapper = new ObjectMapper().registerModule(BasestarModule.INSTANCE);
+
+    private SQLUtils() {
+
+    }
 
     public static DataType<?> dataType(final Use<?> type) {
 
@@ -456,15 +463,11 @@ public class SQLUtils {
 
     public static List<Field<?>> fields(final ObjectSchema schema, final Index index) {
 
-        final List<Name> partitionNames = index.resolvePartitionPaths();
-        final List<Sort> sortPaths = index.getSort();
-
         return Stream.of(
-                partitionNames.stream()
-                        .map(v -> DSL.field(columnName(v), dataType(schema.typeOf(v)).nullable(true))),
-                sortPaths.stream()
-                        .map(Sort::getName)
-                        .map(v -> DSL.field(columnName(v), dataType(schema.typeOf(v)).nullable(true))),
+                Stream.of(
+                        DSL.field(DSL.name(PARTITION), dataType(UseBinary.DEFAULT)),
+                        DSL.field(DSL.name(SORT), dataType(UseBinary.DEFAULT))
+                ),
                 index.projectionSchema(schema).entrySet().stream()
                         .map(e -> DSL.field(DSL.name(e.getKey()), dataType(e.getValue()).nullable(true)))
 
@@ -481,12 +484,9 @@ public class SQLUtils {
         return DSL.name(v.toString(Reserved.PREFIX));
     }
 
-    public static Constraint primaryKey(final ObjectSchema schema, final Index index) {
+    public static Constraint indexPrimaryKey() {
 
-        final List<org.jooq.Name> names = new ArrayList<>();
-        index.resolvePartitionPaths().forEach(v -> names.add(columnName(v)));
-        index.getSort().forEach(v -> names.add(columnName(v.getName())));
-        return DSL.primaryKey(names.toArray(new org.jooq.Name[0]));
+        return DSL.primaryKey(DSL.name(PARTITION), DSL.name(SORT));
     }
 
     public static Field<?> selectField(final Field<?> field, final Use<?> type) {

@@ -51,6 +51,14 @@ import java.util.stream.Stream;
 @Slf4j
 public class SparkSchemaUtils {
 
+    public static String PARTITION = Reserved.PREFIX + "partition";
+
+    public static String SORT = Reserved.PREFIX + "sort";
+
+    private SparkSchemaUtils() {
+
+    }
+
     public static StructType structType(final Layout schema, final Set<Name> expand) {
 
         return structType(schema, expand, ImmutableMap.of());
@@ -74,7 +82,8 @@ public class SparkSchemaUtils {
     public static StructType structType(final ObjectSchema schema, final Index index, final Map<String, Use<?>> extraMetadata) {
 
         final List<StructField> fields = new ArrayList<>();
-        index.keySchema(schema).forEach((name, type) -> fields.add(field(name, type, null)));
+        fields.add(field(PARTITION, DataTypes.BinaryType));
+        fields.add(field(SORT, DataTypes.BinaryType));
         index.projectionSchema(schema).forEach((name, type) -> fields.add(field(name, type, null)));
         extraMetadata.forEach((name, type) -> fields.add(field(name, type, null)));
         fields.sort(Comparator.comparing(StructField::name));
@@ -521,18 +530,22 @@ public class SparkSchemaUtils {
         });
     }
 
-    public static Row toSpark(final ObjectSchema schema, final Index index, final Map<String, Use<?>> extraMetadata, final StructType structType, final Map<String, Object> object) {
+    public static Row toSpark(final ObjectSchema schema, final Index index, final Map<String, Use<?>> extraMetadata, final StructType structType, final Index.Key key, final Map<String, Object> object) {
 
         if(object == null) {
             return null;
         }
         final StructField[] fields = structType.fields();
         final Object[] values = new Object[fields.length];
-        Stream.of(index.keySchema(schema), index.projectionSchema(schema), extraMetadata).forEach(source -> {
-            source.forEach((name, type) -> {
-                final int i = structType.fieldIndex(name);
-                values[i] = toSpark(type, null, fields[i].dataType(), object.get(name));
-            });
+        values[structType.fieldIndex(PARTITION)] = key.getPartition();
+        values[structType.fieldIndex(SORT)] = key.getSort();
+        index.projectionSchema(schema).forEach((name, type) -> {
+            final int i = structType.fieldIndex(name);
+            values[i] = toSpark(type, null, fields[i].dataType(), object.get(name));
+        });
+        extraMetadata.forEach((name, type) -> {
+            final int i = structType.fieldIndex(name);
+            values[i] = toSpark(type, null, fields[i].dataType(), object.get(name));
         });
         return new GenericRowWithSchema(values, structType);
     }

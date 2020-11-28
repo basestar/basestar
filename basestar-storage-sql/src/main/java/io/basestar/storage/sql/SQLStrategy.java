@@ -122,7 +122,7 @@ public interface SQLStrategy {
                         log.info("Creating multi-value index table {}", indexTableName);
                         try(final CreateTableFinalStep create = context.createTableIfNotExists(indexTableName(schema, index))
                                 .columns(SQLUtils.fields(schema, index))
-                                .constraints(SQLUtils.primaryKey(schema, index))) {
+                                .constraints(SQLUtils.indexPrimaryKey())) {
                             create.execute();
                         }
                     } else if(index.isUnique()) {
