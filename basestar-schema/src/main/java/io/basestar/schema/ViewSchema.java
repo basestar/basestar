@@ -359,6 +359,14 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
         if(Instance.getSchema(result) == null) {
             Instance.setSchema(result, this.getQualifiedName());
         }
+        if(expand != null && !expand.isEmpty()) {
+            final Map<String, Set<Name>> branches = Name.branch(expand);
+            getLinks().forEach((name, link) -> {
+                if(value.containsKey(name)) {
+                    result.put(name, link.create(value.get(name), branches.get(name), suppress));
+                }
+            });
+        }
         return new Instance(result);
     }
 
