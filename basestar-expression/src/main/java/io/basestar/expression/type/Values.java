@@ -95,6 +95,10 @@ public class Values {
             } catch (final NumberFormatException e) {
                 throw new TypeConversionException(Long.class, value);
             }
+        } else if(value instanceof LocalDate) {
+            return ISO8601.toMillis((LocalDate)value);
+        } else if(value instanceof Instant) {
+            return ISO8601.toMillis((Instant)value);
         } else {
             throw new TypeConversionException(Long.class, value);
         }
@@ -114,6 +118,10 @@ public class Values {
             } catch (final NumberFormatException e) {
                 throw new TypeConversionException(Double.class, value);
             }
+        } else if(value instanceof LocalDate) {
+            return (double)ISO8601.toMillis((LocalDate)value);
+        } else if(value instanceof Instant) {
+            return (double)ISO8601.toMillis((Instant)value);
         } else {
             throw new TypeConversionException(Double.class, value);
         }

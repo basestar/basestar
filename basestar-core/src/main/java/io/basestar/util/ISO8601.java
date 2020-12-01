@@ -182,4 +182,14 @@ public class ISO8601 {
         // FIXME: should support non-ambiguous prefix datetimes, fill in missing values with zeros/firsts
         return parseDateTime(value);
     }
+
+    public static Long toMillis(final Instant value) {
+
+        return value.toEpochMilli();
+    }
+
+    public static Long toMillis(final LocalDate value) {
+
+        return value.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
+    }
 }
