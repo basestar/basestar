@@ -70,18 +70,6 @@ public class ForAll implements Binary {
         return new ForAll(lhs, rhs);
     }
 
-//    @Override
-//    public Expression bind(final Context context, final Path root) {
-//
-//        final Expression yield = this.yield.bind(context, root);
-//        final Expression with = this.with.bind(context, root);
-//        if(yield == this.yield && with == this.with) {
-//            return this;
-//        } else {
-//            return new ForAll(yield, with);
-//        }
-//    }
-
     @Override
     public Boolean evaluate(final Context context) {
 
@@ -119,12 +107,6 @@ public class ForAll implements Binary {
                 .addAll(rhs.names())
                 .build();
     }
-
-//    @Override
-//    public Query query() {
-//
-//        return Query.and();
-//    }
 
     @Override
     public String token() {

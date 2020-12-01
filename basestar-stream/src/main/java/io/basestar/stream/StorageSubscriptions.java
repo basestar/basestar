@@ -113,12 +113,10 @@ public class StorageSubscriptions implements Subscriptions {
 
     private static byte[] binaryKey(final Subscription.Key key) {
 
-        final List<Object> keys = new ArrayList<>();
-        keys.add(key.getSchema().toString());
-        keys.add(key.getIndex());
-        keys.addAll(key.getPartition());
-
-        return UseBinary.binaryKey(keys);
+        final List<Object> prefix = new ArrayList<>();
+        prefix.add(key.getSchema().toString());
+        prefix.add(key.getIndex());
+        return UseBinary.concat(UseBinary.binaryKey(prefix), key.getPartition());
     }
 
     private static Expression keyExpression(final Subscription.Key key) {

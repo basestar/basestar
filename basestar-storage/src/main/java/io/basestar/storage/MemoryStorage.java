@@ -150,7 +150,7 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
                 } else {
                     if(!satisfy.getSort().isEmpty()) {
                         final byte[] sortLo = UseBinary.binaryKey(satisfy.getSort());
-                        final byte[] sortHi = UseBinary.binaryKey(satisfy.getSort(), new byte[]{0});
+                        final byte[] sortHi = UseBinary.concat(UseBinary.binaryKey(satisfy.getSort()), new byte[]{0});
                         results = Lists.newArrayList(partition.tailMap(new IndexSort(sortLo, null), true)
                                 .headMap(new IndexSort(sortHi, null)).values());
                     } else {
@@ -200,18 +200,6 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
             public CompletableFuture<BatchResponse> read() {
 
                 return BatchResponse.mergeFutures(futures.stream());
-//
-//                return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]))
-//                        .thenApply(ignored -> {
-//                                final List<Map<String, Object>> results = new ArrayList<>();
-//                                futures.forEach(future -> {
-//                                    final Map<String, Object> result = future.getNow(null);
-//                                    if(result != null) {
-//                                        results.add(result);
-//                                    }
-//                                });
-//                                return new BatchResponse.Basic(results);
-//                        });
             }
         };
     }
@@ -345,9 +333,9 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
 
                 items.add(state -> {
 
-
-                    final IndexPartition partKey = new IndexPartition(schema.getQualifiedName(), index.getName(), UseBinary.binaryKey(key.getPartition()));
-                    final IndexSort sortKey = new IndexSort(UseBinary.binaryKey(key.getSort()), index.isUnique() ? null : id);
+                    final Index.Key.Binary binaryKey = key.binary();
+                    final IndexPartition partKey = new IndexPartition(schema.getQualifiedName(), index.getName(), binaryKey.getPartition());
+                    final IndexSort sortKey = new IndexSort(binaryKey.getSort(), index.isUnique() ? null : id);
 
                     final Map<IndexSort, Map<String, Object>> partition = state.index
                             .computeIfAbsent(partKey, k -> new TreeMap<>());
@@ -441,15 +429,6 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
                 }
             }
             return Comparator.<String>nullsFirst(Comparator.naturalOrder()).compare(id, other.id);
-//            if(id == null && other.id == null) {
-//                return 0;
-//            } else if(id == null && other.id != null) {
-//                return -1;
-//            } else if(other.id == null) {
-//                return 1;
-//            } else {
-//                return id.compareTo(other.id);
-//            }
         }
     }
 

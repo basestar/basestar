@@ -66,7 +66,6 @@ public interface FieldType {
     static String keywordSuffix(boolean caseSensitive) {
 
         // FIXME
-//        return "";
         return caseSensitive ? "" : "." + IKEYWORD_FIELD;
     }
 

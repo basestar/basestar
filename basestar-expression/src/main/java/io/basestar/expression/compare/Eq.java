@@ -73,18 +73,6 @@ public class Eq implements Binary {
         return Boolean.class;
     }
 
-//    @Override
-//    public Query query() {
-//
-//        if(lhs instanceof PathConstant && rhs instanceof Constant) {
-//            return Query.eq(((PathConstant) lhs).getPath(), ((Constant) rhs).getValue());
-//        } else if(lhs instanceof Constant && rhs instanceof PathConstant) {
-//            return Query.eq(((PathConstant) rhs).getPath(), ((Constant) lhs).getValue());
-//        } else {
-//            return Query.and();
-//        }
-//    }
-
     @Override
     public String token() {
 
@@ -108,16 +96,6 @@ public class Eq implements Binary {
 
         return Binary.super.toString(lhs, rhs);
     }
-
-//    public static Matcher<Eq> matcher() {
-//
-//        return matcher(lhs -> lhs, rhs -> rhs, (a, b) -> this);
-//    }
-//
-//    public static <A, B> Matcher<Eq> matcher(final Matcher<A> lhs, final Matcher<B> rhs) {
-//
-//        return matcher(lhs, rhs, (a, b) -> this);
-//    }
 
     public static <A, B, R> Matcher<R> match(final Matcher<A> lhs, final Matcher<B> rhs, final BiFunction<A, B, R> then) {
 

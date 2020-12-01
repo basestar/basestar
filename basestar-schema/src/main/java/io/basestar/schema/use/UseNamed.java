@@ -213,7 +213,7 @@ public interface UseNamed<T> extends Use<T> {
         }
 
         @Override
-        public boolean equal(final Object a, final Object b) {
+        public boolean areEqual(final Object a, final Object b) {
 
             throw new UnsupportedOperationException();
         }

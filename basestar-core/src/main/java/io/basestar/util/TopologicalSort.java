@@ -25,6 +25,10 @@ import java.util.function.Function;
 
 public class TopologicalSort {
 
+    private TopologicalSort() {
+
+    }
+
     public static <T> boolean isSorted(final Iterable<? extends T> in, final Function<T, ? extends Iterable<? extends T>> dependency) {
 
         final Set<T> seen = new HashSet<>();

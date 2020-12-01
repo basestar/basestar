@@ -94,10 +94,6 @@ public interface TypeMapper extends Serializable {
             return new OfLocalDateTime();
         } else if (Instant.class.isAssignableFrom(erased)) {
             return new OfInstant();
-        } else if (Map.class.isAssignableFrom(erased)) {
-            final TypeContext mapContext = type.find(Map.class);
-            final TypeContext valueType = mapContext.typeParameters().get(1).type();
-            return new OfMap(type.erasedType(), context.typeMapper(valueType));
         } else if (Object.class.equals(erased)) {
             return new OfAny();
         } else if (Name.class.equals(erased)) {

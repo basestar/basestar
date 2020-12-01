@@ -87,8 +87,6 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
             output = sort(from, output, schema.getSort());
         }
 
-//        System.out.println("View transform input (after filter):\n" + output.showString(10, 80, false));
-
         final Map<String, Set<Name>> branches = Name.branch(schema.getFrom().getExpand());
         final AggregateExtractingVisitor visitor = new AggregateExtractingVisitor();
         final Map<String, TypedExpression> columns = new HashMap<>();
@@ -142,8 +140,6 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
         output = output.select(selectColumns.toArray(new Column[0]));
 
-//        System.out.println("View transform output:\n" + output.showString(10, 80, false));
-
         return output;
     }
 
@@ -188,23 +184,7 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
             if(path.get(0).equals(Reserved.THIS)) {
                 final Name rest = path.withoutFirst();
                 if(rest.isEmpty()) {
-//                    final Column[] columns = Arrays.stream(ds.columns())
-//                            .filter(from::hasMember)
-//                            .map(ds::col).toArray(Column[]::new);
                     return functions.struct(ds.col(ObjectSchema.ID));
-//                    // FIXME:
-//                    final Set<Name> expand;
-//                    if (from instanceof LinkableSchema) {
-//                        expand = ((LinkableSchema) from).getExpand();
-//                    } else {
-//                        expand = Collections.emptySet();
-//                    }
-//                    final StructType structType = SparkSchemaUtils.structType(from, expand);
-//                    final UserDefinedFunction conform = functions.udf(
-//                            (UDF1<Object, Object>) v -> SparkSchemaUtils.conform(v, structType),
-//                            structType
-//                    );
-//                    return conform.apply(functions.struct(Arrays.stream(ds.columns()).map(ds::col).toArray(Column[]::new)));
                 } else {
                     return next(ds.col(rest.get(0)), rest.withoutFirst());
                 }

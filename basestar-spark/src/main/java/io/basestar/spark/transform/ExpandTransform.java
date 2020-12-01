@@ -192,8 +192,6 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         Dataset<Row> output = input;
         for (final RequiredRef requiredRef : requiredRefs) {
 
-//            System.out.println("Before expanding refs " + requiredRef.getSchema().getQualifiedName() + ":\n" + output.showString(10, 80, false));
-
             final Dataset<Row> refInput = cache(resolver.resolveAndConform(requiredRef.getSchema(), requiredRef.getExpand()));
 
             final StructField refIdField = SparkSchemaUtils.field(REF_ID_COLUMN, DataTypes.StringType);
@@ -255,8 +253,6 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
             };
 
             output = grouped.mapGroups(collect, RowEncoder.apply(output.schema()));
-
-//            System.out.println("After expanding refs " + requiredRef.getSchema().getQualifiedName() + ":\n" + output.showString(10, 80, false));
         }
 
         return output;

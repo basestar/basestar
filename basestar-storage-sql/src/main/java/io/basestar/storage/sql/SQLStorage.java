@@ -771,7 +771,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         index.projectionSchema(schema).forEach((k, v) ->
                 result.put(DSL.field(DSL.name(k)), SQLUtils.toSQLValue(v, object.get(k))));
 
-        final List<Name> partitionNames = index.resolvePartitionPaths();
+        final List<Name> partitionNames = index.resolvePartitionNames();
         final List<Object> partition = key.getPartition();
         assert partitionNames.size() == partition.size();
         for(int i = 0; i != partition.size(); ++i) {

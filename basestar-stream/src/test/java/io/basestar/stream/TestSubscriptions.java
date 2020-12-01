@@ -7,6 +7,7 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
+import io.basestar.schema.use.UseBinary;
 import io.basestar.util.Name;
 import io.basestar.util.Pager;
 import org.junit.jupiter.api.Test;
@@ -17,16 +18,16 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public abstract class TestSubscriptions {
+abstract class TestSubscriptions {
 
     protected abstract Subscriptions subscriber();
 
     @Test
-    public void testSubscriber() {
+    void testSubscriber() {
 
         final Subscriptions subscriptions = subscriber();
 
-        final Set<Subscription.Key> keys = ImmutableSet.of(new Subscription.Key(Name.of("Test"), Reserved.PREFIX + ObjectSchema.ID, ImmutableList.of("id")));
+        final Set<Subscription.Key> keys = ImmutableSet.of(new Subscription.Key(Name.of("Test"), Reserved.PREFIX + ObjectSchema.ID, UseBinary.binaryKey(ImmutableList.of("id"))));
         final SubscriptionInfo info = new TestSubscriptionInfo();
 
         final Expression expression = Expression.parseAndBind(Context.init(), "id == 'x'");

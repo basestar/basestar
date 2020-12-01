@@ -153,6 +153,4 @@ public interface Caller {
             return Collections.emptyMap();
         }
     }
-
-    //boolean verify(Permission permission, Map<String, Object> context);
 }

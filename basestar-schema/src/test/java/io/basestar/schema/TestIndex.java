@@ -33,10 +33,10 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class TestIndex {
+class TestIndex {
 
     @Test
-    public void testReadRecords() {
+    void testReadRecords() {
 
         final Index index = Index.builder()
                 .setConsistency(Consistency.ASYNC)
@@ -81,13 +81,8 @@ public class TestIndex {
                 ImmutableList.of(1, 4, 8, 9), ImmutableList.of(2, 4, 8, 9), ImmutableList.of(3, 4, 8, 9),
                 ImmutableList.of(1, 5, 8, 9), ImmutableList.of(2, 5, 8, 9), ImmutableList.of(3, 5, 8, 9),
                 ImmutableList.of(1, 6, 8, 9), ImmutableList.of(2, 6, 8, 9), ImmutableList.of(3, 6, 8, 9)
-        ), records.keySet().stream()
-                .map(Index.Key::getPartition).collect(Collectors.toSet()));
-
-        assertEquals(ImmutableSet.of(
-                ImmutableList.of(10)
-        ), records.keySet().stream()
-                .map(Index.Key::getSort).collect(Collectors.toSet()));
+        ).stream().map(partition -> Index.Key.of(partition, ImmutableList.of(10))).collect(Collectors.toSet()),
+                records.keySet());
 
         assertEquals(ImmutableSet.of(
                 data

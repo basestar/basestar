@@ -42,6 +42,10 @@ public class Text {
 
     private static final Set<Character> VOWELS = ImmutableSet.of('a', 'e', 'i', 'o', 'u');
 
+    private Text() {
+
+    }
+
     public static boolean isVowel(final char c) {
 
         return VOWELS.contains(Character.toLowerCase(c));

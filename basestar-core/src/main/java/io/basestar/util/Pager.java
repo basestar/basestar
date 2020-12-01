@@ -97,16 +97,6 @@ public class Pager<T> {
         }
     }
 
-//    @Data
-//    private static class Item<T> {
-//
-//        private final int source;
-//
-//        private final int position;
-//
-//        private final T value;
-//    }
-
     public CompletableFuture<Page<T>> page(final int count) {
 
         return pageInternal(count)
@@ -246,11 +236,6 @@ public class Pager<T> {
 
             return page == null || paging.getOffset() >= page.size() ? null : page.get(paging.getOffset());
         }
-
-//        public State<T> pop() {
-//
-//            return this.withPaging(paging.withOffset(paging.getOffset() + 1));
-//        }
 
         public CompletableFuture<State<T>> trim(final Comparator<? super T> comparator, final T value) {
 

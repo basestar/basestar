@@ -36,10 +36,10 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class TestRangeVisitor {
+class TestRangeVisitor {
 
     @Test
-    public void testRange() {
+    void testRange() {
 
         assertEquals(ImmutableMap.of(
                 Name.of("a"), Range.eq(1),

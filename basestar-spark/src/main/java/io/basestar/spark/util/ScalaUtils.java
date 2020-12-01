@@ -42,6 +42,10 @@ import java.util.stream.Stream;
 
 public class ScalaUtils {
 
+    private ScalaUtils() {
+
+    }
+
     public static <K, V> scala.collection.immutable.Map<K, V> emptyScalaMap() {
 
         return Map$.MODULE$.empty();

@@ -4,10 +4,10 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class TestISO8601 {
+class TestISO8601 {
 
     @Test
-    public void testParseDateTime() {
+    void testParseDateTime() {
 
         // FIXME: is this rounding expected?
         assertEquals("2020-07-29T11:21:38.501Z", ISO8601.toString(ISO8601.parseDateTime("2020-07-29T11:21:38.501736Z")));
@@ -22,11 +22,10 @@ public class TestISO8601 {
         assertEquals("2020-01-01T00:00:00.000Z", ISO8601.toString(ISO8601.parseDateTime("2020-01-01T00:00:00GMT")));
         assertEquals("2020-01-01T00:00:00.000Z", ISO8601.toString(ISO8601.parseDateTime("2020-01-01T01:00:00GMT+01:00")));
         assertEquals("2020-08-12T14:34:58.977Z", ISO8601.toString(ISO8601.parseDateTime("1597242898977")));
-//        assertEquals("2020-08-12T14:34:59.000Z", ISO8601.toString(ISO8601.parseDateTime("1597242899")));
     }
 
     @Test
-    public void testParseDate() {
+    void testParseDate() {
 
         assertEquals("2019-09-24", ISO8601.toString(ISO8601.parseDate("20190924")));
         assertEquals("2020-01-01", ISO8601.toString(ISO8601.parseDate("20200101")));

@@ -21,6 +21,10 @@ public class ISO8601 {
 
     public static final DateTimeFormatter DATE_OUTPUT_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
+    private ISO8601() {
+
+    }
+
     public static final DateTimeFormatter[] DATE_INPUT_FORMATS = {
             DATE_OUTPUT_FORMAT,
             DateTimeFormatter.ISO_LOCAL_DATE,

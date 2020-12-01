@@ -28,12 +28,12 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class TestNamespace {
+class TestNamespace {
 
     private static final Name SOURCE = Name.of("source");
 
     @Test
-    public void testQualified() throws IOException {
+    void testQualified() throws IOException {
 
         final Namespace absoluteNamespace = Namespace.load(TestObjectSchema.class.getResource("qualified.yml"));
 
@@ -44,13 +44,5 @@ public class TestNamespace {
         final Namespace dependencyExpandSchema = Namespace.from(absoluteSchema.dependencies(absoluteSchema.getExpand()));
 
         assertThrows(SchemaValidationException.class, () -> absoluteNamespace.relative(SOURCE));
-//
-//        assertThrows(SchemaValidationException.class, () -> dependencySchema.relative(SOURCE));
-//
-//        final Namespace relativeNamespace = dependencyExpandSchema.relative(SOURCE);
-//
-//        final ObjectSchema relativeSchema = relativeNamespace.requireObjectSchema(Name.of("A"));
-//
-//        assertEquals(2, relativeSchema.dependencies().size());
     }
 }

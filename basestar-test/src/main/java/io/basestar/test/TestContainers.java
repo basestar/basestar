@@ -91,94 +91,101 @@ public class TestContainers {
 
         log.info("Checking to see if ({}) is running", spec);
 
-        final String hash = spec.getHash();
-        final List<Container> running = docker.listContainersCmd()
-                .withLabelFilter(ImmutableMap.of(HASH_LABEL, hash))
-                .exec();
-
-        final String containerId;
-
-        if(running.isEmpty()) {
-
-            log.info("Creating container ({})", spec);
-
-            // FIXME: deprecated port bindings
-            final CreateContainerResponse createResponse = docker.createContainerCmd(spec.getImage())
-                    .withEnv(spec.getEnv())
-                    .withPortBindings(spec.getPorts().stream()
-                            .map(v -> PortBinding.parse(v.toString()))
-                            .collect(Collectors.toList()))
-                    .withLabels(ImmutableMap.of("hash", hash))
-                    .exec();
-
-            containerId = createResponse.getId();
-
-            docker.startContainerCmd(containerId).exec();
-
-        } else {
-
-            containerId = running.iterator().next().getId();
-
-            log.info("Already running ({})", containerId);
-        }
-
-        final String logName = spec.getImage();
-
         final CompletableFuture<?> future = new CompletableFuture<>();
 
-        final Pattern waitFor = spec.getWaitFor();
+        try {
 
-        docker.logContainerCmd(containerId)
-                .withStdOut(true)
-                .withFollowStream(true)
-                .exec(new ResultCallback<Frame>() {
+            final String hash = spec.getHash();
+            final List<Container> running = docker.listContainersCmd()
+                    .withLabelFilter(ImmutableMap.of(HASH_LABEL, hash))
+                    .exec();
 
-                    private boolean waiting = waitFor != null;
+            final String containerId;
 
-                    @Override
-                    public void close() {
+            if(running.isEmpty()) {
 
-                        log.debug("{}: CLOSE", logName);
-                    }
+                log.info("Creating container ({})", spec);
 
-                    @Override
-                    public void onStart(final Closeable closeable) {
+                // FIXME: deprecated port bindings
+                final CreateContainerResponse createResponse = docker.createContainerCmd(spec.getImage()) // NOSONAR
+                        .withEnv(spec.getEnv())
+                        .withPortBindings(spec.getPorts().stream()
+                                .map(v -> PortBinding.parse(v.toString()))
+                                .collect(Collectors.toList()))
+                        .withLabels(ImmutableMap.of("hash", hash))
+                        .exec();
 
-                        log.debug("{}: START", logName);
-                    }
+                containerId = createResponse.getId();
 
-                    @Override
-                    public void onNext(final Frame frame) {
+                docker.startContainerCmd(containerId).exec();
 
-                        final String line = new String(frame.getPayload(), Charsets.UTF_8).trim();
-                        if(waiting) {
-                            log.debug("{}: {}", logName, line);
-                            if (waitFor.matcher(line).matches()) {
-                                waiting = false;
-                                future.complete(null);
-                            }
-                        } else {
-                            log.trace("{}: {}", logName, line);
+            } else {
+
+                containerId = running.iterator().next().getId();
+
+                log.info("Already running ({})", containerId);
+            }
+
+            final String logName = spec.getImage();
+
+            final Pattern waitFor = spec.getWaitFor();
+
+            docker.logContainerCmd(containerId)
+                    .withStdOut(true)
+                    .withFollowStream(true)
+                    .exec(new ResultCallback<Frame>() {
+
+                        private boolean waiting = waitFor != null;
+
+                        @Override
+                        public void close() {
+
+                            log.debug("{}: CLOSE", logName);
                         }
-                    }
 
-                    @Override
-                    public void onError(final Throwable throwable) {
+                        @Override
+                        public void onStart(final Closeable closeable) {
 
-                        log.debug("{}: ERROR", logName, throwable);
-                        future.completeExceptionally(throwable);
-                    }
+                            log.debug("{}: START", logName);
+                        }
 
-                    @Override
-                    public void onComplete() {
+                        @Override
+                        public void onNext(final Frame frame) {
 
-                        log.debug("{}: COMPLETE", logName);
-                        future.complete(null);
-                    }
-                });
+                            final String line = new String(frame.getPayload(), Charsets.UTF_8).trim();
+                            if(waiting) {
+                                log.debug("{}: {}", logName, line);
+                                if (waitFor.matcher(line).matches()) {
+                                    waiting = false;
+                                    future.complete(null);
+                                }
+                            } else {
+                                log.trace("{}: {}", logName, line);
+                            }
+                        }
 
-        if(waitFor == null) {
-            future.complete(null);
+                        @Override
+                        public void onError(final Throwable throwable) {
+
+                            log.debug("{}: ERROR", logName, throwable);
+                            future.completeExceptionally(throwable);
+                        }
+
+                        @Override
+                        public void onComplete() {
+
+                            log.debug("{}: COMPLETE", logName);
+                            future.complete(null);
+                        }
+                    });
+
+            if(waitFor == null) {
+                future.complete(null);
+            }
+
+        } catch (final Exception e) {
+            log.error("Test container failed", e);
+            future.completeExceptionally(e);
         }
 
         return future;

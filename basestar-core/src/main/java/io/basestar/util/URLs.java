@@ -11,6 +11,10 @@ import java.util.stream.Stream;
 
 public class URLs {
 
+    private URLs() {
+
+    }
+
     public static List<URL> all(final List<URL> urls) {
 
         return all(urls.stream()).collect(Collectors.toList());

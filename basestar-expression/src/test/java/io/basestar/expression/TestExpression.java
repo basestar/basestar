@@ -51,7 +51,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
-public class TestExpression {
+class TestExpression {
 
     private final ExpressionCache cache = new ExpressionCache();
 
@@ -107,13 +107,13 @@ public class TestExpression {
     }
 
     @Test
-    public void testNull() {
+    void testNull() {
 
         check("null", null);
     }
 
     @Test
-    public void testPrecedence() {
+    void testPrecedence() {
 
         check("1 || 2 in [2]", true);
         check("2 + 3 * 5", 17);
@@ -123,7 +123,7 @@ public class TestExpression {
     }
 
     @Test
-    public void testArithmetic() {
+    void testArithmetic() {
 
         check("-1 - -2", 1);
         check("1 + 3", 4);
@@ -137,7 +137,7 @@ public class TestExpression {
     }
 
     @Test
-    public void testLogical() {
+    void testLogical() {
 
         check("!\"\"", true);
         check("!\"a\"", false);
@@ -147,33 +147,33 @@ public class TestExpression {
     }
 
     @Test
-    public void testLiteral() {
+    void testLiteral() {
 
         check("{\"a\": 1, \"b\": [2, 3]}", ImmutableMap.of("a", 1L, "b", ImmutableList.of(2L, 3L)));
     }
 
     @Test
-    public void testMember() {
+    void testMember() {
 
         check("a.x.y", 5, context(ImmutableMap.of("a", ImmutableMap.of("x", ImmutableMap.of("y", 5)))));
     }
 
     @Test
-    public void testIndex() {
+    void testIndex() {
 
         check("a[5]", 5, context(ImmutableMap.of("a", ImmutableList.of(0, 1, 2, 3, 4, 5))));
         check("\"test\"[2]", "s", context(ImmutableMap.of("a", ImmutableMap.of("x", 5))));
     }
 
     @Test
-    public void testString() {
+    void testString() {
 
         check("'blah\\'blah'", "blah'blah");
         check("\"blah\\\"blah\"", "blah\"blah");
     }
 
     @Test
-    public void testCompare() {
+    void testCompare() {
 
         Stream.of(
                 Pair.of(1, 2),
@@ -210,7 +210,7 @@ public class TestExpression {
     }
 
     @Test
-    public void testEquals() {
+    void testEquals() {
 
         Stream.of(
                 Pair.of(ImmutableMap.of("a", 1), ImmutableMap.of("a", 1L)),
@@ -229,14 +229,14 @@ public class TestExpression {
     }
 
     @Test
-    public void testWith() {
+    void testWith() {
 
         check("with(z = 100) with(x = 5, y = 10) (x + y) * z", 1500);
         //check("with(100 as z) with(5 as x, 10 as y) (x + y) * z", 1500);
     }
 
     @Test
-    public void testLambda() {
+    void testLambda() {
 
         check("(x => x + x)(1)", 2);
         check("((x, y) => x * y)(2, 4)", 8);
@@ -244,14 +244,14 @@ public class TestExpression {
     }
 
     @Test
-    public void testCall() {
+    void testCall() {
 
         check("\"test\".size()", 4);
         check("[].size()", 0);
     }
 
     @Test
-    public void testForObject() {
+    void testForObject() {
 
         check("{k : k for (k, v) of {\"a\":1, \"b\":2}}", ImmutableMap.of(
                 "a", "a", "b", "b"
@@ -259,46 +259,46 @@ public class TestExpression {
     }
 
     @Test
-    public void testForArray() {
+    void testForArray() {
 
         check("[v.id for v of [{\"id\": 1}]]", ImmutableList.of(1L));
     }
 
     @Test
-    public void testForSet() {
+    void testForSet() {
 
         check("{v.id for v of [{\"id\": \"a\"}, {\"id\": \"b\"}]}", ImmutableSet.of("a", "b"));
     }
 
     @Test
-    public void testForAll() {
+    void testForAll() {
 
         check("v.id < 3 for all v of [{\"id\": 1}, {\"id\": 2}]", true);
         check("v.id < 3 for all v of [{\"id\": 2}, {\"id\": 3}]", false);
     }
 
     @Test
-    public void testForAny() {
+    void testForAny() {
 
         check("v.id < 2 for any v of [{\"id\": 1}, {\"id\": 2}]", true);
         check("v.id < 2 for any v of [{\"id\": 2}, {\"id\": 3}]", false);
     }
 
     @Test
-    public void testIn() {
+    void testIn() {
 
         check("3 in [1, 2, 3, 4]", true);
         check("5 in [1, 2, 3, 4]", false);
     }
 
     @Test
-    public void testWhere() {
+    void testWhere() {
 
         check("[v.id for v of [{\"id\": \"a\"}, {\"id\": \"b\"}] where v.id==\"a\"]", ImmutableList.of("a"));
     }
 
     @Test
-    public void testComplex() {
+    void testComplex() {
 
         final String expr = "this.owner.id == caller.id && this.users.anyMatch(u => u.id == caller.id)";
         check(expr, true, context(ImmutableMap.of(
@@ -320,7 +320,7 @@ public class TestExpression {
 
     @Test
     @Disabled
-    public void testLambdaBind() {
+    void testLambdaBind() {
 
         final Expression unbound = Expression.parse("[1].map(v => a)").bind(context());
         assertTrue(unbound instanceof LambdaCall);
@@ -367,7 +367,7 @@ public class TestExpression {
     }
 
     @Test
-    public void testBitwise() {
+    void testBitwise() {
 
         check("15315 << 2", 61260);
         check("15315 >> 5", 478);
@@ -380,7 +380,7 @@ public class TestExpression {
     // FIXME
     @Test
     @Disabled
-    public void testStar() {
+    void testStar() {
 
         check("a.*.x", Arrays.asList(1, 2), context(ImmutableMap.of(
                 "a", ImmutableList.of(
@@ -412,7 +412,7 @@ public class TestExpression {
     }
 
     @Test
-    public void testBindWith() {
+    void testBindWith() {
 
         final Expression expression = Expression.parse("with(m = a) m");
         final Expression bound = expression.bind(Context.init(), Renaming.addPrefix(Name.of("this")));
@@ -420,7 +420,7 @@ public class TestExpression {
     }
 
     @Test
-    public void testBindForAny() {
+    void testBindForAny() {
 
         final Expression expression = Expression.parse("m.id for any m of members");
         final Expression bound = expression.bind(Context.init(), Renaming.addPrefix(Name.of("this")));
@@ -428,7 +428,7 @@ public class TestExpression {
     }
 
     @Test
-    public void testBindForAll() {
+    void testBindForAll() {
 
         final Expression expression = Expression.parse("m.id for all m of members");
         final Expression bound = expression.bind(Context.init(), Renaming.addPrefix(Name.of("this")));
@@ -436,7 +436,7 @@ public class TestExpression {
     }
 
     @Test
-    public void testBindWhere() {
+    void testBindWhere() {
 
         final Expression expression = Expression.parse("m of members where m.id");
         final Expression bound = expression.bind(Context.init(), Renaming.addPrefix(Name.of("this")));
@@ -444,7 +444,7 @@ public class TestExpression {
     }
 
     @Test
-    public void testBindOf() {
+    void testBindOf() {
 
         final Expression expression = Expression.parse("k of [1, 2, 3]");
         final Expression bound = expression.bind(Context.init());
@@ -452,7 +452,7 @@ public class TestExpression {
     }
 
     @Test
-    public void testBindForArray() {
+    void testBindForArray() {
 
         final Expression expression = Expression.parse("[k for k of [1, 2, 3]]");
         final Expression bound = expression.bind(Context.init());
@@ -460,7 +460,7 @@ public class TestExpression {
     }
 
     @Test
-    public void testBindForSet() {
+    void testBindForSet() {
 
         final Expression expression = Expression.parse("{k for k of [1, 2, 3]}");
         final Expression bound = expression.bind(Context.init());
@@ -468,7 +468,7 @@ public class TestExpression {
     }
 
     @Test
-    public void testBindForMap() {
+    void testBindForMap() {
 
         final Expression expression = Expression.parse("{k:k * 2 for k of [1, 2, 3]}");
         final Expression bound = expression.bind(Context.init());
@@ -476,27 +476,27 @@ public class TestExpression {
     }
 
     @Test
-    public void testLike() {
+    void testLike() {
 
         final Expression expression = Expression.parse("'abc' like 'a%'");
         final Expression bound = expression.bind(Context.init());
     }
 
     @Test
-    public void testThrowOnSingleEquals() {
+    void testThrowOnSingleEquals() {
 
         assertThrows(BadExpressionException.class, () -> Expression.parse("x = y"));
     }
 
     @Test
-    public void testExtant() {
+    void testExtant() {
 
         Expression.parse("asset.fileType != 'UNKNOWN' && location.locationType == 'INBOX' && ('2018' IN asset.tags || 'student' IN asset.tags)");
         Expression.parse("asset.fileType != 'UNKNOWN' && location.locationType == 'INBOX' && ('DSR' IN asset.fileType || 'ERN' IN asset.fileType)");
     }
 
     @Test
-    public void testDateTimeFormat() {
+    void testDateTimeFormat() {
 
         check("v.toString('YYYY')", "2020", context(ImmutableMap.of(
                 "v", LocalDate.parse("2020-01-01")
@@ -524,43 +524,4 @@ public class TestExpression {
 
         check("null.toDatetime()", null, context(ImmutableMap.of()));
     }
-
-//    @Test
-//    public void testPatternMatching() {
-////
-////        final Eq src = new Eq(new PathConstant(Path.of("hello")), new PathConstant(Path.of("world")));
-////
-////        final Path result = Eq.match(PathConstant.match(), PathConstant.match(), (p1, p2) -> p1.getPath().with(p2.getPath()))
-////                .match(src);
-////
-////        assertEquals(Path.of("hello", "world"), result);
-////
-////        ForAny.match(null, Of.match(PathConstant.match(), p -> p.getPath()));
-//
-////        Expression.parse("x for any y of z");
-//    }
-
-    /*
-
-        final Expression lhs = expression.getLhs();
-        final Expression rhs = expression.getRhs();
-        if(rhs instanceof Of) {
-            final Of of = (Of)rhs;
-            if(of.getExpr() instanceof PathConstant) {
-                final Path path = ((PathConstant) of.getExpr()).getPath();
-                // map keys not supported
-                if(of.getKey() == null) {
-                    final String value = of.getValue();
-                    final Set<Path> paths = lhs.paths();
-
-                    final Expression bound = lhs.bind(Context.init(), PathTransform.move(Path.of(value), path));
-
-
-                    return null;
-                }
-            }
-        }
-        return null;
-    }
-     */
 }

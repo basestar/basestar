@@ -19,10 +19,10 @@ import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class TestAuthenticatingAPI {
+class TestAuthenticatingAPI {
 
     @Test
-    public void testAuth() throws IOException, ExecutionException, InterruptedException {
+    void testAuth() throws IOException, ExecutionException, InterruptedException {
 
         final Authenticator authenticator = new BasicAuthenticator() {
             @Override

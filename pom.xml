@@ -78,7 +78,6 @@
         <module>basestar-event</module>
         <module>basestar-event-sns</module>
         <module>basestar-event-sqs</module>
-        <module>basestar-example</module>
         <module>basestar-expression</module>
         <module>basestar-jackson</module>
         <module>basestar-mapper</module>

@@ -75,18 +75,6 @@ public class Gte implements Binary {
         return Boolean.class;
     }
 
-//    @Override
-//    public Query query() {
-//
-//        if(lhs instanceof PathConstant && rhs instanceof Constant) {
-//            return Query.gte(((PathConstant) lhs).getPath(), ((Constant) rhs).getValue());
-//        } else if(lhs instanceof Constant && rhs instanceof PathConstant) {
-//            return Query.lt(((PathConstant) rhs).getPath(), ((Constant) lhs).getValue());
-//        } else {
-//            return Query.and();
-//        }
-//    }
-
     @Override
     public String token() {
 

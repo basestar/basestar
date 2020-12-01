@@ -9,9 +9,9 @@ package io.basestar.storage.sql;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -91,28 +91,6 @@ public interface SQLStrategy {
 
             return RowMapper.forInstance(columnStrategy, schema, expand);
         }
-
-//        private List<Field<?>> columns(final ObjectSchema schema) {
-//
-//            final List<Field<?>> result = new ArrayList<>();
-//            schema.metadataSchema().forEach((name, type) -> {
-//                columnStrategy.columnMapper(type).toColumns(name).forEach((col, dt) -> {
-//                    result.add(DSL.field(DSL.name(col), dt));
-//                });
-//            });
-//            schema.getProperties().forEach((name, property) -> {
-//                final Use<?> type = property.getType();
-//                columnStrategy.columnMapper(type).toColumns(name).forEach((col, dt) -> {
-//                    result.add(DSL.field(DSL.name(col), dt));
-//                });
-//            });
-//            return result;
-//        }
-//
-//        private List<Field<?>> columns(final ObjectSchema schema, final Index index) {
-//
-//            return columns(schema);
-//        }
 
         @Override
         public void createTables(final DSLContext context, final Collection<ObjectSchema> schemas) {

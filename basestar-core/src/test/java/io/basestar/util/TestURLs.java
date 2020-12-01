@@ -12,10 +12,10 @@ import java.nio.file.StandardOpenOption;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class TestURLs {
+class TestURLs {
 
     @Test
-    public void testAll() throws IOException {
+    void testAll() throws IOException {
 
         final String target = "target/test/urls";
         Files.createDirectories(Paths.get(target, "a/b/c"));

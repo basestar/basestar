@@ -76,12 +76,6 @@ public class Cmp implements Binary {
         return Integer.class;
     }
 
-//    @Override
-//    public Query query() {
-//
-//        return Query.and();
-//    }
-
     @Override
     public String token() {
 

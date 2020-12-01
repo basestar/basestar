@@ -33,7 +33,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Comparator;
-import java.util.List;
 import java.util.Set;
 
 @Data
@@ -74,7 +73,7 @@ public class Subscription {
 
         private String index;
 
-        private List<Object> partition;
+        private byte[] partition;
     }
 
     @Data

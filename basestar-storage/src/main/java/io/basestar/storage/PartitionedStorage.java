@@ -66,9 +66,7 @@ public abstract class PartitionedStorage implements Storage.WithWriteIndex {
             final Map<Name, Range<Object>> query = new HashMap<>();
             for(final Map.Entry<Name, Range<Object>> entry : conjunction.visit(new RangeVisitor()).entrySet()) {
                 final Name name = entry.getKey();
-//                if(path.isChild(Path.of(Reserved.THIS))) {
-                    query.put(name, entry.getValue());
-//                }
+                query.put(name, entry.getValue());
             }
 
             final Optional<String> optId = constantId(query);

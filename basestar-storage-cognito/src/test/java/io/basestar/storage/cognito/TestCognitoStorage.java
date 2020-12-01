@@ -27,8 +27,8 @@ import io.basestar.schema.*;
 import io.basestar.schema.use.UseNamed;
 import io.basestar.schema.use.UseString;
 import io.basestar.storage.Storage;
-import io.basestar.util.Name;
 import io.basestar.storage.Versioning;
+import io.basestar.util.Name;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.regions.Region;
@@ -41,7 +41,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Disabled
-public class TestCognitoStorage {
+class TestCognitoStorage {
 
     protected Namespace namespace() {
 
@@ -65,7 +65,7 @@ public class TestCognitoStorage {
     }
 
     @Test
-    public void testCreate() {
+    void testCreate() {
 
         final Storage storage = storage();
 
@@ -119,7 +119,7 @@ public class TestCognitoStorage {
     }
 
     @Test
-    public void testGetMissing() {
+    void testGetMissing() {
 
         final Storage storage = storage();
 

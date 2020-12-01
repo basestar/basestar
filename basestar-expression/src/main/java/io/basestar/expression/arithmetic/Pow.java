@@ -79,12 +79,6 @@ public class Pow implements Binary {
         return VISITOR.apply(Values.defaultValue(lhs.type(context)), Values.defaultValue(rhs.type(context))).getClass();
     }
 
-//    @Override
-//    public Query query() {
-//
-//        return Query.and();
-//    }
-
     @Override
     public String token() {
 

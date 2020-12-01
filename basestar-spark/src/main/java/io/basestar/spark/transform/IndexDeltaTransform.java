@@ -2,6 +2,7 @@ package io.basestar.spark.transform;
 
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Index;
+import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.schema.use.Use;
@@ -49,13 +50,20 @@ public class IndexDeltaTransform implements Transform<Dataset<Tuple2<Row, Row>>,
             final Index.Diff diff = index.diff(before, after);
 
             final Stream<Row> upsert = Stream.of(diff.getCreate(), diff.getUpdate())
-                    .flatMap(v -> v.values().stream())
-                    .map(v -> Nullsafe.immutableCopyPut(v, Reserved.DELETED, false))
-                    .map(v -> SparkSchemaUtils.toSpark(schema, index, extraMetadata, structType, v));
+                    .flatMap(source -> source.entrySet().stream())
+                    .map(entry -> {
+                        final Map<String, Object> data = Nullsafe.immutableCopyPut(entry.getValue(), Reserved.DELETED, false);
+                        return SparkSchemaUtils.toSpark(schema, index, extraMetadata, structType, entry.getKey().binary(), data);
+                    });
 
             final Stream<Row> delete = diff.getDelete().stream()
-                    .map(k -> index.keyToValue(k, ImmutableMap.of(Reserved.DELETED, true)))
-                    .map(v -> SparkSchemaUtils.toSpark(schema, index, extraMetadata, structType, v));
+                    .map(key -> {
+                        final Map<String, Object> data = ImmutableMap.of(
+                                ObjectSchema.ID, Instance.getId(before),
+                                Reserved.DELETED, true
+                        );
+                        return SparkSchemaUtils.toSpark(schema, index, extraMetadata, structType, key.binary(), data);
+                    });
 
             return Stream.concat(upsert, delete).iterator();
 

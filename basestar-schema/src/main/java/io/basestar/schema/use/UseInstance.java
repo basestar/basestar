@@ -105,8 +105,8 @@ public interface UseInstance extends UseNamed<Instance>, UseLayout {
     }
 
     @Override
-    default boolean equal(final Instance a, final Instance b) {
+    default boolean areEqual(final Instance a, final Instance b) {
 
-        return getSchema().equal(a, b);
+        return getSchema().areEqual(a, b);
     }
 }

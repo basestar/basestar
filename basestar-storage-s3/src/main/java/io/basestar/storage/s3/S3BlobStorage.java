@@ -205,14 +205,6 @@ public class S3BlobStorage implements Storage.WithoutWriteIndex, Storage.Without
                 return this;
             }
 
-//            @Override
-//            public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
-//
-//                steps.add(() -> writeHistory(schema, id, version, after)
-//                        .thenApply(v -> BatchResponse.empty()));
-//                return this;
-//            }
-
             @Override
             public CompletableFuture<BatchResponse> write() {
 

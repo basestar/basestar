@@ -85,7 +85,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
 
     interface Builder<T> extends Descriptor<T>, Extendable {
 
-        Builder<T> setExtensions(Map<String, Object> extensions);
+        Builder<T> setExtensions(Map<String, Serializable> extensions);
     }
 
     default T create(final Object value) {

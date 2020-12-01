@@ -3,7 +3,7 @@ package io.basestar.storage;
 import io.basestar.schema.Namespace;
 import io.basestar.storage.replica.ReplicaStorage;
 
-public class TestReplicaStorage extends TestStorage {
+class TestReplicaStorage extends TestStorage {
 
     @Override
     protected Storage storage(final Namespace namespace) {

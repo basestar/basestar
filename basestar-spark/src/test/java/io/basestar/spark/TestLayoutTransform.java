@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
-public class TestLayoutTransform extends AbstractSparkTest {
+class TestLayoutTransform extends AbstractSparkTest {
 
     @Data
     @NoArgsConstructor
@@ -32,11 +32,9 @@ public class TestLayoutTransform extends AbstractSparkTest {
     }
 
     @Test
-    public void testObjectIdLayout() throws Exception {
+    void testObjectIdLayout() throws Exception {
 
-        final SparkSession session = SparkSession.builder()
-                .master("local[*]")
-                .getOrCreate();
+        final SparkSession session = session();
 
         final Namespace namespace = Namespace.load(SparkDatabaseTest.class.getResourceAsStream("schema.yml"));
 
@@ -52,7 +50,6 @@ public class TestLayoutTransform extends AbstractSparkTest {
         );
 
         final SchemaResolver resolver = new SchemaResolver.Automatic((schema, expand) -> datasets.get(schema.getQualifiedName()));
-//        final ColumnResolver<Row> columnResolver = ColumnResolver.lowercase(ColumnResolver::nested);
 
         final Dataset<Row> ds = resolver.resolve(a);
 

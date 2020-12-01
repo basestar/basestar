@@ -141,12 +141,12 @@ public class UseBinary implements UseScalar<byte[]> {
         return NAME;
     }
 
+//    public static byte[] binaryKey(final Object ... keys) {
+//
+//        return binaryKey(ImmutableList.copyOf(keys));
+//    }
+
     public static byte[] binaryKey(final List<?> keys) {
-
-        return binaryKey(keys, null);
-    }
-
-    public static byte[] binaryKey(final List<?> keys, final byte[] suffix) {
 
         final byte T_NULL = 1;
         final byte T_FALSE = 2;
@@ -188,10 +188,21 @@ public class UseBinary implements UseScalar<byte[]> {
                 }
             }
 
-            if(suffix != null) {
-                baos.write(suffix);
-            }
+        } catch (final IOException e) {
+            throw new IllegalStateException(e);
+        }
 
+        return baos.toByteArray();
+    }
+
+    public static byte[] concat(final byte[] ... arrays) {
+
+        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        try {
+            for(final byte[] array : arrays) {
+                baos.write(array);
+            }
         } catch (final IOException e) {
             throw new IllegalStateException(e);
         }
@@ -225,7 +236,7 @@ public class UseBinary implements UseScalar<byte[]> {
     }
 
     @Override
-    public boolean equal(final byte[] a, final byte[] b) {
+    public boolean areEqual(final byte[] a, final byte[] b) {
 
         if(a == null || b == null) {
             return a == null && b == null;

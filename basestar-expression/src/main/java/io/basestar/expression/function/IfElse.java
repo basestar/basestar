@@ -108,12 +108,6 @@ public class IfElse implements Expression {
         return Values.commonType(then.type(context), otherwise.type(context));
     }
 
-//    @Override
-//    public Query query() {
-//
-//        return Query.and();
-//    }
-
     @Override
     public Set<Name> names() {
 

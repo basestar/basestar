@@ -76,44 +76,4 @@ public interface Emitter {
                     .toArray(CompletableFuture<?>[]::new));
         }
     }
-
-//    interface OversizeHandler {
-//
-//        CompletableFuture<String> write(String id, byte[] data);
-//
-//        static OversizeHandler fail() {
-//
-//            return Fail.INSTANCE;
-//        }
-//
-//        class Fail implements OversizeHandler {
-//
-//            public static Fail INSTANCE = new Fail();
-//
-//            @Override
-//            public CompletableFuture<String> write(final String id, final byte[] data) {
-//
-//                throw new UnsupportedOperationException();
-//            }
-//        }
-//
-////        @Data
-////        class S3 implements OversizeHandler {
-////
-////            private final S3AsyncClient s3;
-////
-////            private final String bucket;
-////
-////            private final String prefix;
-////
-////            @Override
-////            public CompletableFuture<String> write(final String id, final byte[] data) {
-////
-////                final PutObjectRequest request = PutObjectRequest.builder()
-////                        .bucket(bucket).key(prefix + id).build();
-////                return s3.putObject(request, AsyncRequestBody.fromBytes(data))
-////                        .thenApply(ignored -> id);
-////            }
-////        }
-//    }
 }

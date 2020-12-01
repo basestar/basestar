@@ -56,8 +56,6 @@ public interface Expression extends Serializable {
         return as.cast(evaluate(context));
     }
 
-    //    Query query();
-
     Set<Name> names();
 
     String token();
@@ -97,8 +95,4 @@ public interface Expression extends Serializable {
 
         return copy(expressions().stream().map(fn).collect(Collectors.toList()));
     }
-
-    //    Set<And> disjunction();
-//
-//    Map<Path, Object> constants();
 }

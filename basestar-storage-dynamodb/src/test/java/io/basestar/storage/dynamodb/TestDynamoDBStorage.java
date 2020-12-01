@@ -29,6 +29,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.model.*;
 
@@ -40,7 +43,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletionException;
 
 @Slf4j
-public class TestDynamoDBStorage extends TestStorage {
+class TestDynamoDBStorage extends TestStorage {
 
     private static final int WAIT_ATTEMPTS = 10;
 
@@ -51,16 +54,27 @@ public class TestDynamoDBStorage extends TestStorage {
     private final List<String> tableNames = new ArrayList<>();
 
     @BeforeAll
-    public static void startLocalStack() {
+    static void startLocalStack() {
 
-        Localstack.start();
-        ddb = DynamoDbAsyncClient.builder()
-                .endpointOverride(URI.create(Localstack.DDB_ENDPOINT))
-                .build();
+        try {
+
+            Localstack.startDynamoDB();
+            ddb = DynamoDbAsyncClient.builder()
+                    .endpointOverride(URI.create(Localstack.DDB_ENDPOINT))
+                    .region(Region.US_EAST_1)
+                    .credentialsProvider(StaticCredentialsProvider.create(
+                            AwsBasicCredentials.create("local", "stack")
+                    ))
+                    .build();
+
+        } catch (final Exception e) {
+            log.error("Failed to initialize DynamoDB", e);
+            throw e;
+        }
     }
 
     @AfterAll
-    public static void close() {
+    static void close() {
 
         if(ddb != null) {
             ddb.close();
@@ -69,7 +83,7 @@ public class TestDynamoDBStorage extends TestStorage {
     }
 
     @AfterEach
-    public void cleanup() {
+    void cleanup() {
 
         // If we don't do this, localstack eventually falls over
         tableNames.forEach(tableName -> ddb.deleteTable(DeleteTableRequest.builder().tableName(tableName).build()));
@@ -120,17 +134,17 @@ public class TestDynamoDBStorage extends TestStorage {
     }
 
     @Override
-    public void testNullBeforeDelete() {
+    protected void testNullBeforeDelete() {
 
     }
 
     @Override
-    public void testNullBeforeUpdate() {
+    protected void testNullBeforeUpdate() {
 
     }
 
     @Override
-    public boolean supportsRepair() {
+    protected boolean supportsRepair() {
 
         return true;
     }

@@ -35,9 +35,11 @@ public abstract class AbstractSparkTest {
 
     protected SparkSession session() {
 
-        return SparkSession.builder()
+        final SparkSession session = SparkSession.builder()
                 .master("local[*]")
                 .getOrCreate();
+        session.sparkContext().setLogLevel("WARN");
+        return session;
     }
 
     @Data
@@ -233,7 +235,7 @@ public abstract class AbstractSparkTest {
 
         private Map<String, String> tags;
 
-        public File(final String id) {
+        File(final String id) {
 
             this(id, null);
         }

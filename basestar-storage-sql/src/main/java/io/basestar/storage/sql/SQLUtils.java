@@ -9,9 +9,9 @@ package io.basestar.storage.sql;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -435,15 +435,6 @@ public class SQLUtils {
         return order == Sort.Order.ASC ? SortOrder.ASC : SortOrder.DESC;
     }
 
-//    public static List<OrderField<?>> orderFields(final Index index) {
-//
-//        return Stream.concat(
-//                index.getPartition().stream().map(v -> DSL.field(DSL.name(v.toString()))),
-//                index.getSort().stream().map(v -> DSL.field(DSL.name(v.getName().toString()))
-//                        .sort(sort(v.getOrder())))
-//        ).collect(Collectors.toList());
-//    }
-
     public static List<OrderField<?>> indexKeys(final ObjectSchema schema, final Index index) {
 
         return Stream.concat(
@@ -465,7 +456,7 @@ public class SQLUtils {
 
     public static List<Field<?>> fields(final ObjectSchema schema, final Index index) {
 
-        final List<Name> partitionNames = index.resolvePartitionPaths();
+        final List<Name> partitionNames = index.resolvePartitionNames();
         final List<Sort> sortPaths = index.getSort();
 
         return Stream.of(
@@ -493,7 +484,7 @@ public class SQLUtils {
     public static Constraint primaryKey(final ObjectSchema schema, final Index index) {
 
         final List<org.jooq.Name> names = new ArrayList<>();
-        index.resolvePartitionPaths().forEach(v -> names.add(columnName(v)));
+        index.resolvePartitionNames().forEach(v -> names.add(columnName(v)));
         index.getSort().forEach(v -> names.add(columnName(v.getName())));
         return DSL.primaryKey(names.toArray(new org.jooq.Name[0]));
     }

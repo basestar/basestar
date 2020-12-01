@@ -22,7 +22,7 @@ package io.basestar.storage;
 
 import io.basestar.schema.Namespace;
 
-public class TestMemoryStorage extends TestStorage {
+class TestMemoryStorage extends TestStorage {
 
     @Override
     protected Storage storage(final Namespace namespace) {

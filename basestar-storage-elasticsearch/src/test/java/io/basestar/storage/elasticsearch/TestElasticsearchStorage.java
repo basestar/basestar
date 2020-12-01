@@ -36,12 +36,12 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 
-public class TestElasticsearchStorage extends TestStorage {
+class TestElasticsearchStorage extends TestStorage {
 
     private static final int PORT = 9200;
 
     @BeforeAll
-    public static void startLocalStack() {
+    static void startLocalStack() {
 
         TestContainers.ensure(ContainerSpec.builder()
                 .image("docker.elastic.co/elasticsearch/elasticsearch:7.4.0")
@@ -75,19 +75,19 @@ public class TestElasticsearchStorage extends TestStorage {
     }
 
     @Override
-    public boolean supportsLike() {
+    protected boolean supportsLike() {
 
         return true;
     }
 
     @Override
-    public void testMultiValueIndex() {
+    protected void testMultiValueIndex() {
 
         // Skipped
     }
 
     @Override
-    public void testLarge() {
+    protected void testLarge() {
 
         // Skipped
     }

@@ -46,27 +46,27 @@ public class Localstack {
 
     public static final String KINESIS_ENDPOINT = ENDPOINT_PREFIX + KINESIS_PORT;
 
-    public static void start() {
+    public static void startDynamoDB() {
 
         // Localstack's Dynamodb is total crap - fails and requires a restart after a handful of requests.
         TestContainers.ensure(ContainerSpec.builder()
                 .image("amazon/dynamodb-local:latest")
                 .port(DDB_PORT)
-                .waitFor(Pattern.compile("CorsParams"))
-                .build());
+                .waitFor(Pattern.compile("CorsParams:.*"))
+                .build()).join();
+    }
 
-//        final File dataDir = Files.createTempDir();
-//        final File tmpDir = Files.createTempDir();
+    public static void start() {
+
+        startDynamoDB();
 
         TestContainers.ensure(ContainerSpec.builder()
                 .image("localstack/localstack:latest")
                 .env("SERVICES=s3,sqs,sns")
-//                .env("DATA_DIR=" + dataDir)
-//                .env("HOST_TMP_FOLDER=" + tmpDir)
+                .env("DEFAULT_REGION=us-east-1")
                 .port(S3_PORT)
                 .port(SQS_PORT)
                 .port(SNS_PORT)
-//                .port(KINESIS_PORT)
                 .waitFor(Pattern.compile("Ready\\."))
                 .build()).join();
     }

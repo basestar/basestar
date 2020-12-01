@@ -49,6 +49,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.util.*;
 
@@ -72,7 +73,7 @@ public class Property implements Member {
     private final boolean immutable;
 
     @Nullable
-    private final Object defaultValue;
+    private final Serializable defaultValue;
 
     @Nullable
     private final Expression expression;
@@ -84,7 +85,7 @@ public class Property implements Member {
     private final Visibility visibility;
 
     @Nonnull
-    private final Map<String, Object> extensions;
+    private final Map<String, Serializable> extensions;
 
     @JsonDeserialize(as = Builder.class)
     public interface Descriptor extends Member.Descriptor {
@@ -169,7 +170,7 @@ public class Property implements Member {
 
         @Getter(AccessLevel.NONE)
         @Setter(AccessLevel.NONE)
-        private Object defaultValue;
+        private Serializable defaultValue;
 
         @JsonSerialize(using = ToStringSerializer.class)
         @JsonDeserialize(using = ExpressionDeserializer.class)
@@ -181,14 +182,14 @@ public class Property implements Member {
         private Visibility visibility;
 
         @Nullable
-        private Map<String, Object> extensions;
+        private Map<String, Serializable> extensions;
 
         public Object getDefault() {
 
             return defaultValue;
         }
 
-        public void setDefault(final Object value) {
+        public void setDefault(final Serializable value) {
 
             this.defaultValue = value;
         }
@@ -209,14 +210,10 @@ public class Property implements Member {
 
     public Property(final Descriptor builder, final Schema.Resolver schemaResolver, final Version version, final Name qualifiedName) {
 
-        // FIXME
-//        if(Reserved.isReserved(qualifiedName.last())) {
-//            throw new ReservedNameException(qualifiedName);
-//        }
         this.qualifiedName = qualifiedName;
         this.description = builder.getDescription();
         this.type = legacyFix(qualifiedName, builder.getType().resolve(schemaResolver), builder.getRequired(), version);
-        this.defaultValue = Nullsafe.map(builder.getDefault(), type::create);
+        this.defaultValue = (Serializable)Nullsafe.map(builder.getDefault(), type::create);
         this.immutable = Nullsafe.orDefault(builder.getImmutable());
         this.expression = builder.getExpression();
         this.constraints = Nullsafe.immutableCopy(builder.getConstraints());
@@ -474,7 +471,7 @@ public class Property implements Member {
             }
 
             @Override
-            public Map<String, Object> getExtensions() {
+            public Map<String, Serializable> getExtensions() {
 
                 return extensions;
             }

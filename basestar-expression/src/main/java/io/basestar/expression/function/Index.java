@@ -110,12 +110,6 @@ public class Index implements Binary {
         }
     }
 
-//    @Override
-//    public Query query() {
-//
-//        return Query.and();
-//    }
-
     @Override
     public String token() {
 

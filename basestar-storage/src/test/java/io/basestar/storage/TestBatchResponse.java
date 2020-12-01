@@ -10,10 +10,10 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-public class TestBatchResponse {
+class TestBatchResponse {
 
     @Test
-    public void testGet() {
+    void testGet() {
 
         final BatchResponse response = new BatchResponse.Basic(ImmutableMap.of(
                 BatchResponse.Key.from(Name.of("Location"), ObjectSchema.ref("x")), ObjectSchema.ref("a")

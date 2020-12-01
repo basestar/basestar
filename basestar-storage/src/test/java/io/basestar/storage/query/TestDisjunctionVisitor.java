@@ -37,10 +37,10 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class TestDisjunctionVisitor {
+class TestDisjunctionVisitor {
 
     @Test
-    public void testDisjunction() {
+    void testDisjunction() {
 
         final Eq a = new Eq(new NameConstant(Name.of("a")), new Constant(1));
         final Eq b = new Eq(new NameConstant(Name.of("b")), new Constant(2));
@@ -75,7 +75,7 @@ public class TestDisjunctionVisitor {
     }
 
     @Test
-    public void testIn() {
+    void testIn() {
 
         final Expression root = Expression.parse("x.a in [1, 2]");
         final Expression bound = root.bind(Context.init());
@@ -94,7 +94,7 @@ public class TestDisjunctionVisitor {
     }
 
     @Test
-    public void testForAnyOr() {
+    void testForAnyOr() {
 
         final Expression root = Expression.parse("x.a || x.b for any x of y").bind(Context.init());
         final Set<Expression> result = disjunction(root);
@@ -113,7 +113,7 @@ public class TestDisjunctionVisitor {
     }
 
     @Test
-    public void testForAnyIn() {
+    void testForAnyIn() {
 
         final Expression root = Expression.parse("x.a in [1, 2] for any x of y");
         final Expression bound = root.bind(Context.init());

@@ -644,5 +644,5 @@ public interface Use<T> extends Serializable {
         }
     }
 
-    boolean equal(T a, T b);
+    boolean areEqual(T a, T b);
 }

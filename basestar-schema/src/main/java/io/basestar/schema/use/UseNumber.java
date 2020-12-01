@@ -124,12 +124,4 @@ public class UseNumber implements UseNumeric<Double> {
 
         return NAME;
     }
-
-//    @Override
-//    public Map<String, Object> openApiType() {
-//
-//        return ImmutableMap.of(
-//                "type", "number"
-//        );
-//    }
 }

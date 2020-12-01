@@ -35,6 +35,10 @@ import java.util.stream.Collectors;
 
 public class AvroUtils {
 
+    private AvroUtils() {
+
+    }
+
     private static String name(final io.basestar.schema.Schema<?> schema) {
 
         return schema.getQualifiedName().toString(Reserved.PREFIX);

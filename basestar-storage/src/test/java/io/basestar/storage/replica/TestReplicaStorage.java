@@ -6,7 +6,7 @@ import io.basestar.storage.MemoryStorage;
 import io.basestar.storage.Storage;
 import io.basestar.storage.TestStorage;
 
-public class TestReplicaStorage extends TestStorage {
+class TestReplicaStorage extends TestStorage {
 
     @Override
     protected Storage storage(final Namespace namespace) {

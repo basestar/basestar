@@ -37,6 +37,10 @@ import java.util.stream.Stream;
 
 public class OpenAPIUtils {
 
+    private OpenAPIUtils() {
+
+    }
+
     public static OpenAPI prefix(final OpenAPI input, final String prefix) {
 
         final OpenAPI result = new OpenAPI();

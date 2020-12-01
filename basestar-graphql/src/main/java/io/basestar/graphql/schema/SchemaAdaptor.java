@@ -544,11 +544,7 @@ public class SchemaAdaptor {
     // FIXME: review what happens when we respond null to a non-null type at GQL
     public Type<?> type(final Use<?> type) {
 
-        //if(optional) {
         return typeImpl(type);
-        //} else {
-        //    return new NonNullType(typeImpl(type));
-        //}
     }
 
     private Type<?> typeImpl(final Use<?> type) {

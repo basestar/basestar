@@ -47,6 +47,7 @@ import lombok.experimental.Accessors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.util.*;
 import java.util.function.Function;
@@ -82,17 +83,7 @@ public class Link implements Member {
     private final Visibility visibility;
 
     @Nonnull
-    private final Map<String, Object> extensions;
-
-//    @Override
-//    public Use<?> storageSchema(final Set<Name> expand) {
-//
-//        if(single) {
-//            return schema.storageSchema(expand);
-//        } else {
-//            return new UseArray<>();
-//        }
-//    }
+    private final Map<String, Serializable> extensions;
 
     @JsonDeserialize(as = Builder.class)
     public interface Descriptor extends Member.Descriptor {
@@ -140,7 +131,7 @@ public class Link implements Member {
 
         @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        private Map<String, Object> extensions;
+        private Map<String, Serializable> extensions;
     }
 
     public static Builder builder() {
@@ -205,7 +196,7 @@ public class Link implements Member {
             return ImmutableList.of(Sort.asc(schema.id()));
         } else {
             final Sort last = sort.get(sort.size() - 1);
-            if(last.getName().equals(schema.id())) {
+            if(last.getName().equals(Name.of(schema.id()))) {
                 return sort;
             } else {
                 return ImmutableList.<Sort>builder().addAll(sort)
@@ -378,7 +369,7 @@ public class Link implements Member {
         return new Descriptor() {
 
             @Override
-            public Map<String, Object> getExtensions() {
+            public Map<String, Serializable> getExtensions() {
 
                 return extensions;
             }

@@ -36,7 +36,7 @@ public interface BucketFunction extends Serializable {
     @SuppressWarnings("deprecation")
     static HashPrefix md5Prefix(final int len) {
 
-        return substring(Hashing.md5(), len);
+        return substring(Hashing.md5(), len); // NOSONAR
     }
 
     // Bucket using modulo of the murmer3 (32 bit) function, may not be able to reproduce in a DBMS

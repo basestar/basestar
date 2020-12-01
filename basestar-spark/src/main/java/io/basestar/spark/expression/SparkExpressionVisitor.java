@@ -31,6 +31,7 @@ import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.exception.BadExpressionException;
 import io.basestar.expression.function.Coalesce;
+import io.basestar.expression.function.IfElse;
 import io.basestar.expression.function.Index;
 import io.basestar.expression.literal.LiteralObject;
 import io.basestar.expression.logical.And;
@@ -140,6 +141,14 @@ public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Colu
     }
 
     @Override
+    public Column visitPow(final Pow expression) {
+
+        final Column lhs = visit(expression.getLhs());
+        final Column rhs = visit(expression.getRhs());
+        return functions.pow(lhs, rhs);
+    }
+
+    @Override
     public Column visitEq(final Eq expression) {
 
         final Column lhs = visit(expression.getLhs());
@@ -238,7 +247,7 @@ public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Colu
     @Override
     public Column visitNot(final Not expression) {
 
-        return visit(expression).unary_$bang();
+        return visit(expression.getOperand()).unary_$bang();
     }
 
     @Override
@@ -253,5 +262,11 @@ public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Colu
             }
         }
         return current == null ? lit(false) : current;
+    }
+
+    @Override
+    public Column visitIfElse(final IfElse expression) {
+
+        return functions.when(visit(expression.getPredicate()), visit(expression.getThen())).otherwise(visit(expression.getOtherwise()));
     }
 }

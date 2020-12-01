@@ -86,24 +86,6 @@ public class In implements Binary {
         return Boolean.class;
     }
 
-//    @Override
-//    public Query query() {
-//
-//        if(lhs instanceof PathConstant && rhs instanceof Constant) {
-//            final Path path= ((PathConstant)lhs).getPath();
-//            final Object value = ((Constant)rhs).getValue();
-//            if(value instanceof Collection<?>) {
-//                return Query.or(((Collection<?>) value).stream()
-//                        .map(v -> Query.eq(path, v))
-//                        .collect(Collectors.toList()));
-//            } else {
-//                throw new IllegalStateException();
-//            }
-//        } else {
-//            return Query.and();
-//        }
-//    }
-
     @Override
     public String token() {
 

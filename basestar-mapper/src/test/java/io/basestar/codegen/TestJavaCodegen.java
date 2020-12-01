@@ -26,17 +26,17 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.io.IOException;
 
-public class TestJavaCodegen {
+class TestJavaCodegen {
 
     private static final File base = new File("target/codegen");
 
-    public Namespace namespace() throws IOException {
+    Namespace namespace() throws IOException {
 
         return Namespace.load(TestJavaCodegen.class.getResource("schema.yml"));
     }
 
     @Test
-    public void testCodegen() throws IOException {
+    void testCodegen() throws IOException {
 
         final Namespace namespace = namespace();
 

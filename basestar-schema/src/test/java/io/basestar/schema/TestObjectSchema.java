@@ -40,11 +40,11 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class TestObjectSchema {
+class TestObjectSchema {
 
     @Test
     @Deprecated
-    public void testRequiredExpand() throws IOException {
+    void testRequiredExpand() throws IOException {
 
         final Namespace namespace = Namespace.load(TestObjectSchema.class.getResource("schema.yml"));
 
@@ -58,7 +58,7 @@ public class TestObjectSchema {
     }
 
     @Test
-    public void testLegacy() throws IOException {
+    void testLegacy() throws IOException {
 
         final Namespace namespace = Namespace.load(TestObjectSchema.class.getResource("legacy.yml"));
 
@@ -70,7 +70,7 @@ public class TestObjectSchema {
 
     @Test
     @SuppressWarnings("rawtypes")
-    public void testExpandCollapse() throws IOException {
+    void testExpandCollapse() throws IOException {
 
         final Namespace namespace = Namespace.load(TestObjectSchema.class.getResource("schema.yml"));
 
@@ -113,7 +113,7 @@ public class TestObjectSchema {
     }
 
     @Test
-    public void testRefQueries() throws IOException {
+    void testRefQueries() throws IOException {
 
         final Namespace namespace = Namespace.load(TestObjectSchema.class.getResource("schema.yml"));
 
@@ -126,15 +126,8 @@ public class TestObjectSchema {
         assertEquals(ImmutableSet.of(), nonQueries);
     }
 
-//    @Test
-//    public void testJsonSchema() throws IOException {
-//
-//        final JsonSchema schema = Namespace.Builder.jsonSchema();
-//        System.err.println(new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(schema));
-//    }
-
     @Test
-    public void testDependencies() throws IOException {
+    void testDependencies() throws IOException {
 
         final Namespace namespace = Namespace.load(TestObjectSchema.class.getResource("schema.yml"));
 

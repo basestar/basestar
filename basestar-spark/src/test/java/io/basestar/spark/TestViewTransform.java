@@ -38,10 +38,10 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class TestViewTransform extends AbstractSparkTest {
+class TestViewTransform extends AbstractSparkTest {
 
     @Test
-    public void testViewTransform() throws IOException {
+    void testViewTransform() throws IOException {
 
         final SparkSession session = session();
 
@@ -75,7 +75,7 @@ public class TestViewTransform extends AbstractSparkTest {
     }
 
     @Test
-    public void testAliasViewTransform() throws IOException {
+    void testAliasViewTransform() throws IOException {
 
         final SparkSession session = session();
 
@@ -101,7 +101,7 @@ public class TestViewTransform extends AbstractSparkTest {
     }
 
     @Test
-    public void testLinkingViewTransform() throws IOException {
+    void testLinkingViewTransform() throws IOException {
 
         final SparkSession session = session();
 
@@ -143,7 +143,7 @@ public class TestViewTransform extends AbstractSparkTest {
     }
 
     @Test
-    public void testLinkingViewToViewTransform() throws IOException {
+    void testLinkingViewToViewTransform() throws IOException {
 
         final SparkSession session = session();
 
@@ -162,7 +162,7 @@ public class TestViewTransform extends AbstractSparkTest {
     }
 
     @Test
-    public void testLinkingViewToViewInnerTransform() throws IOException {
+    void testLinkingViewToViewInnerTransform() throws IOException {
 
         final SparkSession session = session();
 
@@ -181,7 +181,7 @@ public class TestViewTransform extends AbstractSparkTest {
     }
 
     @Test
-    public void testExpressionTransform() throws IOException {
+    void testExpressionTransform() throws IOException {
 
         final SparkSession session = session();
 

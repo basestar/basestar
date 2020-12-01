@@ -74,12 +74,6 @@ public class Negate implements Unary {
         return operand.type(context);
     }
 
-//    @Override
-//    public Query query() {
-//
-//        return Query.and();
-//    }
-
     @Override
     public String token() {
 

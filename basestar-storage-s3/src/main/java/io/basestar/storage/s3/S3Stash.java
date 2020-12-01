@@ -96,33 +96,6 @@ public class S3Stash implements Stash {
         return client.deleteObject(request);
     }
 
-//    @Override
-//    protected CompletableFuture<String> write(final String key, final byte[] data) {
-//
-//        final PutObjectRequest request = PutObjectRequest.builder()
-//                .bucket(bucket).key(key(key)).build();
-//        return s3.putObject(request, AsyncRequestBody.fromBytes(data))
-//                .thenApply(ignored -> key);
-//    }
-//
-//    @Override
-//    protected CompletableFuture<byte[]> read(final String key) {
-//
-//        final GetObjectRequest get = GetObjectRequest.builder()
-//                .bucket(bucket).key(key(key)).build();
-//
-//        return s3.getObject(get, AsyncResponseTransformer.toBytes())
-//                .thenApply(BytesWrapper::asByteArray);
-//    }
-//
-//    @Override
-//    protected CompletableFuture<?> delete(final String key) {
-//
-//        final DeleteObjectRequest request = DeleteObjectRequest.builder()
-//                .bucket(bucket).key(key(key)).build();
-//        return s3.deleteObject(request);
-//    }
-
     private String key(final String ref) {
 
         return prefix + ref;

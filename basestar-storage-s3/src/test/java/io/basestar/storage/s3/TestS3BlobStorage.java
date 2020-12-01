@@ -33,10 +33,10 @@ import java.net.URI;
 import java.util.UUID;
 
 @Disabled
-public class TestS3BlobStorage extends TestStorage {
+class TestS3BlobStorage extends TestStorage {
 
     @BeforeAll
-    public static void startLocalStack() {
+    static void startLocalStack() {
 
         Localstack.start();
     }

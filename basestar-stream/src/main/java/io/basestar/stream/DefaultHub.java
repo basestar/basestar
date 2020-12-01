@@ -33,6 +33,7 @@ import io.basestar.event.Handlers;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
+import io.basestar.schema.use.UseBinary;
 import io.basestar.storage.PartitionedStorage;
 import io.basestar.storage.exception.UnsupportedQueryException;
 import io.basestar.storage.query.DisjunctionVisitor;
@@ -189,7 +190,7 @@ public class DefaultHub implements Hub {
 
     private static Subscription.Key idKey(final ObjectSchema schema, final String id) {
 
-        return new Subscription.Key(schema.getQualifiedName(), Reserved.PREFIX + ObjectSchema.ID, ImmutableList.of(id));
+        return new Subscription.Key(schema.getQualifiedName(), Reserved.PREFIX + ObjectSchema.ID, UseBinary.binaryKey(ImmutableList.of(id)));
     }
 
     private static Set<Subscription.Key> keys(final ObjectSchema schema, final Expression expression, final Set<Name> expand) {
@@ -207,7 +208,7 @@ public class DefaultHub implements Hub {
                 if (optSatisfy.isPresent()) {
                     final PartitionedStorage.SatisfyResult satisfy = optSatisfy.get();
                     final Index index = satisfy.getIndex();
-                    keys.add(new Subscription.Key(schema.getQualifiedName(), index.getName(), satisfy.getPartition()));
+                    keys.add(new Subscription.Key(schema.getQualifiedName(), index.getName(), UseBinary.binaryKey(satisfy.getPartition())));
                 } else {
                     throw new UnsupportedQueryException(schema.getQualifiedName(), expression, "no index");
                 }
@@ -222,7 +223,7 @@ public class DefaultHub implements Hub {
         keys.add(idKey(schema, Instance.getId(object)));
         for(final Index index : schema.getIndexes().values()) {
             index.readValues(object).forEach((k, projection) -> {
-                keys.add(new Subscription.Key(schema.getQualifiedName(), index.getName(), k.getPartition()));
+                keys.add(new Subscription.Key(schema.getQualifiedName(), index.getName(), k.binary().getPartition()));
             });
         }
         return keys;

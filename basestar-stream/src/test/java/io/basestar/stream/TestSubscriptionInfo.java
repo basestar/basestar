@@ -14,7 +14,7 @@ import java.util.Set;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class TestSubscriptionInfo implements SubscriptionInfo {
+class TestSubscriptionInfo implements SubscriptionInfo {
 
     @JsonSerialize(contentUsing = ToStringSerializer.class)
     @JsonDeserialize(contentUsing = NameDeserializer.class)

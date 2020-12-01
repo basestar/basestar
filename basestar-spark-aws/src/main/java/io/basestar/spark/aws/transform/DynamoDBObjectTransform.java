@@ -71,7 +71,8 @@ public class DynamoDBObjectTransform implements Transform<Dataset<Row>, RDD<Map<
     }
 
     @lombok.Builder(builderClassName = "Builder")
-    DynamoDBObjectTransform(final DynamoDBStrategy strategy, final ObjectSchema schema, final Format format, final Map<String, Use<?>> extraMetadata) {
+    DynamoDBObjectTransform(final DynamoDBStrategy strategy, final ObjectSchema schema, final Format format,
+                            final Map<String, Use<?>> extraMetadata) {
 
         this.strategy = Nullsafe.require(strategy);
         this.schema = Nullsafe.require(schema);

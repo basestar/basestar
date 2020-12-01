@@ -124,7 +124,7 @@ public class UseDateTime implements UseStringLike<Instant> {
     }
 
     @Override
-    public boolean equal(final Instant a, final Instant b) {
+    public boolean areEqual(final Instant a, final Instant b) {
 
         return Objects.equals(a, b);
     }

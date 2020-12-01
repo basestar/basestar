@@ -37,8 +37,6 @@ public class Loopback implements Emitter, Receiver {
 
     private final int batchSize;
 
-    //private final Multimap<String, Handler<Event>> handlers = HashMultimap.create();
-
     public Loopback() {
 
         this(DEFAULT_BATCH_SIZE);

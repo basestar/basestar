@@ -27,10 +27,10 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class TextTest {
+class TextTest {
 
     @Test
-    public void testWords() {
+    void testWords() {
 
         assertEquals(ImmutableList.of("hello", "world"), Text.words("hello_world").collect(Collectors.toList()));
         assertEquals(ImmutableList.of("hello", "world"), Text.words("hello-world").collect(Collectors.toList()));
@@ -42,14 +42,14 @@ public class TextTest {
     }
 
     @Test
-    public void testCase() {
+    void testCase() {
 
         assertEquals("helloWorld", Text.lowerCamel("HelloWorld"));
         assertEquals("AbcAbc", Text.upperCamel("abcABC"));
     }
 
     @Test
-    public void testPlural() {
+    void testPlural() {
 
         assertEquals("CATS", Text.plural("CAT"));
         assertEquals("trusses", Text.plural("truss"));
@@ -59,7 +59,6 @@ public class TextTest {
         assertEquals("taxes", Text.plural("tax"));
         assertEquals("blitzes", Text.plural("blitz"));
         assertEquals("churches", Text.plural("church"));
-//        assertEquals("gasses", Text.plural("gas"));
         assertEquals("wives", Text.plural("wife"));
         assertEquals("wolves", Text.plural("wolf"));
         assertEquals("cities", Text.plural("city"));

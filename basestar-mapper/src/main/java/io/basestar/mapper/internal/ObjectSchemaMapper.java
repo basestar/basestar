@@ -39,14 +39,6 @@ public class ObjectSchemaMapper<T> extends InstanceSchemaMapper<T, ObjectSchema.
         super(ObjectSchema.Builder.class, context, name, type);
         this.indexes = ImmutableMap.of();
         this.permissions = ImmutableMap.of();
-
-//        for(final AnnotationContext<Permission> annot : type.annotations(Permission.class)) {
-//            final Permission perm = annot.annotation();
-//            permissions.put(perm.on(), new io.basestar.schema.Permission.Builder()
-//                    .setAnonymous(perm.anon())
-//                    .setExpression(Expression.parse(perm.expression()))
-//                    .setExpand(expand(perm.expand())));
-//        }
     }
 
     private ObjectSchemaMapper(final ObjectSchemaMapper<T> copy, final String description, final Map<String, Index.Descriptor> indexes, final Map<String, Permission.Descriptor> permissions) {

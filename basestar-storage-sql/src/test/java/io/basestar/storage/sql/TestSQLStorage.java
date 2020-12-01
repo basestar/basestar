@@ -39,7 +39,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Slf4j
-public class TestSQLStorage extends TestStorage {
+class TestSQLStorage extends TestStorage {
 
     @Override
     protected Storage storage(final Namespace namespace) {

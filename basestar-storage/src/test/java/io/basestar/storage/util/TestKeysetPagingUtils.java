@@ -14,10 +14,10 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
-public class TestKeysetPagingUtils {
+class TestKeysetPagingUtils {
 
     @Test
-    public void testDatePaging() throws IOException {
+    void testDatePaging() throws IOException {
 
         final Namespace namespace = Namespace.load(TestStorage.class.getResource("schema.yml"));
 
