@@ -344,6 +344,22 @@ public class SparkSchemaUtils {
         }
     }
 
+    public static Map.Entry<Index.Key.Binary, Map<String, Object>> fromSpark(final ObjectSchema schema, final Index index, final Set<Name> expand, final Map<String, Use<?>> extraMetadata, final Row row) {
+
+        if(row == null) {
+            return null;
+        }
+        final byte[] partition = (byte[])get(row, PARTITION);
+        final byte[] sort = (byte[])get(row, SORT);
+        final Index.Key.Binary key = Index.Key.Binary.of(partition, sort);
+        final Map<String, Set<Name>> branches = Name.branch(expand);
+        final NamingConvention naming = NamingConvention.DEFAULT;
+        final Map<String, Object> projection = new HashMap<>();
+        index.projectionSchema(schema).forEach((name, type) -> projection.put(name, fromSpark(type, naming, branches.get(name), get(naming, row, name))));
+        extraMetadata.forEach((name, type) -> projection.put(name, fromSpark(type, naming, branches.get(name), get(naming, row, name))));
+        return new AbstractMap.SimpleImmutableEntry<>(key, projection);
+    }
+
     public static Map<String, Object> refFromSpark(final NamingConvention naming, final Row row) {
 
         final Map<String, Object> object = new HashMap<>();

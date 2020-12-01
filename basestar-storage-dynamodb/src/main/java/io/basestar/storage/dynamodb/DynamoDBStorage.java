@@ -429,11 +429,11 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
         return UseBinary.concat(sort, UseBinary.binaryKey(sortSuffix));
     }
 
-    public static Map<String, AttributeValue> indexItem(final DynamoDBStrategy strategy, final ObjectSchema schema, final Index index, final String id, final Index.Key key, final Map<String, Object> data) {
+    public static Map<String, AttributeValue> indexItem(final DynamoDBStrategy strategy, final ObjectSchema schema, final Index index, final String id, final Index.Key.Binary key, final Map<String, Object> data) {
 
         final ImmutableMap.Builder<String, AttributeValue> builder = ImmutableMap.builder();
         builder.putAll(DynamoDBUtils.toItem(data));
-        builder.putAll(indexKey(strategy, schema, index, id, key.binary()));
+        builder.putAll(indexKey(strategy, schema, index, id, key));
         return builder.build();
     }
 
@@ -601,7 +601,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
             items.add(TransactWriteItem.builder()
                     .put(conditionalCreate(strategy.indexPartitionName(schema, index), versioning)
                             .tableName(strategy.indexTableName(schema, index))
-                            .item(indexItem(strategy, schema, index, id, key, projection))
+                            .item(indexItem(strategy, schema, index, id, key.binary(), projection))
                             .build())
                     .build());
 
@@ -616,7 +616,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
             items.add(TransactWriteItem.builder()
                     .put(conditionalUpdate(version, Versioning.UNCHECKED)
                             .tableName(strategy.indexTableName(schema, index))
-                            .item(indexItem(strategy, schema, index, id, key, projection))
+                            .item(indexItem(strategy, schema, index, id, key.binary(), projection))
                             .build())
                     .build());
 
@@ -759,7 +759,7 @@ public class DynamoDBStorage extends PartitionedStorage implements Storage.Witho
             final String id = Instance.getId(instance);
             index.readValues(instance).forEach((key, record) -> {
                 final Map<String, AttributeValue> indexKey = indexKey(strategy, schema, index, id, key.binary());
-                final Map<String, AttributeValue> indexValues = indexItem(strategy, schema, index, id, key, record);
+                final Map<String, AttributeValue> indexValues = indexItem(strategy, schema, index, id, key.binary(), record);
                 indexRecords.put(indexKey, indexValues);
             });
         });

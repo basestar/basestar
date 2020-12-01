@@ -397,6 +397,10 @@ public class Index implements Named, Described, Serializable, Extendable {
         }
     }
 
+    /**
+     * Contains the matched partition and sort values for a given record
+     */
+
     @Data
     public static class Key {
 
@@ -413,6 +417,10 @@ public class Index implements Named, Described, Serializable, Extendable {
 
             return new Binary(UseBinary.binaryKey(partition), UseBinary.binaryKey(sort));
         }
+
+        /**
+         * Standardized binary encoding of the key (cannot be trivially converted back to Key)
+         */
 
         @Data
         public static class Binary {
