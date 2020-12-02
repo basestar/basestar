@@ -239,5 +239,10 @@
         "type": "MyEnum?"
       }
     }
+  },
+  "Readonly": {
+    "readonly": true,
+    "properties": {
+    }
   }
 }

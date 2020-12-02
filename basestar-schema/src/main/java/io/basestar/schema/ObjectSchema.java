@@ -187,6 +187,8 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
 
     private final boolean concrete;
 
+    private final boolean readonly;
+
     @Nonnull
     private final SortedMap<String, Serializable> extensions;
 
@@ -208,6 +210,8 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
         Id.Descriptor getId();
 
         Boolean getConcrete();
+
+        Boolean getReadonly();
 
         History getHistory();
 
@@ -255,6 +259,9 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
 
         @Nullable
         private Boolean concrete;
+
+        @Nullable
+        private Boolean readonly;
 
         @Nullable
         private History history;
@@ -354,6 +361,7 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
         this.declaredPermissions = Nullsafe.immutableSortedCopy(descriptor.getPermissions(), (k, v) -> v.build(k));
         this.declaredExpand = Nullsafe.immutableSortedCopy(descriptor.getExpand());
         this.concrete = Nullsafe.orDefault(descriptor.getConcrete(), Boolean.TRUE);
+        this.readonly = Nullsafe.orDefault(descriptor.getReadonly());
         this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
@@ -659,6 +667,12 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
             public Boolean getConcrete() {
 
                 return concrete;
+            }
+
+            @Override
+            public Boolean getReadonly() {
+
+                return readonly;
             }
 
             @Override

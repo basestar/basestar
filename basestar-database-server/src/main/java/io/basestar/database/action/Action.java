@@ -26,6 +26,7 @@ import io.basestar.schema.Consistency;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Permission;
+import io.basestar.storage.exception.UnsupportedWriteException;
 import io.basestar.util.Name;
 
 import java.util.Set;
@@ -47,4 +48,12 @@ public interface Action {
     Set<Name> paths();
 
     Consistency getConsistency();
+
+    default void validate() {
+
+        final ObjectSchema schema = schema();
+        if(schema.isReadonly()) {
+            throw new UnsupportedWriteException(schema.getQualifiedName(), "schema is readonly");
+        }
+    }
 }
