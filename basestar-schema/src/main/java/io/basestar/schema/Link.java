@@ -164,9 +164,9 @@ public class Link implements Member {
     public Use<?> getType() {
 
         if(single) {
-            return schema.use();
+            return schema.typeOf();
         } else {
-            return new UseArray<>(schema.use());
+            return new UseArray<>(schema.typeOf());
         }
     }
 

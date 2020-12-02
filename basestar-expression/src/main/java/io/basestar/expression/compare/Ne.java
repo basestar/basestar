@@ -27,8 +27,6 @@ import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.type.Values;
 import lombok.Data;
 
-import java.lang.reflect.Type;
-
 /**
  * Not Equal
  */
@@ -67,12 +65,6 @@ public class Ne implements Binary {
     public Boolean evaluate(final Context context) {
 
         return !Values.equals(lhs.evaluate(context), rhs.evaluate(context));
-    }
-
-    @Override
-    public Type type(final Context context) {
-
-        return Boolean.class;
     }
 
     @Override

@@ -21,15 +21,17 @@ package io.basestar.spark.transform;
  */
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.expression.aggregate.AggregateExtractingVisitor;
 import io.basestar.schema.*;
+import io.basestar.schema.expression.InferenceContext;
+import io.basestar.schema.expression.InferenceVisitor;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseBinary;
 import io.basestar.schema.use.UseBoolean;
-import io.basestar.spark.expression.SparkAggregateVisitor;
 import io.basestar.spark.expression.SparkExpressionVisitor;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.util.Name;
@@ -78,13 +80,17 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         final Context context = Context.init();
 
         final InstanceSchema from = schema.getFrom().getSchema();
+        final InferenceContext fromContext = new InferenceContext.Overlay(
+                new InferenceContext.FromSchema(from),
+                ImmutableMap.of(Reserved.THIS, new InferenceContext.FromSchema(from))
+        );
 
         Dataset<Row> output = input;
         if(schema.getWhere() != null) {
-            output = output.where(apply(from, context, output, schema.getWhere(), UseBoolean.DEFAULT));
+            output = output.where(apply(fromContext, context, output, schema.getWhere(), UseBoolean.DEFAULT));
         }
         if(!schema.getSort().isEmpty()) {
-            output = sort(from, output, schema.getSort());
+            output = sort(fromContext, output, schema.getSort());
         }
 
         final Map<String, Set<Name>> branches = Name.branch(schema.getFrom().getExpand());
@@ -98,6 +104,7 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
         final List<Column> selectColumns = new ArrayList<>();
 
+        final InferenceContext aggContext;
         if(!(aggregates.isEmpty() && schema.getGroup().isEmpty())) {
 
             final List<Column> groupColumns = new ArrayList<>();
@@ -105,15 +112,17 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
                 final String name = entry.getKey();
                 final Property prop = entry.getValue();
                 final Expression expr = Nullsafe.require(prop.getExpression());
-                groupColumns.add(apply(from, context, output, expr, prop.getType()).as(name));
+                groupColumns.add(apply(fromContext, context, output, expr, prop.getType()).as(name));
             }
             final RelationalGroupedDataset groupedOutput = output.groupBy(groupColumns.toArray(new Column[0]));
 
             final List<Column> aggColumns = new ArrayList<>();
+            final Map<String, Use<?>> aggTypes = new HashMap<>();
             for(final Map.Entry<String, Aggregate> entry : aggregates.entrySet()) {
                 final String name = entry.getKey();
                 final Aggregate agg = entry.getValue();
-                aggColumns.add(apply(from, context, output, agg).as(name));
+                aggColumns.add(apply(fromContext, context, output, agg).as(name));
+                aggTypes.put(name, new InferenceVisitor(fromContext).visit(agg));
             }
             assert !aggColumns.isEmpty();
             final Column first = aggColumns.get(0);
@@ -123,6 +132,12 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
             for(final String key : schema.getGroup()) {
                 selectColumns.add(output.col(key).as(key));
             }
+
+            aggContext = fromContext.with(aggTypes);
+
+        } else {
+
+            aggContext = fromContext;
         }
 
         final Dataset<Row> finalOutput = output;
@@ -134,7 +149,7 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         for(final Map.Entry<String, TypedExpression> entry : columns.entrySet()) {
             final String name = entry.getKey();
             final TypedExpression expression = entry.getValue();
-            selectColumns.add(apply(from, context, output, expression).as(name));
+            selectColumns.add(apply(aggContext, context, output, expression).as(name));
         }
         selectColumns.add(output.col(ViewSchema.KEY));
 
@@ -153,32 +168,33 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         private final Set<Name> expand;
     }
 
-    private Column apply(final InstanceSchema from, final Context context, final Dataset<Row> ds, final Aggregate aggregate) {
+    private Column apply(final InferenceContext from, final Context context, final Dataset<Row> ds, final Aggregate aggregate) {
 
-        return new SparkAggregateVisitor(expression -> apply(from, context, ds, expression)).visit(aggregate);
+        return new SparkExpressionVisitor(columnResolver(from, ds), from).visit(aggregate);
     }
 
-    private Column apply(final InstanceSchema from, final Context context, final Dataset<Row> ds, final Expression expression) {
+    private Column apply(final InferenceContext from, final Context context, final Dataset<Row> ds, final Expression expression) {
 
-        return new SparkExpressionVisitor(columnResolver(from, ds)).visit(expression.bind(context));
+        return new SparkExpressionVisitor(columnResolver(from, ds), from).visit(expression.bind(context));
     }
 
-    private Column apply(final InstanceSchema from, final Context context, final Dataset<Row> ds, final TypedExpression expression) {
+    private Column apply(final InferenceContext from, final Context context, final Dataset<Row> ds, final TypedExpression expression) {
 
         return apply(from, context, ds, expression.getExpression(), expression.getType(), expression.getExpand());
     }
 
-    private Column apply(final InstanceSchema from, final Context context, final Dataset<Row> ds, final Expression expression, final Use<?> type) {
+    private Column apply(final InferenceContext from, final Context context, final Dataset<Row> ds, final Expression expression, final Use<?> type) {
 
         return apply(from, context, ds, expression, type, null);
     }
 
-    private Column apply(final InstanceSchema from, final Context context, final Dataset<Row> ds, final Expression expression, final Use<?> type, final Set<Name> expand) {
+    private Column apply(final InferenceContext from, final Context context, final Dataset<Row> ds, final Expression expression, final Use<?> type, final Set<Name> expand) {
 
-        return SparkSchemaUtils.cast(apply(from, context, ds, expression), type, expand);
+        final Use<?> expressionType = new InferenceVisitor(from).visit(expression);
+        return SparkSchemaUtils.cast(apply(from, context, ds, expression), expressionType, type, expand);
     }
 
-    private Function<Name, Column> columnResolver(final InstanceSchema from, final Dataset<Row> ds) {
+    private Function<Name, Column> columnResolver(final InferenceContext from, final Dataset<Row> ds) {
 
         return path -> {
             if(path.get(0).equals(Reserved.THIS)) {
@@ -194,7 +210,7 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         };
     }
 
-    private Dataset<Row> sort(final InstanceSchema from, final Dataset<Row> ds, final List<Sort> sort) {
+    private Dataset<Row> sort(final InferenceContext from, final Dataset<Row> ds, final List<Sort> sort) {
 
         final Function<Name, Column> columnResolver = columnResolver(from, ds);
         return ds.sort(sort.stream()

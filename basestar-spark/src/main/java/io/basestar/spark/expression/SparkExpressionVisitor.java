@@ -23,13 +23,13 @@ package io.basestar.spark.expression;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
+import io.basestar.expression.aggregate.*;
 import io.basestar.expression.arithmetic.*;
 import io.basestar.expression.call.Callable;
 import io.basestar.expression.call.MemberCall;
 import io.basestar.expression.compare.*;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.NameConstant;
-import io.basestar.expression.exception.BadExpressionException;
 import io.basestar.expression.function.Coalesce;
 import io.basestar.expression.function.IfElse;
 import io.basestar.expression.function.Index;
@@ -37,6 +37,12 @@ import io.basestar.expression.literal.LiteralObject;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
+import io.basestar.expression.methods.Methods;
+import io.basestar.schema.expression.InferenceContext;
+import io.basestar.schema.expression.InferenceVisitor;
+import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseNumeric;
+import io.basestar.schema.use.UseStringLike;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
@@ -44,10 +50,11 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.StringType;
 
 import java.lang.reflect.Type;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -59,12 +66,18 @@ public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Colu
 
     private final Function<Name, Column> columnResolver;
 
+    private final InferenceContext inferenceContext;
+
+    private final Methods methods;
+
     private final Context context;
 
-    public SparkExpressionVisitor(final Function<Name, Column> columnResolver) {
+    public SparkExpressionVisitor(final Function<Name, Column> columnResolver, final InferenceContext inferenceContext) {
 
         this.columnResolver = columnResolver;
-        this.context = Context.init();
+        this.inferenceContext = inferenceContext;
+        this.methods = Methods.builder().defaults().build();
+        this.context = Context.init(methods);
     }
 
     @Override
@@ -76,15 +89,23 @@ public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Colu
     @Override
     public Column visitIndex(final Index expression) {
 
-        final Object rhs = expression.getRhs().evaluate(context);
-        if(rhs instanceof Number) {
-            final int at = expression.getRhs().evaluateAs(Number.class, context).intValue();
-            return functions.element_at(visit(expression.getLhs()), at + 1);
-        } else if(rhs instanceof String) {
-            return visit(expression.getLhs()).getField((String)rhs);
+        final Column lhs = visit(expression.getLhs());
+        final Column rhs = visit(expression.getRhs());
+        final Use<?> rhsType = typeOf(expression.getRhs());
+        if(rhsType instanceof UseNumeric) {
+            return functions.element_at(lhs, rhs.plus(1));
         } else {
-            throw new BadExpressionException("RHS must be constant number or string");
+            return functions.element_at(lhs, rhs);
         }
+//        final
+//        if(rhs instanceof Number) {
+//            final int at = expression.getRhs().evaluateAs(Number.class, context).intValue();
+//            return functions.element_at(visit(expression.getLhs()), at + 1);
+//        } else if(rhs instanceof String) {
+//            return visit(expression.getLhs()).getField((String)rhs);
+//        } else {
+//            throw new BadExpressionException("RHS must be constant number or string");
+//        }
     }
 
     @Override
@@ -101,8 +122,8 @@ public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Colu
 
         final Column lhs = visit(expression.getLhs());
         final Column rhs = visit(expression.getRhs());
-        // FIXME add concat for lists and maps here
-        if(lhs.expr().dataType() instanceof StringType || rhs.expr().dataType() instanceof StringType) {
+        final Use<?> type = typeOf(expression);
+        if(type instanceof UseStringLike<?>) {
             return functions.concat(lhs.cast(DataTypes.StringType), rhs.cast(DataTypes.StringType));
         } else {
             return lhs.plus(rhs);
@@ -199,7 +220,26 @@ public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Colu
     @Override
     public Column visitConstant(final Constant expression) {
 
-        return lit(expression.getValue());
+        final Object value = expression.getValue();
+        return literal(value);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Column literal(final Object value) {
+
+        if(value instanceof Collection) {
+            final Column[] columns = ((Collection<?>)value).stream()
+                    .map(SparkExpressionVisitor::literal)
+                    .toArray(Column[]::new);
+            return functions.array(columns);
+        } else if(value instanceof Map) {
+            final Column[] columns = ((Map<String, ?>)value).entrySet().stream()
+                    .flatMap(e -> Stream.of(functions.lit(e.getKey()), literal(e.getValue())))
+                    .toArray(Column[]::new);
+            return functions.map(columns);
+        } else {
+            return functions.lit(value);
+        }
     }
 
     @Override
@@ -214,12 +254,17 @@ public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Colu
         final Column with = this.visit(expression.getWith());
         final Column[] args = expression.getArgs().stream().map(this::visit).toArray(Column[]::new);
         final Type withType = SparkSchemaUtils.type(with.expr().dataType()).javaType();
-        final Type[] argTypes = Arrays.stream(args).map(v -> SparkSchemaUtils.type(v.expr().dataType()).javaType()).toArray(Type[]::new);
+        final Type[] argTypes = expression.getArgs().stream().map(v -> typeOf(v).javaType()).toArray(Type[]::new);
         final Callable callable = context.callable(withType, expression.getMember(), argTypes);
 
         final UserDefinedFunction udf = SparkSchemaUtils.udf(callable);
         final Column[] mergedArgs = Stream.concat(Stream.of(with), Arrays.stream(args)).toArray(Column[]::new);
         return udf.apply(mergedArgs);
+    }
+
+    private Use<?> typeOf(final Expression expression) {
+
+        return new InferenceVisitor(inferenceContext).visit(expression);
     }
 
     @Override
@@ -268,5 +313,47 @@ public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Colu
     public Column visitIfElse(final IfElse expression) {
 
         return functions.when(visit(expression.getPredicate()), visit(expression.getThen())).otherwise(visit(expression.getOtherwise()));
+    }
+
+    @Override
+    public Column visitSum(final Sum expression) {
+
+        final Column input = visit(expression.getInput());
+        return functions.sum(input);
+    }
+
+    @Override
+    public Column visitCollectArray(final CollectArray expression) {
+
+        final Column input = visit(expression.getInput());
+        return functions.collect_list(input);
+    }
+
+    @Override
+    public Column visitMin(final Min expression) {
+
+        final Column input = visit(expression.getInput());
+        return functions.min(input);
+    }
+
+    @Override
+    public Column visitMax(final Max expression) {
+
+        final Column input = visit(expression.getInput());
+        return functions.max(input);
+    }
+
+    @Override
+    public Column visitAvg(final Avg expression) {
+
+        final Column input = visit(expression.getInput());
+        return functions.avg(input);
+    }
+
+    @Override
+    public Column visitCount(final Count expression) {
+
+        final Column input = visit(expression.getPredicate());
+        return functions.count(input);
     }
 }

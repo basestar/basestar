@@ -3,11 +3,12 @@ package io.basestar.expression.methods;
 import io.basestar.expression.type.Values;
 import io.basestar.util.ISO8601;
 
+import java.io.Serializable;
 import java.time.Instant;
 import java.time.LocalDate;
 
 @SuppressWarnings("unused")
-public class ObjectMethods {
+public class ObjectMethods implements Serializable {
 
     public Long toBoolean(final Object value) {
 

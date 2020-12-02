@@ -31,7 +31,6 @@ import io.basestar.expression.type.Values;
 import io.basestar.util.Name;
 import lombok.Data;
 
-import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Set;
 
@@ -47,7 +46,7 @@ public class IfElse implements Expression {
 
     public static final String TOKEN = "?:";
 
-    public static final int PRECEDENCE = Operator.PRECEDENCE + 1;
+    public static final int PRECEDENCE = Coalesce.PRECEDENCE + 1;
 
     private final Expression predicate;
 
@@ -100,12 +99,6 @@ public class IfElse implements Expression {
         } else {
             return otherwise.evaluate(context);
         }
-    }
-
-    @Override
-    public Type type(final Context context) {
-
-        return Values.commonType(then.type(context), otherwise.type(context));
     }
 
     @Override

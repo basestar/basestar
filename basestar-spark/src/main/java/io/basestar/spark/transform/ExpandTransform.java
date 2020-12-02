@@ -20,9 +20,11 @@ package io.basestar.spark.transform;
  * #L%
  */
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
+import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.*;
 import io.basestar.spark.expression.SparkExpressionVisitor;
 import io.basestar.spark.resolver.ColumnResolver;
@@ -87,35 +89,39 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         output = propertiesExpand(output, schema, expand);
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
-        if (schema instanceof Link.Resolver) {
-            for (final Map.Entry<String, Link> entry : ((Link.Resolver) schema).getLinks().entrySet()) {
-                final Set<Name> branch = branches.get(entry.getKey());
-                if (branch != null) {
-                    output = linkExpand(output, entry.getValue(), branch);
-                }
+        for (final Map.Entry<String, Link> entry : schema.getLinks().entrySet()) {
+            final Set<Name> branch = branches.get(entry.getKey());
+            if (branch != null) {
+                output = linkExpand(schema, output, entry.getValue(), branch);
             }
         }
+
         return output;
     }
 
     // NOTE: try to do some of the grouping steps using collect_list etc and compare performance
 
-    private Dataset<Row> linkExpand(final Dataset<Row> input, final Link link, final Set<Name> expand) {
+    private Dataset<Row> linkExpand(final LinkableSchema schema, final Dataset<Row> input, final Link link, final Set<Name> expand) {
 
         final String rootIdColumn = this.schema.id();
         final Use<?> rootIdType = this.schema.typeOfId();
 
-        return linkExpand(input, link, expand, rootIdColumn, rootIdType);
+        return linkExpand(schema, input, link, expand, rootIdColumn, rootIdType);
     }
 
     @SuppressWarnings("unchecked")
-    private <T> Dataset<Row> linkExpand(final Dataset<Row> input, final Link link, final Set<Name> expand, final String rootIdColumn, final Use<T> rootIdType) {
+    private <T> Dataset<Row> linkExpand(final LinkableSchema schema, final Dataset<Row> input, final Link link, final Set<Name> expand, final String rootIdColumn, final Use<T> rootIdType) {
 
         final String linkName = link.getName();
 
         final LinkableSchema linkSchema = link.getSchema();
 
         final Dataset<Row> linkInput = resolver.resolveAndConform(linkSchema, expand);
+
+        final InferenceContext inferenceContext = new InferenceContext.Overlay(
+                new InferenceContext.FromSchema(linkSchema),
+                ImmutableMap.of(Reserved.THIS, new InferenceContext.FromSchema(schema))
+        );
 
         final Expression expression = link.getExpression();
         final Column joinCondition = expression.visit(new SparkExpressionVisitor(name -> {
@@ -125,7 +131,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
             } else {
                 return columnResolver.resolve(linkInput, name);
             }
-        }));
+        }, inferenceContext));
 
         final Dataset<Tuple2<Row, Row>> joined = input.joinWith(linkInput, joinCondition, "left_outer");
 

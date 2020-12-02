@@ -4,6 +4,7 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Namespace;
+import io.basestar.schema.expression.InferenceContext;
 import io.basestar.spark.expression.SparkExpressionVisitor;
 import io.basestar.spark.resolver.ColumnResolver;
 import io.basestar.spark.resolver.SchemaResolver;
@@ -45,11 +46,14 @@ public class SparkDatabase {
 
             final Dataset<Row> input = resolver.resolve(schema, expand);
 
+            final InferenceContext inferenceContext = new InferenceContext.FromSchema(schema);
+
             Dataset<Row> output = input;
             if(query != null) {
                 final Expression bound = query.bind(Context.init());
                 final SparkExpressionVisitor visitor = new SparkExpressionVisitor(
-                        name -> ColumnResolver.nested(input, name)
+                        name -> ColumnResolver.nested(input, name),
+                        inferenceContext
                 );
                 output = output.filter(bound.visit(visitor));
             }

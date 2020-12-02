@@ -224,7 +224,7 @@ public class StructSchema implements InstanceSchema {
     }
 
     @Override
-    public UseStruct use() {
+    public UseStruct typeOf() {
 
         return new UseStruct(this);
     }

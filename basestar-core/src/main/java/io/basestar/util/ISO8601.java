@@ -192,4 +192,16 @@ public class ISO8601 {
 
         return value.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
     }
+
+    @SuppressWarnings("deprecation")
+    public static java.sql.Date toSqlDate(final LocalDate date) {
+
+        // Deprecated, but seems more reliable than the other constructors, which end up with hrs, mins, secs embedded and breaks equals/hashcode
+        return new java.sql.Date(date.getYear() - 1900, date.getMonthValue() - 1, date.getDayOfMonth());
+    }
+
+    public static java.sql.Timestamp toSqlTimestamp(final Instant instant) {
+
+        return new java.sql.Timestamp(instant.toEpochMilli());
+    }
 }

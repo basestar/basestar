@@ -198,7 +198,7 @@ public class EnumSchema implements Schema<String> {
     }
 
     @Override
-    public UseEnum use() {
+    public UseEnum typeOf() {
 
         return new UseEnum(this);
     }

@@ -26,7 +26,6 @@ import com.google.common.io.BaseEncoding;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.exception.UnexpectedTypeException;
-import io.basestar.schema.layout.Layout;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseInstance;
 import io.basestar.schema.use.UseString;
@@ -41,7 +40,7 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
-public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolver, Property.Resolver {
+public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Property.Resolver {
 
     Instance create(Map<String, Object> value, Set<Name> expand, boolean suppress);
 
@@ -86,14 +85,6 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
 
     SortedMap<String, Use<?>> metadataSchema();
 
-    default SortedMap<String, Use<?>> schema() {
-
-        final SortedMap<String, Use<?>> result = new TreeMap<>();
-        metadataSchema().forEach(result::put);
-        getMembers().forEach((name, member) -> result.put(name, member.getType()));
-        return result;
-    }
-
     default SortedMap<String, Use<?>> layoutSchema(final Set<Name> expand) {
 
         // This is the canonical layout, by definition
@@ -107,18 +98,6 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
         return result;
     }
 
-    @Override
-    default Map<String, Object> applyLayout(final Set<Name> expand, final Map<String, Object> object) {
-
-        return create(object, expand, true);
-    }
-
-    @Override
-    default Map<String, Object> unapplyLayout(final Set<Name> expand, final Map<String, Object> object) {
-
-        return create(object, expand, true);
-    }
-
     InstanceSchema getExtend();
 
     default Set<Name> getExpand() {
@@ -127,7 +106,7 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
     }
 
     @Override
-    UseInstance use();
+    UseInstance typeOf();
 
     String id();
 
@@ -187,7 +166,7 @@ public interface InstanceSchema extends Schema<Instance>, Layout, Member.Resolve
     default <T> Use<T> typeOf(final Name name) {
 
         if(name.isEmpty()) {
-            throw new IllegalStateException();
+            return (Use<T>) typeOf();
         } else {
             final String first = name.first();
             final Map<String, Use<?>> metadataSchema = metadataSchema();

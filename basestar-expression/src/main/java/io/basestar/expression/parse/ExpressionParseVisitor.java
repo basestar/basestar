@@ -21,6 +21,7 @@ package io.basestar.expression.parse;
  */
 
 import io.basestar.expression.Expression;
+import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.expression.arithmetic.Add;
 import io.basestar.expression.arithmetic.Div;
 import io.basestar.expression.arithmetic.Mod;
@@ -140,6 +141,15 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
             final String method = ctx.Identifier().getText();
             return new MemberCall(with, method, args);
         } else {
+            if(with instanceof NameConstant) {
+                final Name name = ((NameConstant) with).getName();
+                if(name.size() == 1) {
+                    final Aggregate.Factory factory = Aggregate.factory(name.first());
+                    if(factory != null) {
+                        return factory.create(args);
+                    }
+                }
+            }
             return new LambdaCall(with, args);
         }
     }
@@ -355,12 +365,6 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
     public Expression visitExprNull(final ExprNullContext ctx) {
 
         return Constant.NULL;
-    }
-
-    @Override
-    public Expression visitExprOperator(final ExprOperatorContext ctx) {
-
-        return new Operator(ctx.Identifier().getText(), visit(ctx.expr(0)), visit(ctx.expr(1)));
     }
 
     @Override

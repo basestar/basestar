@@ -27,7 +27,6 @@ import io.basestar.util.Name;
 import io.basestar.util.Streams;
 import lombok.Data;
 
-import java.lang.reflect.Type;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -85,12 +84,6 @@ public class ForAny implements Binary {
         } else {
             throw new IllegalStateException();
         }
-    }
-
-    @Override
-    public Type type(final Context context) {
-
-        return Boolean.class;
     }
 
     @Override

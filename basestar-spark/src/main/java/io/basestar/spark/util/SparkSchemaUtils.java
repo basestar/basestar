@@ -25,8 +25,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import io.basestar.expression.call.Callable;
 import io.basestar.schema.*;
-import io.basestar.schema.layout.Layout;
 import io.basestar.schema.use.*;
+import io.basestar.util.ISO8601;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
 import lombok.extern.slf4j.Slf4j;
@@ -59,12 +59,12 @@ public class SparkSchemaUtils {
 
     }
 
-    public static StructType structType(final Layout schema, final Set<Name> expand) {
+    public static StructType structType(final InstanceSchema schema, final Set<Name> expand) {
 
         return structType(schema, expand, ImmutableMap.of());
     }
 
-    public static StructType structType(final Layout schema, final Set<Name> expand, final Map<String, Use<?>> extraMetadata) {
+    public static StructType structType(final InstanceSchema schema, final Set<Name> expand, final Map<String, Use<?>> extraMetadata) {
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
         final List<StructField> fields = new ArrayList<>();
@@ -188,7 +188,7 @@ public class SparkSchemaUtils {
 
     public static DataType type(final Type type) {
 
-        return type(Use.fromType(type), Collections.emptySet());
+        return type(Use.fromJavaType(type), Collections.emptySet());
     }
 
     public static DataType type(final Use<?> type, final Set<Name> expand) {
@@ -293,32 +293,32 @@ public class SparkSchemaUtils {
         });
     }
 
-    public static Map<String, Object> fromSpark(final Layout schema, final Row row) {
+    public static Map<String, Object> fromSpark(final InstanceSchema schema, final Row row) {
 
         return fromSpark(schema, NamingConvention.DEFAULT, ImmutableSet.of(), ImmutableMap.of(), row);
     }
 
-    public static Map<String, Object> fromSpark(final Layout schema, final Set<Name> expand, final Row row) {
+    public static Map<String, Object> fromSpark(final InstanceSchema schema, final Set<Name> expand, final Row row) {
 
         return fromSpark(schema, NamingConvention.DEFAULT, expand, Collections.emptyMap(), row);
     }
 
-    public static Map<String, Object> fromSpark(final Layout schema, final Set<Name> expand, final Map<String, Use<?>> extraMetadata, final Row row) {
+    public static Map<String, Object> fromSpark(final InstanceSchema schema, final Set<Name> expand, final Map<String, Use<?>> extraMetadata, final Row row) {
 
         return fromSpark(schema, NamingConvention.DEFAULT, expand, extraMetadata, row);
     }
 
-    public static Map<String, Object> fromSpark(final Layout schema, final NamingConvention naming, final Row row) {
+    public static Map<String, Object> fromSpark(final InstanceSchema schema, final NamingConvention naming, final Row row) {
 
         return fromSpark(schema, naming, ImmutableSet.of(), ImmutableMap.of(), row);
     }
 
-    public static Map<String, Object> fromSpark(final Layout schema, final NamingConvention naming, final Set<Name> expand, final Row row) {
+    public static Map<String, Object> fromSpark(final InstanceSchema schema, final NamingConvention naming, final Set<Name> expand, final Row row) {
 
         return fromSpark(schema, naming, expand, Collections.emptyMap(), row);
     }
 
-    public static Map<String, Object> fromSpark(final Layout schema, final NamingConvention naming, final Set<Name> expand, final Map<String, Use<?>> extraMetadata, final Row row) {
+    public static Map<String, Object> fromSpark(final InstanceSchema schema, final NamingConvention naming, final Set<Name> expand, final Map<String, Use<?>> extraMetadata, final Row row) {
 
         if(row == null) {
             return null;
@@ -566,12 +566,12 @@ public class SparkSchemaUtils {
         return new GenericRowWithSchema(values, structType);
     }
 
-    public static Row toSpark(final Layout schema, final Set<Name> expand, final StructType structType, final Map<String, Object> object) {
+    public static Row toSpark(final InstanceSchema schema, final Set<Name> expand, final StructType structType, final Map<String, Object> object) {
 
         return toSpark(schema, expand, ImmutableMap.of(), structType, object);
     }
 
-    public static Row toSpark(final Layout schema, final Set<Name> expand, final Map<String, Use<?>> extraMetadata, final StructType structType, final Map<String, Object> object) {
+    public static Row toSpark(final InstanceSchema schema, final Set<Name> expand, final Map<String, Use<?>> extraMetadata, final StructType structType, final Map<String, Object> object) {
 
         if(object == null) {
             return null;
@@ -718,19 +718,17 @@ public class SparkSchemaUtils {
             }
 
             @Override
-            @SuppressWarnings("deprecation")
             public Object visitDate(final UseDate type) {
 
                 final LocalDate converted = type.create(value, expand, suppress);
-                // Deprecated, but seems more reliable than the other constructors, which end up with hrs, mins, secs embedded and breaks equals/hashcode
-                return new java.sql.Date(converted.getYear() - 1900, converted.getMonthValue() - 1, converted.getDayOfMonth());
+                return ISO8601.toSqlDate(converted);
             }
 
             @Override
             public Object visitDateTime(final UseDateTime type) {
 
                 final Instant converted = type.create(value, expand, suppress);
-                return new java.sql.Timestamp(converted.toEpochMilli());
+                return ISO8601.toSqlTimestamp(converted);
             }
 
             @Override
@@ -749,7 +747,6 @@ public class SparkSchemaUtils {
 
                 return type.getType().visit(this);
             }
-
 
             @Override
             public Object visitAny(final UseAny type) {
@@ -1156,19 +1153,18 @@ public class SparkSchemaUtils {
         return (String)SparkSchemaUtils.get(row, ObjectSchema.HASH);
     }
 
-    public static Column cast(final Column column, final Use<?> type, final Set<Name> expand) {
+    public static Column cast(final Column column, final Use<?> fromType, final Use<?> toType, final Set<Name> expand) {
 
-        final DataType sourceType = columnType(column);
-        final DataType targetType = type(type, expand);
-        if(targetType.equals(sourceType)) {
-            return column;
+        final DataType toDataType = type(toType, expand);
+        if(fromType.equals(toType)) {
+            return column.cast(toDataType);
         } else {
             final UserDefinedFunction udf = functions.udf((UDF1<Object, Object>) sparkValue -> {
 
-                final Object value = fromSpark(type, NamingConvention.DEFAULT, expand, sparkValue);
-                return toSpark(type, expand, targetType, value);
+                final Object value = fromSpark(fromType, NamingConvention.DEFAULT, expand, sparkValue);
+                return toSpark(toType, expand, toDataType, value);
 
-            }, targetType);
+            }, toDataType);
             return udf.apply(column);
         }
     }

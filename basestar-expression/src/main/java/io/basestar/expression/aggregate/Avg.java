@@ -20,13 +20,18 @@ package io.basestar.expression.aggregate;
  * #L%
  */
 
+import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.expression.ExpressionVisitor;
+import io.basestar.expression.Renaming;
 import io.basestar.expression.exception.InvalidAggregateException;
+import io.basestar.util.Name;
 import lombok.Data;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 @Data
@@ -46,17 +51,46 @@ public class Avg implements Aggregate {
     }
 
     @Override
-    public <T> T visit(final AggregateVisitor<T> visitor) {
-
-        return visitor.visitAvg(this);
-    }
-
-    @Override
     public Object evaluate(final Context context, final Stream<? extends Map<String, Object>> values) {
 
         return values.map(v -> input.evaluate(context.with(v)))
                 .map(Entry::from).reduce(Entry::sum).map(Entry::avg)
                 .orElse(null);
+    }
+
+    @Override
+    public Avg bind(final Context context, final Renaming root) {
+
+        final Expression boundInput = this.input.bind(context, root);
+        if(boundInput == this.input) {
+            return this;
+        } else {
+            return new Avg(boundInput);
+        }
+    }
+
+    @Override
+    public Set<Name> names() {
+
+        return input.names();
+    }
+
+    @Override
+    public <T> T visit(final ExpressionVisitor<T> visitor) {
+
+        return visitor.visitAvg(this);
+    }
+
+    @Override
+    public List<Expression> expressions() {
+
+        return ImmutableList.of(input);
+    }
+
+    @Override
+    public Expression copy(final List<Expression> expressions) {
+
+        return new Avg(expressions.get(0));
     }
 
     @Data

@@ -31,7 +31,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-public interface UseInstance extends UseNamed<Instance>, UseLayout {
+public interface UseInstance extends UseNamed<Instance> {
 
     InstanceSchema getSchema();
 

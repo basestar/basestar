@@ -283,5 +283,7 @@ public abstract class AbstractSparkTest {
         private String substr2;
 
         private String mapValue;
+
+        private String lookupValue;
     }
 }

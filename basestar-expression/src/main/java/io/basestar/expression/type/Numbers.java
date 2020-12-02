@@ -38,6 +38,11 @@ public class Numbers {
 
     private static final Double DOUBLE_ZERO = 0D;
 
+    public static boolean isBooleanType(final Class<?> cls) {
+
+        return Boolean.class.isAssignableFrom(cls) || boolean.class.isAssignableFrom(cls);
+    }
+
     public static boolean isNumberType(final Class<?> cls) {
 
         return isIntegerType(cls) || isRealType(cls);

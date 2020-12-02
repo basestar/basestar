@@ -434,7 +434,7 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
     }
 
     @Override
-    public UseObject use() {
+    public UseObject typeOf() {
 
         return new UseObject(this);
     }

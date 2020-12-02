@@ -331,7 +331,6 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
 
                 final Function<Name, QueryPart> columnResolver = objectColumnResolver(context, schema);
                 final SQLExpressionVisitor expressionVisitor = new SQLExpressionVisitor(columnResolver);
-                final SQLAggregateVisitor aggregateVisitor = new SQLAggregateVisitor(expressionVisitor::field);
 
                 final List<GroupField> groupFields = group.entrySet().stream()
                         .map(e -> expressionVisitor.field(e.getValue()).as(DSL.name(e.getKey())))
@@ -350,7 +349,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                     selectFields.add(DSL.field(DSL.name(k)));
                 });
                 aggregates.forEach((k, v) -> {
-                    selectFields.add(aggregateVisitor.field(v).as(DSL.name(k)));
+                    selectFields.add(expressionVisitor.field(v).as(DSL.name(k)));
                 });
 
                 final SelectSeekStepN<Record> select = context.select(selectFields)

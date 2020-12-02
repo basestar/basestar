@@ -113,12 +113,6 @@ public class Lambda implements Expression {
     }
 
     @Override
-    public Type type(final Context context) {
-
-        return Callable.class;
-    }
-
-    @Override
     public Set<Name> names() {
 
         return yield.names().stream()

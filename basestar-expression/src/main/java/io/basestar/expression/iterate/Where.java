@@ -24,7 +24,6 @@ import io.basestar.expression.*;
 import io.basestar.util.Streams;
 import lombok.Data;
 
-import java.lang.reflect.Type;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -87,12 +86,6 @@ public class Where implements Binary {
         } else {
             throw new IllegalStateException();
         }
-    }
-
-    @Override
-    public Type type(final Context context) {
-
-        return lhs.type(context);
     }
 
     @Override
