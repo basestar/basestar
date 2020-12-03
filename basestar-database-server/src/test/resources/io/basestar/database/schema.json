@@ -244,5 +244,16 @@
     "readonly": true,
     "properties": {
     }
+  },
+  "WithVersionedRef": {
+    "properties": {
+      "ref": {
+        "type": {
+          "Simple": {
+            "versioned": true
+          }
+        }
+      }
+    }
   }
 }

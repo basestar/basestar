@@ -73,11 +73,10 @@ public class AvroUtils {
         }
     }
 
-    public static Schema refSchema(final ObjectSchema schema) {
+    public static Schema refSchema(final boolean versioned) {
 
         final List<Schema.Field> fields = new ArrayList<>();
-        ObjectSchema.REF_SCHEMA
-                .forEach((k, v) -> fields.add(new Schema.Field(k, schema(v, Collections.emptySet()))));
+        ObjectSchema.refSchema(versioned).forEach((k, v) -> fields.add(new Schema.Field(k, schema(v, Collections.emptySet()))));
         return Schema.createRecord(Reserved.PREFIX + "Ref", "Ref", null, false, fields);
     }
 
@@ -124,7 +123,7 @@ public class AvroUtils {
             public Schema visitObject(final UseObject type) {
 
                 if(expand == null) {
-                    return refSchema(type.getSchema());
+                    return refSchema(type.isVersioned());
                 } else {
                     return schema(type.getSchema(), expand);
                 }
@@ -212,10 +211,10 @@ public class AvroUtils {
         return record;
     }
 
-    public static GenericRecord encodeRef(final Schema schema, final Map<String, Object> object) {
+    public static GenericRecord encodeRef(final Schema schema, final boolean versioned, final Map<String, Object> object) {
 
         final GenericRecord record = new GenericData.Record(schema);
-        ObjectSchema.REF_SCHEMA.forEach((k, v) -> {
+        ObjectSchema.refSchema(versioned).forEach((k, v) -> {
             final Schema.Field field = schema.getField(k);
             record.put(k, encode(v, field.schema(), Collections.emptySet(), object.get(k)));
         });
@@ -240,7 +239,7 @@ public class AvroUtils {
             public GenericRecord visitObject(final UseObject type) {
 
                 if(expand == null) {
-                    return encodeRef(schema, (Map<String, Object>) value);
+                    return encodeRef(schema, type.isVersioned(), (Map<String, Object>) value);
                 } else {
                     return encode(type.getSchema(), schema, expand, (Map<String, Object>)value);
                 }
@@ -312,10 +311,10 @@ public class AvroUtils {
         return object;
     }
 
-    public static Map<String, Object> decodeRef(final Schema schema, final IndexedRecord record) {
+    public static Map<String, Object> decodeRef(final Schema schema, final boolean versioned, final IndexedRecord record) {
 
         final Map<String, Object> object = new HashMap<>();
-        ObjectSchema.REF_SCHEMA.forEach((k, v) -> {
+        ObjectSchema.refSchema(versioned).forEach((k, v) -> {
             final Schema.Field field = schema.getField(k);
             object.put(k, encode(v, field.schema(), Collections.emptySet(), record.get(field.pos())));
         });
@@ -339,7 +338,7 @@ public class AvroUtils {
             public Map<String, Object> visitObject(final UseObject type) {
 
                 if(expand == null) {
-                    return decodeRef(schema, (IndexedRecord) value);
+                    return decodeRef(schema, type.isVersioned(), (IndexedRecord) value);
                 } else {
                     return decode(type.getSchema(), schema, expand, (IndexedRecord)value);
                 }

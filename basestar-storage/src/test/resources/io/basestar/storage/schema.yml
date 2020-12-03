@@ -170,3 +170,11 @@ Expanded:
       sort:
         - source.hello
       consistency: async
+
+VersionedRef:
+  type: object
+  properties:
+    versionedRef:
+      type:
+        VersionedRef?:
+          versioned: true

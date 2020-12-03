@@ -114,6 +114,12 @@ class GraphQLTest {
                 ))
                 .build()).get();
 
+        databaseServer.create(Caller.SUPER, CreateOptions.builder()
+                .schema(Name.of("Test7"))
+                .id("test7")
+                .data(ImmutableMap.of())
+                .build()).get();
+
         return GraphQLAdaptor.builder().database(databaseServer).namespace(namespace).build().graphQL();
     }
 
@@ -397,6 +403,37 @@ class GraphQLTest {
                         "abstractRef", ImmutableMap.of(
                                 "id", "missing",
                                 "__typename", "Test3__"
+                        )
+                )
+        ), result.getData());
+    }
+
+    @Test
+    void testVersionedRef() throws Exception {
+
+        final Namespace namespace = namespace();
+        final GraphQL graphQL = graphQL(namespace);
+
+        graphQL.execute(ExecutionInput.newExecutionInput()
+                .query("mutation {\n" +
+                        "  updateTest7(id:\"test7\", data:{versionedRef:{id: \"test7\", version: 1}}) {\n" +
+                        "    id\n" +
+                        "  }\n" +
+                        "}")
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
+                .build()).getData();
+
+        final ExecutionResult result = graphQL.execute(ExecutionInput.newExecutionInput()
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
+                .query("query { readTest7(id: \"test7\") { versionedRef { id version schema } } }")
+                .build());
+
+        assertEquals(ImmutableMap.of(
+                "readTest7", ImmutableMap.of(
+                        "versionedRef", ImmutableMap.of(
+                                "id", "test7",
+                                "version", 1,
+                                "schema", "Test7"
                         )
                 )
         ), result.getData());

@@ -52,3 +52,11 @@ Test6:
       expression: x
   from:
     schema: Test1
+
+Test7:
+  type: object
+  properties:
+    versionedRef:
+      type:
+        Test7?:
+          versioned: true

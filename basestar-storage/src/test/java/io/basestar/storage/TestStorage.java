@@ -64,6 +64,8 @@ public abstract class TestStorage {
 
     private static final String EXPANDED = "Expanded";
 
+    private static final String VERSIONED_REF = "VersionedRef";
+
     private final Namespace namespace;
 
     protected TestStorage() {
@@ -862,6 +864,30 @@ public abstract class TestStorage {
         // Should remove the invalid index record and update the incorrect one
         assertEquals(0, page(storage, expanded, beforeExpression, sort, expand, 10).size());
         assertEquals(1, page(storage, expanded, afterExpression, sort, expand, 10).size());
+    }
+
+    @Test
+    protected void testVersionedRef() {
+
+        final Storage storage = storage(namespace);
+
+        final ObjectSchema schema = namespace.requireObjectSchema(VERSIONED_REF);
+
+        final String id = UUID.randomUUID().toString();
+
+        final Map<String, Object> data = ImmutableMap.of(
+                "versionedRef", ObjectSchema.versionedRef(id, 1L)
+        );
+
+        final Instance after = instance(schema, id, 1L, data);
+
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
+                .createObject(schema, id, after)
+                .write().join();
+
+        final Map<String, Object> current = schema.create(storage.readObject(schema, id, ImmutableSet.of()).join());
+        assertNotNull(current);
+        assertEquals(1, Instance.getVersion(current));
     }
 
     private Page<Map<String, Object>> page(final Storage storage, final ObjectSchema schema, final Expression expression, final List<Sort> sort, final int count) {

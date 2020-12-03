@@ -97,6 +97,11 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
             .put(ID, UseString.DEFAULT)
             .build();
 
+    public static final SortedMap<String, Use<?>> VERSIONED_REF_SCHEMA = ImmutableSortedMap.<String, Use<?>>orderedBy(Comparator.naturalOrder())
+            .put(ID, UseString.DEFAULT)
+            .put(VERSION, UseInteger.DEFAULT)
+            .build();
+
     @Nonnull
     private final Name qualifiedName;
 
@@ -621,7 +626,7 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
         ));
     }
 
-    public static Instance ref(final String key, final Long version) {
+    public static Instance versionedRef(final String key, final Long version) {
 
         return new Instance(ImmutableMap.of(
                 ID, key,
@@ -782,5 +787,10 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
         if(schemaName == null || !isSubclassOf(schemaName)) {
             throw new IllegalStateException("Instance validation failed: schema mismatch");
         }
+    }
+
+    public static Map<String, Use<?>> refSchema(final boolean versioned) {
+
+        return versioned ? VERSIONED_REF_SCHEMA : REF_SCHEMA;
     }
 }

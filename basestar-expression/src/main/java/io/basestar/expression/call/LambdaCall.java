@@ -27,7 +27,7 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.Renaming;
 import io.basestar.expression.constant.Constant;
-import io.basestar.expression.function.IfElse;
+import io.basestar.expression.function.Member;
 import io.basestar.util.Name;
 import lombok.Data;
 
@@ -46,7 +46,7 @@ public class LambdaCall implements Expression {
 
     public static final String TOKEN = "()";
 
-    public static final int PRECEDENCE = IfElse.PRECEDENCE;
+    public static final int PRECEDENCE = Member.PRECEDENCE;
 
     private final Expression with;
 

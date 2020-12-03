@@ -116,7 +116,7 @@ class TestExpression {
     void testPrecedence() {
 
         check("1 || 2 in [2]", true);
-        check("2 + 3 * 5", 17);
+        check("2 + 3 * 6", 20);
         check("true || false ? 1 - 2 + \"test\" : false", "-1test");
         check("null ?? null ?? true", true);
         //check("[v + v for v in [0, 1, 2, 3, 4] where v]", Arrays.asList(2, 4, 6, 8));
@@ -493,6 +493,9 @@ class TestExpression {
 
         Expression.parse("asset.fileType != 'UNKNOWN' && location.locationType == 'INBOX' && ('2018' IN asset.tags || 'student' IN asset.tags)");
         Expression.parse("asset.fileType != 'UNKNOWN' && location.locationType == 'INBOX' && ('DSR' IN asset.fileType || 'ERN' IN asset.fileType)");
+        final Expression original = Expression.parse("(sdnRecord.accountingPeriodStart.toInteger() + ((sdnRecord.accountingPeriodEnd.toInteger() - sdnRecord.accountingPeriodStart.toInteger())/2)).toDate().toString(\"YYYY-'QQ\")");
+        final Expression reparsed = Expression.parse(original.toString());
+        assertEquals(original, reparsed);
     }
 
     @Test

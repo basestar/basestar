@@ -124,7 +124,7 @@ public class UseObject implements UseLinkable {
                         if(version == null && !suppress) {
                             throw new UnexpectedTypeException(this, value);
                         }
-                        return ObjectSchema.ref(id, version);
+                        return ObjectSchema.versionedRef(id, version);
                     } else {
                         return ObjectSchema.ref(id);
                     }
@@ -162,6 +162,12 @@ public class UseObject implements UseLinkable {
 
         final String id = Instance.getId(value);
         UseString.DEFAULT.serializeValue(id, out);
+        if(versioned) {
+            final Long version = Instance.getVersion(value);
+            UseInteger.DEFAULT.serializeValue(version, out);
+        } else {
+            UseInteger.DEFAULT.serializeValue(0L, out);
+        }
     }
 
     @Override
@@ -173,8 +179,12 @@ public class UseObject implements UseLinkable {
     public static Instance deserializeAnyValue(final DataInput in) throws IOException {
 
         final String id = UseString.DEFAULT.deserializeValue(in);
+        final long version = UseInteger.DEFAULT.deserializeValue(in);
         final Map<String, Object> ref = new HashMap<>();
         Instance.setId(ref, id);
+        if(version > 0) {
+            Instance.setVersion(ref, version);
+        }
         return new Instance(ref);
     }
 
@@ -189,7 +199,7 @@ public class UseObject implements UseLinkable {
                     if(value.size() == 2 && value.containsKey(ObjectSchema.ID) && value.containsKey(ObjectSchema.VERSION)) {
                         return value;
                     } else {
-                        return ObjectSchema.ref(Instance.getId(value), Instance.getVersion(value));
+                        return ObjectSchema.versionedRef(Instance.getId(value), Instance.getVersion(value));
                     }
                 } else {
                     if (value.size() == 1 && value.containsKey(ObjectSchema.ID)) {

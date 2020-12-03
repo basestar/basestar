@@ -35,7 +35,9 @@ public class PortableSchemaFactory implements PortableFactory {
 
     public static final int REF_SLOT = 1;
 
-    public static final int SLOT_OFFSET = 2;
+    public static final int VERSIONED_REF_SLOT = 2;
+
+    public static final int SLOT_OFFSET = 3;
 
     private final int factoryId;
 
@@ -45,7 +47,8 @@ public class PortableSchemaFactory implements PortableFactory {
 
         this.factoryId = factoryId;
 
-        slots.put(REF_SLOT, refAttributes());
+        slots.put(REF_SLOT, refAttributes(false));
+        slots.put(VERSIONED_REF_SLOT, refAttributes(true));
         for(final Schema<?> schema : namespace.getSchemas().values()) {
             if(schema instanceof InstanceSchema) {
                 final int slot = schema.getSlot() + SLOT_OFFSET;
@@ -71,10 +74,10 @@ public class PortableSchemaFactory implements PortableFactory {
         return builder.build();
     }
 
-    private static SortedMap<String, AttributeType<?>> refAttributes() {
+    private static SortedMap<String, AttributeType<?>> refAttributes(final boolean versioned) {
 
         final SortedMap<String, AttributeType<?>> attributes = new TreeMap<>();
-        ObjectSchema.REF_SCHEMA.forEach((k, v) -> {
+        ObjectSchema.refSchema(versioned).forEach((k, v) -> {
             final AttributeType<?> type = v.visit(AttributeTypeVisitor.INSTANCE);
             attributes.put(k, type);
         });
@@ -111,9 +114,9 @@ public class PortableSchemaFactory implements PortableFactory {
         return create(schema.getSlot() + SLOT_OFFSET);
     }
 
-    public CustomPortable createRef() {
+    public CustomPortable createRef(final boolean versioned) {
 
-        return create(REF_SLOT);
+        return create(versioned ? VERSIONED_REF_SLOT : REF_SLOT);
     }
 
     public ClassDefinition def(final int slot) {
@@ -121,9 +124,9 @@ public class PortableSchemaFactory implements PortableFactory {
         return def(slot, slots.get(slot));
     }
 
-    public ClassDefinition refDef() {
+    public ClassDefinition refDef(final boolean versioned) {
 
-        return def(REF_SLOT);
+        return def(versioned ? VERSIONED_REF_SLOT : REF_SLOT);
     }
 
     public ClassDefinition def(final Schema<?> schema) {

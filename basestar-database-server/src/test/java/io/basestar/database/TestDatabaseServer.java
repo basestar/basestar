@@ -104,6 +104,8 @@ class TestDatabaseServer {
 
     private static final Name READONLY = Name.of("Readonly");
 
+    private static final Name WITH_VERSIONED_REF = Name.of("WithVersionedRef");
+
     private Namespace namespace;
 
     private DatabaseServer database;
@@ -890,6 +892,45 @@ class TestDatabaseServer {
                 .schema(READONLY)
                 .data(ImmutableMap.of())
                 .build()).get());
+    }
+
+    @Test
+    void testVersionedRef() throws Exception {
+
+        final String id = UUID.randomUUID().toString();
+
+        database.create(Caller.SUPER, CreateOptions.builder()
+                .schema(SIMPLE)
+                .id(id)
+                .data(ImmutableMap.of(
+                        "boolean", true
+                ))
+                .build()).get();
+
+        database.update(Caller.SUPER, UpdateOptions.builder()
+                .schema(SIMPLE)
+                .id(id)
+                .data(ImmutableMap.of(
+                        "boolean", false
+                ))
+                .build()).get();
+
+        database.create(Caller.SUPER, CreateOptions.builder()
+                .schema(WITH_VERSIONED_REF)
+                .id(id)
+                .data(ImmutableMap.of(
+                        "ref", ObjectSchema.versionedRef(id, 1L)
+                ))
+                .build()).get();
+
+        final Instance read = database.read(Caller.SUPER, ReadOptions.builder()
+                .schema(WITH_VERSIONED_REF)
+                .id(id)
+                .expand(Name.parseSet("ref"))
+                .build()).get();
+
+        assertEquals(1L, Instance.<Long>get(read, Name.parse("ref.version")));
+        assertEquals(true,  Instance.get(read, Name.parse("ref.boolean")));
     }
 
     private Executable cause(final Executable target) {
