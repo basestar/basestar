@@ -55,6 +55,19 @@ public class UseObject implements UseLinkable {
 
     private final ObjectSchema schema;
 
+    private final boolean versioned;
+
+    public UseObject(final ObjectSchema schema) {
+
+        this(schema, false);
+    }
+
+    public UseObject(final ObjectSchema schema, final boolean versioned) {
+
+        this.schema = schema;
+        this.versioned = versioned;
+    }
+
     @Override
     public <R> R visit(final Visitor<R> visitor) {
 
@@ -63,7 +76,7 @@ public class UseObject implements UseLinkable {
 
     public static UseObject from(final ObjectSchema schema, final Object config) {
 
-        return new UseObject(schema);
+        return new UseObject(schema, false);
     }
 
     @Override
@@ -76,7 +89,7 @@ public class UseObject implements UseLinkable {
             if(resolved == schema) {
                 return this;
             } else {
-                return new UseObject(resolved);
+                return new UseObject(resolved, versioned);
             }
         }
     }

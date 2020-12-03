@@ -100,4 +100,10 @@ public class Count implements Aggregate {
 
         return new Count(expressions.get(0));
     }
+
+    @Override
+    public String toString() {
+
+        return NAME + "(" + predicate + ")";
+    }
 }

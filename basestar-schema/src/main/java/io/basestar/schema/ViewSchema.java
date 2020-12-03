@@ -498,6 +498,17 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
         }
     }
 
+    public boolean isGrouping() {
+
+        return !group.isEmpty();
+    }
+
+    public boolean isAggregating() {
+
+        return getProperties().values().stream().map(Property::getExpression)
+                .filter(Objects::nonNull).anyMatch(Expression::isAggregate);
+    }
+
     private static Property.Descriptor viewPropertyDescriptor(final Property.Descriptor descriptor, final From from) {
 
         final InstanceSchema fromSchema = from.getSchema();

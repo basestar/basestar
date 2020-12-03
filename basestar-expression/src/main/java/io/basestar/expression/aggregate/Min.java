@@ -92,4 +92,10 @@ public class Min implements Aggregate {
 
         return new Min(expressions.get(0));
     }
+
+    @Override
+    public String toString() {
+
+        return NAME + "(" + input + ")";
+    }
 }

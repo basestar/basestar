@@ -97,4 +97,10 @@ public class CollectArray implements Aggregate {
 
         return new CollectArray(expressions.get(0));
     }
+
+    @Override
+    public String toString() {
+
+        return NAME + "(" + input + ")";
+    }
 }

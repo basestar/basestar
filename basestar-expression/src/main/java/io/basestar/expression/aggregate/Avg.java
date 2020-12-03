@@ -115,4 +115,10 @@ public class Avg implements Aggregate {
             return value / count;
         }
     }
+
+    @Override
+    public String toString() {
+
+        return NAME + "(" + input + ")";
+    }
 }

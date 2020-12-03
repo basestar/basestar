@@ -32,7 +32,6 @@ import io.basestar.schema.util.Expander;
 import io.basestar.storage.Storage;
 import io.basestar.util.*;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
@@ -45,7 +44,6 @@ import java.util.stream.Collectors;
  */
 
 @Slf4j
-@RequiredArgsConstructor
 public class ReadProcessor {
 
     private static final int EXPAND_LINK_SIZE = 100;
@@ -53,6 +51,11 @@ public class ReadProcessor {
     protected final Namespace namespace;
 
     protected final Storage storage;
+
+    public ReadProcessor(Namespace namespace, Storage storage) {
+        this.namespace = namespace;
+        this.storage = storage;
+    }
 
     protected ObjectSchema objectSchema(final Name schema) {
 
@@ -153,7 +156,7 @@ public class ReadProcessor {
         } else if(expand == null || expand.isEmpty()) {
             return CompletableFuture.completedFuture(item);
         } else {
-            final ExpandKey<RefKey> expandKey = ExpandKey.from(RefKey.from(item), expand);
+            final ExpandKey<RefKey> expandKey = ExpandKey.from(RefKey.latest(item), expand);
             return expand(context, Collections.singletonMap(expandKey, item))
                     .thenApply(results -> results.get(expandKey));
         }
@@ -168,13 +171,13 @@ public class ReadProcessor {
         } else {
             final Map<ExpandKey<RefKey>, Instance> expandKeys = items.stream()
                     .collect(Collectors.toMap(
-                            item -> ExpandKey.from(RefKey.from(item), expand),
+                            item -> ExpandKey.from(RefKey.latest(item), expand),
                             item -> item
                     ));
             return expand(context, expandKeys)
                     .thenApply(expanded -> items.withPage(
                             items.stream()
-                                    .map(v -> expanded.get(ExpandKey.from(RefKey.from(v), expand)))
+                                    .map(v -> expanded.get(ExpandKey.from(RefKey.latest(v), expand)))
                                     .collect(Collectors.toList())
                     ));
         }
@@ -213,7 +216,18 @@ public class ReadProcessor {
                         if(ref == null) {
                             return null;
                         } else {
-                            refs.add(ExpandKey.from(RefKey.from(schema, ref), expand));
+                            refs.add(ExpandKey.from(RefKey.latest(schema.getQualifiedName(), ref), expand));
+                            return ref;
+                        }
+                    }
+
+                    @Override
+                    public Instance expandVersionedRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
+
+                        if(ref == null) {
+                            return null;
+                        } else {
+                            refs.add(ExpandKey.from(RefKey.versioned(schema.getQualifiedName(), ref), expand));
                             return ref;
                         }
                     }
@@ -249,7 +263,11 @@ public class ReadProcessor {
                 refs.forEach(ref -> {
                     final RefKey refKey = ref.getKey();
                     final ObjectSchema objectSchema = objectSchema(refKey.getSchema());
-                    readTransaction.readObject(objectSchema, refKey.getId(), ref.getExpand());
+                    if(refKey.getVersion() != null) {
+                        readTransaction.readObjectVersion(objectSchema, refKey.getId(), refKey.getVersion(), ref.getExpand());
+                    } else {
+                        readTransaction.readObject(objectSchema, refKey.getId(), ref.getExpand());
+                    }
                 });
 
                 return readTransaction.read().thenCompose(results -> {
@@ -259,13 +277,25 @@ public class ReadProcessor {
 
                         final Name schemaName = Instance.getSchema(initial);
                         final String id = Instance.getId(initial);
+                        final Long version = Instance.getVersion(initial);
                         final ObjectSchema schema = objectSchema(schemaName);
                         final Instance object = create(schema, initial);
 
                         refs.forEach(ref -> {
                             final RefKey refKey = ref.getKey();
                             if (refKey.getId().equals(id)) {
-                                resolved.put(ExpandKey.from(refKey, ref.getExpand()), object);
+                                if(refKey.getVersion() != null) {
+                                    if (version.equals(refKey.getVersion())) {
+                                        resolved.put(ExpandKey.from(refKey, ref.getExpand()), object);
+                                    }
+                                } else {
+                                    // this is awkward, could rely on implicit ordering of BatchResult versions
+                                    final ExpandKey<RefKey> expandKey = ExpandKey.from(refKey, ref.getExpand());
+                                    final Instance prev = resolved.get(expandKey);
+                                    if(prev == null || version > Instance.getVersion(prev)) {
+                                        resolved.put(expandKey, object);
+                                    }
+                                }
                             }
                         });
                     }
@@ -284,10 +314,21 @@ public class ReadProcessor {
                                 @Override
                                 public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
 
-                                    final ExpandKey<RefKey> expandKey = ExpandKey.from(RefKey.from(schema, ref), expand);
+                                    final ExpandKey<RefKey> expandKey = ExpandKey.from(RefKey.latest(schema.getQualifiedName(), ref), expand);
                                     Instance result = expanded.get(expandKey);
                                     if (result == null) {
                                         result = ObjectSchema.ref(Instance.getId(ref));
+                                    }
+                                    return result;
+                                }
+
+                                @Override
+                                public Instance expandVersionedRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
+
+                                    final ExpandKey<RefKey> expandKey = ExpandKey.from(RefKey.versioned(schema.getQualifiedName(), ref), expand);
+                                    Instance result = expanded.get(expandKey);
+                                    if (result == null) {
+                                        result = ObjectSchema.ref(Instance.getId(ref), Instance.getVersion(ref));
                                     }
                                     return result;
                                 }
@@ -367,10 +408,10 @@ public class ReadProcessor {
             return readTransaction.read().thenApply(results -> {
 
                 final Map<RefKey, Map<String, Object>> mapped = new HashMap<>();
-                results.forEach((key, result) -> mapped.put(new RefKey(key.getSchema(), key.getId()), result));
+                results.forEach((key, result) -> mapped.put(new RefKey(key.getSchema(), key.getId(), null), result));
 
                 return data.map(v -> {
-                    final RefKey key = RefKey.from(v);
+                    final RefKey key = RefKey.latest(v);
                     final Map<String, Object> result = Nullsafe.orDefault(mapped.get(key), v);
                     final ObjectSchema schema = objectSchema(Instance.getSchema(result));
                     return schema.create(result, expand, true);
@@ -420,11 +461,11 @@ public class ReadProcessor {
             return readTransaction.read().thenApply(results -> {
 
                 final Map<RefKey, Map<String, Object>> mapped = new HashMap<>();
-                results.forEach((key, result) -> mapped.put(new RefKey(key.getSchema(), key.getId()), result));
+                results.forEach((key, result) -> mapped.put(new RefKey(key.getSchema(), key.getId(), null), result));
 
                 final Map<ExpandKey<RefKey>, Instance> remapped = new HashMap<>();
                 data.forEach((k, v) ->  {
-                    final RefKey key = RefKey.from(v);
+                    final RefKey key = RefKey.latest(v);
                     final Map<String, Object> result = Nullsafe.orDefault(mapped.get(key), v);
                     final ObjectSchema schema = objectSchema(Instance.getSchema(result));
                     final Instance instance = create(schema, result);

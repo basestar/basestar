@@ -95,6 +95,12 @@ class TestObjectSchema {
             }
 
             @Override
+            public Instance expandVersionedRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
+
+                return expandRef(schema, ref, expand);
+            }
+
+            @Override
             public Page<Instance> expandLink(final Link link, final Page<Instance> value, final Set<Name> expand) {
 
                 return null;

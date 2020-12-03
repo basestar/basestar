@@ -91,4 +91,10 @@ public class Sum implements Aggregate {
 
         return new Sum(expressions.get(0));
     }
+
+    @Override
+    public String toString() {
+
+        return NAME + "(" + input + ")";
+    }
 }

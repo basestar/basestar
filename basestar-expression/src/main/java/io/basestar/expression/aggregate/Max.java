@@ -92,4 +92,10 @@ public class Max implements Aggregate {
 
         return new Max(expressions.get(0));
     }
+
+    @Override
+    public String toString() {
+
+        return NAME + "(" + input + ")";
+    }
 }

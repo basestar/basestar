@@ -188,7 +188,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             final String id = action.id();
             if (id != null) {
                 final ObjectSchema schema = action.schema();
-                final RefKey key = new RefKey(schema.getQualifiedName(), id);
+                final RefKey key = new RefKey(schema.getQualifiedName(), id, null);
                 if (!beforeCheck.add(key)) {
                     throw new BatchKeyRepeatedException(key.getSchema(), key.getId());
                 }
@@ -250,7 +250,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                     final RefKey beforeKey;
                     final Instance before;
                     if (id != null) {
-                        beforeKey = new RefKey(schema.getQualifiedName(), id);
+                        beforeKey = new RefKey(schema.getQualifiedName(), id, null);
                         before = beforeResults.get(beforeKey);
                     } else {
                         beforeKey = null;
@@ -258,13 +258,12 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                     }
                     final Instance after = action.after(beforeContext.with(VAR_BATCH, overlay), before);
                     if (after != null) {
-                        final RefKey afterKey = RefKey.from(after);
+                        final RefKey afterKey = RefKey.latest(after);
                         if (!afterCheck.add(afterKey)) {
                             throw new BatchKeyRepeatedException(afterKey.getSchema(), afterKey.getId());
                         }
                         resultLookup.put(name, afterKey);
                         overlay.put(name, after);
-//                        assert beforeKey == null || beforeKey.equals(afterKey);
                         final Set<Name> permissionExpand = permissionExpand(schema, action.permission(before));
                         afterCallerExpand.addAll(Name.children(permissionExpand, Name.of(VAR_CALLER)));
                         final Set<Name> readExpand = Sets.union(
@@ -821,6 +820,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             if(before != null) {
                 final Set<Name> refExpand = schema.refExpand(refSchema.getQualifiedName(), schema.getExpand());
                 final Instance refAfter = refSchema.create(readResponse.getObject(refSchema, refId), expand, true);
+                final Long refAfterVersion = refAfter == null ? null : Instance.getVersion(refAfter);
                 return expand(context(Caller.SUPER), refAfter, refExpand).thenCompose(expandedRefAfter -> {
 
                     final Long version = Instance.getVersion(before);
@@ -839,6 +839,21 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                                     } else {
                                         return schema.expand(refAfter, Expander.noop(), expand);
                                     }
+                                }
+                            }
+                            return schema.expand(ref, this, expand);
+                        }
+
+                        @Override
+                        public Instance expandVersionedRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
+
+                            if (ref == null) {
+                                return null;
+                            }
+                            final Long version = Instance.getVersion(ref);
+                            if (schema.getQualifiedName().equals(refSchema.getQualifiedName())) {
+                                if (refId.equals(Instance.getId(ref)) && version.equals(refAfterVersion)) {
+                                    return schema.expand(refAfter, Expander.noop(), expand);
                                 }
                             }
                             return schema.expand(ref, this, expand);
