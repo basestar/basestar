@@ -23,24 +23,24 @@ package io.basestar.expression.aggregate;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.expression.call.LambdaCall;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
-public interface Aggregate {
+public interface Aggregate extends Expression {
 
     Map<String, Factory> REGISTRY = ImmutableMap.<String, Factory>builder()
-            .put(Avg.NAME, Avg::create)
-            .put(Count.NAME, Count::create)
+            .put(Avg.NAME.toLowerCase(), Avg::create)
+            .put(CollectArray.NAME.toLowerCase(), CollectArray::create)
+            .put(Count.NAME.toLowerCase(), Count::create)
             // MORE COMPLICATED THAN OTHERS
-            .put(Max.NAME, Max::create)
-            .put(Min.NAME, Min::create)
-            .put(Sum.NAME, Sum::create)
-            .put(CollectArray.NAME, CollectArray::create)
+            .put(Max.NAME.toLowerCase(), Max::create)
+            .put(Min.NAME.toLowerCase(), Min::create)
+            .put(Sum.NAME.toLowerCase(), Sum::create)
             .build();
-
-    <T> T visit(AggregateVisitor<T> visitor);
 
     // Presently only used for tests
     Object evaluate(Context context, Stream<? extends Map<String, Object>> values);
@@ -52,6 +52,36 @@ public interface Aggregate {
 
     static Factory factory(final String name) {
 
-        return REGISTRY.get(name);
+        return REGISTRY.get(name.toLowerCase());
+    }
+
+    @Override
+    default boolean isAggregate() {
+
+        return true;
+    }
+
+    @Override
+    default Object evaluate(final Context context) {
+
+        throw new UnsupportedOperationException("Aggregate cannot be evaluated in this context");
+    }
+
+    @Override
+    default boolean isConstant(final Set<String> closure) {
+
+        return false;
+    }
+
+    @Override
+    default int precedence() {
+
+        return LambdaCall.PRECEDENCE;
+    }
+
+    @Override
+    default String token() {
+
+        return LambdaCall.TOKEN;
     }
 }

@@ -195,4 +195,7 @@ Expressions:
     mapValue:
       expression: "tags['a']"
       type: string
+    lookupValue:
+      expression: "{'loremipsum': 'x'}['' + id] ?? ('' + id)"
+      type: string
   from: File

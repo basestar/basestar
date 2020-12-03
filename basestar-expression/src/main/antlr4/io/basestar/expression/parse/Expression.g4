@@ -40,7 +40,6 @@ expr
  | expr BitXor expr #exprBitXor
  | expr BitOr expr #exprBitOr
  | expr In expr #exprIn
- | expr Identifier expr #exprOperator
  | expr op=(Like | ILike) expr #exprLike
  | expr And expr #exprAnd
  | expr Or expr #exprOr

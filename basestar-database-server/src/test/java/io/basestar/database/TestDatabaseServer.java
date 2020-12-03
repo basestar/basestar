@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import io.basestar.auth.Caller;
 import io.basestar.auth.exception.PermissionDeniedException;
 import io.basestar.database.event.*;
+import io.basestar.database.exception.DatabaseReadonlyException;
 import io.basestar.database.options.*;
 import io.basestar.event.Emitter;
 import io.basestar.event.Event;
@@ -43,6 +44,7 @@ import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.schema.util.Ref;
 import io.basestar.storage.MemoryStorage;
 import io.basestar.storage.Storage;
+import io.basestar.storage.exception.UnsupportedWriteException;
 import io.basestar.util.Name;
 import io.basestar.util.Page;
 import lombok.extern.slf4j.Slf4j;
@@ -100,6 +102,10 @@ class TestDatabaseServer {
 
     private static final Name WITH_ENUM = Name.of("WithEnum");
 
+    private static final Name READONLY = Name.of("Readonly");
+
+    private Namespace namespace;
+
     private DatabaseServer database;
 
     private Storage storage;
@@ -112,7 +118,7 @@ class TestDatabaseServer {
     @SuppressWarnings("unchecked")
     void setUp() throws Exception {
 
-        final Namespace namespace = Namespace.load(
+        this.namespace = Namespace.load(
                 TestDatabaseServer.class.getResource("/io/basestar/database/schema.json"),
                 TestDatabaseServer.class.getResource("/io/basestar/database/Team.yml")
         );
@@ -865,6 +871,25 @@ class TestDatabaseServer {
                     ))
                     .build()).get();
         }));
+    }
+
+    @Test
+    void testDatabaseReadonly() {
+
+        final Database database = new DatabaseServer(namespace, storage, emitter, DatabaseMode.READONLY);
+        assertThrows(DatabaseReadonlyException.class, () -> database.create(Caller.SUPER, CreateOptions.builder()
+                    .schema(SIMPLE)
+                    .data(ImmutableMap.of())
+                    .build()).get());
+    }
+
+    @Test
+    void testSchemaReadonly() {
+
+        assertThrows(UnsupportedWriteException.class, () -> database.create(Caller.SUPER, CreateOptions.builder()
+                .schema(READONLY)
+                .data(ImmutableMap.of())
+                .build()).get());
     }
 
     private Executable cause(final Executable target) {

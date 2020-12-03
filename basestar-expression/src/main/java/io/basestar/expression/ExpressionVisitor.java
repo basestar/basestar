@@ -20,6 +20,7 @@ package io.basestar.expression;
  * #L%
  */
 
+import io.basestar.expression.aggregate.*;
 import io.basestar.expression.arithmetic.*;
 import io.basestar.expression.bitwise.*;
 import io.basestar.expression.call.LambdaCall;
@@ -132,13 +133,28 @@ public interface ExpressionVisitor<T> {
 
     T visitOr(Or expression);
 
-    T visitOperator(Operator operator);
+    T visitLike(Like expression);
 
-    T visitLike(Like like);
+    T visitAvg(Avg expression);
+
+    T visitCollectArray(CollectArray expression);
+
+    T visitCount(Count expression);
+
+    T visitMax(Max expression);
+
+    T visitMin(Min expression);
+
+    T visitSum(Sum expression);
 
     interface Defaulting<T> extends ExpressionVisitor<T> {
 
         T visitDefault(Expression expression);
+
+        default T visitAggregate(Aggregate expression) {
+
+            return visitDefault(expression);
+        }
 
         @Override
         default T visitAdd(final Add expression) {
@@ -405,15 +421,45 @@ public interface ExpressionVisitor<T> {
         }
 
         @Override
-        default T visitOperator(final Operator expression) {
+        default T visitLike(final Like expression) {
 
             return visitDefault(expression);
         }
 
         @Override
-        default T visitLike(final Like expression) {
+        default T visitAvg(final Avg expression) {
 
-            return visitDefault(expression);
+            return visitAggregate(expression);
+        }
+
+        @Override
+        default T visitCollectArray(final CollectArray expression) {
+
+            return visitAggregate(expression);
+        }
+
+        @Override
+        default T visitCount(final Count expression) {
+
+            return visitAggregate(expression);
+        }
+
+        @Override
+        default T visitMax(final Max expression) {
+
+            return visitAggregate(expression);
+        }
+
+        @Override
+        default T visitMin(final Min expression) {
+
+            return visitAggregate(expression);
+        }
+
+        @Override
+        default T visitSum(final Sum expression) {
+
+            return visitAggregate(expression);
         }
     }
 }

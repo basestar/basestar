@@ -33,7 +33,6 @@ import io.basestar.util.Name;
 import io.basestar.util.Streams;
 import lombok.Data;
 
-import java.lang.reflect.Type;
 import java.util.*;
 
 /**
@@ -111,12 +110,6 @@ public class ForObject implements Expression {
         } else {
             throw new IllegalStateException();
         }
-    }
-
-    @Override
-    public Type type(final Context context) {
-
-        return Map.class;
     }
 
     @Override

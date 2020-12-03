@@ -20,15 +20,20 @@ package io.basestar.expression.aggregate;
  * #L%
  */
 
+import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.expression.ExpressionVisitor;
+import io.basestar.expression.Renaming;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.exception.InvalidAggregateException;
+import io.basestar.util.Name;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 @Data
@@ -56,14 +61,43 @@ public class Count implements Aggregate {
     }
 
     @Override
-    public <T> T visit(final AggregateVisitor<T> visitor) {
+    public Object evaluate(final Context context, final Stream<? extends Map<String, Object>> values) {
+
+        return values.count();
+    }
+
+    @Override
+    public Count bind(final Context context, final Renaming root) {
+
+        final Expression boundPredicate = this.predicate.bind(context, root);
+        if(boundPredicate == this.predicate) {
+            return this;
+        } else {
+            return new Count(boundPredicate);
+        }
+    }
+
+    @Override
+    public Set<Name> names() {
+
+        return predicate.names();
+    }
+
+    @Override
+    public <T> T visit(final ExpressionVisitor<T> visitor) {
 
         return visitor.visitCount(this);
     }
 
     @Override
-    public Object evaluate(final Context context, final Stream<? extends Map<String, Object>> values) {
+    public List<Expression> expressions() {
 
-        return values.count();
+        return ImmutableList.of(predicate);
+    }
+
+    @Override
+    public Expression copy(final List<Expression> expressions) {
+
+        return new Count(expressions.get(0));
     }
 }

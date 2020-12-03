@@ -125,7 +125,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
 
     Descriptor<T> descriptor();
 
-    Use<T> use();
+    Use<T> typeOf();
 
     default Map<Name, Schema<?>> dependencies() {
 

@@ -32,6 +32,7 @@ import io.basestar.database.action.DeleteAction;
 import io.basestar.database.action.UpdateAction;
 import io.basestar.database.event.*;
 import io.basestar.database.exception.BatchKeyRepeatedException;
+import io.basestar.database.exception.DatabaseReadonlyException;
 import io.basestar.database.options.*;
 import io.basestar.database.util.ExpandKey;
 import io.basestar.database.util.RefKey;
@@ -72,6 +73,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
     private final Emitter emitter;
 
+    private final DatabaseMode mode;
+
     private static final Handlers<DatabaseServer> HANDLERS = Handlers.<DatabaseServer>builder()
             .on(ObjectCreatedEvent.class, DatabaseServer::onObjectCreated)
             .on(ObjectUpdatedEvent.class, DatabaseServer::onObjectUpdated)
@@ -94,8 +97,14 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
     public DatabaseServer(final Namespace namespace, final Storage storage, final Emitter emitter) {
 
+        this(namespace, storage, emitter, DatabaseMode.DEFAULT);
+    }
+
+    public DatabaseServer(final Namespace namespace, final Storage storage, final Emitter emitter, final DatabaseMode mode) {
+
         super(namespace, storage);
-        this.emitter = emitter;
+        this.emitter = Nullsafe.require(emitter);
+        this.mode = Nullsafe.require(mode);
     }
 
     @Override
@@ -170,7 +179,12 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final Set<ExpandKey<RefKey>> beforeKeys = new HashSet<>();
         final Set<Name> beforeCallerExpand = new HashSet<>();
 
+        if(mode.isReadonly()) {
+            throw new DatabaseReadonlyException();
+        }
+
         actions.forEach((name, action) -> {
+            action.validate();
             final String id = action.id();
             if (id != null) {
                 final ObjectSchema schema = action.schema();
@@ -178,11 +192,6 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                 if (!beforeCheck.add(key)) {
                     throw new BatchKeyRepeatedException(key.getSchema(), key.getId());
                 }
-//                final Set<Path> permissionExpand = Sets.union(
-//                        permissionExpand(schema, action.permission()),
-//                        // Always need read permission for the target object
-//                        permissionExpand(schema, schema.getPermission(Permission.READ))
-//                );
                 final Set<Name> permissionExpand = permissionExpand(schema, schema.getPermission(Permission.READ));
                 beforeCallerExpand.addAll(Name.children(permissionExpand, Name.of(VAR_CALLER)));
                 final Set<Name> readExpand = Name.children(permissionExpand, Name.of(VAR_BEFORE));

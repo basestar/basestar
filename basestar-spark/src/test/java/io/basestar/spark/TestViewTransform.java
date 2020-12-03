@@ -197,6 +197,7 @@ class TestViewTransform extends AbstractSparkTest {
         assertEquals("remi", row.getSubstr1());
         assertEquals("ipsum", row.getSubstr2());
         assertEquals("b", row.getMapValue());
+        assertEquals("x", row.getLookupValue());
     }
 
     private <T> List<T> view(final String view, final Class<T> as,  final Map<Name, Dataset<Row>> datasets) throws IOException {

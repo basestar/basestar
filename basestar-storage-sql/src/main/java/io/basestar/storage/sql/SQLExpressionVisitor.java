@@ -23,6 +23,7 @@ package io.basestar.storage.sql;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
+import io.basestar.expression.aggregate.*;
 import io.basestar.expression.arithmetic.*;
 import io.basestar.expression.bitwise.*;
 import io.basestar.expression.compare.*;
@@ -37,6 +38,7 @@ import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
 import io.basestar.expression.text.Like;
+import io.basestar.expression.type.Values;
 import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
 import org.jooq.Condition;
@@ -311,6 +313,50 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
             return DSL.or(conditions);
         } else {
             return null;
+        }
+    }
+
+    @Override
+    public Field<?> visitSum(final Sum aggregate) {
+
+        final Field<? extends Number> input = SQLUtils.cast(field(aggregate.getInput()), Number.class);
+        return DSL.sum(input);
+    }
+
+    @Override
+    public Field<?> visitMin(final Min aggregate) {
+
+        final Field<?> input = field(aggregate.getInput());
+        return DSL.min(input);
+    }
+
+    @Override
+    public Field<?> visitMax(final Max aggregate) {
+
+        final Field<?> input = field(aggregate.getInput());
+        return DSL.max(input);
+    }
+
+    @Override
+    public Field<?> visitAvg(final Avg aggregate) {
+
+        final Field<? extends Number> input = SQLUtils.cast(field(aggregate.getInput()), Number.class);
+        return DSL.avg(input);
+    }
+
+    @Override
+    public Field<?> visitCount(final Count aggregate) {
+
+        if(aggregate.getPredicate() instanceof Constant) {
+            final boolean value = Values.isTruthy(((Constant) aggregate.getPredicate()).getValue());
+            if(value) {
+                return DSL.count();
+            } else {
+                return DSL.inline(0);
+            }
+        } else {
+            final Field<?> input = field(aggregate.getPredicate());
+            return DSL.count(DSL.nullif(input, false));
         }
     }
 

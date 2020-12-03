@@ -27,7 +27,6 @@ import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.function.In;
 import lombok.Data;
 
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -47,12 +46,6 @@ public interface Like extends Binary {
         final Object rhs = getRhs().evaluate(context);
         final Matcher matcher = Matcher.Dialect.DEFAULT.parse(Objects.toString(rhs));
         return matcher.match(Objects.toString(lhs), isCaseSensitive());
-    }
-
-    @Override
-    default Type type(final Context context) {
-
-        return Boolean.class;
     }
 
     @Override

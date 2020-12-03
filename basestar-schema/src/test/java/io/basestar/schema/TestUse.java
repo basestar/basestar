@@ -48,10 +48,10 @@ class TestUse {
     @Test
     void fromType() {
 
-        final Use<?> intMap = Use.fromType((new TypeToken<Map<String, Integer>>() {}).getType());
+        final Use<?> intMap = Use.fromJavaType((new TypeToken<Map<String, Integer>>() {}).getType());
         assertEquals(UseMap.from(UseInteger.DEFAULT), intMap);
 
-        final Use<?> anyMap = Use.fromType(Map.class);
+        final Use<?> anyMap = Use.fromJavaType(Map.class);
         assertEquals(UseMap.from(UseAny.DEFAULT), anyMap);
     }
 }

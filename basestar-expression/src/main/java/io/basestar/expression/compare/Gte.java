@@ -27,8 +27,6 @@ import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.type.Values;
 import lombok.Data;
 
-import java.lang.reflect.Type;
-
 /**
  * Greater Than or Equal
  */
@@ -67,12 +65,6 @@ public class Gte implements Binary {
     public Boolean evaluate(final Context context) {
 
         return Values.compare(lhs.evaluate(context), rhs.evaluate(context)) >= 0;
-    }
-
-    @Override
-    public Type type(final Context context) {
-
-        return Boolean.class;
     }
 
     @Override

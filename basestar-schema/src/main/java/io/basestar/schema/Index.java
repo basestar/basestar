@@ -274,7 +274,7 @@ public class Index implements Named, Described, Serializable, Extendable {
         } else {
             final Set<String> members = new HashSet<>(projection);
             resolvePartitionNames().forEach(name -> members.add(name.first()));
-            sort.forEach(sort -> members.add(sort.getName().first()));
+            sort.forEach(v -> members.add(v.getName().first()));
             members.forEach(name -> result.put(name, schema.typeOf(Name.of(name))));
             result.put(ObjectSchema.SCHEMA, UseString.DEFAULT);
             result.put(ObjectSchema.ID, UseString.DEFAULT);

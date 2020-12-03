@@ -29,7 +29,6 @@ import io.basestar.util.Name;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
-import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -99,12 +98,6 @@ public class Or implements Expression {
         } else {
             return terms.stream().anyMatch(v -> v.evaluatePredicate(context));
         }
-    }
-
-    @Override
-    public Type type(final Context context) {
-
-        return Boolean.class;
     }
 
     @Override

@@ -22,6 +22,8 @@ package io.basestar.spark.transform;
 
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
+import io.basestar.schema.expression.InferenceContext;
+import io.basestar.schema.expression.InferenceVisitor;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseString;
 import io.basestar.spark.expression.SparkExpressionVisitor;
@@ -50,33 +52,36 @@ public class ExpressionTransform implements Transform<Dataset<Row>, Dataset<Row>
     @Override
     public Dataset<Row> accept(final Dataset<Row> input) {
 
+        final InferenceContext inferenceContext = new InferenceContext.FromSchema(schema);
+
         Dataset<Row> output = input;
         if(schema instanceof ObjectSchema) {
             final ObjectSchema objectSchema = (ObjectSchema)schema;
             final Id id = objectSchema.getId();
             if (id != null && id.getExpression() != null) {
-                final Column col = apply(input, id.getExpression(), UseString.DEFAULT);
+                final Column col = apply(inferenceContext, input, id.getExpression(), UseString.DEFAULT);
                 output = output.withColumn(ObjectSchema.ID, col);
             }
         }
         for(final Property property : schema.getProperties().values()) {
             if(property.getExpression() != null) {
-                output = output.withColumn(property.getName(), apply(output, property.getExpression(), property.getType()));
+                output = output.withColumn(property.getName(), apply(inferenceContext, output, property.getExpression(), property.getType()));
             }
         }
         return output;
     }
 
-    private Column apply(final Dataset<Row> ds, final Expression expression, final Use<?> type) {
+    private Column apply(final InferenceContext inferenceContext, final Dataset<Row> ds, final Expression expression, final Use<?> type) {
 
-        return SparkSchemaUtils.cast(visitor(ds).visit(expression), type, expand);
+        final Use<?> expressionType = new InferenceVisitor(inferenceContext).visit(expression);
+        return SparkSchemaUtils.cast(visitor(inferenceContext, ds).visit(expression), expressionType, type, expand);
     }
 
-    private SparkExpressionVisitor visitor(final Dataset<Row> ds) {
+    private SparkExpressionVisitor visitor(final InferenceContext inferenceContext, final Dataset<Row> ds) {
 
         return new SparkExpressionVisitor(path -> {
             assert path.size() == 2 && path.isChild(Name.of(Reserved.THIS));
             return ds.col(path.get(1));
-        });
+        }, inferenceContext);
     }
 }

@@ -25,10 +25,7 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.logical.Or;
-import io.basestar.expression.type.Values;
 import lombok.Data;
-
-import java.lang.reflect.Type;
 
 /**
  * Coalesce
@@ -75,12 +72,6 @@ public class Coalesce implements Binary {
         } else {
             return lhs;
         }
-    }
-
-    @Override
-    public Type type(final Context context) {
-
-        return Values.commonType(lhs.type(context), rhs.type(context));
     }
 
     @Override

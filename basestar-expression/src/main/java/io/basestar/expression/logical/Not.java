@@ -27,8 +27,6 @@ import io.basestar.expression.Unary;
 import io.basestar.expression.arithmetic.Negate;
 import lombok.Data;
 
-import java.lang.reflect.Type;
-
 /**
  * Not
  *
@@ -65,12 +63,6 @@ public class Not implements Unary {
     public Boolean evaluate(final Context context) {
 
         return !operand.evaluatePredicate(context);
-    }
-
-    @Override
-    public Type type(final Context context) {
-
-        return Boolean.class;
     }
 
     @Override

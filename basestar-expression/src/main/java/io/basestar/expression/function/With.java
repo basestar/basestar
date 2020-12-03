@@ -30,7 +30,6 @@ import io.basestar.expression.iterate.ForAll;
 import io.basestar.util.Name;
 import lombok.Data;
 
-import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -90,13 +89,6 @@ public class With implements Expression {
             with.put(entry.getKey(), entry.getValue().evaluate(context));
         }
         return yield.evaluate(context.with(with));
-    }
-
-    @Override
-    public Type type(final Context context) {
-
-        // FIXME
-        return yield.type(context);
     }
 
     @Override

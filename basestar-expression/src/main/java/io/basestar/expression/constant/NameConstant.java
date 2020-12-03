@@ -27,7 +27,6 @@ import io.basestar.util.Name;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
-import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -74,12 +73,6 @@ public class NameConstant implements Expression {
         } else {
             throw new UndefinedNameException(name.first());
         }
-    }
-
-    @Override
-    public Type type(final Context context) {
-
-        return Object.class;
     }
 
     private Object resolve(Object target, final Name tail, final Context context) {

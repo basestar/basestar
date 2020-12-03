@@ -22,13 +22,11 @@ package io.basestar.expression.aggregate;
 
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
-import io.basestar.expression.call.LambdaCall;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.util.Name;
 import lombok.Getter;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Getter
@@ -43,23 +41,10 @@ public class AggregateExtractingVisitor implements ExpressionVisitor.Defaulting<
     }
 
     @Override
-    public Expression visitLambdaCall(final LambdaCall expression) {
+    public Expression visitAggregate(final Aggregate expression) {
 
-        final Expression with = expression.getWith();
-        if(with instanceof NameConstant) {
-            final Name path = ((NameConstant) with).getName();
-            if(path.size() == 1) {
-                final String name = path.first();
-                final Aggregate.Factory factory = Aggregate.factory(name);
-                if(factory != null) {
-                    final List<Expression> args = expression.getArgs();
-                    final Aggregate aggregate = factory.create(args);
-                    final String id = "v" + System.identityHashCode(aggregate);
-                    aggregates.put(id, aggregate);
-                    return new NameConstant(Name.of(id));
-                }
-            }
-        }
-        return visitDefault(expression);
+        final String id = "v" + System.identityHashCode(expression);
+        aggregates.put(id, expression);
+        return new NameConstant(Name.of(id));
     }
 }

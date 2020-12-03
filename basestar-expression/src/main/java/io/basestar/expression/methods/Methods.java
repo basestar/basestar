@@ -28,6 +28,7 @@ import lombok.AccessLevel;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
+import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -36,13 +37,13 @@ import java.util.List;
 
 @Data
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
-public class Methods {
+public class Methods implements Serializable {
 
-    public static final List<Object> DEFAULT_FILTERS = ImmutableList.of(
+    public static final List<Serializable> DEFAULT_FILTERS = ImmutableList.of(
             new ObjectMethods(), new StringMethods(), new ListMethods(), new SetMethods(), new MapMethods(), new DateMethods(), new DateTimeMethods()
     );
 
-    private final List<Object> filters;
+    private final List<Serializable> filters;
 
     private final boolean whitelist;
 
@@ -151,7 +152,7 @@ public class Methods {
 
     public static class Builder {
 
-        private final List<Object> filters = new ArrayList<>();
+        private final List<Serializable> filters = new ArrayList<>();
 
         private boolean whitelist = true;
 
@@ -161,7 +162,7 @@ public class Methods {
             return this;
         }
 
-        public Builder filter(final Object filter) {
+        public Builder filter(final Serializable filter) {
 
             filters.add(filter);
             return this;

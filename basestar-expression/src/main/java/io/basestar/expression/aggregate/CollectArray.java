@@ -9,9 +9,9 @@ package io.basestar.expression.aggregate;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,14 +20,19 @@ package io.basestar.expression.aggregate;
  * #L%
  */
 
+import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.expression.ExpressionVisitor;
+import io.basestar.expression.Renaming;
 import io.basestar.expression.exception.InvalidAggregateException;
+import io.basestar.util.Name;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -53,14 +58,43 @@ public class CollectArray implements Aggregate {
     }
 
     @Override
-    public <T> T visit(final AggregateVisitor<T> visitor) {
+    public Object evaluate(final Context context, final Stream<? extends Map<String, Object>> values) {
+
+        return values.map(v -> input.evaluate(context.with(v))).collect(Collectors.toList());
+    }
+
+    @Override
+    public CollectArray bind(final Context context, final Renaming root) {
+
+        final Expression boundInput = this.input.bind(context, root);
+        if(boundInput == this.input) {
+            return this;
+        } else {
+            return new CollectArray(boundInput);
+        }
+    }
+
+    @Override
+    public Set<Name> names() {
+
+        return input.names();
+    }
+
+    @Override
+    public <T> T visit(final ExpressionVisitor<T> visitor) {
 
         return visitor.visitCollectArray(this);
     }
 
     @Override
-    public Object evaluate(final Context context, final Stream<? extends Map<String, Object>> values) {
+    public List<Expression> expressions() {
 
-        return values.collect(Collectors.toList());
+        return ImmutableList.of(input);
+    }
+
+    @Override
+    public Expression copy(final List<Expression> expressions) {
+
+        return new CollectArray(expressions.get(0));
     }
 }

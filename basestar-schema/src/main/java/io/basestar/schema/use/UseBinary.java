@@ -141,11 +141,6 @@ public class UseBinary implements UseScalar<byte[]> {
         return NAME;
     }
 
-//    public static byte[] binaryKey(final Object ... keys) {
-//
-//        return binaryKey(ImmutableList.copyOf(keys));
-//    }
-
     public static byte[] binaryKey(final List<?> keys) {
 
         final byte T_NULL = 1;

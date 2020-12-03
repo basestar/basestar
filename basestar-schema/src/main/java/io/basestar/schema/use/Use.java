@@ -202,10 +202,10 @@ public interface Use<T> extends Serializable {
         }
     }
 
-    static Use<?> fromType(final Type type) {
+    static Use<?> fromJavaType(final Type type) {
 
         final Class<?> erased = GenericTypeReflector.erase(type);
-        if(Boolean.class.isAssignableFrom(erased)) {
+        if(Numbers.isBooleanType(erased)) {
             return UseBoolean.DEFAULT;
         } else if(Numbers.isIntegerType(erased)) {
             return UseInteger.DEFAULT;
@@ -279,7 +279,7 @@ public interface Use<T> extends Serializable {
             nestedType = (Use<?>)config;
             nestedConfig = null;
         } else if(config instanceof Type) {
-            nestedType = Use.fromType((Type)config);
+            nestedType = Use.fromJavaType((Type)config);
             nestedConfig = null;
         } else if(config instanceof String) {
             nestedType = Use.fromConfig(config);
@@ -438,14 +438,9 @@ public interface Use<T> extends Serializable {
                 return visitContainer(type);
             }
 
-            default R visitLayout(final UseLayout type) {
-
-                return visitDefault(type);
-            }
-
             default R visitInstance(final UseInstance type) {
 
-                return visitLayout(type);
+                return visitDefault(type);
             }
 
             default R visitLinkable(final UseLinkable type) {
@@ -645,4 +640,51 @@ public interface Use<T> extends Serializable {
     }
 
     boolean areEqual(T a, T b);
+
+    static Use<?> commonBase(final Use<?> a, final Use<?> b) {
+
+        if(a instanceof UseBoolean && b instanceof UseBoolean) {
+            return UseBoolean.DEFAULT;
+        } else if(a instanceof UseNumeric && b instanceof UseNumeric) {
+            if(a instanceof UseNumber || b instanceof UseNumber) {
+                return UseNumber.DEFAULT;
+            } else {
+                return UseInteger.DEFAULT;
+            }
+        } else if(a instanceof UseString && b instanceof UseString) {
+            return UseString.DEFAULT;
+        } else if(a instanceof UseArray && b instanceof UseArray) {
+            return UseArray.from(commonBase(((UseArray<?>) a).getType(), ((UseArray<?>) b).getType()));
+        } else if(a instanceof UseSet && b instanceof UseSet) {
+            return UseArray.from(commonBase(((UseSet<?>) a).getType(), ((UseSet<?>) b).getType()));
+        } else if(a instanceof UseMap && b instanceof UseMap) {
+            return UseMap.from(commonBase(((UseMap<?>) a).getType(), ((UseMap<?>) b).getType()));
+        } else if(a instanceof UseEnum && b instanceof UseEnum) {
+            if(((UseEnum) a).getName().equals(((UseEnum) b).getName())) {
+                return a;
+            }
+        } else if(a instanceof UseStruct && b instanceof UseStruct) {
+            if(((UseStruct) a).getName().equals(((UseStruct) b).getName())) {
+                return a;
+            }
+        } else if(a instanceof UseObject && b instanceof UseObject) {
+            if(((UseObject) a).getName().equals(((UseObject) b).getName())) {
+                return a;
+            }
+        } else if(a instanceof UseView && b instanceof UseView) {
+            if(((UseView) a).getName().equals(((UseView) b).getName())) {
+                return a;
+            }
+        } else if(a instanceof UseDate && b instanceof UseDate) {
+            return UseDate.DEFAULT;
+        } else if(a instanceof UseDateTime && b instanceof UseDateTime) {
+            return UseDateTime.DEFAULT;
+        } else if(a instanceof UseBinary && b instanceof UseBinary) {
+            return UseBinary.DEFAULT;
+        } else if(a instanceof UseOptional<?> && b instanceof UseOptional<?>) {
+            return UseOptional.from(commonBase(((UseOptional<?>) a).getType(), ((UseOptional<?>) b).getType()));
+        }
+
+        return UseAny.DEFAULT;
+    }
 }

@@ -20,12 +20,13 @@ package io.basestar.expression;
  * #L%
  */
 
+import com.google.common.hash.Hashing;
 import io.basestar.expression.parse.ExpressionCache;
 import io.basestar.expression.type.Values;
 import io.basestar.util.Name;
 
 import java.io.Serializable;
-import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -43,8 +44,6 @@ public interface Expression extends Serializable {
 
     Object evaluate(Context context);
 
-    Type type(Context context);
-
     default boolean evaluatePredicate(final Context context) {
 
         return Values.isTruthy(evaluate(context));
@@ -54,6 +53,11 @@ public interface Expression extends Serializable {
     default <T> T evaluateAs(final Class<T> as, final Context context) {
 
         return as.cast(evaluate(context));
+    }
+
+    default boolean isAggregate() {
+
+        return expressions().stream().anyMatch(Expression::isAggregate);
     }
 
     Set<Name> names();
@@ -94,5 +98,11 @@ public interface Expression extends Serializable {
     default Expression copy(final Function<Expression, Expression> fn) {
 
         return copy(expressions().stream().map(fn).collect(Collectors.toList()));
+    }
+
+    @SuppressWarnings("UnstableApiUsage")
+    default String digest() {
+
+        return Hashing.murmur3_32().hashString(toString(), StandardCharsets.UTF_8).toString();
     }
 }

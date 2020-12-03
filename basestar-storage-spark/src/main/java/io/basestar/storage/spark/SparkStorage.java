@@ -25,6 +25,7 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.expression.InferenceContext;
 import io.basestar.spark.expression.SparkExpressionVisitor;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.storage.Storage;
@@ -119,7 +120,8 @@ public class SparkStorage implements Storage.WithoutWrite, /* FIXME */ Storage.W
         return ImmutableList.of((count, paging, stats) -> CompletableFuture.supplyAsync(() -> {
 
             final Dataset<Row> input = strategy.objectRead(session, schema);
-            final Column column = query.visit(new SparkExpressionVisitor(path -> input.col(path.toString())));
+            final InferenceContext inferenceContext = new InferenceContext.FromSchema(schema);
+            final Column column = query.visit(new SparkExpressionVisitor(path -> input.col(path.toString()), inferenceContext));
             Dataset<Row> ds = input.filter(column);
             if(paging != null) {
                 // FIXME:

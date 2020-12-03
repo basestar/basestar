@@ -28,14 +28,16 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.expression.constant.NameConstant;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.jackson.serde.AbbrevSetDeserializer;
 import io.basestar.jackson.serde.ExpressionDeserializer;
 import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
+import io.basestar.schema.expression.InferenceContext;
+import io.basestar.schema.expression.InferenceVisitor;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseAny;
 import io.basestar.schema.use.UseBinary;
 import io.basestar.schema.use.UseView;
 import io.basestar.util.Name;
@@ -428,7 +430,7 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
     }
 
     @Override
-    public UseView use() {
+    public UseView typeOf() {
 
         return new UseView(this);
     }
@@ -524,20 +526,13 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
             public Use<?> getType() {
 
                 if(descriptor.getType() == null && descriptor.getExpression() != null) {
-                    if (descriptor.getExpression() instanceof NameConstant) {
-                        final Name name = ((NameConstant) descriptor.getExpression()).getName();
-                        if(name.size() == 1) {
-                            final Use<?> metadataType = fromSchema.metadataSchema().get(name.last());
-                            if(metadataType != null) {
-                                return metadataType;
-                            }
-                            final Property prop = fromSchema.getProperty(name.last(), true);
-                            if(prop != null) {
-                                return prop.getType();
-                            }
-                        }
+                    final InferenceContext context = new InferenceContext.FromSchema(fromSchema);
+                    final Use<?> type = new InferenceVisitor(context).visit(descriptor.getExpression());
+                    if(type instanceof UseAny) {
+                        throw new IllegalStateException("Cannot infer type from expression " + descriptor.getExpression());
+                    } else {
+                        return type;
                     }
-                    throw new IllegalStateException("Cannot infer type from expression " + descriptor.getExpression());
                 } else {
                     return descriptor.getType();
                 }
@@ -668,7 +663,7 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
     @Override
     public boolean equals(final Object other) {
 
-        return qualifiedNameEquals(other);
+        return other instanceof ViewSchema && qualifiedNameEquals(other);
     }
 
     @Override

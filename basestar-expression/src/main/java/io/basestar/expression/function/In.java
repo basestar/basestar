@@ -28,7 +28,6 @@ import io.basestar.expression.bitwise.BitOr;
 import io.basestar.expression.type.Values;
 import lombok.Data;
 
-import java.lang.reflect.Type;
 import java.util.Collection;
 
 /**
@@ -78,12 +77,6 @@ public class In implements Binary {
         } else {
             throw new IllegalStateException();
         }
-    }
-
-    @Override
-    public Type type(final Context context) {
-
-        return Boolean.class;
     }
 
     @Override

@@ -20,15 +20,20 @@ package io.basestar.expression.aggregate;
  * #L%
  */
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.expression.ExpressionVisitor;
+import io.basestar.expression.Renaming;
 import io.basestar.expression.exception.InvalidAggregateException;
 import io.basestar.expression.type.Values;
+import io.basestar.util.Name;
 import lombok.Data;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 @Data
@@ -48,14 +53,43 @@ public class Min implements Aggregate {
     }
 
     @Override
-    public <T> T visit(final AggregateVisitor<T> visitor) {
+    public Object evaluate(final Context context, final Stream<? extends Map<String, Object>> values) {
+
+        return Ordering.from(Values::compare).min(values.map(v -> input.evaluate(context.with(v))).iterator());
+    }
+
+    @Override
+    public Min bind(final Context context, final Renaming root) {
+
+        final Expression boundInput = this.input.bind(context, root);
+        if(boundInput == this.input) {
+            return this;
+        } else {
+            return new Min(boundInput);
+        }
+    }
+
+    @Override
+    public Set<Name> names() {
+
+        return input.names();
+    }
+
+    @Override
+    public <T> T visit(final ExpressionVisitor<T> visitor) {
 
         return visitor.visitMin(this);
     }
 
     @Override
-    public Object evaluate(final Context context, final Stream<? extends Map<String, Object>> values) {
+    public List<Expression> expressions() {
 
-        return Ordering.from(Values::compare).min(values.map(v -> input.evaluate(context.with(v))).iterator());
+        return ImmutableList.of(input);
+    }
+
+    @Override
+    public Expression copy(final List<Expression> expressions) {
+
+        return new Min(expressions.get(0));
     }
 }
