@@ -48,7 +48,7 @@ public interface GraphQLStrategy {
         return typeName(type) + Reserved.PREFIX;
     }
 
-    String inputRefTypeName();
+    String inputRefTypeName(boolean versioned);
 
     String inputTypeName(Schema<?> type);
 
@@ -181,9 +181,9 @@ public interface GraphQLStrategy {
         }
 
         @Override
-        public String inputRefTypeName() {
+        public String inputRefTypeName(boolean versioned) {
 
-            return inputPrefix() + "Ref";
+            return inputPrefix() + (versioned ? "VersionedRef" : "Ref");
         }
 
         @Override

@@ -328,7 +328,7 @@ public class ReadProcessor {
                                     final ExpandKey<RefKey> expandKey = ExpandKey.from(RefKey.versioned(schema.getQualifiedName(), ref), expand);
                                     Instance result = expanded.get(expandKey);
                                     if (result == null) {
-                                        result = ObjectSchema.ref(Instance.getId(ref), Instance.getVersion(ref));
+                                        result = ObjectSchema.versionedRef(Instance.getId(ref), Instance.getVersion(ref));
                                     }
                                     return result;
                                 }
@@ -405,18 +405,14 @@ public class ReadProcessor {
                     readTransaction.readObjectVersion(schema, id, version, expand);
                 });
             });
-            return readTransaction.read().thenApply(results -> {
-
-                final Map<RefKey, Map<String, Object>> mapped = new HashMap<>();
-                results.forEach((key, result) -> mapped.put(new RefKey(key.getSchema(), key.getId(), null), result));
-
-                return data.map(v -> {
-                    final RefKey key = RefKey.latest(v);
-                    final Map<String, Object> result = Nullsafe.orDefault(mapped.get(key), v);
-                    final ObjectSchema schema = objectSchema(Instance.getSchema(result));
-                    return schema.create(result, expand, true);
-                });
-            });
+            return readTransaction.read().thenApply(results -> data.map(v -> {
+                final Name schemaName = Instance.getSchema(v);
+                final String id = Instance.getId(v);
+                final Map<String, Object> mappedResult = results.getObject(schemaName, id);
+                final Map<String, Object> result = Nullsafe.orDefault(mappedResult, v);
+                final ObjectSchema schema = objectSchema(Instance.getSchema(result));
+                return schema.create(result, expand, true);
+            }));
         }
     }
 
@@ -460,13 +456,13 @@ public class ReadProcessor {
             });
             return readTransaction.read().thenApply(results -> {
 
-                final Map<RefKey, Map<String, Object>> mapped = new HashMap<>();
-                results.forEach((key, result) -> mapped.put(new RefKey(key.getSchema(), key.getId(), null), result));
-
                 final Map<ExpandKey<RefKey>, Instance> remapped = new HashMap<>();
                 data.forEach((k, v) ->  {
-                    final RefKey key = RefKey.latest(v);
-                    final Map<String, Object> result = Nullsafe.orDefault(mapped.get(key), v);
+                    final Name schemaName = Instance.getSchema(v);
+                    final String id = Instance.getId(v);
+                    final Long version = Instance.getVersion(v);
+                    final Map<String, Object> mappedResult = results.getObjectVersion(schemaName, id, version);
+                    final Map<String, Object> result = Nullsafe.orDefault(mappedResult, v);
                     final ObjectSchema schema = objectSchema(Instance.getSchema(result));
                     final Instance instance = create(schema, result);
                     remapped.put(k, instance);

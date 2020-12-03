@@ -87,6 +87,9 @@ public class SQLUtils {
             @Override
             public DataType<?> visitObject(final UseObject type) {
 
+                if(type.isVersioned()) {
+                    throw new IllegalStateException("Versioned ref storage not supported presently");
+                }
                 return SQLDataType.LONGVARCHAR;
             }
 

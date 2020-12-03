@@ -34,6 +34,7 @@ import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseArray;
 import io.basestar.schema.use.UseDate;
 import io.basestar.schema.use.UseDateTime;
+import lombok.RequiredArgsConstructor;
 
 import java.io.*;
 import java.time.Instant;
@@ -71,9 +72,13 @@ public interface AttributeType<T> {
 
     BinaryType BINARY = new BinaryType();
 
-    RefType REF = new RefType();
+    RefType REF = new RefType(false);
 
-    RefArrayType REF_ARRAY = new RefArrayType();
+    RefType VERSIONED_REF = new RefType(true);
+
+    RefArrayType REF_ARRAY = new RefArrayType(false);
+
+    RefArrayType VERSIONED_REF_ARRAY = new RefArrayType(true);
 
     static <T> EncodedType<T> encoded(final Use<T> use) {
 
@@ -509,7 +514,10 @@ public interface AttributeType<T> {
         }
     }
 
+    @RequiredArgsConstructor
     class RefType implements AttributeType<Map<String, Object>> {
+
+        private final boolean versioned;
 
         @Override
         public Map<String, Object> readValue(final PortableReader reader, final String name) throws IOException {
@@ -521,7 +529,7 @@ public interface AttributeType<T> {
         @Override
         public void writeValue(final PortableSchemaFactory factory, final PortableWriter writer, final String name, final Map<String, Object> value) throws IOException {
 
-            final CustomPortable portable = factory.createRef();
+            final CustomPortable portable = factory.createRef(versioned);
             portable.setData(value);
             writer.writePortable(name, portable);
         }
@@ -529,11 +537,14 @@ public interface AttributeType<T> {
         @Override
         public void defineValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
 
-            builder.addPortableField(name, factory.refDef());
+            builder.addPortableField(name, factory.refDef(versioned));
         }
     }
 
+    @RequiredArgsConstructor
     class RefArrayType implements AttributeType<List<Map<String, Object>>> {
+
+        private final boolean versioned;
 
         @Override
         public List<Map<String, Object>> readValue(final PortableReader reader, final String name) throws IOException {
@@ -549,7 +560,7 @@ public interface AttributeType<T> {
         public void writeValue(final PortableSchemaFactory factory, final PortableWriter writer, final String name, final List<Map<String, Object>> value) throws IOException {
 
             final Portable[] portables = value.stream().map(v -> {
-                final CustomPortable portable = factory.createRef();
+                final CustomPortable portable = factory.createRef(versioned);
                 portable.setData(v);
                 return portable;
             }).toArray(Portable[]::new);
@@ -559,7 +570,7 @@ public interface AttributeType<T> {
         @Override
         public void defineValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
 
-            builder.addPortableArrayField(name, factory.refDef());
+            builder.addPortableArrayField(name, factory.refDef(versioned));
         }
     }
 }

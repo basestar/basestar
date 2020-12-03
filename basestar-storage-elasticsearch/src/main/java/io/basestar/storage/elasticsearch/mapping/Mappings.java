@@ -121,7 +121,7 @@ public class Mappings {
 
                         if(expand == null) {
                             final Map<String, FieldType> properties = new HashMap<>();
-                            ObjectSchema.REF_SCHEMA.forEach((k, v) -> properties.put(k, v.visit(this)));
+                            ObjectSchema.refSchema(type.isVersioned()).forEach((k, v) -> properties.put(k, v.visit(this)));
                             return new FieldType.NestedType(properties);
                         } else {
                             return new FieldType.NestedType(properties(type.getSchema(), expand));

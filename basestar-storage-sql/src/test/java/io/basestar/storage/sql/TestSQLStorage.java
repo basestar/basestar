@@ -82,4 +82,10 @@ class TestSQLStorage extends TestStorage {
 
         return true;
     }
+
+    @Override
+    protected void testVersionedRef() {
+
+        // FIXME: versioned ref storage will need a strategy that supports multiple output columns per input value
+    }
 }

@@ -77,9 +77,16 @@ public class SchemaAdaptor {
         registry.add(subscriptionDefinition());
         registry.add(batchTypeDefinition());
         registry.add(InputObjectTypeDefinition.newInputObjectDefinition()
-                .name(strategy.inputRefTypeName())
+                .name(strategy.inputRefTypeName(false))
                 .inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                         .name(strategy.idArgumentName()).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build())
+                .build());
+        registry.add(InputObjectTypeDefinition.newInputObjectDefinition()
+                .name(strategy.inputRefTypeName(true))
+                .inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                        .name(strategy.idArgumentName()).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build())
+                .inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                        .name(strategy.versionArgumentName()).type(new NonNullType(new TypeName(GraphQLUtils.INT_TYPE))).build())
                 .build());
         registry.add(consistencyTypeDefinition());
         mapTypes.forEach((k, v) -> {
@@ -666,7 +673,7 @@ public class SchemaAdaptor {
             @Override
             public Type<?> visitObject(final UseObject type) {
 
-                return new TypeName(strategy.inputRefTypeName());
+                return new TypeName(strategy.inputRefTypeName(type.isVersioned()));
             }
 
             @Override
