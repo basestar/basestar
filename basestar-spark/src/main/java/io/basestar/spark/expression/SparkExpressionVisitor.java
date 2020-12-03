@@ -244,7 +244,7 @@ public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Colu
 
         final Column with = this.visit(expression.getWith());
         final Column[] args = expression.getArgs().stream().map(this::visit).toArray(Column[]::new);
-        final Type withType = SparkSchemaUtils.type(with.expr().dataType()).javaType();
+        final Type withType = typeOf(expression.getWith()).javaType();
         final Type[] argTypes = expression.getArgs().stream().map(v -> typeOf(v).javaType()).toArray(Type[]::new);
         final Callable callable = context.callable(withType, expression.getMember(), argTypes);
 

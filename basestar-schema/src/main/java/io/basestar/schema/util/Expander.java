@@ -45,6 +45,16 @@ public interface Expander {
             }
 
             @Override
+            public Instance expandVersionedRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
+
+                if(ref == null) {
+                    return null;
+                } else {
+                    return schema.expand(ref, this, expand);
+                }
+            }
+
+            @Override
             public Page<Instance> expandLink(final Link link, final Page<Instance> value, final Set<Name> expand) {
 
                 if(value == null) {
@@ -58,6 +68,8 @@ public interface Expander {
     }
 
     Instance expandRef(ObjectSchema schema, Instance ref, Set<Name> expand);
+
+    Instance expandVersionedRef(ObjectSchema schema, Instance ref, Set<Name> expand);
 
     Page<Instance> expandLink(Link link, Page<Instance> value, Set<Name> expand);
 }

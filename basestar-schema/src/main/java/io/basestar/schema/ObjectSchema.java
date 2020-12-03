@@ -621,6 +621,14 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
         ));
     }
 
+    public static Instance ref(final String key, final Long version) {
+
+        return new Instance(ImmutableMap.of(
+                ID, key,
+                VERSION, version
+        ));
+    }
+
     @Override
     public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 

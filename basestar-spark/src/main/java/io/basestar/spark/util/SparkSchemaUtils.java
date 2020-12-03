@@ -720,14 +720,14 @@ public class SparkSchemaUtils {
             public Object visitDate(final UseDate type) {
 
                 final LocalDate converted = type.create(value, expand, suppress);
-                return ISO8601.toSqlDate(converted);
+                return converted == null ? null : ISO8601.toSqlDate(converted);
             }
 
             @Override
             public Object visitDateTime(final UseDateTime type) {
 
                 final Instant converted = type.create(value, expand, suppress);
-                return ISO8601.toSqlTimestamp(converted);
+                return converted == null ? null : ISO8601.toSqlTimestamp(converted);
             }
 
             @Override

@@ -266,9 +266,10 @@ public class Link implements Member {
 
     //FIXME
     @Override
+    @SuppressWarnings("unchecked")
     public <T> Use<T> typeOf(final Name name) {
 
-        throw new UnsupportedOperationException();
+        return (Use<T>)getType().typeOf(name);
     }
 
     @Override

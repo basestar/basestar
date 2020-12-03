@@ -485,7 +485,11 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
     @Override
     public Member getMember(final String name, final boolean inherited) {
 
-        return getProperty(name, inherited);
+        final Property property = getProperty(name, inherited);
+        if(property != null) {
+            return property;
+        }
+        return getLink(name, inherited);
     }
 
     @Override
@@ -496,6 +500,17 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
             from.getSchema().collectDependencies(expand, out);
             declaredProperties.forEach((k, v) -> v.collectDependencies(expand, out));
         }
+    }
+
+    public boolean isGrouping() {
+
+        return !group.isEmpty();
+    }
+
+    public boolean isAggregating() {
+
+        return getProperties().values().stream().map(Property::getExpression)
+                .filter(Objects::nonNull).anyMatch(Expression::isAggregate);
     }
 
     private static Property.Descriptor viewPropertyDescriptor(final Property.Descriptor descriptor, final From from) {

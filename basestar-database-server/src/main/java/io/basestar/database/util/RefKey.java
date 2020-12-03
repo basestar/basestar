@@ -21,7 +21,6 @@ package io.basestar.database.util;
  */
 
 import io.basestar.schema.Instance;
-import io.basestar.schema.ObjectSchema;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.Data;
@@ -37,27 +36,39 @@ public class RefKey {
 
     private final String id;
 
-    public static RefKey from(final Map<String, Object> item) {
+    private final Long version;
+
+    public static RefKey latest(final Map<String, Object> item) {
 
         final Name schema = Instance.getSchema(item);
         final String id = Instance.getId(item);
         assert schema != null && id != null;
-        return new RefKey(schema, id);
+        return new RefKey(schema, id, null);
     }
 
-    public static RefKey from(final ObjectSchema schema, final Map<String, Object> item) {
+    public static RefKey latest(final Name defaultSchema, final Map<String, Object> item) {
 
+        final Name schema = Instance.getSchema(item);
         final String id = Instance.getId(item);
-        final Name instanceSchemaName = Instance.getSchema(item);
         assert id != null;
-        return new RefKey(Nullsafe.orDefault(instanceSchemaName, schema.getQualifiedName()), id);
+        return new RefKey(Nullsafe.orDefault(schema, defaultSchema), id, null);
     }
 
-    public static RefKey from(final Name schema, final Map<String, Object> item) {
+    public static RefKey versioned(final Map<String, Object> item) {
 
+        final Name schema = Instance.getSchema(item);
         final String id = Instance.getId(item);
-        final Name instanceSchemaName = Instance.getSchema(item);
-        assert id != null;
-        return new RefKey(Nullsafe.orDefault(instanceSchemaName, schema), id);
+        final Long version = Instance.getVersion(item);
+        assert schema != null && id != null && version != null;
+        return new RefKey(schema, id, version);
+    }
+
+    public static RefKey versioned(final Name defaultSchema, final Map<String, Object> item) {
+
+        final Name schema = Instance.getSchema(item);
+        final String id = Instance.getId(item);
+        final Long version = Instance.getVersion(item);
+        assert id != null && version != null;
+        return new RefKey(Nullsafe.orDefault(schema, defaultSchema), id, version);
     }
 }
