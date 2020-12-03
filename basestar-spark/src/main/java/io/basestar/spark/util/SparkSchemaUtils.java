@@ -33,7 +33,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.*;
 import org.apache.spark.sql.api.java.*;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
-import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.types.*;
@@ -51,9 +50,9 @@ import java.util.stream.Stream;
 @Slf4j
 public class SparkSchemaUtils {
 
-    public static String PARTITION = Reserved.PREFIX + "partition";
+    public static final String PARTITION = Reserved.PREFIX + "partition";
 
-    public static String SORT = Reserved.PREFIX + "sort";
+    public static final String SORT = Reserved.PREFIX + "sort";
 
     private SparkSchemaUtils() {
 
@@ -1167,18 +1166,5 @@ public class SparkSchemaUtils {
             }, toDataType);
             return udf.apply(column);
         }
-    }
-
-    private static DataType columnType(final Column column) {
-
-        final Expression expr = column.expr();
-        if(expr.resolved()) {
-            try {
-                return expr.dataType();
-            } catch (final Exception e) {
-                log.error("Failed to determine column type", e);
-            }
-        }
-        return null;
     }
 }

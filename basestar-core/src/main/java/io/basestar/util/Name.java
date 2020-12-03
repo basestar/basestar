@@ -42,7 +42,7 @@ public class Name extends AbstractPath<Name> implements Comparable<Name> {
     // FIXME: names with wildcard parts should probably be represented by another type (if at-all)
     public static final Pattern PATTERN = Pattern.compile("[\\w\\d_$\\-]+|\\*");
 
-    protected Name(final String ... parts) {
+    protected Name(final String... parts) {
 
         super(parts);
     }
@@ -74,7 +74,7 @@ public class Name extends AbstractPath<Name> implements Comparable<Name> {
     public static Name parseNonEmpty(final String str) {
 
         final Name name = parse(str);
-        if(name.isEmpty()) {
+        if (name.isEmpty()) {
             throw new IllegalStateException("Cannot be empty");
         }
         return name;
@@ -101,7 +101,7 @@ public class Name extends AbstractPath<Name> implements Comparable<Name> {
                 .collect(Collectors.toSet());
     }
 
-    public static Set<Name> parseSet(final String ... strs) {
+    public static Set<Name> parseSet(final String... strs) {
 
         return parseSet(Arrays.asList(strs));
     }
@@ -117,7 +117,7 @@ public class Name extends AbstractPath<Name> implements Comparable<Name> {
                 .collect(Collectors.toList());
     }
 
-    public static List<Name> parseList(final String ... strs) {
+    public static List<Name> parseList(final String... strs) {
 
         return parseList(Arrays.asList(strs));
     }
@@ -127,7 +127,7 @@ public class Name extends AbstractPath<Name> implements Comparable<Name> {
         return parseList(splitter(MULTIPLE_DELIMITER).split(str));
     }
 
-    public static Name of(final String ... parts) {
+    public static Name of(final String... parts) {
 
         validateParts(parts);
         return new Name(Arrays.asList(parts));
@@ -159,14 +159,14 @@ public class Name extends AbstractPath<Name> implements Comparable<Name> {
         return size() == 1 && path.equals(get(0));
     }
 
-    protected static void validateParts(final String ... parts) {
+    protected static void validateParts(final String... parts) {
 
         Arrays.stream(parts).forEach(Name::validatePart);
     }
 
     private static void validatePart(final String part) {
 
-        if(!PATTERN.matcher(part).matches()) {
+        if (!PATTERN.matcher(part).matches()) {
             throw new IllegalStateException("Names can only contain alphanumeric characters or - _ $ characters (provided: " + part + ")");
         }
     }
@@ -184,11 +184,11 @@ public class Name extends AbstractPath<Name> implements Comparable<Name> {
     public boolean isSimilar(final Name other) {
 
         final int size = size();
-        if(size == other.size()) {
-            for(int i = 0; i != size; ++i) {
+        if (size == other.size()) {
+            for (int i = 0; i != size; ++i) {
                 final String a = similarityFold(get(i));
                 final String b = similarityFold(other.get(i));
-                if(!a.equals(b)) {
+                if (!a.equals(b)) {
                     return false;
                 }
             }

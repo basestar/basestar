@@ -756,7 +756,7 @@ public class ObjectSchema implements LinkableSchema, Index.Resolver, Transient.R
     @Override
     public boolean equals(final Object other) {
 
-        return qualifiedNameEquals(other);
+        return other instanceof ObjectSchema && qualifiedNameEquals(other);
     }
 
     @Override

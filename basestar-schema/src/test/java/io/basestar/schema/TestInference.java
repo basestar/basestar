@@ -12,19 +12,19 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class TestInference {
+class TestInference {
 
     private InstanceSchema schema;
 
     @BeforeEach
-    public void setUp() throws IOException {
+    void setUp() throws IOException {
 
         final Namespace namespace = Namespace.load(TestInference.class.getResource("inference.yml"));
         this.schema = namespace.requireInstanceSchema("Inference");
     }
 
     @Test
-    public void testConstant() {
+    void testConstant() {
 
         test("null", UseAny.DEFAULT);
         test("'test'", UseString.DEFAULT);
@@ -34,7 +34,7 @@ public class TestInference {
     }
 
     @Test
-    public void testAdd() {
+    void testAdd() {
 
         test("string + number", UseString.DEFAULT);
         test("string + boolean", UseString.DEFAULT);
@@ -46,7 +46,7 @@ public class TestInference {
     }
 
     @Test
-    public void testArithmetic() {
+    void testArithmetic() {
 
         test("integer + number", UseNumber.DEFAULT);
         test("number / integer", UseNumber.DEFAULT);
@@ -58,7 +58,7 @@ public class TestInference {
     }
 
     @Test
-    public void testCoalesce() {
+    void testCoalesce() {
 
         test("string ?? string", UseString.DEFAULT);
         test("integer ?? number", UseNumber.DEFAULT);
@@ -67,7 +67,7 @@ public class TestInference {
     }
 
     @Test
-    public void testIfElse() {
+    void testIfElse() {
 
         test("boolean ? string : string", UseString.DEFAULT);
         test("boolean ? integer : number", UseNumber.DEFAULT);
@@ -76,7 +76,7 @@ public class TestInference {
     }
 
     @Test
-    public void testBitwise() {
+    void testBitwise() {
 
         test("missing | missing", UseInteger.DEFAULT);
         test("missing & missing", UseInteger.DEFAULT);
@@ -87,7 +87,7 @@ public class TestInference {
     }
 
     @Test
-    public void testLogical() {
+    void testLogical() {
 
         test("missing && missing", UseBoolean.DEFAULT);
         test("missing || missing", UseBoolean.DEFAULT);
@@ -95,7 +95,7 @@ public class TestInference {
     }
 
     @Test
-    public void testCompare() {
+    void testCompare() {
 
         test("missing <=> missing", UseInteger.DEFAULT);
         test("missing == missing", UseBoolean.DEFAULT);
@@ -107,14 +107,14 @@ public class TestInference {
     }
 
     @Test
-    public void testMemberCall() {
+    void testMemberCall() {
 
         test("string.substr(1)", UseString.DEFAULT);
         test("string.isEmpty()", UseBoolean.DEFAULT);
     }
 
     @Test
-    public void testIndex() {
+    void testIndex() {
 
         test("mapString[string]", UseString.DEFAULT);
         test("setInteger[integer]", UseInteger.DEFAULT);
@@ -122,7 +122,7 @@ public class TestInference {
     }
 
     @Test
-    public void testAggregate() {
+    void testAggregate() {
 
         test("avg(missing)", UseNumber.DEFAULT);
         test("sum(number)", UseNumber.DEFAULT);
@@ -133,7 +133,7 @@ public class TestInference {
     }
 
     @Test
-    public void testLiteral() {
+    void testLiteral() {
 
         test("{\"x\": string}", UseMap.from(UseString.DEFAULT));
         test("{number}", UseSet.from(UseNumber.DEFAULT));
@@ -141,13 +141,13 @@ public class TestInference {
     }
 
     @Test
-    public void testWith() {
+    void testWith() {
 
         test("with(x = number) integer + x", UseNumber.DEFAULT);
     }
 
     @Test
-    public void testFor() {
+    void testFor() {
 
         test("x for all missing of missing", UseBoolean.DEFAULT);
         test("x for any missing of missing", UseBoolean.DEFAULT);
@@ -157,19 +157,19 @@ public class TestInference {
     }
 
     @Test
-    public void testIn() {
+    void testIn() {
 
         test("missing in missing", UseBoolean.DEFAULT);
     }
 
     @Test
-    public void testLike() {
+    void testLike() {
 
         test("missing like missing", UseBoolean.DEFAULT);
     }
 
     @Test
-    public void testMember() {
+    void testMember() {
 
         test("other.other.other.string", UseString.DEFAULT);
     }

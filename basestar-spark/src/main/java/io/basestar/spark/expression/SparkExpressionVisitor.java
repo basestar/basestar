@@ -97,15 +97,6 @@ public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Colu
         } else {
             return functions.element_at(lhs, rhs);
         }
-//        final
-//        if(rhs instanceof Number) {
-//            final int at = expression.getRhs().evaluateAs(Number.class, context).intValue();
-//            return functions.element_at(visit(expression.getLhs()), at + 1);
-//        } else if(rhs instanceof String) {
-//            return visit(expression.getLhs()).getField((String)rhs);
-//        } else {
-//            throw new BadExpressionException("RHS must be constant number or string");
-//        }
     }
 
     @Override

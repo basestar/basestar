@@ -338,7 +338,7 @@ public class StructSchema implements InstanceSchema {
     @Override
     public boolean equals(final Object other) {
 
-        return qualifiedNameEquals(other);
+        return other instanceof StructSchema &&qualifiedNameEquals(other);
     }
 
     @Override

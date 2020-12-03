@@ -372,34 +372,6 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
         return new Instance(result);
     }
 
-//    // Using this prototype in advance of over: syntax
-//    public Collection<Instance> flatMap(final Map<String, Object> input) {
-//
-//        final Map<String, Object> output = new HashMap<>();
-//        getProperties().forEach((name, property) -> {
-//            final AggregateExtractingVisitor aggVisitor = new AggregateExtractingVisitor();
-//            final Expression converted = aggVisitor.visit(Nullsafe.require(property.getExpression()));
-//            final Map<String, Aggregate> aggregates = aggVisitor.getAggregates();
-//            if(!aggregates.isEmpty()) {
-//                aggregates.forEach((key, agg) -> {
-//                    agg.inputs().forEach(aggInput -> {
-//                        final String digestKey = Reserved.PREFIX + "agg_" + aggInput.digest();
-//                        output.put(digestKey, aggInput.evaluate(Context.init(input)));
-//                    });
-//                });
-//            }
-//            converted.evaluate();
-//
-//        });
-//        output.put(KEY, key(input));
-//        return Collections.singleton(new Instance(output));
-//    }
-//
-//    public Instance reduce(final Collection<Map<String, Object>> inputs) {
-//
-//
-//    }
-
     public byte[] key(final Map<String, Object> value) {
 
         final List<Object> key = new ArrayList<>();
@@ -691,7 +663,7 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
     @Override
     public boolean equals(final Object other) {
 
-        return qualifiedNameEquals(other);
+        return other instanceof ViewSchema && qualifiedNameEquals(other);
     }
 
     @Override

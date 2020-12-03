@@ -20,13 +20,13 @@ package io.basestar.expression;
  * #L%
  */
 
-import com.google.common.base.Charsets;
 import com.google.common.hash.Hashing;
 import io.basestar.expression.parse.ExpressionCache;
 import io.basestar.expression.type.Values;
 import io.basestar.util.Name;
 
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -103,6 +103,6 @@ public interface Expression extends Serializable {
     @SuppressWarnings("UnstableApiUsage")
     default String digest() {
 
-        return Hashing.murmur3_32().hashString(toString(), Charsets.UTF_8).toString();
+        return Hashing.murmur3_32().hashString(toString(), StandardCharsets.UTF_8).toString();
     }
 }

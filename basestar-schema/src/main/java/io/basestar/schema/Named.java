@@ -43,7 +43,7 @@ public interface Named {
 
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        final ObjectSchema that = (ObjectSchema) o;
+        final Named that = (Named) o;
         return getQualifiedName().equals(that.getQualifiedName());
     }
 

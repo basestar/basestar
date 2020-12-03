@@ -73,13 +73,13 @@ public interface InferenceContext {
 
         private final InferenceContext parent;
 
-        private final Map<String, InferenceContext> overlay;
+        private final Map<String, InferenceContext> overrides;
 
         @Override
         public Use<?> typeOfMember(final Name name) {
 
             final String first = name.first();
-            final InferenceContext override = overlay.get(first);
+            final InferenceContext override = overrides.get(first);
             if(override != null) {
                 return override.typeOfMember(name.withoutFirst());
             } else {

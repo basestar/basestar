@@ -238,7 +238,7 @@ public class EnumSchema implements Schema<String> {
     @Override
     public boolean equals(final Object other) {
 
-        return qualifiedNameEquals(other);
+        return other instanceof EnumSchema && qualifiedNameEquals(other);
     }
 
     @Override
