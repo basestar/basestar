@@ -20,6 +20,7 @@ package io.basestar.util;
  * #L%
  */
 
+import com.google.common.base.Charsets;
 import com.google.common.io.BaseEncoding;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -164,6 +165,16 @@ public class Page<T> extends AbstractList<T> implements Serializable {
         public String toString() {
 
             return ENCODING.encode(value);
+        }
+
+        public static Token fromStringValue(final String value) {
+
+            return new Token(value.getBytes(Charsets.UTF_8));
+        }
+
+        public String getStringValue() {
+
+            return new String(value, Charsets.UTF_8);
         }
     }
 }

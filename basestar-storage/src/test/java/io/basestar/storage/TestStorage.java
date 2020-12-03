@@ -79,6 +79,26 @@ public abstract class TestStorage {
 
     protected abstract Storage storage(Namespace namespace);
 
+    protected boolean supportsDelete() {
+
+        return true;
+    }
+
+    protected boolean supportsUpdate() {
+
+        return true;
+    }
+
+    protected boolean supportsIndexes() {
+
+        return true;
+    }
+
+    protected boolean supportsOversize() {
+
+        return true;
+    }
+
     protected void bulkLoad(final Storage storage, final Multimap<String, Map<String, Object>> data) {
 
         writeAll(storage, namespace, data);
@@ -135,6 +155,8 @@ public abstract class TestStorage {
     @Test
     protected void testIndexes() throws IOException {
 
+        assumeTrue(supportsIndexes());
+
         final Storage storage = storage(namespace);
 
         final ObjectSchema schema = namespace.requireObjectSchema(ADDRESS);
@@ -159,6 +181,8 @@ public abstract class TestStorage {
 
     @Test
     protected void testSortAndPaging() {
+
+        assumeTrue(supportsIndexes());
 
         final Instant now = Instant.now();
 
@@ -304,6 +328,8 @@ public abstract class TestStorage {
     @Test
     protected void testUpdate() {
 
+        assumeTrue(supportsUpdate());
+
         final Storage storage = storage(namespace);
 
         final ObjectSchema schema = namespace.requireObjectSchema(SIMPLE);
@@ -345,6 +371,8 @@ public abstract class TestStorage {
     @Test
     protected void testDelete() {
 
+        assumeTrue(supportsDelete());
+
         final Storage storage = storage(namespace);
 
         final ObjectSchema schema = namespace.requireObjectSchema(SIMPLE);
@@ -374,6 +402,8 @@ public abstract class TestStorage {
 
     @Test
     protected void testLarge() {
+
+        assumeTrue(supportsOversize());
 
         final Storage storage = storage(namespace);
 
@@ -428,6 +458,8 @@ public abstract class TestStorage {
     @Test
     protected void testUpdateMissing() {
 
+        assumeTrue(supportsUpdate());
+
         final Storage storage = storage(namespace);
 
         final ObjectSchema schema = namespace.requireObjectSchema(SIMPLE);
@@ -458,6 +490,8 @@ public abstract class TestStorage {
     @Test
     protected void testDeleteMissing() {
 
+        assumeTrue(supportsDelete());
+
         final Storage storage = storage(namespace);
 
         final ObjectSchema schema = namespace.requireObjectSchema(SIMPLE);
@@ -485,6 +519,8 @@ public abstract class TestStorage {
 
     @Test
     protected void testDeleteWrongVersion() {
+
+        assumeTrue(supportsDelete());
 
         final Storage storage = storage(namespace);
 
@@ -515,6 +551,8 @@ public abstract class TestStorage {
 
     @Test
     protected void testUpdateWrongVersion() {
+
+        assumeTrue(supportsUpdate());
 
         final Storage storage = storage(namespace);
 
@@ -550,6 +588,8 @@ public abstract class TestStorage {
     @Test
     protected void testMultiValueIndex() {
 
+        assumeTrue(supportsIndexes());
+
         final Storage storage = storage(namespace);
 
         final ObjectSchema schema = namespace.requireObjectSchema(POINTSET);
@@ -581,6 +621,8 @@ public abstract class TestStorage {
     @Test
     protected void testNullBeforeUpdate() {
 
+        assumeTrue(supportsUpdate());
+
         final Storage storage = storage(namespace);
 
         final ObjectSchema schema = namespace.requireObjectSchema(SIMPLE);
@@ -600,6 +642,8 @@ public abstract class TestStorage {
 
     @Test
     protected void testNullBeforeDelete() {
+
+        assumeTrue(supportsDelete());
 
         final Storage storage = storage(namespace);
 
@@ -702,6 +746,8 @@ public abstract class TestStorage {
     @Test
     protected void testRefIndex() {
 
+        assumeTrue(supportsIndexes());
+
         final Storage storage = storage(namespace);
 
         final ObjectSchema target = namespace.requireObjectSchema(REF_TARGET);
@@ -780,6 +826,8 @@ public abstract class TestStorage {
 
     @Test
     protected void testDateSort() {
+
+        assumeTrue(supportsIndexes());
 
         final Storage storage = storage(namespace);
 

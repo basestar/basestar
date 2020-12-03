@@ -505,7 +505,7 @@ class TestExpression {
                 "v", LocalDate.parse("2020-01-01")
         )));
 
-        check("v.toString()", "2020-01-01T01:02:03Z", context(ImmutableMap.of(
+        check("v.toString()", "2020-01-01T01:02:03.000Z", context(ImmutableMap.of(
                 "v", Instant.parse("2020-01-01T01:02:03Z")
         )));
 
@@ -523,6 +523,10 @@ class TestExpression {
 
         check("v.toDatetime('dd-MM-yyyy HH:mm:ss')", Instant.parse("2020-01-01T01:02:03Z"), context(ImmutableMap.of(
                 "v", "01-01-2020 01:02:03"
+        )));
+
+        check("v.toDate().toInteger()", 1577836800000L, context(ImmutableMap.of(
+                "v", "2020-01-01"
         )));
 
         check("null.toDatetime()", null, context(ImmutableMap.of()));
