@@ -98,6 +98,7 @@
         <module>basestar-stream</module>
         <module>basestar-maven-plugin</module>
         <module>basestar-storage-leveldb</module>
+        <module>basestar-storage-aws</module>
     </modules>
 
 <!--    <reporting>-->

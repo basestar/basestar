@@ -31,7 +31,7 @@ import io.basestar.util.Name;
 import io.basestar.util.Sort;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.*;
-import org.apache.spark.sql.api.java.*;
+import org.apache.spark.sql.api.java.UDF1;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.expressions.UserDefinedFunction;
@@ -1096,32 +1096,81 @@ public class SparkSchemaUtils {
         }
     }
 
+    public static Object toSpark(final Object value) {
+
+        if(value instanceof Map) {
+            final Map<Object, Object> tmp = new HashMap<>();
+            ((Map<?, ?>) value).forEach((k, v) -> tmp.put(k, toSpark(v)));
+            return ScalaUtils.asScalaMap(tmp);
+        } else if(value instanceof Collection) {
+            final List<Object> tmp = new ArrayList<>();
+            ((Collection<?>) value).forEach(v -> tmp.add(toSpark(v)));
+            return ScalaUtils.asScalaSeq(tmp);
+        } else if(value instanceof Instant) {
+            return ISO8601.toSqlTimestamp((Instant)value);
+        } else if(value instanceof LocalDate) {
+            return ISO8601.toSqlDate((LocalDate)value);
+        } else {
+            return value;
+        }
+    }
+
+    public static Object fromSpark(final Object value) {
+
+        if(value instanceof scala.collection.Map) {
+            final Map<Object, Object> tmp = new HashMap<>();
+            ScalaUtils.asJavaMap((scala.collection.Map<?, ?>)value).forEach((k, v) -> tmp.put(k, fromSpark(v)));
+            return tmp;
+        } else if(value instanceof scala.collection.Seq) {
+            final List<Object> tmp = new ArrayList<>();
+            ScalaUtils.asJavaStream((scala.collection.Seq<?>)value).forEach(v -> tmp.add(fromSpark(v)));
+            return tmp;
+        } else if(value instanceof java.sql.Timestamp) {
+            return ISO8601.toDateTime(value);
+        } else if(value instanceof java.sql.Date) {
+            return ISO8601.toDate(value);
+        } else {
+            return value;
+        }
+    }
+
     public static UserDefinedFunction udf(final Callable callable) {
 
         final DataType returnType = type(callable.type());
         switch (callable.args().length) {
             case 0:
-                return functions.udf((UDF0<?>) callable::call, returnType);
+                return functions.udf(() -> toSpark(callable.call()), returnType);
             case 1:
-                return functions.udf((UDF1<?, ?>) callable::call, returnType);
+                return functions.udf(v1 -> toSpark(callable.call(fromSpark(v1))), returnType);
             case 2:
-                return functions.udf((UDF2<?, ?, ?>) callable::call, returnType);
+                return functions.udf((v1, v2) -> toSpark(callable.call(fromSpark(v1), fromSpark(v2))), returnType);
             case 3:
-                return functions.udf((UDF3<?, ?, ?, ?>) callable::call, returnType);
+                return functions.udf((v1, v2, v3) -> toSpark(callable.call(fromSpark(v1), fromSpark(v2),
+                        fromSpark(v3))), returnType);
             case 4:
-                return functions.udf((UDF4<?, ?, ?, ?, ?>) callable::call, returnType);
+                return functions.udf((v1, v2, v3, v4) -> toSpark(callable.call(fromSpark(v1), fromSpark(v2),
+                        fromSpark(v3), fromSpark(v4))), returnType);
             case 5:
-                return functions.udf((UDF5<?, ?, ?, ?, ?, ?>) callable::call, returnType);
+                return functions.udf((v1, v2, v3, v4, v5) -> toSpark(callable.call(fromSpark(v1), fromSpark(v2),
+                        fromSpark(v3), fromSpark(v4), fromSpark(v5))), returnType);
             case 6:
-                return functions.udf((UDF6<?, ?, ?, ?, ?, ?, ?>) callable::call, returnType);
+                return functions.udf((v1, v2, v3, v4, v5, v6) -> toSpark(callable.call(fromSpark(v1), fromSpark(v2),
+                        fromSpark(v3), fromSpark(v4), fromSpark(v5), fromSpark(v6))), returnType);
             case 7:
-                return functions.udf((UDF7<?, ?, ?, ?, ?, ?, ?, ?>) callable::call, returnType);
+                return functions.udf((v1, v2, v3, v4, v5, v6, v7) -> toSpark(callable.call(fromSpark(v1), fromSpark(v2),
+                        fromSpark(v3), fromSpark(v4), fromSpark(v5), fromSpark(v6), fromSpark(v7))), returnType);
             case 8:
-                return functions.udf((UDF8<?, ?, ?, ?, ?, ?, ?, ?, ?>) callable::call, returnType);
+                return functions.udf((v1, v2, v3, v4, v5, v6, v7, v8) -> toSpark(callable.call(fromSpark(v1),
+                        fromSpark(v2), fromSpark(v3), fromSpark(v4), fromSpark(v5), fromSpark(v6), fromSpark(v7),
+                        fromSpark(v8))), returnType);
             case 9:
-                return functions.udf((UDF9<?, ?, ?, ?, ?, ?, ?, ?, ?, ?>) callable::call, returnType);
+                return functions.udf((v1, v2, v3, v4, v5, v6, v7, v8, v9) -> toSpark(callable.call(fromSpark(v1),
+                        fromSpark(v2), fromSpark(v3), fromSpark(v4), fromSpark(v5), fromSpark(v6), fromSpark(v7),
+                        fromSpark(v8), fromSpark(v9))), returnType);
             case 10:
-                return functions.udf((UDF10<?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?>) callable::call, returnType);
+                return functions.udf((v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) -> toSpark(callable.call(fromSpark(v1),
+                        fromSpark(v2), fromSpark(v3), fromSpark(v4), fromSpark(v5), fromSpark(v6), fromSpark(v7),
+                        fromSpark(v8), fromSpark(v9), fromSpark(v10))), returnType);
             default:
                 throw new IllegalStateException("Too many UDF parameters");
         }

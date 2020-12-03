@@ -369,7 +369,7 @@ public class DynamoDBUtils {
         final List<CompletableFuture<Void>> futures = slices.stream()
                 .map(slice -> batchWriteImpl(client, tableName, slice))
                 .collect(Collectors.toList());
-        return CompletableFutures.allOf(futures);
+        return CompletableFutures.allOf(futures).thenApply(v -> null);
     }
 
     private static CompletableFuture<Void> batchWriteImpl(final DynamoDbAsyncClient client, final String tableName, final Collection<WriteRequest> writes) {

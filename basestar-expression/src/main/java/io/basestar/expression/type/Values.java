@@ -98,7 +98,9 @@ public class Values {
         } else if(value instanceof LocalDate) {
             return ISO8601.toMillis((LocalDate)value);
         } else if(value instanceof Instant) {
-            return ISO8601.toMillis((Instant)value);
+            return ISO8601.toMillis((Instant) value);
+        } else if(value instanceof Date) {
+            return ISO8601.toMillis((Date)value);
         } else {
             throw new TypeConversionException(Long.class, value);
         }
@@ -122,6 +124,8 @@ public class Values {
             return (double)ISO8601.toMillis((LocalDate)value);
         } else if(value instanceof Instant) {
             return (double)ISO8601.toMillis((Instant)value);
+        } else if(value instanceof Date) {
+            return (double)ISO8601.toMillis((Date)value);
         } else {
             throw new TypeConversionException(Double.class, value);
         }
@@ -134,7 +138,9 @@ public class Values {
         } else if(value instanceof Boolean || value instanceof Number) {
             return value.toString();
         } else if(value instanceof TemporalAccessor) {
-            return value.toString();
+            return ISO8601.toString((TemporalAccessor)value);
+        } else if(value instanceof Date) {
+            return ISO8601.toString((Date)value);
         } else if(value instanceof String) {
             return (String) value;
         } else {

@@ -21,9 +21,11 @@ package io.basestar.util;
  */
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BinaryOperator;
+import java.util.stream.Collectors;
 
 public class CompletableFutures {
 
@@ -38,9 +40,19 @@ public class CompletableFutures {
         return future;
     }
 
-    public static CompletableFuture<Void> allOf(final List<? extends CompletableFuture<?>> futures) {
+    public static <T> CompletableFuture<List<T>> allOf(final List<? extends CompletableFuture<T>> futures) {
 
-        return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]));
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]))
+                .thenApply(ignored -> futures.stream().map(v -> v.getNow(null)).collect(Collectors.toList()));
+    }
+
+    public static <K, T> CompletableFuture<Map<K, T>> allOf(final Map<? extends K, ? extends CompletableFuture<T>> futures) {
+
+        return CompletableFuture.allOf(futures.values().toArray(new CompletableFuture<?>[0]))
+                .thenApply(ignored -> futures.entrySet().stream().collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        e -> e.getValue().getNow(null)
+                )));
     }
 
     public static <T> CompletableFuture<T> allOf(final T identity, final BinaryOperator<T> accumulator, final List<CompletableFuture<T>> futures) {

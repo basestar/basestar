@@ -118,7 +118,11 @@ public class ISO8601 {
 
     public static LocalDate toDate(final TemporalAccessor value) {
 
-        return LocalDate.from(value);
+        if(value instanceof Instant) {
+            return ((Instant) value).atZone(ZoneOffset.UTC).toLocalDate();
+        } else {
+            return LocalDate.from(value);
+        }
     }
 
     public static LocalDate toDate(final Object value) {
@@ -135,6 +139,8 @@ public class ISO8601 {
             return toDate(((Date) value).toInstant());
         } else if(value instanceof String) {
             return parseDate((String) value);
+        } else if(value instanceof Number) {
+            return toDate(toDateTime(((Number)value).longValue()));
         } else {
             throw new InvalidDateException(value);
         }
@@ -158,6 +164,26 @@ public class ISO8601 {
             return DateTimeFormatter.ofPattern(format).parse(value, LocalDate::from);
         } catch (final DateTimeParseException e) {
             throw new InvalidDateException(value);
+        }
+    }
+
+    public static String toString(final TemporalAccessor value) {
+
+        if(value instanceof LocalDate) {
+            return toString((LocalDate)value);
+        } else if(value instanceof Instant) {
+            return toString((Instant)value);
+        } else {
+            throw new InvalidDateException(value);
+        }
+    }
+
+    public static String toString(final Date value) {
+
+        if(value instanceof java.sql.Date) {
+            return toString(((java.sql.Date) value).toLocalDate());
+        } else {
+            return toString(value.toInstant());
         }
     }
 
@@ -191,6 +217,15 @@ public class ISO8601 {
     public static Long toMillis(final LocalDate value) {
 
         return value.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
+    }
+
+    public static Long toMillis(final Date value) {
+
+        if(value instanceof java.sql.Date) {
+            return toMillis(((java.sql.Date) value).toLocalDate());
+        } else {
+            return toMillis(value.toInstant());
+        }
     }
 
     @SuppressWarnings("deprecation")
