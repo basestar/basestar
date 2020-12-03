@@ -20,11 +20,13 @@ package io.basestar.schema.use;
  * #L%
  */
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.compare.Eq;
 import io.basestar.expression.constant.NameConstant;
+import io.basestar.expression.type.Values;
 import io.basestar.schema.*;
 import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.util.Expander;
@@ -53,6 +55,8 @@ import java.util.*;
 @Slf4j
 public class UseObject implements UseLinkable {
 
+    public static final String VERSIONED_KEY = "versioned";
+
     private final ObjectSchema schema;
 
     private final boolean versioned;
@@ -76,7 +80,13 @@ public class UseObject implements UseLinkable {
 
     public static UseObject from(final ObjectSchema schema, final Object config) {
 
-        return new UseObject(schema, false);
+        final boolean versioned;
+        if(config instanceof Map) {
+            versioned = Values.isTruthy(((Map<?, ?>) config).get(VERSIONED_KEY));
+        } else {
+            versioned = false;
+        }
+        return new UseObject(schema, versioned);
     }
 
     @Override
@@ -109,7 +119,15 @@ public class UseObject implements UseLinkable {
                 if(expand != null) {
                     return schema.create(map, expand, suppress);
                 } else {
-                    return ObjectSchema.ref(id);
+                    if(versioned) {
+                        final Long version = Instance.getVersion(map);
+                        if(version == null && !suppress) {
+                            throw new UnexpectedTypeException(this, value);
+                        }
+                        return ObjectSchema.ref(id, version);
+                    } else {
+                        return ObjectSchema.ref(id);
+                    }
                 }
             }
         } else if(suppress) {
@@ -123,6 +141,20 @@ public class UseObject implements UseLinkable {
     public Code code() {
 
         return Code.OBJECT;
+    }
+
+    @Override
+    public Object toConfig(final boolean optional) {
+
+        if(versioned) {
+            return UseLinkable.super.toConfig(optional);
+        } else {
+            return ImmutableMap.of(
+                    Use.name(getName().toString(), optional), ImmutableMap.of(
+                            VERSIONED_KEY, true
+                    )
+            );
+        }
     }
 
     @Override
@@ -153,11 +185,21 @@ public class UseObject implements UseLinkable {
             if(expand == null) {
                 // If non-expanded, strip back to just a ref, this is needed because expand is also used to
                 // reset after expansion for permission evaluation
-                if(value.size() == 1 && value.containsKey(ObjectSchema.ID)) {
-                    return value;
+                if(versioned) {
+                    if(value.size() == 2 && value.containsKey(ObjectSchema.ID) && value.containsKey(ObjectSchema.VERSION)) {
+                        return value;
+                    } else {
+                        return ObjectSchema.ref(Instance.getId(value), Instance.getVersion(value));
+                    }
                 } else {
-                    return ObjectSchema.ref(Instance.getId(value));
+                    if (value.size() == 1 && value.containsKey(ObjectSchema.ID)) {
+                        return value;
+                    } else {
+                        return ObjectSchema.ref(Instance.getId(value));
+                    }
                 }
+            } else if(versioned) {
+                return expander.expandVersionedRef(schema, value, expand);
             } else {
                 return expander.expandRef(schema, value, expand);
             }
@@ -180,6 +222,9 @@ public class UseObject implements UseLinkable {
         final Set<Name> copy = Sets.newHashSet(names);
         copy.remove(Name.of(ObjectSchema.SCHEMA));
         copy.remove(Name.of(ObjectSchema.ID));
+        if(versioned) {
+            copy.remove(Name.of(ObjectSchema.VERSION));
+        }
 
         if(!copy.isEmpty()) {
             final Set<Name> result = Sets.newHashSet();

@@ -485,7 +485,11 @@ public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Res
     @Override
     public Member getMember(final String name, final boolean inherited) {
 
-        return getProperty(name, inherited);
+        final Property property = getProperty(name, inherited);
+        if(property != null) {
+            return property;
+        }
+        return getLink(name, inherited);
     }
 
     @Override

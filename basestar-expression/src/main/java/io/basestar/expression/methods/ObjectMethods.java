@@ -20,7 +20,7 @@ public class ObjectMethods implements Serializable {
         return Values.toInteger(value);
     }
 
-    public Double toFloat(final Object value) {
+    public Double toNumber(final Object value) {
 
         return Values.toFloat(value);
     }
