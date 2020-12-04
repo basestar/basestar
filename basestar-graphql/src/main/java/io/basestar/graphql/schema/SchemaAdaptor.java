@@ -54,9 +54,11 @@ public class SchemaAdaptor {
                 mapTypes.putAll(mapTypes(instanceSchema));
                 if(schema instanceof ObjectSchema) {
                     final ObjectSchema objectSchema = (ObjectSchema) instanceSchema;
-                    registry.add(inputExpressionTypeDefinition(objectSchema));
                     registry.add(pageTypeDefinition(objectSchema));
-                    registry.add(createInputTypeDefinition(objectSchema));
+                    if(objectSchema.hasProperties()) {
+                        registry.add(createInputTypeDefinition(objectSchema));
+                        registry.add(inputExpressionTypeDefinition(objectSchema));
+                    }
                     if (objectSchema.hasMutableProperties()) {
                         registry.add(updateInputTypeDefinition(objectSchema));
                         registry.add(patchInputTypeDefinition(objectSchema));
@@ -180,16 +182,23 @@ public class SchemaAdaptor {
 
         final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
         builder.name(GraphQLUtils.MUTATION_TYPE);
-        namespace.forEachObjectSchema((k, v) -> {
-            builder.fieldDefinition(createDefinition(v));
-            if(v.hasMutableProperties()) {
-                builder.fieldDefinition(updateDefinition(v));
-                builder.fieldDefinition(patchDefinition(v));
-            }
-            builder.fieldDefinition(deleteDefinition(v));
-        });
+        addMutations(builder);
         builder.fieldDefinition(batchDefinition());
         return builder.build();
+    }
+
+    private void addMutations(final ObjectTypeDefinition.Builder builder) {
+
+        namespace.forEachObjectSchema((k, v) -> {
+            if(!v.isReadonly()) {
+                builder.fieldDefinition(createDefinition(v));
+                if (v.hasMutableProperties()) {
+                    builder.fieldDefinition(updateDefinition(v));
+                    builder.fieldDefinition(patchDefinition(v));
+                }
+                builder.fieldDefinition(deleteDefinition(v));
+            }
+        });
     }
 
     private FieldDefinition batchDefinition() {
@@ -207,14 +216,7 @@ public class SchemaAdaptor {
 
         final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
         builder.name(strategy.batchTypeName());
-        namespace.forEachObjectSchema((k, v) -> {
-            builder.fieldDefinition(createDefinition(v));
-            if(v.hasMutableProperties()) {
-                builder.fieldDefinition(updateDefinition(v));
-                builder.fieldDefinition(patchDefinition(v));
-            }
-            builder.fieldDefinition(deleteDefinition(v));
-        });
+        addMutations(builder);
         return builder.build();
     }
 
@@ -237,12 +239,16 @@ public class SchemaAdaptor {
         builder.type(new TypeName(strategy.typeName(schema)));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(strategy.idArgumentName()).type(new TypeName(GraphQLUtils.ID_TYPE)).build());
-        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(strategy.dataArgumentName()).type(new TypeName(strategy.createInputTypeName(schema))).build());
+        if(schema.hasProperties()) {
+            builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                    .name(strategy.dataArgumentName()).type(new TypeName(strategy.createInputTypeName(schema))).build());
+        }
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(strategy.consistencyArgumentName()).type(new TypeName(strategy.consistencyTypeName())).build());
-        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(strategy.expressionsArgumentName()).type(new TypeName(strategy.inputExpressionsTypeName(schema))).build());
+        if(schema.hasProperties()) {
+            builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                    .name(strategy.expressionsArgumentName()).type(new TypeName(strategy.inputExpressionsTypeName(schema))).build());
+        }
         return builder.build();
     }
 

@@ -11,7 +11,6 @@ import io.basestar.util.Name;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
@@ -24,7 +23,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
-@Disabled
 public class TestStepFunctionStorage extends TestStorage {
 
     private static SfnAsyncClient sfn;

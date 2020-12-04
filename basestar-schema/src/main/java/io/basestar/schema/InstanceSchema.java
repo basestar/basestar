@@ -115,6 +115,11 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         return metadataSchema().get(id());
     }
 
+    default boolean hasProperties() {
+
+        return !getProperties().isEmpty();
+    }
+
     default boolean hasMutableProperties() {
 
         return !getProperties().values().stream().map(Property::isImmutable).reduce(true, (a, b) -> a && b);

@@ -60,3 +60,13 @@ Test7:
       type:
         Test7?:
           versioned: true
+
+EmptyObject:
+  type: object
+
+TestView:
+  type: view
+  properties:
+    count: count()
+  from:
+    schema: Test1
