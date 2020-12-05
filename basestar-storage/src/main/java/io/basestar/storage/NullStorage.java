@@ -52,7 +52,7 @@ public class NullStorage implements Storage.WithoutWriteIndex, Storage.WithoutWr
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    public List<Pager.Source<Map<String, Object>>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         return Collections.singletonList((count, pagingToken, stats) -> CompletableFuture.completedFuture(Page.empty()));
     }

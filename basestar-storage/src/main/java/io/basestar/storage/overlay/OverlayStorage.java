@@ -95,14 +95,14 @@ public class OverlayStorage implements Storage {
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    public List<Pager.Source<Map<String, Object>>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         final List<Pager.Source<Map<String, Object>>> sources = new ArrayList<>();
 
         // FIXME: relies on stable impl of Stream.min() in Pager
         // Overlay entries appear first, so they will be chosen
-        sources.addAll(Pager.map(overlay.query(schema, query, sort, expand), v -> OverlayMetadata.wrap(null, v).applyTo(v)));
-        sources.addAll(Pager.map(baseline.query(schema, query, sort, expand), v -> OverlayMetadata.wrap(v, null).applyTo(v)));
+        sources.addAll(Pager.map(overlay.queryObject(schema, query, sort, expand), v -> OverlayMetadata.wrap(null, v).applyTo(v)));
+        sources.addAll(Pager.map(baseline.queryObject(schema, query, sort, expand), v -> OverlayMetadata.wrap(v, null).applyTo(v)));
 
         return sources;
     }

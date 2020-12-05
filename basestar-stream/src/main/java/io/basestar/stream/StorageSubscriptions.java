@@ -139,7 +139,7 @@ public class StorageSubscriptions implements Subscriptions {
 
         final Expression expression = new Or(keys.stream().map(StorageSubscriptions::keyExpression).toArray(Expression[]::new));
 
-        return Pager.map(storage.query(SCHEMA, expression, sort(), Collections.emptySet()), this::fromMap);
+        return Pager.map(storage.queryObject(SCHEMA, expression, sort(), Collections.emptySet()), this::fromMap);
     }
 
     private Subscription fromMap(final Map<String, Object> object) {
@@ -179,7 +179,7 @@ public class StorageSubscriptions implements Subscriptions {
         final Context context = Context.init(ImmutableMap.of("s", sub));
         final Expression expression = Expression.parseAndBind(context, "sub == s");
 
-        return unsubscribeAll(storage.query(SCHEMA, expression, sort(), Collections.emptySet()), null);
+        return unsubscribeAll(storage.queryObject(SCHEMA, expression, sort(), Collections.emptySet()), null);
     }
 
     private CompletableFuture<?> unsubscribeAll(final List<Pager.Source<Map<String, Object>>> sources, final Page.Token token) {

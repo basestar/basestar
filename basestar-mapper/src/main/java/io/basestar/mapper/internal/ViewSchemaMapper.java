@@ -31,7 +31,7 @@ import io.basestar.util.Name;
 import java.util.List;
 import java.util.Set;
 
-public class ViewSchemaMapper<T> extends InstanceSchemaMapper<T, ViewSchema.Builder> {
+public class ViewSchemaMapper<T> extends InstanceSchemaMapper<ViewSchema.Builder, T> {
 
     private final boolean materialized;
 

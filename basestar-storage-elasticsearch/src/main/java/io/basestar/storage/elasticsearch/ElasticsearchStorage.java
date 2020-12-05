@@ -143,7 +143,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    public List<Pager.Source<Map<String, Object>>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         final Expression bound = query.bind(Context.init());
         final String index = strategy.objectIndex(schema);

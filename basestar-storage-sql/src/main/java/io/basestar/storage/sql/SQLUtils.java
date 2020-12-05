@@ -84,7 +84,7 @@ public class SQLUtils {
             }
 
             @Override
-            public DataType<?> visitObject(final UseObject type) {
+            public DataType<?> visitRef(final UseRef type) {
 
                 return SQLDataType.LONGVARCHAR;
             }
@@ -187,7 +187,7 @@ public class SQLUtils {
 
             @Override
             @SuppressWarnings("unchecked")
-            public String visitObject(final UseObject type) {
+            public String visitRef(final UseRef type) {
 
                 if(value == null) {
                     return null;
@@ -310,7 +310,7 @@ public class SQLUtils {
             }
 
             @Override
-            public Map<String, Object> visitObject(final UseObject type) {
+            public Map<String, Object> visitRef(final UseRef type) {
 
                 if(value == null) {
                     return null;

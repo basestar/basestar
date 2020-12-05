@@ -1,0 +1,138 @@
+PetStatus:
+  type: enum
+  values:
+    - available
+    - pending
+    - sold
+
+Pet:
+  type: interface
+  properties:
+    name:
+      type: string
+    photoUrls:
+      type:
+        array: string
+    tags:
+      type:
+        map?: string
+    status:
+      type: PetStatus
+    store:
+      type: Store
+  index:
+    store:
+      partition: store.id
+      sort: name
+  links:
+    orders:
+      schema: Order
+      expression: pet.id == this.id
+
+Cat:
+  type: object
+  extend: Pet
+
+Dog:
+  type: object
+  extend: Pet
+
+Mouse:
+  type: object
+  extend: Pet
+
+OrderStatus:
+  type: enum
+  values:
+    - placed
+    - approved
+    - delivered
+
+Order:
+  type: object
+  properties:
+    pet:
+      type: Pet
+    quantity:
+      type: integer
+    createDate:
+      type: datetime
+    shipDate:
+      type: datetime
+    status:
+      type: OrderStatus
+    complete:
+      type: boolean
+    store:
+      type: Store
+    user:
+      type: User
+  index:
+    user:
+      partition: user.id
+      sort:
+        - status
+        - createDate:DESC
+    store:
+      partition: store.id
+      sort:
+        - status
+        - createDate:DESC
+    pet:
+      partition: pet.id
+  permissions:
+    create:
+      expression: pet.orders.isEmpty()
+      expand:
+        - pet.orders
+
+UserStatus:
+  type: enum
+  values:
+    - registered
+
+User:
+  type: object
+  properties:
+    username:
+      type: string
+    firstName:
+      type: string
+    lastName:
+      type: string
+    email:
+      type: string
+    password:
+      type: string
+    phone:
+      type: string
+    userStatus:
+      type: UserStatus
+    store:
+      type: Store
+  indexes:
+    store:
+      partition: store.id
+      sort: username
+  links:
+    schema: Order
+    expression: user.id == this.id
+
+Store:
+  type: object
+  properties:
+    name:
+      type: string
+  indexes:
+    name:
+      partition: name
+  links:
+    pets:
+      schema: Pet
+      expression: store.id == this.id
+    users:
+      schema: User
+      expression: store.id == this.id
+    orders:
+      schema: Order
+      expression: store.id == this.id

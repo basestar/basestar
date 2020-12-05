@@ -1,0 +1,3 @@
+id, name, photoUrls[0], tags[tag1], status, store.id
+cat1,Pippa,,,sold,store1
+cat2,Garfield,,,available,store1

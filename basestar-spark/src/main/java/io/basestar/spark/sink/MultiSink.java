@@ -1,7 +1,7 @@
 package io.basestar.spark.sink;
 
 import com.google.common.collect.ImmutableList;
-import io.basestar.util.Nullsafe;
+import io.basestar.util.Immutable;
 
 import java.util.List;
 
@@ -17,7 +17,7 @@ public class MultiSink<T> implements Sink<T> {
 
     public MultiSink(final List<Sink<T>> sinks) {
 
-        this.sinks = Nullsafe.immutableCopy(sinks);
+        this.sinks = Immutable.copy(sinks);
     }
 
     @Override

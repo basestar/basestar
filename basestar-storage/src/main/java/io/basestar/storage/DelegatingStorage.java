@@ -64,9 +64,9 @@ public interface DelegatingStorage extends Storage {
     }
 
     @Override
-    default List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    default List<Pager.Source<Map<String, Object>>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        return storage(schema).query(schema, query, sort, expand);
+        return storage(schema).queryObject(schema, query, sort, expand);
     }
 
     @Override

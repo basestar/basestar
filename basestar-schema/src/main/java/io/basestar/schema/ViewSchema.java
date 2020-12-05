@@ -40,6 +40,7 @@ import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseAny;
 import io.basestar.schema.use.UseBinary;
 import io.basestar.schema.use.UseView;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Sort;
@@ -128,7 +129,7 @@ public class ViewSchema implements LinkableSchema {
     }
 
     @JsonDeserialize(as = Builder.class)
-    public interface Descriptor extends LinkableSchema.Descriptor {
+    public interface Descriptor extends LinkableSchema.Descriptor<ViewSchema> {
 
         String TYPE = "view";
 
@@ -157,16 +158,40 @@ public class ViewSchema implements LinkableSchema {
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         List<String> getGroup();
 
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        Map<String, Link.Descriptor> getLinks();
-
         Expression getWhere();
 
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        Map<String, Permission.Descriptor> getPermissions();
+        interface Self extends LinkableSchema.Descriptor.Self<ViewSchema>, Descriptor {
 
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        Set<Name> getExpand();
+            @Override
+            default Boolean getMaterialized() {
+
+                return self().isMaterialized();
+            }
+
+            @Override
+            default Descriptor.From getFrom() {
+
+                return self().getFrom().descriptor();
+            }
+
+            @Override
+            default List<Sort> getSort() {
+
+                return self().getSort();
+            }
+
+            @Override
+            default List<String> getGroup() {
+
+                return self().getGroup();
+            }
+
+            @Override
+            default Expression getWhere() {
+
+                return self().getWhere();
+            }
+        }
 
         @Override
         default ViewSchema build(final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
@@ -191,7 +216,7 @@ public class ViewSchema implements LinkableSchema {
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonPropertyOrder({"type", "description", "version", "materialized", "from", "select", "group", "permissions", "extensions"})
-    public static class Builder implements InstanceSchema.Builder, Descriptor, Link.Resolver.Builder {
+    public static class Builder implements LinkableSchema.Builder<Builder, ViewSchema>, Descriptor {
 
         @Nullable
         private Long version;
@@ -241,29 +266,9 @@ public class ViewSchema implements LinkableSchema {
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private Map<String, Serializable> extensions;
 
-        public Builder addGroup(final String name) {
+        public ViewSchema.Builder addGroup(final String name) {
 
-            group = Nullsafe.immutableCopyAdd(group, name);
-            return this;
-        }
-
-        public Builder setPermission(final String name, final Permission.Builder v) {
-
-            permissions = Nullsafe.immutableCopyPut(permissions, name, v);
-            return this;
-        }
-
-        @Override
-        public Link.Resolver.Builder setLink(final String name, final Link.Descriptor v) {
-
-            links = Nullsafe.immutableCopyPut(links, name, v);
-            return this;
-        }
-
-        @Override
-        public Builder setProperty(final String name, final Property.Descriptor v) {
-
-            properties = Nullsafe.immutableCopyPut(properties, name, v);
+            group = Immutable.copyAdd(group, name);
             return this;
         }
     }
@@ -330,16 +335,17 @@ public class ViewSchema implements LinkableSchema {
             throw new SchemaValidationException(qualifiedName, "View must specify from.schema");
         }
         this.from = new From(resolver.requireLinkableSchema(from.getSchema()), Nullsafe.orDefault(from.getExpand()));
-        this.sort = Nullsafe.immutableCopy(descriptor.getSort());
+        this.sort = Immutable.copy(descriptor.getSort());
         this.description = descriptor.getDescription();
-        this.group = Nullsafe.immutableCopy(descriptor.getGroup());
+        this.group = Immutable.copy(descriptor.getGroup());
         this.where = descriptor.getWhere();
-        this.declaredProperties = Nullsafe.immutableSortedCopy(descriptor.getProperties(),
-                (k, v) -> viewPropertyDescriptor(v, this.from).build(resolver, version, qualifiedName.with(k)));
-        this.declaredLinks = Nullsafe.immutableSortedCopy(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
-        this.declaredPermissions = Nullsafe.immutableSortedCopy(descriptor.getPermissions(), (k, v) -> v.build(k));
-        this.declaredExpand = Nullsafe.immutableSortedCopy(descriptor.getExpand());
-        this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());
+        final InferenceContext context = new InferenceContext.FromSchema(this.from.getSchema());
+        this.declaredProperties = Immutable.transformSorted(descriptor.getProperties(),
+                (k, v) -> v.build(resolver, context, version, qualifiedName.with(k)));
+        this.declaredLinks = Immutable.transformSorted(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
+        this.declaredPermissions = Immutable.transformSorted(descriptor.getPermissions(), (k, v) -> v.build(k));
+        this.declaredExpand = Immutable.sortedCopy(descriptor.getExpand());
+        this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName.toString());
         }
@@ -442,7 +448,7 @@ public class ViewSchema implements LinkableSchema {
     }
 
     @Override
-    public InstanceSchema getExtend() {
+    public List<? extends InstanceSchema> getExtend() {
 
         return null;
     }
@@ -573,7 +579,7 @@ public class ViewSchema implements LinkableSchema {
             }
 
             @Override
-            public Object getDefault() {
+            public Serializable getDefault() {
 
                 return descriptor.getDefault();
             }
@@ -589,90 +595,7 @@ public class ViewSchema implements LinkableSchema {
     @Override
     public Descriptor descriptor() {
 
-        return new Descriptor() {
-
-            @Override
-            public Boolean getMaterialized() {
-
-                return materialized;
-            }
-
-            @Override
-            public From getFrom() {
-
-                return from.descriptor();
-            }
-
-            @Override
-            public List<Sort> getSort() {
-
-                return sort;
-            }
-
-            @Override
-            public List<String> getGroup() {
-
-                return group;
-            }
-
-            @Override
-            public Set<Name> getExpand() {
-
-                return declaredExpand;
-            }
-
-            @Override
-            public Map<String, Property.Descriptor> getProperties() {
-
-                return declaredProperties.entrySet().stream().collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> entry.getValue().descriptor()
-                ));
-            }
-
-            @Override
-            public Map<String, Link.Descriptor> getLinks() {
-
-                return declaredLinks.entrySet().stream().collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> entry.getValue().descriptor()
-                ));
-            }
-
-            @Override
-            public Expression getWhere() {
-
-                return where;
-            }
-
-            @Override
-            public Map<String, Permission.Descriptor> getPermissions() {
-
-                return declaredPermissions.entrySet().stream().collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> entry.getValue().descriptor()
-                ));
-            }
-
-            @Override
-            public Long getVersion() {
-
-                return version;
-            }
-
-            @Nullable
-            @Override
-            public String getDescription() {
-
-                return description;
-            }
-
-            @Override
-            public Map<String, Serializable> getExtensions() {
-
-                return extensions;
-            }
-        };
+        return (Descriptor.Self) () -> ViewSchema.this;
     }
 
     @Override

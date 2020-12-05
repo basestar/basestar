@@ -113,7 +113,7 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    public List<Pager.Source<Map<String, Object>>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         return ImmutableList.of(
                 (count, token, stats) -> {
@@ -300,7 +300,7 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
             }
 
             @Override
-            public Map<Name, String> visitObject(final UseObject type) {
+            public Map<Name, String> visitRef(final UseRef type) {
 
                 final Instance instance = type.create(value);
                 if(instance != null) {
@@ -389,7 +389,7 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
             }
 
             @Override
-            public Map<String, Object> visitObject(final UseObject type) {
+            public Map<String, Object> visitRef(final UseRef type) {
 
                 final String id = attrs.get(path.with(ObjectSchema.ID));
                 return id == null ? null : ReferableSchema.ref(id);

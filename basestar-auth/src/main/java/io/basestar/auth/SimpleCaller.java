@@ -5,8 +5,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import io.basestar.jackson.serde.NameDeserializer;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;
@@ -43,7 +43,7 @@ public class SimpleCaller implements Caller {
         this._super = builder._super;
         this.schema = builder.schema;
         this.id = builder.id;
-        this.claims = Nullsafe.immutableCopy(builder.claims);
+        this.claims = Immutable.copy(builder.claims);
     }
 
     public static Builder builder() {

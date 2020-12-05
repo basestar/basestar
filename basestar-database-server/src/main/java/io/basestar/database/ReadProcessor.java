@@ -116,7 +116,7 @@ public class ReadProcessor {
 
         final Set<Name> queryExpand = Sets.union(Nullsafe.orDefault(expand), Nullsafe.orDefault(objectSchema.getExpand()));
 
-        final List<Pager.Source<Instance>> sources = storage.query(objectSchema, expression, sort, queryExpand).stream()
+        final List<Pager.Source<Instance>> sources = storage.queryObject(objectSchema, expression, sort, queryExpand).stream()
                 .map(source -> (Pager.Source<Instance>) (c, t, stats) -> source.page(c, t, stats)
                         .thenCompose(data -> cast(objectSchema, data, queryExpand)))
                 .collect(Collectors.toList());

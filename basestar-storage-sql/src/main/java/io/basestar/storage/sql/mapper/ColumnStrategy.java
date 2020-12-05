@@ -163,7 +163,7 @@ public interface ColumnStrategy {
                 }
 
                 @Override
-                public ColumnMapper<T> visitObject(final UseObject type) {
+                public ColumnMapper<T> visitRef(final UseRef type) {
 
                     final Map<String, ColumnMapper<Object>> mappers = new HashMap<>();
                     if(expand != null) {

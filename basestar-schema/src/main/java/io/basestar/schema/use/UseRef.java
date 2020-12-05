@@ -53,7 +53,7 @@ import java.util.*;
 
 @Data
 @Slf4j
-public class UseObject implements UseLinkable {
+public class UseRef implements UseLinkable {
 
     public static final String VERSIONED_KEY = "versioned";
 
@@ -61,12 +61,12 @@ public class UseObject implements UseLinkable {
 
     private final boolean versioned;
 
-    public UseObject(final ReferableSchema schema) {
+    public UseRef(final ReferableSchema schema) {
 
         this(schema, false);
     }
 
-    public UseObject(final ReferableSchema schema, final boolean versioned) {
+    public UseRef(final ReferableSchema schema, final boolean versioned) {
 
         this.schema = schema;
         this.versioned = versioned;
@@ -75,10 +75,10 @@ public class UseObject implements UseLinkable {
     @Override
     public <R> R visit(final Visitor<R> visitor) {
 
-        return visitor.visitObject(this);
+        return visitor.visitRef(this);
     }
 
-    public static UseObject from(final ReferableSchema schema, final Object config) {
+    public static UseRef from(final ReferableSchema schema, final Object config) {
 
         final boolean versioned;
         if(config instanceof Map) {
@@ -86,20 +86,20 @@ public class UseObject implements UseLinkable {
         } else {
             versioned = false;
         }
-        return new UseObject(schema, versioned);
+        return new UseRef(schema, versioned);
     }
 
     @Override
-    public UseObject resolve(final Schema.Resolver resolver) {
+    public UseRef resolve(final Schema.Resolver resolver) {
 
         if(schema.isAnonymous()) {
             return this;
         } else {
-            final ObjectSchema resolved = resolver.requireObjectSchema(schema.getQualifiedName());
+            final ReferableSchema resolved = resolver.requireReferableSchema(schema.getQualifiedName());
             if(resolved == schema) {
                 return this;
             } else {
-                return new UseObject(resolved, versioned);
+                return new UseRef(resolved, versioned);
             }
         }
     }
@@ -140,7 +140,7 @@ public class UseObject implements UseLinkable {
     @Override
     public Code code() {
 
-        return Code.OBJECT;
+        return Code.REF;
     }
 
     @Override
@@ -196,13 +196,13 @@ public class UseObject implements UseLinkable {
                 // If non-expanded, strip back to just a ref, this is needed because expand is also used to
                 // reset after expansion for permission evaluation
                 if(versioned) {
-                    if(value.size() == 2 && value.containsKey(ObjectSchema.ID) && value.containsKey(ObjectSchema.VERSION)) {
+                    if(value.size() == 2 && value.containsKey(ReferableSchema.ID) && value.containsKey(ReferableSchema.VERSION)) {
                         return value;
                     } else {
                         return ReferableSchema.versionedRef(Instance.getId(value), Instance.getVersion(value));
                     }
                 } else {
-                    if (value.size() == 1 && value.containsKey(ObjectSchema.ID)) {
+                    if (value.size() == 1 && value.containsKey(ReferableSchema.ID)) {
                         return value;
                     } else {
                         return ReferableSchema.ref(Instance.getId(value));
@@ -230,10 +230,10 @@ public class UseObject implements UseLinkable {
     public Set<Name> requiredExpand(final Set<Name> names) {
 
         final Set<Name> copy = Sets.newHashSet(names);
-        copy.remove(Name.of(ObjectSchema.SCHEMA));
-        copy.remove(Name.of(ObjectSchema.ID));
+        copy.remove(Name.of(ReferableSchema.SCHEMA));
+        copy.remove(Name.of(ReferableSchema.ID));
         if(versioned) {
-            copy.remove(Name.of(ObjectSchema.VERSION));
+            copy.remove(Name.of(ReferableSchema.VERSION));
         }
 
         if(!copy.isEmpty()) {
@@ -263,7 +263,7 @@ public class UseObject implements UseLinkable {
 
         final Set<Expression> queries = new HashSet<>();
         if(schema.getQualifiedName().equals(otherTypeName)) {
-            queries.add(new Eq(new NameConstant(name.with(ObjectSchema.ID)), new NameConstant(Name.of(Reserved.THIS, ObjectSchema.ID))));
+            queries.add(new Eq(new NameConstant(name.with(ReferableSchema.ID)), new NameConstant(Name.of(Reserved.THIS, ReferableSchema.ID))));
         }
         if(expand != null && !expand.isEmpty()) {
             queries.addAll(schema.refQueries(otherTypeName, expand, name));

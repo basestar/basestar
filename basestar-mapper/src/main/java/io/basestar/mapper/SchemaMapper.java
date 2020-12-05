@@ -42,7 +42,7 @@ public interface SchemaMapper<T, O> extends Serializable {
         return qualifiedName().toString();
     }
 
-    Schema.Builder<? extends O> schemaBuilder();
+    Schema.Builder<?, ?, ?> schemaBuilder();
 
     T marshall(Object value);
 

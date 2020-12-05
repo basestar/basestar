@@ -142,7 +142,7 @@ public class CodegenMojo extends AbstractMojo {
         }
 
         @Override
-        public Collection<Schema<?>> getExtendingSchemas(final Name qualifiedName) {
+        public Collection<Schema<?>> getExtendedSchemas(final Name qualifiedName) {
 
             throw new UnsupportedOperationException();
         }

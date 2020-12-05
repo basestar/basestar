@@ -120,7 +120,7 @@ public class AvroUtils {
             }
 
             @Override
-            public Schema visitObject(final UseObject type) {
+            public Schema visitRef(final UseRef type) {
 
                 if(expand == null) {
                     return refSchema(type.isVersioned());
@@ -236,7 +236,7 @@ public class AvroUtils {
             }
 
             @Override
-            public GenericRecord visitObject(final UseObject type) {
+            public GenericRecord visitRef(final UseRef type) {
 
                 if(expand == null) {
                     return encodeRef(schema, type.isVersioned(), (Map<String, Object>) value);
@@ -335,7 +335,7 @@ public class AvroUtils {
             }
 
             @Override
-            public Map<String, Object> visitObject(final UseObject type) {
+            public Map<String, Object> visitRef(final UseRef type) {
 
                 if(expand == null) {
                     return decodeRef(schema, type.isVersioned(), (IndexedRecord) value);

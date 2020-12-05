@@ -18,12 +18,12 @@ public @interface Immutable {
     boolean value() default true;
 
     @RequiredArgsConstructor
-    class Modifier implements MemberModifier.Modifier<PropertyMapper> {
+    class Modifier implements MemberModifier.Modifier<PropertyMapper<?>> {
 
         private final Immutable annotation;
 
         @Override
-        public PropertyMapper modify(final MappingContext context, final PropertyMapper mapper) {
+        public PropertyMapper<?> modify(final MappingContext context, final PropertyMapper<?> mapper) {
 
             return mapper.withImmutable(annotation.value());
         }

@@ -21,9 +21,12 @@ package io.basestar.storage;
  */
 
 import com.google.common.collect.ImmutableSortedMap;
+import io.basestar.expression.Expression;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.util.Name;
+import io.basestar.util.Page;
+import io.basestar.util.Sort;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -36,19 +39,21 @@ import java.util.stream.Stream;
 
 public interface BatchResponse extends Map<BatchResponse.Key, Map<String, Object>> {
 
-    default Map<String, Object> getObject(final ObjectSchema schema, final String id) {
+    default Map<String, Object> get(final ObjectSchema schema, final String id) {
 
-        return getObject(schema.getQualifiedName(), id);
+        return get(schema.getQualifiedName(), id);
     }
 
-    Map<String, Object> getObject(Name schema, String id);
+    Map<String, Object> get(Name schema, String id);
 
-    default Map<String, Object> getObjectVersion(final ObjectSchema schema, final String id, final long version) {
+    default Map<String, Object> getVersion(final ObjectSchema schema, final String id, final long version) {
 
-        return getObjectVersion(schema.getQualifiedName(), id, version);
+        return getVersion(schema.getQualifiedName(), id, version);
     }
 
-    Map<String, Object> getObjectVersion(Name schema, String id, long version);
+    Map<String, Object> getVersion(Name schema, String id, long version);
+
+    Page<Map<String, Object>> query(Name schema, Expression query, List<Sort> sort, Set<Name> expand);
 
     static BatchResponse empty() {
 

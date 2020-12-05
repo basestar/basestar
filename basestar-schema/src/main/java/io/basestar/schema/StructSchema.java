@@ -27,10 +27,12 @@ import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.collect.ImmutableSortedMap;
 import io.basestar.expression.Context;
+import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseStruct;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.Data;
@@ -43,7 +45,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
 import java.util.stream.Collectors;
 
 /**
@@ -81,8 +86,7 @@ public class StructSchema implements InstanceSchema {
 
     /** Parent schema, may be another struct schema only */
 
-    @Nullable
-    private final StructSchema extend;
+    private final List<StructSchema> extend;
 
     /** Description of the schema */
 
@@ -99,13 +103,11 @@ public class StructSchema implements InstanceSchema {
     @Nonnull
     private final SortedMap<String, Property> declaredProperties;
 
-    private final boolean concrete;
-
     @Nonnull
     private final Map<String, Serializable> extensions;
 
     @JsonDeserialize(as = Builder.class)
-    public interface Descriptor extends InstanceSchema.Descriptor {
+    public interface Descriptor extends InstanceSchema.Descriptor<StructSchema> {
 
         String TYPE = "struct";
 
@@ -115,11 +117,19 @@ public class StructSchema implements InstanceSchema {
             return TYPE;
         }
 
-        Long getVersion();
+        @JsonDeserialize(using = AbbrevListDeserializer.class)
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        List<Name> getExtend();
 
-        Name getExtend();
+        interface Self extends InstanceSchema.Descriptor.Self<StructSchema>, Descriptor {
 
-        Boolean getConcrete();
+            @Override
+            default List<Name> getExtend() {
+
+                final List<StructSchema> extend = self().getExtend();
+                return Immutable.transform(extend, Named::getQualifiedName);
+            }
+        }
 
         @Override
         default StructSchema build(final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
@@ -144,19 +154,16 @@ public class StructSchema implements InstanceSchema {
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonPropertyOrder({"type", "description", "version", "extend", "concrete", "properties", "extensions"})
-    public static class Builder implements InstanceSchema.Builder, Descriptor {
+    public static class Builder implements InstanceSchema.Builder<Builder, StructSchema>, Descriptor {
 
         @Nullable
         private Long version;
 
         @Nullable
-        private Name extend;
+        private List<Name> extend;
 
         @Nullable
         private String description;
-
-        @Nullable
-        private Boolean concrete;
 
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
@@ -165,12 +172,6 @@ public class StructSchema implements InstanceSchema {
         @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private Map<String, Serializable> extensions;
-
-        public Builder setProperty(final String name, final Property.Descriptor v) {
-
-            properties = Nullsafe.immutableCopyPut(properties, name, v);
-            return this;
-        }
     }
 
     public static Builder builder() {
@@ -184,13 +185,9 @@ public class StructSchema implements InstanceSchema {
         this.qualifiedName = qualifiedName;
         this.slot = slot;
         this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
-        if(descriptor.getExtend() != null) {
-            this.extend = resolver.requireStructSchema(descriptor.getExtend());
-        } else {
-            this.extend = null;
-        }
+        this.extend = Immutable.transform(descriptor.getExtend(), resolver::requireStructSchema);
         this.description = descriptor.getDescription();
-        this.declaredProperties = Nullsafe.immutableSortedCopy(descriptor.getProperties(), (k, v) -> v.build(resolver, version, qualifiedName.with(k)));
+        this.declaredProperties = Immutable.transformSorted(descriptor.getProperties(), (k, v) -> v.build(resolver, version, qualifiedName.with(k)));
         this.declaredProperties.forEach((k, v) -> {
             if(v.isImmutable()) {
                 throw new SchemaValidationException(qualifiedName, "Struct types cannot have immutable properties");
@@ -202,18 +199,11 @@ public class StructSchema implements InstanceSchema {
                 throw new SchemaValidationException(qualifiedName, "Struct types cannot have properties with custom visibility");
             }
         });
-        this.concrete = Nullsafe.orDefault(descriptor.getConcrete(), Boolean.TRUE);
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
-        if(extend != null) {
-            final SortedMap<String, Property> merged = new TreeMap<>();
-            merged.putAll(extend.getProperties());
-            merged.putAll(declaredProperties);
-            this.properties = Collections.unmodifiableSortedMap(merged);
-        } else {
-            this.properties = declaredProperties;
-        }
+        this.properties = Property.extend(extend, declaredProperties);
+
         this.extensions = Nullsafe.orDefault(descriptor.getExtensions());
     }
 
@@ -233,6 +223,12 @@ public class StructSchema implements InstanceSchema {
     public String id() {
 
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isConcrete() {
+
+        return true;
     }
 
     @Override
@@ -281,9 +277,7 @@ public class StructSchema implements InstanceSchema {
     public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
         if(!out.containsKey(qualifiedName)) {
-            if(extend != null) {
-                extend.collectDependencies(expand, out);
-            }
+            extend.forEach(ex -> ex.collectDependencies(expand, out));
             out.put(qualifiedName, this);
             declaredProperties.forEach((k, v) -> v.collectDependencies(expand, out));
         }
@@ -292,47 +286,7 @@ public class StructSchema implements InstanceSchema {
     @Override
     public Descriptor descriptor() {
 
-        return new Descriptor() {
-            @Override
-            public Long getVersion() {
-
-                return version;
-            }
-
-            @Override
-            public Name getExtend() {
-
-                return extend == null ? null : extend.getQualifiedName();
-            }
-
-            @Override
-            public Boolean getConcrete() {
-
-                return concrete;
-            }
-
-            @Override
-            public Map<String, Property.Descriptor> getProperties() {
-
-                return declaredProperties.entrySet().stream().collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> entry.getValue().descriptor()
-                ));
-            }
-
-            @Nullable
-            @Override
-            public String getDescription() {
-
-                return description;
-            }
-
-            @Override
-            public Map<String, Serializable> getExtensions() {
-
-                return extensions;
-            }
-        };
+        return (Descriptor.Self) () -> StructSchema.this;
     }
 
     @Override

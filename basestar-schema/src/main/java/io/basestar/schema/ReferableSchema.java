@@ -1,10 +1,13 @@
 package io.basestar.schema;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import io.basestar.expression.Context;
+import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.schema.use.*;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 
 import java.io.DataInput;
@@ -47,32 +50,77 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
             .put(VERSION, UseInteger.DEFAULT)
             .build();
 
-    interface Descriptor extends LinkableSchema.Descriptor {
+    interface Descriptor<S extends ReferableSchema> extends LinkableSchema.Descriptor<S>, Transient.Resolver.Descriptor, Index.Resolver.Descriptor {
 
-        Name getExtend();
-
+        @JsonDeserialize(using = AbbrevListDeserializer.class)
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        Map<String, Transient.Descriptor> getTransients();
-
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        Map<String, Index.Descriptor> getIndexes();
+        List<Name> getExtend();
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         List<? extends Constraint> getConstraints();
 
-        @Override
-        LinkableSchema build(Resolver.Constructing resolver, Version version, Name qualifiedName, int slot);
+        interface Self<S extends ReferableSchema> extends LinkableSchema.Descriptor.Self<S>, Descriptor<S> {
 
-        @Override
-        LinkableSchema build(Name qualifiedName);
+            @Override
+            default List<Name> getExtend() {
 
-        @Override
-        LinkableSchema build();
+                final List<? extends ReferableSchema> extend = self().getExtend();
+                return Immutable.transform(extend, Named::getQualifiedName);
+            }
+
+            @Override
+            default Map<String, Transient.Descriptor> getTransients() {
+
+                return self().describeDeclaredTransients();
+            }
+
+            @Override
+            default Map<String, Index.Descriptor> getIndexes() {
+
+                return self().describeDeclaredIndexes();
+            }
+
+            @Override
+            default List<? extends Constraint> getConstraints() {
+
+                return self().getConstraints();
+            }
+        }
     }
 
-    ReferableSchema getExtend();
+    interface Builder<B extends Builder<B, S>, S extends ReferableSchema> extends LinkableSchema.Builder<B, S>, Descriptor<S>, Transient.Resolver.Builder<B>, Index.Resolver.Builder<B> {
+
+    }
+
+    List<? extends ReferableSchema> getExtend();
 
     List<? extends Constraint> getConstraints();
+
+    @Override
+    Descriptor<? extends ReferableSchema> descriptor();
+
+    Collection<ReferableSchema> getDirectlyExtended();
+
+    default Collection<ReferableSchema> getIndirectlyExtended() {
+
+        final Set<ReferableSchema> results = new HashSet<>();
+        for(final ReferableSchema schema : getDirectlyExtended()) {
+            results.add(schema);
+            results.addAll(schema.getIndirectlyExtended());
+        }
+        return results;
+    }
+
+    default Collection<ObjectSchema> getConcreteExtended() {
+
+        final Set<ObjectSchema> results = new HashSet<>();
+        getIndirectlyExtended().forEach(schema -> {
+            if(schema instanceof ObjectSchema) {
+                results.add((ObjectSchema)schema);
+            }
+        });
+        return results;
+    }
 
     default void validateObject(final String id, final Instance after) {
 
@@ -80,7 +128,7 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
             throw new IllegalStateException("Instance validation failed: id mismatch");
         }
         final Name schemaName = Instance.getSchema(after);
-        if(schemaName == null || !isSubclassOf(schemaName)) {
+        if(schemaName == null || !isOrExtending(schemaName)) {
             throw new IllegalStateException("Instance validation failed: schema mismatch");
         }
     }
@@ -131,9 +179,9 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
     }
 
     @Override
-    default UseObject typeOf() {
+    default UseRef typeOf() {
 
-        return new UseObject(this);
+        return new UseRef(this);
     }
 
     @Override
@@ -250,7 +298,7 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
         final Set<Constraint.Violation> violations = new HashSet<>();
 
         violations.addAll(this.getConstraints().stream()
-                .flatMap(v -> v.violations(new UseObject(this), context, name, after).stream())
+                .flatMap(v -> v.violations(new UseRef(this), context, name, after).stream())
                 .collect(Collectors.toSet()));
 
         violations.addAll(this.getProperties().values().stream()
@@ -281,11 +329,9 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
     default void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
         final Name qualifiedName = getQualifiedName();
-        final InstanceSchema extend = getExtend();
+        final List<? extends ReferableSchema> extend = getExtend();
         if (!out.containsKey(qualifiedName)) {
-            if (extend != null) {
-                extend.collectDependencies(expand, out);
-            }
+            extend.forEach(ex -> ex.collectDependencies(expand, out));
             out.put(qualifiedName, this);
             final Map<String, Set<Name>> branches = Name.branch(expand);
             getDeclaredProperties().forEach((k, v) -> v.collectDependencies(branches.get(k), out));

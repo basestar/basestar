@@ -91,7 +91,7 @@ public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.W
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    public List<Pager.Source<Map<String, Object>>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         return ImmutableList.of(
                 (count, token, stats) -> {

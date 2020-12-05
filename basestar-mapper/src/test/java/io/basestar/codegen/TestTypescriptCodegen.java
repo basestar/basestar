@@ -12,6 +12,7 @@ import io.basestar.schema.Schema;
 import io.basestar.schema.use.Use;
 import io.basestar.type.PropertyContext;
 import io.basestar.type.TypeContext;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Path;
 import org.junit.jupiter.api.Disabled;
@@ -20,8 +21,8 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 class TestTypescriptCodegen {
@@ -59,24 +60,24 @@ class TestTypescriptCodegen {
             }
 
             @Override
-            public Optional<TypeContext> extend(final TypeContext type) {
+            public List<TypeContext> extend(final TypeContext type) {
 
                 // These are interfaces, so have to explicitly set them
                 final Class<?> erased = type.erasedType();
                 if(erased.equals(io.basestar.schema.InstanceSchema.Descriptor.class)) {
-                    return Optional.of(TypeContext.from(Schema.Descriptor.class));
+                    return Immutable.list(TypeContext.from(Schema.Descriptor.class));
                 } else if(erased.equals(io.basestar.schema.EnumSchema.Descriptor.class)) {
-                    return Optional.of(TypeContext.from(Schema.Descriptor.class));
+                    return Immutable.list(TypeContext.from(Schema.Descriptor.class));
                 } else if(erased.equals(io.basestar.schema.ObjectSchema.Descriptor.class)
                         || erased.equals(io.basestar.schema.StructSchema.Descriptor.class)
                         || erased.equals(io.basestar.schema.ViewSchema.Descriptor.class)) {
-                    return Optional.of(TypeContext.from(InstanceSchema.Descriptor.class));
+                    return Immutable.list(TypeContext.from(InstanceSchema.Descriptor.class));
                 } else if(Member.Descriptor.class.isAssignableFrom(erased) && !Member.Descriptor.class.equals(erased)) {
-                    return Optional.of(TypeContext.from(Member.Descriptor.class));
+                    return Immutable.list(TypeContext.from(Member.Descriptor.class));
                 } else if(Use.class.isAssignableFrom(erased) && !Use.class.equals(erased)) {
-                    return Optional.of(TypeContext.from(Use.class));
+                    return Immutable.list(TypeContext.from(Use.class));
                 }
-                return Optional.empty();
+                return Immutable.list();
             }
 
             @Override
@@ -129,7 +130,7 @@ class TestTypescriptCodegen {
                 io.basestar.schema.use.UseOptional.class
         };
 
-        final Map<Name, Schema.Descriptor<?>> schemas = Arrays.stream(classes)
+        final Map<Name, Schema.Descriptor<?, ?>> schemas = Arrays.stream(classes)
                 .map(mappingContext::schemaMapper).collect(Collectors.toMap(
                         SchemaMapper::qualifiedName,
                         SchemaMapper::schemaBuilder

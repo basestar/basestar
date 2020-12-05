@@ -27,6 +27,11 @@ import java.util.Map;
 
 public interface Extendable {
 
+    interface Builder<B extends Builder<B>> {
+
+        B setExtensions(Map<String, Serializable> extensions);
+    }
+
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     Map<String, Serializable> getExtensions();
 

@@ -423,7 +423,7 @@ public interface GraphQLStrategy {
             }
 
             @Override
-            public String visitObject(final UseObject type) {
+            public String visitRef(final UseRef type) {
 
                 return typeName(type.getSchema());
             }

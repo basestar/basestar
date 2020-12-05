@@ -68,7 +68,7 @@ public class ConstantStorage implements Storage.WithoutAggregate, Storage.Withou
 
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    public List<Pager.Source<Map<String, Object>>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         // Add a source that will emit matching results
 

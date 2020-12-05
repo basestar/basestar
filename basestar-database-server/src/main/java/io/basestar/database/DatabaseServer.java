@@ -427,16 +427,21 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
     private List<ObjectSchema> objectHierarchy(final ObjectSchema schema) {
 
-        final InstanceSchema parent = schema.getExtend();
-        if(parent instanceof ObjectSchema) {
-            final ObjectSchema objectParent = (ObjectSchema)parent;
-            return ImmutableList.<ObjectSchema>builder()
-                    .addAll(objectHierarchy(objectParent))
-                    .add(objectParent)
-                    .build();
-        } else {
+        if(schema.getExtend().isEmpty()) {
             return ImmutableList.of();
+        } else {
+            throw new IllegalStateException("need re-implement extend");
         }
+//        final InstanceSchema parent = schema.getExtend();
+//        if(parent instanceof ObjectSchema) {
+//            final ObjectSchema objectParent = (ObjectSchema)parent;
+//            return ImmutableList.<ObjectSchema>builder()
+//                    .addAll(objectHierarchy(objectParent))
+//                    .add(objectParent)
+//                    .build();
+//        } else {
+//            return ImmutableList.of();
+//        }
     }
 
     @Override

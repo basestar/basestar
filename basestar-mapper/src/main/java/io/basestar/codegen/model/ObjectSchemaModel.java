@@ -24,7 +24,6 @@ import io.basestar.codegen.CodegenContext;
 import io.basestar.mapper.annotation.Description;
 import io.basestar.schema.Index;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.ReferableSchema;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,9 +32,9 @@ import java.util.stream.Collectors;
 @SuppressWarnings("unused")
 public class ObjectSchemaModel extends InstanceSchemaModel {
 
-    private final ReferableSchema schema;
+    private final ObjectSchema schema;
 
-    public ObjectSchemaModel(final CodegenContext context, final ReferableSchema schema) {
+    public ObjectSchemaModel(final CodegenContext context, final ObjectSchema schema) {
 
         super(context, schema);
         this.schema = schema;

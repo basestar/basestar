@@ -20,13 +20,13 @@ package io.basestar.graphql.schema;
  * #L%
  */
 
-import com.google.common.collect.ImmutableList;
 import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.basestar.graphql.GraphQLStrategy;
 import io.basestar.graphql.GraphQLUtils;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
+import io.basestar.util.Immutable;
 
 import java.util.*;
 
@@ -432,14 +432,16 @@ public class SchemaAdaptor {
     @SuppressWarnings("rawtypes")
     private List<Type> implementz(final InstanceSchema schema) {
 
-        final InstanceSchema parent = schema.getExtend();
-        if(parent != null) {
-            return ImmutableList.<Type>builder()
-                    .addAll(implementz(parent))
-                    .add(new TypeName(strategy.typeName(parent)))
-                    .build();
+        final List<? extends InstanceSchema> extend = schema.getExtend();
+        if(extend != null) {
+            final List<Type> result = new ArrayList<>();
+            for(final InstanceSchema parent : extend) {
+                result.addAll(implementz(parent));
+                result.add(new TypeName(strategy.typeName(parent)));
+            }
+            return result;
         } else {
-            return ImmutableList.of();
+            return Immutable.list();
         }
     }
 
@@ -677,7 +679,7 @@ public class SchemaAdaptor {
             }
 
             @Override
-            public Type<?> visitObject(final UseObject type) {
+            public Type<?> visitRef(final UseRef type) {
 
                 return new TypeName(strategy.inputRefTypeName(type.isVersioned()));
             }

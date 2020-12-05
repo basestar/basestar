@@ -52,19 +52,47 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
             @JsonSubTypes.Type(name = EnumSchema.Builder.TYPE, value = EnumSchema.Builder.class),
             @JsonSubTypes.Type(name = StructSchema.Builder.TYPE, value = StructSchema.Builder.class),
             @JsonSubTypes.Type(name = ObjectSchema.Builder.TYPE, value = ObjectSchema.Builder.class),
+            @JsonSubTypes.Type(name = InterfaceSchema.Builder.TYPE, value = InterfaceSchema.Builder.class),
             @JsonSubTypes.Type(name = ViewSchema.Builder.TYPE, value = ViewSchema.Builder.class)
     })
-    interface Descriptor<T> extends Described, Extendable {
+    interface Descriptor<S extends Schema<V>, V> extends Described, Extendable {
 
         String getType();
 
         Long getVersion();
 
-        Schema<T> build(Resolver.Constructing resolver, Version version, Name qualifiedName, int slot);
+        S build(Resolver.Constructing resolver, Version version, Name qualifiedName, int slot);
 
-        Schema<T> build(Name qualifiedName);
+        S build(Name qualifiedName);
 
-        Schema<T> build();
+        S build();
+
+        interface Self<S extends Schema<V>, V> extends Descriptor<S, V> {
+
+            S self();
+
+            @Override
+            default Long getVersion() {
+
+                return self().getVersion();
+            }
+
+            @Override
+            default String getDescription() {
+
+                return self().getDescription();
+            }
+
+            @Override
+            default Map<String, Serializable> getExtensions() {
+
+                return self().getExtensions();
+            }
+        }
+    }
+
+    interface Builder<B extends Builder<B, S, V>, S extends Schema<V>, V> extends Descriptor<S, V>, Described.Builder<B>, Extendable.Builder<B> {
+
     }
 
     default Name getQualifiedPackageName() {
@@ -83,11 +111,6 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         return qualifiedName.isEmpty() ? null : qualifiedName.toString(delimiter);
     }
 
-    interface Builder<T> extends Descriptor<T>, Extendable {
-
-        Builder<T> setExtensions(Map<String, Serializable> extensions);
-    }
-
     default T create(final Object value) {
 
         return create(value, Collections.emptySet(), false);
@@ -96,6 +119,8 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
     T create(Object value, Set<Name> expand, boolean suppress);
 
     int getSlot();
+
+    long getVersion();
 
     static Name anonymousQualifiedName() {
 
@@ -123,7 +148,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
 
     io.swagger.v3.oas.models.media.Schema<?> openApi();
 
-    Descriptor<T> descriptor();
+    Descriptor<? extends Schema<T>, ? extends T> descriptor();
 
     Use<T> typeOf();
 
@@ -167,7 +192,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
                 }
 
                 @Override
-                public Collection<Schema<?>> getExtendingSchemas(final Name qualifiedName) {
+                public Collection<Schema<?>> getExtendedSchemas(final Name qualifiedName) {
 
                     return Collections.emptyList();
                 }
@@ -184,7 +209,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
             }
 
             @Override
-            public Collection<Schema<?>> getExtendingSchemas(final Name qualifiedName) {
+            public Collection<Schema<?>> getExtendedSchemas(final Name qualifiedName) {
 
                 return Collections.emptyList();
             }
@@ -193,7 +218,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         @Nullable
         Schema<?> getSchema(Name qualifiedName);
 
-        Collection<Schema<?>> getExtendingSchemas(Name qualifiedName);
+        Collection<Schema<?>> getExtendedSchemas(Name qualifiedName);
 
         @Nonnull
         default Schema<?> requireSchema(final Name qualifiedName) {
@@ -305,6 +330,38 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         default LinkableSchema requireLinkableSchema(final String name) {
 
             return requireLinkableSchema(Name.parse(name));
+        }
+
+        @Nonnull
+        default InterfaceSchema requireInterfaceSchema(final Name qualifiedName) {
+
+            final Schema<?> schema = requireSchema(qualifiedName);
+            if (schema instanceof InterfaceSchema) {
+                return (InterfaceSchema) schema;
+            } else {
+                throw new IllegalStateException(qualifiedName + " is not an interface schema");
+            }
+        }
+
+        default InterfaceSchema requireInterfaceSchema(final String name) {
+
+            return requireInterfaceSchema(Name.parse(name));
+        }
+
+        @Nonnull
+        default ReferableSchema requireReferableSchema(final Name qualifiedName) {
+
+            final Schema<?> schema = requireSchema(qualifiedName);
+            if (schema instanceof ReferableSchema) {
+                return (ReferableSchema) schema;
+            } else {
+                throw new IllegalStateException(qualifiedName + " is not a referable schema");
+            }
+        }
+
+        default ReferableSchema requireReferableSchema(final String name) {
+
+            return requireReferableSchema(Name.parse(name));
         }
     }
 }

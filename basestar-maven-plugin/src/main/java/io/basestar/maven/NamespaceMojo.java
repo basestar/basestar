@@ -119,9 +119,9 @@ public class NamespaceMojo extends AbstractMojo {
             }
 
             if(outputFilename == null || outputFilename.isEmpty()) {
-                for(final Map.Entry<Name, Schema.Descriptor<?>> entry : all.getSchemas().entrySet()) {
+                for(final Map.Entry<Name, Schema.Descriptor<?, ?>> entry : all.getSchemas().entrySet()) {
                     final Name name = entry.getKey();
-                    final Schema.Descriptor<?> schema = entry.getValue();
+                    final Schema.Descriptor<?, ?> schema = entry.getValue();
                     final File output = packageOutputDirectory(name);
                     output.mkdirs();
                     final File file = new File(output, name.last() + ".yml");

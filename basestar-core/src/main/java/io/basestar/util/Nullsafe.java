@@ -23,7 +23,6 @@ package io.basestar.util;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.*;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -115,90 +114,6 @@ public class Nullsafe {
     public static <V> Set<V> orDefault(@Nullable final Set<V> s) {
 
         return s == null ? Collections.emptySet() : s;
-    }
-
-    @Nonnull
-    public static <K, V> Map<K, V> immutableCopyPut(@Nullable final Map<K, V> m, final K k, final V v) {
-
-        if(m == null) {
-            return Collections.singletonMap(k, v);
-        } else {
-            final HashMap<K, V> copy = new HashMap<>(m);
-            copy.put(k, v);
-            return Collections.unmodifiableMap(copy);
-        }
-    }
-
-    @Nonnull
-    public static <V> List<V> immutableCopyAdd(@Nullable final List<V> l, final V v) {
-
-        if(l == null) {
-            return Collections.singletonList(v);
-        } else {
-            final ArrayList<V> copy = new ArrayList<>(l);
-            copy.add(v);
-            return Collections.unmodifiableList(copy);
-        }
-    }
-
-    @Nonnull
-    public static <V> Set<V> immutableCopyAdd(@Nullable final Set<V> s, final V v) {
-
-        if(s == null) {
-            return Collections.singleton(v);
-        } else {
-            final HashSet<V> copy = new HashSet<>(s);
-            copy.add(v);
-            return Collections.unmodifiableSet(copy);
-        }
-    }
-
-    @Nonnull
-    public static <V> List<V> immutableCopy(@Nullable final List<? extends V> l) {
-
-        return l == null ? Collections.emptyList() : Collections.unmodifiableList(new ArrayList<>(l));
-    }
-
-    @Nonnull
-    public static <V> Set<V> immutableCopy(@Nullable final Set<? extends V> s) {
-
-        return s == null ? Collections.emptySet() : Collections.unmodifiableSet(new HashSet<>(s));
-    }
-
-    @Nonnull
-    public static <V extends Comparable<V>> SortedSet<V> immutableSortedCopy(@Nullable final Set<? extends V> s) {
-
-        return s == null ? Collections.emptySortedSet() : Collections.unmodifiableSortedSet(new TreeSet<>(s));
-    }
-
-    @Nonnull
-    public static <K, V> Map<K, V> immutableCopy(@Nullable final Map<? extends K, ? extends V> m) {
-
-        return m == null ? Collections.emptyMap() : Collections.unmodifiableMap(new HashMap<>(m));
-    }
-
-    @Nonnull
-    public static <K extends Comparable<K>, V> SortedMap<K, V> immutableCopy(@Nullable final SortedMap<? extends K, ? extends V> m) {
-
-        return immutableSortedCopy(m);
-    }
-
-    @Nonnull
-    public static <K extends Comparable<K>, V> SortedMap<K, V> immutableSortedCopy(@Nullable final Map<? extends K, ? extends V> m) {
-
-        return m == null ? Collections.emptySortedMap() : Collections.unmodifiableSortedMap(new TreeMap<>(m));
-    }
-
-    @Nonnull
-    public static <K extends Comparable<K>, V1, V2> SortedMap<K, V2> immutableSortedCopy(@Nullable final Map<? extends K, ? extends V1> m, final BiFunction<? super K, ? super V1, ? extends V2> transform) {
-
-        if(m == null) {
-            return Collections.emptySortedMap();
-        } else {
-            final SortedMap<K, V2> result = new TreeMap<>();
-            m.forEach((k, v) -> result.put(k, transform.apply(k, v)));
-            return Collections.unmodifiableSortedMap(result);
-        }
     }
 
     @Nullable

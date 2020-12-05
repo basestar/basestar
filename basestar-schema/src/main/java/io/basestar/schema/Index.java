@@ -39,6 +39,7 @@ import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseBinary;
 import io.basestar.schema.use.UseInteger;
 import io.basestar.schema.use.UseString;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Sort;
@@ -51,6 +52,7 @@ import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Index
@@ -60,6 +62,9 @@ import java.util.stream.Collectors;
 public class Index implements Named, Described, Serializable, Extendable {
 
     private static final int DEFAULT_MAX = 100;
+
+    @Nonnull
+    private final ReferableSchema schema;
 
     @Nonnull
     private final Name qualifiedName;
@@ -121,9 +126,9 @@ public class Index implements Named, Described, Serializable, Extendable {
         @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         Integer getMax();
 
-        default Index build(final Name qualifiedName) {
+        default Index build(final ReferableSchema schema, final Name qualifiedName) {
 
-            return new Index(this, qualifiedName);
+            return new Index(this, schema, qualifiedName);
         }
     }
 
@@ -171,20 +176,21 @@ public class Index implements Named, Described, Serializable, Extendable {
         return new Builder();
     }
 
-    private Index(final Descriptor descriptor, final Name qualifiedName) {
+    private Index(final Descriptor descriptor, final ReferableSchema schema, final Name qualifiedName) {
 
+        this.schema = schema;
         this.qualifiedName = qualifiedName;
         this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
         this.description = descriptor.getDescription();
-        this.partition = Nullsafe.immutableCopy(descriptor.getPartition());
-        this.sort = Nullsafe.immutableCopy(descriptor.getSort());
-        this.projection = Nullsafe.immutableSortedCopy(descriptor.getProjection());
-        this.over = Nullsafe.immutableSortedCopy(descriptor.getOver());
+        this.partition = Immutable.copy(descriptor.getPartition());
+        this.sort = Immutable.copy(descriptor.getSort());
+        this.projection = Immutable.sortedCopy(descriptor.getProjection());
+        this.over = Immutable.sortedCopy(descriptor.getOver());
         this.unique = Nullsafe.orDefault(descriptor.getUnique(), false);
         this.sparse = Nullsafe.orDefault(descriptor.getSparse(), false);
         this.consistency = descriptor.getConsistency();
         this.max = Nullsafe.orDefault(descriptor.getMax(), DEFAULT_MAX);
-        this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());
+        this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
         if (Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
@@ -397,6 +403,24 @@ public class Index implements Named, Described, Serializable, Extendable {
         }
     }
 
+    public Index extend(final Index ext) {
+
+        return ext;
+    }
+
+    public static SortedMap<String, Index> extend(final Map<String, Index> base, final Map<String, Index> ext) {
+
+        return Immutable.sortedMerge(base, ext, Index::extend);
+    }
+
+    public static SortedMap<String, Index> extend(final Collection<? extends Resolver> base, final Map<String, Index> ext) {
+
+        return Immutable.sortedCopy(Stream.concat(
+                base.stream().map(Resolver::getIndexes),
+                Stream.of(ext)
+        ).reduce(Index::extend).orElse(Collections.emptyMap()));
+    }
+
     /**
      * Contains the matched partition and sort values for a given record
      */
@@ -410,7 +434,7 @@ public class Index implements Named, Described, Serializable, Extendable {
 
         public static Key of(final List<?> partition, final List<?> sort) {
 
-            return new Key(Nullsafe.immutableCopy(partition), Nullsafe.immutableCopy(sort));
+            return new Key(Immutable.copy(partition), Immutable.copy(sort));
         }
 
         public Binary binary() {
@@ -456,9 +480,33 @@ public class Index implements Named, Described, Serializable, Extendable {
 
     public interface Resolver {
 
+        interface Descriptor {
+
+            @JsonInclude(JsonInclude.Include.NON_EMPTY)
+            Map<String, Index.Descriptor> getIndexes();
+        }
+
+        interface Builder<B extends Builder<B>> extends Descriptor {
+
+            default B setIndex(final String name, final Index.Descriptor v) {
+
+                return setIndexes(Immutable.copyPut(getIndexes(), name, v));
+            }
+
+            B setIndexes(Map<String, Index.Descriptor> vs);
+        }
+
         Map<String, Index> getDeclaredIndexes();
 
         Map<String, Index> getIndexes();
+
+        default Map<String, Index.Descriptor> describeDeclaredIndexes() {
+
+            return getDeclaredIndexes().entrySet().stream().collect(Collectors.toMap(
+                    Map.Entry::getKey,
+                    entry -> entry.getValue().descriptor()
+            ));
+        }
 
         default Index getIndex(final String name, final boolean inherited) {
 

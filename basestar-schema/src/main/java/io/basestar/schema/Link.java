@@ -36,10 +36,7 @@ import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseArray;
 import io.basestar.schema.util.Expander;
-import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
-import io.basestar.util.Page;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 import io.leangen.geantyref.TypeFactory;
 import lombok.Data;
 import lombok.Getter;
@@ -52,6 +49,7 @@ import java.lang.reflect.Type;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Link
@@ -96,6 +94,39 @@ public class Link implements Member {
 
         List<Sort> getSort();
 
+        interface Self extends Member.Descriptor.Self<Link>, Descriptor {
+
+            @Override
+            default Name getSchema() {
+
+                return self().getSchema().getQualifiedName();
+            }
+
+            @Override
+            default Expression getExpression() {
+
+                return self().getExpression();
+            }
+
+            @Override
+            default Boolean getSingle() {
+
+                return self().isSingle();
+            }
+
+            @Override
+            default List<Sort> getSort() {
+
+                return self().getSort();
+            }
+
+            @Override
+            default Visibility getVisibility() {
+
+                return self().getVisibility();
+            }
+        }
+
         default Link build(final Schema.Resolver resolver, final Name qualifiedName) {
 
             return new Link(this, resolver, qualifiedName);
@@ -105,7 +136,7 @@ public class Link implements Member {
     @Data
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public static class Builder implements Descriptor, Member.Builder {
+    public static class Builder implements Descriptor, Member.Builder<Builder> {
 
         @Nullable
         private Name schema;
@@ -146,9 +177,9 @@ public class Link implements Member {
         this.schema = resolver.requireLinkableSchema(descriptor.getSchema());
         this.expression = Nullsafe.require(descriptor.getExpression());
         this.single = Nullsafe.orDefault(descriptor.getSingle());
-        this.sort = Nullsafe.immutableCopy(descriptor.getSort());
+        this.sort = Immutable.copy(descriptor.getSort());
         this.visibility = descriptor.getVisibility();
-        this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());
+        this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
@@ -331,18 +362,53 @@ public class Link implements Member {
         }
     }
 
+    public Link extend(final Link ext) {
+
+        return ext;
+    }
+
+    public static SortedMap<String, Link> extend(final Map<String, Link> base, final Map<String, Link> ext) {
+
+        return Immutable.sortedMerge(base, ext, Link::extend);
+    }
+
+    public static SortedMap<String, Link> extend(final Collection<? extends Resolver> base, final Map<String, Link> ext) {
+
+        return Immutable.sortedCopy(Stream.concat(
+                base.stream().map(Resolver::getLinks),
+                Stream.of(ext)
+        ).reduce(Link::extend).orElse(Collections.emptyMap()));
+    }
+
     public interface Resolver {
 
-        interface Builder {
+        interface Descriptor {
 
-            Builder setLink(String name, Link.Descriptor v);
+            @JsonInclude(JsonInclude.Include.NON_EMPTY)
+            Map<String, Link.Descriptor> getLinks();
+        }
 
-            Builder setLinks(Map<String, Link.Descriptor> vs);
+        interface Builder<B extends Builder<B>> extends Descriptor {
+
+            default B setLink(final String name, final Link.Descriptor v) {
+
+                return setLinks(Immutable.copyPut(getLinks(), name, v));
+            }
+
+            B setLinks(Map<String, Link.Descriptor> vs);
         }
 
         Map<String, Link> getDeclaredLinks();
 
         Map<String, Link> getLinks();
+
+        default Map<String, Link.Descriptor> describeDeclaredLinks() {
+
+            return getDeclaredLinks().entrySet().stream().collect(Collectors.toMap(
+                    Map.Entry::getKey,
+                    entry -> entry.getValue().descriptor()
+            ));
+        }
 
         default Link getLink(final String name, final boolean inherited) {
 
@@ -367,50 +433,6 @@ public class Link implements Member {
     @Override
     public Descriptor descriptor() {
 
-        return new Descriptor() {
-
-            @Override
-            public Map<String, Serializable> getExtensions() {
-
-                return extensions;
-            }
-
-            @Nullable
-            @Override
-            public String getDescription() {
-
-                return schema.getDescription();
-            }
-
-            @Override
-            public Name getSchema() {
-
-                return schema.getQualifiedName();
-            }
-
-            @Override
-            public Expression getExpression() {
-
-                return expression;
-            }
-
-            @Override
-            public Boolean getSingle() {
-
-                return single;
-            }
-
-            @Override
-            public List<Sort> getSort() {
-
-                return sort;
-            }
-
-            @Override
-            public Visibility getVisibility() {
-
-                return visibility;
-            }
-        };
+        return (Descriptor.Self) () -> Link.this;
     }
 }

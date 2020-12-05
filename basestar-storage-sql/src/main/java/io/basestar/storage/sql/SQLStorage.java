@@ -27,7 +27,7 @@ import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Index;
 import io.basestar.schema.*;
 import io.basestar.schema.use.Use;
-import io.basestar.schema.use.UseObject;
+import io.basestar.schema.use.UseRef;
 import io.basestar.schema.use.UseStruct;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
@@ -139,8 +139,8 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query,
-                                                         final List<Sort> sort, final Set<Name> expand) {
+    public List<Pager.Source<Map<String, Object>>> queryObject(final ObjectSchema schema, final Expression query,
+                                                               final List<Sort> sort, final Set<Name> expand) {
 
         final Expression bound = query.bind(Context.init());
 
@@ -299,7 +299,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                         }
 
                         @Override
-                        public QueryPart visitObject(final UseObject type) {
+                        public QueryPart visitRef(final UseRef type) {
 
                             final Field<String> sourceId = DSL.field(DSL.name(name.first()), String.class);
                             if (rest.equals(ObjectSchema.ID_NAME)) {

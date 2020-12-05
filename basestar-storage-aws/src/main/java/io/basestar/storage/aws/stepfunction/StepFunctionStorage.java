@@ -174,7 +174,7 @@ public class StepFunctionStorage implements Storage, Storage.WithoutAggregate,
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    public List<Pager.Source<Map<String, Object>>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         final String stepFunctionArn = strategy.stateMachineArn(schema);
         return ImmutableList.of(

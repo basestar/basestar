@@ -120,12 +120,12 @@ public interface NamespacedStorage extends Storage {
     }
 
     @Override
-    default List<Pager.Source<Map<String, Object>>> query(final ObjectSchema absoluteSchema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    default List<Pager.Source<Map<String, Object>>> queryObject(final ObjectSchema absoluteSchema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         final Name namespace = namespace(absoluteSchema);
         final ObjectSchema relativeSchema = relative(namespace, absoluteSchema);
         return absolute(namespace, relativeSchema, storage(namespace, relativeSchema)
-                .query(relative(namespace, relativeSchema), query, sort, expand));
+                .queryObject(relative(namespace, relativeSchema), query, sort, expand));
     }
 
     @Override

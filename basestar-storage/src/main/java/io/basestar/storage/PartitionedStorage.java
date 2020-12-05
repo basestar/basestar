@@ -54,7 +54,7 @@ public abstract class PartitionedStorage implements Storage.WithWriteIndex {
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression expression, final List<Sort> sort, final Set<Name> expand) {
+    public List<Pager.Source<Map<String, Object>>> queryObject(final ObjectSchema schema, final Expression expression, final List<Sort> sort, final Set<Name> expand) {
 
         final Expression bound = expression.bind(Context.init());
         final Set<Expression> disjunction = bound.visit(new DisjunctionVisitor());

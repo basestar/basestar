@@ -57,7 +57,7 @@ public class MetadataMapper implements MemberMapper<ObjectSchema.Builder> {
     }
 
     @Override
-    public void addToSchema(final InstanceSchemaMapper<?, ObjectSchema.Builder> mapper, final ObjectSchema.Builder builder) {
+    public void addToSchema(final InstanceSchemaMapper<ObjectSchema.Builder, ?> mapper, final ObjectSchema.Builder builder) {
 
         // no-op
     }

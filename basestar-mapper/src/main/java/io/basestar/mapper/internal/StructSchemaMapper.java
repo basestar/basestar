@@ -28,23 +28,23 @@ import io.basestar.util.Name;
 
 import java.util.Map;
 
-public class StructSchemaMapper<T> extends InstanceSchemaMapper<T, StructSchema.Builder> {
+public class StructSchemaMapper<T> extends InstanceSchemaMapper<StructSchema.Builder, T> {
 
     public StructSchemaMapper(final MappingContext context, final Name name, final TypeContext type) {
 
         super(StructSchema.Builder.class, context, name, type);
     }
 
-    public StructSchemaMapper(final StructSchemaMapper<T> copy, final String desscription) {
+    public StructSchemaMapper(final StructSchemaMapper<T> copy, final String description) {
 
-        super(copy, desscription);
+        super(copy, description);
     }
 
     @Override
     public StructSchema.Builder schemaBuilder() {
 
         return addMembers(StructSchema.builder()
-                .setConcrete(concrete ? null : false)
+//                .setConcrete(concrete ? null : false)
                 .setExtend(extend));
     }
 

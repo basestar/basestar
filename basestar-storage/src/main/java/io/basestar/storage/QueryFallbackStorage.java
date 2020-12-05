@@ -27,8 +27,8 @@ import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.storage.exception.UnsupportedQueryException;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
 import io.basestar.util.Pager;
 import io.basestar.util.Sort;
 
@@ -43,7 +43,7 @@ public class QueryFallbackStorage implements DelegatingStorage {
 
     public QueryFallbackStorage(final List<Storage> storage) {
 
-        this.storage = Nullsafe.immutableCopy(storage);
+        this.storage = Immutable.copy(storage);
         if(storage.isEmpty()) {
             throw new IllegalStateException("Query fallback storage must have at least one storage engine");
         }
@@ -56,7 +56,7 @@ public class QueryFallbackStorage implements DelegatingStorage {
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    public List<Pager.Source<Map<String, Object>>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         return tryQuery(0, schema, query, sort, expand);
     }
@@ -73,7 +73,7 @@ public class QueryFallbackStorage implements DelegatingStorage {
             throw new UnsupportedQueryException(schema.getQualifiedName(), query);
         } else {
             try {
-                final List<Pager.Source<Map<String, Object>>> result = storage.get(offset).query(schema, query, sort, expand);
+                final List<Pager.Source<Map<String, Object>>> result = storage.get(offset).queryObject(schema, query, sort, expand);
                 if(offset != 0) {
                     return Pager.map(result, v -> Instance.without(v, Reserved.META));
                 } else {

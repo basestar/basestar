@@ -196,11 +196,11 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
         final Object target = data.get(first);
         final AbstractPath<SELF> tail = withoutFirst();
         if(tail.isEmpty()) {
-            return Nullsafe.immutableCopyPut(data, first, value);
+            return Immutable.copyPut(data, first, value);
         } else if(target instanceof Map) {
-            return Nullsafe.immutableCopyPut(data, first, tail.set((Map<String, Object>)target, value));
+            return Immutable.copyPut(data, first, tail.set((Map<String, Object>)target, value));
         } else if(target == null) {
-            return Nullsafe.immutableCopyPut(data, first, tail.set(ImmutableMap.of(), value));
+            return Immutable.copyPut(data, first, tail.set(ImmutableMap.of(), value));
         } else {
             throw new IllegalStateException();
         }

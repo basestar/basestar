@@ -30,6 +30,7 @@ import io.basestar.expression.Context;
 import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.Data;
@@ -40,7 +41,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -63,7 +63,7 @@ import java.util.stream.Stream;
 
 @Getter
 @Accessors(chain = true)
-public class ObjectSchema implements ReferableSchema, Index.Resolver, Transient.Resolver, Permission.Resolver {
+public class ObjectSchema implements ReferableSchema {
 
     public static final String ID = ReferableSchema.ID;
 
@@ -98,8 +98,7 @@ public class ObjectSchema implements ReferableSchema, Index.Resolver, Transient.
      * Parent schema, may be another object schema or a struct schema
      */
 
-    @Nullable
-    private final ReferableSchema extend;
+    private final List<InterfaceSchema> extend;
 
     /**
      * Id configuration
@@ -197,8 +196,6 @@ public class ObjectSchema implements ReferableSchema, Index.Resolver, Transient.
     @Nonnull
     private final SortedSet<Name> expand;
 
-    private final boolean concrete;
-
     private final boolean readonly;
 
     @Nonnull
@@ -207,7 +204,7 @@ public class ObjectSchema implements ReferableSchema, Index.Resolver, Transient.
     private final Collection<Schema<?>> directlyExtending;
 
     @JsonDeserialize(as = Builder.class)
-    public interface Descriptor extends ReferableSchema.Descriptor {
+    public interface Descriptor extends ReferableSchema.Descriptor<ObjectSchema> {
 
         String TYPE = "object";
 
@@ -217,15 +214,33 @@ public class ObjectSchema implements ReferableSchema, Index.Resolver, Transient.
             return TYPE;
         }
 
-        Long getVersion();
-
         Id.Descriptor getId();
-
-        Boolean getConcrete();
 
         Boolean getReadonly();
 
         History getHistory();
+
+        interface Self extends ReferableSchema.Descriptor.Self<ObjectSchema>, Descriptor {
+
+            @Override
+            default Id.Descriptor getId() {
+
+                final Id id = self().getId();
+                return id == null ? null : id.descriptor();
+            }
+
+            @Override
+            default Boolean getReadonly() {
+
+                return self().isReadonly();
+            }
+
+            @Override
+            default History getHistory() {
+
+                return self().getHistory();
+            }
+        }
 
         @Override
         default ObjectSchema build(final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
@@ -250,17 +265,18 @@ public class ObjectSchema implements ReferableSchema, Index.Resolver, Transient.
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonPropertyOrder({"type", "description", "version", "extend", "concrete", "id", "history", "properties", "transients", "links", "indexes", "permissions", "extensions"})
-    public static class Builder implements InstanceSchema.Builder, Descriptor, Link.Resolver.Builder, Transient.Resolver.Builder {
+    public static class Builder implements ReferableSchema.Builder<Builder, ObjectSchema>, Descriptor {
 
         private Long version;
 
         @Nullable
-        private Name extend;
+        private List<Name> extend;
 
         @Nullable
         private Id.Builder id;
 
         @Nullable
+        @Deprecated
         private Boolean concrete;
 
         @Nullable
@@ -302,39 +318,6 @@ public class ObjectSchema implements ReferableSchema, Index.Resolver, Transient.
 
         @Nullable
         private Map<String, Serializable> extensions;
-
-        @Override
-        public Builder setProperty(final String name, final Property.Descriptor v) {
-
-            properties = Nullsafe.immutableCopyPut(properties, name, v);
-            return this;
-        }
-
-        @Override
-        public Builder setTransient(final String name, final Transient.Descriptor v) {
-
-            transients = Nullsafe.immutableCopyPut(transients, name, v);
-            return this;
-        }
-
-        @Override
-        public Builder setLink(final String name, final Link.Descriptor v) {
-
-            links = Nullsafe.immutableCopyPut(links, name, v);
-            return this;
-        }
-
-        public Builder setIndex(final String name, final Index.Descriptor v) {
-
-            indexes = Nullsafe.immutableCopyPut(indexes, name, v);
-            return this;
-        }
-
-        public Builder setPermission(final String name, final Permission.Descriptor v) {
-
-            permissions = Nullsafe.immutableCopyPut(permissions, name, v);
-            return this;
-        }
     }
 
     public static Builder builder() {
@@ -348,24 +331,19 @@ public class ObjectSchema implements ReferableSchema, Index.Resolver, Transient.
         this.qualifiedName = qualifiedName;
         this.slot = slot;
         this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
-        if (descriptor.getExtend() != null) {
-            this.extend = resolver.requireObjectSchema(descriptor.getExtend());
-        } else {
-            this.extend = null;
-        }
+        this.extend = Immutable.transform(descriptor.getExtend(), resolver::requireInterfaceSchema);
         this.description = descriptor.getDescription();
         this.id = descriptor.getId() == null ? null : descriptor.getId().build(qualifiedName.with(ID));
         this.history = Nullsafe.orDefault(descriptor.getHistory(), History.ENABLED);
-        this.declaredProperties = Nullsafe.immutableSortedCopy(descriptor.getProperties(), (k, v) -> v.build(resolver, version, qualifiedName.with(k)));
-        this.declaredTransients = Nullsafe.immutableSortedCopy(descriptor.getTransients(), (k, v) -> v.build(qualifiedName.with(k)));
-        this.declaredLinks = Nullsafe.immutableSortedCopy(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
-        this.declaredIndexes = Nullsafe.immutableSortedCopy(descriptor.getIndexes(), (k, v) -> v.build(qualifiedName.with(k)));
-        this.constraints = Nullsafe.immutableCopy(descriptor.getConstraints());
-        this.declaredPermissions = Nullsafe.immutableSortedCopy(descriptor.getPermissions(), (k, v) -> v.build(k));
-        this.declaredExpand = Nullsafe.immutableSortedCopy(descriptor.getExpand());
-        this.concrete = Nullsafe.orDefault(descriptor.getConcrete(), Boolean.TRUE);
+        this.declaredProperties = Immutable.transformSorted(descriptor.getProperties(), (k, v) -> v.build(resolver, version, qualifiedName.with(k)));
+        this.declaredTransients = Immutable.transformSorted(descriptor.getTransients(), (k, v) -> v.build(qualifiedName.with(k)));
+        this.declaredLinks = Immutable.transformSorted(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
+        this.declaredIndexes = Immutable.transformSorted(descriptor.getIndexes(), (k, v) -> v.build(this, qualifiedName.with(k)));
+        this.constraints = Immutable.copy(descriptor.getConstraints());
+        this.declaredPermissions = Immutable.transformSorted(descriptor.getPermissions(), (k, v) -> v.build(k));
+        this.declaredExpand = Immutable.sortedCopy(descriptor.getExpand());
         this.readonly = Nullsafe.orDefault(descriptor.getReadonly());
-        this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());
+        this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
         if (Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
@@ -375,60 +353,14 @@ public class ObjectSchema implements ReferableSchema, Index.Resolver, Transient.
                 throw new ReservedNameException(k);
             }
         });
-        if (extend != null) {
-            this.properties = merge(extend.getProperties(), declaredProperties);
-            if (extend instanceof ObjectSchema) {
-                final ObjectSchema objectExtend = (ObjectSchema) extend;
-                this.transients = merge(objectExtend.getTransients(), declaredTransients);
-                this.links = merge(objectExtend.getLinks(), declaredLinks);
-                this.indexes = merge(objectExtend.getIndexes(), declaredIndexes);
-                this.permissions = mergePermissions(objectExtend.getPermissions(), declaredPermissions);
-                this.expand = merge(objectExtend.getExpand(), declaredExpand);
-            } else {
-                this.transients = declaredTransients;
-                this.links = declaredLinks;
-                this.indexes = declaredIndexes;
-                this.permissions = declaredPermissions;
-                this.expand = declaredExpand;
-            }
-        } else {
-            this.properties = declaredProperties;
-            this.transients = declaredTransients;
-            this.links = declaredLinks;
-            this.indexes = declaredIndexes;
-            this.permissions = declaredPermissions;
-            this.expand = declaredExpand;
-        }
-        this.directlyExtending = ImmutableList.copyOf(resolver.getExtendingSchemas(qualifiedName));
-    }
+        this.properties = Property.extend(extend, declaredProperties);
+        this.transients = Transient.extend(extend, declaredTransients);
+        this.links = Link.extend(extend, declaredLinks);
+        this.indexes = Index.extend(extend, declaredIndexes);
+        this.permissions = Permission.extend(extend, declaredPermissions);
+        this.expand = LinkableSchema.extendExpand(extend, declaredExpand);
 
-    private static <T> SortedMap<String, T> merge(final Map<String, T> a, final Map<String, T> b) {
-
-        final SortedMap<String, T> merged = new TreeMap<>();
-        merged.putAll(a);
-        merged.putAll(b);
-        return Collections.unmodifiableSortedMap(merged);
-    }
-
-    private static <T extends Comparable<T>> SortedSet<T> merge(final Set<T> a, final Set<T> b) {
-
-        final SortedSet<T> merged = new TreeSet<>();
-        merged.addAll(a);
-        merged.addAll(b);
-        return Collections.unmodifiableSortedSet(merged);
-    }
-
-    private static SortedMap<String, Permission> mergePermissions(final Map<String, Permission> a, final Map<String, Permission> b) {
-
-        final SortedMap<String, Permission> merged = new TreeMap<>(a);
-        b.forEach((k, v) -> {
-            if (merged.containsKey(k)) {
-                merged.put(k, merged.get(k).merge(v));
-            } else {
-                merged.put(k, v);
-            }
-        });
-        return Collections.unmodifiableSortedMap(merged);
+        this.directlyExtending = ImmutableList.copyOf(resolver.getExtendedSchemas(qualifiedName));
     }
 
     @Override
@@ -443,116 +375,21 @@ public class ObjectSchema implements ReferableSchema, Index.Resolver, Transient.
     }
 
     @Override
+    public boolean isConcrete() {
+
+        return true;
+    }
+
+    @Override
     public Descriptor descriptor() {
 
-        return new Descriptor() {
+        return (Descriptor.Self) () -> ObjectSchema.this;
+    }
 
-            @Override
-            public Long getVersion() {
+    @Override
+    public Collection<ReferableSchema> getDirectlyExtended() {
 
-                return version;
-            }
-
-            @Override
-            public Name getExtend() {
-
-                return extend == null ? null : extend.getQualifiedName();
-            }
-
-            @Override
-            public Id.Descriptor getId() {
-
-                return id == null ? null : id.descriptor();
-            }
-
-            @Override
-            public Boolean getConcrete() {
-
-                return concrete;
-            }
-
-            @Override
-            public Boolean getReadonly() {
-
-                return readonly;
-            }
-
-            @Override
-            public History getHistory() {
-
-                return history;
-            }
-
-            @Override
-            public Map<String, Property.Descriptor> getProperties() {
-
-                return declaredProperties.entrySet().stream().collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> entry.getValue().descriptor()
-                ));
-            }
-
-            @Override
-            public Map<String, Transient.Descriptor> getTransients() {
-
-                return declaredTransients.entrySet().stream().collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> entry.getValue().descriptor()
-                ));
-            }
-
-            @Override
-            public Map<String, Link.Descriptor> getLinks() {
-
-                return declaredLinks.entrySet().stream().collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> entry.getValue().descriptor()
-                ));
-            }
-
-            @Override
-            public Map<String, Index.Descriptor> getIndexes() {
-
-                return declaredIndexes.entrySet().stream().collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> entry.getValue().descriptor()
-                ));
-            }
-
-            @Override
-            public List<? extends Constraint> getConstraints() {
-
-                return constraints;
-            }
-
-            @Override
-            public Map<String, Permission.Descriptor> getPermissions() {
-
-                return declaredPermissions.entrySet().stream().collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> entry.getValue().descriptor()
-                ));
-            }
-
-            @Override
-            public Set<Name> getExpand() {
-
-                return expand;
-            }
-
-            @Nullable
-            @Override
-            public String getDescription() {
-
-                return description;
-            }
-
-            @Override
-            public Map<String, Serializable> getExtensions() {
-
-                return extensions;
-            }
-        };
+        return Collections.emptySet();
     }
 
     @Override

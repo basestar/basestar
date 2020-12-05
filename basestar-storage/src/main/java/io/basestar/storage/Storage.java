@@ -69,13 +69,26 @@ public interface Storage {
         return getClass().getSimpleName();
     }
 
-    CompletableFuture<Map<String, Object>> readObject(ObjectSchema schema, String id, Set<Name> expand);
+    default CompletableFuture<Map<String, Object>> get(final ReferableSchema schema, final String id, final Set<Name> expand) {
 
-    CompletableFuture<Map<String, Object>> readObjectVersion(ObjectSchema schema, String id, long version, Set<Name> expand);
+        return read(Consistency.ATOMIC)
+                .get(schema, id, expand)
+                .read().thenApply(results -> results.get(schema.getQualifiedName(), id));
+    }
 
-    List<Pager.Source<Map<String, Object>>> query(ObjectSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
+    default CompletableFuture<Map<String, Object>> getVersion(final ReferableSchema schema, final String id, final long version, final Set<Name> expand) {
 
-    List<Pager.Source<Map<String, Object>>> aggregate(ObjectSchema schema, Expression query, Map<String, Expression> group, Map<String, Aggregate> aggregates);
+        return read(Consistency.ATOMIC)
+                .getVersion(schema, id, version, expand)
+                .read().thenApply(results -> results.get(schema.getQualifiedName(), id));
+    }
+
+    default CompletableFuture<Page<Map<String, Object>>> query(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        return read(Consistency.ATOMIC)
+                .query(schema, query, sort, expand)
+                .read().thenApply(results -> results.query(schema.getQualifiedName(), query, sort, expand));
+    }
 
     ReadTransaction read(Consistency consistency);
 
@@ -101,9 +114,48 @@ public interface Storage {
 
     interface ReadTransaction {
 
-        ReadTransaction readObject(ObjectSchema schema, String id, Set<Name> expand);
+        default ReadTransaction get(final ReferableSchema schema, final String id, final Set<Name> expand) {
 
-        ReadTransaction readObjectVersion(ObjectSchema schema, String id, long version, Set<Name> expand);
+            if(schema instanceof InterfaceSchema) {
+                return getInterface((InterfaceSchema) schema, id, expand);
+            } else {
+                return getObject((ObjectSchema)schema, id, expand);
+            }
+        }
+
+        default ReadTransaction getVersion(final ReferableSchema schema, final String id, final long version, final Set<Name> expand) {
+
+            if(schema instanceof InterfaceSchema) {
+                return getInterfaceVersion((InterfaceSchema) schema, id, version, expand);
+            } else {
+                return getObjectVersion((ObjectSchema)schema, id, version, expand);
+            }
+        }
+
+        default ReadTransaction query(final LinkableSchema schema, Expression query, List<Sort> sort, Set<Name> expand) {
+
+            if(schema instanceof InterfaceSchema) {
+                return queryInterface((InterfaceSchema) schema, query, sort, expand);
+            } else if(schema instanceof ViewSchema) {
+                return queryView((ViewSchema)schema, query, sort, expand);
+            } else {
+                return queryObject((ObjectSchema)schema, query, sort, expand);
+            }
+        }
+
+        ReadTransaction getInterface(InterfaceSchema schema, String id, Set<Name> expand);
+
+        ReadTransaction getInterfaceVersion(InterfaceSchema schema, String id, long version, Set<Name> expand);
+
+        ReadTransaction getObject(ObjectSchema schema, String id, Set<Name> expand);
+
+        ReadTransaction getObjectVersion(ObjectSchema schema, String id, long version, Set<Name> expand);
+
+        ReadTransaction queryInterface(InterfaceSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
+
+        ReadTransaction queryObject(ObjectSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
+
+        ReadTransaction queryView(ViewSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
 
         CompletableFuture<BatchResponse> read();
 
@@ -187,7 +239,7 @@ public interface Storage {
     interface WithoutQuery extends WithoutAggregate {
 
         @Override
-        default List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+        default List<Pager.Source<Map<String, Object>>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
             throw new UnsupportedQueryException(schema.getQualifiedName(), query);
         }
