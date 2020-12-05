@@ -38,7 +38,7 @@ import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.logical.Or;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Namespace;
-import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.schema.util.Ref;
@@ -731,14 +731,14 @@ class TestDatabaseServer {
                 .schema(TEAM)
                 .data(ImmutableMap.of(
                         "name", "b",
-                        "parent", ObjectSchema.ref(teamA.getId())
+                        "parent", ReferableSchema.ref(teamA.getId())
                 ))
                 .build()).get();
 
         final Instance member = database.create(Caller.SUPER, CreateOptions.builder()
                 .schema(TEAM_MEMBER)
                 .data(ImmutableMap.of(
-                        "team", ObjectSchema.ref(teamB.getId())
+                        "team", ReferableSchema.ref(teamB.getId())
                 ))
                 .build()).get();
 
@@ -919,7 +919,7 @@ class TestDatabaseServer {
                 .schema(WITH_VERSIONED_REF)
                 .id(id)
                 .data(ImmutableMap.of(
-                        "ref", ObjectSchema.versionedRef(id, 1L)
+                        "ref", ReferableSchema.versionedRef(id, 1L)
                 ))
                 .build()).get();
 

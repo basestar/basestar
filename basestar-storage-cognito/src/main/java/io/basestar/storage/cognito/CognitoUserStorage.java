@@ -25,10 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
-import io.basestar.schema.Consistency;
-import io.basestar.schema.Instance;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.Property;
+import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
@@ -395,7 +392,7 @@ public class CognitoUserStorage implements Storage.WithoutWriteIndex, Storage.Wi
             public Map<String, Object> visitObject(final UseObject type) {
 
                 final String id = attrs.get(path.with(ObjectSchema.ID));
-                return id == null ? null : ObjectSchema.ref(id);
+                return id == null ? null : ReferableSchema.ref(id);
             }
         });
     }

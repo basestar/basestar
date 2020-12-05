@@ -21,7 +21,7 @@ package io.basestar.database.event;
  */
 
 import io.basestar.schema.Index;
-import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.util.Name;
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -61,6 +61,6 @@ public class AsyncIndexUpdatedEvent implements ObjectEvent {
                 .setId(id)
                 .setVersion(version)
                 .setKey(key)
-                .setProjection(ObjectSchema.copyMeta(projection));
+                .setProjection(ReferableSchema.copyMeta(projection));
     }
 }

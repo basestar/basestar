@@ -211,7 +211,7 @@ public class ReadProcessor {
                 final ObjectSchema resolvedSchema = objectSchema(Nullsafe.orDefault(instanceSchemaName, baseSchemaName));
                 resolvedSchema.expand(object, new Expander() {
                     @Override
-                    public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
+                    public Instance expandRef(final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
                         if(ref == null) {
                             return null;
@@ -222,7 +222,7 @@ public class ReadProcessor {
                     }
 
                     @Override
-                    public Instance expandVersionedRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
+                    public Instance expandVersionedRef(final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
                         if(ref == null) {
                             return null;
@@ -312,23 +312,23 @@ public class ReadProcessor {
 
                             result.put(ref, resolvedSchema.expand(object, new Expander() {
                                 @Override
-                                public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
+                                public Instance expandRef(final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
                                     final ExpandKey<RefKey> expandKey = ExpandKey.from(RefKey.latest(schema.getQualifiedName(), ref), expand);
                                     Instance result = expanded.get(expandKey);
                                     if (result == null) {
-                                        result = ObjectSchema.ref(Instance.getId(ref));
+                                        result = ReferableSchema.ref(Instance.getId(ref));
                                     }
                                     return result;
                                 }
 
                                 @Override
-                                public Instance expandVersionedRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
+                                public Instance expandVersionedRef(final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
                                     final ExpandKey<RefKey> expandKey = ExpandKey.from(RefKey.versioned(schema.getQualifiedName(), ref), expand);
                                     Instance result = expanded.get(expandKey);
                                     if (result == null) {
-                                        result = ObjectSchema.versionedRef(Instance.getId(ref), Instance.getVersion(ref));
+                                        result = ReferableSchema.versionedRef(Instance.getId(ref), Instance.getVersion(ref));
                                     }
                                     return result;
                                 }

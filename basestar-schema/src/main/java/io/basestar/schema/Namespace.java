@@ -145,12 +145,12 @@ public class Namespace implements Serializable, Schema.Resolver {
 
         public Namespace build() {
 
-            return build(name -> null, Renaming.noop());
+            return build(Schema.Resolver.NOOP, Renaming.noop());
         }
 
         public Namespace build(final Name prefix) {
 
-            return build(name -> null, Renaming.addPrefix(prefix));
+            return build(Schema.Resolver.NOOP, Renaming.addPrefix(prefix));
         }
 
         public Namespace build(final Schema.Resolver resolver) {
@@ -245,14 +245,32 @@ public class Namespace implements Serializable, Schema.Resolver {
 
                 @Nullable
                 @Override
-                public Schema<?> getSchema(final Name inputName) {
+                public Schema<?> getSchema(final Name qualifiedName) {
 
-                    final Schema.Descriptor<?> builder = descriptors.get(inputName);
+                    final Schema.Descriptor<?> builder = descriptors.get(qualifiedName);
                     if (builder == null) {
-                        return resolver.getSchema(inputName);
+                        return resolver.getSchema(qualifiedName);
                     } else {
-                        return resolveCyclic(resolver, version, inputName, builder, descriptors, naming, out);
+                        return resolveCyclic(resolver, version, qualifiedName, builder, descriptors, naming, out);
                     }
+                }
+
+                @Override
+                public Collection<Schema<?>> getExtendingSchemas(final Name qualifiedName) {
+
+                    return descriptors.entrySet().stream().filter(e -> {
+                        final Schema.Descriptor<?> descriptor = e.getValue();
+                        final Name extend;
+                        if(descriptor instanceof ReferableSchema.Descriptor) {
+                            extend = ((ReferableSchema.Descriptor) descriptor).getExtend();
+                        } else if(descriptor instanceof StructSchema.Descriptor) {
+                            extend = ((StructSchema.Descriptor) descriptor).getExtend();
+                        } else {
+                            extend = null;
+                        }
+                        return Objects.equals(extend, qualifiedName);
+                    }).map(e -> getSchema(e.getKey()))
+                            .collect(Collectors.toList());
                 }
             }, version, outputName, slot);
         }
@@ -262,6 +280,26 @@ public class Namespace implements Serializable, Schema.Resolver {
     public Schema<?> getSchema(final Name qualifiedName) {
 
         return schemas.get(qualifiedName);
+    }
+
+    @Override
+    public Collection<Schema<?>> getExtendingSchemas(final Name qualifiedName) {
+
+        return schemas.values().stream().filter(schema -> {
+            final Schema<?> extend;
+            if (schema instanceof ReferableSchema) {
+                extend = ((ReferableSchema) schema).getExtend();
+            } else if (schema instanceof StructSchema) {
+                extend = ((StructSchema) schema).getExtend();
+            } else {
+                extend = null;
+            }
+            if (extend == null) {
+                return qualifiedName == null;
+            } else {
+                return Objects.equals(extend.getQualifiedName(), qualifiedName);
+            }
+        }).collect(Collectors.toList());
     }
 
     public static Namespace from(final Map<Name, Schema<?>> schemas) {
@@ -284,7 +322,7 @@ public class Namespace implements Serializable, Schema.Resolver {
         return new Namespace(getSchemas().entrySet().stream().collect(Collectors.toMap(
                 Map.Entry::getKey,
                 e -> e.getValue().descriptor()
-        )), version, name -> null, renaming);
+        )), version, Schema.Resolver.NOOP, renaming);
     }
 
     public static Namespace load(final Schema.Resolver resolver, final URL... urls) throws IOException {

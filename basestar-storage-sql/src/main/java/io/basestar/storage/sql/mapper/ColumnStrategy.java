@@ -2,6 +2,7 @@ package io.basestar.storage.sql.mapper;
 
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.schema.use.*;
 import io.basestar.storage.sql.mapper.column.ColumnMapper;
@@ -166,7 +167,7 @@ public interface ColumnStrategy {
 
                     final Map<String, ColumnMapper<Object>> mappers = new HashMap<>();
                     if(expand != null) {
-                        final ObjectSchema schema = type.getSchema();
+                        final ReferableSchema schema = type.getSchema();
                         final Map<String, Set<Name>> branches = Name.branch(expand);
                         schema.metadataSchema().forEach((k, v) -> {
                             mappers.put(k, (ColumnMapper<Object>) columnMapper(v, false, Collections.emptySet()));
@@ -214,7 +215,7 @@ public interface ColumnStrategy {
 
                             final Object value = values.get(selectName(table, name));
                             if(value != null) {
-                                return ObjectSchema.ref((String)value);
+                                return ReferableSchema.ref((String)value);
                             } else {
                                 return null;
                             }

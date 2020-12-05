@@ -7,7 +7,7 @@ import io.basestar.util.Name;
 import java.util.Map;
 import java.util.Set;
 
-public interface LinkableSchema extends InstanceSchema, Link.Resolver {
+public interface LinkableSchema extends InstanceSchema, Link.Resolver, Permission.Resolver {
 
     interface Descriptor extends InstanceSchema.Descriptor {
 

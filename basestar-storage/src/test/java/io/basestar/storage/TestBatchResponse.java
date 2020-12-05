@@ -1,7 +1,7 @@
 package io.basestar.storage;
 
 import com.google.common.collect.ImmutableMap;
-import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.util.Name;
 import org.junit.jupiter.api.Test;
 
@@ -16,7 +16,7 @@ class TestBatchResponse {
     void testGet() {
 
         final BatchResponse response = new BatchResponse.Basic(ImmutableMap.of(
-                BatchResponse.Key.from(Name.of("Location"), ObjectSchema.ref("x")), ObjectSchema.ref("a")
+                BatchResponse.Key.from(Name.of("Location"), ReferableSchema.ref("x")), ReferableSchema.ref("a")
         ));
         final Map<String, Object> c = response.getObject(Name.of("Task"), "y");
         assertNull(c);

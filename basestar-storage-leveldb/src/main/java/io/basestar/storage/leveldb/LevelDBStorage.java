@@ -346,7 +346,7 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
             try(final ByteArrayInputStream bais = new ByteArrayInputStream(data);
                 final DataInputStream dis = new DataInputStream(bais)) {
                 dis.readLong();
-                return ObjectSchema.deserialize(dis);
+                return ReferableSchema.deserialize(dis);
             } catch (final IOException e) {
                 throw new IllegalStateException(e);
             }

@@ -20,7 +20,7 @@ package io.basestar.database.event;
  * #L%
  */
 
-import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.util.Name;
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -51,6 +51,6 @@ public class AsyncHistoryCreatedEvent implements ObjectEvent {
                 .setSchema(schema)
                 .setId(id)
                 .setVersion(version)
-                .setAfter(ObjectSchema.copyMeta(after));
+                .setAfter(ReferableSchema.copyMeta(after));
     }
 }

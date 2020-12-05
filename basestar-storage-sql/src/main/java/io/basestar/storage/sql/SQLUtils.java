@@ -25,13 +25,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import io.basestar.jackson.BasestarModule;
 import io.basestar.schema.Index;
-import io.basestar.schema.Instance;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.Reserved;
+import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
 import org.apache.commons.text.StringEscapeUtils;
+import org.jooq.Constraint;
 import org.jooq.*;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
@@ -317,7 +316,7 @@ public class SQLUtils {
                     return null;
                 } else {
                     final String id = (String)value;
-                    return ObjectSchema.ref(id);
+                    return ReferableSchema.ref(id);
                 }
             }
 
@@ -422,7 +421,7 @@ public class SQLUtils {
     public static List<Field<?>> fields(final ObjectSchema schema) {
 
         return Stream.concat(
-                ObjectSchema.METADATA_SCHEMA.entrySet().stream()
+                schema.metadataSchema().entrySet().stream()
                         .map(e -> DSL.field(DSL.name(e.getKey()), dataType(e.getValue()))),
                 schema.getProperties().entrySet().stream()
                         .map(e -> DSL.field(DSL.name(e.getKey()),

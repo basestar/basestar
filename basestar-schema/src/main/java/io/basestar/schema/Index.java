@@ -270,7 +270,7 @@ public class Index implements Named, Described, Serializable, Extendable {
         final Map<String, Use<?>> result = new HashMap<>();
         if(projection.isEmpty()) {
             schema.getProperties().forEach((name, property) -> result.put(name, property.getType()));
-            result.putAll(ObjectSchema.METADATA_SCHEMA);
+            result.putAll(schema.metadataSchema());
         } else {
             final Set<String> members = new HashSet<>(projection);
             resolvePartitionNames().forEach(name -> members.add(name.first()));

@@ -22,6 +22,7 @@ package io.basestar.storage.s3;
 
 import io.basestar.schema.Consistency;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.storage.BatchResponse;
 import io.basestar.storage.Storage;
 import io.basestar.storage.StorageTraits;
@@ -100,7 +101,7 @@ public class S3BlobStorage implements Storage.WithoutWriteIndex, Storage.Without
                     } else {
                         try (final ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
                              final DataInputStream dis = new DataInputStream(bais)) {
-                            return ObjectSchema.deserialize(dis);
+                            return ReferableSchema.deserialize(dis);
                         } catch (final IOException e) {
                             throw new IllegalStateException(e);
                         }

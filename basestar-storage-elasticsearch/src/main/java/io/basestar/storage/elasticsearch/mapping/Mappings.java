@@ -23,6 +23,7 @@ package io.basestar.storage.elasticsearch.mapping;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.use.*;
 import io.basestar.util.Name;
 import lombok.Data;
@@ -121,7 +122,7 @@ public class Mappings {
 
                         if(expand == null) {
                             final Map<String, FieldType> properties = new HashMap<>();
-                            ObjectSchema.refSchema(type.isVersioned()).forEach((k, v) -> properties.put(k, v.visit(this)));
+                            ReferableSchema.refSchema(type.isVersioned()).forEach((k, v) -> properties.put(k, v.visit(this)));
                             return new FieldType.NestedType(properties);
                         } else {
                             return new FieldType.NestedType(properties(type.getSchema(), expand));

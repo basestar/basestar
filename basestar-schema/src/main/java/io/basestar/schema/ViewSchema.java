@@ -58,7 +58,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Getter
-public class ViewSchema implements LinkableSchema, Permission.Resolver, Link.Resolver {
+public class ViewSchema implements LinkableSchema {
 
     public static String KEY = Reserved.PREFIX + "key";
 

@@ -57,16 +57,16 @@ public class UseObject implements UseLinkable {
 
     public static final String VERSIONED_KEY = "versioned";
 
-    private final ObjectSchema schema;
+    private final ReferableSchema schema;
 
     private final boolean versioned;
 
-    public UseObject(final ObjectSchema schema) {
+    public UseObject(final ReferableSchema schema) {
 
         this(schema, false);
     }
 
-    public UseObject(final ObjectSchema schema, final boolean versioned) {
+    public UseObject(final ReferableSchema schema, final boolean versioned) {
 
         this.schema = schema;
         this.versioned = versioned;
@@ -78,7 +78,7 @@ public class UseObject implements UseLinkable {
         return visitor.visitObject(this);
     }
 
-    public static UseObject from(final ObjectSchema schema, final Object config) {
+    public static UseObject from(final ReferableSchema schema, final Object config) {
 
         final boolean versioned;
         if(config instanceof Map) {
@@ -124,9 +124,9 @@ public class UseObject implements UseLinkable {
                         if(version == null && !suppress) {
                             throw new UnexpectedTypeException(this, value);
                         }
-                        return ObjectSchema.versionedRef(id, version);
+                        return ReferableSchema.versionedRef(id, version);
                     } else {
-                        return ObjectSchema.ref(id);
+                        return ReferableSchema.ref(id);
                     }
                 }
             }
@@ -199,13 +199,13 @@ public class UseObject implements UseLinkable {
                     if(value.size() == 2 && value.containsKey(ObjectSchema.ID) && value.containsKey(ObjectSchema.VERSION)) {
                         return value;
                     } else {
-                        return ObjectSchema.versionedRef(Instance.getId(value), Instance.getVersion(value));
+                        return ReferableSchema.versionedRef(Instance.getId(value), Instance.getVersion(value));
                     }
                 } else {
                     if (value.size() == 1 && value.containsKey(ObjectSchema.ID)) {
                         return value;
                     } else {
-                        return ObjectSchema.ref(Instance.getId(value));
+                        return ReferableSchema.ref(Instance.getId(value));
                     }
                 }
             } else if(versioned) {

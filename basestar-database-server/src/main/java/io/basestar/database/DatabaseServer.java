@@ -827,7 +827,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                     assert version != null;
                     final Instance after = schema.expand(before, new Expander() {
                         @Override
-                        public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
+                        public Instance expandRef(final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
                             if (ref == null) {
                                 return null;
@@ -835,7 +835,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                             if (schema.getQualifiedName().equals(refSchema.getQualifiedName())) {
                                 if (refId.equals(Instance.getId(ref))) {
                                     if (refAfter == null) {
-                                        return ObjectSchema.ref(refId);
+                                        return ReferableSchema.ref(refId);
                                     } else {
                                         return schema.expand(refAfter, Expander.noop(), expand);
                                     }
@@ -845,7 +845,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         }
 
                         @Override
-                        public Instance expandVersionedRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
+                        public Instance expandVersionedRef(final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
                             if (ref == null) {
                                 return null;
@@ -897,7 +897,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             final Set<Expression> queries = v.refQueries(schema.getQualifiedName(), v.getExpand());
             if(!queries.isEmpty()) {
                 final Or merged = new Or(queries.toArray(new Expression[0]));
-                final Expression bound = merged.bind(context(Caller.ANON, ImmutableMap.of(Reserved.THIS, ObjectSchema.ref(id))));
+                final Expression bound = merged.bind(context(Caller.ANON, ImmutableMap.of(Reserved.THIS, ReferableSchema.ref(id))));
                 events.add(RefQueryEvent.of(Ref.of(schema.getQualifiedName(), id), k, bound));
             }
         });

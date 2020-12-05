@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.util.CompletableFutures;
 import io.basestar.util.ISO8601;
@@ -229,7 +230,7 @@ public class DynamoDBUtils {
 
         try(final ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
             final DataInputStream dis = new DataInputStream(bais)) {
-            return ObjectSchema.deserialize(dis);
+            return ReferableSchema.deserialize(dis);
         } catch (final IOException e) {
             throw new IllegalStateException(e);
         }

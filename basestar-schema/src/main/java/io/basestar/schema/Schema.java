@@ -145,7 +145,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
 
         interface Constructing extends Resolver {
 
-            // 'Magic' method to handles cycles in namespace builder, instance under construction
+            // 'Magic' method to handle cycles in namespace builder, instance under construction
             // must call resolver.constructing(this); as first constructor line.
 
             void constructing(final Schema<?> schema);
@@ -165,11 +165,35 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
 
                     return null;
                 }
+
+                @Override
+                public Collection<Schema<?>> getExtendingSchemas(final Name qualifiedName) {
+
+                    return Collections.emptyList();
+                }
             };
         }
 
+        Resolver NOOP = new Resolver() {
+
+            @Nullable
+            @Override
+            public Schema<?> getSchema(final Name qualifiedName) {
+
+                return null;
+            }
+
+            @Override
+            public Collection<Schema<?>> getExtendingSchemas(final Name qualifiedName) {
+
+                return Collections.emptyList();
+            }
+        };
+
         @Nullable
         Schema<?> getSchema(Name qualifiedName);
+
+        Collection<Schema<?>> getExtendingSchemas(Name qualifiedName);
 
         @Nonnull
         default Schema<?> requireSchema(final Name qualifiedName) {

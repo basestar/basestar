@@ -76,7 +76,7 @@ public class AvroUtils {
     public static Schema refSchema(final boolean versioned) {
 
         final List<Schema.Field> fields = new ArrayList<>();
-        ObjectSchema.refSchema(versioned).forEach((k, v) -> fields.add(new Schema.Field(k, schema(v, Collections.emptySet()))));
+        ReferableSchema.refSchema(versioned).forEach((k, v) -> fields.add(new Schema.Field(k, schema(v, Collections.emptySet()))));
         return Schema.createRecord(Reserved.PREFIX + "Ref", "Ref", null, false, fields);
     }
 
@@ -214,7 +214,7 @@ public class AvroUtils {
     public static GenericRecord encodeRef(final Schema schema, final boolean versioned, final Map<String, Object> object) {
 
         final GenericRecord record = new GenericData.Record(schema);
-        ObjectSchema.refSchema(versioned).forEach((k, v) -> {
+        ReferableSchema.refSchema(versioned).forEach((k, v) -> {
             final Schema.Field field = schema.getField(k);
             record.put(k, encode(v, field.schema(), Collections.emptySet(), object.get(k)));
         });
@@ -314,7 +314,7 @@ public class AvroUtils {
     public static Map<String, Object> decodeRef(final Schema schema, final boolean versioned, final IndexedRecord record) {
 
         final Map<String, Object> object = new HashMap<>();
-        ObjectSchema.refSchema(versioned).forEach((k, v) -> {
+        ReferableSchema.refSchema(versioned).forEach((k, v) -> {
             final Schema.Field field = schema.getField(k);
             object.put(k, encode(v, field.schema(), Collections.emptySet(), record.get(field.pos())));
         });

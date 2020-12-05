@@ -813,10 +813,10 @@ public abstract class TestStorage {
         ));
         final String targetId = createComplete(storage, target, ImmutableMap.of(
                 "hello", "world",
-                "source", ObjectSchema.ref(sourceId)
+                "source", ReferableSchema.ref(sourceId)
         ));
         createComplete(storage, source, ImmutableMap.of(
-                "target", ObjectSchema.ref(targetId)
+                "target", ReferableSchema.ref(targetId)
         ));
 
         final List<Sort> sort = Sort.parseList("id");
@@ -924,7 +924,7 @@ public abstract class TestStorage {
         final String id = UUID.randomUUID().toString();
 
         final Map<String, Object> data = ImmutableMap.of(
-                "versionedRef", ObjectSchema.versionedRef(id, 1L)
+                "versionedRef", ReferableSchema.versionedRef(id, 1L)
         );
 
         final Instance after = instance(schema, id, 1L, data);
