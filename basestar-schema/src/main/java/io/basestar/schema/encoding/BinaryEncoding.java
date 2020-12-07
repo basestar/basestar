@@ -27,14 +27,14 @@ import java.util.Map;
 public class BinaryEncoding implements Encoding<Map<String, Object>, byte[]> {
 
     @Override
-    public byte[] encode(final Map<String, Object> v) {
+    public byte[] encode(final Map<String, Object> input) {
 
-        return new byte[0];
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Map<String, Object> decode(final byte[] v) {
 
-        return null;
+        throw new UnsupportedOperationException();
     }
 }

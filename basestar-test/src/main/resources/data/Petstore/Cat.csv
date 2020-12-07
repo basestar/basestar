@@ -1,3 +1,3 @@
-id, name, photoUrls[0], tags[tag1], status, store.id
-cat1,Pippa,,,sold,store1
-cat2,Garfield,,,available,store1
+id, name, photoUrls[0], tags.tag1, status, store.id, catBreed
+cat1,Pippa,https://cataas.com/cat,,sold,store1, Bengal
+cat2,Garfield,https://cataas.com/cat,fictional,available,store1, Tabby

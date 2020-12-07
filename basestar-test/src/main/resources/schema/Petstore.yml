@@ -20,7 +20,7 @@ Pet:
       type: PetStatus
     store:
       type: Store
-  index:
+  indexes:
     store:
       partition: store.id
       sort: name
@@ -32,10 +32,22 @@ Pet:
 Cat:
   type: object
   extend: Pet
+  properties:
+    catBreed:
+      type: string
+    sound:
+      type: string
+      expression: "'meow'"
 
 Dog:
   type: object
   extend: Pet
+  properties:
+    dogBreed:
+      type: string
+    sound:
+      type: string
+      expression: "'woof'"
 
 Mouse:
   type: object
@@ -67,7 +79,7 @@ Order:
       type: Store
     user:
       type: User
-  index:
+  indexes:
     user:
       partition: user.id
       sort:
@@ -115,8 +127,9 @@ User:
       partition: store.id
       sort: username
   links:
-    schema: Order
-    expression: user.id == this.id
+    orders:
+      schema: Order
+      expression: user.id == this.id
 
 Store:
   type: object

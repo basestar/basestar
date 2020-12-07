@@ -271,9 +271,10 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
         if (value == null) {
             return null;
         }
+        final Name schemaName = Instance.getSchema(value);
         final HashMap<String, Object> result = new HashMap<>(readProperties(value, expand, suppress));
         result.putAll(readMeta(value, suppress));
-        if (Instance.getSchema(result) == null) {
+        if (schemaName == null) {
             Instance.setSchema(result, this.getQualifiedName());
         }
         if (Instance.getHash(result) == null) {
@@ -311,7 +312,7 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
         });
     }
 
-    default Instance evaluateProperties(final Context context, final Set<Name> expand, final Map<String, Object> object) {
+    default Instance evaluateProperties(final Context context, final Map<String, Object> object, final Set<Name> expand) {
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
         final Context thisContext = context.with(VAR_THIS, object);

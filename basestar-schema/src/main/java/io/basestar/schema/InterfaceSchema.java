@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.basestar.expression.Context;
 import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.util.Immutable;
@@ -16,6 +17,8 @@ import lombok.experimental.Accessors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Stream;
@@ -259,7 +262,7 @@ public class InterfaceSchema implements ReferableSchema {
         this.permissions = Permission.extend(extend, declaredPermissions);
         this.expand = LinkableSchema.extendExpand(extend, declaredExpand);
 
-        this.directlyExtended = Immutable.transform(resolver.getExtendedSchemas(qualifiedName), v -> (ReferableSchema)v);
+        this.directlyExtended = Immutable.transform(resolver.getExtendedSchemas(qualifiedName), v -> (ReferableSchema) v);
     }
 
     @Override
@@ -284,5 +287,71 @@ public class InterfaceSchema implements ReferableSchema {
     public int hashCode() {
 
         return qualifiedNameHashCode();
+    }
+
+    private ReferableSchema getExtendedOrThis(final Name schemaName) {
+
+        if (schemaName == null || schemaName.equals(getQualifiedName())) {
+            return this;
+        } else {
+            return getIndirectlyExtended().stream()
+                    .filter(v -> v.getQualifiedName().equals(schemaName))
+                    .findFirst().orElse(this);
+        }
+    }
+
+    @Override
+    public Set<Constraint.Violation> validate(final Context context, final Name name, final Instance before, final Instance after) {
+
+        final ReferableSchema resolvedSchema = getExtendedOrThis(Instance.getSchema(after));
+        if (resolvedSchema == this) {
+            return ReferableSchema.super.validate(context, name, before, after);
+        } else {
+            return resolvedSchema.validate(context, name, before, after);
+        }
+    }
+
+    @Override
+    public Instance create(final Map<String, Object> value, final Set<Name> expand, final boolean suppress) {
+
+        final ReferableSchema resolvedSchema = getExtendedOrThis(Instance.getSchema(value));
+        if (resolvedSchema == this) {
+            return ReferableSchema.super.create(value, expand, suppress);
+        } else {
+            return resolvedSchema.create(value, expand, suppress);
+        }
+    }
+
+    @Override
+    public void serialize(final Map<String, Object> object, final DataOutput out) throws IOException {
+
+        final ReferableSchema resolvedSchema = getExtendedOrThis(Instance.getSchema(object));
+        if (resolvedSchema == this) {
+            ReferableSchema.super.serialize(object, out);
+        } else {
+            resolvedSchema.serialize(object, out);
+        }
+    }
+
+    @Override
+    public Instance evaluateProperties(final Context context, final Map<String, Object> object, final Set<Name> expand) {
+
+        final ReferableSchema resolvedSchema = getExtendedOrThis(Instance.getSchema(object));
+        if (resolvedSchema == this) {
+            return ReferableSchema.super.evaluateProperties(context, object, expand);
+        } else {
+            return resolvedSchema.evaluateProperties(context, object, expand);
+        }
+    }
+
+    @Override
+    public Instance evaluateTransients(final Context context, final Instance object, final Set<Name> expand) {
+
+        final ReferableSchema resolvedSchema = getExtendedOrThis(Instance.getSchema(object));
+        if (resolvedSchema == this) {
+            return ReferableSchema.super.evaluateTransients(context, object, expand);
+        } else {
+            return resolvedSchema.evaluateTransients(context, object, expand);
+        }
     }
 }
