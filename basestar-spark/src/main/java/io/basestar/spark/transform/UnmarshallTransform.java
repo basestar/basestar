@@ -23,7 +23,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class UnmarshallTransform<T> implements Transform<Dataset<T>, Dataset<Row>> {
 
-    private final InstanceSchemaMapper<T, ?> mapper;
+    private final InstanceSchemaMapper<?, T> mapper;
 
     private final InstanceSchema schema;
 
@@ -42,13 +42,13 @@ public class UnmarshallTransform<T> implements Transform<Dataset<T>, Dataset<Row
             this.expand = Collections.emptySet();
         }
         // FIXME: should provide an instanceSchemaMapper method in MappingContext so we don't have to cast like this
-        this.mapper = (InstanceSchemaMapper<T, ?>)(InstanceSchemaMapper)resolvedContext.schemaMapper(sourceType);
+        this.mapper = (InstanceSchemaMapper<?, T>)(InstanceSchemaMapper)resolvedContext.schemaMapper(sourceType);
     }
 
     @Override
     public Dataset<Row> accept(final Dataset<T> input) {
 
-        final InstanceSchemaMapper<T, ?> mapper = this.mapper;
+        final InstanceSchemaMapper<?, T> mapper = this.mapper;
         final InstanceSchema schema = this.schema;
         final Set<Name> expand = this.expand;
         final StructType structType = SparkSchemaUtils.structType(schema, ImmutableSet.of());

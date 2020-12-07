@@ -402,7 +402,7 @@ class GraphQLTest {
                 "readTest5", ImmutableMap.of(
                         "abstractRef", ImmutableMap.of(
                                 "id", "missing",
-                                "__typename", "Test3__"
+                                "__typename", "UnresolvedTest3"
                         )
                 )
         ), result.getData());

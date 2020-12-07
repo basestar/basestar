@@ -137,6 +137,7 @@
     }
   },
   "Animal": {
+    "type": "interface",
     "properties": {
       "name": {
         "type": "string?"

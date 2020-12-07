@@ -85,7 +85,7 @@ public class IdMapper implements MemberMapper<ObjectSchema.Builder> {
     }
 
     @Override
-    public void addToSchema(final InstanceSchemaMapper<?, ObjectSchema.Builder> mapper, final ObjectSchema.Builder builder) {
+    public void addToSchema(final InstanceSchemaMapper<ObjectSchema.Builder, ?> mapper, final ObjectSchema.Builder builder) {
 
         if(expression != null) {
             builder.setId(Id.builder().setExpression(expression));

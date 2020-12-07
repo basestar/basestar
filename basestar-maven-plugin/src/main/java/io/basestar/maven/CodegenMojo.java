@@ -39,6 +39,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 @Setter
@@ -138,6 +139,12 @@ public class CodegenMojo extends AbstractMojo {
                 }
             }
             return null;
+        }
+
+        @Override
+        public Collection<Schema<?>> getExtendedSchemas(final Name qualifiedName) {
+
+            throw new UnsupportedOperationException();
         }
     }
 }

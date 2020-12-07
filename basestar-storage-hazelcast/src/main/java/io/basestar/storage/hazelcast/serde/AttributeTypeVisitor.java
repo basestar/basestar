@@ -57,7 +57,7 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
     }
 
     @Override
-    public AttributeType<?> visitObject(final UseObject type) {
+    public AttributeType<?> visitRef(final UseRef type) {
 
         return type.isVersioned() ? AttributeType.VERSIONED_REF : AttributeType.REF;
     }
@@ -157,7 +157,7 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
         }
 
         @Override
-        public AttributeType<?> visitObject(final UseObject type) {
+        public AttributeType<?> visitRef(final UseRef type) {
 
             return type.isVersioned() ? AttributeType.VERSIONED_REF_ARRAY : AttributeType.REF_ARRAY;
         }

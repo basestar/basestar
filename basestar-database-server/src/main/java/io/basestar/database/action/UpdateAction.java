@@ -129,7 +129,7 @@ public class UpdateAction implements Action {
         Instance.setUpdated(initial, updated);
         Instance.setHash(initial, schema.hash(initial));
 
-        final Instance evaluated = schema.evaluateProperties(context.with(CommonVars.VAR_THIS, initial), Collections.emptySet(), new Instance(initial));
+        final Instance evaluated = schema.evaluateProperties(context.with(CommonVars.VAR_THIS, initial), new Instance(initial), Collections.emptySet());
 
         final Set<Constraint.Violation> violations = schema.validate(context.with(CommonVars.VAR_THIS, evaluated), before == null ? evaluated : before, evaluated);
         if(!violations.isEmpty()) {

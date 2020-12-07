@@ -20,7 +20,6 @@ package io.basestar.schema;
  * #L%
  */
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import io.basestar.expression.Context;
@@ -42,48 +41,45 @@ import java.util.stream.Collectors;
 
 public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Property.Resolver {
 
+    interface Descriptor<S extends InstanceSchema> extends Schema.Descriptor<S, Instance>, Property.Resolver.Descriptor {
+
+        interface Self<S extends InstanceSchema> extends Schema.Descriptor.Self<S, Instance>, Descriptor<S> {
+
+            @Override
+            default Map<String, Property.Descriptor> getProperties() {
+
+                return self().describeDeclaredProperties();
+            }
+        }
+    }
+
+    interface Builder<B extends Builder<B, S>, S extends InstanceSchema> extends Schema.Builder<B, S, Instance>, Descriptor<S>, Property.Resolver.Builder<B> {
+
+    }
+
+    SortedMap<String, Use<?>> metadataSchema();
+
     Instance create(Map<String, Object> value, Set<Name> expand, boolean suppress);
+
+    @Override
+    UseInstance typeOf();
+
+    String id();
+
+    boolean isConcrete();
+
+    @Override
+    Descriptor<? extends InstanceSchema> descriptor();
+
+    default Set<Name> getExpand() {
+
+        return Collections.emptySet();
+    }
 
     default boolean hasMember(final String name) {
 
         return metadataSchema().containsKey(name) || getMember(name, true) != null;
     }
-
-    default boolean isSubclassOf(Name name) {
-
-        if(name.equals(this.getQualifiedName())) {
-            return true;
-        } else {
-            final InstanceSchema extend = getExtend();
-            if(extend != null) {
-                return extend.isSubclassOf(name);
-            } else {
-                return false;
-            }
-        }
-    }
-
-    interface Descriptor extends Schema.Descriptor<Instance> {
-
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        Map<String, Property.Descriptor> getProperties();
-
-        @Override
-        InstanceSchema build(Resolver.Constructing resolver, Version version, Name qualifiedName, int slot);
-
-        @Override
-        InstanceSchema build(Name qualifiedName);
-
-        @Override
-        InstanceSchema build();
-    }
-
-    interface Builder extends Schema.Builder<Instance>, Descriptor, Property.Resolver.Builder {
-
-        Builder setDescription(String description);
-    }
-
-    SortedMap<String, Use<?>> metadataSchema();
 
     default SortedMap<String, Use<?>> layoutSchema(final Set<Name> expand) {
 
@@ -97,18 +93,6 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         });
         return result;
     }
-
-    InstanceSchema getExtend();
-
-    default Set<Name> getExpand() {
-
-        return Collections.emptySet();
-    }
-
-    @Override
-    UseInstance typeOf();
-
-    String id();
 
     default Use<?> typeOfId() {
 
@@ -165,8 +149,6 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         return transientExpand;
     }
 
-    boolean isConcrete();
-
     @SuppressWarnings("unchecked")
     default <T> Use<T> typeOf(final Name name) {
 
@@ -198,20 +180,6 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
                 final Member member = requireMember(first, true);
                 return member.javaType(name.withoutFirst());
             }
-        }
-    }
-
-    default boolean hasParent(final Name qualifiedName) {
-
-        final InstanceSchema extend = getExtend();
-        if(extend != null) {
-            if(extend.getQualifiedName().equals(qualifiedName)) {
-                return true;
-            } else {
-                return extend.hasParent(qualifiedName);
-            }
-        } else {
-            return false;
         }
     }
 
@@ -424,7 +392,4 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         }
         return true;
     }
-
-    @Override
-    Descriptor descriptor();
 }

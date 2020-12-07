@@ -262,7 +262,7 @@ public class GraphQLUtils {
 
                 @Override
                 @SuppressWarnings("unchecked")
-                public Object visitObject(final UseObject type) {
+                public Object visitRef(final UseRef type) {
 
                     return toResponse(namespace, type.getSchema(), (Map<String, Object>) value);
                 }
@@ -404,11 +404,11 @@ public class GraphQLUtils {
                 }
 
                 @Override
-                public Object visitObject(final UseObject type) {
+                public Object visitRef(final UseRef type) {
 
                     if (value instanceof ObjectValue) {
                         final String id = fromInput(context, UseString.DEFAULT, get((ObjectValue) value, ObjectSchema.ID));
-                        return ObjectSchema.ref(id);
+                        return ReferableSchema.ref(id);
                     } else {
                         throw new IllegalStateException();
                     }
@@ -533,10 +533,10 @@ public class GraphQLUtils {
 
                 @Override
                 @SuppressWarnings("unchecked")
-                public Object visitObject(final UseObject type) {
+                public Object visitRef(final UseRef type) {
 
                     if (value instanceof Map) {
-                        return ObjectSchema.ref(Instance.getId((Map<String, Object>) value));
+                        return ReferableSchema.ref(Instance.getId((Map<String, Object>) value));
                     } else {
                         throw new IllegalStateException();
                     }
@@ -666,7 +666,7 @@ public class GraphQLUtils {
 
                 @Override
                 @SuppressWarnings("unchecked")
-                public Object visitObject(final UseObject type) {
+                public Object visitRef(final UseRef type) {
 
                     return toResponse(type.getSchema(), selections, (Map<String, Object>) value);
                 }

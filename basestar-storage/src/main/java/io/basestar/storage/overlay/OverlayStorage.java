@@ -21,20 +21,18 @@ package io.basestar.storage.overlay;
  */
 
 import com.google.common.collect.Sets;
+import io.basestar.event.Event;
 import io.basestar.expression.Expression;
-import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.*;
 import io.basestar.storage.*;
-import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
-import io.basestar.util.Pager;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 
 import java.time.Instant;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 // Used in batch to allow pending creates/updates to be linked and referenced in permission expressions.
 // This storage will respond as if the provided items exist in the underlying storage.
@@ -43,7 +41,9 @@ import java.util.stream.Stream;
 
 public class OverlayStorage implements Storage {
 
-    private static final String TOMBSTONE_KEY = Reserved.PREFIX + "overlay";
+    private static final String OVERLAY_KEY = Reserved.PREFIX + "overlay";
+
+    private static final String TOMBSTONE_KEY = Reserved.PREFIX + "deleted";
 
     private final Storage baseline;
 
@@ -57,108 +57,111 @@ public class OverlayStorage implements Storage {
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+    public Pager<Map<String, Object>> query(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        final CompletableFuture<Map<String, Object>> futBase = baseline.readObject(schema, id, expand);
-        final CompletableFuture<Map<String, Object>> futOver = overlay.readObject(schema, id, expand);
-        return CompletableFuture.allOf(futBase, futOver).thenApply(ignored -> {
-            final Map<String, Object> over = futOver.getNow(null);
-            final Map<String, Object> base = futBase.getNow(null);
-            return OverlayMetadata.wrap(base, over).applyTo(over != null ? over : base);
-        });
-    }
-
-    @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
-
-        final CompletableFuture<Map<String, Object>> futBase = baseline.readObjectVersion(schema, id, version, expand);
-        final CompletableFuture<Map<String, Object>> futOver = overlay.readObjectVersion(schema, id, version, expand);
-        final CompletableFuture<Map<String, Object>> futCheck = overlay.readObject(schema, id, expand);
-        return CompletableFuture.allOf(futBase, futOver, futCheck).thenApply(ignored -> {
-            final Map<String, Object> over = futOver.getNow(null);
-            final Map<String, Object> base = futOver.getNow(null);
-            final OverlayMetadata meta = OverlayMetadata.wrap(base, over);
-            if (over != null) {
-                return meta.applyTo(over);
-            } else {
-                // Cannot return a version greater than the latest in the overlay
-                final Map<String, Object> check = futCheck.getNow(null);
-                if(check != null) {
-                    final Long checkVersion = Instance.getVersion(check);
-                    if(checkVersion != null && checkVersion > version) {
-                        return null;
-                    }
-                }
-                return meta.applyTo(base);
-            }
-        });
-    }
-
-    @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
-
-        final List<Pager.Source<Map<String, Object>>> sources = new ArrayList<>();
-
-        // FIXME: relies on stable impl of Stream.min() in Pager
+        final Map<String, Pager<Map<String, Object>>> pagers = new HashMap<>();
         // Overlay entries appear first, so they will be chosen
-        sources.addAll(Pager.map(overlay.query(schema, query, sort, expand), v -> OverlayMetadata.wrap(null, v).applyTo(v)));
-        sources.addAll(Pager.map(baseline.query(schema, query, sort, expand), v -> OverlayMetadata.wrap(v, null).applyTo(v)));
+        pagers.put("o", overlay.query(schema, query, sort, expand).map(v -> Immutable.copyPut(v, OVERLAY_KEY, 0)));
+        pagers.put("b", baseline.query(schema, query, sort, expand).map(v -> Immutable.copyPut(v, OVERLAY_KEY, 1)));
 
-        return sources;
+        return Pager.merge(Instance.comparator(sort)
+                .thenComparing(v -> ((Number) v.get(OVERLAY_KEY)).intValue()), pagers);
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
+    public void validate(final ObjectSchema schema) {
 
-        throw new UnsupportedOperationException();
+        overlay.validate(schema);
+    }
+
+    @Override
+    public CompletableFuture<Set<Event>> afterCreate(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+
+        return overlay.afterCreate(schema, id, after);
+    }
+
+    @Override
+    public CompletableFuture<Set<Event>> afterUpdate(final ObjectSchema schema, final String id, final long version, final Map<String, Object> before, final Map<String, Object> after) {
+
+        return overlay.afterUpdate(schema, id, version, before, after);
+    }
+
+    @Override
+    public CompletableFuture<Set<Event>> afterDelete(final ObjectSchema schema, final String id, final long version, final Map<String, Object> before) {
+
+        return overlay.afterDelete(schema, id, version, before);
     }
 
     @Override
     public ReadTransaction read(final Consistency consistency) {
 
-        return new ReadTransaction.Basic(this);
-    }
+        final ReadTransaction baselineTransaction = baseline.read(consistency);
+        final ReadTransaction overlayTransaction = overlay.read(consistency);
 
-    @Override
-    public CompletableFuture<?> asyncIndexCreated(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+        return new ReadTransaction() {
 
-        // FIXME: need to know if overlay has the value already for correct versioning
-        return overlay.asyncIndexCreated(schema, index, id, version, key, projection);
-    }
+            final BatchCapture capture = new BatchCapture();
 
-    @Override
-    public CompletableFuture<?> asyncIndexUpdated(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+            @Override
+            public ReadTransaction get(final ReferableSchema schema, final String id, final Set<Name> expand) {
 
-        // FIXME: need to know if overlay has the value already for correct versioning
-        return overlay.asyncIndexUpdated(schema, index, id, version, key, projection);
-    }
+                capture.captureLatest(schema, id, expand);
+                baselineTransaction.get(schema, id, expand);
+                overlayTransaction.get(schema, id, expand);
+                return this;
+            }
 
-    @Override
-    public CompletableFuture<?> asyncIndexDeleted(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
+            @Override
+            public ReadTransaction getVersion(final ReferableSchema schema, final String id, final long version, final Set<Name> expand) {
 
-        // FIXME: need to know if overlay has the value already for correct versioning
-        return overlay.asyncIndexDeleted(schema, index, id, version, key);
-    }
+                capture.captureVersion(schema, id, version, expand);
+                baselineTransaction.getVersion(schema, id, version, expand);
+                overlayTransaction.getVersion(schema, id, version, expand);
+                // See: ref()
+                overlayTransaction.get(schema, id, expand);
+                return this;
+            }
 
-    @Override
-    public CompletableFuture<?> asyncHistoryCreated(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
+            @Override
+            public CompletableFuture<BatchResponse> read() {
 
-        // FIXME: need to know if overlay has the value already for correct versioning
-        return overlay.asyncHistoryCreated(schema, id, version, after);
-    }
+                final CompletableFuture<BatchResponse> baselineFuture = baselineTransaction.read();
+                final CompletableFuture<BatchResponse> overlayFuture = overlayTransaction.read();
 
-    @Override
-    public List<Pager.Source<RepairInfo>> repair(final ObjectSchema schema) {
+                return baselineFuture.thenCombine(overlayFuture, (baselineResponse, overlayResponse) -> {
 
-        return Stream.of(baseline, overlay).flatMap(v -> v.repair(schema).stream())
-                .collect(Collectors.toList());
-    }
+                    final Map<BatchResponse.RefKey, Map<String, Object>> refs = new HashMap<>();
+                    capture.forEachRef((schema, key, args) -> {
+                        refs.put(key, ref(baselineResponse, overlayResponse, key));
+                    });
+                    return new BatchResponse(refs);
+                });
+            }
 
-    @Override
-    public List<Pager.Source<RepairInfo>> repairIndex(final ObjectSchema schema, final Index index) {
+            private Map<String, Object> ref(final BatchResponse baselineResponse, final BatchResponse overlayResponse, final BatchResponse.RefKey key) {
 
-        return Stream.of(baseline, overlay).flatMap(v -> v.repairIndex(schema, index).stream())
-                .collect(Collectors.toList());
+                final Map<String, Object> over = overlayResponse.get(key);
+                final Map<String, Object> base = baselineResponse.get(key);
+                if(key.hasVersion()) {
+                    final OverlayMetadata meta = OverlayMetadata.wrap(base, over);
+                    if (over != null) {
+                        return meta.applyTo(over);
+                    } else {
+                        // Cannot return a version greater than the latest in the overlay
+                        final Map<String, Object> check = overlayResponse.get(key.withoutVersion());
+                        if(check != null) {
+                            final Long checkVersion = Instance.getVersion(check);
+                            if(checkVersion != null && checkVersion > key.getVersion()) {
+                                return null;
+                            }
+                        }
+                        return meta.applyTo(base);
+                    }
+                } else {
+                    return OverlayMetadata.wrap(base, over).applyTo(over != null ? over : base);
+                }
+            }
+        };
     }
 
     @Override
@@ -212,19 +215,19 @@ public class OverlayStorage implements Storage {
     }
 
     @Override
-    public EventStrategy eventStrategy(final ObjectSchema schema) {
+    public EventStrategy eventStrategy(final ReferableSchema schema) {
 
         return overlay.eventStrategy(schema);
     }
 
     @Override
-    public StorageTraits storageTraits(final ObjectSchema schema) {
+    public StorageTraits storageTraits(final ReferableSchema schema) {
 
         return overlay.storageTraits(schema);
     }
 
     @Override
-    public Set<Name> supportedExpand(final ObjectSchema schema, final Set<Name> expand) {
+    public Set<Name> supportedExpand(final LinkableSchema schema, final Set<Name> expand) {
 
         return Sets.intersection(baseline.supportedExpand(schema, expand), overlay.supportedExpand(schema, expand));
     }

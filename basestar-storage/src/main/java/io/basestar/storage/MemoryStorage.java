@@ -20,20 +20,14 @@ package io.basestar.storage;
  * #L%
  */
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
-import io.basestar.expression.Context;
-import io.basestar.expression.Expression;
-import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.*;
 import io.basestar.schema.use.UseBinary;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;
 import io.basestar.util.Name;
-import io.basestar.util.Page;
+import io.basestar.util.Nullsafe;
 import io.basestar.util.Pager;
 import io.basestar.util.Sort;
 import lombok.Data;
@@ -45,11 +39,10 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 // TODO optimize, this is currently used only as a mock so not important but should be a viable implementation
 
-public class MemoryStorage extends PartitionedStorage implements Storage.WithoutExpand, Storage.WithoutRepair {
+public class MemoryStorage implements DefaultIndexStorage {
 
     private State state = new State();
 
@@ -74,93 +67,70 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
         }
     }
 
+//    @Override
+//    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
+//
+//        // FIXME: only implemented for testing, this is equivalent to an all-objects-scan
+//        synchronized (lock) {
+//
+//            final Multimap<Map<String, Object>, Map<String, Object>> groups = HashMultimap.create();
+//
+//            state.objects.forEach((typeId, object) -> {
+//                if(typeId.getSchema().equals(schema.getQualifiedName())) {
+//                    final Map<String, Object> g = group.entrySet().stream().collect(Collectors.toMap(
+//                            Map.Entry::getKey,
+//                            e -> e.getValue().evaluate(Context.init(object))
+//                    ));
+//                    groups.put(g, object);
+//                }
+//            });
+//
+//            final List<Map<String, Object>> page = new ArrayList<>();
+//            groups.asMap().forEach((key, values) -> {
+//                final Map<String, Object> row = new HashMap<>();
+//                key.forEach(row::put);
+//                aggregates.forEach((name, agg) -> {
+//                    values.forEach(value -> {
+//                        final Object col = agg.evaluate(Context.init(), values.stream());
+//                        row.put(name, col);
+//                    });
+//                });
+//                page.add(row);
+//            });
+//
+//            return ImmutableList.of(
+//                    (count, token, stats) -> CompletableFuture.completedFuture(new Page<>(page, null))
+//            );
+//        }
+//    }
+//
+
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+    public Pager<Map<String, Object>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfy, final Map<Name, Range<Object>> query, final List<Sort> sort, final Set<Name> expand) {
 
-        return CompletableFuture.supplyAsync(() -> {
-            synchronized (lock) {
-                return state.objects.get(new SchemaId(schema.getQualifiedName(), id));
-            }
-        });
-    }
-
-    @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
-
-        return CompletableFuture.supplyAsync(() -> {
-            synchronized (lock) {
-                return state.history.get(new SchemaIdVersion(schema.getQualifiedName(), id, version));
-            }
-        });
-    }
-
-    @Override
-    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
-
-        // FIXME: only implemented for testing, this is equivalent to an all-objects-scan
         synchronized (lock) {
 
-            final Multimap<Map<String, Object>, Map<String, Object>> groups = HashMultimap.create();
+            final byte[] partBinary = UseBinary.binaryKey(satisfy.getPartition());
+            final IndexPartition partKey = new IndexPartition(schema.getQualifiedName(), index.getName(), partBinary);
 
-            state.objects.forEach((typeId, object) -> {
-                if(typeId.getSchema().equals(schema.getQualifiedName())) {
-                    final Map<String, Object> g = group.entrySet().stream().collect(Collectors.toMap(
-                            Map.Entry::getKey,
-                            e -> e.getValue().evaluate(Context.init(object))
-                    ));
-                    groups.put(g, object);
-                }
-            });
+            final NavigableMap<IndexSort, Map<String, Object>> partition = state.index.get(partKey);
 
-            final List<Map<String, Object>> page = new ArrayList<>();
-            groups.asMap().forEach((key, values) -> {
-                final Map<String, Object> row = new HashMap<>();
-                key.forEach(row::put);
-                aggregates.forEach((name, agg) -> {
-                    values.forEach(value -> {
-                        final Object col = agg.evaluate(Context.init(), values.stream());
-                        row.put(name, col);
-                    });
-                });
-                page.add(row);
-            });
-
-            return ImmutableList.of(
-                    (count, token, stats) -> CompletableFuture.completedFuture(new Page<>(page, null))
-            );
-        }
-    }
-
-    @Override
-    protected CompletableFuture<Page<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfy,
-                                                                      final Map<Name, Range<Object>> query, final List<Sort> sort, final Set<Name> expand,
-                                                                      final int count, final Page.Token paging) {
-
-        return CompletableFuture.supplyAsync(() -> {
-            synchronized (lock) {
-
-                final byte[] partBinary = UseBinary.binaryKey(satisfy.getPartition());
-                final IndexPartition partKey = new IndexPartition(schema.getQualifiedName(), index.getName(), partBinary);
-
-                final NavigableMap<IndexSort, Map<String, Object>> partition = state.index.get(partKey);
-
-                final List<Map<String, Object>> results;
-                if(partition == null) {
-                    results = Collections.emptyList();
+            final List<Map<String, Object>> results;
+            if(partition == null) {
+                results = Collections.emptyList();
+            } else {
+                if(!satisfy.getSort().isEmpty()) {
+                    final byte[] sortLo = UseBinary.binaryKey(satisfy.getSort());
+                    final byte[] sortHi = UseBinary.concat(UseBinary.binaryKey(satisfy.getSort()), new byte[]{0});
+                    results = Lists.newArrayList(partition.tailMap(new IndexSort(sortLo, null), true)
+                            .headMap(new IndexSort(sortHi, null)).values());
                 } else {
-                    if(!satisfy.getSort().isEmpty()) {
-                        final byte[] sortLo = UseBinary.binaryKey(satisfy.getSort());
-                        final byte[] sortHi = UseBinary.concat(UseBinary.binaryKey(satisfy.getSort()), new byte[]{0});
-                        results = Lists.newArrayList(partition.tailMap(new IndexSort(sortLo, null), true)
-                                .headMap(new IndexSort(sortHi, null)).values());
-                    } else {
-                        results = Lists.newArrayList(partition.values());
-                    }
+                    results = Lists.newArrayList(partition.values());
                 }
-
-                return new Page<>(results, null);
             }
-        });
+
+            return Pager.simple(results);
+        }
     }
 
     @Override
@@ -168,66 +138,61 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
 
         return new ReadTransaction() {
 
-            private final List<CompletableFuture<BatchResponse>> futures = new ArrayList<>();
+            private final BatchCapture capture = new BatchCapture();
 
             @Override
-            public ReadTransaction readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+            public ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
-                final CompletableFuture<Map<String, Object>> future = CompletableFuture.supplyAsync(() -> {
-                    synchronized (lock) {
-                        return state.objects.get(new SchemaId(schema.getQualifiedName(), id));
-                    }
-                });
-                futures.add(future.thenApply(v -> BatchResponse.single(schema.getQualifiedName(), v)));
-
+                capture.captureLatest(schema, id, expand);
                 return this;
             }
 
             @Override
-            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+            public ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
-                final CompletableFuture<Map<String, Object>> future = CompletableFuture.supplyAsync(() -> {
-                    synchronized (lock) {
-                        return state.history.get(new SchemaIdVersion(schema.getQualifiedName(), id, version));
-                    }
-                });
-                futures.add(future.thenApply(v -> BatchResponse.single(schema.getQualifiedName(), v)));
-
+                capture.captureVersion(schema, id, version, expand);
                 return this;
             }
 
             @Override
             public CompletableFuture<BatchResponse> read() {
 
-                return BatchResponse.mergeFutures(futures.stream());
+                return CompletableFuture.supplyAsync(() -> {
+                    final Map<BatchResponse.RefKey, Map<String, Object>> results = new HashMap<>();
+
+                    capture.getRefs().forEach((schema, refs) -> {
+                        refs.forEach((key, args) -> {
+                            synchronized (lock) {
+                                if (key.hasVersion()) {
+                                    results.put(key, state.history.get(new SchemaIdVersion(schema.getQualifiedName(), key.getId(), key.getVersion())));
+                                } else {
+                                    results.put(key, state.objects.get(new SchemaId(schema.getQualifiedName(), key.getId())));
+                                }
+                            }
+                        });
+                    });
+
+                    return BatchResponse.fromRefs(results);
+                });
             }
         };
     }
 
     @Override
-    public CompletableFuture<?> asyncHistoryCreated(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
+    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
 
-        return CompletableFuture.supplyAsync(() -> {
-            synchronized (lock) {
-
-                final Long afterVersion = Instance.getVersion(after);
-                assert afterVersion != null;
-                state.history.put(new SchemaIdVersion(schema.getQualifiedName(), id, afterVersion), after);
-
-                return BatchResponse.empty();
-            }
-        });
-    }
-
-    @Override
-    public PartitionedStorage.WriteTransaction write(final Consistency consistency, final Versioning versioning) {
-
-        return new PartitionedStorage.WriteTransaction() {
+        return new WriteTransaction() {
 
             private final List<Function<State, BatchResponse>> items = new ArrayList<>();
 
             @Override
-            public PartitionedStorage.WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+            public StorageTraits storageTraits(final ReferableSchema schema) {
+
+                return MemoryStorage.this.storageTraits(schema);
+            }
+
+            @Override
+            public void createObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
 
                 items.add(state -> {
 
@@ -237,14 +202,12 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
                     } else {
                         state.objects.put(typeId, after);
                     }
-                    final History history = schema.getHistory();
-                    if(history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
-                        state.history.put(new SchemaIdVersion(schema.getQualifiedName(), id, 1L), after);
-                    }
-                    return BatchResponse.single(schema.getQualifiedName(), after);
+//                    final History history = schema.getHistory();
+//                    if(history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
+//                        state.history.put(new SchemaIdVersion(schema.getQualifiedName(), id, 1L), after);
+//                    }
+                    return BatchResponse.fromRef(schema.getQualifiedName(), after);
                 });
-
-                return createIndexes(schema, id, after);
             }
 
             private boolean checkExists(final Map<String, Object> current, final Long version) {
@@ -259,12 +222,11 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
             }
 
             @Override
-            public PartitionedStorage.WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
+            public void updateObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
                 items.add(state -> {
 
-                    final Long version = before == null ? null : Instance.getVersion(before);
-
+                    final Long version = Nullsafe.map(before, Instance::getVersion);
                     final SchemaId typeId = new SchemaId(schema.getQualifiedName(), id);
                     final Map<String, Object> current = state.objects.get(typeId);
                     if(checkExists(current, version)) {
@@ -272,25 +234,22 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
                     } else {
                         throw new VersionMismatchException(schema.getQualifiedName(), id, version);
                     }
-                    final History history = schema.getHistory();
-                    if(history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
-                        final Long afterVersion = Instance.getVersion(after);
-                        assert afterVersion != null;
-                        state.history.put(new SchemaIdVersion(schema.getQualifiedName(), id, afterVersion), after);
-                    }
-                    return BatchResponse.single(schema.getQualifiedName(), after);
+//                    final History history = schema.getHistory();
+//                    if(history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
+//                        final Long afterVersion = Instance.getVersion(after);
+//                        assert afterVersion != null;
+//                        state.history.put(new SchemaIdVersion(schema.getQualifiedName(), id, afterVersion), after);
+//                    }
+                    return BatchResponse.fromRef(schema.getQualifiedName(), after);
                 });
-
-                return updateIndexes(schema, id, before, after);
             }
 
             @Override
-            public PartitionedStorage.WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
+            public void deleteObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> before) {
 
                 items.add(state -> {
 
-                    final Long version = before == null ? null : Instance.getVersion(before);
-
+                    final Long version = Nullsafe.map(before, Instance::getVersion);
                     final SchemaId typeId = new SchemaId(schema.getQualifiedName(), id);
                     final Map<String, Object> current = state.objects.get(typeId);
                     if(checkExists(current, version)) {
@@ -300,14 +259,23 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
                     }
                     return BatchResponse.empty();
                 });
-
-                return deleteIndexes(schema, id, before);
             }
 
             @Override
-            public PartitionedStorage.WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+            public void writeHistoryLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
 
-                return withPartitionSort(schema, index, id, key, (partition, sortKey) -> {
+                items.add(state -> {
+
+                    state.history.put(new SchemaIdVersion(schema.getQualifiedName(), id, Instance.getVersion(after)), after);
+
+                    return BatchResponse.empty();
+                });
+            }
+
+            @Override
+            public void createIndex(final ReferableSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+
+                withPartitionSort(schema, index, id, key, (partition, sortKey) -> {
 
                     if (partition.containsKey(sortKey)) {
                         throw new IllegalStateException();
@@ -318,18 +286,18 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
             }
 
             @Override
-            public PartitionedStorage.WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+            public void updateIndex(final ReferableSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
 
-                return withPartitionSort(schema, index, id, key, (partition, sortKey) -> partition.put(sortKey, projection));
+                withPartitionSort(schema, index, id, key, (partition, sortKey) -> partition.put(sortKey, projection));
             }
 
             @Override
-            public PartitionedStorage.WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
+            public void deleteIndex(final ReferableSchema schema, final Index index, final String id, final long version, final Index.Key key) {
 
-                return withPartitionSort(schema, index, id, key, Map::remove);
+                withPartitionSort(schema, index, id, key, Map::remove);
             }
 
-            private PartitionedStorage.WriteTransaction withPartitionSort(final ObjectSchema schema, final Index index, final String id, final Index.Key key, final BiConsumer<Map<IndexSort, Map<String, Object>>, IndexSort> consumer) {
+            private void withPartitionSort(final ReferableSchema schema, final Index index, final String id, final Index.Key key, final BiConsumer<Map<IndexSort, Map<String, Object>>, IndexSort> consumer) {
 
                 items.add(state -> {
 
@@ -344,33 +312,32 @@ public class MemoryStorage extends PartitionedStorage implements Storage.Without
 
                     return BatchResponse.empty();
                 });
-                return this;
             }
 
             @Override
             public CompletableFuture<BatchResponse> write() {
 
                 return CompletableFuture.supplyAsync(() -> {
-                    final SortedMap<BatchResponse.Key, Map<String, Object>> changes = new TreeMap<>();
+                    final SortedMap<BatchResponse.RefKey, Map<String, Object>> changes = new TreeMap<>();
                     synchronized (lock) {
                         final State copy = state.copy();
-                        items.forEach(item -> changes.putAll(item.apply(copy)));
+                        items.forEach(item -> changes.putAll(item.apply(copy).getRefs()));
                         state = copy;
                     }
-                    return new BatchResponse.Basic(changes);
+                    return BatchResponse.fromRefs(changes);
                 });
             }
         };
     }
 
     @Override
-    public EventStrategy eventStrategy(final ObjectSchema schema) {
+    public EventStrategy eventStrategy(final ReferableSchema schema) {
 
         return EventStrategy.EMIT;
     }
 
     @Override
-    public StorageTraits storageTraits(final ObjectSchema schema) {
+    public StorageTraits storageTraits(final ReferableSchema schema) {
 
         return TRAITS;
     }

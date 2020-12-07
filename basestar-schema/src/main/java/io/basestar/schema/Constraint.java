@@ -38,8 +38,8 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.validation.Validation;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
@@ -82,7 +82,7 @@ public class Constraint implements Serializable {
 
         this.validator = validator;
         this.message = message;
-        this.when = Nullsafe.immutableCopy(when);
+        this.when = Immutable.copy(when);
     }
 
     public List<Violation> violations(final Use<?> type, final Context context, final Name name, final Object value) {

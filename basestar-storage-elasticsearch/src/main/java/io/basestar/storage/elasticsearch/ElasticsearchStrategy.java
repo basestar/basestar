@@ -20,7 +20,7 @@ package io.basestar.storage.elasticsearch;
  * #L%
  */
 
-import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.storage.elasticsearch.mapping.Mappings;
 import io.basestar.storage.elasticsearch.mapping.Settings;
@@ -29,15 +29,15 @@ import lombok.Builder;
 
 public interface ElasticsearchStrategy {
 
-    String objectIndex(ObjectSchema schema);
+    String objectIndex(ReferableSchema schema);
 
-    String historyIndex(ObjectSchema schema);
+    String historyIndex(ReferableSchema schema);
 
-    Mappings mappings(ObjectSchema schema);
+    Mappings mappings(ReferableSchema schema);
 
-    Settings settings(ObjectSchema schema);
+    Settings settings(ReferableSchema schema);
 
-    boolean historyEnabled(ObjectSchema schema);
+    boolean historyEnabled(ReferableSchema schema);
 
     @Builder
     class Simple implements ElasticsearchStrategy {
@@ -56,37 +56,37 @@ public interface ElasticsearchStrategy {
 
         private final boolean historyEnabled;
 
-        private String name(final ObjectSchema schema) {
+        private String name(final ReferableSchema schema) {
 
             return schema.getQualifiedName().toString(Reserved.PREFIX).toLowerCase();
         }
 
         @Override
-        public String objectIndex(final ObjectSchema schema) {
+        public String objectIndex(final ReferableSchema schema) {
 
             return Nullsafe.orDefault(objectPrefix) + name(schema) +  Nullsafe.orDefault(objectSuffix);
         }
 
         @Override
-        public String historyIndex(final ObjectSchema schema) {
+        public String historyIndex(final ReferableSchema schema) {
 
             return Nullsafe.orDefault(historyPrefix) + name(schema) + Nullsafe.orDefault(historySuffix);
         }
 
         @Override
-        public Mappings mappings(final ObjectSchema schema) {
+        public Mappings mappings(final ReferableSchema schema) {
 
             return mappingsFactory.mappings(schema);
         }
 
         @Override
-        public Settings settings(final ObjectSchema schema) {
+        public Settings settings(final ReferableSchema schema) {
 
             return settings;
         }
 
         @Override
-        public boolean historyEnabled(final ObjectSchema schema) {
+        public boolean historyEnabled(final ReferableSchema schema) {
 
             return historyEnabled;
         }

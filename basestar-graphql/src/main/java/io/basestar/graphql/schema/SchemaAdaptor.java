@@ -20,13 +20,13 @@ package io.basestar.graphql.schema;
  * #L%
  */
 
-import com.google.common.collect.ImmutableList;
 import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.basestar.graphql.GraphQLStrategy;
 import io.basestar.graphql.GraphQLUtils;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
+import io.basestar.util.Immutable;
 
 import java.util.*;
 
@@ -63,9 +63,10 @@ public class SchemaAdaptor {
                         registry.add(updateInputTypeDefinition(objectSchema));
                         registry.add(patchInputTypeDefinition(objectSchema));
                     }
-                    if (!objectSchema.isConcrete()) {
-                        registry.add(missingInterfaceRefDefinition(objectSchema));
-                    }
+                } else if(schema instanceof InterfaceSchema) {
+                    final InterfaceSchema interfaceSchema = (InterfaceSchema) instanceSchema;
+                    registry.add(pageTypeDefinition(interfaceSchema));
+                    registry.add(missingInterfaceRefDefinition(interfaceSchema));
                 } else if(schema instanceof ViewSchema) {
                     final ViewSchema viewSchema = (ViewSchema) instanceSchema;
                     registry.add(pageTypeDefinition(viewSchema));
@@ -126,8 +127,8 @@ public class SchemaAdaptor {
         final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
         builder.name(GraphQLUtils.QUERY_TYPE);
         namespace.forEachLinkableSchema((schemaName, schema) -> {
-            if(schema instanceof ObjectSchema) {
-                builder.fieldDefinition(readDefinition((ObjectSchema)schema));
+            if(schema instanceof ReferableSchema) {
+                builder.fieldDefinition(readDefinition((ReferableSchema)schema));
             }
             builder.fieldDefinition(queryDefinition(schema));
             schema.getLinks()
@@ -136,7 +137,7 @@ public class SchemaAdaptor {
         return builder.build();
     }
 
-    public FieldDefinition readDefinition(final ObjectSchema schema) {
+    public FieldDefinition readDefinition(final ReferableSchema schema) {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
         builder.name(strategy.readMethodName(schema));
@@ -388,7 +389,7 @@ public class SchemaAdaptor {
         return builder.build();
     }
 
-    public TypeDefinition<?> missingInterfaceRefDefinition(final ObjectSchema schema) {
+    public TypeDefinition<?> missingInterfaceRefDefinition(final ReferableSchema schema) {
 
         final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
         builder.name(strategy.missingInterfaceRefTypeName(schema));
@@ -415,8 +416,8 @@ public class SchemaAdaptor {
             final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
             builder.name(strategy.typeName(schema));
             builder.description(description(schema.getDescription()));
-            if (schema.getExtend() != null) {
-                builder.implementz(implementz(schema));
+            if(schema instanceof ReferableSchema) {
+                builder.implementz(implementz((ReferableSchema)schema));
             }
             fieldDefinitions(schema).forEach(builder::fieldDefinition);
             return builder.build();
@@ -430,16 +431,18 @@ public class SchemaAdaptor {
     }
 
     @SuppressWarnings("rawtypes")
-    private List<Type> implementz(final InstanceSchema schema) {
+    private List<Type> implementz(final ReferableSchema schema) {
 
-        final InstanceSchema parent = schema.getExtend();
-        if(parent != null) {
-            return ImmutableList.<Type>builder()
-                    .addAll(implementz(parent))
-                    .add(new TypeName(strategy.typeName(parent)))
-                    .build();
+        final List<? extends ReferableSchema> extend = schema.getExtend();
+        if(extend != null) {
+            final List<Type> result = new ArrayList<>();
+            for(final ReferableSchema parent : extend) {
+                result.addAll(implementz(parent));
+                result.add(new TypeName(strategy.typeName(parent)));
+            }
+            return result;
         } else {
-            return ImmutableList.of();
+            return Immutable.list();
         }
     }
 
@@ -677,7 +680,7 @@ public class SchemaAdaptor {
             }
 
             @Override
-            public Type<?> visitObject(final UseObject type) {
+            public Type<?> visitRef(final UseRef type) {
 
                 return new TypeName(strategy.inputRefTypeName(type.isVersioned()));
             }

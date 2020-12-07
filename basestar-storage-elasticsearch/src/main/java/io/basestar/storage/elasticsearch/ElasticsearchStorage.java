@@ -20,10 +20,8 @@ package io.basestar.storage.elasticsearch;
  * #L%
  */
 
-import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.*;
 import io.basestar.storage.*;
 import io.basestar.storage.elasticsearch.mapping.Mappings;
@@ -40,7 +38,10 @@ import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteRequest;
-import org.elasticsearch.action.get.*;
+import org.elasticsearch.action.get.GetResponse;
+import org.elasticsearch.action.get.MultiGetItemResponse;
+import org.elasticsearch.action.get.MultiGetRequest;
+import org.elasticsearch.action.get.MultiGetResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
@@ -62,7 +63,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Function;
 
 @Slf4j
-public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.WithoutWriteIndex, Storage.WithoutExpand, Storage.WithoutRepair {
+public class ElasticsearchStorage implements DefaultLayerStorage {
 
     private static final String PRIMARY_TERM_KEY = "@primaryTerm";
 
@@ -116,87 +117,80 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
         }
     }
 
+//    @Override
+//    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+//
+//        final String index = strategy.objectIndex(schema);
+//        return getIndex(index, schema).thenCompose(ignored -> {
+//            final GetRequest request = new GetRequest(index, id);
+//            return ElasticsearchUtils.<GetResponse>future(listener -> client.getAsync(request, OPTIONS, listener))
+//                    .thenApply(v -> fromResponse(schema, v));
+//        });
+//    }
+//
+//    @Override
+//    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+//
+//        if (!strategy.historyEnabled(schema)) {
+//            throw new UnsupportedOperationException("History not enabled");
+//        }
+//        final String index = strategy.historyIndex(schema);
+//        return getIndex(index, schema).thenCompose(ignored -> {
+//            final String key = historyKey(id, version);
+//            final GetRequest request = new GetRequest(index, key);
+//            return ElasticsearchUtils.<GetResponse>future(listener -> client.getAsync(request, OPTIONS, listener))
+//                    .thenApply(v -> fromResponse(schema, v));
+//        });
+//    }
+
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
-
-        final String index = strategy.objectIndex(schema);
-        return getIndex(index, schema).thenCompose(ignored -> {
-            final GetRequest request = new GetRequest(index, id);
-            return ElasticsearchUtils.<GetResponse>future(listener -> client.getAsync(request, OPTIONS, listener))
-                    .thenApply(v -> fromResponse(schema, v));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
-
-        if (!strategy.historyEnabled(schema)) {
-            throw new UnsupportedOperationException("History not enabled");
-        }
-        final String index = strategy.historyIndex(schema);
-        return getIndex(index, schema).thenCompose(ignored -> {
-            final String key = historyKey(id, version);
-            final GetRequest request = new GetRequest(index, key);
-            return ElasticsearchUtils.<GetResponse>future(listener -> client.getAsync(request, OPTIONS, listener))
-                    .thenApply(v -> fromResponse(schema, v));
-        });
-    }
-
-    @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    public Pager<Map<String, Object>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         final Expression bound = query.bind(Context.init());
         final String index = strategy.objectIndex(schema);
 
         final List<Sort> normalizedSort = KeysetPagingUtils.normalizeSort(schema, sort);
 
-        return ImmutableList.of(
-                (count, token, stats) -> getIndex(index, schema).thenCompose(ignored -> {
+        return (stats, token, count) -> getIndex(index, schema).thenCompose(ignored -> {
 
-                    final QueryBuilder queryBuilder = bound.visit(new ElasticsearchExpressionVisitor());
+            final QueryBuilder queryBuilder = bound.visit(new ElasticsearchExpressionVisitor());
 
-                    final QueryBuilder pagedQueryBuilder;
-                    if (token == null) {
-                        pagedQueryBuilder = queryBuilder;
-                    } else if (queryBuilder == null) {
-                        pagedQueryBuilder = pagingQueryBuilder(schema, normalizedSort, token);
-                    } else {
-                        pagedQueryBuilder = QueryBuilders.boolQuery()
-                                .must(queryBuilder)
-                                .must(pagingQueryBuilder(schema, normalizedSort, token));
-                    }
+            final QueryBuilder pagedQueryBuilder;
+            if (token == null) {
+                pagedQueryBuilder = queryBuilder;
+            } else if (queryBuilder == null) {
+                pagedQueryBuilder = pagingQueryBuilder(schema, normalizedSort, token);
+            } else {
+                pagedQueryBuilder = QueryBuilders.boolQuery()
+                        .must(queryBuilder)
+                        .must(pagingQueryBuilder(schema, normalizedSort, token));
+            }
 
-                    final SearchRequest request = new SearchRequest(index)
-                            .source(applySort(new SearchSourceBuilder()
-                                    .query(pagedQueryBuilder), normalizedSort)
-                                    .trackTotalHits(true));
+            final SearchRequest request = new SearchRequest(index)
+                    .source(applySort(new SearchSourceBuilder()
+                            .query(pagedQueryBuilder), normalizedSort)
+                            .size(count)
+                            .trackTotalHits(true));
 
-                    return ElasticsearchUtils.<SearchResponse>future(listener -> client.searchAsync(request, OPTIONS, listener))
-                            .thenApply(searchResponse -> {
+            return ElasticsearchUtils.<SearchResponse>future(listener -> client.searchAsync(request, OPTIONS, listener))
+                    .thenApply(searchResponse -> {
 
-                                final List<Map<String, Object>> results = new ArrayList<>();
-                                Map<String, Object> last = null;
-                                for (final SearchHit hit : searchResponse.getHits()) {
-                                    last = fromHit(schema, hit);
-                                    results.add(last);
-                                }
-                                final long total = searchResponse.getHits().getTotalHits().value;
-                                final Page.Token newPaging;
-                                if (total > results.size() && last != null) {
-                                    newPaging = KeysetPagingUtils.keysetPagingToken(schema, normalizedSort, last);
-                                } else {
-                                    newPaging = null;
-                                }
-                                return new Page<>(results, newPaging, Page.Stats.fromTotal(total));
-                            });
-                })
-        );
-    }
-
-    @Override
-    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
-
-        throw new UnsupportedOperationException();
+                        final List<Map<String, Object>> results = new ArrayList<>();
+                        Map<String, Object> last = null;
+                        for (final SearchHit hit : searchResponse.getHits()) {
+                            last = fromHit(schema, hit);
+                            results.add(last);
+                        }
+                        final long total = searchResponse.getHits().getTotalHits().value;
+                        final Page.Token newPaging;
+                        if (total > results.size() && last != null) {
+                            newPaging = KeysetPagingUtils.keysetPagingToken(schema, normalizedSort, last);
+                        } else {
+                            newPaging = null;
+                        }
+                        return new Page<>(results, newPaging, Page.Stats.fromTotal(total));
+                    });
+        });
     }
 
     private QueryBuilder pagingQueryBuilder(final ObjectSchema schema, final List<Sort> sort, final Page.Token token) {
@@ -244,10 +238,10 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
 
             private final MultiGetRequest request = new MultiGetRequest();
 
-            private final Map<String, ObjectSchema> indexToSchema = new HashMap<>();
+            private final Map<String, ReferableSchema> indexToSchema = new HashMap<>();
 
             @Override
-            public ReadTransaction readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+            public ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
                 final String index = strategy.objectIndex(schema);
                 indexToSchema.put(index, schema);
@@ -256,7 +250,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
             }
 
             @Override
-            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+            public ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
                 if (!strategy.historyEnabled(schema)) {
                     throw new UnsupportedOperationException("History not enabled");
@@ -273,27 +267,27 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
 
                 return getIndices(indexToSchema).thenCompose(ignored -> ElasticsearchUtils.<MultiGetResponse>future(listener -> client.mgetAsync(request, OPTIONS, listener))
                         .thenApply(response -> {
-                            final SortedMap<BatchResponse.Key, Map<String, Object>> results = new TreeMap<>();
+                            final SortedMap<BatchResponse.RefKey, Map<String, Object>> results = new TreeMap<>();
                             for (final MultiGetItemResponse item : response) {
                                 final String index = item.getIndex();
-                                final ObjectSchema schema = indexToSchema.get(index);
+                                final ReferableSchema schema = indexToSchema.get(index);
                                 final Map<String, Object> result = fromResponse(schema, item.getResponse());
                                 if (result != null) {
-                                    results.put(BatchResponse.Key.from(schema.getQualifiedName(), result), result);
+                                    results.put(BatchResponse.RefKey.from(schema.getQualifiedName(), result), result);
                                 }
                             }
-                            return new BatchResponse.Basic(results);
+                            return BatchResponse.fromRefs(results);
                         }));
             }
         };
     }
 
-    private Map<String, Object> fromHit(final ObjectSchema schema, final SearchHit hit) {
+    private Map<String, Object> fromHit(final ReferableSchema schema, final SearchHit hit) {
 
         return fromSource(schema, hit.getSourceAsMap());
     }
 
-    private Map<String, Object> fromResponse(final ObjectSchema schema, final GetResponse item) {
+    private Map<String, Object> fromResponse(final ReferableSchema schema, final GetResponse item) {
 
         if (item.isExists()) {
             final Map<String, Object> result = new HashMap<>(fromSource(schema, item.getSourceAsMap()));
@@ -313,10 +307,10 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
         }
     }
 
-    private CompletableFuture<?> getIndices(final Map<String, ObjectSchema> indices) {
+    private CompletableFuture<?> getIndices(final Map<String, ReferableSchema> indices) {
 
         final List<CompletableFuture<?>> createIndexFutures = new ArrayList<>();
-        for (final Map.Entry<String, ObjectSchema> entry : indices.entrySet()) {
+        for (final Map.Entry<String, ReferableSchema> entry : indices.entrySet()) {
             if (!createdIndices.contains(entry.getKey())) {
                 createIndexFutures.add(ElasticsearchStorage.this.syncIndex(entry.getKey(), entry.getValue()));
             }
@@ -324,7 +318,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
         return CompletableFuture.allOf(createIndexFutures.toArray(new CompletableFuture<?>[0]));
     }
 
-    private CompletableFuture<?> syncIndex(final String name, final ObjectSchema schema) {
+    private CompletableFuture<?> syncIndex(final String name, final ReferableSchema schema) {
 
         final Mappings mappings = strategy.mappings(schema);
         final Settings settings = strategy.settings(schema);
@@ -341,7 +335,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
         return new WriteTransaction(consistency, versioning);
     }
 
-    protected class WriteTransaction implements WithWriteHistory.WriteTransaction {
+    protected class WriteTransaction implements DefaultLayerStorage.WriteTransaction {
 
         private final WriteRequest.RefreshPolicy refreshPolicy;
 
@@ -351,7 +345,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
 
         private final List<Function<BulkItemResponse, BatchResponse>> responders = new ArrayList<>();
 
-        private final Map<String, ObjectSchema> indices = new HashMap<>();
+        private final Map<String, ReferableSchema> indices = new HashMap<>();
 
         public WriteTransaction(final Consistency consistency, final Versioning versioning) {
 
@@ -366,7 +360,13 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
         }
 
         @Override
-        public Storage.WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+        public StorageTraits storageTraits(final ReferableSchema schema) {
+
+            return ElasticsearchStorage.this.storageTraits(schema);
+        }
+
+        @Override
+        public void createObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
 
             final String index = strategy.objectIndex(schema);
             indices.put(index, schema);
@@ -378,22 +378,8 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
                 if (failure != null && failure.getStatus() == RestStatus.CONFLICT) {
                     throw new ObjectExistsException(schema.getQualifiedName(), id);
                 }
-                return BatchResponse.single(schema.getQualifiedName(), after);
+                return BatchResponse.fromRef(schema.getQualifiedName(), after);
             });
-
-            checkAndCreateHistory(schema, id, after);
-
-            return this;
-        }
-
-        private void checkAndCreateHistory(final ObjectSchema schema, final String id, final Map<String, Object> after) {
-
-            final History history = schema.getHistory();
-            if (history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
-                final Long afterVersion = Instance.getVersion(after);
-                assert afterVersion != null;
-                createHistory(schema, id, afterVersion, after);
-            }
         }
 
         private Long version(final Map<String, Object> before, final DocWriteRequest<?> req) {
@@ -418,7 +404,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
         }
 
         @Override
-        public Storage.WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
+        public void updateObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
             final String index = strategy.objectIndex(schema);
             indices.put(index, schema);
@@ -435,16 +421,12 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
                     assert version != null;
                     throw new VersionMismatchException(schema.getQualifiedName(), id, version);
                 }
-                return BatchResponse.single(schema.getQualifiedName(), after);
+                return BatchResponse.fromRef(schema.getQualifiedName(), after);
             });
-
-            checkAndCreateHistory(schema, id, after);
-
-            return this;
         }
 
         @Override
-        public Storage.WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
+        public void deleteObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> before) {
 
             final String index = strategy.objectIndex(schema);
             indices.put(index, schema);
@@ -462,23 +444,21 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
                 }
                 return BatchResponse.empty();
             });
-
-            return this;
         }
 
         @Override
-        public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
+        public void writeHistoryLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
 
             if (strategy.historyEnabled(schema)) {
+                final long version = Instance.getVersion(after);
                 final String index = strategy.historyIndex(schema);
                 final String key = historyKey(id, version);
                 indices.put(index, schema);
                 request.add(new IndexRequest()
                         .index(index).source(toSource(schema, after)).id(key)
                         .opType(DocWriteRequest.OpType.CREATE));
-                responders.add(response -> BatchResponse.single(schema.getQualifiedName(), after));
+                responders.add(response -> BatchResponse.fromRef(schema.getQualifiedName(), after));
             }
-            return this;
         }
 
         @Override
@@ -488,18 +468,18 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
                     .thenCompose(ignored -> ElasticsearchUtils
                             .<BulkResponse>future(listener -> client.bulkAsync(request, OPTIONS, listener))
                             .thenApply(response -> {
-                                final SortedMap<BatchResponse.Key, Map<String, Object>> results = new TreeMap<>();
+                                final SortedMap<BatchResponse.RefKey, Map<String, Object>> results = new TreeMap<>();
                                 final BulkItemResponse[] items = response.getItems();
                                 assert (items.length == responders.size());
                                 for (int i = 0; i != items.length; ++i) {
-                                    results.putAll(responders.get(i).apply(items[i]));
+                                    results.putAll(responders.get(i).apply(items[i]).getRefs());
                                 }
-                                return new BatchResponse.Basic(results);
+                                return BatchResponse.fromRefs(results);
                             }));
         }
     }
 
-    private Map<String, Object> toSource(final ObjectSchema schema, final Map<String, Object> data) {
+    private Map<String, Object> toSource(final ReferableSchema schema, final Map<String, Object> data) {
 
         final Map<String, Object> source = new HashMap<>();
         final Mappings mappings = strategy.mappings(schema);
@@ -510,7 +490,7 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
         return source;
     }
 
-    private Map<String, Object> fromSource(final ObjectSchema schema, final Map<String, Object> source) {
+    private Map<String, Object> fromSource(final ReferableSchema schema, final Map<String, Object> source) {
 
         final Map<String, Object> data = new HashMap<>();
         final Mappings mappings = strategy.mappings(schema);
@@ -522,13 +502,13 @@ public class ElasticsearchStorage implements Storage.WithWriteHistory, Storage.W
     }
 
     @Override
-    public EventStrategy eventStrategy(final ObjectSchema schema) {
+    public EventStrategy eventStrategy(final ReferableSchema schema) {
 
         return eventStrategy;
     }
 
     @Override
-    public StorageTraits storageTraits(final ObjectSchema schema) {
+    public StorageTraits storageTraits(final ReferableSchema schema) {
 
         return ElasticsearchStorageTraits.INSTANCE;
     }

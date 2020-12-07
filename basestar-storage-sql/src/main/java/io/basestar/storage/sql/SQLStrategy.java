@@ -22,6 +22,7 @@ package io.basestar.storage.sql;
 
 import io.basestar.schema.Index;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.storage.sql.mapper.ColumnStrategy;
 import io.basestar.storage.sql.mapper.RowMapper;
@@ -40,16 +41,16 @@ import java.util.Set;
 
 public interface SQLStrategy {
 
-    org.jooq.Name objectTableName(ObjectSchema schema);
+    org.jooq.Name objectTableName(ReferableSchema schema);
 
-    org.jooq.Name historyTableName(ObjectSchema schema);
+    org.jooq.Name historyTableName(ReferableSchema schema);
 
     // Only used for multi-value indexes
-    org.jooq.Name indexTableName(ObjectSchema schema, Index index);
+    org.jooq.Name indexTableName(ReferableSchema schema, Index index);
 
     void createTables(DSLContext context, Collection<ObjectSchema> schemas);
 
-    RowMapper<Map<String, Object>> rowMapper(ObjectSchema schema, Set<Name> expand);
+    RowMapper<Map<String, Object>> rowMapper(ReferableSchema schema, Set<Name> expand);
 
     @Data
     @Slf4j
@@ -62,32 +63,32 @@ public interface SQLStrategy {
 
         private final ColumnStrategy columnStrategy;
 
-        private String name(final ObjectSchema schema) {
+        private String name(final ReferableSchema schema) {
 
             return schema.getQualifiedName().toString(Reserved.PREFIX);
         }
 
         @Override
-        public org.jooq.Name objectTableName(final ObjectSchema schema) {
+        public org.jooq.Name objectTableName(final ReferableSchema schema) {
 
             return DSL.name(DSL.name(objectSchemaName), DSL.name(name(schema)));
         }
 
         @Override
-        public org.jooq.Name historyTableName(final ObjectSchema schema) {
+        public org.jooq.Name historyTableName(final ReferableSchema schema) {
 
             return DSL.name(DSL.name(historySchemaName), DSL.name(name(schema)));
         }
 
         @Override
-        public org.jooq.Name indexTableName(final ObjectSchema schema, final Index index) {
+        public org.jooq.Name indexTableName(final ReferableSchema schema, final Index index) {
 
             final String name = name(schema) + Reserved.PREFIX + index.getName();
             return DSL.name(DSL.name(objectSchemaName), DSL.name(name));
         }
 
         @Override
-        public RowMapper<Map<String, Object>> rowMapper(final ObjectSchema schema, final Set<Name> expand) {
+        public RowMapper<Map<String, Object>> rowMapper(final ReferableSchema schema, final Set<Name> expand) {
 
             return RowMapper.forInstance(columnStrategy, schema, expand);
         }

@@ -28,10 +28,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.With;
 
 import java.io.Serializable;
-import java.util.AbstractList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.nio.ByteBuffer;
+import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -41,6 +39,18 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @EqualsAndHashCode(callSuper = false)
 public class Page<T> extends AbstractList<T> implements Serializable {
+
+    public static <T> Page<T> merge(final Map<String, Page<T>> pages, final Comparator<T> comparator, final int count) {
+
+//        final List<T> results = new ArrayList<>();
+//        final Map<String, OffsetToken> tokens = Immutable.transformValues(pages, (key, page) -> OffsetToken.fromToken(page.getPaging()));
+//        final Map<String, Integer> offsets =
+//        pages.forEach((key, page) -> {
+//
+//        });
+
+        return Page.empty();
+    }
 
     public enum Stat {
 
@@ -151,8 +161,15 @@ public class Page<T> extends AbstractList<T> implements Serializable {
 
         private final byte[] value;
 
+        public static final int MAX_SIZE = 10000;
+
         public Token(final byte[] value) {
 
+            if(value.length  == 0) {
+                throw new IllegalStateException("Cannot create empty token");
+            } else if(value.length > MAX_SIZE) {
+                throw new IllegalStateException("Token is too long (was " + value.length + " bytes)");
+            }
             this.value = Arrays.copyOf(value, value.length);
         }
 
@@ -176,5 +193,162 @@ public class Page<T> extends AbstractList<T> implements Serializable {
 
             return new String(value, Charsets.UTF_8);
         }
+
+        public static Token fromLongValue(final Long value) {
+
+            final ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+            buffer.putLong(value);
+            return new Token(buffer.array());
+        }
+
+        public Long getLongValue() {
+
+            final ByteBuffer buffer = ByteBuffer.wrap(getValue());
+            return buffer.getLong();
+        }
+
+//        public static Token join(final Map<String, Token> tokens) {
+//
+//            if(tokens.size() == 0) {
+//                return null;
+//            } else {
+//                try (final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+//                     final DataOutputStream dos = new DataOutputStream(baos)) {
+//
+//                    for (final Map.Entry<String, Token> entry : Immutable.sortedCopy(tokens).entrySet()) {
+//                        final String key = entry.getKey();
+//                        final Token token = entry.getValue();
+//                        final byte[] keyBytes = key.getBytes(Charsets.UTF_8);
+//                        final byte[] valueBytes = token.getValue();
+//                        final int keyLength = keyBytes.length;
+//                        if(keyLength > MAX_SIZE) {
+//                            throw new IllegalStateException("Join token key too long");
+//                        }
+//                        dos.writeInt(keyLength);
+//                        dos.write(keyBytes);
+//                        dos.writeInt(valueBytes.length);
+//                        dos.write(valueBytes);
+//                    }
+//                    dos.writeInt(0);
+//                    return new Page.Token(baos.toByteArray());
+//
+//                } catch (final IOException e) {
+//                    throw new IllegalStateException(e);
+//                }
+//            }
+//        }
+//
+//        public static Map<String, Token> split(final Token token) {
+//
+//            if(token == null) {
+//                return Collections.emptyMap();
+//            } else {
+//                final Map<String, Token> tokens = new HashMap<>();
+//                try (final ByteArrayInputStream bais = new ByteArrayInputStream(token.getValue());
+//                     final DataInputStream dis = new DataInputStream(bais)) {
+//
+//                        final int keyLength = dis.readInt();
+//                        if(keyLength == 0) {
+//                            break;
+//                        } else if(keyLength > MAX_SIZE) {
+//                            throw new UnsupportedOperationException("Input token key is too long");
+//                        } else {
+//                            final byte[] keyBytes = new byte[keyLength];
+//                            dis.readFully(keyBytes);
+//                            final String key = new String(keyBytes, Charsets.UTF_8);
+//                            final int valueLength = dis.readInt();
+//                            if(valueLength > MAX_SIZE) {
+//                                throw new UnsupportedOperationException("Input token value is too long");
+//                            }
+//                            final byte[] value = new byte[valueLength];
+//                            dis.readFully(value);
+//                            tokens.put(key, new Token(value));
+//                        }
+//                    }
+//
+//                } catch (final IOException e) {
+//                    throw new IllegalStateException(e);
+//                }
+//                return tokens;
+//            }
+//        }
     }
+
+//    @Data
+//    public static class OffsetToken {
+//
+//        @Nullable
+//        private final Token token;
+//
+//        private final int offset;
+//
+//        public boolean isComplete() {
+//
+//            return offset < 0;
+//        }
+//
+//        public static OffsetToken completed() {
+//
+//            return new OffsetToken(null, -1);
+//        }
+//
+//        public Token toToken() {
+//
+//            if (offset == 0 && token == null) {
+//                return null;
+//            }
+//
+//            try (final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+//                 final DataOutputStream dos = new DataOutputStream(baos)) {
+//
+//                dos.writeInt(offset);
+//                if (token == null) {
+//                    dos.writeInt(0);
+//                } else {
+//                    dos.writeInt(token.value.length);
+//                    dos.write(token.value);
+//                }
+//                return new Page.Token(baos.toByteArray());
+//
+//            } catch (final IOException e) {
+//                throw new IllegalStateException(e);
+//            }
+//        }
+//
+//        public static OffsetToken fromToken(final Token token) {
+//
+//            if (token == null) {
+//                return new OffsetToken(null, 0);
+//            }
+//
+//            try (final ByteArrayInputStream bais = new ByteArrayInputStream(token.getValue());
+//                 final DataInputStream dis = new DataInputStream(bais)) {
+//
+//                final int offset = dis.readInt();
+//                final int length = dis.readInt();
+//                if (length == 0) {
+//                    return new OffsetToken(null, offset);
+//                } else if (length > Token.MAX_SIZE) {
+//                    throw new UnsupportedOperationException("Input token is too long");
+//                } else {
+//                    final byte[] value = new byte[length];
+//                    dis.readFully(value);
+//                    return new OffsetToken(new Token(value), offset);
+//                }
+//
+//            } catch (final IOException e) {
+//                throw new IllegalStateException(e);
+//            }
+//        }
+//
+//        public static Token join(final Map<String, OffsetToken> tokens) {
+//
+//            return Token.join(Immutable.transformValues(tokens, (k, v) -> v.toToken()));
+//        }
+//
+//        public static Map<String, OffsetToken> split(final Token token) {
+//
+//            return Immutable.transformValues(Token.split(token), (k, v) -> fromToken(v));
+//        }
+//    }
 }

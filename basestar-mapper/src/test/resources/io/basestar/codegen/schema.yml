@@ -5,7 +5,7 @@ MyEnum:
     - VALUE_2
 
 MyBase:
-  type: object
+  type: interface
   properties:
     test0:
       type: MyBase
@@ -47,9 +47,9 @@ MyView:
   from: MyObject
   where: a + "_" + b
 
-ns1.ns2.MyObject:
-  type: object
-  extend: MyObject
+#ns1.ns2.MyObject:
+#  type: object
+#  extend: MyObject
 
 ns1.ns2.UPPERCASE:
   type: object

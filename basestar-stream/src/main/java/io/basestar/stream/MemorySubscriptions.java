@@ -41,7 +41,7 @@ public class MemorySubscriptions implements Subscriptions {
     }
 
     @Override
-    public List<Pager.Source<Subscription>> query(final Set<Subscription.Key> keys) {
+    public Pager<Subscription> query(final Set<Subscription.Key> keys) {
 
         final List<Subscription> results = new ArrayList<>();
         synchronized (lock) {
@@ -51,7 +51,7 @@ public class MemorySubscriptions implements Subscriptions {
             });
             ids.forEach(id -> results.add(subscriptions.get(id)));
         }
-        return Collections.singletonList((count, token, stats) -> CompletableFuture.completedFuture(Page.from(results)));
+        return (stats, token, count) -> CompletableFuture.completedFuture(Page.from(results));
     }
 
     @Override

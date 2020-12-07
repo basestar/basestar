@@ -23,6 +23,7 @@ package io.basestar.storage.elasticsearch.mapping;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.use.*;
 import io.basestar.util.Name;
 import lombok.Data;
@@ -45,12 +46,12 @@ public class Mappings {
 
     public interface Factory {
 
-        Mappings mappings(ObjectSchema schema);
+        Mappings mappings(ReferableSchema schema);
 
         class Default implements Factory {
 
             @Override
-            public Mappings mappings(final ObjectSchema schema) {
+            public Mappings mappings(final ReferableSchema schema) {
 
                 return new Mappings(properties(schema, schema.getExpand()));
             }
@@ -117,11 +118,11 @@ public class Mappings {
                     }
 
                     @Override
-                    public FieldType visitObject(final UseObject type) {
+                    public FieldType visitRef(final UseRef type) {
 
                         if(expand == null) {
                             final Map<String, FieldType> properties = new HashMap<>();
-                            ObjectSchema.refSchema(type.isVersioned()).forEach((k, v) -> properties.put(k, v.visit(this)));
+                            ReferableSchema.refSchema(type.isVersioned()).forEach((k, v) -> properties.put(k, v.visit(this)));
                             return new FieldType.NestedType(properties);
                         } else {
                             return new FieldType.NestedType(properties(type.getSchema(), expand));

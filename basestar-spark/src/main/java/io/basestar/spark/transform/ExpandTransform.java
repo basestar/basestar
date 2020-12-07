@@ -31,6 +31,7 @@ import io.basestar.spark.resolver.ColumnResolver;
 import io.basestar.spark.resolver.SchemaResolver;
 import io.basestar.spark.util.ScalaUtils;
 import io.basestar.spark.util.SparkSchemaUtils;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.Builder;
@@ -73,7 +74,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         this.resolver = Nullsafe.require(resolver);
         this.columnResolver = Nullsafe.orDefault(columnResolver, ColumnResolver::nested);
         this.schema = Nullsafe.require(schema);
-        this.expand = Nullsafe.immutableCopy(expand);
+        this.expand = Immutable.copy(expand);
     }
 
     @Override
@@ -321,7 +322,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
             }
 
             @Override
-            public Set<RequiredRef> visitObject(final UseObject type) {
+            public Set<RequiredRef> visitRef(final UseRef type) {
 
                 return ImmutableSet.of(new RequiredRef(type.getSchema(), expand));
             }
@@ -393,7 +394,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
                 }
 
                 @Override
-                public Set<String> visitObject(final UseObject type) {
+                public Set<String> visitRef(final UseRef type) {
 
                     if (input instanceof Row) {
                         final Row row = (Row) input;
@@ -472,7 +473,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
                 }
 
                 @Override
-                public Row visitObject(final UseObject type) {
+                public Row visitRef(final UseRef type) {
 
                     if (input instanceof Row) {
                         final Row row = (Row) input;

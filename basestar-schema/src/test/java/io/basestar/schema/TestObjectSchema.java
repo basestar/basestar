@@ -89,13 +89,13 @@ class TestObjectSchema {
 
         final Instance instance = schema.expand(initial, new Expander() {
             @Override
-            public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
+            public Instance expandRef(final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
                 return Instance.getId(ref).equals(id) ? refValue : null;
             }
 
             @Override
-            public Instance expandVersionedRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
+            public Instance expandVersionedRef(final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
                 return expandRef(schema, ref, expand);
             }

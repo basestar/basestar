@@ -5,15 +5,14 @@ import io.basestar.event.Emitter;
 import io.basestar.event.Event;
 import io.basestar.event.Handler;
 import io.basestar.event.Handlers;
-import io.basestar.schema.Consistency;
-import io.basestar.schema.Index;
-import io.basestar.schema.Namespace;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.storage.*;
+import io.basestar.schema.*;
+import io.basestar.storage.BatchResponse;
+import io.basestar.storage.DelegatingStorage;
+import io.basestar.storage.Storage;
+import io.basestar.storage.Versioning;
 import io.basestar.storage.replica.event.ReplicaSyncEvent;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import io.basestar.util.Pager;
 import lombok.Builder;
 
 import javax.annotation.Nullable;
@@ -21,8 +20,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Builder(builderClassName = "Builder", setterPrefix = "set")
 public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
@@ -97,24 +94,24 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
     @Nullable
     private final Emitter emitter;
 
-    private final Function<ObjectSchema, Storage> primary;
+    private final Function<LinkableSchema, Storage> primary;
 
-    private final Function<ObjectSchema, Optional<Storage>> replica;
+    private final Function<LinkableSchema, Optional<Storage>> replica;
 
     private final Function<Consistency, Consistency> readConsistency;
 
     private final Function<Consistency, Consistency> writeConsistency;
 
-    private final BiFunction<ObjectSchema, Consistency, Consistency> primaryConsistency;
+    private final BiFunction<LinkableSchema, Consistency, Consistency> primaryConsistency;
 
-    private final BiFunction<ObjectSchema, Versioning, Versioning> primaryVersioning;
+    private final BiFunction<LinkableSchema, Versioning, Versioning> primaryVersioning;
 
-    private final BiFunction<ObjectSchema, Consistency, Consistency> replicaConsistency;
+    private final BiFunction<LinkableSchema, Consistency, Consistency> replicaConsistency;
 
-    private final BiFunction<ObjectSchema, Versioning, Versioning> replicaVersioning;
+    private final BiFunction<LinkableSchema, Versioning, Versioning> replicaVersioning;
 
     @Override
-    public Storage storage(final ObjectSchema schema) {
+    public Storage storage(final LinkableSchema schema) {
 
         return primary.apply(schema);
     }
@@ -130,31 +127,29 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
 
             return new ReadTransaction() {
 
-                private ReadTransaction primaryTransaction(final ObjectSchema schema) {
+                private ReadTransaction primaryTransaction(final LinkableSchema schema) {
 
                     return primaryTransactions.computeIfAbsent(storage(schema), v -> v.read(consistency));
                 }
 
-                private ReadTransaction replicaTransaction(final ObjectSchema schema) {
+                private ReadTransaction replicaTransaction(final LinkableSchema schema) {
 
                     return replicaTransactions.computeIfAbsent(storage(schema), v -> v.read(consistency));
                 }
 
                 @Override
-                public ReadTransaction readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+                public ReadTransaction get(final ReferableSchema schema, final String id, final Set<Name> expand) {
 
-                    primaryTransaction(schema).readObject(schema, id, expand);
-                    replicaTransaction(schema).readObject(schema, id, expand);
-
+                    primaryTransaction(schema).get(schema, id, expand);
+                    replicaTransaction(schema).get(schema, id, expand);
                     return this;
                 }
 
                 @Override
-                public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+                public ReadTransaction getVersion(final ReferableSchema schema, final String id, final long version, final Set<Name> expand) {
 
-                    primaryTransaction(schema).readObjectVersion(schema, id, version, expand);
-                    replicaTransaction(schema).readObjectVersion(schema, id, version, expand);
-
+                    primaryTransaction(schema).getVersion(schema, id, version, expand);
+                    replicaTransaction(schema).getVersion(schema, id, version, expand);
                     return this;
                 }
 
@@ -163,7 +158,6 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
 
                     final CompletableFuture<BatchResponse> primaryFuture = BatchResponse.mergeFutures(primaryTransactions.values().stream().map(ReadTransaction::read));
                     final CompletableFuture<BatchResponse> replicaFuture = BatchResponse.mergeFutures(replicaTransactions.values().stream().map(ReadTransaction::read));
-
                     return mergeFutures(primaryFuture, replicaFuture);
                 }
             };
@@ -178,8 +172,8 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
 
         return primaryFuture.thenCombine(replicaFuture, (primaryResponse, replicaResponse) -> {
 
-            final Map<BatchResponse.Key, Map<String, Object>> results = new HashMap<>();
-            Sets.union(primaryResponse.keySet(), replicaResponse.keySet()).forEach(key -> {
+            final Map<BatchResponse.RefKey, Map<String, Object>> refs = new HashMap<>();
+            Sets.union(primaryResponse.getRefs().keySet(), replicaResponse.getRefs().keySet()).forEach(key -> {
 
                 final Map<String, Object> primary = primaryResponse.get(key);
                 final Map<String, Object> replica = replicaResponse.get(key);
@@ -187,11 +181,11 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
                 if(primary != null) {
 
                     final ReplicaMetadata meta = ReplicaMetadata.wrap(primary, replica);
-                    results.put(key, meta.applyTo(primary));
+                    refs.put(key, meta.applyTo(primary));
                 }
             });
 
-            return new BatchResponse.Basic(results);
+            return new BatchResponse(refs);
         });
     }
 
@@ -206,12 +200,12 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
 
             return new WriteTransaction() {
 
-                private WriteTransaction primaryTransaction(final ObjectSchema schema) {
+                private WriteTransaction primaryTransaction(final ReferableSchema schema) {
 
                     return primaryTransactions.computeIfAbsent(storage(schema), v -> v.write(consistency, versioning));
                 }
 
-                private Optional<WriteTransaction> replicaTransaction(final ObjectSchema schema) {
+                private Optional<WriteTransaction> replicaTransaction(final ReferableSchema schema) {
 
                     return replica.apply(schema).map(storage -> {
 
@@ -271,7 +265,7 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
 
             return new WriteTransaction() {
 
-                private WriteTransaction primaryTransaction(final ObjectSchema schema) {
+                private WriteTransaction primaryTransaction(final ReferableSchema schema) {
 
                     return primaryTransactions.computeIfAbsent(storage(schema), v -> v.write(consistency, versioning));
                 }
@@ -281,7 +275,6 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
 
                     primaryTransaction(schema).createObject(schema, id, ReplicaMetadata.unwrapPrimary(after));
                     events.add(ReplicaSyncEvent.create(schema.getQualifiedName(), id, after, consistency, versioning));
-
                     return this;
                 }
 
@@ -290,7 +283,6 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
 
                     primaryTransaction(schema).updateObject(schema, id, ReplicaMetadata.unwrapPrimary(before), ReplicaMetadata.unwrapPrimary(after));
                     events.add(ReplicaSyncEvent.update(schema.getQualifiedName(), id, before, after, consistency, versioning));
-
                     return this;
                 }
 
@@ -299,7 +291,6 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
 
                     primaryTransaction(schema).deleteObject(schema, id, ReplicaMetadata.unwrapPrimary(before));
                     events.add(ReplicaSyncEvent.delete(schema.getQualifiedName(), id, before, consistency, versioning));
-
                     return this;
                 }
 
@@ -342,7 +333,7 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
                 }
                 case DELETE: {
                     final Map<String, Object> before = ReplicaMetadata.unwrapReplica(event.getBefore());
-                    write.createObject(schema, event.getId(), before);
+                    write.deleteObject(schema, event.getId(), before);
                     break;
                 }
             }
@@ -352,21 +343,27 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
         }).orElseGet(() -> CompletableFuture.completedFuture(null));
     }
 
-    @Override
-    public List<Pager.Source<RepairInfo>> repair(final ObjectSchema schema) {
-
-        return Stream.of(Optional.of(primary.apply(schema)), replica.apply(schema))
-                .flatMap(v -> v.map(Stream::of).orElse(Stream.of()))
-                .flatMap(v -> v.repair(schema).stream())
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<Pager.Source<RepairInfo>> repairIndex(final ObjectSchema schema, final Index index) {
-
-        return Stream.of(Optional.of(primary.apply(schema)), replica.apply(schema))
-                .flatMap(v -> v.map(Stream::of).orElse(Stream.of()))
-                .flatMap(v -> v.repairIndex(schema, index).stream())
-                .collect(Collectors.toList());
-    }
+//    @Override
+//    public Pager<RepairInfo> repair(final LinkableSchema schema) {
+//
+//        final Map<String, Optional<Storage>> delegates = ImmutableMap.of(
+//                "p", Optional.of(primary.apply(schema)),
+//                "r", replica.apply(schema)
+//        );
+//        return Page.merge(Immutable.transformValues(delegates, (k, v) -> v.map(v2 -> v2.repair(schema)).orElse(Pager.empty()));
+//
+//        return Stream.of(Optional.of(primary.apply(schema)), replica.apply(schema))
+//                .flatMap(v -> v.map(Stream::of).orElse(Stream.of()))
+//                .flatMap(v -> v.repair(schema))
+//                .collect(Collectors.toMap());
+//    }
+//
+//    @Override
+//    public Pager<RepairInfo> repairIndex(final LinkableSchema schema, final Index index) {
+//
+//        return Stream.of(Optional.of(primary.apply(schema)), replica.apply(schema))
+//                .flatMap(v -> v.map(Stream::of).orElse(Stream.of()))
+//                .flatMap(v -> v.repairIndex(schema, index).stream())
+//                .collect(Collectors.toList());
+//    }
 }

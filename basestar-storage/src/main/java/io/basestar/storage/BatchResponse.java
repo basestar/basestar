@@ -20,9 +20,11 @@ package io.basestar.storage;
  * #L%
  */
 
-import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Instance;
-import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
+import io.basestar.util.CompletableFutures;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import lombok.AccessLevel;
 import lombok.Data;
@@ -34,102 +36,102 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public interface BatchResponse extends Map<BatchResponse.Key, Map<String, Object>> {
+@Data
+public class BatchResponse {
 
-    default Map<String, Object> getObject(final ObjectSchema schema, final String id) {
+    private final NavigableMap<RefKey, Map<String, Object>> refs;
 
-        return getObject(schema.getQualifiedName(), id);
+    public BatchResponse() {
+
+        this(Collections.emptyNavigableMap());
+    }
+    
+    public BatchResponse(final Map<RefKey, Map<String, Object>> refs) {
+
+        this.refs = Immutable.navigableCopy(refs.entrySet().stream().filter(v -> v.getValue() != null).collect(Collectors.toMap(
+                Map.Entry::getKey,
+                Map.Entry::getValue
+        )));
     }
 
-    Map<String, Object> getObject(Name schema, String id);
+    public static BatchResponse fromRef(final Name schema, final Map<String, Object> ref) {
 
-    default Map<String, Object> getObjectVersion(final ObjectSchema schema, final String id, final long version) {
-
-        return getObjectVersion(schema.getQualifiedName(), id, version);
+        if(ref == null) {
+            return BatchResponse.empty();
+        } else {
+            return new BatchResponse(ImmutableMap.of(RefKey.from(schema, ref), ref));
+        }
     }
 
-    Map<String, Object> getObjectVersion(Name schema, String id, long version);
+    public static BatchResponse fromRefs(final Map<RefKey, Map<String, Object>> refs) {
 
-    static BatchResponse empty() {
-
-        return Basic.EMPTY;
+        return new BatchResponse(refs);
     }
 
-    static BatchResponse single(final Name schema, final Map<String, Object> object) {
+    public Map<String, Object> get(final Name schema, final String id) {
 
-        return object == null ? empty() : new Basic(Key.from(schema, object), object);
+        final Map.Entry<RefKey, Map<String, Object>> entry = refs.floorEntry(new RefKey(schema, id, null));
+        if (entry != null && (schema.equals(entry.getKey().getSchema()) && id.equals(entry.getKey().getId()))) {
+            return entry.getValue();
+        } else {
+            return null;
+        }
     }
 
-    static BatchResponse merge(final Stream<? extends BatchResponse> responses) {
+    public Map<String, Object> get(final RefKey key) {
 
-        final SortedMap<Key, Map<String, Object>> all = new TreeMap<>();
-        responses.forEach(all::putAll);
-        return new Basic(all);
+        return refs.get(key);
     }
 
-    static CompletableFuture<BatchResponse> mergeFutures(final Stream<? extends CompletableFuture<? extends BatchResponse>> responses) {
+    public Map<String, Object> getVersion(final Name schema, final String id, final long version) {
 
-        final List<CompletableFuture<? extends BatchResponse>> futures = responses.collect(Collectors.toList());
-
-        return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]))
-                .thenApply(ignored -> BatchResponse.merge(futures.stream()
-                        .map(v -> v.getNow(null))
-                        .map(v -> v == null ? BatchResponse.empty() : v)));
+        return refs.get(new RefKey(schema, id, version));
     }
 
-    class Basic extends AbstractMap<Key, Map<String, Object>> implements BatchResponse {
+    public BatchResponse with(final Name schema, final Map<String, Object> ref) {
 
-        private static final Basic EMPTY = new Basic();
+        return new BatchResponse(
+                Immutable.copyPutAll(refs, ImmutableMap.of(RefKey.from(schema, ref), ref))
+        );
+    }
 
-        private final NavigableMap<Key, Map<String, Object>> items;
+    public Map<String, Object> get(final ReferableSchema schema, final String id) {
 
-        public Basic() {
+        return get(schema.getQualifiedName(), id);
+    }
 
-            this.items = ImmutableSortedMap.of();
-        }
+    public Map<String, Object> getVersion(final ReferableSchema schema, final String id, final long version) {
 
-        @Override
-        public Set<Entry<Key, Map<String, Object>>> entrySet() {
+        return getVersion(schema.getQualifiedName(), id, version);
+    }
 
-            return items.entrySet();
-        }
+    public BatchResponse with(final ReferableSchema schema, final Map<String, Object> ref) {
 
-        public Basic(final Key key, final Map<String, Object> object) {
+        return with(schema.getQualifiedName(), ref);
+    }
 
-            this.items = ImmutableSortedMap.of(key, object);
-        }
+    public static BatchResponse empty() {
 
-        public Basic(final Map<Key, Map<String, Object>> items) {
+        return new BatchResponse();
+    }
 
-            this.items = ImmutableSortedMap.copyOf(items);
-        }
+    public static BatchResponse merge(final Stream<? extends BatchResponse> responses) {
 
-        public Basic(final SortedMap<Key, Map<String, Object>> items) {
+        final Map<RefKey, Map<String, Object>> refs = new HashMap<>();
+        responses.forEach(response -> {
+            refs.putAll(response.getRefs());
+        });
+        return new BatchResponse(refs);
+    }
 
-            this.items = ImmutableSortedMap.copyOfSorted(items);
-        }
+    public static CompletableFuture<BatchResponse> mergeFutures(final Stream<CompletableFuture<BatchResponse>> futures) {
 
-        @Override
-        public Map<String, Object> getObject(final Name schema, final String id) {
-
-            final Map.Entry<Key, Map<String, Object>> entry = items.floorEntry(new Key(schema, id, null));
-            if(entry != null && (schema.equals(entry.getKey().getSchema()) && id.equals(entry.getKey().getId()))) {
-                return entry.getValue();
-            } else {
-                return null;
-            }
-        }
-
-        @Override
-        public Map<String, Object> getObjectVersion(final Name schema, final String id, final long version) {
-
-            return items.get(new Key(schema, id, version));
-        }
+        return CompletableFutures.allOf(futures).thenApply(BatchResponse::merge);
     }
 
     @Data
     @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
-    class Key implements Comparable<Key>, Serializable {
+    public static class RefKey implements Comparable<RefKey>, Serializable {
 
         private final Name schema;
 
@@ -137,31 +139,59 @@ public interface BatchResponse extends Map<BatchResponse.Key, Map<String, Object
 
         private final Long version;
 
-        public static Key latest(final Name schema, final String id) {
-
-            return new Key(schema, id, null);
+        public boolean hasVersion() {
+            
+            return version != null;
         }
 
-        public static Key version(final Name schema, final String id, final Long version) {
+        public static RefKey latest(final Name schema, final String id) {
 
-            return new Key(schema, id, version);
+            return new RefKey(schema, id, null);
         }
 
-        public static Key from(final Name schema, final Map<String, Object> object) {
+        public static RefKey version(final Name schema, final String id, final Long version) {
+
+            return new RefKey(schema, id, version);
+        }
+
+        public static RefKey from(final Name schema, final Map<String, Object> object) {
 
             final String id = Instance.getId(object);
             final Long version = Instance.getVersion(object);
-            return new Key(schema, id, version);
+            return new RefKey(schema, id, version);
         }
 
         @Override
-        public int compareTo(final Key o) {
+        public int compareTo(final RefKey o) {
 
             return COMPARATOR.compare(this, o);
         }
 
-        private static final Comparator<Key> COMPARATOR = Comparator.comparing(Key::getSchema)
-                .thenComparing(Key::getId)
-                .thenComparing(Comparator.comparing(Key::getVersion, Comparator.nullsFirst(Comparator.naturalOrder())).reversed());
+        private static final Comparator<RefKey> COMPARATOR = Comparator.comparing(RefKey::getSchema)
+                .thenComparing(RefKey::getId)
+                .thenComparing(Comparator.comparing(RefKey::getVersion, Comparator.nullsFirst(Comparator.naturalOrder())).reversed());
+
+        public Map<String, Object> matchOrNull(final Map<String, Object> object) {
+
+            if(object == null) {
+                return null;
+            } else if(!id.equals(Instance.getId(object))) {
+                return null;
+            } else if(hasVersion() && !version.equals(Instance.getVersion(object))) {
+                return null;
+            } else {
+                return object;
+            }
+        }
+
+        public RefKey withVersion(final Long version) {
+
+            return new RefKey(schema, id, version);
+        }
+
+        public RefKey withoutVersion() {
+
+            return withVersion(null);
+        }
     }
 }

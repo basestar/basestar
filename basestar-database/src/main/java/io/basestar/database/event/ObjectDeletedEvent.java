@@ -20,7 +20,7 @@ package io.basestar.database.event;
  * #L%
  */
 
-import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.util.Name;
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -53,6 +53,6 @@ public class ObjectDeletedEvent implements ObjectEvent {
                 .setSchema(schema)
                 .setId(id)
                 .setVersion(version)
-                .setBefore(ObjectSchema.copyMeta(before));
+                .setBefore(ReferableSchema.copyMeta(before));
     }
 }

@@ -20,123 +20,121 @@ package io.basestar.storage;
  * #L%
  */
 
-import com.google.common.collect.Sets;
+import io.basestar.event.Event;
 import io.basestar.expression.Expression;
-import io.basestar.expression.aggregate.Aggregate;
-import io.basestar.schema.*;
-import io.basestar.schema.exception.UnsupportedConsistencyException;
-import io.basestar.storage.exception.UnsupportedQueryException;
+import io.basestar.schema.Consistency;
+import io.basestar.schema.LinkableSchema;
+import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.util.Name;
-import io.basestar.util.Page;
 import io.basestar.util.Pager;
 import io.basestar.util.Sort;
-import lombok.RequiredArgsConstructor;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Supplier;
 
 public interface Storage {
 
-    default void validate(final ObjectSchema schema) {
+    enum EventStrategy {
 
-        final StorageTraits storageTraits = storageTraits(schema);
-        final Consistency bestHistoryWrite = storageTraits.getHistoryConsistency();
-        final Consistency bestSingleIndexWrite = storageTraits.getSingleValueIndexConsistency();
-        final Consistency bestMultiIndexWrite = storageTraits.getMultiValueIndexConsistency();
-
-        final History history = schema.getHistory();
-        if (history.isEnabled()) {
-            final Consistency requested = history.getConsistency();
-            if (requested != null && requested.isStronger(bestHistoryWrite)) {
-                throw new UnsupportedConsistencyException(schema.getQualifiedName() + ".history", name(schema), bestHistoryWrite, requested);
-            }
-        }
-        for (final Map.Entry<String, Index> entry : schema.getIndexes().entrySet()) {
-            final Index index = entry.getValue();
-            final Consistency requested = index.getConsistency();
-            if (requested != null) {
-                final Consistency best = index.isMultiValue() ? bestMultiIndexWrite : bestSingleIndexWrite;
-                if (requested.isStronger(best)) {
-                    throw new UnsupportedConsistencyException(schema.getQualifiedName() + "." + entry.getKey(), name(schema), best, requested);
-                }
-            }
-        }
+        SUPPRESS,
+        EMIT
     }
-
-    default String name(final ObjectSchema schema) {
-
-        return getClass().getSimpleName();
-    }
-
-    CompletableFuture<Map<String, Object>> readObject(ObjectSchema schema, String id, Set<Name> expand);
-
-    CompletableFuture<Map<String, Object>> readObjectVersion(ObjectSchema schema, String id, long version, Set<Name> expand);
-
-    List<Pager.Source<Map<String, Object>>> query(ObjectSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
-
-    List<Pager.Source<Map<String, Object>>> aggregate(ObjectSchema schema, Expression query, Map<String, Expression> group, Map<String, Aggregate> aggregates);
 
     ReadTransaction read(Consistency consistency);
 
     WriteTransaction write(Consistency consistency, Versioning versioning);
 
-    EventStrategy eventStrategy(ObjectSchema schema);
+    EventStrategy eventStrategy(ReferableSchema schema);
 
-    StorageTraits storageTraits(ObjectSchema schema);
+    StorageTraits storageTraits(ReferableSchema schema);
 
-    Set<Name> supportedExpand(ObjectSchema schema, Set<Name> expand);
+    Set<Name> supportedExpand(LinkableSchema schema, Set<Name> expand);
 
-    CompletableFuture<?> asyncIndexCreated(ObjectSchema schema, Index index, String id, long version, Index.Key key, Map<String, Object> projection);
+    default String name() {
 
-    CompletableFuture<?> asyncIndexUpdated(ObjectSchema schema, Index index, String id, long version, Index.Key key, Map<String, Object> projection);
+        return getClass().getSimpleName();
+    }
 
-    CompletableFuture<?> asyncIndexDeleted(ObjectSchema schema, Index index, String id, long version, Index.Key key);
+    void validate(ObjectSchema schema);
 
-    CompletableFuture<?> asyncHistoryCreated(ObjectSchema schema, String id, long version, Map<String, Object> after);
+    default CompletableFuture<Map<String, Object>> get(final Consistency consistency, final ReferableSchema schema, final String id, final Set<Name> expand) {
 
-    List<Pager.Source<RepairInfo>> repair(ObjectSchema schema);
+        return read(consistency)
+                .get(schema, id, expand)
+                .read().thenApply(results -> results.get(schema.getQualifiedName(), id));
+    }
 
-    List<Pager.Source<RepairInfo>> repairIndex(ObjectSchema schema, Index index);
+    default CompletableFuture<Map<String, Object>> getVersion(final Consistency consistency, final ReferableSchema schema, final String id, final long version, final Set<Name> expand) {
+
+        return read(consistency)
+                .getVersion(schema, id, version, expand)
+                .read().thenApply(results -> results.getVersion(schema.getQualifiedName(), id, version));
+    }
+
+    Pager<Map<String, Object>> query(LinkableSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
+
+    CompletableFuture<Set<Event>> afterCreate(ObjectSchema schema, String id, Map<String, Object> after);
+
+    CompletableFuture<Set<Event>> afterUpdate(ObjectSchema schema, String id, long version, Map<String, Object> before, Map<String, Object> after);
+
+    CompletableFuture<Set<Event>> afterDelete(ObjectSchema schema, String id, long version, Map<String, Object> before);
 
     interface ReadTransaction {
 
-        ReadTransaction readObject(ObjectSchema schema, String id, Set<Name> expand);
+        ReadTransaction get(ReferableSchema schema, String id, Set<Name> expand);
 
-        ReadTransaction readObjectVersion(ObjectSchema schema, String id, long version, Set<Name> expand);
+        ReadTransaction getVersion(ReferableSchema schema, String id, long version, Set<Name> expand);
 
         CompletableFuture<BatchResponse> read();
 
-        // Basic non-consistent read, delegates to non-isolated storage methods
+        interface Delegating extends ReadTransaction {
 
-        @RequiredArgsConstructor
-        class Basic implements ReadTransaction {
-
-            private final List<Supplier<CompletableFuture<BatchResponse>>> requests = new ArrayList<>();
-
-            private final Storage delegate;
+            ReadTransaction delegate(ReferableSchema schema);
 
             @Override
-            public ReadTransaction readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+            default ReadTransaction get(final ReferableSchema schema, final String id, final Set<Name> expand) {
 
-                requests.add(() -> delegate.readObject(schema, id, expand)
-                        .thenApply(v -> BatchResponse.single(schema.getQualifiedName(), v)));
+                delegate(schema).get(schema, id, expand);
                 return this;
             }
 
             @Override
-            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+            default ReadTransaction getVersion(final ReferableSchema schema, final String id, final long version, final Set<Name> expand) {
 
-                requests.add(() -> delegate.readObjectVersion(schema, id, version, expand)
-                        .thenApply(v -> BatchResponse.single(schema.getQualifiedName(), v)));
+                delegate(schema).getVersion(schema, id, version, expand);
                 return this;
             }
 
-            @Override
-            public CompletableFuture<BatchResponse> read() {
-
-                return BatchResponse.mergeFutures(requests.stream().map(Supplier::get));
-            }
+//            @Override
+//            default ReadTransaction getInterface(final InterfaceSchema schema, final String id, final Set<Name> expand) {
+//
+//                delegate(schema).getInterface(schema, id, expand);
+//                return this;
+//            }
+//
+//            @Override
+//            default ReadTransaction getInterfaceVersion(final InterfaceSchema schema, final String id, final long version, final Set<Name> expand) {
+//
+//                delegate(schema).getInterfaceVersion(schema, id, version, expand);
+//                return this;
+//            }
+//
+//            @Override
+//            default ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+//
+//                delegate(schema).getObject(schema, id, expand);
+//                return this;
+//            }
+//
+//            @Override
+//            default ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+//
+//                delegate(schema).getObjectVersion(schema, id, version, expand);
+//                return this;
+//            }
         }
     }
 
@@ -149,170 +147,35 @@ public interface Storage {
         WriteTransaction deleteObject(ObjectSchema schema, String id, Map<String, Object> before);
 
         CompletableFuture<BatchResponse> write();
-    }
 
-    enum EventStrategy {
+        interface Delegating extends WriteTransaction {
 
-        SUPPRESS,
-        EMIT
-    }
+            WriteTransaction delegate(final ObjectSchema schema);
 
-    interface WithoutExpand extends Storage {
+            @Override
+            default WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
-        @Override
-        default Set<Name> supportedExpand(final ObjectSchema schema, final Set<Name> expand) {
+                delegate(schema).createObject(schema, id, after);
+                return this;
+            }
 
-            return Sets.intersection(expand, schema.getExpand());
+            @Override
+            default WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
+
+                delegate(schema).updateObject(schema, id, before, after);
+                return this;
+            }
+
+            @Override
+            default WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
+
+                delegate(schema).deleteObject(schema, id, before);
+                return this;
+            }
         }
     }
 
-    interface WithoutWrite extends WithoutWriteIndex, WithoutWriteHistory {
+    interface Scan {
 
-        @Override
-        default WriteTransaction write(final Consistency consistency, final Versioning versioning) {
-
-            throw new UnsupportedOperationException();
-        }
-    }
-
-    interface WithoutAggregate extends Storage {
-
-        @Override
-        default List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
-
-            throw new UnsupportedQueryException(schema.getQualifiedName(), query);
-        }
-    }
-
-    interface WithoutQuery extends WithoutAggregate {
-
-        @Override
-        default List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
-
-            throw new UnsupportedQueryException(schema.getQualifiedName(), query);
-        }
-    }
-
-    interface WithoutHistory extends WithoutWriteHistory {
-
-        @Override
-        default CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
-
-            return readObject(schema, id, expand).thenApply(object -> {
-                if (object != null && Long.valueOf(version).equals(Instance.getVersion(object))) {
-                    return object;
-                } else {
-                    return null;
-                }
-            });
-        }
-    }
-
-    interface WithoutWriteHistory extends Storage {
-
-        @Override
-        default CompletableFuture<?> asyncHistoryCreated(final ObjectSchema schema, String id, final long version, Map<String, Object> after) {
-
-            throw new UnsupportedOperationException();
-        }
-    }
-
-    interface WithoutWriteIndex extends Storage {
-
-        @Override
-        default CompletableFuture<?> asyncIndexCreated(final ObjectSchema schema, final Index index, String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        default CompletableFuture<?> asyncIndexUpdated(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        default CompletableFuture<?> asyncIndexDeleted(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
-
-            throw new UnsupportedOperationException();
-        }
-    }
-
-    interface WithWriteHistory extends Storage {
-
-        @Override
-        WriteTransaction write(Consistency consistency, Versioning versioning);
-
-        @Override
-        default CompletableFuture<?> asyncHistoryCreated(final ObjectSchema schema, String id, final long version, Map<String, Object> after) {
-
-            final WriteTransaction write = write(Consistency.ASYNC, Versioning.CHECKED);
-            write.createHistory(schema, id, version, after);
-            return write.write();
-        }
-
-        interface WriteTransaction extends Storage.WriteTransaction {
-
-            WriteTransaction createHistory(ObjectSchema schema, String id, long version, Map<String, Object> after);
-        }
-    }
-
-    interface WithWriteIndex extends Storage {
-
-        @Override
-        WriteTransaction write(Consistency consistency, Versioning versioning);
-
-        @Override
-        default CompletableFuture<?> asyncIndexCreated(final ObjectSchema schema, final Index index, String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-            final WriteTransaction write = write(Consistency.ASYNC, Versioning.CHECKED);
-            write.createIndex(schema, index, id, version, key, projection);
-            return write.write();
-        }
-
-        @Override
-        default CompletableFuture<?> asyncIndexUpdated(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-            final WriteTransaction write = write(Consistency.ASYNC, Versioning.CHECKED);
-            write.updateIndex(schema, index, id, version, key, projection);
-            return write.write();
-        }
-
-        @Override
-        default CompletableFuture<?> asyncIndexDeleted(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
-
-            final WriteTransaction write = write(Consistency.ASYNC, Versioning.CHECKED);
-            write.deleteIndex(schema, index, id, version, key);
-            return write.write();
-        }
-
-        interface WriteTransaction extends Storage.WriteTransaction {
-
-            WriteTransaction createIndex(ObjectSchema schema, Index index, String id, long version, Index.Key key, Map<String, Object> projection);
-
-            WriteTransaction updateIndex(ObjectSchema schema, Index index, String id, long version, Index.Key key, Map<String, Object> projection);
-
-            WriteTransaction deleteIndex(ObjectSchema schema, Index index, String id, long version, Index.Key key);
-        }
-    }
-
-    // FIXME: review usages
-    interface WithoutRepair extends Storage {
-
-        @Override
-        default List<Pager.Source<RepairInfo>> repair(final ObjectSchema schema) {
-
-            return Collections.singletonList(
-                    (count, token, stats) -> CompletableFuture.completedFuture(Page.empty())
-            );
-        }
-
-        @Override
-        default List<Pager.Source<RepairInfo>> repairIndex(final ObjectSchema schema, final Index index) {
-
-            return Collections.singletonList(
-                    (count, token, stats) -> CompletableFuture.completedFuture(Page.empty())
-            );
-        }
     }
 }

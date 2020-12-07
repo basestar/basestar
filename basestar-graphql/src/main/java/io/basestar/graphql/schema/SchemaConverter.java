@@ -26,6 +26,7 @@ import graphql.schema.idl.TypeDefinitionRegistry;
 import io.basestar.graphql.GraphQLUtils;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import lombok.extern.slf4j.Slf4j;
 
@@ -41,7 +42,7 @@ public class SchemaConverter {
         final Namespace.Builder builder = Namespace.builder();
         tdr.types().forEach((name, def) -> {
             if(!SKIP_TYPE_NAMES.contains(name)) {
-                final Schema.Builder<?> schema = schema(def);
+                final Schema.Builder<?, ?, ?> schema = schema(def);
                 if (schema != null) {
                     builder.setSchema(name, schema);
                 }
@@ -50,7 +51,7 @@ public class SchemaConverter {
         return builder;
     }
 
-    private Schema.Builder<?> schema(final Node<?> def) {
+    private Schema.Builder<?, ?, ?> schema(final Node<?> def) {
 
         if(def instanceof ObjectTypeDefinition) {
             return instanceSchema((ObjectTypeDefinition) def);
@@ -100,10 +101,8 @@ public class SchemaConverter {
     private StructSchema.Builder structSchema(final ObjectTypeDefinition def) {
 
         final StructSchema.Builder builder = StructSchema.builder();
-        def.getImplements().forEach(impl -> {
-            // FIXME:
-            builder.setExtend(Name.of(def.getName()));
-        });
+        // FIXME:
+        builder.setExtend(Immutable.transform(def.getImplements(), impl -> Name.of(def.getName())));
         builder.setProperties(instanceProperties(def.getFieldDefinitions(), Collections.emptySet()));
         return builder;
     }
@@ -111,10 +110,8 @@ public class SchemaConverter {
     private ObjectSchema.Builder objectSchema(final ObjectTypeDefinition def) {
 
         final ObjectSchema.Builder builder = ObjectSchema.builder();
-        def.getImplements().forEach(impl -> {
-            // FIXME:
-            builder.setExtend(Name.of(def.getName()));
-        });
+        // FIXME:
+        builder.setExtend(Immutable.transform(def.getImplements(), impl -> Name.of(def.getName())));
         builder.setProperties(instanceProperties(def.getFieldDefinitions(), ObjectSchema.METADATA_SCHEMA.keySet()));
         return builder;
     }

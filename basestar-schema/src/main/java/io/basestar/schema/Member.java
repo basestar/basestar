@@ -46,33 +46,32 @@ public interface Member extends Named, Described, Serializable, Extendable {
         @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         Visibility getVisibility();
 
-        interface Delegating extends Descriptor {
+        interface Self<M extends Member> extends Descriptor {
 
-            Descriptor delegate();
+            M self();
 
             @Override
             default Visibility getVisibility() {
 
-                return delegate().getVisibility();
+                return self().getVisibility();
             }
 
             @Override
             default String getDescription() {
 
-                return delegate().getDescription();
+                return self().getDescription();
             }
 
             @Override
             default Map<String, Serializable> getExtensions() {
 
-                return delegate().getExtensions();
+                return self().getExtensions();
             }
         }
     }
 
-    interface Builder extends Descriptor {
+    interface Builder<B extends Builder<B>> extends Descriptor, Extendable.Builder<B> {
 
-        Builder setExtensions(Map<String, Serializable> extensions);
     }
 
     interface Resolver {

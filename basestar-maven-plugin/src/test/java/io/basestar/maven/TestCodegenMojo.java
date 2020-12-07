@@ -23,7 +23,6 @@ package io.basestar.maven;
 import com.google.common.collect.ImmutableList;
 import io.basestar.schema.Namespace;
 import org.apache.commons.io.FileUtils;
-import org.apache.maven.plugin.MojoExecutionException;
 import org.junit.jupiter.api.Test;
 
 import javax.tools.*;
@@ -45,7 +44,7 @@ class TestCodegenMojo {
     private final File namespaceDirectory = new File("target/test/namespace");
 
     @Test
-    void testCodegenMojo() throws MojoExecutionException, Exception {
+    void testCodegenMojo() throws Exception {
 
         FileUtils.deleteDirectory(codegenDirectory);
         FileUtils.deleteDirectory(namespaceDirectory);

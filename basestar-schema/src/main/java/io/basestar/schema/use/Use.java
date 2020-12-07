@@ -69,7 +69,7 @@ public interface Use<T> extends Serializable {
         ARRAY,
         SET,
         MAP,
-        OBJECT,
+        REF,
         STRUCT,
         BINARY,
         DATE,
@@ -350,8 +350,8 @@ public interface Use<T> extends Serializable {
                 return (T)UseSet.deserializeAnyValue(in);
             case MAP:
                 return (T)UseMap.deserializeAnyValue(in);
-            case OBJECT:
-                return (T) UseObject.deserializeAnyValue(in);
+            case REF:
+                return (T) UseRef.deserializeAnyValue(in);
             case STRUCT:
                 return (T)UseStruct.deserializeAnyValue(in);
             case BINARY:
@@ -384,7 +384,7 @@ public interface Use<T> extends Serializable {
 
         R visitEnum(UseEnum type);
 
-        R visitObject(UseObject type);
+        R visitRef(UseRef type);
 
         <T> R visitArray(UseArray<T> type);
 
@@ -479,7 +479,7 @@ public interface Use<T> extends Serializable {
             }
 
             @Override
-            default R visitObject(final UseObject type) {
+            default R visitRef(final UseRef type) {
 
                 return visitLinkable(type);
             }
@@ -667,8 +667,8 @@ public interface Use<T> extends Serializable {
             if(((UseStruct) a).getName().equals(((UseStruct) b).getName())) {
                 return a;
             }
-        } else if(a instanceof UseObject && b instanceof UseObject) {
-            if(((UseObject) a).getName().equals(((UseObject) b).getName())) {
+        } else if(a instanceof UseRef && b instanceof UseRef) {
+            if(((UseRef) a).getName().equals(((UseRef) b).getName())) {
                 return a;
             }
         } else if(a instanceof UseView && b instanceof UseView) {

@@ -58,7 +58,7 @@ public @interface ObjectSchema {
             return new ObjectSchemaMapper<>(context, getQualifiedName(context, type), type);
         }
 
-        public static ObjectSchema annotation(final io.basestar.schema.ObjectSchema schema) {
+        public static ObjectSchema annotation(final io.basestar.schema.ReferableSchema schema) {
 
             return new AnnotationContext<>(ObjectSchema.class, ImmutableMap.<String, Object>builder()
                     .put("name", schema.getQualifiedName().toString())

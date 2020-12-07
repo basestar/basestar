@@ -88,7 +88,7 @@ public interface TypeModel {
             }
 
             @Override
-            public TypeModel visitObject(final UseObject type) {
+            public TypeModel visitRef(final UseRef type) {
 
                 return new TypeModel() {
 
@@ -101,7 +101,7 @@ public interface TypeModel {
                     @Override
                     public SchemaModel getSchema() {
 
-                        return new ObjectSchemaModel(context, type.getSchema());
+                        return InstanceSchemaModel.from(context, type.getSchema());
                     };
                 };
             }

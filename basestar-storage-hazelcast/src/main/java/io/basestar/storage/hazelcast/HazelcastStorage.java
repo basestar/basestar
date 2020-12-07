@@ -23,7 +23,6 @@ package io.basestar.storage.hazelcast;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.collect.ImmutableList;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.map.IMap;
 import com.hazelcast.query.Predicate;
@@ -32,15 +31,15 @@ import com.hazelcast.transaction.TransactionOptions;
 import com.hazelcast.transaction.TransactionalMap;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
-import io.basestar.storage.BatchResponse;
-import io.basestar.storage.Storage;
-import io.basestar.storage.StorageTraits;
-import io.basestar.storage.Versioning;
+import io.basestar.storage.*;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.hazelcast.serde.CustomPortable;
 import io.basestar.storage.hazelcast.serde.PortableSchemaFactory;
-import io.basestar.util.*;
+import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
+import io.basestar.util.Pager;
+import io.basestar.util.Sort;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
@@ -51,10 +50,9 @@ import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
 
 @Slf4j
-public class HazelcastStorage implements Storage.WithWriteHistory, Storage.WithoutWriteIndex, Storage.WithoutAggregate, Storage.WithoutExpand, Storage.WithoutRepair {
+public class HazelcastStorage implements DefaultLayerStorage {
 
     @Nonnull
     private final HazelcastInstance instance;
@@ -65,9 +63,9 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
     @Nonnull
     private final PortableSchemaFactory schemaFactory;
 
-    private final LoadingCache<ObjectSchema, IMap<BatchResponse.Key, CustomPortable>> object;
+    private final LoadingCache<ReferableSchema, IMap<BatchResponse.RefKey, CustomPortable>> object;
 
-    private final LoadingCache<ObjectSchema, IMap<BatchResponse.Key, CustomPortable>> history;
+    private final LoadingCache<ReferableSchema, IMap<BatchResponse.RefKey, CustomPortable>> history;
 
     private HazelcastStorage(final Builder builder) {
 
@@ -75,16 +73,16 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
         this.strategy = Nullsafe.require(builder.strategy);
         this.schemaFactory = Nullsafe.require(builder.schemaFactory);
         this.object = CacheBuilder.newBuilder()
-                .build(new CacheLoader<ObjectSchema, IMap<BatchResponse.Key, CustomPortable>>() {
+                .build(new CacheLoader<ReferableSchema, IMap<BatchResponse.RefKey, CustomPortable>>() {
                     @Override
-                    public IMap<BatchResponse.Key, CustomPortable> load(final ObjectSchema s) {
+                    public IMap<BatchResponse.RefKey, CustomPortable> load(final ReferableSchema s) {
                         return instance.getMap(strategy.objectMapName(s));
                     }
                 });
         this.history = CacheBuilder.newBuilder()
-                .build(new CacheLoader<ObjectSchema, IMap<BatchResponse.Key, CustomPortable>>() {
+                .build(new CacheLoader<ReferableSchema, IMap<BatchResponse.RefKey, CustomPortable>>() {
                     @Override
-                    public IMap<BatchResponse.Key, CustomPortable> load(final ObjectSchema s) {
+                    public IMap<BatchResponse.RefKey, CustomPortable> load(final ReferableSchema s) {
                         return instance.getMap(strategy.historyMapName(s));
                     }
                 });
@@ -115,19 +113,6 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
     }
 
 
-    @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
-
-        try {
-            final IMap<BatchResponse.Key, CustomPortable> map = object.get(schema);
-
-            return map.getAsync(BatchResponse.Key.latest(schema.getQualifiedName(), id))
-                    .thenApply(this::fromRecord)
-                    .toCompletableFuture();
-        } catch (final ExecutionException e) {
-            throw new IllegalStateException(e);
-        }
-    }
 
     private Map<String, Object> fromRecord(final CustomPortable record) {
 
@@ -141,40 +126,54 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
         return record;
     }
 
+//    @Override
+//    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+//
+//        try {
+//            final IMap<BatchResponse.RefKey, CustomPortable> map = object.get(schema);
+//
+//            return map.getAsync(BatchResponse.RefKey.latest(schema.getQualifiedName(), id))
+//                    .thenApply(this::fromRecord)
+//                    .toCompletableFuture();
+//        } catch (final ExecutionException e) {
+//            throw new IllegalStateException(e);
+//        }
+//    }
+//    @Override
+//    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+//
+//        try {
+//            final IMap<BatchResponse.RefKey, CustomPortable> map = history.get(schema);
+//
+//            return map.getAsync(BatchResponse.RefKey.version(schema.getQualifiedName(), id, version))
+//                    .thenApply(this::fromRecord)
+//                    .toCompletableFuture();
+//        } catch (final ExecutionException e) {
+//            throw new IllegalStateException(e);
+//        }
+//    }
+
     @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+    public Pager<Map<String, Object>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        try {
-            final IMap<BatchResponse.Key, CustomPortable> map = history.get(schema);
-
-            return map.getAsync(BatchResponse.Key.version(schema.getQualifiedName(), id, version))
-                    .thenApply(this::fromRecord)
-                    .toCompletableFuture();
-        } catch (final ExecutionException e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
-    @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
-
-        return ImmutableList.of((count, token, stats) -> CompletableFuture.supplyAsync(() -> {
+        return Pager.simple(CompletableFuture.supplyAsync(() -> {
             try {
-
-                final Predicate<BatchResponse.Key, CustomPortable> predicate = query.visit(new HazelcastExpressionVisitor<>());
-                final IMap<BatchResponse.Key, CustomPortable> map = object.get(schema);
+                final Predicate<BatchResponse.RefKey, CustomPortable> predicate = query.visit(new HazelcastExpressionVisitor<>());
+                final IMap<BatchResponse.RefKey, CustomPortable> map = object.get(schema);
 
                 final List<Map<String, Object>> results = new ArrayList<>();
-                for (final Map.Entry<BatchResponse.Key, CustomPortable> entry : map.entrySet(predicate)) {
+                for (final Map.Entry<BatchResponse.RefKey, CustomPortable> entry : map.entrySet(predicate)) {
                     results.add(fromRecord(entry.getValue()));
                 }
-                // FIXME: need to check sorting
-                return new Page<>(results, null);
+                results.sort(Instance.comparator(sort));
+
+                // TODO: implement keyset paging
+
+                return results;
 
             } catch (final ExecutionException e) {
                 throw new IllegalStateException(e);
             }
-
         }));
     }
 
@@ -183,66 +182,71 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
 
         return new ReadTransaction() {
 
-            private final Map<String, Set<BatchResponse.Key>> requests = new HashMap<>();
+            final BatchCapture capture = new BatchCapture();
 
             @Override
-            public ReadTransaction readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+            public ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
-                final String target = strategy.objectMapName(schema);
-                requests.computeIfAbsent(target, ignored -> new HashSet<>())
-                        .add(BatchResponse.Key.latest(schema.getQualifiedName(), id));
+                capture.captureLatest(schema, id, expand);
                 return this;
             }
 
             @Override
-            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+            public ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
-                final String target = strategy.historyMapName(schema);
-                requests.computeIfAbsent(target, ignored -> new HashSet<>())
-                        .add(BatchResponse.Key.version(schema.getQualifiedName(), id, version));
+                capture.captureVersion(schema, id, version, expand);
                 return this;
             }
 
             @Override
             public CompletableFuture<BatchResponse> read() {
 
-                final List<CompletableFuture<? extends BatchResponse>> futures = requests.entrySet().stream()
-                        .map(entry -> {
-                            final String target = entry.getKey();
-                            final IMap<BatchResponse.Key, Map<String, Object>> map = instance.getMap(target);
-                            return CompletableFuture
-                                    .supplyAsync(() -> new BatchResponse.Basic(map.getAll(entry.getValue())));
-                        }).collect(Collectors.toList());
-
-                return BatchResponse.mergeFutures(futures.stream());
+                return CompletableFuture.supplyAsync(() -> {
+                    final Map<BatchResponse.RefKey, Map<String, Object>> refs = new HashMap<>();
+                    capture.forEachRef((schema, ref, expand) -> {
+                        final String target;
+                        if (ref.hasVersion()) {
+                            target = strategy.historyMapName(schema);
+                        } else {
+                            target = strategy.objectMapName(schema);
+                        }
+                        final IMap<BatchResponse.RefKey, CustomPortable> map = instance.getMap(target);
+                        refs.put(ref, fromRecord(map.get(ref)));
+                    });
+                    return BatchResponse.fromRefs(refs);
+                });
             }
         };
     }
 
     private interface WriteAction extends Serializable  {
 
-        CustomPortable apply(BatchResponse.Key key, CustomPortable value);
+        CustomPortable apply(BatchResponse.RefKey key, CustomPortable value);
     }
 
-    protected class WriteTransaction implements WithWriteHistory.WriteTransaction {
+    protected class WriteTransaction implements DefaultLayerStorage.WriteTransaction {
 
-        private final Map<String, Map<BatchResponse.Key, WriteAction>> requests = new IdentityHashMap<>();
+        private final Map<String, Map<BatchResponse.RefKey, WriteAction>> requests = new IdentityHashMap<>();
 
         @Override
-        public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+        public StorageTraits storageTraits(final ReferableSchema schema) {
+
+            return HazelcastStorage.this.storageTraits(schema);
+        }
+
+        @Override
+        public void createObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
 
             final String target = strategy.objectMapName(schema);
             final Name schemaName = schema.getQualifiedName();
             requests.computeIfAbsent(target, ignored -> new HashMap<>())
-                    .put(BatchResponse.Key.latest(schemaName, id), (key, value) -> {
+                    .put(BatchResponse.RefKey.latest(schemaName, id), (key, value) -> {
                         if(value == null) {
                             return toRecord(schema, after);
                         } else {
                             throw new ObjectExistsException(schemaName, id);
                         }
                     });
-
-            return createHistory(schema, id, after);
         }
 
         private boolean checkExists(final Map<String, Object> current, final Long version) {
@@ -257,13 +261,13 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
         }
 
         @Override
-        public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
+        public void updateObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
             final String target = strategy.objectMapName(schema);
             final Name schemaName = schema.getQualifiedName();
             final Long version = before == null ? null : Instance.getVersion(before);
             requests.computeIfAbsent(target, ignored -> new HashMap<>())
-                    .put(BatchResponse.Key.latest(schemaName, id), (key, value) -> {
+                    .put(BatchResponse.RefKey.latest(schemaName, id), (key, value) -> {
                         final Map<String, Object> current = fromRecord(value);
                         if(checkExists(current, version)) {
                             return toRecord(schema, after);
@@ -271,18 +275,16 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
                             throw new VersionMismatchException(schemaName, id, version);
                         }
                     });
-
-            return createHistory(schema, id, after);
         }
 
         @Override
-        public WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
+        public void deleteObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> before) {
 
             final String target = strategy.objectMapName(schema);
             final Name schemaName = schema.getQualifiedName();
             final Long version = before == null ? null : Instance.getVersion(before);
             requests.computeIfAbsent(target, ignored -> new HashMap<>())
-                    .put(BatchResponse.Key.latest(schemaName, id), (key, value) -> {
+                    .put(BatchResponse.RefKey.latest(schemaName, id), (key, value) -> {
                         final Map<String, Object> current = fromRecord(value);
                         if(checkExists(current, version)) {
                             return null;
@@ -290,30 +292,29 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
                             throw new VersionMismatchException(schemaName, id, version);
                         }
                     });
-            return this;
         }
 
         @Override
-        public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
+        public void writeHistoryLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
 
+            final long version = Instance.getVersion(after);
             final String target = strategy.historyMapName(schema);
             final Name schemaName = schema.getQualifiedName();
             requests.computeIfAbsent(target, ignored -> new HashMap<>())
-                    .put(BatchResponse.Key.version(schemaName, id, version), (key, value) -> toRecord(schema, after));
-            return this;
+                    .put(BatchResponse.RefKey.version(schemaName, id, version), (key, value) -> toRecord(schema, after));
         }
 
-        private WriteTransaction createHistory(final ObjectSchema schema, final String id, final Map<String, Object> after) {
-
-            final History history = schema.getHistory();
-            if(history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
-                final Long afterVersion = Instance.getVersion(after);
-                assert afterVersion != null;
-                return createHistory(schema, id, afterVersion, after);
-            } else {
-                return this;
-            }
-        }
+//        private WriteTransaction createHistory(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+//
+//            final History history = schema.getHistory();
+//            if(history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
+//                final Long afterVersion = Instance.getVersion(after);
+//                assert afterVersion != null;
+//                return createHistory(schema, id, afterVersion, after);
+//            } else {
+//                return this;
+//            }
+//        }
 
         @Override
         public CompletableFuture<BatchResponse> write() {
@@ -325,11 +326,11 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
 
                 context.beginTransaction();
 
-                final Map<BatchResponse.Key, Map<String, Object>> results = new HashMap<>();
+                final Map<BatchResponse.RefKey, Map<String, Object>> results = new HashMap<>();
 
                 try {
                     requests.forEach((target, actions) -> {
-                        final TransactionalMap<BatchResponse.Key, CustomPortable> map = context.getMap(target);
+                        final TransactionalMap<BatchResponse.RefKey, CustomPortable> map = context.getMap(target);
 
                         actions.forEach((key, action) -> {
                             final CustomPortable oldValue = map.getForUpdate(key);
@@ -348,7 +349,7 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
                     throw e;
                 }
 
-                return new BatchResponse.Basic(results);
+                return new BatchResponse(results);
             });
         }
     }
@@ -360,13 +361,13 @@ public class HazelcastStorage implements Storage.WithWriteHistory, Storage.Witho
     }
 
     @Override
-    public EventStrategy eventStrategy(final ObjectSchema schema) {
+    public EventStrategy eventStrategy(final ReferableSchema schema) {
 
         return EventStrategy.EMIT;
     }
 
     @Override
-    public StorageTraits storageTraits(final ObjectSchema schema) {
+    public StorageTraits storageTraits(final ReferableSchema schema) {
 
         return HazelcastStorageTraits.INSTANCE;
     }
