@@ -232,13 +232,17 @@ public class Property implements Member {
     private static Use<?> type(final Descriptor builder, final InferenceContext context) {
 
         final Use<?> type = builder.getType();
-        final Expression expression = builder.getExpression();
-        if(context != null && type == null && expression != null) {
-            final Use<?> inferredType = new InferenceVisitor(context).visit(builder.getExpression());
-            if(inferredType instanceof UseAny) {
-                throw new IllegalStateException("Cannot infer type from expression " + builder.getExpression());
+        if(type == null) {
+            final Expression expression = builder.getExpression();
+            if(context != null && expression != null) {
+                final Use<?> inferredType = new InferenceVisitor(context).visit(builder.getExpression());
+                if(inferredType instanceof UseAny) {
+                    throw new IllegalStateException("Cannot infer type from expression " + builder.getExpression());
+                } else {
+                    return inferredType;
+                }
             } else {
-                return inferredType;
+                throw new IllegalStateException("Property type or expression must be specified");
             }
         } else {
             return type;

@@ -160,8 +160,6 @@ public abstract class TestStorage {
 
         final ObjectSchema schema = namespace.requireObjectSchema(ADDRESS);
 
-        assumeConcurrentObjectWrite(storage, schema);
-
         bulkLoad(storage, loadAddresses());
 
         final List<Sort> sort = ImmutableList.of(
@@ -207,8 +205,6 @@ public abstract class TestStorage {
         final Storage storage = storage(namespace);
 
         final ObjectSchema schema = namespace.requireObjectSchema(ADDRESS);
-
-        assumeConcurrentObjectWrite(storage, schema);
 
         bulkLoad(storage, init);
 
@@ -408,8 +404,6 @@ public abstract class TestStorage {
 
         final ObjectSchema schema = namespace.requireObjectSchema(SIMPLE);
 
-//        assumeConcurrentObjectWrite(storage, schema);
-
         final String id = UUID.randomUUID().toString();
 
         final StringBuilder str = new StringBuilder();
@@ -439,8 +433,6 @@ public abstract class TestStorage {
 
         final ObjectSchema schema = namespace.requireObjectSchema(SIMPLE);
 
-        assumeConcurrentObjectWrite(storage, schema);
-
         final String id = UUID.randomUUID().toString();
 
         final Instance after = instance(schema, id, 2L);
@@ -462,8 +454,6 @@ public abstract class TestStorage {
         final Storage storage = storage(namespace);
 
         final ObjectSchema schema = namespace.requireObjectSchema(SIMPLE);
-
-        assumeConcurrentObjectWrite(storage, schema);
 
         final String id = UUID.randomUUID().toString();
 
@@ -494,8 +484,6 @@ public abstract class TestStorage {
         final Storage storage = storage(namespace);
 
         final ObjectSchema schema = namespace.requireObjectSchema(SIMPLE);
-
-        assumeConcurrentObjectWrite(storage, schema);
 
         final String id = UUID.randomUUID().toString();
 
@@ -593,8 +581,6 @@ public abstract class TestStorage {
 
         final ObjectSchema schema = namespace.requireObjectSchema(POINTSET);
 
-        assumeConcurrentObjectWrite(storage, schema);
-
         createComplete(storage, schema, ImmutableMap.of(
                 "points", ImmutableList.of(
                         new Instance(ImmutableMap.of("x", 10L, "y", 100L)),
@@ -624,8 +610,6 @@ public abstract class TestStorage {
 
         final ObjectSchema schema = namespace.requireObjectSchema(SIMPLE);
 
-        assumeConcurrentObjectWrite(storage, schema);
-
         final String id = UUID.randomUUID().toString();
 
         storage.write(Consistency.ATOMIC, Versioning.CHECKED)
@@ -645,8 +629,6 @@ public abstract class TestStorage {
         final Storage storage = storage(namespace);
 
         final ObjectSchema schema = namespace.requireObjectSchema(SIMPLE);
-
-        assumeConcurrentObjectWrite(storage, schema);
 
         final String id = UUID.randomUUID().toString();
 
@@ -829,8 +811,6 @@ public abstract class TestStorage {
         final Storage storage = storage(namespace);
 
         final ObjectSchema dateSort = namespace.requireObjectSchema(DATE_SORT);
-
-        assumeConcurrentObjectWrite(storage, dateSort);
 
         for(int i = 0; i != 10; ++i) {
             createComplete(storage, dateSort, ImmutableMap.of(
