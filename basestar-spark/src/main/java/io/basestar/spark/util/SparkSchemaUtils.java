@@ -281,7 +281,7 @@ public class SparkSchemaUtils {
             @Override
             public <T> DataType visitOptional(final UseOptional<T> type) {
 
-                return type.getType().visit(this);
+                return type.getType().visit(this).asNullable();
             }
 
             @Override
