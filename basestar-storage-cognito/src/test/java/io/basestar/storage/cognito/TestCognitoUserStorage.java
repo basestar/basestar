@@ -38,27 +38,6 @@ import static org.mockito.Mockito.when;
 
 class TestCognitoUserStorage extends TestStorage {
 
-//    protected Namespace namespace() {
-//
-//        return Namespace.builder()
-//                .setSchema("User", ObjectSchema.builder()
-//                        .setProperty("test", Property.builder().setType(UseString.DEFAULT))
-//                        .setProperty("organization", Property.builder().setType(UseNamed.from("Organization")))
-//                )
-//                .setSchema("Organization", ObjectSchema.builder()
-//                        .setProperty("test", Property.builder().setType(UseString.DEFAULT))
-//                )
-//                .build();
-//    }
-//
-//    protected Storage storage() {
-//
-//        return CognitoUserStorage.builder()
-//                .setClient(Mockito.mock(CognitoIdentityProviderAsyncClient.class))
-//                .setStrategy(schema -> "us-east-1_rhBrmRi8n")
-//                .build();
-//    }
-
     @Override
     protected Storage storage(final Namespace namespace) {
 

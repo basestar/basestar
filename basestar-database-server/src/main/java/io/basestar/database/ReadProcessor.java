@@ -265,7 +265,6 @@ public class ReadProcessor {
                     final Map<ExpandKey<RefKey>, Instance> resolved = new HashMap<>();
                     for (final Map<String, Object> initial : results.getRefs().values()) {
 
-                        final Name schemaName = Instance.getSchema(initial);
                         final String id = Instance.getId(initial);
                         final Long version = Instance.getVersion(initial);
                         final Instance object = create(initial);

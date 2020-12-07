@@ -20,7 +20,6 @@ package io.basestar.util;
  * #L%
  */
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import lombok.Data;
 import lombok.Getter;
@@ -28,6 +27,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.With;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -74,7 +74,7 @@ public interface Pager<T> {
                 final Page.Token newToken = end == list.size() ? null : Page.Token.fromLongValue((long) end);
                 return new Page<>(page, newToken, token == null ? Page.Stats.fromTotal(list.size()) : null);
             } else {
-                return new Page<T>(ImmutableList.of(), null);
+                return new Page<>(ImmutableList.of(), null);
             }
         });
     }
@@ -358,7 +358,7 @@ public interface Pager<T> {
                         } else {
                             final byte[] keyBytes = new byte[keyLength];
                             dis.readFully(keyBytes);
-                            final String key = new String(keyBytes, Charsets.UTF_8);
+                            final String key = new String(keyBytes, StandardCharsets.UTF_8);
                             final Pager<T> source = sources.get(key);
                             if(source == null) {
                                 throw new IllegalStateException("Page token not recognised: " + key);
@@ -389,7 +389,7 @@ public interface Pager<T> {
                  final DataOutputStream dos = new DataOutputStream(baos)) {
 
                 for (final State<T> state : states) {
-                    final byte[] keyBytes = state.getId().getBytes(Charsets.UTF_8);
+                    final byte[] keyBytes = state.getId().getBytes(StandardCharsets.UTF_8);
                     final int keyLength = keyBytes.length;
                     if (keyLength > Character.MAX_VALUE) {
                         throw new IllegalStateException("Page token key too long");

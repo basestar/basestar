@@ -24,7 +24,10 @@ import com.google.common.collect.Sets;
 import io.basestar.event.Event;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
-import io.basestar.storage.*;
+import io.basestar.storage.BatchResponse;
+import io.basestar.storage.Storage;
+import io.basestar.storage.StorageTraits;
+import io.basestar.storage.Versioning;
 import io.basestar.util.*;
 
 import java.time.Instant;
@@ -33,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 // Used in batch to allow pending creates/updates to be linked and referenced in permission expressions.
 // This storage will respond as if the provided items exist in the underlying storage.
@@ -95,30 +99,26 @@ public class OverlayStorage implements Storage {
     @Override
     public ReadTransaction read(final Consistency consistency) {
 
-        final ReadTransaction baselineTransaction = baseline.read(consistency);
-        final ReadTransaction overlayTransaction = overlay.read(consistency);
-
         return new ReadTransaction() {
 
-            final BatchCapture capture = new BatchCapture();
+            ReadTransaction baselineTransaction = baseline.read(consistency);
+            ReadTransaction overlayTransaction = overlay.read(consistency);
 
             @Override
             public ReadTransaction get(final ReferableSchema schema, final String id, final Set<Name> expand) {
 
-                capture.captureLatest(schema, id, expand);
-                baselineTransaction.get(schema, id, expand);
-                overlayTransaction.get(schema, id, expand);
+                baselineTransaction = baselineTransaction.get(schema, id, expand);
+                overlayTransaction = overlayTransaction.get(schema, id, expand);
                 return this;
             }
 
             @Override
             public ReadTransaction getVersion(final ReferableSchema schema, final String id, final long version, final Set<Name> expand) {
 
-                capture.captureVersion(schema, id, version, expand);
-                baselineTransaction.getVersion(schema, id, version, expand);
-                overlayTransaction.getVersion(schema, id, version, expand);
+                baselineTransaction = baselineTransaction.getVersion(schema, id, version, expand);
+                overlayTransaction = overlayTransaction.getVersion(schema, id, version, expand);
                 // See: ref()
-                overlayTransaction.get(schema, id, expand);
+                overlayTransaction = overlayTransaction.get(schema, id, expand);
                 return this;
             }
 
@@ -131,7 +131,8 @@ public class OverlayStorage implements Storage {
                 return baselineFuture.thenCombine(overlayFuture, (baselineResponse, overlayResponse) -> {
 
                     final Map<BatchResponse.RefKey, Map<String, Object>> refs = new HashMap<>();
-                    capture.forEachRef((schema, key, args) -> {
+                    Stream.of(baselineResponse, overlayResponse)
+                            .flatMap(v -> v.getRefs().keySet().stream()).forEach(key -> {
                         refs.put(key, ref(baselineResponse, overlayResponse, key));
                     });
                     return new BatchResponse(refs);

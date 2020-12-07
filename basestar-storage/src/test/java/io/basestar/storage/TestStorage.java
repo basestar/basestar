@@ -65,6 +65,12 @@ public abstract class TestStorage {
 
     private static final String VERSIONED_REF = "VersionedRef";
 
+    private static final String INTERFACE = "Interface";
+
+    private static final String EXTEND_A = "ExtendA";
+
+    private static final String EXTEND_B = "ExtendB";
+
     private final Namespace namespace;
 
     protected TestStorage() {
@@ -927,8 +933,12 @@ public abstract class TestStorage {
 
     private String createComplete(final Storage storage, final ObjectSchema schema, final Map<String, Object> data) {
 
+        return createComplete(storage, schema, UUID.randomUUID().toString(), data);
+    }
+
+    private String createComplete(final Storage storage, final ObjectSchema schema, final String id, final Map<String, Object> data) {
+
         final StorageTraits traits = storage.storageTraits(schema);
-        final String id = UUID.randomUUID().toString();
         final Map<String, Object> instance = instance(schema, id, 1L, data);
         final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC, Versioning.CHECKED);
         write.createObject(schema, id, instance);
@@ -982,6 +992,46 @@ public abstract class TestStorage {
             assertThrows(except, () -> {
             });
         }
+    }
+
+    @Test
+    void testPolymorphicCreate() {
+
+        assumeTrue(supportsPolymorphism());
+
+        final Storage storage = storage(namespace);
+
+        final InterfaceSchema interfaceSchema = namespace.requireInterfaceSchema(INTERFACE);
+
+        final ObjectSchema extendASchema = namespace.requireObjectSchema(EXTEND_A);
+        final ObjectSchema extendBSchema = namespace.requireObjectSchema(EXTEND_B);
+
+        final String idA = createComplete(storage, extendASchema, ImmutableMap.of(
+                "propA", "test1"
+        ));
+
+        final String idB = createComplete(storage, extendBSchema, ImmutableMap.of(
+                "propB", "test2"
+        ));
+
+        final Map<String, Object> getA = storage.get(Consistency.ATOMIC, interfaceSchema, idA, ImmutableSet.of()).join();
+        final Map<String, Object> getB = storage.get(Consistency.ATOMIC, interfaceSchema, idB, ImmutableSet.of()).join();
+
+        assertNotNull(getA);
+        assertNotNull(getB);
+        assertEquals("test1", Instance.get(getA, "propA", String.class));
+        assertEquals("test2", Instance.get(getB, "propB", String.class));
+
+        assertCause(ObjectExistsException.class, () -> {
+            createComplete(storage, extendASchema, idB, ImmutableMap.of(
+                    "propA", "test1"
+            ));
+        });
+    }
+
+    protected boolean supportsPolymorphism() {
+
+        return true;
     }
 
     private static void assumeConcurrentObjectWrite(final Storage storage, final ObjectSchema schema) {

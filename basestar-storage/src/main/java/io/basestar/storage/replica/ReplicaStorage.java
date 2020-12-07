@@ -127,29 +127,33 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
 
             return new ReadTransaction() {
 
-                private ReadTransaction primaryTransaction(final LinkableSchema schema) {
+                private void primaryTransaction(final LinkableSchema schema, final Function<ReadTransaction, ReadTransaction> apply) {
 
-                    return primaryTransactions.computeIfAbsent(storage(schema), v -> v.read(consistency));
+                    final Storage storage = storage(schema);
+                    final ReadTransaction transaction = primaryTransactions.computeIfAbsent(storage, v -> v.read(consistency));
+                    primaryTransactions.put(storage, apply.apply(transaction));
                 }
 
-                private ReadTransaction replicaTransaction(final LinkableSchema schema) {
+                private void replicaTransaction(final LinkableSchema schema, final Function<ReadTransaction, ReadTransaction> apply) {
 
-                    return replicaTransactions.computeIfAbsent(storage(schema), v -> v.read(consistency));
+                    final Storage storage = storage(schema);
+                    final ReadTransaction transaction = replicaTransactions.computeIfAbsent(storage, v -> v.read(consistency));
+                    replicaTransactions.put(storage, apply.apply(transaction));
                 }
 
                 @Override
                 public ReadTransaction get(final ReferableSchema schema, final String id, final Set<Name> expand) {
 
-                    primaryTransaction(schema).get(schema, id, expand);
-                    replicaTransaction(schema).get(schema, id, expand);
+                    primaryTransaction(schema, v -> v.get(schema, id, expand));
+                    replicaTransaction(schema, v -> v.get(schema, id, expand));
                     return this;
                 }
 
                 @Override
                 public ReadTransaction getVersion(final ReferableSchema schema, final String id, final long version, final Set<Name> expand) {
 
-                    primaryTransaction(schema).getVersion(schema, id, version, expand);
-                    replicaTransaction(schema).getVersion(schema, id, version, expand);
+                    primaryTransaction(schema, v -> v.getVersion(schema, id, version, expand));
+                    replicaTransaction(schema, v -> v.getVersion(schema, id, version, expand));
                     return this;
                 }
 

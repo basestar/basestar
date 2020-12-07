@@ -48,7 +48,7 @@ public interface SQLStrategy {
     // Only used for multi-value indexes
     org.jooq.Name indexTableName(ReferableSchema schema, Index index);
 
-    void createTables(DSLContext context, Collection<ObjectSchema> schemas);
+    void createTables(DSLContext context, Collection<ReferableSchema> schemas);
 
     RowMapper<Map<String, Object>> rowMapper(ReferableSchema schema, Set<Name> expand);
 
@@ -94,7 +94,7 @@ public interface SQLStrategy {
         }
 
         @Override
-        public void createTables(final DSLContext context, final Collection<ObjectSchema> schemas) {
+        public void createTables(final DSLContext context, final Collection<ReferableSchema> schemas) {
 
             try(final CreateSchemaFinalStep create = context.createSchemaIfNotExists(DSL.name(objectSchemaName))) {
                 create.execute();
@@ -103,7 +103,7 @@ public interface SQLStrategy {
                 create.execute();
             }
 
-            for(final ObjectSchema schema : schemas) {
+            for(final ReferableSchema schema : schemas) {
 
                 final org.jooq.Name objectTableName = objectTableName(schema);
                 final org.jooq.Name historyTableName = historyTableName(schema);

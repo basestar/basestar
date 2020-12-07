@@ -68,8 +68,6 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
     private static final int REF_QUERY_BATCH_SIZE = 100;
 
-    private static final int REPAIR_PAGE_SIZE = 500;
-
     private final Emitter emitter;
 
     private final DatabaseMode mode;
@@ -185,7 +183,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                 beforeKeys.forEach(expandKey -> {
                     final RefKey key = expandKey.getKey();
                     final ReferableSchema objectSchema = referableSchema(key.getSchema());
-                    read.get((ObjectSchema) objectSchema, key.getId(), expandKey.getExpand());
+                    read.get(objectSchema, key.getId(), expandKey.getExpand());
                 });
                 beforeFuture = read.read().thenCompose(readResults -> {
 
@@ -661,13 +659,11 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                             if (ref == null) {
                                 return null;
                             }
-                            if (schema.getQualifiedName().equals(refSchema.getQualifiedName())) {
-                                if (refId.equals(Instance.getId(ref))) {
-                                    if (refAfter == null) {
-                                        return ReferableSchema.ref(refId);
-                                    } else {
-                                        return schema.expand(refAfter, Expander.noop(), expand);
-                                    }
+                            if (schema.getQualifiedName().equals(refSchema.getQualifiedName()) && refId.equals(Instance.getId(ref))) {
+                                if (refAfter == null) {
+                                    return ReferableSchema.ref(refId);
+                                } else {
+                                    return schema.expand(refAfter, Expander.noop(), expand);
                                 }
                             }
                             return schema.expand(ref, this, expand);

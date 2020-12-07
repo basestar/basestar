@@ -92,6 +92,12 @@ public class TestStepFunctionStorage extends TestStorage {
     }
 
     @Override
+    protected boolean supportsPolymorphism() {
+
+        return false;
+    }
+
+    @Override
     protected boolean supportsOversize() {
 
         return false;
