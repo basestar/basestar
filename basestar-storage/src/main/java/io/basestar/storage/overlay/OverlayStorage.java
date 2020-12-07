@@ -57,24 +57,6 @@ public class OverlayStorage implements Storage {
     }
 
     @Override
-    public Pager<Map<String, Object>> queryInterface(final InterfaceSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
-
-        return query(schema, query, sort, expand);
-    }
-
-    @Override
-    public Pager<Map<String, Object>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
-
-        return query(schema, query, sort, expand);
-    }
-
-    @Override
-    public Pager<Map<String, Object>> queryView(final ViewSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
-
-        return query(schema, query, sort, expand);
-    }
-
-    @Override
     public Pager<Map<String, Object>> query(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         final Map<String, Pager<Map<String, Object>>> pagers = new HashMap<>();
@@ -121,43 +103,23 @@ public class OverlayStorage implements Storage {
             final BatchCapture capture = new BatchCapture();
 
             @Override
-            public ReadTransaction getInterface(final InterfaceSchema schema, final String id, final Set<Name> expand) {
+            public ReadTransaction get(final ReferableSchema schema, final String id, final Set<Name> expand) {
 
                 capture.captureLatest(schema, id, expand);
-                baselineTransaction.getInterface(schema, id, expand);
-                overlayTransaction.getInterface(schema, id, expand);
+                baselineTransaction.get(schema, id, expand);
+                overlayTransaction.get(schema, id, expand);
                 return this;
             }
 
             @Override
-            public ReadTransaction getInterfaceVersion(final InterfaceSchema schema, final String id, final long version, final Set<Name> expand) {
+            public ReadTransaction getVersion(final ReferableSchema schema, final String id, final long version, final Set<Name> expand) {
 
                 capture.captureVersion(schema, id, version, expand);
-                baselineTransaction.getInterfaceVersion(schema, id, version, expand);
-                overlayTransaction.getInterfaceVersion(schema, id, version, expand);
-                // See: refs()
-                overlayTransaction.getInterface(schema, id, expand);
+                baselineTransaction.getVersion(schema, id, version, expand);
+                overlayTransaction.getVersion(schema, id, version, expand);
+                // See: ref()
+                overlayTransaction.get(schema, id, expand);
                 return this;
-            }
-
-            @Override
-            public ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
-
-                capture.captureLatest(schema, id, expand);
-                baselineTransaction.getObject(schema, id, expand);
-                overlayTransaction.getObject(schema, id, expand);
-                return this;
-            }
-
-            @Override
-            public ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
-
-                capture.captureVersion(schema, id, version, expand);
-                baselineTransaction.getObjectVersion(schema, id, version, expand);
-                overlayTransaction.getObjectVersion(schema, id, version, expand);
-                // See: refs()
-                overlayTransaction.getObject(schema, id, expand);
-                return null;
             }
 
             @Override

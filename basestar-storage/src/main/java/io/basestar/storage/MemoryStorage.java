@@ -141,14 +141,14 @@ public class MemoryStorage implements DefaultIndexStorage {
             private final BatchCapture capture = new BatchCapture();
 
             @Override
-            public Storage.ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+            public ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
                 capture.captureLatest(schema, id, expand);
                 return this;
             }
 
             @Override
-            public Storage.ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+            public ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
                 capture.captureVersion(schema, id, version, expand);
                 return this;

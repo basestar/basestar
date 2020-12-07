@@ -11,7 +11,7 @@ import io.basestar.util.Sort;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
-public interface DefaultLayeredStorage extends ValidatingStorage {
+public interface DefaultLayerStorage extends LayeredStorage, ValidatingStorage {
 
     @Override
     ReadTransaction read(Consistency consistency);
@@ -81,7 +81,13 @@ public interface DefaultLayeredStorage extends ValidatingStorage {
         return CompletableFuture.completedFuture(Collections.emptySet());
     }
 
-    @Override
+    Pager<Map<String, Object>> queryObject(ObjectSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
+
+    default Pager<Map<String, Object>> queryView(final ViewSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        throw new UnsupportedOperationException();
+    }
+
     default Pager<Map<String, Object>> queryInterface(final InterfaceSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         final Collection<ObjectSchema> objectSchemas = schema.getConcreteExtended();
@@ -90,54 +96,51 @@ public interface DefaultLayeredStorage extends ValidatingStorage {
             pagers.put(objectSchema.getQualifiedName().toString(), queryObject(objectSchema, query, sort, expand));
         });
         return Pager.merge(Instance.comparator(sort), pagers);
-
-
-//        return new Storage.ReadTransaction.Delegating() {
-//
-//            @Override
-//            public Storage.ReadTransaction delegate() {
-//
-//                return delegate;
-//            }
-//
-//            @Override
-//            public CompletableFuture<BatchResponse> read() {
-//
-//                return delegate.read().thenApply(result -> {
-//                    final Map<String, Page<Map<String, Object>>> pages = new HashMap<>();
-//                    objectSchemas.forEach(objectSchema -> {
-//                        final Page.Token objectToken = tokens.get(objectSchema.getQualifiedName().toString());
-//                        final Page.OffsetToken offsetToken = Page.OffsetToken.fromToken(objectToken);
-//                        if (!offsetToken.isComplete()) {
-//                            final Page<Map<String, Object>> page = result.query(objectSchema, query, sort, offsetToken.getToken());
-//                            pages.put(objectSchema.getQualifiedName().toString(), page);
-//                        }
-//                    });
-//                    final Page<Map<String, Object>> page = Page.merge(pages, Instance.comparator(sort), count);
-//                    return result.withQuery(schema, query, sort, token, page);
-//                });
-//            }
-//        };
     }
 
     @Override
-    default Pager<Map<String, Object>> queryView(final ViewSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    default Pager<Map<String, Object>> query(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        throw new UnsupportedOperationException();
+        if(schema instanceof ViewSchema) {
+            return queryView((ViewSchema)schema, query, sort, expand);
+        } else if(schema instanceof InterfaceSchema) {
+            return queryInterface((InterfaceSchema)schema, query, sort, expand);
+        } else {
+            return queryObject((ObjectSchema)schema, query, sort, expand);
+        }
     }
 
-    interface ReadTransaction extends Storage.ReadTransaction {
+    interface ReadTransaction extends LayeredStorage.ReadTransaction {
 
         @Override
+        default Storage.ReadTransaction get(final ReferableSchema schema, final String id, final Set<Name> expand) {
+
+            if(schema instanceof ObjectSchema) {
+                return getObject((ObjectSchema)schema, id, expand);
+            } else {
+                return getInterface((InterfaceSchema) schema, id, expand);
+            }
+        }
+
+        @Override
+        default Storage.ReadTransaction getVersion(final ReferableSchema schema, final String id, final long version, final Set<Name> expand) {
+
+            if(schema instanceof ObjectSchema) {
+                return getObjectVersion((ObjectSchema)schema, id, version, expand);
+            } else {
+                return getInterfaceVersion((InterfaceSchema) schema, id, version, expand);
+            }
+        }
+
         default Storage.ReadTransaction getInterface(final InterfaceSchema schema, final String id, final Set<Name> expand) {
 
-            final Storage.ReadTransaction delegate = this;
             final Collection<ObjectSchema> objectSchemas = schema.getConcreteExtended();
-            objectSchemas.forEach(object -> delegate.getObject(object, id, expand));
+            objectSchemas.forEach(object -> getObject(object, id, expand));
+            final ReadTransaction delegate = this;
             return new Storage.ReadTransaction.Delegating() {
 
                 @Override
-                public Storage.ReadTransaction delegate() {
+                public Storage.ReadTransaction delegate(final ReferableSchema schema) {
 
                     return delegate;
                 }
@@ -158,16 +161,15 @@ public interface DefaultLayeredStorage extends ValidatingStorage {
             };
         }
 
-        @Override
         default Storage.ReadTransaction getInterfaceVersion(final InterfaceSchema schema, final String id, final long version, final Set<Name> expand) {
 
-            final Storage.ReadTransaction delegate = this;
             final Collection<ObjectSchema> objectSchemas = schema.getConcreteExtended();
-            objectSchemas.forEach(object -> delegate.getObjectVersion(object, id, version, expand));
+            objectSchemas.forEach(object -> getObjectVersion(object, id, version, expand));
+            final ReadTransaction delegate = this;
             return new Storage.ReadTransaction.Delegating() {
 
                 @Override
-                public Storage.ReadTransaction delegate() {
+                public Storage.ReadTransaction delegate(final ReferableSchema schema) {
 
                     return delegate;
                 }
@@ -189,17 +191,9 @@ public interface DefaultLayeredStorage extends ValidatingStorage {
         }
     }
 
-    interface WriteTransaction extends Storage.WriteTransaction {
+    interface WriteTransaction extends LayeredStorage.WriteTransaction {
 
         StorageTraits storageTraits(ReferableSchema schema);
-
-        void createObjectLayer(ReferableSchema schema, String id, Map<String, Object> after);
-
-        void updateObjectLayer(ReferableSchema schema, String id, Map<String, Object> before, Map<String, Object> after);
-
-        void deleteObjectLayer(ReferableSchema schema, String id, Map<String, Object> before);
-
-        void writeHistoryLayer(ReferableSchema schema, String id, Map<String, Object> after);
 
         @Override
         default Storage.WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {

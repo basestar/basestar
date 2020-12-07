@@ -138,34 +138,18 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
                 }
 
                 @Override
-                public ReadTransaction getInterface(final InterfaceSchema schema, final String id, final Set<Name> expand) {
+                public ReadTransaction get(final ReferableSchema schema, final String id, final Set<Name> expand) {
 
-                    primaryTransaction(schema).getInterface(schema, id, expand);
-                    replicaTransaction(schema).getInterface(schema, id, expand);
-                    return null;
-                }
-
-                @Override
-                public ReadTransaction getInterfaceVersion(final InterfaceSchema schema, final String id, final long version, final Set<Name> expand) {
-
-                    primaryTransaction(schema).getInterface(schema, id, expand);
-                    replicaTransaction(schema).getInterface(schema, id, expand);
-                    return null;
-                }
-
-                @Override
-                public ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
-
-                    primaryTransaction(schema).getObject(schema, id, expand);
-                    replicaTransaction(schema).getObject(schema, id, expand);
+                    primaryTransaction(schema).get(schema, id, expand);
+                    replicaTransaction(schema).get(schema, id, expand);
                     return this;
                 }
 
                 @Override
-                public ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+                public ReadTransaction getVersion(final ReferableSchema schema, final String id, final long version, final Set<Name> expand) {
 
-                    primaryTransaction(schema).getObjectVersion(schema, id, version, expand);
-                    replicaTransaction(schema).getObjectVersion(schema, id, version, expand);
+                    primaryTransaction(schema).getVersion(schema, id, version, expand);
+                    replicaTransaction(schema).getVersion(schema, id, version, expand);
                     return this;
                 }
 

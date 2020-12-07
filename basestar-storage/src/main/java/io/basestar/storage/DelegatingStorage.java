@@ -22,7 +22,10 @@ package io.basestar.storage;
 
 import io.basestar.event.Event;
 import io.basestar.expression.Expression;
-import io.basestar.schema.*;
+import io.basestar.schema.Consistency;
+import io.basestar.schema.LinkableSchema;
+import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.util.CompletableFutures;
 import io.basestar.util.Name;
 import io.basestar.util.Pager;
@@ -63,21 +66,23 @@ public interface DelegatingStorage extends Storage {
     }
 
     @Override
-    default Pager<Map<String, Object>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    default CompletableFuture<Map<String, Object>> get(final Consistency consistency, final ReferableSchema schema, final String id, final Set<Name> expand) {
 
-        return storage(schema).queryObject(schema, query, sort, expand);
+        // Explicit non-delegation, default implementation must be called to reach read() override
+        return Storage.super.get(consistency, schema, id, expand);
     }
 
     @Override
-    default Pager<Map<String, Object>> queryInterface(final InterfaceSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    default CompletableFuture<Map<String, Object>> getVersion(final Consistency consistency, final ReferableSchema schema, final String id, final long version, final Set<Name> expand) {
 
-        return storage(schema).queryInterface(schema, query, sort, expand);
+        // Explicit non-delegation, default implementation must be called to reach read() override
+        return Storage.super.getVersion(consistency, schema, id, version, expand);
     }
 
     @Override
-    default Pager<Map<String, Object>> queryView(final ViewSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    default Pager<Map<String, Object>> query(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        return storage(schema).queryView(schema, query, sort, expand);
+        return storage(schema).query(schema, query, sort, expand);
     }
 
     @Override
@@ -103,35 +108,23 @@ public interface DelegatingStorage extends Storage {
 
         final IdentityHashMap<Storage, ReadTransaction> transactions = new IdentityHashMap<>();
         return new ReadTransaction() {
-            @Override
-            public ReadTransaction getInterface(final InterfaceSchema schema, final String id, final Set<Name> expand) {
 
-                transactions.computeIfAbsent(storage(schema), v -> v.read(consistency))
-                        .getInterface(schema, id, expand);
+            public ReadTransaction delegate(final ReferableSchema schema) {
+
+                return transactions.computeIfAbsent(storage(schema), v -> v.read(consistency));
+            }
+
+            @Override
+            public ReadTransaction get(final ReferableSchema schema, final String id, final Set<Name> expand) {
+
+                delegate(schema).get(schema, id, expand);
                 return this;
             }
 
             @Override
-            public ReadTransaction getInterfaceVersion(final InterfaceSchema schema, final String id, final long version, final Set<Name> expand) {
+            public ReadTransaction getVersion(final ReferableSchema schema, final String id, final long version, final Set<Name> expand) {
 
-                transactions.computeIfAbsent(storage(schema), v -> v.read(consistency))
-                        .getInterfaceVersion(schema, id, version, expand);
-                return this;
-            }
-
-            @Override
-            public ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
-
-                transactions.computeIfAbsent(storage(schema), v -> v.read(consistency))
-                        .getObject(schema, id, expand);
-                return this;
-            }
-
-            @Override
-            public ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
-
-                transactions.computeIfAbsent(storage(schema), v -> v.read(consistency))
-                        .getObjectVersion(schema, id, version, expand);
+                delegate(schema).getVersion(schema, id, version, expand);
                 return this;
             }
 
@@ -149,30 +142,30 @@ public interface DelegatingStorage extends Storage {
 
         final IdentityHashMap<Storage, WriteTransaction> transactions = new IdentityHashMap<>();
         return new WriteTransaction() {
+
+            public WriteTransaction delegate(final ObjectSchema schema) {
+
+                return transactions.computeIfAbsent(storage(schema), v -> v.write(consistency, versioning));
+            }
+
             @Override
             public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
-                transactions.computeIfAbsent(storage(schema), v -> v.write(consistency, versioning))
-                        .createObject(schema, id, after);
-
+                delegate(schema).createObject(schema, id, after);
                 return this;
             }
 
             @Override
             public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
-                transactions.computeIfAbsent(storage(schema), v -> v.write(consistency, versioning))
-                        .updateObject(schema, id, before, after);
-
+                delegate(schema).updateObject(schema, id, before, after);
                 return this;
             }
 
             @Override
             public WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
 
-                transactions.computeIfAbsent(storage(schema), v -> v.write(consistency, versioning))
-                        .deleteObject(schema, id, before);
-
+                delegate(schema).deleteObject(schema, id, before);
                 return this;
             }
 

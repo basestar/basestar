@@ -139,7 +139,7 @@ public class StorageSubscriptions implements Subscriptions {
 
         final Expression expression = new Or(keys.stream().map(StorageSubscriptions::keyExpression).toArray(Expression[]::new));
 
-        return storage.queryObject(SCHEMA, expression, sort(), Collections.emptySet()).map(this::fromMap);
+        return storage.query(SCHEMA, expression, sort(), Collections.emptySet()).map(this::fromMap);
     }
 
     private Subscription fromMap(final Map<String, Object> object) {
@@ -166,7 +166,7 @@ public class StorageSubscriptions implements Subscriptions {
     public CompletableFuture<?> unsubscribe(final String sub, final String channel) {
 
         final String id = id(sub, channel);
-        return storage.getObject(Consistency.ATOMIC, SCHEMA, id, Collections.emptySet()).thenCompose(before -> {
+        return storage.get(Consistency.ATOMIC, SCHEMA, id, Collections.emptySet()).thenCompose(before -> {
             final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC, Versioning.CHECKED);
             write.deleteObject(SCHEMA, id(sub, channel), before);
             return write.write();
@@ -179,7 +179,7 @@ public class StorageSubscriptions implements Subscriptions {
         final Context context = Context.init(ImmutableMap.of("s", sub));
         final Expression expression = Expression.parseAndBind(context, "sub == s");
 
-        return unsubscribeAll(storage.queryObject(SCHEMA, expression, sort(), Collections.emptySet()), null);
+        return unsubscribeAll(storage.query(SCHEMA, expression, sort(), Collections.emptySet()), null);
     }
 
     private CompletableFuture<?> unsubscribeAll(final Pager<Map<String, Object>> pager, final Page.Token token) {

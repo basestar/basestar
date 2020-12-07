@@ -18,7 +18,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-public interface DefaultIndexStorage extends DefaultLayeredStorage {
+public interface DefaultIndexStorage extends IndexStorage, DefaultLayerStorage {
 
     @Override
     ReadTransaction read(Consistency consistency);
@@ -26,32 +26,19 @@ public interface DefaultIndexStorage extends DefaultLayeredStorage {
     @Override
     WriteTransaction write(Consistency consistency, Versioning versioning);
 
-    static List<Index> getAsyncIndexes(final StorageTraits traits, final ObjectSchema schema) {
-
-        return schema.getIndexes().values().stream()
-                .filter(index -> index.getConsistency(traits.getIndexConsistency(index.isMultiValue())).isAsync())
-                .collect(Collectors.toList());
-    }
-
-    static List<Index> getSyncIndexes(final StorageTraits traits, final ObjectSchema schema) {
-
-        return schema.getIndexes().values().stream()
-                .filter(index -> !index.getConsistency(traits.getIndexConsistency(index.isMultiValue())).isAsync())
-                .collect(Collectors.toList());
-    }
 
     @Override
     default CompletableFuture<Set<Event>> afterCreate(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
         final StorageTraits traits = storageTraits(schema);
-        final List<Index> indexes = getAsyncIndexes(traits, schema);
+        final List<Index> indexes = IndexStorage.getAsyncIndexes(traits, schema);
         if(!indexes.isEmpty()) {
-            return DefaultLayeredStorage.super.afterCreate(schema, id, after)
+            return DefaultLayerStorage.super.afterCreate(schema, id, after)
                     .thenCompose(events -> write(Consistency.ATOMIC, Versioning.CHECKED)
                         .createIndexes(schema, indexes, id, after)
                         .write().thenApply(ignored -> events));
         } else {
-            return DefaultLayeredStorage.super.afterCreate(schema, id, after);
+            return DefaultLayerStorage.super.afterCreate(schema, id, after);
         }
     }
 
@@ -59,14 +46,14 @@ public interface DefaultIndexStorage extends DefaultLayeredStorage {
     default CompletableFuture<Set<Event>> afterUpdate(final ObjectSchema schema, final String id, final long version, final Map<String, Object> before, final Map<String, Object> after) {
 
         final StorageTraits traits = storageTraits(schema);
-        final List<Index> indexes = getAsyncIndexes(traits, schema);
+        final List<Index> indexes = IndexStorage.getAsyncIndexes(traits, schema);
         if(!indexes.isEmpty()) {
-            return DefaultLayeredStorage.super.afterUpdate(schema, id, version, before, after)
+            return DefaultLayerStorage.super.afterUpdate(schema, id, version, before, after)
                     .thenCompose(events -> write(Consistency.ATOMIC, Versioning.CHECKED)
                             .updateIndexes(schema, indexes, id, before, after)
                             .write().thenApply(ignored -> events));
         } else {
-            return DefaultLayeredStorage.super.afterUpdate(schema, id, version, before, after);
+            return DefaultLayerStorage.super.afterUpdate(schema, id, version, before, after);
         }
     }
 
@@ -74,18 +61,35 @@ public interface DefaultIndexStorage extends DefaultLayeredStorage {
     default CompletableFuture<Set<Event>> afterDelete(final ObjectSchema schema, final String id, final long version, final Map<String, Object> before) {
 
         final StorageTraits traits = storageTraits(schema);
-        final List<Index> indexes = getAsyncIndexes(traits, schema);
+        final List<Index> indexes = IndexStorage.getAsyncIndexes(traits, schema);
         if(!indexes.isEmpty()) {
-            return DefaultLayeredStorage.super.afterDelete(schema, id, version, before)
+            return DefaultLayerStorage.super.afterDelete(schema, id, version, before)
                     .thenCompose(events -> write(Consistency.ATOMIC, Versioning.CHECKED)
                             .deleteIndexes(schema, indexes, id, before)
                             .write().thenApply(ignored -> events));
         } else {
-            return DefaultLayeredStorage.super.afterDelete(schema, id, version, before);
+            return DefaultLayerStorage.super.afterDelete(schema, id, version, before);
         }
     }
 
     Pager<Map<String, Object>> queryIndex(ObjectSchema schema, Index index, SatisfyResult satisfy, Map<Name, Range<Object>> query, List<Sort> sort, Set<Name> expand);
+
+    @Override
+    default Pager<Map<String, Object>> queryIndex(final ObjectSchema schema, final Index index, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        final Map<Name, Range<Object>> ranges = new HashMap<>();
+        for(final Map.Entry<Name, Range<Object>> entry : query.visit(new RangeVisitor()).entrySet()) {
+            final Name name = entry.getKey();
+            ranges.put(name, entry.getValue());
+        }
+        final Optional<SatisfyResult> optSatisfy = satisfy(index, ranges, sort);
+        if (optSatisfy.isPresent()) {
+            final SatisfyResult satisfy = optSatisfy.get();
+            return queryIndex(schema, index, satisfy, ranges, sort, expand);
+        } else {
+            throw new UnsupportedQueryException(schema.getQualifiedName(), query, "index does not support this query");
+        }
+    }
 
     @Override
     default Pager<Map<String, Object>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
@@ -106,7 +110,7 @@ public interface DefaultIndexStorage extends DefaultLayeredStorage {
             final Optional<String> optId = constantId(ranges);
             if(optId.isPresent()) {
 
-                pagers.put(conjunction.digest(), Pager.simple(getObject(Consistency.ATOMIC, schema, optId.get(), expand)
+                pagers.put(conjunction.digest(), Pager.simple(get(Consistency.ATOMIC, schema, optId.get(), expand)
                         .thenApply(v -> v == null ? Collections.emptyList() : Collections.singletonList(v))));
 
             } else {
@@ -132,7 +136,11 @@ public interface DefaultIndexStorage extends DefaultLayeredStorage {
         return Pager.merge(Instance.comparator(sort), pagers);
     }
 
-    interface WriteTransaction extends DefaultLayeredStorage.WriteTransaction {
+    interface ReadTransaction extends IndexStorage.ReadTransaction, DefaultLayerStorage.ReadTransaction {
+
+    }
+
+    interface WriteTransaction extends IndexStorage.WriteTransaction, DefaultLayerStorage.WriteTransaction {
 
         void createIndex(ReferableSchema schema, Index index, String id, long version, Index.Key key, Map<String, Object> projection);
 
@@ -144,8 +152,8 @@ public interface DefaultIndexStorage extends DefaultLayeredStorage {
         default Storage.WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
             final StorageTraits traits = storageTraits(schema);
-            DefaultLayeredStorage.WriteTransaction.super.createObject(schema, id, after);
-            createIndexes(schema, getSyncIndexes(traits, schema), id, after);
+            DefaultLayerStorage.WriteTransaction.super.createObject(schema, id, after);
+            createIndexes(schema, IndexStorage.getSyncIndexes(traits, schema), id, after);
             return this;
         }
 
@@ -153,8 +161,8 @@ public interface DefaultIndexStorage extends DefaultLayeredStorage {
         default Storage.WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
             final StorageTraits traits = storageTraits(schema);
-            DefaultLayeredStorage.WriteTransaction.super.updateObject(schema, id, before, after);
-            updateIndexes(schema, getSyncIndexes(traits, schema), id, before, after);
+            DefaultLayerStorage.WriteTransaction.super.updateObject(schema, id, before, after);
+            updateIndexes(schema, IndexStorage.getSyncIndexes(traits, schema), id, before, after);
             return this;
         }
 
@@ -162,13 +170,14 @@ public interface DefaultIndexStorage extends DefaultLayeredStorage {
         default Storage.WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
 
             final StorageTraits traits = storageTraits(schema);
-            DefaultLayeredStorage.WriteTransaction.super.deleteObject(schema, id, before);
+            DefaultLayerStorage.WriteTransaction.super.deleteObject(schema, id, before);
             schema.getIndirectExtend().forEach(layer -> deleteObjectLayer(layer, id, before));
-            deleteIndexes(schema, getSyncIndexes(traits, schema), id, before);
+            deleteIndexes(schema, IndexStorage.getSyncIndexes(traits, schema), id, before);
             return this;
         }
 
-        default WriteTransaction createIndexes(final ReferableSchema schema, final List<Index> indexes, final String id, final Map<String, Object> after) {
+        @Override
+        default IndexStorage.WriteTransaction createIndexes(final ReferableSchema schema, final List<Index> indexes, final String id, final Map<String, Object> after) {
 
             indexes.forEach(index -> {
                 final Map<Index.Key, Map<String, Object>> records = index.readValues(after);
@@ -177,7 +186,8 @@ public interface DefaultIndexStorage extends DefaultLayeredStorage {
             return this;
         }
 
-        default WriteTransaction updateIndexes(final ReferableSchema schema, final List<Index> indexes, final String id, final Map<String, Object> before, final Map<String, Object> after) {
+        @Override
+        default IndexStorage.WriteTransaction updateIndexes(final ReferableSchema schema, final List<Index> indexes, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
             if(before != null) {
                 long version = Instance.getVersion(before);
@@ -196,7 +206,8 @@ public interface DefaultIndexStorage extends DefaultLayeredStorage {
             return this;
         }
 
-        default WriteTransaction deleteIndexes(final ReferableSchema schema, final List<Index> indexes, final String id, final Map<String, Object> before) {
+        @Override
+        default IndexStorage.WriteTransaction deleteIndexes(final ReferableSchema schema, final List<Index> indexes, final String id, final Map<String, Object> before) {
 
             if(before != null) {
                 long version = Instance.getVersion(before);

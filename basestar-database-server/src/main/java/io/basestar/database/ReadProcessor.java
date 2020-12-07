@@ -279,18 +279,10 @@ public class ReadProcessor {
                 refs.forEach(ref -> {
                     final RefKey refKey = ref.getKey();
                     final ReferableSchema schema = referableSchema(refKey.getSchema());
-                    if(schema instanceof ObjectSchema) {
-                        if (refKey.getVersion() != null) {
-                            readTransaction.getObjectVersion((ObjectSchema)schema, refKey.getId(), refKey.getVersion(), ref.getExpand());
-                        } else {
-                            readTransaction.getObject((ObjectSchema)schema, refKey.getId(), ref.getExpand());
-                        }
+                    if (refKey.getVersion() != null) {
+                        readTransaction.getVersion(schema, refKey.getId(), refKey.getVersion(), ref.getExpand());
                     } else {
-                        if (refKey.getVersion() != null) {
-                            readTransaction.getInterfaceVersion((InterfaceSchema) schema, refKey.getId(), refKey.getVersion(), ref.getExpand());
-                        } else {
-                            readTransaction.getInterface((InterfaceSchema)schema, refKey.getId(), ref.getExpand());
-                        }
+                        readTransaction.get(schema, refKey.getId(), ref.getExpand());
                     }
                 });
 

@@ -28,7 +28,7 @@ import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class StepFunctionStorage implements DefaultLayeredStorage {
+public class StepFunctionStorage implements DefaultLayerStorage {
 
     // An execution object is at version 1 if running, 2 if complete
     private static final long MIN_VERSION = 1L;
@@ -186,14 +186,14 @@ public class StepFunctionStorage implements DefaultLayeredStorage {
             private final BatchCapture capture = new BatchCapture();
 
             @Override
-            public Storage.ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+            public ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
                 capture.captureLatest(schema, id, expand);
                 return this;
             }
 
             @Override
-            public Storage.ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+            public ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
                 capture.captureVersion(schema, id, version, expand);
                 return this;

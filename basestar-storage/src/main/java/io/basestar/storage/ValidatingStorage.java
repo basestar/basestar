@@ -11,7 +11,7 @@ import java.util.Map;
 public interface ValidatingStorage extends Storage {
 
     @Override
-    default void validate(ObjectSchema schema) {
+    default void validate(final ObjectSchema schema) {
 
         final StorageTraits storageTraits = storageTraits(schema);
         final Consistency bestHistoryWrite = storageTraits.getHistoryConsistency();

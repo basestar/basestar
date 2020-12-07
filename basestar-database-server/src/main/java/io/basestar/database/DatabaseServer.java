@@ -211,11 +211,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                 beforeKeys.forEach(expandKey -> {
                     final RefKey key = expandKey.getKey();
                     final ReferableSchema objectSchema = referableSchema(key.getSchema());
-                    if(objectSchema instanceof ObjectSchema) {
-                        read.getObject((ObjectSchema) objectSchema, key.getId(), expandKey.getExpand());
-                    } else {
-                        read.getInterface((InterfaceSchema)objectSchema, key.getId(), expandKey.getExpand());
-                    }
+                    read.get((ObjectSchema) objectSchema, key.getId(), expandKey.getExpand());
                 });
                 beforeFuture = read.read().thenCompose(readResults -> {
 
@@ -811,8 +807,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final ObjectSchema refSchema = namespace.requireObjectSchema(event.getRef().getSchema());
         final String refId = event.getRef().getId();
         final Storage.ReadTransaction read = storage.read(Consistency.ATOMIC);
-        read.getObject(schema, id, ImmutableSet.of());
-        read.getObject(refSchema, refId, ImmutableSet.of());
+        read.get(schema, id, ImmutableSet.of());
+        read.get(refSchema, refId, ImmutableSet.of());
         final Set<Name> expand = schema.getExpand();
         return read.read().thenCompose(readResponse -> {
             final Instance before = schema.create(readResponse.get(schema, id), expand, true);

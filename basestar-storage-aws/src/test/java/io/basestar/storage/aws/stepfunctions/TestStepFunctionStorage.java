@@ -2,6 +2,8 @@ package io.basestar.storage.aws.stepfunctions;
 
 import io.basestar.schema.Namespace;
 import io.basestar.schema.ReferableSchema;
+import io.basestar.storage.MemoryStorage;
+import io.basestar.storage.SplitIndexStorage;
 import io.basestar.storage.Storage;
 import io.basestar.storage.TestStorage;
 import io.basestar.storage.aws.stepfunction.StepFunctionStorage;
@@ -81,20 +83,16 @@ public class TestStepFunctionStorage extends TestStorage {
             }
         };
 
-        return StepFunctionStorage.builder()
+        final StepFunctionStorage storage = StepFunctionStorage.builder()
                 .strategy(strategy)
                 .client(sfn)
                 .build();
+
+        return new SplitIndexStorage(storage, MemoryStorage.builder().build());
     }
 
     @Override
     protected boolean supportsOversize() {
-
-        return false;
-    }
-
-    @Override
-    protected boolean supportsIndexes() {
 
         return false;
     }

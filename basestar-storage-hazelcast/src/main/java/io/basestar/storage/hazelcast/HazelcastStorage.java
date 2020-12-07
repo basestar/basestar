@@ -52,7 +52,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 @Slf4j
-public class HazelcastStorage implements DefaultLayeredStorage {
+public class HazelcastStorage implements DefaultLayerStorage {
 
     @Nonnull
     private final HazelcastInstance instance;
@@ -224,7 +224,7 @@ public class HazelcastStorage implements DefaultLayeredStorage {
         CustomPortable apply(BatchResponse.RefKey key, CustomPortable value);
     }
 
-    protected class WriteTransaction implements DefaultLayeredStorage.WriteTransaction {
+    protected class WriteTransaction implements DefaultLayerStorage.WriteTransaction {
 
         private final Map<String, Map<BatchResponse.RefKey, WriteAction>> requests = new IdentityHashMap<>();
 

@@ -31,7 +31,7 @@ import io.basestar.util.Sort;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
-public class ConstantStorage implements DefaultLayeredStorage {
+public class ConstantStorage implements DefaultLayerStorage {
 
     private final Map<Name, Map<String, Map<String, Object>>> data;
 
@@ -83,17 +83,17 @@ public class ConstantStorage implements DefaultLayeredStorage {
             private final BatchCapture capture = new BatchCapture();
 
             @Override
-            public Storage.ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+            public ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
                 capture.captureLatest(schema, id, expand);
-                return null;
+                return this;
             }
 
             @Override
-            public Storage.ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+            public ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
                 capture.captureVersion(schema, id, version, expand);
-                return null;
+                return this;
             }
 
             @Override
@@ -101,7 +101,7 @@ public class ConstantStorage implements DefaultLayeredStorage {
 
                 final Map<BatchResponse.RefKey, Map<String, Object>> refs = new HashMap<>();
                 capture.forEachRef((schema, key, args) -> {
-                    final Map<String, Object> object = get(key.getSchema(), key.getId());
+                    final Map<String, Object> object = ConstantStorage.this.get(key.getSchema(), key.getId());
                     refs.put(key, key.matchOrNull(object));
                 });
                 return CompletableFuture.completedFuture(BatchResponse.fromRefs(refs));

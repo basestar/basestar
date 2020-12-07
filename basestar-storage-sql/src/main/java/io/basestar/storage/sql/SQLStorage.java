@@ -28,7 +28,7 @@ import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseRef;
 import io.basestar.schema.use.UseStruct;
 import io.basestar.storage.BatchResponse;
-import io.basestar.storage.DefaultLayeredStorage;
+import io.basestar.storage.DefaultLayerStorage;
 import io.basestar.storage.StorageTraits;
 import io.basestar.storage.Versioning;
 import io.basestar.storage.exception.ObjectExistsException;
@@ -62,7 +62,7 @@ import java.util.stream.Collectors;
  */
 
 @Slf4j
-public class SQLStorage implements DefaultLayeredStorage {
+public class SQLStorage implements DefaultLayerStorage {
 
     private static final String COUNT_AS = "__count";
 
@@ -473,7 +473,7 @@ public class SQLStorage implements DefaultLayeredStorage {
         return new WriteTransaction();
     }
 
-    protected class WriteTransaction implements DefaultLayeredStorage.WriteTransaction {
+    protected class WriteTransaction implements DefaultLayerStorage.WriteTransaction {
 
         private final List<Function<DSLContext, BatchResponse>> steps = new ArrayList<>();
 

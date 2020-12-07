@@ -22,7 +22,10 @@ package io.basestar.storage;
 
 import io.basestar.event.Event;
 import io.basestar.expression.Expression;
-import io.basestar.schema.*;
+import io.basestar.schema.Consistency;
+import io.basestar.schema.LinkableSchema;
+import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.util.Name;
 import io.basestar.util.Pager;
 import io.basestar.util.Sort;
@@ -55,13 +58,23 @@ public interface Storage {
         return getClass().getSimpleName();
     }
 
-//    @Deprecated
-//    Pager<RepairInfo> repair(LinkableSchema schema);
-//
-//    @Deprecated
-//    Pager<RepairInfo> repairIndex(LinkableSchema schema, Index index);
-
     void validate(ObjectSchema schema);
+
+    default CompletableFuture<Map<String, Object>> get(final Consistency consistency, final ReferableSchema schema, final String id, final Set<Name> expand) {
+
+        return read(consistency)
+                .get(schema, id, expand)
+                .read().thenApply(results -> results.get(schema.getQualifiedName(), id));
+    }
+
+    default CompletableFuture<Map<String, Object>> getVersion(final Consistency consistency, final ReferableSchema schema, final String id, final long version, final Set<Name> expand) {
+
+        return read(consistency)
+                .getVersion(schema, id, version, expand)
+                .read().thenApply(results -> results.getVersion(schema.getQualifiedName(), id, version));
+    }
+
+    Pager<Map<String, Object>> query(LinkableSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
 
     CompletableFuture<Set<Event>> afterCreate(ObjectSchema schema, String id, Map<String, Object> after);
 
@@ -69,61 +82,59 @@ public interface Storage {
 
     CompletableFuture<Set<Event>> afterDelete(ObjectSchema schema, String id, long version, Map<String, Object> before);
 
-    Pager<Map<String, Object>> queryInterface(InterfaceSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
-
-    Pager<Map<String, Object>> queryObject(ObjectSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
-
-    Pager<Map<String, Object>> queryView(ViewSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
-
     interface ReadTransaction {
 
-        ReadTransaction getInterface(InterfaceSchema schema, String id, Set<Name> expand);
+        ReadTransaction get(ReferableSchema schema, String id, Set<Name> expand);
 
-        ReadTransaction getInterfaceVersion(InterfaceSchema schema, String id, long version, Set<Name> expand);
+        ReadTransaction getVersion(ReferableSchema schema, String id, long version, Set<Name> expand);
 
-        ReadTransaction getObject(ObjectSchema schema, String id, Set<Name> expand);
-
-        ReadTransaction getObjectVersion(ObjectSchema schema, String id, long version, Set<Name> expand);
-//
         CompletableFuture<BatchResponse> read();
 
         interface Delegating extends ReadTransaction {
 
-            ReadTransaction delegate();
+            ReadTransaction delegate(ReferableSchema schema);
 
             @Override
-            default ReadTransaction getInterface(final InterfaceSchema schema, final String id, final Set<Name> expand) {
+            default ReadTransaction get(final ReferableSchema schema, final String id, final Set<Name> expand) {
 
-                delegate().getInterface(schema, id, expand);
+                delegate(schema).get(schema, id, expand);
                 return this;
             }
 
             @Override
-            default ReadTransaction getInterfaceVersion(final InterfaceSchema schema, final String id, final long version, final Set<Name> expand) {
+            default ReadTransaction getVersion(final ReferableSchema schema, final String id, final long version, final Set<Name> expand) {
 
-                delegate().getInterfaceVersion(schema, id, version, expand);
+                delegate(schema).getVersion(schema, id, version, expand);
                 return this;
             }
 
-            @Override
-            default ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
-
-                delegate().getObject(schema, id, expand);
-                return this;
-            }
-
-            @Override
-            default ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
-
-                delegate().getObjectVersion(schema, id, version, expand);
-                return this;
-            }
-
-            @Override
-            default CompletableFuture<BatchResponse> read() {
-
-                return delegate().read();
-            }
+//            @Override
+//            default ReadTransaction getInterface(final InterfaceSchema schema, final String id, final Set<Name> expand) {
+//
+//                delegate(schema).getInterface(schema, id, expand);
+//                return this;
+//            }
+//
+//            @Override
+//            default ReadTransaction getInterfaceVersion(final InterfaceSchema schema, final String id, final long version, final Set<Name> expand) {
+//
+//                delegate(schema).getInterfaceVersion(schema, id, version, expand);
+//                return this;
+//            }
+//
+//            @Override
+//            default ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+//
+//                delegate(schema).getObject(schema, id, expand);
+//                return this;
+//            }
+//
+//            @Override
+//            default ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+//
+//                delegate(schema).getObjectVersion(schema, id, version, expand);
+//                return this;
+//            }
         }
     }
 
@@ -139,236 +150,32 @@ public interface Storage {
 
         interface Delegating extends WriteTransaction {
 
-            WriteTransaction delegate();
+            WriteTransaction delegate(final ObjectSchema schema);
 
             @Override
             default WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
-                delegate().createObject(schema, id, after);
+                delegate(schema).createObject(schema, id, after);
                 return this;
             }
 
             @Override
             default WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
-                delegate().updateObject(schema, id, before, after);
+                delegate(schema).updateObject(schema, id, before, after);
                 return this;
             }
 
             @Override
             default WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
 
-                delegate().deleteObject(schema, id, before);
+                delegate(schema).deleteObject(schema, id, before);
                 return this;
             }
-
-//            @Override
-//            default WriteTransaction writeHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
-//
-//                delegate().writeHistory(schema, id, version, after);
-//                return this;
-//            }
-//
-//            @Override
-//            default WriteTransaction createIndex(final ReferableSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-//
-//                delegate().createIndex(schema, index, id, version, key, projection);
-//                return this;
-//            }
-//
-//            @Override
-//            default WriteTransaction updateIndex(final ReferableSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-//
-//                delegate().createIndex(schema, index, id, version, key, projection);
-//                return this;
-//            }
-//
-//            @Override
-//            default WriteTransaction deleteIndex(final ReferableSchema schema, final Index index, final String id, final long version, final Index.Key key) {
-//
-//                delegate().deleteIndex(schema, index, id, version, key);
-//                return this;
-//            }
-
-            @Override
-            default CompletableFuture<BatchResponse> write() {
-
-                return delegate().write();
-            }
         }
     }
 
-    default CompletableFuture<Map<String, Object>> get(final Consistency consistency, final ReferableSchema schema, final String id, final Set<Name> expand) {
+    interface Scan {
 
-        if(schema instanceof InterfaceSchema) {
-            return getInterface(consistency, (InterfaceSchema)schema, id, expand);
-        } else {
-            return getObject(consistency, (ObjectSchema)schema, id, expand);
-        }
     }
-
-    default CompletableFuture<Map<String, Object>> getVersion(final Consistency consistency, final ReferableSchema schema, final String id, final long version, final Set<Name> expand) {
-
-        if(schema instanceof InterfaceSchema) {
-            return getInterfaceVersion(consistency, (InterfaceSchema)schema, id, version, expand);
-        } else {
-            return getObjectVersion(consistency, (ObjectSchema)schema, id, version, expand);
-        }
-    }
-
-    default Pager<Map<String, Object>> query(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
-
-        if(schema instanceof ViewSchema) {
-            return queryView((ViewSchema)schema, query, sort, expand);
-        } else if(schema instanceof InterfaceSchema) {
-            return queryInterface((InterfaceSchema)schema, query, sort, expand);
-        } else {
-            return queryObject((ObjectSchema)schema, query, sort, expand);
-        }
-    }
-
-    default CompletableFuture<Map<String, Object>> getObject(final Consistency consistency, final ObjectSchema schema, final String id, final Set<Name> expand) {
-
-        return read(consistency)
-                .getObject(schema, id, expand)
-                .read().thenApply(results -> results.get(schema.getQualifiedName(), id));
-    }
-
-    default CompletableFuture<Map<String, Object>> getObjectVersion(final Consistency consistency, final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
-
-        return read(consistency)
-                .getObjectVersion(schema, id, version, expand)
-                .read().thenApply(results -> results.getVersion(schema.getQualifiedName(), id, version));
-    }
-
-    default CompletableFuture<Map<String, Object>> getInterface(final Consistency consistency, final InterfaceSchema schema, final String id, final Set<Name> expand) {
-
-        return read(consistency)
-                .getInterface(schema, id, expand)
-                .read().thenApply(results -> results.get(schema.getQualifiedName(), id));
-    }
-
-    default CompletableFuture<Map<String, Object>> getInterfaceVersion(final Consistency consistency, final InterfaceSchema schema, final String id, final long version, final Set<Name> expand) {
-
-        return read(consistency)
-                .getInterfaceVersion(schema, id, version, expand)
-                .read().thenApply(results -> results.getVersion(schema.getQualifiedName(), id, version));
-    }
-//
-//    default CompletableFuture<?> asyncIndexCreated(final ObjectSchema schema, final Index index, String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-//
-//        final WriteTransaction write = write(Consistency.ASYNC, Versioning.CHECKED);
-//        write.createIndex(schema, index, id, version, key, projection);
-//        return write.write();
-//    }
-//
-//    default CompletableFuture<?> asyncIndexUpdated(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-//
-//        final WriteTransaction write = write(Consistency.ASYNC, Versioning.CHECKED);
-//        write.updateIndex(schema, index, id, version, key, projection);
-//        return write.write();
-//    }
-//
-//    default CompletableFuture<?> asyncIndexDeleted(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
-//
-//        final WriteTransaction write = write(Consistency.ASYNC, Versioning.CHECKED);
-//        write.deleteIndex(schema, index, id, version, key);
-//        return write.write();
-//    }
-//
-//    default CompletableFuture<?> asyncHistoryCreated(final ObjectSchema schema, String id, final long version, Map<String, Object> after) {
-//
-//        final WriteTransaction write = write(Consistency.ASYNC, Versioning.CHECKED);
-//        write.writeHistory(schema, id, version, after);
-//        return write.write();
-//    }
-
-
-//    interface WithoutWriteHistory extends Storage {
-//
-//        @Override
-//        default CompletableFuture<?> asyncHistoryCreated(final ObjectSchema schema, String id, final long version, Map<String, Object> after) {
-//
-//            throw new UnsupportedOperationException();
-//        }
-//    }
-
-//    interface WithoutWriteIndex extends Storage {
-//
-//        @Override
-//        default CompletableFuture<?> asyncIndexCreated(final ObjectSchema schema, final Index index, String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-//
-//            throw new UnsupportedOperationException();
-//        }
-//
-//        @Override
-//        default CompletableFuture<?> asyncIndexUpdated(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-//
-//            throw new UnsupportedOperationException();
-//        }
-//
-//        @Override
-//        default CompletableFuture<?> asyncIndexDeleted(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
-//
-//            throw new UnsupportedOperationException();
-//        }
-//    }
-
-//    interface WithWriteHistory extends Storage {
-//
-//        @Override
-//        WriteTransaction write(Consistency consistency, Versioning versioning);
-//
-//        @Override
-//        default CompletableFuture<?> asyncHistoryCreated(final ObjectSchema schema, String id, final long version, Map<String, Object> after) {
-//
-//            final WriteTransaction write = write(Consistency.ASYNC, Versioning.CHECKED);
-//            write.createHistory(schema, id, version, after);
-//            return write.write();
-//        }
-//
-//        interface WriteTransaction extends Storage.WriteTransaction {
-//
-//            WriteTransaction createHistory(ObjectSchema schema, String id, long version, Map<String, Object> after);
-//        }
-//    }
-
-//    interface WithWriteIndex extends Storage {
-//
-//        @Override
-//        WriteTransaction write(Consistency consistency, Versioning versioning);
-//
-//        @Override
-//        default CompletableFuture<?> asyncIndexCreated(final ObjectSchema schema, final Index index, String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-//
-//            final WriteTransaction write = write(Consistency.ASYNC, Versioning.CHECKED);
-//            write.createIndex(schema, index, id, version, key, projection);
-//            return write.write();
-//        }
-//
-//        @Override
-//        default CompletableFuture<?> asyncIndexUpdated(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-//
-//            final WriteTransaction write = write(Consistency.ASYNC, Versioning.CHECKED);
-//            write.updateIndex(schema, index, id, version, key, projection);
-//            return write.write();
-//        }
-//
-//        @Override
-//        default CompletableFuture<?> asyncIndexDeleted(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
-//
-//            final WriteTransaction write = write(Consistency.ASYNC, Versioning.CHECKED);
-//            write.deleteIndex(schema, index, id, version, key);
-//            return write.write();
-//        }
-//
-//        interface WriteTransaction extends Storage.WriteTransaction {
-//
-//            WriteTransaction createIndex(ReferableSchema schema, Index index, String id, long version, Index.Key key, Map<String, Object> projection);
-//
-//            WriteTransaction updateIndex(ReferableSchema schema, Index index, String id, long version, Index.Key key, Map<String, Object> projection);
-//
-//            WriteTransaction deleteIndex(ReferableSchema schema, Index index, String id, long version, Index.Key key);
-//        }
-//    }
 }

@@ -63,7 +63,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Function;
 
 @Slf4j
-public class ElasticsearchStorage implements DefaultLayeredStorage {
+public class ElasticsearchStorage implements DefaultLayerStorage {
 
     private static final String PRIMARY_TERM_KEY = "@primaryTerm";
 
@@ -335,7 +335,7 @@ public class ElasticsearchStorage implements DefaultLayeredStorage {
         return new WriteTransaction(consistency, versioning);
     }
 
-    protected class WriteTransaction implements DefaultLayeredStorage.WriteTransaction {
+    protected class WriteTransaction implements DefaultLayerStorage.WriteTransaction {
 
         private final WriteRequest.RefreshPolicy refreshPolicy;
 

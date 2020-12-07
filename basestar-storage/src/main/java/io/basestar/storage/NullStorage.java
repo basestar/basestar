@@ -37,7 +37,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 @RequiredArgsConstructor
-public class NullStorage implements DefaultLayeredStorage {
+public class NullStorage implements DefaultLayerStorage {
 
     private final EventStrategy eventStrategy;
 
@@ -53,13 +53,13 @@ public class NullStorage implements DefaultLayeredStorage {
         return new ReadTransaction() {
 
             @Override
-            public Storage.ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+            public ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
                 return this;
             }
 
             @Override
-            public Storage.ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+            public ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
                 return this;
             }
