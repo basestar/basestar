@@ -47,9 +47,9 @@ MyView:
   from: MyObject
   where: a + "_" + b
 
-ns1.ns2.MyObject:
-  type: object
-  extend: MyObject
+#ns1.ns2.MyObject:
+#  type: object
+#  extend: MyObject
 
 ns1.ns2.UPPERCASE:
   type: object

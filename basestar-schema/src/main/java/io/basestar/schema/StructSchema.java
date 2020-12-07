@@ -187,7 +187,7 @@ public class StructSchema implements InstanceSchema {
         this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
         this.extend = Immutable.transform(descriptor.getExtend(), resolver::requireStructSchema);
         this.description = descriptor.getDescription();
-        this.declaredProperties = Immutable.transformSorted(descriptor.getProperties(), (k, v) -> v.build(resolver, version, qualifiedName.with(k)));
+        this.declaredProperties = Immutable.transformValuesSorted(descriptor.getProperties(), (k, v) -> v.build(resolver, version, qualifiedName.with(k)));
         this.declaredProperties.forEach((k, v) -> {
             if(v.isImmutable()) {
                 throw new SchemaValidationException(qualifiedName, "Struct types cannot have immutable properties");

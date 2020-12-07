@@ -20,11 +20,10 @@ package io.basestar.storage;
  * #L%
  */
 
+import io.basestar.event.Event;
 import io.basestar.expression.Expression;
-import io.basestar.expression.aggregate.Aggregate;
-import io.basestar.schema.Consistency;
-import io.basestar.schema.Index;
-import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.*;
+import io.basestar.util.CompletableFutures;
 import io.basestar.util.Name;
 import io.basestar.util.Pager;
 import io.basestar.util.Sort;
@@ -37,7 +36,7 @@ import java.util.concurrent.CompletableFuture;
 
 public interface DelegatingStorage extends Storage {
 
-    Storage storage(ObjectSchema schema);
+    Storage storage(LinkableSchema schema);
 
     @Override
     default void validate(final ObjectSchema schema) {
@@ -46,87 +45,57 @@ public interface DelegatingStorage extends Storage {
     }
 
     @Override
-    default String name(final ObjectSchema schema) {
-
-        return storage(schema).name(schema);
-    }
-
-    @Override
-    default CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
-
-        return storage(schema).readObject(schema, id, expand);
-    }
-
-    @Override
-    default CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
-
-        return storage(schema).readObjectVersion(schema, id, version, expand);
-    }
-
-    @Override
-    default List<Pager.Source<Map<String, Object>>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
-
-        return storage(schema).queryObject(schema, query, sort, expand);
-    }
-
-    @Override
-    default List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
-
-        return storage(schema).aggregate(schema, query, group, aggregates);
-    }
-
-    @Override
-    default EventStrategy eventStrategy(final ObjectSchema schema) {
+    default EventStrategy eventStrategy(final ReferableSchema schema) {
 
         return storage(schema).eventStrategy(schema);
     }
 
     @Override
-    default StorageTraits storageTraits(final ObjectSchema schema) {
+    default StorageTraits storageTraits(final ReferableSchema schema) {
 
         return storage(schema).storageTraits(schema);
     }
 
     @Override
-    default Set<Name> supportedExpand(final ObjectSchema schema, final Set<Name> expand) {
+    default Set<Name> supportedExpand(final LinkableSchema schema, final Set<Name> expand) {
 
         return storage(schema).supportedExpand(schema, expand);
     }
 
     @Override
-    default CompletableFuture<?> asyncIndexCreated(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+    default Pager<Map<String, Object>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        return storage(schema).asyncIndexCreated(schema, index, id, version, key, projection);
+        return storage(schema).queryObject(schema, query, sort, expand);
     }
 
     @Override
-    default CompletableFuture<?> asyncIndexUpdated(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+    default Pager<Map<String, Object>> queryInterface(final InterfaceSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        return storage(schema).asyncIndexUpdated(schema, index, id, version, key, projection);
+        return storage(schema).queryInterface(schema, query, sort, expand);
     }
 
     @Override
-    default CompletableFuture<?> asyncIndexDeleted(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
+    default Pager<Map<String, Object>> queryView(final ViewSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        return storage(schema).asyncIndexDeleted(schema, index, id, version, key);
+        return storage(schema).queryView(schema, query, sort, expand);
     }
 
     @Override
-    default CompletableFuture<?> asyncHistoryCreated(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
+    default CompletableFuture<Set<Event>> afterCreate(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
-        return storage(schema).asyncHistoryCreated(schema, id, version, after);
+        return storage(schema).afterCreate(schema, id, after);
     }
 
     @Override
-    default List<Pager.Source<RepairInfo>> repair(final ObjectSchema schema) {
+    default CompletableFuture<Set<Event>> afterUpdate(final ObjectSchema schema, final String id, final long version, final Map<String, Object> before, final Map<String, Object> after) {
 
-        return storage(schema).repair(schema);
+        return storage(schema).afterUpdate(schema, id, version, before, after);
     }
 
     @Override
-    default List<Pager.Source<RepairInfo>> repairIndex(final ObjectSchema schema, final Index index) {
+    default CompletableFuture<Set<Event>> afterDelete(final ObjectSchema schema, final String id, final long version, final Map<String, Object> before) {
 
-        return storage(schema).repairIndex(schema, index);
+        return storage(schema).afterDelete(schema, id, version, before);
     }
 
     @Override
@@ -135,27 +104,42 @@ public interface DelegatingStorage extends Storage {
         final IdentityHashMap<Storage, ReadTransaction> transactions = new IdentityHashMap<>();
         return new ReadTransaction() {
             @Override
-            public ReadTransaction readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+            public ReadTransaction getInterface(final InterfaceSchema schema, final String id, final Set<Name> expand) {
 
                 transactions.computeIfAbsent(storage(schema), v -> v.read(consistency))
-                        .readObject(schema, id, expand);
-
+                        .getInterface(schema, id, expand);
                 return this;
             }
 
             @Override
-            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+            public ReadTransaction getInterfaceVersion(final InterfaceSchema schema, final String id, final long version, final Set<Name> expand) {
 
                 transactions.computeIfAbsent(storage(schema), v -> v.read(consistency))
-                        .readObjectVersion(schema, id, version, expand);
+                        .getInterfaceVersion(schema, id, version, expand);
+                return this;
+            }
 
+            @Override
+            public ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+
+                transactions.computeIfAbsent(storage(schema), v -> v.read(consistency))
+                        .getObject(schema, id, expand);
+                return this;
+            }
+
+            @Override
+            public ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+
+                transactions.computeIfAbsent(storage(schema), v -> v.read(consistency))
+                        .getObjectVersion(schema, id, version, expand);
                 return this;
             }
 
             @Override
             public CompletableFuture<BatchResponse> read() {
 
-                return BatchResponse.mergeFutures(transactions.values().stream().map(ReadTransaction::read));
+                return CompletableFutures.allOf(transactions.values().stream().map(ReadTransaction::read))
+                        .thenApply(BatchResponse::merge);
             }
         };
     }
@@ -198,8 +182,8 @@ public interface DelegatingStorage extends Storage {
                 if(consistency != Consistency.NONE && transactions.size() > 1) {
                     throw new IllegalStateException("Consistent write transaction spanned multiple storage engines");
                 } else {
-
-                    return BatchResponse.mergeFutures(transactions.values().stream().map(WriteTransaction::write));
+                    return CompletableFutures.allOf(transactions.values().stream().map(WriteTransaction::write))
+                            .thenApply(BatchResponse::merge);
                 }
             }
         };

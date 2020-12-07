@@ -20,19 +20,18 @@ package io.basestar.storage;
  * #L%
  */
 
-import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.schema.Concurrency;
-import io.basestar.schema.Consistency;
-import io.basestar.schema.Instance;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.util.*;
+import io.basestar.schema.*;
+import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
+import io.basestar.util.Pager;
+import io.basestar.util.Sort;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
-public class ConstantStorage implements Storage.WithoutAggregate, Storage.WithoutWrite, Storage.WithoutHistory, Storage.WithoutExpand, Storage.WithoutRepair {
+public class ConstantStorage implements DefaultLayeredStorage {
 
     private final Map<Name, Map<String, Map<String, Object>>> data;
 
@@ -60,49 +59,70 @@ public class ConstantStorage implements Storage.WithoutAggregate, Storage.Withou
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+    public Pager<Map<String, Object>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        final Map<String, Object> object = get(schema.getQualifiedName(), id);
-        return CompletableFuture.completedFuture(object);
-    }
-
-    @Override
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    public List<Pager.Source<Map<String, Object>>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
-
-        // Add a source that will emit matching results
-
-        return ImmutableList.of((count, token, stats) -> {
-            // Don't do any paging, just return all matches, this is compliant with Pager interface
-            final List<Map<String, Object>> page = new ArrayList<>();
-            Nullsafe.orDefault(data.get(schema.getQualifiedName())).forEach((id, item) -> {
-                if(query.evaluatePredicate(Context.init(item))) {
-                    page.add(item);
-                }
-            });
-
-            // Must be sorted
-            final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
-            page.sort(comparator);
-
-            return CompletableFuture.completedFuture(new Page<>(page, null));
+        final List<Map<String, Object>> all = new ArrayList<>();
+        Nullsafe.orDefault(data.get(schema.getQualifiedName())).forEach((id, item) -> {
+            if (query.evaluatePredicate(Context.init(item))) {
+                all.add(item);
+            }
         });
+
+        // Must be sorted
+        final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
+        all.sort(comparator);
+
+        return Pager.simple(all);
     }
 
     @Override
     public ReadTransaction read(final Consistency consistency) {
 
-        return new ReadTransaction.Basic(this);
+        return new ReadTransaction() {
+
+            private final BatchCapture capture = new BatchCapture();
+
+            @Override
+            public Storage.ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+
+                capture.captureLatest(schema, id, expand);
+                return null;
+            }
+
+            @Override
+            public Storage.ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+
+                capture.captureVersion(schema, id, version, expand);
+                return null;
+            }
+
+            @Override
+            public CompletableFuture<BatchResponse> read() {
+
+                final Map<BatchResponse.RefKey, Map<String, Object>> refs = new HashMap<>();
+                capture.forEachRef((schema, key, args) -> {
+                    final Map<String, Object> object = get(key.getSchema(), key.getId());
+                    refs.put(key, key.matchOrNull(object));
+                });
+                return CompletableFuture.completedFuture(BatchResponse.fromRefs(refs));
+            }
+        };
     }
 
     @Override
-    public EventStrategy eventStrategy(final ObjectSchema schema) {
+    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public EventStrategy eventStrategy(final ReferableSchema schema) {
 
         return EventStrategy.EMIT;
     }
 
     @Override
-    public StorageTraits storageTraits(final ObjectSchema schema) {
+    public StorageTraits storageTraits(final ReferableSchema schema) {
 
         return TRAITS;
     }

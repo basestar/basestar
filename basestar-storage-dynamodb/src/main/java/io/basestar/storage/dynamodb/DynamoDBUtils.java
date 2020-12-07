@@ -24,7 +24,6 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.util.CompletableFutures;
@@ -236,7 +235,7 @@ public class DynamoDBUtils {
         }
     }
 
-    public static byte[] toOversizeBytes(final ObjectSchema schema, final Map<String, Object> object) {
+    public static byte[] toOversizeBytes(final ReferableSchema schema, final Map<String, Object> object) {
 
         try(final ByteArrayOutputStream baos = new ByteArrayOutputStream();
             final DataOutputStream dos = new DataOutputStream(baos)) {
@@ -249,17 +248,17 @@ public class DynamoDBUtils {
 
     public static String id(final Map<String, AttributeValue> values) {
 
-        return (String)fromAttributeValue(values.get(ObjectSchema.ID));
+        return (String)fromAttributeValue(values.get(ReferableSchema.ID));
     }
 
     public static Long version(final Map<String, AttributeValue> values) {
 
-        return (Long)fromAttributeValue(values.get(ObjectSchema.VERSION));
+        return (Long)fromAttributeValue(values.get(ReferableSchema.VERSION));
     }
 
     public static String schema(final Map<String, AttributeValue> values) {
 
-        return (String)fromAttributeValue(values.get(ObjectSchema.SCHEMA));
+        return (String)fromAttributeValue(values.get(ReferableSchema.SCHEMA));
     }
 
     public static AttributeValue nul(final Boolean v) {

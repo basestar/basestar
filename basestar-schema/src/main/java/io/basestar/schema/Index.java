@@ -252,7 +252,7 @@ public class Index implements Named, Described, Serializable, Extendable {
     }
 
     @Deprecated
-    public Set<Name> requiredExpand(final ObjectSchema schema) {
+    public Set<Name> requiredExpand(final ReferableSchema schema) {
 
         final Set<Name> names = new HashSet<>(partition);
         sort.forEach(v -> names.add(v.getName()));
@@ -271,7 +271,7 @@ public class Index implements Named, Described, Serializable, Extendable {
                 .collect(Collectors.toList());
     }
 
-    public Map<String, Use<?>> projectionSchema(final ObjectSchema schema) {
+    public Map<String, Use<?>> projectionSchema(final ReferableSchema schema) {
 
         final Map<String, Use<?>> result = new HashMap<>();
         if(projection.isEmpty()) {
@@ -282,9 +282,9 @@ public class Index implements Named, Described, Serializable, Extendable {
             resolvePartitionNames().forEach(name -> members.add(name.first()));
             sort.forEach(v -> members.add(v.getName().first()));
             members.forEach(name -> result.put(name, schema.typeOf(Name.of(name))));
-            result.put(ObjectSchema.SCHEMA, UseString.DEFAULT);
-            result.put(ObjectSchema.ID, UseString.DEFAULT);
-            result.put(ObjectSchema.VERSION, UseInteger.DEFAULT);
+            result.put(ReferableSchema.SCHEMA, UseString.DEFAULT);
+            result.put(ReferableSchema.ID, UseString.DEFAULT);
+            result.put(ReferableSchema.VERSION, UseInteger.DEFAULT);
         }
         return result;
     }
@@ -314,9 +314,9 @@ public class Index implements Named, Described, Serializable, Extendable {
         } else {
             // These properties must be projected
             final Set<String> fullProjection = new HashSet<>(projection);
-            fullProjection.add(ObjectSchema.SCHEMA);
-            fullProjection.add(ObjectSchema.ID);
-            fullProjection.add(ObjectSchema.VERSION);
+            fullProjection.add(ReferableSchema.SCHEMA);
+            fullProjection.add(ReferableSchema.ID);
+            fullProjection.add(ReferableSchema.VERSION);
             resolvePartitionNames().forEach(v -> fullProjection.add(v.first()));
             sort.forEach(v -> fullProjection.add(v.getName().first()));
             final Map<String, Object> result = new HashMap<>();

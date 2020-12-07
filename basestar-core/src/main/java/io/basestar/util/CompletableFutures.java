@@ -26,6 +26,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class CompletableFutures {
 
@@ -38,6 +39,12 @@ public class CompletableFutures {
         final CompletableFuture<T> future = new CompletableFuture<>();
         future.completeExceptionally(err);
         return future;
+    }
+
+    public static <T> CompletableFuture<Stream<T>> allOf(final Stream<? extends CompletableFuture<T>> futures) {
+
+        final List<CompletableFuture<T>> list = futures.collect(Collectors.toList());
+        return allOf(list).thenApply(List::stream);
     }
 
     public static <T> CompletableFuture<List<T>> allOf(final List<? extends CompletableFuture<T>> futures) {

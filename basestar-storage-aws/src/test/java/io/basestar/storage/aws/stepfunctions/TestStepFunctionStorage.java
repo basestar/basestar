@@ -1,7 +1,7 @@
 package io.basestar.storage.aws.stepfunctions;
 
 import io.basestar.schema.Namespace;
-import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.storage.Storage;
 import io.basestar.storage.TestStorage;
 import io.basestar.storage.aws.stepfunction.StepFunctionStorage;
@@ -69,13 +69,13 @@ public class TestStepFunctionStorage extends TestStorage {
         final StepFunctionStrategy strategy = new StepFunctionStrategy() {
 
             @Override
-            public String stateMachineArn(final ObjectSchema schema) {
+            public String stateMachineArn(final ReferableSchema schema) {
 
                 return stateMachineArns.get(schema.getQualifiedName());
             }
 
             @Override
-            public Storage.EventStrategy eventStrategy(final ObjectSchema schema) {
+            public Storage.EventStrategy eventStrategy(final ReferableSchema schema) {
 
                 return Storage.EventStrategy.EMIT;
             }

@@ -20,17 +20,15 @@ package io.basestar.storage.sql;
  * #L%
  */
 
-import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Index;
 import io.basestar.schema.*;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseRef;
 import io.basestar.schema.use.UseStruct;
 import io.basestar.storage.BatchResponse;
-import io.basestar.storage.Storage;
+import io.basestar.storage.DefaultLayeredStorage;
 import io.basestar.storage.StorageTraits;
 import io.basestar.storage.Versioning;
 import io.basestar.storage.exception.ObjectExistsException;
@@ -64,7 +62,7 @@ import java.util.stream.Collectors;
  */
 
 @Slf4j
-public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHistory, Storage.WithoutRepair {
+public class SQLStorage implements DefaultLayeredStorage {
 
     private static final String COUNT_AS = "__count";
 
@@ -119,35 +117,36 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         return fields;
     }
 
+//    @Override
+//    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+//
+//        return withContext(context -> context.select(selectFields(schema))
+//                .from(DSL.table(objectTableName(schema)))
+//                .where(idField(schema).eq(DSL.inline(id)))
+//                .limit(DSL.inline(1)).fetchAsync().thenApply(result -> first(schema, result)));
+//    }
+//
+//    @Override
+//    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+//
+//        return withContext(context -> context.select(selectFields(schema))
+//                .from(DSL.table(historyTableName(schema)))
+//                .where(idField(schema).eq(DSL.inline(id))
+//                        .and(versionField(schema).eq(DSL.inline(version))))
+//                .limit(DSL.inline(1)).fetchAsync().thenApply(result -> first(schema, result)));
+//    }
+
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
-
-        return withContext(context -> context.select(selectFields(schema))
-                .from(DSL.table(objectTableName(schema)))
-                .where(idField(schema).eq(DSL.inline(id)))
-                .limit(DSL.inline(1)).fetchAsync().thenApply(result -> first(schema, result)));
-    }
-
-    @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
-
-        return withContext(context -> context.select(selectFields(schema))
-                .from(DSL.table(historyTableName(schema)))
-                .where(idField(schema).eq(DSL.inline(id))
-                        .and(versionField(schema).eq(DSL.inline(version))))
-                .limit(DSL.inline(1)).fetchAsync().thenApply(result -> first(schema, result)));
-    }
-
-    @Override
-    public List<Pager.Source<Map<String, Object>>> queryObject(final ObjectSchema schema, final Expression query,
-                                                               final List<Sort> sort, final Set<Name> expand) {
+    public Pager<Map<String, Object>> queryObject(final ObjectSchema schema, final Expression query,
+                                                  final List<Sort> sort, final Set<Name> expand) {
 
         final Expression bound = query.bind(Context.init());
 
         final Set<Expression> disjunction = new DisjunctionVisitor().visit(bound);
 
-        final List<Pager.Source<Map<String, Object>>> sources = new ArrayList<>();
+        final Map<String, Pager<Map<String, Object>>> sources = new HashMap<>();
 
+        // FIXME: use a union instead of doing this manually
         for(final Expression conjunction : disjunction) {
             final Map<Name, Range<Object>> ranges = conjunction.visit(new RangeVisitor());
 
@@ -163,10 +162,10 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
             }
 
             final Index index = best;
-            sources.add((count, token, stats) -> queryImpl(schema, index, conjunction, sort, expand, count, token, stats));
+            sources.put(conjunction.digest(), (stats, token, count) -> queryImpl(schema, index, conjunction, sort, expand, count, token, stats));
         }
 
-        return sources;
+        return Pager.merge(Instance.comparator(sort), sources);
     }
 
     private Condition condition(final DSLContext context, final ObjectSchema schema, final Index index, final Expression expression) {
@@ -319,77 +318,77 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         // FIXME
         return name -> DSL.field(SQLUtils.columnName(name));
     }
-
-    @Override
-    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
-
-        final Table<Record> table = DSL.table(objectTableName(schema));
-
-        return ImmutableList.of((count, token, stats) -> {
-
-            final CompletableFuture<Page<Map<String, Object>>> pageFuture = withContext(context -> {
-
-                final Function<Name, QueryPart> columnResolver = objectColumnResolver(context, schema);
-                final SQLExpressionVisitor expressionVisitor = new SQLExpressionVisitor(columnResolver);
-
-                final List<GroupField> groupFields = group.entrySet().stream()
-                        .map(e -> expressionVisitor.field(e.getValue()).as(DSL.name(e.getKey())))
-                        .collect(Collectors.toList());
-
-                final List<Sort> sort = group.keySet().stream().map(Sort::asc).collect(Collectors.toList());
-
-                final List<OrderField<?>> orderFields = orderFields(sort);
-
-                final Condition condition = condition(context, schema, /* FIXME */ null, query);
-
-                log.debug("SQL aggregate condition {}", condition);
-
-                final List<SelectFieldOrAsterisk> selectFields = new ArrayList<>();
-                group.keySet().forEach(k -> {
-                    selectFields.add(DSL.field(DSL.name(k)));
-                });
-                aggregates.forEach((k, v) -> {
-                    selectFields.add(expressionVisitor.field(v).as(DSL.name(k)));
-                });
-
-                final SelectSeekStepN<Record> select = context.select(selectFields)
-                        .from(table).where(condition).groupBy(groupFields).orderBy(orderFields);
-
-                final SelectForUpdateStep<Record> seek;
-                if (token == null) {
-                    seek = select.limit(DSL.inline(count));
-                } else {
-                    final List<Object> values = KeysetPagingUtils.keysetValues(schema, sort, token);
-                    seek = select.seek(values.toArray(new Object[0])).limit(DSL.inline(count));
-                }
-
-                return seek.fetchAsync().thenApply(results -> {
-
-                    final List<Map<String, Object>> objects = results.stream()
-                            .map(v -> {
-                                final Map<String, Object> value = new HashMap<>();
-                                group.keySet().forEach(k -> value.put(k, v.get(k)));
-                                aggregates.keySet().forEach(k -> value.put(k, v.get(k)));
-                                return value;
-                            })
-                            .collect(Collectors.toList());
-
-                    final Page.Token nextToken;
-                    if (objects.size() < count) {
-                        nextToken = null;
-                    } else {
-                        final Map<String, Object> last = objects.get(objects.size() - 1);
-                        nextToken = KeysetPagingUtils.keysetPagingToken(schema, sort, last);
-                    }
-
-                    return new Page<>(objects, nextToken);
-                });
-
-            });
-
-            return pageFuture;
-        });
-    }
+//
+//    @Override
+//    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
+//
+//        final Table<Record> table = DSL.table(objectTableName(schema));
+//
+//        return ImmutableList.of((count, token, stats) -> {
+//
+//            final CompletableFuture<Page<Map<String, Object>>> pageFuture = withContext(context -> {
+//
+//                final Function<Name, QueryPart> columnResolver = objectColumnResolver(context, schema);
+//                final SQLExpressionVisitor expressionVisitor = new SQLExpressionVisitor(columnResolver);
+//
+//                final List<GroupField> groupFields = group.entrySet().stream()
+//                        .map(e -> expressionVisitor.field(e.getValue()).as(DSL.name(e.getKey())))
+//                        .collect(Collectors.toList());
+//
+//                final List<Sort> sort = group.keySet().stream().map(Sort::asc).collect(Collectors.toList());
+//
+//                final List<OrderField<?>> orderFields = orderFields(sort);
+//
+//                final Condition condition = condition(context, schema, /* FIXME */ null, query);
+//
+//                log.debug("SQL aggregate condition {}", condition);
+//
+//                final List<SelectFieldOrAsterisk> selectFields = new ArrayList<>();
+//                group.keySet().forEach(k -> {
+//                    selectFields.add(DSL.field(DSL.name(k)));
+//                });
+//                aggregates.forEach((k, v) -> {
+//                    selectFields.add(expressionVisitor.field(v).as(DSL.name(k)));
+//                });
+//
+//                final SelectSeekStepN<Record> select = context.select(selectFields)
+//                        .from(table).where(condition).groupBy(groupFields).orderBy(orderFields);
+//
+//                final SelectForUpdateStep<Record> seek;
+//                if (token == null) {
+//                    seek = select.limit(DSL.inline(count));
+//                } else {
+//                    final List<Object> values = KeysetPagingUtils.keysetValues(schema, sort, token);
+//                    seek = select.seek(values.toArray(new Object[0])).limit(DSL.inline(count));
+//                }
+//
+//                return seek.fetchAsync().thenApply(results -> {
+//
+//                    final List<Map<String, Object>> objects = results.stream()
+//                            .map(v -> {
+//                                final Map<String, Object> value = new HashMap<>();
+//                                group.keySet().forEach(k -> value.put(k, v.get(k)));
+//                                aggregates.keySet().forEach(k -> value.put(k, v.get(k)));
+//                                return value;
+//                            })
+//                            .collect(Collectors.toList());
+//
+//                    final Page.Token nextToken;
+//                    if (objects.size() < count) {
+//                        nextToken = null;
+//                    } else {
+//                        final Map<String, Object> last = objects.get(objects.size() - 1);
+//                        nextToken = KeysetPagingUtils.keysetPagingToken(schema, sort, last);
+//                    }
+//
+//                    return new Page<>(objects, nextToken);
+//                });
+//
+//            });
+//
+//            return pageFuture;
+//        });
+//    }
 
     @Override
     public ReadTransaction read(final Consistency consistency) {
@@ -401,7 +400,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
             private final Map<ObjectSchema, Set<IdVersion>> byIdVersion = new IdentityHashMap<>();
 
             @Override
-            public ReadTransaction readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+            public ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
                 final Set<String> target = byId.computeIfAbsent(schema, ignored -> new HashSet<>());
                 target.add(id);
@@ -409,7 +408,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
             }
 
             @Override
-            public ReadTransaction readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+            public ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
                 final Set<IdVersion> target = byIdVersion.computeIfAbsent(schema, ignored -> new HashSet<>());
                 target.add(new IdVersion(id, version));
@@ -423,7 +422,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
 
                     final DSLContext context = DSL.using(config);
 
-                    final SortedMap<BatchResponse.Key, Map<String, Object>> results = new TreeMap<>();
+                    final SortedMap<BatchResponse.RefKey, Map<String, Object>> results = new TreeMap<>();
 
                     for (final Map.Entry<ObjectSchema, Set<String>> entry : byId.entrySet()) {
                         final ObjectSchema schema = entry.getKey();
@@ -432,7 +431,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                                 .from(objectTableName(schema))
                                 .where(idField(schema).in(literals(ids)))
                                 .fetch())
-                                .forEach(v -> results.put(BatchResponse.Key.from(schema.getQualifiedName(), v), v));
+                                .forEach(v -> results.put(BatchResponse.RefKey.from(schema.getQualifiedName(), v), v));
                     }
 
                     for (final Map.Entry<ObjectSchema, Set<IdVersion>> entry : byIdVersion.entrySet()) {
@@ -445,10 +444,10 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                                 .where(DSL.row(idField(schema), versionField(schema))
                                         .in(idVersions))
                                 .fetch())
-                                .forEach(v -> results.put(BatchResponse.Key.from(schema.getQualifiedName(), v), v));
+                                .forEach(v -> results.put(BatchResponse.RefKey.from(schema.getQualifiedName(), v), v));
                     }
 
-                    return new BatchResponse.Basic(results);
+                    return new BatchResponse(results);
 
                 }));
             }
@@ -474,12 +473,18 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         return new WriteTransaction();
     }
 
-    protected class WriteTransaction implements WithWriteIndex.WriteTransaction, WithWriteHistory.WriteTransaction {
+    protected class WriteTransaction implements DefaultLayeredStorage.WriteTransaction {
 
         private final List<Function<DSLContext, BatchResponse>> steps = new ArrayList<>();
 
         @Override
-        public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+        public StorageTraits storageTraits(final ReferableSchema schema) {
+
+            return SQLStorage.this.storageTraits(schema);
+        }
+
+        @Override
+        public void createObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
 
             steps.add(context -> {
 
@@ -489,14 +494,14 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                             .set(toRecord(schema, after))
                             .execute();
 
-                    final History history = schema.getHistory();
-                    if(history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
-                        context.insertInto(DSL.table(historyTableName(schema)))
-                                .set(toRecord(schema, after))
-                                .execute();
-                    }
+//                    final History history = schema.getHistory();
+//                    if(history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
+//                        context.insertInto(DSL.table(historyTableName(schema)))
+//                                .set(toRecord(schema, after))
+//                                .execute();
+//                    }
 
-                    return BatchResponse.single(schema.getQualifiedName(), after);
+                    return BatchResponse.fromRef(schema.getQualifiedName(), after);
 
                 } catch (final DataAccessException e) {
                     if(SQLStateClass.C23_INTEGRITY_CONSTRAINT_VIOLATION.equals(e.sqlStateClass())) {
@@ -506,55 +511,39 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                     }
                 }
             });
-
-            final StorageTraits traits = storageTraits(schema);
-            for(final Index index : schema.getIndexes().values()) {
-                final Consistency best = traits.getMultiValueIndexConsistency();
-                if (index.isMultiValue() && !index.getConsistency(best).isAsync()) {
-                    for(final Map.Entry<Index.Key, Map<String, Object>> entry : index.readValues(after).entrySet()) {
-                        createIndex(schema, index, id, 1L, entry.getKey(), entry.getValue());
-                    }
-                }
-            }
-
-            return this;
         }
 
         @Override
-        public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
+        public void updateObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
             steps.add(context -> {
 
                 final Long version = before == null ? null : Instance.getVersion(before);
 
                 Condition condition = idField(schema).eq(id);
-                if(version != null) {
+                if (version != null) {
                     condition = condition.and(versionField(schema).eq(version));
                 }
 
-                if(context.update(DSL.table(objectTableName(schema))).set(toRecord(schema, after))
+                if (context.update(DSL.table(objectTableName(schema))).set(toRecord(schema, after))
                         .where(condition).limit(DSL.inline(1)).execute() != 1) {
 
                     throw new VersionMismatchException(schema.getQualifiedName(), id, version);
                 }
 
-                final History history = schema.getHistory();
-                if(history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
-                    context.insertInto(DSL.table(historyTableName(schema)))
-                            .set(toRecord(schema, after))
-                            .execute();
-                }
+//                final History history = schema.getHistory();
+//                if (history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
+//                    context.insertInto(DSL.table(historyTableName(schema)))
+//                            .set(toRecord(schema, after))
+//                            .execute();
+//                }
 
-                return BatchResponse.single(schema.getQualifiedName(), after);
+                return BatchResponse.fromRef(schema.getQualifiedName(), after);
             });
-
-            // FIXME: not writing non-async indexes
-
-            return this;
         }
 
         @Override
-        public WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
+        public void deleteObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> before) {
 
             steps.add(context -> {
 
@@ -573,49 +562,42 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
 
                 return BatchResponse.empty();
             });
-
-            // FIXME: not writing non-async indexes
-
-            return this;
         }
 
-        @Override
-        public WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+//        public void createIndex(final ObjectSchema schema, final Index index, final String id, final Index.Key key, final Map<String, Object> projection) {
+//
+//            if (index.isMultiValue()) {
+//
+//                steps.add(context -> {
+//
+//                    context.insertInto(DSL.table(indexTableName(schema, index)))
+//                            .set(toRecord(schema, index, key, projection))
+//                            .execute();
+//
+//                    return BatchResponse.empty();
+//                });
+//
+//            } else {
+//                throw new UnsupportedOperationException();
+//            }
+//        }
 
-            if (index.isMultiValue()) {
-
-                steps.add(context -> {
-
-                    context.insertInto(DSL.table(indexTableName(schema, index)))
-                            .set(toRecord(schema, index, key, projection))
-                            .execute();
-
-                    return BatchResponse.empty();
-                });
-
-                return this;
-
-            } else {
-                throw new UnsupportedOperationException();
-            }
-        }
-
-        @Override
-        public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-
-            // FIXME
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
-
-            // FIXME
-            throw new UnsupportedOperationException();
-        }
+//        @Override
+//        public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+//
+//            // FIXME
+//            throw new UnsupportedOperationException();
+//        }
+//
+//        @Override
+//        public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
+//
+//            // FIXME
+//            throw new UnsupportedOperationException();
+//        }
 
         @Override
-        public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
+        public void writeHistoryLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
 
             steps.add(context -> {
 
@@ -625,7 +607,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                             .set(toRecord(schema, after))
                             .execute();
 
-                    return BatchResponse.single(schema.getQualifiedName(), after);
+                    return BatchResponse.fromRef(schema.getQualifiedName(), after);
 
                 } catch (final DataAccessException e) {
                     if(SQLStateClass.C23_INTEGRITY_CONSTRAINT_VIOLATION.equals(e.sqlStateClass())) {
@@ -635,38 +617,36 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
                     }
                 }
             });
-
-            return this;
         }
 
         @Override
         public CompletableFuture<BatchResponse> write() {
 
-            final SortedMap<BatchResponse.Key, Map<String, Object>> changes = new TreeMap<>();
+            final SortedMap<BatchResponse.RefKey, Map<String, Object>> changes = new TreeMap<>();
             return withContext(initialContext -> initialContext.transactionAsync(config -> {
 
                 final DSLContext context = DSL.using(config);
 
-                steps.forEach(step -> changes.putAll(step.apply(context)));
+                steps.forEach(step -> changes.putAll(step.apply(context).getRefs()));
 
-            }).thenApply(v -> new BatchResponse.Basic(changes)));
+            }).thenApply(v -> new BatchResponse(changes)));
         }
     }
 
     @Override
-    public EventStrategy eventStrategy(final ObjectSchema schema) {
+    public EventStrategy eventStrategy(final ReferableSchema schema) {
 
         return eventStrategy;
     }
 
     @Override
-    public StorageTraits storageTraits(final ObjectSchema schema) {
+    public StorageTraits storageTraits(final ReferableSchema schema) {
 
         return SQLStorageTraits.INSTANCE;
     }
 
     @Override
-    public Set<Name> supportedExpand(final ObjectSchema schema, final Set<Name> expand) {
+    public Set<Name> supportedExpand(final LinkableSchema schema, final Set<Name> expand) {
 
         return Collections.emptySet();
     }
@@ -702,32 +682,32 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         }
     }
 
-    private Field<String> idField(final ObjectSchema schema) {
+    private Field<String> idField(final ReferableSchema schema) {
 
         return DSL.field(DSL.name(ObjectSchema.ID), String.class);
     }
 
-    private Field<Long> versionField(final ObjectSchema schema) {
+    private Field<Long> versionField(final ReferableSchema schema) {
 
         return DSL.field(DSL.name(ObjectSchema.VERSION), Long.class);
     }
 
-    private org.jooq.Name objectTableName(final ObjectSchema schema) {
+    private org.jooq.Name objectTableName(final ReferableSchema schema) {
 
         return strategy.objectTableName(schema);
     }
 
-    private org.jooq.Name historyTableName(final ObjectSchema schema) {
+    private org.jooq.Name historyTableName(final ReferableSchema schema) {
 
         return strategy.historyTableName(schema);
     }
 
-    private org.jooq.Name indexTableName(final ObjectSchema schema, final Index index) {
+    private org.jooq.Name indexTableName(final ReferableSchema schema, final Index index) {
 
         return strategy.indexTableName(schema, index);
     }
 
-    private Map<String, Object> first(final ObjectSchema schema, final Result<Record> result) {
+    private Map<String, Object> first(final ReferableSchema schema, final Result<Record> result) {
 
         if(result.isEmpty()) {
             return null;
@@ -736,14 +716,14 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         }
     }
 
-    private List<Map<String, Object>> all(final ObjectSchema schema, final Result<Record> result) {
+    private List<Map<String, Object>> all(final ReferableSchema schema, final Result<Record> result) {
 
         return result.stream()
                 .map(v -> fromRecord(schema, v))
                 .collect(Collectors.toList());
     }
 
-    private Map<String, Object> fromRecord(final ObjectSchema schema, final Record record) {
+    private Map<String, Object> fromRecord(final ReferableSchema schema, final Record record) {
 
         final Map<String, Object> data = record.intoMap();
         final Map<String, Object> result = new HashMap<>();
@@ -754,7 +734,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         return result;
     }
 
-    private Map<Field<?>, Object> toRecord(final ObjectSchema schema, final Map<String, Object> object) {
+    private Map<Field<?>, Object> toRecord(final ReferableSchema schema, final Map<String, Object> object) {
 
         final Map<Field<?>, Object> result = new HashMap<>();
         schema.metadataSchema().forEach((k, v) ->
@@ -764,7 +744,7 @@ public class SQLStorage implements Storage.WithWriteIndex, Storage.WithWriteHist
         return result;
     }
 
-    private Map<Field<?>, Object> toRecord(final ObjectSchema schema, final Index index, final Index.Key key, final Map<String, Object> object) {
+    private Map<Field<?>, Object> toRecord(final ReferableSchema schema, final Index index, final Index.Key key, final Map<String, Object> object) {
 
         final Map<Field<?>, Object> result = new HashMap<>();
         index.projectionSchema(schema).forEach((k, v) ->

@@ -10,6 +10,7 @@ import io.basestar.schema.use.*;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 
+import javax.annotation.Nullable;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -52,6 +53,9 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
 
     interface Descriptor<S extends ReferableSchema> extends LinkableSchema.Descriptor<S>, Transient.Resolver.Descriptor, Index.Resolver.Descriptor {
 
+        @Nullable
+        History getHistory();
+
         @JsonDeserialize(using = AbbrevListDeserializer.class)
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         List<Name> getExtend();
@@ -66,6 +70,12 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
 
                 final List<? extends ReferableSchema> extend = self().getExtend();
                 return Immutable.transform(extend, Named::getQualifiedName);
+            }
+
+            @Override
+            default History getHistory() {
+
+                return self().getHistory();
             }
 
             @Override
@@ -91,6 +101,8 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
     interface Builder<B extends Builder<B, S>, S extends ReferableSchema> extends LinkableSchema.Builder<B, S>, Descriptor<S>, Transient.Resolver.Builder<B>, Index.Resolver.Builder<B> {
 
     }
+
+    History getHistory();
 
     List<? extends ReferableSchema> getExtend();
 
@@ -118,6 +130,16 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
             if(schema instanceof ObjectSchema) {
                 results.add((ObjectSchema)schema);
             }
+        });
+        return results;
+    }
+
+    default Set<ReferableSchema> getIndirectExtend() {
+
+        final Set<ReferableSchema> results = new HashSet<>();
+        getExtend().forEach(schema -> {
+            results.add(schema);
+            results.addAll(schema.getIndirectExtend());
         });
         return results;
     }

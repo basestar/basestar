@@ -20,33 +20,24 @@ package io.basestar.storage.cognito;
  * #L%
  */
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.storage.BatchResponse;
-import io.basestar.storage.Storage;
-import io.basestar.storage.StorageTraits;
-import io.basestar.storage.Versioning;
-import io.basestar.util.Name;
-import io.basestar.util.Page;
-import io.basestar.util.Pager;
-import io.basestar.util.Sort;
+import io.basestar.schema.ReferableSchema;
+import io.basestar.storage.*;
+import io.basestar.util.*;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderAsyncClient;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.WithoutHistory, Storage.WithoutAggregate, Storage.WithoutExpand, Storage.WithoutRepair {
+public class CognitoGroupStorage implements DefaultLayeredStorage {
 
     private static final String DESCRIPTION_KEY = "description";
 
@@ -80,33 +71,21 @@ public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.W
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+    public Pager<Map<String, Object>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        final String userPoolId = strategy.getUserPoolId(schema);
-        return client.getGroup(GetGroupRequest.builder()
-                .userPoolId(userPoolId)
-                .groupName(id)
-                .build())
-                .thenApply(response -> fromGroup(response.group()));
-    }
+        return (stats, token, count) -> {
+            final String userPoolId = strategy.getUserPoolId(schema);
+            return client.listGroups(ListGroupsRequest.builder()
+                    .userPoolId(userPoolId)
+                    .limit(count)
+                    .nextToken(decodePaging(token))
+                    .build()).thenApply(response -> {
+                final List<GroupType> groups = response.groups();
+                return new Page<>(groups.stream().map(this::fromGroup)
+                        .collect(Collectors.toList()), encodePaging(response.nextToken()));
 
-    @Override
-    public List<Pager.Source<Map<String, Object>>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
-
-        return ImmutableList.of(
-                (count, token, stats) -> {
-                    final String userPoolId = strategy.getUserPoolId(schema);
-                    return client.listGroups(ListGroupsRequest.builder()
-                            .userPoolId(userPoolId)
-                            .limit(count)
-                            .nextToken(decodePaging(token))
-                            .build()).thenApply(response -> {
-                        final List<GroupType> groups = response.groups();
-                        return new Page<>(groups.stream().map(this::fromGroup)
-                                .collect(Collectors.toList()), encodePaging(response.nextToken()));
-
-                    });
-                });
+            });
+        };
     }
 
     private String decodePaging(final Page.Token token) {
@@ -122,7 +101,39 @@ public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.W
     @Override
     public ReadTransaction read(final Consistency consistency) {
 
-        return new ReadTransaction.Basic(this);
+        return new ReadTransaction() {
+
+            final BatchCapture capture = new BatchCapture();
+
+            @Override
+            public Storage.ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+
+                capture.captureLatest(schema, id, expand);
+                return this;
+            }
+
+            @Override
+            public Storage.ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+
+                capture.captureVersion(schema, id, version, expand);
+                return this;
+            }
+
+            @Override
+            public CompletableFuture<BatchResponse> read() {
+
+                final Map<BatchResponse.RefKey, CompletableFuture<Map<String, Object>>> futures = new HashMap<>();
+                capture.forEachRef((schema, key, args) -> {
+                    final String userPoolId = strategy.getUserPoolId(schema);
+                    futures.put(key, client.getGroup(GetGroupRequest.builder()
+                            .userPoolId(userPoolId)
+                            .groupName(key.getId())
+                            .build())
+                            .thenApply(response -> key.matchOrNull(fromGroup(response.group()))));
+                });
+                return CompletableFutures.allOf(futures).thenApply(BatchResponse::new);
+            }
+        };
     }
 
     @Override
@@ -133,7 +144,13 @@ public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.W
             private final List<Supplier<CompletableFuture<BatchResponse>>> requests = new ArrayList<>();
 
             @Override
-            public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+            public StorageTraits storageTraits(final ReferableSchema schema) {
+
+                return CognitoGroupStorage.this.storageTraits(schema);
+            }
+
+            @Override
+            public void createObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
 
                 requests.add(() -> {
                     final String userPoolId = strategy.getUserPoolId(schema);
@@ -143,13 +160,12 @@ public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.W
                             .groupName(id)
                             .description(description)
                             .build())
-                            .thenApply(ignored -> BatchResponse.single(schema.getQualifiedName(), after));
+                            .thenApply(ignored -> BatchResponse.fromRef(schema.getQualifiedName(), after));
                 });
-                return this;
             }
 
             @Override
-            public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
+            public void updateObjectLayer(final ReferableSchema schema,final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
                 requests.add(() -> {
                     final String userPoolId = strategy.getUserPoolId(schema);
@@ -159,13 +175,12 @@ public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.W
                             .groupName(id)
                             .description(description)
                             .build())
-                            .thenApply(ignored -> BatchResponse.single(schema.getQualifiedName(), after));
+                            .thenApply(ignored -> BatchResponse.fromRef(schema.getQualifiedName(), after));
                 });
-                return this;
             }
 
             @Override
-            public WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
+            public void deleteObjectLayer(final ReferableSchema schema,final String id, final Map<String, Object> before) {
 
                 requests.add(() -> {
                     final String userPoolId = strategy.getUserPoolId(schema);
@@ -175,7 +190,12 @@ public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.W
                             .build())
                             .thenApply(ignored -> BatchResponse.empty());
                 });
-                return this;
+            }
+
+            @Override
+            public void writeHistoryLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
+
+                throw new UnsupportedOperationException("cannot write history");
             }
 
             @Override
@@ -187,13 +207,13 @@ public class CognitoGroupStorage implements Storage.WithoutWriteIndex, Storage.W
     }
 
     @Override
-    public EventStrategy eventStrategy(final ObjectSchema schema) {
+    public EventStrategy eventStrategy(final ReferableSchema schema) {
 
         return EventStrategy.EMIT;
     }
 
     @Override
-    public StorageTraits storageTraits(final ObjectSchema schema) {
+    public StorageTraits storageTraits(final ReferableSchema schema) {
 
         return CognitoStorageTraits.INSTANCE;
     }

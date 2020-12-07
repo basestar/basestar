@@ -135,11 +135,11 @@ public class StorageSubscriptions implements Subscriptions {
     }
 
     @Override
-    public List<Pager.Source<Subscription>> query(final Set<Subscription.Key> keys) {
+    public Pager<Subscription> query(final Set<Subscription.Key> keys) {
 
         final Expression expression = new Or(keys.stream().map(StorageSubscriptions::keyExpression).toArray(Expression[]::new));
 
-        return Pager.map(storage.queryObject(SCHEMA, expression, sort(), Collections.emptySet()), this::fromMap);
+        return storage.queryObject(SCHEMA, expression, sort(), Collections.emptySet()).map(this::fromMap);
     }
 
     private Subscription fromMap(final Map<String, Object> object) {
@@ -166,7 +166,7 @@ public class StorageSubscriptions implements Subscriptions {
     public CompletableFuture<?> unsubscribe(final String sub, final String channel) {
 
         final String id = id(sub, channel);
-        return storage.readObject(SCHEMA, id, Collections.emptySet()).thenCompose(before -> {
+        return storage.getObject(Consistency.ATOMIC, SCHEMA, id, Collections.emptySet()).thenCompose(before -> {
             final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC, Versioning.CHECKED);
             write.deleteObject(SCHEMA, id(sub, channel), before);
             return write.write();
@@ -182,17 +182,15 @@ public class StorageSubscriptions implements Subscriptions {
         return unsubscribeAll(storage.queryObject(SCHEMA, expression, sort(), Collections.emptySet()), null);
     }
 
-    private CompletableFuture<?> unsubscribeAll(final List<Pager.Source<Map<String, Object>>> sources, final Page.Token token) {
+    private CompletableFuture<?> unsubscribeAll(final Pager<Map<String, Object>> pager, final Page.Token token) {
 
-        final List<Sort> sort = sort();
-        final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
-        return new Pager<>(comparator, sources, token).page(UNSUBSCRIBE_PAGE_SIZE).thenCompose(page -> {
+        return pager.page(token, UNSUBSCRIBE_PAGE_SIZE).thenCompose(page -> {
 
             final Storage.WriteTransaction write = storage.write(Consistency.NONE, Versioning.CHECKED);
             page.forEach(object -> write.deleteObject(SCHEMA, Instance.getId(object), object));
 
             if(page.hasMore()) {
-                return write.write().thenCompose(ignored -> unsubscribeAll(sources, page.getPaging())).thenApply(ignored -> null);
+                return write.write().thenCompose(ignored -> unsubscribeAll(pager, page.getPaging())).thenApply(ignored -> null);
             } else {
                 return write.write();
             }

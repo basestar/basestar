@@ -66,6 +66,9 @@ public class SchemaAdaptor {
                     if (!objectSchema.isConcrete()) {
                         registry.add(missingInterfaceRefDefinition(objectSchema));
                     }
+                } else if(schema instanceof InterfaceSchema) {
+                    final InterfaceSchema interfaceSchema = (InterfaceSchema) instanceSchema;
+                    registry.add(pageTypeDefinition(interfaceSchema));
                 } else if(schema instanceof ViewSchema) {
                     final ViewSchema viewSchema = (ViewSchema) instanceSchema;
                     registry.add(pageTypeDefinition(viewSchema));
@@ -126,8 +129,8 @@ public class SchemaAdaptor {
         final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
         builder.name(GraphQLUtils.QUERY_TYPE);
         namespace.forEachLinkableSchema((schemaName, schema) -> {
-            if(schema instanceof ObjectSchema) {
-                builder.fieldDefinition(readDefinition((ObjectSchema)schema));
+            if(schema instanceof ReferableSchema) {
+                builder.fieldDefinition(readDefinition((ReferableSchema)schema));
             }
             builder.fieldDefinition(queryDefinition(schema));
             schema.getLinks()
@@ -136,7 +139,7 @@ public class SchemaAdaptor {
         return builder.build();
     }
 
-    public FieldDefinition readDefinition(final ObjectSchema schema) {
+    public FieldDefinition readDefinition(final ReferableSchema schema) {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
         builder.name(strategy.readMethodName(schema));

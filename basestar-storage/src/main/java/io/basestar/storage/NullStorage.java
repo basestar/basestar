@@ -21,52 +21,55 @@ package io.basestar.storage;
  */
 
 import io.basestar.expression.Expression;
-import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Concurrency;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.util.Name;
-import io.basestar.util.Page;
 import io.basestar.util.Pager;
 import io.basestar.util.Sort;
 import lombok.RequiredArgsConstructor;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 @RequiredArgsConstructor
-public class NullStorage implements Storage.WithoutWriteIndex, Storage.WithoutWriteHistory, Storage.WithoutExpand, Storage.WithoutRepair {
+public class NullStorage implements DefaultLayeredStorage {
 
     private final EventStrategy eventStrategy;
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+    public Pager<Map<String, Object>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        return CompletableFuture.completedFuture(null);
-    }
-
-    @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
-
-        return CompletableFuture.completedFuture(null);
-    }
-
-    @Override
-    public List<Pager.Source<Map<String, Object>>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
-
-        return Collections.singletonList((count, pagingToken, stats) -> CompletableFuture.completedFuture(Page.empty()));
-    }
-
-    @Override
-    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
-
-        return Collections.singletonList((count, pagingToken, stats) -> CompletableFuture.completedFuture(Page.empty()));
+        return Pager.empty();
     }
 
     @Override
     public ReadTransaction read(final Consistency consistency) {
 
-        return new ReadTransaction.Basic(this);
+        return new ReadTransaction() {
+
+            @Override
+            public Storage.ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+
+                return this;
+            }
+
+            @Override
+            public Storage.ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+
+                return this;
+            }
+
+            @Override
+            public CompletableFuture<BatchResponse> read() {
+
+                return CompletableFuture.completedFuture(BatchResponse.empty());
+            }
+        };
     }
 
     @Override
@@ -74,44 +77,52 @@ public class NullStorage implements Storage.WithoutWriteIndex, Storage.WithoutWr
 
         return new WriteTransaction() {
 
-            private final Map<BatchResponse.Key, Map<String, Object>> data = new HashMap<>();
+            private final Map<BatchResponse.RefKey, Map<String, Object>> data = new HashMap<>();
 
             @Override
-            public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+            public StorageTraits storageTraits(final ReferableSchema schema) {
 
-                data.put(BatchResponse.Key.from(schema.getQualifiedName(), after), after);
-                return this;
+                return NullStorage.this.storageTraits(schema);
             }
 
             @Override
-            public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
+            public void createObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
 
-                data.put(BatchResponse.Key.from(schema.getQualifiedName(), after), after);
-                return this;
+                data.put(BatchResponse.RefKey.from(schema.getQualifiedName(), after), after);
             }
 
             @Override
-            public WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
+            public void updateObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
-                return this;
+                data.put(BatchResponse.RefKey.from(schema.getQualifiedName(), after), after);
+            }
+
+            @Override
+            public void deleteObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> before) {
+
+            }
+
+            @Override
+            public void writeHistoryLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
+
             }
 
             @Override
             public CompletableFuture<BatchResponse> write() {
 
-                return CompletableFuture.completedFuture(new BatchResponse.Basic(data));
+                return CompletableFuture.completedFuture(BatchResponse.fromRefs(data));
             }
         };
     }
 
     @Override
-    public EventStrategy eventStrategy(final ObjectSchema schema) {
+    public EventStrategy eventStrategy(final ReferableSchema schema) {
 
         return eventStrategy;
     }
 
     @Override
-    public StorageTraits storageTraits(final ObjectSchema schema) {
+    public StorageTraits storageTraits(final ReferableSchema schema) {
 
         return TRAITS;
     }

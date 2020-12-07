@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
@@ -201,8 +200,6 @@ public class ObjectSchema implements ReferableSchema {
     @Nonnull
     private final SortedMap<String, Serializable> extensions;
 
-    private final Collection<Schema<?>> directlyExtending;
-
     @JsonDeserialize(as = Builder.class)
     public interface Descriptor extends ReferableSchema.Descriptor<ObjectSchema> {
 
@@ -217,8 +214,6 @@ public class ObjectSchema implements ReferableSchema {
         Id.Descriptor getId();
 
         Boolean getReadonly();
-
-        History getHistory();
 
         interface Self extends ReferableSchema.Descriptor.Self<ObjectSchema>, Descriptor {
 
@@ -335,12 +330,12 @@ public class ObjectSchema implements ReferableSchema {
         this.description = descriptor.getDescription();
         this.id = descriptor.getId() == null ? null : descriptor.getId().build(qualifiedName.with(ID));
         this.history = Nullsafe.orDefault(descriptor.getHistory(), History.ENABLED);
-        this.declaredProperties = Immutable.transformSorted(descriptor.getProperties(), (k, v) -> v.build(resolver, version, qualifiedName.with(k)));
-        this.declaredTransients = Immutable.transformSorted(descriptor.getTransients(), (k, v) -> v.build(qualifiedName.with(k)));
-        this.declaredLinks = Immutable.transformSorted(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
-        this.declaredIndexes = Immutable.transformSorted(descriptor.getIndexes(), (k, v) -> v.build(this, qualifiedName.with(k)));
+        this.declaredProperties = Immutable.transformValuesSorted(descriptor.getProperties(), (k, v) -> v.build(resolver, version, qualifiedName.with(k)));
+        this.declaredTransients = Immutable.transformValuesSorted(descriptor.getTransients(), (k, v) -> v.build(qualifiedName.with(k)));
+        this.declaredLinks = Immutable.transformValuesSorted(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
+        this.declaredIndexes = Immutable.transformValuesSorted(descriptor.getIndexes(), (k, v) -> v.build(this, qualifiedName.with(k)));
         this.constraints = Immutable.copy(descriptor.getConstraints());
-        this.declaredPermissions = Immutable.transformSorted(descriptor.getPermissions(), (k, v) -> v.build(k));
+        this.declaredPermissions = Immutable.transformValuesSorted(descriptor.getPermissions(), (k, v) -> v.build(k));
         this.declaredExpand = Immutable.sortedCopy(descriptor.getExpand());
         this.readonly = Nullsafe.orDefault(descriptor.getReadonly());
         this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
@@ -359,8 +354,6 @@ public class ObjectSchema implements ReferableSchema {
         this.indexes = Index.extend(extend, declaredIndexes);
         this.permissions = Permission.extend(extend, declaredPermissions);
         this.expand = LinkableSchema.extendExpand(extend, declaredExpand);
-
-        this.directlyExtending = ImmutableList.copyOf(resolver.getExtendedSchemas(qualifiedName));
     }
 
     @Override

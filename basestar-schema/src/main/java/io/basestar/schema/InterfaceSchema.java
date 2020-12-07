@@ -43,6 +43,13 @@ public class InterfaceSchema implements ReferableSchema {
     private final List<InterfaceSchema> extend;
 
     /**
+     * History configuration
+     */
+
+    @Nonnull
+    private final History history;
+
+    /**
      * Description of the schema
      */
 
@@ -208,6 +215,9 @@ public class InterfaceSchema implements ReferableSchema {
         private Set<Name> expand;
 
         @Nullable
+        private History history;
+
+        @Nullable
         private Map<String, Serializable> extensions;
     }
 
@@ -223,13 +233,14 @@ public class InterfaceSchema implements ReferableSchema {
         this.slot = slot;
         this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
         this.extend = Immutable.transform(descriptor.getExtend(), resolver::requireInterfaceSchema);
+        this.history = Nullsafe.orDefault(descriptor.getHistory(), History.ENABLED);
         this.description = descriptor.getDescription();
-        this.declaredProperties = Immutable.transformSorted(descriptor.getProperties(), (k, v) -> v.build(resolver, version, qualifiedName.with(k)));
-        this.declaredTransients = Immutable.transformSorted(descriptor.getTransients(), (k, v) -> v.build(qualifiedName.with(k)));
-        this.declaredLinks = Immutable.transformSorted(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
-        this.declaredIndexes = Immutable.transformSorted(descriptor.getIndexes(), (k, v) -> v.build(this, qualifiedName.with(k)));
+        this.declaredProperties = Immutable.transformValuesSorted(descriptor.getProperties(), (k, v) -> v.build(resolver, version, qualifiedName.with(k)));
+        this.declaredTransients = Immutable.transformValuesSorted(descriptor.getTransients(), (k, v) -> v.build(qualifiedName.with(k)));
+        this.declaredLinks = Immutable.transformValuesSorted(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
+        this.declaredIndexes = Immutable.transformValuesSorted(descriptor.getIndexes(), (k, v) -> v.build(this, qualifiedName.with(k)));
         this.constraints = Immutable.copy(descriptor.getConstraints());
-        this.declaredPermissions = Immutable.transformSorted(descriptor.getPermissions(), (k, v) -> v.build(k));
+        this.declaredPermissions = Immutable.transformValuesSorted(descriptor.getPermissions(), (k, v) -> v.build(k));
         this.declaredExpand = Immutable.sortedCopy(descriptor.getExpand());
         this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
         if (Reserved.isReserved(qualifiedName.last())) {

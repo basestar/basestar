@@ -87,7 +87,7 @@ class TestCognitoStorage {
                 .createObject(schema, id, before)
                 .write().join();
 
-        assertValid(before, storage.readObject(schema, id, ImmutableSet.of()).join());
+        assertValid(before, storage.getObject(Consistency.ATOMIC, schema, id, ImmutableSet.of()).join());
 
         data.put("test", "value2");
         Instance.setVersion(data, 2L);
@@ -100,7 +100,7 @@ class TestCognitoStorage {
                 .updateObject(schema, id, before, after)
                 .write().join();
 
-        assertValid(after, storage.readObject(schema, id, ImmutableSet.of()).join());
+        assertValid(after, storage.getObject(Consistency.ATOMIC, schema, id, ImmutableSet.of()).join());
     }
 
     private void assertValid(final Instance expected, final Map<String, Object> actual) {
@@ -127,6 +127,6 @@ class TestCognitoStorage {
 
         final String id = UUID.randomUUID().toString();
 
-        storage.readObject(schema, id, ImmutableSet.of()).join();
+        storage.getObject(Consistency.ATOMIC, schema, id, ImmutableSet.of()).join();
     }
 }

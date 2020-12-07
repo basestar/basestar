@@ -111,5 +111,5 @@ public interface Database {
                 .build());
     }
 
-    CompletableFuture<?> repair(Caller caller, RepairOptions options);
+//    CompletableFuture<?> repair(Caller caller, RepairOptions options);
 }

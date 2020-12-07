@@ -59,7 +59,9 @@ public class Immutable {
             }
         } else {
             final List<V> copy = new ArrayList<>(l);
-            copy.addAll(vs);
+            if(vs != null) {
+                copy.addAll(vs);
+            }
             return Collections.unmodifiableList(copy);
         }
     }
@@ -88,7 +90,9 @@ public class Immutable {
             }
         } else {
             final Set<V> copy = new HashSet<>(s);
-            copy.addAll(vs);
+            if(vs != null) {
+                copy.addAll(vs);
+            }
             return Collections.unmodifiableSet(copy);
         }
     }
@@ -130,9 +134,21 @@ public class Immutable {
     }
 
     @Nonnull
+    public static <K extends Comparable<K>, V> NavigableMap<K, V> copy(@Nullable final NavigableMap<? extends K, ? extends V> m) {
+
+        return navigableCopy(m);
+    }
+
+    @Nonnull
     public static <K extends Comparable<K>, V> SortedMap<K, V> sortedCopy(@Nullable final Map<? extends K, ? extends V> m) {
 
-        return m == null || m.isEmpty() ? Collections.emptySortedMap() : Collections.unmodifiableSortedMap(new TreeMap<>(m));
+        return navigableCopy(m);
+    }
+
+    @Nonnull
+    public static <K extends Comparable<K>, V> NavigableMap<K, V> navigableCopy(@Nullable final Map<? extends K, ? extends V> m) {
+
+        return m == null || m.isEmpty() ? Collections.emptyNavigableMap() : Collections.unmodifiableNavigableMap(new TreeMap<>(m));
     }
 
     public static <K, V> Map<K, V> copyPutAll(final Map<K, V> m, final Map<K, ? extends V> vs) {
@@ -202,7 +218,7 @@ public class Immutable {
     }
 
     @Nonnull
-    public static <K, V1, V2> Map<K, V2> transform(@Nullable final Map<? extends K, ? extends V1> m, final BiFunction<? super K, ? super V1, ? extends V2> transform) {
+    public static <K, V1, V2> Map<K, V2> transformValues(@Nullable final Map<? extends K, ? extends V1> m, final BiFunction<? super K, ? super V1, ? extends V2> transform) {
 
         if (m == null || m.isEmpty()) {
             return Collections.emptyMap();
@@ -214,13 +230,13 @@ public class Immutable {
     }
 
     @Nonnull
-    public static <K extends Comparable<K>, V1, V2> SortedMap<K, V2> transform(@Nullable final SortedMap<? extends K, ? extends V1> m, final BiFunction<? super K, ? super V1, ? extends V2> transform) {
+    public static <K extends Comparable<K>, V1, V2> SortedMap<K, V2> transformValues(@Nullable final SortedMap<? extends K, ? extends V1> m, final BiFunction<? super K, ? super V1, ? extends V2> transform) {
 
-        return transformSorted(m, transform);
+        return transformValuesSorted(m, transform);
     }
 
     @Nonnull
-    public static <K extends Comparable<K>, V1, V2> SortedMap<K, V2> transformSorted(@Nullable final Map<? extends K, ? extends V1> m, final BiFunction<? super K, ? super V1, ? extends V2> transform) {
+    public static <K extends Comparable<K>, V1, V2> SortedMap<K, V2> transformValuesSorted(@Nullable final Map<? extends K, ? extends V1> m, final BiFunction<? super K, ? super V1, ? extends V2> transform) {
 
         if (m == null || m.isEmpty()) {
             return Collections.emptySortedMap();

@@ -84,6 +84,11 @@ class TestSQLStorage extends TestStorage {
     }
 
     @Override
+    protected void testMultiValueIndex() {
+
+    }
+
+    @Override
     protected void testVersionedRef() {
 
         // FIXME: versioned ref storage will need a strategy that supports multiple output columns per input value

@@ -46,12 +46,12 @@ public class Mappings {
 
     public interface Factory {
 
-        Mappings mappings(ObjectSchema schema);
+        Mappings mappings(ReferableSchema schema);
 
         class Default implements Factory {
 
             @Override
-            public Mappings mappings(final ObjectSchema schema) {
+            public Mappings mappings(final ReferableSchema schema) {
 
                 return new Mappings(properties(schema, schema.getExpand()));
             }

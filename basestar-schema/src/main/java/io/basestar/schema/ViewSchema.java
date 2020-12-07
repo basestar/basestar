@@ -340,10 +340,10 @@ public class ViewSchema implements LinkableSchema {
         this.group = Immutable.copy(descriptor.getGroup());
         this.where = descriptor.getWhere();
         final InferenceContext context = new InferenceContext.FromSchema(this.from.getSchema());
-        this.declaredProperties = Immutable.transformSorted(descriptor.getProperties(),
+        this.declaredProperties = Immutable.transformValuesSorted(descriptor.getProperties(),
                 (k, v) -> v.build(resolver, context, version, qualifiedName.with(k)));
-        this.declaredLinks = Immutable.transformSorted(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
-        this.declaredPermissions = Immutable.transformSorted(descriptor.getPermissions(), (k, v) -> v.build(k));
+        this.declaredLinks = Immutable.transformValuesSorted(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
+        this.declaredPermissions = Immutable.transformValuesSorted(descriptor.getPermissions(), (k, v) -> v.build(k));
         this.declaredExpand = Immutable.sortedCopy(descriptor.getExpand());
         this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
         if(Reserved.isReserved(qualifiedName.last())) {

@@ -698,6 +698,8 @@ class TestDatabaseServer {
         final Instance member = init.get("member");
         assertNotNull(member);
 
+        assertNotNull(database.read(Caller.SUPER, TEAM, "t1").join());
+
         final Map<String, Instance> update = database.batch(Caller.SUPER, BatchOptions.builder()
                 .action("team", UpdateOptions.builder()
                         .schema(TEAM)
@@ -768,26 +770,26 @@ class TestDatabaseServer {
         assertEquals("a2", Instance.get(get, Name.parse("team.parent.name")));
     }
 
-    @Test
-    void aggregate() throws Exception {
-
-        database.batch(Caller.SUPER, BatchOptions.builder()
-                .action("a", CreateOptions.builder()
-                        .schema(TEAM_MEMBER)
-                        .data(ImmutableMap.of(
-                                "user", ImmutableMap.of("id", "u1"),
-                                "team", ImmutableMap.of("id", "t1"),
-                                "role", "owner",
-                                "accepted", true
-                        )).build())
-                .build()).get();
-
-        final Page<Instance> results = database.query(Caller.SUPER, QueryOptions.builder()
-                .schema(Name.of("TeamMemberStats"))
-                .build()).get();
-
-        log.debug("Aggregate results: {}", results);
-    }
+//    @Test
+//    void aggregate() throws Exception {
+//
+//        database.batch(Caller.SUPER, BatchOptions.builder()
+//                .action("a", CreateOptions.builder()
+//                        .schema(TEAM_MEMBER)
+//                        .data(ImmutableMap.of(
+//                                "user", ImmutableMap.of("id", "u1"),
+//                                "team", ImmutableMap.of("id", "t1"),
+//                                "role", "owner",
+//                                "accepted", true
+//                        )).build())
+//                .build()).get();
+//
+//        final Page<Instance> results = database.query(Caller.SUPER, QueryOptions.builder()
+//                .schema(Name.of("TeamMemberStats"))
+//                .build()).get();
+//
+//        log.debug("Aggregate results: {}", results);
+//    }
 
     @Test
     void merge() throws Exception {

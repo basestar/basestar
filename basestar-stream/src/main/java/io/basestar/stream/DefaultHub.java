@@ -34,7 +34,7 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
 import io.basestar.schema.use.UseBinary;
-import io.basestar.storage.PartitionedStorage;
+import io.basestar.storage.DefaultIndexStorage;
 import io.basestar.storage.exception.UnsupportedQueryException;
 import io.basestar.storage.query.DisjunctionVisitor;
 import io.basestar.storage.query.Range;
@@ -146,8 +146,8 @@ public class DefaultHub implements Hub {
         final ObjectSchema schema = namespace.requireObjectSchema(event.getSchema());
         final Set<Subscription.Key> keys = event.getKeys();
         final Comparator<Subscription> comparator = Subscription.COMPARATOR;
-        final Pager<Subscription> pager = new Pager<>(comparator, subscriptions.query(keys), event.getPaging());
-        return pager.page(SUBSCRIPTION_PAGE_SIZE).thenCompose(results -> {
+        final Pager<Subscription> pager = subscriptions.query(keys);
+        return pager.page(event.getPaging(), SUBSCRIPTION_PAGE_SIZE).thenCompose(results -> {
             final List<Event> events = new ArrayList<>();
 
             results.forEach(result -> {
@@ -200,13 +200,13 @@ public class DefaultHub implements Hub {
         final Set<Subscription.Key> keys = new HashSet<>();
         for (final Expression conjunction : disjunction) {
             final Map<Name, Range<Object>> query = conjunction.visit(new RangeVisitor());
-            final Optional<String> optId = PartitionedStorage.constantId(query);
+            final Optional<String> optId = DefaultIndexStorage.constantId(query);
             if(optId.isPresent()) {
                 keys.add(idKey(schema, optId.get()));
             } else {
-                final Optional<PartitionedStorage.SatisfyResult> optSatisfy = PartitionedStorage.satisfy(schema.getIndexes().values(), query, Collections.emptyList());
+                final Optional<DefaultIndexStorage.SatisfyResult> optSatisfy = DefaultIndexStorage.satisfy(schema.getIndexes().values(), query, Collections.emptyList());
                 if (optSatisfy.isPresent()) {
-                    final PartitionedStorage.SatisfyResult satisfy = optSatisfy.get();
+                    final DefaultIndexStorage.SatisfyResult satisfy = optSatisfy.get();
                     final Index index = satisfy.getIndex();
                     keys.add(new Subscription.Key(schema.getQualifiedName(), index.getName(), UseBinary.binaryKey(satisfy.getPartition())));
                 } else {

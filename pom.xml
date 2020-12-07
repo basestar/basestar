@@ -88,7 +88,6 @@
         <module>basestar-storage-dynamodb</module>
         <module>basestar-storage-elasticsearch</module>
         <module>basestar-storage-s3</module>
-        <module>basestar-storage-spark</module>
         <module>basestar-storage-sql</module>
         <module>basestar-storage-cognito</module>
         <module>basestar-storage-hazelcast</module>

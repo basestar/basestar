@@ -23,8 +23,7 @@ Test2:
       type: any
 
 Test3:
-  type: object
-  concrete: false
+  type: interface
   properties:
     test:
       type: Test1
