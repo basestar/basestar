@@ -142,6 +142,9 @@ public class OverlayStorage implements Storage {
 
                 final Map<String, Object> over = overlayResponse.get(key);
                 final Map<String, Object> base = baselineResponse.get(key);
+                if(over != null && over.containsKey(TOMBSTONE_KEY)) {
+                    return null;
+                }
                 if(key.hasVersion()) {
                     final OverlayMetadata meta = OverlayMetadata.wrap(base, over);
                     if (over != null) {

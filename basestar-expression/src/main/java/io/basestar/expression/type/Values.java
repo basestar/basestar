@@ -143,6 +143,8 @@ public class Values {
             return ISO8601.toString((Date)value);
         } else if(value instanceof String) {
             return (String) value;
+        } else if(value instanceof byte[]) {
+            return BaseEncoding.base64().encode((byte[])value);
         } else {
             throw new TypeConversionException(String.class, value);
         }

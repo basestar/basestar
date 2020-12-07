@@ -41,6 +41,8 @@ public class CognitoGroupStorage implements DefaultLayerStorage {
 
     private static final String DESCRIPTION_KEY = "description";
 
+    private static final int MAX_PAGE_SIZE = 60;
+
     private final CognitoIdentityProviderAsyncClient client;
 
     private final CognitoGroupStrategy strategy;
@@ -77,7 +79,7 @@ public class CognitoGroupStorage implements DefaultLayerStorage {
             final String userPoolId = strategy.getUserPoolId(schema);
             return client.listGroups(ListGroupsRequest.builder()
                     .userPoolId(userPoolId)
-                    .limit(count)
+                    .limit(Math.max(MAX_PAGE_SIZE, count))
                     .nextToken(decodePaging(token))
                     .build()).thenApply(response -> {
                 final List<GroupType> groups = response.groups();

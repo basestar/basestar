@@ -20,13 +20,21 @@ package io.basestar.storage.cognito;
  * #L%
  */
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
+import io.basestar.expression.type.Values;
+import io.basestar.jackson.BasestarModule;
 import io.basestar.schema.*;
-import io.basestar.schema.use.*;
+import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseRef;
+import io.basestar.schema.use.UseScalar;
+import io.basestar.schema.use.UseStruct;
 import io.basestar.storage.*;
+import io.basestar.storage.exception.ObjectExistsException;
+import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.DisjunctionVisitor;
 import io.basestar.storage.query.Range;
 import io.basestar.storage.query.RangeVisitor;
@@ -38,6 +46,7 @@ import org.apache.commons.text.StringEscapeUtils;
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderAsyncClient;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.*;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -47,7 +56,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class CognitoUserStorage implements DefaultLayerStorage {
 
-    public static final int MAX_PAGE_SIZE = 50;
+    public static final int MAX_PAGE_SIZE = 60;
 
     private static final String CUSTOM_ATTR_PREFIX = "custom:";
 
@@ -60,6 +69,8 @@ public class CognitoUserStorage implements DefaultLayerStorage {
     private final CognitoIdentityProviderAsyncClient client;
 
     private final CognitoUserStrategy strategy;
+
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(BasestarModule.INSTANCE);
 
     private CognitoUserStorage(final Builder builder) {
 
@@ -94,7 +105,7 @@ public class CognitoUserStorage implements DefaultLayerStorage {
             return client.listUsers(ListUsersRequest.builder()
                     .userPoolId(userPoolId)
                     .filter(filter(query))
-                    .limit(count)
+                    .limit(Math.max(MAX_PAGE_SIZE, count))
                     .paginationToken(decodePaging(token))
                     .build()).thenApply(response -> {
                 final List<UserType> users = response.users();
@@ -208,6 +219,16 @@ public class CognitoUserStorage implements DefaultLayerStorage {
                             .username(id)
                             .userAttributes(attributes)
                             .build())
+                            .exceptionally(e -> {
+                                final Throwable cause = e.getCause();
+                                if(cause instanceof UsernameExistsException) {
+                                    throw new ObjectExistsException(schema.getQualifiedName(), id);
+                                } else if(cause instanceof RuntimeException) {
+                                    throw (RuntimeException)e.getCause();
+                                } else {
+                                    throw new IllegalStateException(cause);
+                                }
+                            })
                             .thenApply(ignored -> BatchResponse.fromRef(schema.getQualifiedName(), after));
                 });
             }
@@ -223,6 +244,17 @@ public class CognitoUserStorage implements DefaultLayerStorage {
                             .username(id)
                             .userAttributes(attributes)
                             .build())
+                            .exceptionally(e -> {
+                                final Throwable cause = e.getCause();
+                                if(cause instanceof UserNotFoundException) {
+                                    log.warn("User {} not found", id);
+                                   throw new VersionMismatchException(schema.getQualifiedName(), id, Instance.getVersion(before));
+                                } else if(cause instanceof RuntimeException) {
+                                    throw (RuntimeException)e.getCause();
+                                } else {
+                                    throw new IllegalStateException(cause);
+                                }
+                            })
                             .thenApply(ignored -> BatchResponse.fromRef(schema.getQualifiedName(), after));
                 });
             }
@@ -236,6 +268,17 @@ public class CognitoUserStorage implements DefaultLayerStorage {
                             .userPoolId(userPoolId)
                             .username(id)
                             .build())
+                            .exceptionally(e -> {
+                                final Throwable cause = e.getCause();
+                                if(cause instanceof UserNotFoundException) {
+                                    log.warn("User {} not found", id);
+                                    throw new VersionMismatchException(schema.getQualifiedName(), id, Instance.getVersion(before));
+                                } else if(cause instanceof RuntimeException) {
+                                    throw (RuntimeException)e.getCause();
+                                } else {
+                                    throw new IllegalStateException(cause);
+                                }
+                            })
                             .thenApply(ignored -> BatchResponse.empty());
                 });
             }
@@ -243,7 +286,7 @@ public class CognitoUserStorage implements DefaultLayerStorage {
             @Override
             public void writeHistoryLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
 
-                throw new UnsupportedOperationException("Cannot write history");
+//                throw new UnsupportedOperationException("Cannot write history");
             }
 
             @Override
@@ -292,21 +335,19 @@ public class CognitoUserStorage implements DefaultLayerStorage {
         return use.visit(new Use.Visitor.Defaulting<Map<Name, String>>() {
 
             @Override
-            public Map<Name, String> visitBoolean(final UseBoolean type) {
+            public <T> Map<Name, String> visitDefault(final Use<T> type) {
 
-                return value == null ? ImmutableMap.of() : ImmutableMap.of(path, Boolean.toString(type.create(value)));
+                try {
+                    return value == null ? ImmutableMap.of() : ImmutableMap.of(path, objectMapper.writeValueAsString(value));
+                } catch (final IOException e) {
+                    return ImmutableMap.of();
+                }
             }
 
             @Override
-            public Map<Name, String> visitInteger(final UseInteger type) {
+            public <T> Map<Name, String> visitScalar(final UseScalar<T> type) {
 
-                return value == null ? ImmutableMap.of() : ImmutableMap.of(path, Long.toString(type.create(value)));
-            }
-
-            @Override
-            public Map<Name, String> visitString(final UseString type) {
-
-                return value == null ? ImmutableMap.of() : ImmutableMap.of(path, type.create(value));
+                return value == null ? ImmutableMap.of() : ImmutableMap.of(path, Values.toString(value));
             }
 
             @Override
@@ -329,7 +370,15 @@ public class CognitoUserStorage implements DefaultLayerStorage {
 
                 final Instance instance = type.create(value);
                 if(instance != null) {
-                    return ImmutableMap.of(path.with(ObjectSchema.ID), Instance.getId(instance));
+                    final Long version = type.isVersioned() ? Instance.getVersion(instance) : null;
+                    if(version != null) {
+                        return ImmutableMap.of(
+                                path.with(ObjectSchema.ID), Instance.getId(instance),
+                                path.with(ObjectSchema.VERSION), Long.toString(version)
+                        );
+                    } else {
+                        return ImmutableMap.of(path.with(ObjectSchema.ID), Instance.getId(instance));
+                    }
                 } else {
                     return ImmutableMap.of();
                 }
@@ -394,6 +443,17 @@ public class CognitoUserStorage implements DefaultLayerStorage {
         return use.visit(new Use.Visitor.Defaulting<Object>() {
 
             @Override
+            public <T> Object visitDefault(final Use<T> type) {
+
+                try {
+                    final String value = attrs.get(path);
+                    return value == null ? null : objectMapper.readValue(value, Object.class);
+                } catch (final IOException e) {
+                    return ImmutableMap.of();
+                }
+            }
+
+            @Override
             public <T> Object visitScalar(final UseScalar<T> type) {
 
                 return type.create(attrs.get(path));
@@ -417,7 +477,17 @@ public class CognitoUserStorage implements DefaultLayerStorage {
             public Map<String, Object> visitRef(final UseRef type) {
 
                 final String id = attrs.get(path.with(ObjectSchema.ID));
-                return id == null ? null : ReferableSchema.ref(id);
+                if(id == null) {
+                    return null;
+                } else {
+                    if (type.isVersioned()) {
+                        final String versionStr = attrs.get(path.with(ObjectSchema.VERSION));
+                        final Long version = versionStr == null ? null : Long.parseLong(versionStr);
+                        return version == null ? ReferableSchema.ref(id) : ReferableSchema.versionedRef(id, version);
+                    } else {
+                        return ReferableSchema.ref(id);
+                    }
+                }
             }
         });
     }

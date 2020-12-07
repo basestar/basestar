@@ -56,10 +56,7 @@ public class CompletableFutures {
     public static <K, T> CompletableFuture<Map<K, T>> allOf(final Map<? extends K, ? extends CompletableFuture<T>> futures) {
 
         return CompletableFuture.allOf(futures.values().toArray(new CompletableFuture<?>[0]))
-                .thenApply(ignored -> futures.entrySet().stream().collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        e -> e.getValue().getNow(null)
-                )));
+                .thenApply(ignored -> Immutable.transformValues(futures, (k, v) -> v.getNow(null)));
     }
 
     public static <T> CompletableFuture<T> allOf(final T identity, final BinaryOperator<T> accumulator, final List<CompletableFuture<T>> futures) {

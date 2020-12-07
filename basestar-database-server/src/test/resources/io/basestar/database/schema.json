@@ -1,5 +1,8 @@
 {
   "Simple": {
+    "extensions": {
+      "test": "test"
+    },
     "properties": {
       "boolean": {
         "type": "boolean?"
