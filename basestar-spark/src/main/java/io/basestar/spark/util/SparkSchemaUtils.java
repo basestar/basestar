@@ -9,9 +9,9 @@ package io.basestar.spark.util;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -70,7 +70,7 @@ public class SparkSchemaUtils {
         schema.layoutSchema(expand).forEach((name, type) -> fields.add(field(name, type, branches.get(name))));
         extraMetadata.forEach((name, type) -> fields.add(field(name, type, branches.get(name))));
         fields.sort(Comparator.comparing(StructField::name));
-        return DataTypes.createStructType(fields);
+        return DataTypes.createStructType(fields).asNullable();
     }
 
     public static StructType structType(final ObjectSchema schema, final Index index) {
@@ -86,7 +86,7 @@ public class SparkSchemaUtils {
         index.projectionSchema(schema).forEach((name, type) -> fields.add(field(name, type, null)));
         extraMetadata.forEach((name, type) -> fields.add(field(name, type, null)));
         fields.sort(Comparator.comparing(StructField::name));
-        return DataTypes.createStructType(fields);
+        return DataTypes.createStructType(fields).asNullable();
     }
 
     public static Set<Name> names(final InstanceSchema schema, final StructType structType) {
@@ -98,8 +98,8 @@ public class SparkSchemaUtils {
 
         final Set<Name> names = new HashSet<>();
         tmp.forEach((name, type) -> findField(structType, name)
-                    .ifPresent(field -> names(type, field.dataType())
-                                .forEach(rest -> names.add(Name.of(name).with(rest)))));
+                .ifPresent(field -> names(type, field.dataType())
+                        .forEach(rest -> names.add(Name.of(name).with(rest)))));
         return names;
     }
 
@@ -159,7 +159,7 @@ public class SparkSchemaUtils {
         final List<StructField> fields = new ArrayList<>();
         ObjectSchema.REF_SCHEMA.forEach((name, type) -> fields.add(field(name, type, null)));
         fields.sort(Comparator.comparing(StructField::name));
-        return DataTypes.createStructType(fields);
+        return DataTypes.createStructType(fields).asNullable();
     }
 
     public static StructField field(final String name, final Use<?> type, final Set<Name> expand) {
@@ -179,7 +179,7 @@ public class SparkSchemaUtils {
         } else if(schema instanceof StructSchema) {
             return structType((StructSchema) schema, expand);
         } else if (schema instanceof EnumSchema) {
-            return DataTypes.StringType;
+            return DataTypes.StringType.asNullable();
         } else {
             throw new IllegalStateException();
         }
@@ -197,31 +197,31 @@ public class SparkSchemaUtils {
             @Override
             public DataType visitBoolean(final UseBoolean type) {
 
-                return DataTypes.BooleanType;
+                return DataTypes.BooleanType.asNullable();
             }
 
             @Override
             public DataType visitInteger(final UseInteger type) {
 
-                return DataTypes.LongType;
+                return DataTypes.LongType.asNullable();
             }
 
             @Override
             public DataType visitNumber(final UseNumber type) {
 
-                return DataTypes.DoubleType;
+                return DataTypes.DoubleType.asNullable();
             }
 
             @Override
             public DataType visitString(final UseString type) {
 
-                return DataTypes.StringType;
+                return DataTypes.StringType.asNullable();
             }
 
             @Override
             public DataType visitEnum(final UseEnum type) {
 
-                return DataTypes.StringType;
+                return DataTypes.StringType.asNullable();
             }
 
             @Override
@@ -233,43 +233,43 @@ public class SparkSchemaUtils {
             @Override
             public <T> DataType visitArray(final UseArray<T> type) {
 
-                return DataTypes.createArrayType(type.getType().visit(this));
+                return DataTypes.createArrayType(type.getType().visit(this)).asNullable();
             }
 
             @Override
             public <T> DataType visitSet(final UseSet<T> type) {
 
-                return DataTypes.createArrayType(type.getType().visit(this));
+                return DataTypes.createArrayType(type.getType().visit(this)).asNullable();
             }
 
             @Override
             public <T> DataType visitMap(final UseMap<T> type) {
 
-                return DataTypes.createMapType(DataTypes.StringType, type.getType().visit(this));
+                return DataTypes.createMapType(DataTypes.StringType, type.getType().visit(this)).asNullable();
             }
 
             @Override
             public DataType visitStruct(final UseStruct type) {
 
-                return structType(type.getSchema(), expand);
+                return structType(type.getSchema(), expand).asNullable();
             }
 
             @Override
             public DataType visitBinary(final UseBinary type) {
 
-                return DataTypes.BinaryType;
+                return DataTypes.BinaryType.asNullable();
             }
 
             @Override
             public DataType visitDate(final UseDate type) {
 
-                return DataTypes.DateType;
+                return DataTypes.DateType.asNullable();
             }
 
             @Override
             public DataType visitDateTime(final UseDateTime type) {
 
-                return DataTypes.TimestampType;
+                return DataTypes.TimestampType.asNullable();
             }
 
             @Override
@@ -1014,7 +1014,7 @@ public class SparkSchemaUtils {
             @Override
             public Encoder<?> visitObject(final UseObject type) {
 
-                return RowEncoder.apply(refType());
+                return RowEncoder.apply(refType().asNullable());
             }
 
             @Override
