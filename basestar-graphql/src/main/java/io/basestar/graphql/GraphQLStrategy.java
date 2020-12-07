@@ -45,7 +45,7 @@ public interface GraphQLStrategy {
 
     default String missingInterfaceRefTypeName(final Schema<?> type) {
 
-        return typeName(type) + Reserved.PREFIX;
+        return "Unresolved" + typeName(type);
     }
 
     String inputRefTypeName(boolean versioned);

@@ -416,8 +416,8 @@ public class SchemaAdaptor {
             final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
             builder.name(strategy.typeName(schema));
             builder.description(description(schema.getDescription()));
-            if (schema.getExtend() != null) {
-                builder.implementz(implementz(schema));
+            if(schema instanceof ReferableSchema) {
+                builder.implementz(implementz((ReferableSchema)schema));
             }
             fieldDefinitions(schema).forEach(builder::fieldDefinition);
             return builder.build();
@@ -431,12 +431,12 @@ public class SchemaAdaptor {
     }
 
     @SuppressWarnings("rawtypes")
-    private List<Type> implementz(final InstanceSchema schema) {
+    private List<Type> implementz(final ReferableSchema schema) {
 
-        final List<? extends InstanceSchema> extend = schema.getExtend();
+        final List<? extends ReferableSchema> extend = schema.getExtend();
         if(extend != null) {
             final List<Type> result = new ArrayList<>();
-            for(final InstanceSchema parent : extend) {
+            for(final ReferableSchema parent : extend) {
                 result.addAll(implementz(parent));
                 result.add(new TypeName(strategy.typeName(parent)));
             }
