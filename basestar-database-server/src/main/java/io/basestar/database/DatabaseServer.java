@@ -79,14 +79,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             .on(ObjectUpdatedEvent.class, DatabaseServer::onObjectUpdated)
             .on(ObjectDeletedEvent.class, DatabaseServer::onObjectDeleted)
             .on(ObjectRefreshedEvent.class, DatabaseServer::onObjectRefreshed)
-//            .on(AsyncIndexCreatedEvent.class, DatabaseServer::onAsyncIndexCreated)
-//            .on(AsyncIndexUpdatedEvent.class, DatabaseServer::onAsyncIndexUpdated)
-//            .on(AsyncIndexDeletedEvent.class, DatabaseServer::onAsyncIndexDeleted)
-//            .on(AsyncIndexDeletedEvent.class, DatabaseServer::onAsyncIndexDeleted)
-//            .on(AsyncHistoryCreatedEvent.class, DatabaseServer::onAsyncHistoryCreated)
             .on(RefQueryEvent.class, DatabaseServer::onRefQuery)
             .on(RefRefreshEvent.class, DatabaseServer::onRefRefresh)
-//            .on(RepairEvent.class, DatabaseServer::onRepair)
             .build();
 
     public DatabaseServer(final Namespace namespace, final Storage storage) {
@@ -139,26 +133,6 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         return batch(caller, options.getConsistency(), actions);
     }
-
-//    private List<Pager.Source<RepairInfo>> repairSources(final Name schemaName, final String indexName) {
-//
-//        final ObjectSchema schema = objectSchema(schemaName);
-//        if(indexName == null) {
-//            return storage.repair(schema);
-//        } else {
-//            final Index index = schema.requireIndex(indexName, true);
-//            return storage.repairIndex(schema, index);
-//        }
-//    }
-//
-//    @Override
-//    public CompletableFuture<?> repair(final Caller caller, final RepairOptions options) {
-//
-//        final List<Pager.Source<RepairInfo>> sources = repairSources(options.getSchema(), options.getIndex());
-//        final List<Event> events = new ArrayList<>();
-//        sources.forEach(source -> events.add(RepairEvent.of(options.getSchema(), options.getIndex(), events.size(), null)));
-//        return emitter.emit(events);
-//    }
 
     private CompletableFuture<Instance> single(final Caller caller, final Action action) {
 
@@ -394,55 +368,18 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         schema.validateObject(id, after);
         write.createObject(schema, id, after);
-
-//        objectHierarchy(schema).forEach(superSchema -> {
-//
-//            final Instance superAfter = superSchema.create(after);
-//            write.createObject(superSchema, id, superAfter);
-//        });
     }
 
     private void writeUpdate(final Storage.WriteTransaction write, final ObjectSchema schema, final String id, final Instance before, final Instance after) {
 
         schema.validateObject(id, after);
         write.updateObject(schema, id, before, after);
-
-//        objectHierarchy(schema).forEach(superSchema -> {
-//
-//            final Instance superBefore = superSchema.create(before);
-//            final Instance superAfter = superSchema.create(after);
-//            write.updateObject(superSchema, id, superBefore, superAfter);
-//        });
     }
 
     private void writeDelete(final Storage.WriteTransaction write, final ObjectSchema schema, final String id, final Instance before) {
 
         write.deleteObject(schema, id, before);
-
-//        objectHierarchy(schema).forEach(superSchema -> {
-//            final Instance superBefore = superSchema.create(before);
-//            write.deleteObject(superSchema, id, superBefore);
-//        });
     }
-
-//    private List<ObjectSchema> objectHierarchy(final ObjectSchema schema) {
-//
-//        if(schema.getExtend().isEmpty()) {
-//            return ImmutableList.of();
-//        } else {
-//            throw new IllegalStateException("need re-implement extend");
-//        }
-////        final InstanceSchema parent = schema.getExtend();
-////        if(parent instanceof ObjectSchema) {
-////            final ObjectSchema objectParent = (ObjectSchema)parent;
-////            return ImmutableList.<ObjectSchema>builder()
-////                    .addAll(objectHierarchy(objectParent))
-////                    .add(objectParent)
-////                    .build();
-////        } else {
-////            return ImmutableList.of();
-////        }
-//    }
 
     @Override
     public CompletableFuture<Instance> read(final Caller caller, final ReadOptions options) {
@@ -571,68 +508,6 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         if(schema instanceof ViewSchema) {
 
             throw new UnsupportedOperationException();
-//            final ViewSchema viewSchema = (ViewSchema)schema;
-//            final Expression expression = options.getExpression();
-//
-//            final Permission permission = viewSchema.getPermission(Permission.READ);
-//
-//            final Context context = context(caller, ImmutableMap.of());
-//
-//            Expression bound;
-//            if(expression != null) {
-//                bound = expression.bind(context);
-//            } else {
-//                bound = new Constant(true);
-//            }
-//
-//            if(viewSchema.getWhere() != null) {
-//                bound = new And(bound, viewSchema.getWhere());
-//            }
-//
-//            final AggregateExtractingVisitor visitor = new AggregateExtractingVisitor();
-//            final Map<String, Expression> columns = new HashMap<>();
-//            viewSchema.getSelectProperties().forEach((name, prop) -> {
-//                final Expression expr = Nullsafe.require(prop.getExpression()).bind(context);
-//                columns.put(name, visitor.visit(expr));
-//            });
-//            final Map<String, Aggregate> aggregates = visitor.getAggregates();
-//
-//            // FIXME: nested aggregates
-//            final ObjectSchema objectSchema = (ObjectSchema) viewSchema.getFrom().getSchema();
-//
-//            final Map<String, Expression> group = new HashMap<>();
-//            viewSchema.getGroupProperties().forEach((name, prop) -> {
-//                final Expression expr = Nullsafe.require(prop.getExpression()).bind(context);
-//                group.put(name, expr);
-//            });
-//
-//            if(aggregates.isEmpty() && group.isEmpty()) {
-//
-//                // FIXME: need to reconcile with Object query behaviour
-//                throw new UnsupportedOperationException();
-//
-//            } else {
-//
-//                //FIXME: should de-duplicate sort keys, also need to deal with empty case
-//                final List<Sort> sort = ImmutableList.<Sort>builder()
-//                        .addAll(Nullsafe.orDefault(options.getSort(), viewSchema.getSort()))
-//                        .addAll(group.keySet().stream().map(k -> Sort.asc(Name.of(k))).collect(Collectors.toList()))
-//                        .build();
-//
-//                final List<Pager.Source<Instance>> sources = storage.aggregate(objectSchema, bound, group, aggregates).stream()
-//                        .map(source -> (Pager.Source<Instance>) (c, t, stats) -> source.page(c, t, stats)
-//                                .thenApply(data -> data.map(row -> {
-//                                    final Map<String, Object> values = new HashMap<>();
-//                                    columns.forEach((name, column) -> {
-//                                        values.put(name, column.evaluate(context.with(row)));
-//                                    });
-//                                    group.keySet().forEach(name -> values.put(name, row.get(name)));
-//                                    return create(viewSchema, values);
-//                                })))
-//                        .collect(Collectors.toList());
-//
-//                return pageImpl(context, sources, new Constant(true), sort, count, paging);
-//            }
 
         } else if(schema instanceof ReferableSchema) {
 
@@ -710,20 +585,6 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final Map<String, Object> after = event.getAfter();
         return storage.afterCreate(schema, id, after)
                 .thenCompose(events -> emitter.emit(Immutable.copyAddAll(events, refQueryEvents(schema, id))));
-//        final Set<Event> events = new HashSet<>();
-//        events.addAll(historyEvents(schema, id, after));
-//        events.addAll(schema.getIndexes().values().stream().flatMap(index -> {
-//            final Consistency best = traits.getIndexConsistency(index.isMultiValue());
-//            if(index.getConsistency(best).isAsync()) {
-//                final Map<Index.Key, Map<String, Object>> records = index.readValues(after);
-//                return records.entrySet().stream()
-//                        .map(e -> AsyncIndexCreatedEvent.of(schema.getQualifiedName(), index.getName(), id, 0L, e.getKey(), e.getValue()));
-//            } else {
-//                return Stream.empty();
-//            }
-//        }).collect(Collectors.toSet()));
-//        events.addAll(refQueryEvents(schema, id));
-//        return emitter.emit(events);
     }
 
     protected CompletableFuture<?> onObjectUpdated(final ObjectUpdatedEvent event) {
@@ -757,33 +618,6 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         return storage.afterUpdate(schema, id, version, before, after)
                 .thenCompose(emitter::emit);
     }
-
-//    protected CompletableFuture<?> onAsyncIndexCreated(final AsyncIndexCreatedEvent event) {
-//
-//        final ObjectSchema schema = objectSchema(event.getSchema());
-//        final Index index = schema.requireIndex(event.getIndex(), true);
-//        return storage.asyncIndexCreated(schema, index, event.getId(), event.getVersion(), event.getKey(), event.getProjection());
-//    }
-//
-//    protected CompletableFuture<?> onAsyncIndexUpdated(final AsyncIndexUpdatedEvent event) {
-//
-//        final ObjectSchema schema = objectSchema(event.getSchema());
-//        final Index index = schema.requireIndex(event.getIndex(), true);
-//        return storage.asyncIndexUpdated(schema, index, event.getId(), event.getVersion(), event.getKey(), event.getProjection());
-//    }
-//
-//    protected CompletableFuture<?> onAsyncIndexDeleted(final AsyncIndexDeletedEvent event) {
-//
-//        final ObjectSchema schema = objectSchema(event.getSchema());
-//        final Index index = schema.requireIndex(event.getIndex(), true);
-//        return storage.asyncIndexDeleted(schema, index, event.getId(), event.getVersion(), event.getKey());
-//    }
-//
-//    protected CompletableFuture<?> onAsyncHistoryCreated(final AsyncHistoryCreatedEvent event) {
-//
-//        final ObjectSchema schema = objectSchema(event.getSchema());
-//        return storage.asyncHistoryCreated(schema, event.getId(), event.getVersion(), event.getAfter());
-//    }
 
     protected CompletableFuture<?> onRefQuery(final RefQueryEvent event) {
 
@@ -872,19 +706,6 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         });
     }
 
-//    protected CompletableFuture<?> onRepair(final RepairEvent event) {
-//
-//        final List<Pager.Source<RepairInfo>> sources = repairSources(event.getSchema(), event.getIndex());
-//        final Pager.Source<RepairInfo> source = sources.get(event.getSource());
-//        return source.page(REPAIR_PAGE_SIZE, event.getPaging(), null).thenCompose(page -> {
-//            if(page.getPaging() == null) {
-//                return CompletableFuture.completedFuture(null);
-//            } else {
-//                return emitter.emit(event.withPaging(page.getPaging()));
-//            }
-//        });
-//    }
-
     private Set<Event> refQueryEvents(final ObjectSchema schema, final String id) {
 
         final Set<Event> events = new HashSet<>();
@@ -898,45 +719,4 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         });
         return events;
     }
-
-//    private Set<Event> historyEvents(final ObjectSchema schema, final String id, final Map<String, Object> after) {
-//
-//        final Long afterVersion = Instance.getVersion(after);
-//        assert afterVersion != null;
-//        final StorageTraits traits = storage.storageTraits(schema);
-//        final History history = schema.getHistory();
-//        if(history.isEnabled() && history.getConsistency(traits.getHistoryConsistency()).isAsync()) {
-//            return Collections.singleton(AsyncHistoryCreatedEvent.of(schema.getQualifiedName(), id, afterVersion, after));
-//        } else {
-//            return Collections.emptySet();
-//        }
-//    }
-
-//    private Set<Event> refreshObjectEvents(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
-//
-//        final StorageTraits traits = storage.storageTraits(schema);
-//        final Long beforeVersion = Instance.getVersion(before);
-//        final Long afterVersion = Instance.getVersion(after);
-//        assert beforeVersion != null && afterVersion != null;
-//
-////        final Set<Event> events = new HashSet<>();
-////        events.addAll(historyEvents(schema, id, after));
-////        events.addAll(schema.getIndexes().values().stream().flatMap(index -> {
-////            final Consistency best = traits.getIndexConsistency(index.isMultiValue());
-////            if(index.getConsistency(best).isAsync()) {
-////                final Index.Diff diff = Index.Diff.from(index.readValues(before), index.readValues(after));
-////                final Stream<Event> create = diff.getCreate().entrySet().stream()
-////                        .map(e -> AsyncIndexCreatedEvent.of(schema.getQualifiedName(), index.getName(), id, beforeVersion, e.getKey(), e.getValue()));
-////                final Stream<Event> update = diff.getUpdate().entrySet().stream()
-////                        .map(e -> AsyncIndexUpdatedEvent.of(schema.getQualifiedName(), index.getName(), id, beforeVersion, e.getKey(), e.getValue()));
-////                final Stream<Event> delete = diff.getDelete().stream()
-////                        .map(key-> AsyncIndexDeletedEvent.of(schema.getQualifiedName(), index.getName(), id, beforeVersion, key));
-////                return Stream.of(create, update, delete)
-////                        .flatMap(v -> v);
-////            } else {
-////                return Stream.empty();
-////            }
-////        }).collect(Collectors.toSet()));
-//        return events;
-//    }
 }

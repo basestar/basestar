@@ -110,6 +110,4 @@ public interface Database {
                 .expand(expand)
                 .build());
     }
-
-//    CompletableFuture<?> repair(Caller caller, RepairOptions options);
 }

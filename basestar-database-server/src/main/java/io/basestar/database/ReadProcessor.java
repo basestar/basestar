@@ -33,7 +33,6 @@ import io.basestar.schema.*;
 import io.basestar.schema.util.Expander;
 import io.basestar.storage.Storage;
 import io.basestar.util.*;
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
@@ -139,31 +138,6 @@ public class ReadProcessor {
                     });
                 });
     }
-
-//    protected CompletableFuture<Page<Instance>> pageImpl(final Context context, final Pager<Instance> sources, final Expression expression,
-//                                                         final List<Sort> sort, final int count, final Page.Token paging) {
-//
-//        if(sources.isEmpty()) {
-//            throw new IllegalStateException("Query not supported");
-//        } else {
-//
-//            final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
-//            final Pager<Instance> pager = Pager.merge(comparator, sources);
-//            return pager.page(paging, count)
-//                    .thenApply(results -> {
-//                        // Expressions that could not be pushed down are applied after auto-paging.
-//                        return results.filter(instance -> {
-//                            try {
-//                                return expression.evaluatePredicate(context.with(instance));
-//                            } catch (final Exception e) {
-//                                // FIXME:
-//                                log.warn("Failed to evaluate predicate", e);
-//                                return false;
-//                            }
-//                        });
-//                    });
-//        }
-//    }
 
     protected CompletableFuture<Instance> expand(final Context context, final Instance item, final Set<Name> expand) {
 
@@ -390,98 +364,6 @@ public class ReadProcessor {
         final ReferableSchema schema = referableSchema(Instance.getSchema(data));
         return schema.create(data, Immutable.copyAddAll(schema.getExpand(), expand), true);
     }
-
-//    protected CompletableFuture<Page<Instance>> cast(final ObjectSchema baseSchema, final Page<? extends Map<String, Object>> data, final Set<Name> expand) {
-//
-//        final Multimap<Name, Map<String, Object>> needed = ArrayListMultimap.create();
-//        data.forEach(v -> {
-//            final Name actualSchema = Instance.getSchema(v);
-//            if(!baseSchema.getQualifiedName().equals(actualSchema)) {
-//                needed.put(actualSchema, v);
-//            }
-//        });
-//        if(needed.isEmpty()) {
-//            return CompletableFuture.completedFuture(data.map(v -> {
-//                final ObjectSchema schema = objectSchema(Instance.getSchema(v));
-//                return schema.create(v, expand, true);
-//            }));
-//        } else {
-//            final Storage.ReadTransaction readTransaction = storage.read(Consistency.NONE);
-//            needed.asMap().forEach((schemaName, items) -> {
-//                final ObjectSchema schema = objectSchema(schemaName);
-//                items.forEach(item -> {
-//                    final String id = Instance.getId(item);
-//                    final Long version = Instance.getVersion(item);
-//                    assert version != null;
-//                    readTransaction.readObjectVersion(schema, id, version, expand);
-//                });
-//            });
-//            return readTransaction.read().thenApply(results -> data.map(v -> {
-//                final Name schemaName = Instance.getSchema(v);
-//                final String id = Instance.getId(v);
-//                final Map<String, Object> mappedResult = results.getObject(schemaName, id);
-//                final Map<String, Object> result = Nullsafe.orDefault(mappedResult, v);
-//                final ObjectSchema schema = objectSchema(Instance.getSchema(result));
-//                return schema.create(result, expand, true);
-//            }));
-//        }
-//    }
-
-    @Data
-    private static class InstanceExpand {
-
-        private final Map<String, Object> instance;
-
-        private final Set<Name> expand;
-    }
-
-//    protected CompletableFuture<Map<ExpandKey<RefKey>, Instance>> cast(final Map<ExpandKey<RefKey>, ? extends Map<String, Object>> data) {
-//
-//        final Multimap<Name, InstanceExpand> needed = ArrayListMultimap.create();
-//        data.forEach((k, v) -> {
-//            final Name actualSchema = Instance.getSchema(v);
-//            if(!k.getKey().getSchema().equals(actualSchema)) {
-//                needed.put(actualSchema, new InstanceExpand(v, k.getExpand()));
-//            }
-//        });
-//        if(needed.isEmpty()) {
-//            final Map<ExpandKey<RefKey>, Instance> results = new HashMap<>();
-//            data.forEach((k, v) -> {
-//                final ReferableSchema schema = objectSchema(Instance.getSchema(v));
-//                final Instance instance = create(schema, v);
-//                results.put(k, instance);
-//            });
-//            return CompletableFuture.completedFuture(results);
-//        } else {
-//            final Storage.ReadTransaction readTransaction = storage.read(Consistency.NONE);
-//            needed.asMap().forEach((schemaName, items) -> {
-//                final ReferableSchema schema = objectSchema(schemaName);
-//                items.forEach(item -> {
-//                    final Map<String, Object> instance = item.getInstance();
-//                    final Set<Name> expand = item.getExpand();
-//                    final String id = Instance.getId(instance);
-//                    final Long version = Instance.getVersion(instance);
-//                    assert version != null;
-//                    readTransaction.readObjectVersion(schema, id, version, expand);
-//                });
-//            });
-//            return readTransaction.read().thenApply(results -> {
-//
-//                final Map<ExpandKey<RefKey>, Instance> remapped = new HashMap<>();
-//                data.forEach((k, v) ->  {
-//                    final Name schemaName = Instance.getSchema(v);
-//                    final String id = Instance.getId(v);
-//                    final Long version = Instance.getVersion(v);
-//                    final Map<String, Object> mappedResult = results.getObjectVersion(schemaName, id, version);
-//                    final Map<String, Object> result = Nullsafe.orDefault(mappedResult, v);
-//                    final ObjectSchema schema = objectSchema(Instance.getSchema(result));
-//                    final Instance instance = create(schema, result);
-//                    remapped.put(k, instance);
-//                });
-//                return remapped;
-//            });
-//        }
-//    }
 
     protected CompletableFuture<Caller> expandCaller(final Context context, final Caller caller, final Set<Name> expand) {
 

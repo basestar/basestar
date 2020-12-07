@@ -8,6 +8,10 @@ import java.util.function.Function;
 
 public class Immutable {
 
+    private Immutable() {
+
+    }
+
     public static <T> List<T> list() {
 
         return Collections.emptyList();
