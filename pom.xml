@@ -100,6 +100,15 @@
         <module>basestar-storage-aws</module>
     </modules>
 
+    <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
 <!--    <reporting>-->
 <!--        <plugins>-->
 <!--            <plugin>-->

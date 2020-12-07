@@ -149,3 +149,14 @@ Store:
     orders:
       schema: Order
       expression: store.id == this.id
+
+PetStats:
+  type: view
+  group:
+    - schema
+  properties:
+    schema: schema
+    count: count()
+  from:
+    schema: Pet
+  where: status == available
