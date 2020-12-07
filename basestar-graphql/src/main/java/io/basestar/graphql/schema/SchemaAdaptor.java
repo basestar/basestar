@@ -63,12 +63,10 @@ public class SchemaAdaptor {
                         registry.add(updateInputTypeDefinition(objectSchema));
                         registry.add(patchInputTypeDefinition(objectSchema));
                     }
-                    if (!objectSchema.isConcrete()) {
-                        registry.add(missingInterfaceRefDefinition(objectSchema));
-                    }
                 } else if(schema instanceof InterfaceSchema) {
                     final InterfaceSchema interfaceSchema = (InterfaceSchema) instanceSchema;
                     registry.add(pageTypeDefinition(interfaceSchema));
+                    registry.add(missingInterfaceRefDefinition(interfaceSchema));
                 } else if(schema instanceof ViewSchema) {
                     final ViewSchema viewSchema = (ViewSchema) instanceSchema;
                     registry.add(pageTypeDefinition(viewSchema));
@@ -391,7 +389,7 @@ public class SchemaAdaptor {
         return builder.build();
     }
 
-    public TypeDefinition<?> missingInterfaceRefDefinition(final ObjectSchema schema) {
+    public TypeDefinition<?> missingInterfaceRefDefinition(final ReferableSchema schema) {
 
         final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
         builder.name(strategy.missingInterfaceRefTypeName(schema));

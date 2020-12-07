@@ -24,8 +24,8 @@ import com.google.common.collect.ImmutableList;
 import io.basestar.codegen.Codebehind;
 import io.basestar.codegen.CodegenContext;
 import io.basestar.schema.*;
-import io.basestar.util.Immutable;
 
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -44,13 +44,11 @@ public abstract class InstanceSchemaModel extends SchemaModel {
 
     public List<MemberModel> getMembers() {
 
-        return Stream.concat(Stream.concat(
-                schema.getExtend() != null ? Stream.<MemberModel>empty() : schema.metadataSchema().entrySet().stream()
-                        .filter(entry -> !ObjectSchema.SCHEMA.equals(entry.getKey()) && !entry.getKey().startsWith(Reserved.PREFIX))
-                        .map(entry -> new MetadataModel(getContext(), entry.getKey(), entry.getValue())),
+        return Stream.concat(
                 schema.getDeclaredProperties().values().stream()
-                        .map(v -> new PropertyModel(getContext(), v))
-        ), getAdditionalMembers().stream()).sorted(Comparator.comparing(MemberModel::getName)).collect(Collectors.toList());
+                        .map(v -> new PropertyModel(getContext(), v)),
+                getAdditionalMembers().stream()
+        ).sorted(Comparator.comparing(MemberModel::getName)).collect(Collectors.toList());
     }
 
     protected List<MemberModel> getAdditionalMembers() {
@@ -65,8 +63,7 @@ public abstract class InstanceSchemaModel extends SchemaModel {
 
     public List<InstanceSchemaModel> getExtend() {
 
-        final CodegenContext context = getContext();
-        return Immutable.transform(schema.getExtend(), v -> from(context, v));
+        return Collections.emptyList();
     }
 
     protected static InstanceSchemaModel from(final CodegenContext context, final InstanceSchema schema) {

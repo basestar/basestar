@@ -27,7 +27,6 @@ import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.collect.ImmutableSortedMap;
 import io.basestar.expression.Context;
-import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.use.Use;
@@ -86,17 +85,17 @@ public class StructSchema implements InstanceSchema {
 
     /** Parent schema, may be another struct schema only */
 
-    private final List<StructSchema> extend;
+//    private final List<StructSchema> extend;
 
     /** Description of the schema */
 
     @Nullable
     private final String description;
 
-    /** Map of property definitions */
-
-    @Nonnull
-    private final SortedMap<String, Property> properties;
+//    /** Map of property definitions */
+//
+//    @Nonnull
+//    private final SortedMap<String, Property> properties;
 
     /** Map of property definitions */
 
@@ -117,18 +116,8 @@ public class StructSchema implements InstanceSchema {
             return TYPE;
         }
 
-        @JsonDeserialize(using = AbbrevListDeserializer.class)
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        List<Name> getExtend();
-
         interface Self extends InstanceSchema.Descriptor.Self<StructSchema>, Descriptor {
 
-            @Override
-            default List<Name> getExtend() {
-
-                final List<StructSchema> extend = self().getExtend();
-                return Immutable.transform(extend, Named::getQualifiedName);
-            }
         }
 
         @Override
@@ -185,7 +174,7 @@ public class StructSchema implements InstanceSchema {
         this.qualifiedName = qualifiedName;
         this.slot = slot;
         this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
-        this.extend = Immutable.transform(descriptor.getExtend(), resolver::requireStructSchema);
+//        this.extend = Immutable.transform(descriptor.getExtend(), resolver::requireStructSchema);
         this.description = descriptor.getDescription();
         this.declaredProperties = Immutable.transformValuesSorted(descriptor.getProperties(), (k, v) -> v.build(resolver, version, qualifiedName.with(k)));
         this.declaredProperties.forEach((k, v) -> {
@@ -202,7 +191,7 @@ public class StructSchema implements InstanceSchema {
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
-        this.properties = Property.extend(extend, declaredProperties);
+//        this.properties = Property.extend(extend, declaredProperties);
 
         this.extensions = Nullsafe.orDefault(descriptor.getExtensions());
     }
@@ -232,6 +221,12 @@ public class StructSchema implements InstanceSchema {
     }
 
     @Override
+    public Map<String, Property> getProperties() {
+
+        return getDeclaredProperties();
+    }
+
+    @Override
     public Map<String, ? extends Member> getDeclaredMembers() {
 
         return declaredProperties;
@@ -240,7 +235,7 @@ public class StructSchema implements InstanceSchema {
     @Override
     public Map<String, ? extends Member> getMembers() {
 
-        return properties;
+        return getProperties();
     }
 
     @Override
@@ -277,7 +272,7 @@ public class StructSchema implements InstanceSchema {
     public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
         if(!out.containsKey(qualifiedName)) {
-            extend.forEach(ex -> ex.collectDependencies(expand, out));
+//            extend.forEach(ex -> ex.collectDependencies(expand, out));
             out.put(qualifiedName, this);
             declaredProperties.forEach((k, v) -> v.collectDependencies(expand, out));
         }

@@ -111,6 +111,25 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
     @Override
     Descriptor<? extends ReferableSchema> descriptor();
 
+    default boolean isOrExtending(final Name name) {
+
+        if(name.equals(this.getQualifiedName())) {
+            return true;
+        } else {
+            return isExtending(name);
+        }
+    }
+
+    default boolean isExtending(final Name name) {
+
+        for(final ReferableSchema extend : getExtend()) {
+            if (extend.isOrExtending(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     Collection<ReferableSchema> getDirectlyExtended();
 
     default Collection<ReferableSchema> getIndirectlyExtended() {

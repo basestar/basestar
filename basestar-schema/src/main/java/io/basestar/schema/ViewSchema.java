@@ -448,12 +448,6 @@ public class ViewSchema implements LinkableSchema {
     }
 
     @Override
-    public List<? extends InstanceSchema> getExtend() {
-
-        return null;
-    }
-
-    @Override
     public boolean isConcrete() {
 
         return true;

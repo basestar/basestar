@@ -24,10 +24,14 @@ import io.basestar.codegen.CodegenContext;
 import io.basestar.mapper.annotation.Description;
 import io.basestar.schema.Index;
 import io.basestar.schema.InterfaceSchema;
+import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.Reserved;
+import io.basestar.util.Immutable;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @SuppressWarnings("unused")
 public class InterfaceSchemaModel extends InstanceSchemaModel {
@@ -64,7 +68,18 @@ public class InterfaceSchemaModel extends InstanceSchemaModel {
     @Override
     public List<MemberModel> getAdditionalMembers() {
 
-        return schema.getDeclaredLinks().values().stream()
-                        .map(v -> new LinkModel(getContext(), v)).collect(Collectors.toList());
+        return Stream.concat(
+                schema.getExtend() != null ? Stream.<MemberModel>empty() : schema.metadataSchema().entrySet().stream()
+                        .filter(entry -> !ObjectSchema.SCHEMA.equals(entry.getKey()) && !entry.getKey().startsWith(Reserved.PREFIX))
+                        .map(entry -> new MetadataModel(getContext(), entry.getKey(), entry.getValue())),
+                schema.getDeclaredLinks().values().stream()
+                        .map(v -> new LinkModel(getContext(), v))).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<InstanceSchemaModel> getExtend() {
+
+        final CodegenContext context = getContext();
+        return Immutable.transform(schema.getExtend(), v -> from(context, v));
     }
 }

@@ -61,8 +61,6 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
 
     Instance create(Map<String, Object> value, Set<Name> expand, boolean suppress);
 
-    List<? extends InstanceSchema> getExtend();
-
     @Override
     UseInstance typeOf();
 
@@ -81,25 +79,6 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
     default boolean hasMember(final String name) {
 
         return metadataSchema().containsKey(name) || getMember(name, true) != null;
-    }
-
-    default boolean isOrExtending(final Name name) {
-
-        if(name.equals(this.getQualifiedName())) {
-            return true;
-        } else {
-            return isExtending(name);
-        }
-    }
-
-    default boolean isExtending(final Name name) {
-
-        for(final InstanceSchema extend : getExtend()) {
-            if (extend.isOrExtending(name)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     default SortedMap<String, Use<?>> layoutSchema(final Set<Name> expand) {

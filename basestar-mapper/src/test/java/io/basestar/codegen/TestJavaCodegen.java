@@ -21,7 +21,6 @@ package io.basestar.codegen;
  */
 
 import io.basestar.schema.Namespace;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -37,7 +36,6 @@ class TestJavaCodegen {
     }
 
     @Test
-    @Disabled
     void testCodegen() throws IOException {
 
         final Namespace namespace = namespace();

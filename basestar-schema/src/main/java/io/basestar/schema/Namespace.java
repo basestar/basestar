@@ -264,8 +264,6 @@ public class Namespace implements Serializable, Schema.Resolver {
                         final List<Name> extend;
                         if(descriptor instanceof ReferableSchema.Descriptor) {
                             extend = Nullsafe.orDefault(((ReferableSchema.Descriptor<?>) descriptor).getExtend());
-                        } else if(descriptor instanceof StructSchema.Descriptor) {
-                            extend = Nullsafe.orDefault(((StructSchema.Descriptor) descriptor).getExtend());
                         } else {
                             extend = Collections.emptyList();
                         }
@@ -290,8 +288,6 @@ public class Namespace implements Serializable, Schema.Resolver {
             final List<Name> extend;
             if (schema instanceof ReferableSchema) {
                 extend = Immutable.transform(((ReferableSchema) schema).getExtend(), Named::getQualifiedName);
-            } else if (schema instanceof StructSchema) {
-                extend = Immutable.transform(((StructSchema) schema).getExtend(), Named::getQualifiedName);
             } else {
                 extend = Collections.emptyList();
             }
