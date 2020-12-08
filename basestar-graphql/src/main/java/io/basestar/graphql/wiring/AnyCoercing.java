@@ -14,7 +14,7 @@ public class AnyCoercing implements Coercing<Object, Object> {
     @Override
     public Object serialize(final Object input) throws CoercingSerializeException {
 
-        return GraphQLUtils.toValue(input);
+        return input;
     }
 
     @Override
