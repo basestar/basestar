@@ -96,7 +96,7 @@ public interface Use<T> extends Serializable {
 
     default T create(final Object value, final Set<Name> expand) {
 
-        return create(value, expand, false);
+        return create(value, expand, true);
     }
 
     default T create(final Object value) {
