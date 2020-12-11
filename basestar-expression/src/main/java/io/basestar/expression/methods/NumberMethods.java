@@ -29,4 +29,9 @@ public class NumberMethods implements Serializable {
 
         throw new UnsupportedOperationException();
     }
+
+    public double sqrt(final Number num) {
+
+        return Math.sqrt(num.doubleValue());
+    }
 }

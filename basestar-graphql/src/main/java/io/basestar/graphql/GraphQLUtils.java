@@ -234,6 +234,10 @@ public class GraphQLUtils {
             final Map<String, Object> result = new HashMap<>();
             resolvedSchema.metadataSchema().forEach((k, use) -> result.put(k, toResponse(namespace, use, input.get(k))));
             resolvedSchema.getProperties().forEach((k, prop) -> result.put(k, toResponse(namespace, prop.getType(), input.get(k))));
+            if (resolvedSchema instanceof Transient.Resolver) {
+                ((Transient.Resolver) resolvedSchema).getTransients()
+                        .forEach((k, prop) -> result.put(k, toResponse(namespace, prop.getType(), input.get(k))));
+            }
             if (resolvedSchema instanceof Link.Resolver) {
                 ((Link.Resolver) resolvedSchema).getLinks().forEach((k, link) -> {
                     final List<Map<String, Object>> values = (List<Map<String, Object>>) input.get(k);
@@ -887,7 +891,12 @@ public class GraphQLUtils {
                         final Name name = Name.of(field.getName());
                         final Member member = schema.getMember(field.getName(), true);
                         if(member != null) {
-                            return expand(namespace, member.getType(), field.getSelectionSet()).stream().map(name::with);
+                            final Stream<Name> result = expand(namespace, member.getType(), field.getSelectionSet()).stream().map(name::with);
+                            if(member instanceof Transient) {
+                                return Stream.concat(Stream.of(name), result);
+                            } else {
+                                return result;
+                            }
                         } else {
                             return Stream.empty();
                         }

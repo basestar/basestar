@@ -35,6 +35,7 @@ import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseArray;
+import io.basestar.schema.use.Widening;
 import io.basestar.schema.util.Expander;
 import io.basestar.util.*;
 import io.leangen.geantyref.TypeFactory;
@@ -189,6 +190,18 @@ public class Link implements Member {
     public boolean supportsTrivialJoin(final Set<Name> expand) {
 
         return single;
+    }
+
+    @Override
+    public boolean canModify(final Member member, final Widening widening) {
+
+        return true;
+    }
+
+    @Override
+    public boolean canCreate() {
+
+        return true;
     }
 
     @Override

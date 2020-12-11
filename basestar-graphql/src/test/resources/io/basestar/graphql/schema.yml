@@ -69,3 +69,25 @@ TestView:
     count: count()
   from:
     schema: Test1
+
+TestAny:
+  type: object
+  properties:
+    any:
+      type: any
+
+Point:
+  type: object
+  extensions:
+    "io.basestar.spark.bucket": ["x"]
+  properties:
+    x:
+      type: number
+    y:
+      type: number
+  transients:
+    length:
+      expression: (this.x ** 2 + this.y ** 2).sqrt()
+
+
+

@@ -34,6 +34,7 @@ import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
+import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.*;
 import io.basestar.schema.util.Expander;
 import io.basestar.util.Immutable;
@@ -119,9 +120,9 @@ public class Transient implements Member {
             }
         }
 
-        default Transient build(final Name qualifiedName) {
+        default Transient build(final Schema.Resolver schemaResolver, final InferenceContext context, final Name qualifiedName) {
 
-            return new Transient(this, qualifiedName);
+            return new Transient(this, schemaResolver, context, qualifiedName);
         }
     }
 
@@ -159,10 +160,10 @@ public class Transient implements Member {
         return new Builder();
     }
 
-    private Transient(final Descriptor descriptor, final Name qualifiedName) {
+    private Transient(final Descriptor descriptor, final Schema.Resolver schemaResolver, final InferenceContext context, final Name qualifiedName) {
 
         this.qualifiedName = qualifiedName;
-        this.type = descriptor.getType();
+        this.type = Member.type(descriptor.getType(), descriptor.getExpression(), context).resolve(schemaResolver);
         this.description = descriptor.getDescription();
         this.expression =  Nullsafe.require(descriptor.getExpression());
         this.visibility = descriptor.getVisibility();
@@ -185,6 +186,18 @@ public class Transient implements Member {
     public boolean supportsTrivialJoin(final Set<Name> expand) {
 
         return false;
+    }
+
+    @Override
+    public boolean canModify(final Member member, final Widening widening) {
+
+        return true;
+    }
+
+    @Override
+    public boolean canCreate() {
+
+        return true;
     }
 
     @Override

@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.basestar.expression.Context;
 import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
+import io.basestar.schema.expression.InferenceContext;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -239,12 +240,19 @@ public class InterfaceSchema implements ReferableSchema {
         this.history = Nullsafe.orDefault(descriptor.getHistory(), History.ENABLED);
         this.description = descriptor.getDescription();
         this.declaredProperties = Immutable.transformValuesSorted(descriptor.getProperties(), (k, v) -> v.build(resolver, version, qualifiedName.with(k)));
-        this.declaredTransients = Immutable.transformValuesSorted(descriptor.getTransients(), (k, v) -> v.build(qualifiedName.with(k)));
+        this.properties = Property.extend(extend, declaredProperties);
+        final InferenceContext context = InferenceContext.empty().with(Immutable.transformValues(this.properties, (k, v) -> v.getType()));
+        this.declaredTransients = Immutable.transformValuesSorted(descriptor.getTransients(), (k, v) -> v.build(resolver, context, qualifiedName.with(k)));
+        this.transients = Transient.extend(extend, declaredTransients);
         this.declaredLinks = Immutable.transformValuesSorted(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
+        this.links = Link.extend(extend, declaredLinks);
         this.declaredIndexes = Immutable.transformValuesSorted(descriptor.getIndexes(), (k, v) -> v.build(this, qualifiedName.with(k)));
+        this.indexes = Index.extend(extend, declaredIndexes);
         this.constraints = Immutable.copy(descriptor.getConstraints());
         this.declaredPermissions = Immutable.transformValuesSorted(descriptor.getPermissions(), (k, v) -> v.build(k));
+        this.permissions = Permission.extend(extend, declaredPermissions);
         this.declaredExpand = Immutable.sortedCopy(descriptor.getExpand());
+        this.expand = LinkableSchema.extendExpand(extend, declaredExpand);
         this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
         if (Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
@@ -255,12 +263,6 @@ public class InterfaceSchema implements ReferableSchema {
                 throw new ReservedNameException(k);
             }
         });
-        this.properties = Property.extend(extend, declaredProperties);
-        this.transients = Transient.extend(extend, declaredTransients);
-        this.links = Link.extend(extend, declaredLinks);
-        this.indexes = Index.extend(extend, declaredIndexes);
-        this.permissions = Permission.extend(extend, declaredPermissions);
-        this.expand = LinkableSchema.extendExpand(extend, declaredExpand);
 
         this.directlyExtended = Immutable.transform(resolver.getExtendedSchemas(qualifiedName), v -> (ReferableSchema) v);
     }

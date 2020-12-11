@@ -37,6 +37,18 @@ public class BatchCapture {
                         consumer.accept(schema, key, args)));
     }
 
+    public interface MapRefsFunction<T> {
+
+        T apply(ReferableSchema schema, BatchResponse.RefKey key, RefArgs args);
+    }
+
+    public <T> Map<BatchResponse.RefKey, T> mapRefs(final MapRefsFunction<T> fn) {
+
+        final Map<BatchResponse.RefKey, T> result = new HashMap<>();
+        forEachRef(((schema, key, args) -> result.put(key, fn.apply(schema, key, args))));
+        return result;
+    }
+
     @Data
     public static class RefArgs {
 

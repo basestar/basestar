@@ -13,6 +13,8 @@ MyBase:
 MyObject:
   type: object
   extend: MyBase
+  extensions:
+    "io.basestar.bucket": ["x"]
   id:
     expression: test1 + "_" + test2
   properties:

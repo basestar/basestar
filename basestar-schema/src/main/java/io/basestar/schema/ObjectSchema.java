@@ -25,10 +25,14 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Sets;
 import io.basestar.expression.Context;
 import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
+import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.Widening;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -331,12 +335,20 @@ public class ObjectSchema implements ReferableSchema {
         this.id = descriptor.getId() == null ? null : descriptor.getId().build(qualifiedName.with(ID));
         this.history = Nullsafe.orDefault(descriptor.getHistory(), History.ENABLED);
         this.declaredProperties = Immutable.transformValuesSorted(descriptor.getProperties(), (k, v) -> v.build(resolver, version, qualifiedName.with(k)));
-        this.declaredTransients = Immutable.transformValuesSorted(descriptor.getTransients(), (k, v) -> v.build(qualifiedName.with(k)));
+        this.properties = Property.extend(extend, declaredProperties);
+        final InferenceContext context = new InferenceContext.Overlay(InferenceContext.empty(),
+                ImmutableMap.of(Reserved.THIS, InferenceContext.empty().with(Immutable.transformValues(this.properties, (k, v) -> v.getType()))));
+        this.declaredTransients = Immutable.transformValuesSorted(descriptor.getTransients(), (k, v) -> v.build(resolver, context, qualifiedName.with(k)));
+        this.transients = Transient.extend(extend, declaredTransients);
         this.declaredLinks = Immutable.transformValuesSorted(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
+        this.links = Link.extend(extend, declaredLinks);
         this.declaredIndexes = Immutable.transformValuesSorted(descriptor.getIndexes(), (k, v) -> v.build(this, qualifiedName.with(k)));
+        this.indexes = Index.extend(extend, declaredIndexes);
         this.constraints = Immutable.copy(descriptor.getConstraints());
         this.declaredPermissions = Immutable.transformValuesSorted(descriptor.getPermissions(), (k, v) -> v.build(k));
+        this.permissions = Permission.extend(extend, declaredPermissions);
         this.declaredExpand = Immutable.sortedCopy(descriptor.getExpand());
+        this.expand = LinkableSchema.extendExpand(extend, declaredExpand);
         this.readonly = Nullsafe.orDefault(descriptor.getReadonly());
         this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
         if (Reserved.isReserved(qualifiedName.last())) {
@@ -348,12 +360,6 @@ public class ObjectSchema implements ReferableSchema {
                 throw new ReservedNameException(k);
             }
         });
-        this.properties = Property.extend(extend, declaredProperties);
-        this.transients = Transient.extend(extend, declaredTransients);
-        this.links = Link.extend(extend, declaredLinks);
-        this.indexes = Index.extend(extend, declaredIndexes);
-        this.permissions = Permission.extend(extend, declaredPermissions);
-        this.expand = LinkableSchema.extendExpand(extend, declaredExpand);
     }
 
     @Override
@@ -395,5 +401,42 @@ public class ObjectSchema implements ReferableSchema {
     public int hashCode() {
 
         return qualifiedNameHashCode();
+    }
+
+    public boolean canModify(final Schema<?> schema, final Widening widening) {
+
+        if(!(schema instanceof ObjectSchema)) {
+            return false;
+        }
+        final ObjectSchema target = (ObjectSchema)schema;
+        if(!Objects.equals(getId(), target.getId())) {
+            return false;
+        }
+        if(!Sets.difference(target.getExpand(), getExpand()).isEmpty()) {
+            return false;
+        }
+        for(final Map.Entry<String, ? extends Member> entry : target.getMembers().entrySet()) {
+            final Member targetMember = entry.getValue();
+            final Member sourceMember = getProperty(entry.getKey(), true);
+            if(sourceMember != null) {
+                if(!sourceMember.canModify(targetMember, widening)) {
+                    return false;
+                }
+            } else if(!targetMember.canCreate()) {
+                return false;
+            }
+        }
+        for(final Map.Entry<String, Index> entry : target.getIndexes().entrySet()) {
+            final Index targetIndex = entry.getValue();
+            final Index sourceIndex = getIndex(entry.getKey(), true);
+            if(sourceIndex != null) {
+                if(!sourceIndex.canModify(targetIndex)) {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+        return true;
     }
 }

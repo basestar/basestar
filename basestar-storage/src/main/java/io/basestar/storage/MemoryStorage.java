@@ -23,6 +23,7 @@ package io.basestar.storage;
 import com.google.common.collect.Lists;
 import io.basestar.schema.*;
 import io.basestar.schema.use.UseBinary;
+import io.basestar.storage.annotation.ConfigurableStorage;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;
@@ -42,6 +43,7 @@ import java.util.function.Function;
 
 // TODO optimize, this is currently used only as a mock so not important but should be a viable implementation
 
+@ConfigurableStorage(builderClass = MemoryStorage.Builder.class)
 public class MemoryStorage implements DefaultIndexStorage {
 
     private State state = new State();
@@ -59,7 +61,7 @@ public class MemoryStorage implements DefaultIndexStorage {
 
     @Setter
     @Accessors(chain = true)
-    public static class Builder {
+    public static class Builder implements Storage.Builder {
 
         public MemoryStorage build() {
 

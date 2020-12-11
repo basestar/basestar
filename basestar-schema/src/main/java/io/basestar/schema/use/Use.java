@@ -26,9 +26,9 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.type.Numbers;
 import io.basestar.schema.Constraint;
-import io.basestar.schema.Property;
 import io.basestar.schema.Schema;
 import io.basestar.schema.exception.TypeSyntaxException;
+import io.basestar.schema.secret.Secret;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
@@ -74,7 +74,8 @@ public interface Use<T> extends Serializable {
         BINARY,
         DATE,
         DATETIME,
-        VIEW
+        VIEW,
+        SECRET;
     }
 
     <R> R visit(Visitor<R> visitor);
@@ -229,6 +230,8 @@ public interface Use<T> extends Serializable {
             final TypeVariable<? extends Class<?>> var = Map.class.getTypeParameters()[1];
             final Type arg = Nullsafe.orDefault(GenericTypeReflector.getTypeParameter(type, var), Object.class);
             return UseMap.from(arg);
+        } else if(Secret.class.isAssignableFrom(erased)) {
+            return UseSecret.DEFAULT;
         } else {
             return UseAny.DEFAULT;
         }
@@ -265,6 +268,8 @@ public interface Use<T> extends Serializable {
                 return UseEnum.from(config);
             case UseStruct.NAME:
                 return UseStruct.from(config);
+            case UseSecret.NAME:
+                return UseSecret.from(config);
             default:
                 return UseNamed.from(type, config);
         }
@@ -406,6 +411,11 @@ public interface Use<T> extends Serializable {
 
         R visitAny(UseAny type);
 
+        default R visitSecret(final UseSecret type) {
+
+            throw new UnsupportedOperationException("Type " + type.code() + " not supported");
+        }
+
         interface Defaulting<R> extends Visitor<R> {
 
             default <T> R visitDefault(final Use<T> type) {
@@ -543,98 +553,6 @@ public interface Use<T> extends Serializable {
 
                 // Least astonishment
                 return visit(type.getType());
-            }
-        }
-
-        /**
-         * Automatically transform container types (collection, map, optional) and struct types
-         */
-
-        interface Transforming extends Defaulting<Use<?>> {
-
-            Set<Name> getExpand();
-
-            Use<?> transform(Use<?> type, Set<Name> expand);
-
-            @Override
-            default <T> Use<?> visitDefault(final Use<T> type) {
-
-                return type;
-            }
-
-            @Override
-            default <V, T> Use<?> visitContainer(final UseContainer<V, T> type) {
-
-                return type.transform(v -> transform(v, getExpand()));
-            }
-
-            @Override
-            default <T> Use<?> visitOptional(final UseOptional<T> type) {
-
-                return visitContainer(type);
-            }
-
-            @Override
-            default Use<?> visitStruct(final UseStruct type) {
-
-                final Map<String, Set<Name>> branches = Name.branch(getExpand());
-                final Map<String, Use<?>> schema = new HashMap<>();
-                boolean changed = false;
-                for(final Map.Entry<String, Property> entry : type.getSchema().getProperties().entrySet()) {
-                    final String name = entry.getKey();
-                    final Property property = entry.getValue();
-                    final Use<?> value = transform(property.getType(), branches.get(name));
-                    changed = changed || (value != property.getType());
-                }
-                if(changed) {
-                    return UseStruct.from(schema);
-                } else {
-                    return type;
-                }
-            }
-        }
-
-        interface TransformingValue extends Defaulting<Object> {
-
-            Set<Name> getExpand();
-
-            Object getValue();
-
-            Object transform(Use<?> type, Set<Name> expand, Object value);
-
-            @Override
-            default <T> Object visitDefault(final Use<T> type) {
-
-                return type.create(getValue());
-            }
-
-            @Override
-            default <V, T> Object visitContainer(final UseContainer<V, T> type) {
-
-                final Set<Name> expand = getExpand();
-                final T before = type.create(getValue());
-                return type.transformValues(before, (t, v) -> t.create(transform(t, expand, v)));
-            }
-
-            @Override
-            default Object visitStruct(final UseStruct type) {
-
-                final Map<String, Object> before = type.create(getValue());
-                final Map<String, Set<Name>> branches = Name.branch(getExpand());
-                final Map<String, Object> after = new HashMap<>();
-                boolean changed = false;
-                for(final Map.Entry<String, Property> entry : type.getSchema().getProperties().entrySet()) {
-                    final String name = entry.getKey();
-                    final Property property = entry.getValue();
-                    final Object beforeValue = before.get(name);
-                    final Object afterValue = transform(property.getType(), branches.get(name), beforeValue);
-                    changed = changed || (afterValue != beforeValue);
-                }
-                if(changed) {
-                    return after;
-                } else {
-                    return before;
-                }
             }
         }
     }

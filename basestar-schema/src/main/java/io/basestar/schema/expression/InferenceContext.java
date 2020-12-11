@@ -4,6 +4,7 @@ import io.basestar.expression.call.Callable;
 import io.basestar.expression.methods.Methods;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseAny;
 import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
 
@@ -16,6 +17,26 @@ public interface InferenceContext {
     Use<?> typeOfMember(Name name);
 
     Use<?> typeOfCall(Use<?> target, String member, List<Use<?>> args);
+
+    static InferenceContext empty() {
+
+        final Methods methods = Methods.builder().defaults().build();
+        return new InferenceContext() {
+            @Override
+            public Use<?> typeOfMember(final Name name) {
+
+                return UseAny.DEFAULT;
+            }
+
+            @Override
+            public Use<?> typeOfCall(final Use<?> target, final String member, final List<Use<?>> args) {
+
+                final Type[] argTypes = args.stream().map(Use::javaType).toArray(Type[]::new);
+                final Callable callable = methods.callable(target.javaType(), member, argTypes);
+                return Use.fromJavaType(callable.type());
+            }
+        };
+    }
 
     default InferenceContext with(final Map<String, Use<?>> context) {
 

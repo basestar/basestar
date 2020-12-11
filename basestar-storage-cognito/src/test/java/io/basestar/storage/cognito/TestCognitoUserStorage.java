@@ -22,8 +22,7 @@ package io.basestar.storage.cognito;
 
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Namespace;
-import io.basestar.storage.Storage;
-import io.basestar.storage.TestStorage;
+import io.basestar.storage.*;
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderAsyncClient;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.*;
 
@@ -123,10 +122,10 @@ class TestCognitoUserStorage extends TestStorage {
                     });
                 });
 
-        return CognitoUserStorage.builder()
+        return new SplitLayerStorage(new SplitIndexStorage(CognitoUserStorage.builder()
                 .setClient(client)
                 .setStrategy(schema -> schema.getQualifiedName().toString())
-                .build();
+                .build(), MemoryStorage.builder().build()), MemoryStorage.builder().build());
     }
 
     private UserType user(final AdminCreateUserRequest req) {
@@ -141,11 +140,11 @@ class TestCognitoUserStorage extends TestStorage {
                 .build();
     }
 
-    @Override
-    protected boolean supportsIndexes() {
-
-        return false;
-    }
+//    @Override
+//    protected boolean supportsIndexes() {
+//
+//        return false;
+//    }
 
     //
 //    @Test

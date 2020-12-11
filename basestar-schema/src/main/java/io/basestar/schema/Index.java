@@ -98,6 +98,32 @@ public class Index implements Named, Described, Serializable, Extendable {
 
     private final int max;
 
+    public boolean canModify(final Index target) {
+
+        if(unique != target.isUnique()) {
+            return false;
+        }
+        if(sparse != target.isSparse()) {
+            return false;
+        }
+        if(!Objects.equals(partition, target.getPartition())) {
+            return false;
+        }
+        if(!Objects.equals(sort, target.getSort())) {
+            return false;
+        }
+        if(!Objects.equals(consistency, target.getConsistency())) {
+            return false;
+        }
+        if(!Objects.equals(projection, target.getProjection())) {
+            return false;
+        }
+        if(!Objects.equals(over, target.getOver())) {
+            return false;
+        }
+        return true;
+    }
+
     @JsonDeserialize(as = Builder.class)
     public interface Descriptor extends Described, Extendable {
 

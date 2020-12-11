@@ -119,11 +119,11 @@ public class Nullsafe {
     @Nullable
     public static <T, U> U map(@Nullable final T v, final Function<T, U> fn) {
 
-        return mapOrDefault(v, fn, null);
+        return v == null ? null : fn.apply(v);
     }
 
-    @Nullable
-    public static <T, U> U mapOrDefault(@Nullable final T v, final Function<T, U> fn, final U or) {
+    @Nonnull
+    public static <T, U> U mapOrDefault(@Nullable final T v, final Function<T, U> fn, @Nonnull final U or) {
 
         return v == null ? or : fn.apply(v);
     }

@@ -120,6 +120,25 @@ class GraphQLTest {
                 .data(ImmutableMap.of())
                 .build()).get();
 
+        databaseServer.create(Caller.SUPER, CreateOptions.builder()
+                .schema(Name.of("TestAny"))
+                .id("testAny")
+                .data(ImmutableMap.of(
+                        "any", ImmutableMap.of(
+                                "z", ImmutableList.of(1, 2, 3)
+                        )
+                ))
+                .build()).get();
+
+        databaseServer.create(Caller.SUPER, CreateOptions.builder()
+                .schema(Name.of("Point"))
+                .id("point1")
+                .data(ImmutableMap.of(
+                        "x", 3,
+                        "y", 4
+                ))
+                .build()).get();
+
         return GraphQLAdaptor.builder().database(databaseServer).namespace(namespace).build().graphQL();
     }
 
@@ -437,6 +456,57 @@ class GraphQLTest {
                         )
                 )
         ), result.getData());
+    }
+
+    @Test
+    void testAny() throws Exception {
+
+        final Namespace namespace = namespace();
+        final GraphQL graphQL = graphQL(namespace);
+
+        final ExecutionResult read = graphQL.execute(ExecutionInput.newExecutionInput()
+                .query("query { readTestAny(id: \"testAny\") { any } }")
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
+                .build());
+
+        assertEquals(ImmutableMap.of(
+                "readTestAny", ImmutableMap.of(
+                        "any", ImmutableMap.of(
+                                "z", ImmutableList.of(1, 2, 3)
+                        )
+                )
+        ), read.getData());
+
+        final ExecutionResult update = graphQL.execute(ExecutionInput.newExecutionInput()
+                .query("mutation { updateTestAny(id: \"testAny\", data:{ any: {z: true}}) { any } }")
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
+                .build());
+
+        assertEquals(ImmutableMap.of(
+                "updateTestAny", ImmutableMap.of(
+                        "any", ImmutableMap.of(
+                                "z", true
+                        )
+                )
+        ), update.getData());
+    }
+
+    @Test
+    void testTransient() throws Exception {
+
+        final Namespace namespace = namespace();
+        final GraphQL graphQL = graphQL(namespace);
+
+        final ExecutionResult read = graphQL.execute(ExecutionInput.newExecutionInput()
+                .query("query { readPoint(id: \"point1\") { length } }")
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
+                .build());
+
+        assertEquals(ImmutableMap.of(
+                "readPoint", ImmutableMap.of(
+                        "length", 5.0
+                )
+        ), read.getData());
     }
 
     @Test

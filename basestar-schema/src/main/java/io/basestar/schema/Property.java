@@ -33,11 +33,10 @@ import io.basestar.schema.exception.MissingPropertyException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.expression.InferenceContext;
-import io.basestar.schema.expression.InferenceVisitor;
 import io.basestar.schema.use.Use;
-import io.basestar.schema.use.UseAny;
 import io.basestar.schema.use.UseInstance;
 import io.basestar.schema.use.UseScalar;
+import io.basestar.schema.use.Widening;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Immutable;
@@ -220,33 +219,13 @@ public class Property implements Member {
 
         this.qualifiedName = qualifiedName;
         this.description = builder.getDescription();
-        this.type = legacyFix(qualifiedName, type(builder, context).resolve(schemaResolver), builder.getRequired(), version);
+        this.type = legacyFix(qualifiedName, Member.type(builder.getType(), builder.getExpression(), context).resolve(schemaResolver), builder.getRequired(), version);
         this.defaultValue = (Serializable)Nullsafe.map(builder.getDefault(), type::create);
         this.immutable = Nullsafe.orDefault(builder.getImmutable());
         this.expression = builder.getExpression();
         this.constraints = Immutable.copy(builder.getConstraints());
         this.visibility = builder.getVisibility();
         this.extensions = Immutable.sortedCopy(builder.getExtensions());
-    }
-
-    private static Use<?> type(final Descriptor builder, final InferenceContext context) {
-
-        final Use<?> type = builder.getType();
-        if(type == null) {
-            final Expression expression = builder.getExpression();
-            if(context != null && expression != null) {
-                final Use<?> inferredType = new InferenceVisitor(context).visit(builder.getExpression());
-                if(inferredType instanceof UseAny) {
-                    throw new IllegalStateException("Cannot infer type from expression " + builder.getExpression());
-                } else {
-                    return inferredType;
-                }
-            } else {
-                throw new IllegalStateException("Property type or expression must be specified");
-            }
-        } else {
-            return type;
-        }
     }
 
     private static Use<?> legacyFix(final Name qualifiedName, final Use<?> type, final Boolean required, final Version version) {
@@ -283,6 +262,28 @@ public class Property implements Member {
                 return type.getSchema().supportsTrivialJoin(expand);
             }
         });
+    }
+
+    @Override
+    public boolean canModify(final Member member, final Widening widening) {
+
+        if(!(member instanceof Property)) {
+            return canCreate();
+        }
+        final Property target = (Property)member;
+        if(!Objects.equals(expression, target.getExpression())) {
+            return false;
+        }
+        if(!widening.canWiden(type, target.getType())) {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public boolean canCreate() {
+
+        return expression == null;
     }
 
     @Override

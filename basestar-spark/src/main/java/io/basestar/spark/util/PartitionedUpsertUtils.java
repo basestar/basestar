@@ -54,7 +54,7 @@ public abstract class PartitionedUpsertUtils {
 
     public static String defaultUpsertId() {
 
-        return Instant.now().toString().replaceAll("[:.-Z]", "") + "-" + UUID.randomUUID().toString();
+        return Instant.now().toString().replaceAll("[:.Z\\-]", "") + "-" + UUID.randomUUID().toString();
     }
 
     public static void repairTable(final SparkSession session, final String databaseName, final String tableName,

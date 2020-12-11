@@ -37,6 +37,11 @@ import java.util.concurrent.CompletableFuture;
 
 public interface Storage {
 
+    interface Builder {
+
+        Storage build();
+    }
+
     enum EventStrategy {
 
         SUPPRESS,
@@ -107,34 +112,6 @@ public interface Storage {
                 delegate(schema).getVersion(schema, id, version, expand);
                 return this;
             }
-
-//            @Override
-//            default ReadTransaction getInterface(final InterfaceSchema schema, final String id, final Set<Name> expand) {
-//
-//                delegate(schema).getInterface(schema, id, expand);
-//                return this;
-//            }
-//
-//            @Override
-//            default ReadTransaction getInterfaceVersion(final InterfaceSchema schema, final String id, final long version, final Set<Name> expand) {
-//
-//                delegate(schema).getInterfaceVersion(schema, id, version, expand);
-//                return this;
-//            }
-//
-//            @Override
-//            default ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
-//
-//                delegate(schema).getObject(schema, id, expand);
-//                return this;
-//            }
-//
-//            @Override
-//            default ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
-//
-//                delegate(schema).getObjectVersion(schema, id, version, expand);
-//                return this;
-//            }
         }
     }
 
@@ -176,6 +153,7 @@ public interface Storage {
     }
 
     interface Scan {
+
 
     }
 }

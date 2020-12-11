@@ -1,5 +1,6 @@
 package io.basestar.schema.expression;
 
+import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.aggregate.*;
 import io.basestar.expression.arithmetic.*;
@@ -32,6 +33,12 @@ public class InferenceVisitor implements ExpressionVisitor<Use<?>> {
     public InferenceVisitor(final InferenceContext context) {
 
         this.context = context;
+    }
+
+    @Override
+    public Use<?> visit(final Expression expression) {
+
+        return expression.visit(this).optional(false);
     }
 
     @Override
