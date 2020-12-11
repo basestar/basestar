@@ -8,11 +8,11 @@ import io.basestar.util.Name;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
 
-public class SecretValueContext extends ValueContext.Standard {
+public class EncryptingValueContext extends ValueContext.Standard {
 
     private final SecretContext secretContext;
 
-    public SecretValueContext(final SecretContext secretContext) {
+    public EncryptingValueContext(final SecretContext secretContext) {
 
         this.secretContext = secretContext;
     }

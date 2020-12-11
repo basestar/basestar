@@ -144,7 +144,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
     private CompletableFuture<Map<String, Instance>> batch(final Caller caller, final Consistency consistency, final Map<String, Action> actions) {
 
-        final ValueContext valueContext = secretContext.valueContext();
+        final ValueContext valueContext = secretContext.encryptingValueContext();
 
         final Set<RefKey> beforeCheck = new HashSet<>();
         final Set<ExpandKey<RefKey>> beforeKeys = new HashSet<>();

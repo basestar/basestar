@@ -23,8 +23,8 @@ public interface SecretContext {
 
     byte[] decrypt(Secret secret);
 
-    default SecretValueContext valueContext() {
+    default EncryptingValueContext encryptingValueContext() {
 
-        return new SecretValueContext(this);
+        return new EncryptingValueContext(this);
     }
 }
