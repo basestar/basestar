@@ -176,6 +176,12 @@ public class Mappings {
                     }
 
                     @Override
+                    public FieldType visitSecret(final UseSecret type) {
+
+                        return FieldType.SECRET;
+                    }
+
+                    @Override
                     public FieldType visitView(final UseView type) {
 
                         return new FieldType.NestedType(properties(type.getSchema(), expand));

@@ -20,14 +20,12 @@ package io.basestar.jackson;
  * #L%
  */
 
-import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.Version;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.*;
+import io.basestar.secret.Secret;
 import io.basestar.util.Name;
 import io.basestar.util.Page;
 import io.basestar.util.Sort;
@@ -38,9 +36,11 @@ import java.time.LocalDate;
 
 public class BasestarModule extends SimpleModule {
 
-    public static BasestarModule INSTANCE = new BasestarModule();
+    public static BasestarModule INSTANCE = new BasestarModule(false);
 
-    public BasestarModule() {
+    public static BasestarModule WITH_VISIBLE_SECRETS = new BasestarModule(true);
+
+    public BasestarModule(final boolean visibleSecrets) {
 
         super("Basestar", new Version(1, 0, 0, null, null, null));
 
@@ -66,6 +66,11 @@ public class BasestarModule extends SimpleModule {
 
         addSerializer(Page.Token.class, toString);
         addDeserializer(Page.Token.class, new PagingTokenDeserializer());
+
+        if(visibleSecrets) {
+            addSerializer(Secret.class, new SecretSerializer(visibleSecrets));
+            addDeserializer(Secret.class, new SecretDeserializer(visibleSecrets));
+        }
 
         addSerializer(Enum.class, new EnumSerializer());
         addDeserializer(Enum.class, new EnumDeserializer());

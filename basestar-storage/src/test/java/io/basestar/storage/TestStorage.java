@@ -26,6 +26,7 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.type.Values;
 import io.basestar.schema.*;
+import io.basestar.secret.Secret;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.util.Streams;
@@ -70,6 +71,8 @@ public abstract class TestStorage {
     private static final String EXTEND_A = "ExtendA";
 
     private static final String EXTEND_B = "ExtendB";
+
+    private static final String SECRET = "Secret";
 
     private final Namespace namespace;
 
@@ -1029,9 +1032,55 @@ public abstract class TestStorage {
         });
     }
 
+    @Test
+    void testPolymorphicDelete() {
+
+        assumeTrue(supportsPolymorphism());
+        assumeTrue(supportsDelete());
+
+        final Storage storage = storage(namespace);
+
+        final InterfaceSchema interfaceSchema = namespace.requireInterfaceSchema(INTERFACE);
+
+        final ObjectSchema extendASchema = namespace.requireObjectSchema(EXTEND_A);
+
+        final String idA = createComplete(storage, extendASchema, ImmutableMap.of(
+                "propA", "test1"
+        ));
+
+        final Map<String, Object> getA = storage.get(Consistency.ATOMIC, interfaceSchema, idA, ImmutableSet.of()).join();
+        assertNotNull(getA);
+
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
+                .deleteObject(extendASchema, idA, getA)
+                .write().join();
+
+        assertNull(storage.get(Consistency.ATOMIC, interfaceSchema, idA, ImmutableSet.of()).join());
+    }
+
     protected boolean supportsPolymorphism() {
 
         return true;
+    }
+
+    @Test
+    void testSecrets() {
+
+        final Storage storage = storage(namespace);
+
+        final ObjectSchema schema = namespace.requireObjectSchema(SECRET);
+
+        final String id = UUID.randomUUID().toString();
+
+        final Map<String, Object> data = ImmutableMap.of(
+                "secret", Secret.encrypted(new byte[]{1, 2, 3})
+        );
+
+        final Instance after = instance(schema, id, 1L, data);
+
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
+                .createObject(schema, id, after)
+                .write().join();
     }
 
     private static void assumeConcurrentObjectWrite(final Storage storage, final ObjectSchema schema) {

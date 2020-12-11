@@ -1,6 +1,6 @@
 package io.basestar.schema.use;
 
-import io.basestar.schema.secret.Secret;
+import io.basestar.secret.Secret;
 import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.media.StringSchema;
@@ -11,11 +11,12 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.util.Objects;
 import java.util.Set;
 
 @Data
 @Slf4j
-public class UseSecret implements UseStringLike<Secret> {
+public class UseSecret implements UseScalar<Secret> {
 
     public static final UseSecret DEFAULT = new UseSecret();
 
@@ -59,7 +60,7 @@ public class UseSecret implements UseStringLike<Secret> {
     @Override
     public Secret defaultValue() {
 
-        return Secret.empty();
+        return Secret.encrypted(new byte[0]);
     }
 
     @Override
@@ -75,13 +76,19 @@ public class UseSecret implements UseStringLike<Secret> {
 
         final int length = in.readInt();
         final byte[] encrypted = new byte[length];
-        return new Secret(encrypted);
+        return Secret.encrypted(encrypted);
     }
 
     @Override
     public Schema<?> openApi(final Set<Name> expand) {
 
         return new StringSchema();
+    }
+
+    @Override
+    public boolean areEqual(final Secret a, final Secret b) {
+
+        return Objects.equals(a, b);
     }
 
     @Override

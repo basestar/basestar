@@ -47,10 +47,10 @@ import io.basestar.expression.constant.Constant;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Or;
 import io.basestar.schema.*;
-import io.basestar.schema.secret.SecretContext;
 import io.basestar.schema.use.ValueContext;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
+import io.basestar.secret.SecretContext;
 import io.basestar.storage.ConstantStorage;
 import io.basestar.storage.Storage;
 import io.basestar.storage.Versioning;
@@ -144,7 +144,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
     private CompletableFuture<Map<String, Instance>> batch(final Caller caller, final Consistency consistency, final Map<String, Action> actions) {
 
-        final ValueContext valueContext = secretContext.encryptingValueContext();
+        final ValueContext valueContext = ValueContext.encrypting(secretContext);
 
         final Set<RefKey> beforeCheck = new HashSet<>();
         final Set<ExpandKey<RefKey>> beforeKeys = new HashSet<>();
@@ -398,6 +398,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final Permission read = schema.getPermission(Permission.READ);
         checkPermission(caller, schema, read, ImmutableMap.of(VAR_THIS, instance));
         final Instance visible = schema.applyVisibility(context(caller), instance);
+//        final ValueContext valueContext = ValueContext.decrypting(secretContext);
+//        final Instance decrypted = schema.create(valueContext, visible, expand);
         return schema.expand(visible, Expander.noop(), expand);
     }
 

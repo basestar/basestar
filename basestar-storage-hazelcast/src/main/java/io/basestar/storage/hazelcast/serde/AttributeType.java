@@ -34,6 +34,7 @@ import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseArray;
 import io.basestar.schema.use.UseDate;
 import io.basestar.schema.use.UseDateTime;
+import io.basestar.secret.Secret;
 import lombok.RequiredArgsConstructor;
 
 import java.io.*;
@@ -71,6 +72,8 @@ public interface AttributeType<T> {
     DateTimeArrayType DATETIME_ARRAY = new DateTimeArrayType();
 
     BinaryType BINARY = new BinaryType();
+
+    SecretType SECRET = new SecretType();
 
     RefType REF = new RefType(false);
 
@@ -400,6 +403,27 @@ public interface AttributeType<T> {
         public void writeValue(final PortableSchemaFactory factory, final PortableWriter writer, final String name, final byte[] value) throws IOException {
 
             writer.writeByteArray(name, value);
+        }
+
+        @Override
+        public void defineValue(final PortableSchemaFactory factory, final ClassDefinitionBuilder builder, final String name) {
+
+            builder.addByteArrayField(name);
+        }
+    }
+
+    class SecretType implements AttributeType<Secret> {
+
+        @Override
+        public Secret readValue(final PortableReader reader, final String name) throws IOException {
+
+            return Secret.encrypted(reader.readByteArray(name));
+        }
+
+        @Override
+        public void writeValue(final PortableSchemaFactory factory, final PortableWriter writer, final String name, final Secret value) throws IOException {
+
+            writer.writeByteArray(name, value.encrypted());
         }
 
         @Override

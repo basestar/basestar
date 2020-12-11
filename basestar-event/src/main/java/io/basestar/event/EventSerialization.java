@@ -46,7 +46,7 @@ public interface EventSerialization {
         public static final EventSerialization INSTANCE = new GzipBson();
 
         private static final ObjectMapper objectMapper = new ObjectMapper(new BsonFactory())
-                .registerModule(new BasestarModule());
+                .registerModule(BasestarModule.INSTANCE);
 
         @Override
         public byte[] serialize(final Event event) {

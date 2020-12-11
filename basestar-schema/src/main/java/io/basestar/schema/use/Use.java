@@ -28,9 +28,9 @@ import io.basestar.expression.type.Numbers;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.Schema;
 import io.basestar.schema.exception.TypeSyntaxException;
-import io.basestar.schema.secret.Secret;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
+import io.basestar.secret.Secret;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.leangen.geantyref.GenericTypeReflector;
@@ -416,10 +416,7 @@ public interface Use<T> extends Serializable {
 
         R visitAny(UseAny type);
 
-        default R visitSecret(final UseSecret type) {
-
-            throw new UnsupportedOperationException("Type " + type.code() + " not supported");
-        }
+        R visitSecret(UseSecret type);
 
         interface Defaulting<R> extends Visitor<R> {
 
@@ -558,6 +555,12 @@ public interface Use<T> extends Serializable {
 
                 // Least astonishment
                 return visit(type.getType());
+            }
+
+            @Override
+            default R visitSecret(final UseSecret type) {
+
+                return visitScalar(type);
             }
         }
     }

@@ -188,6 +188,12 @@ public class AvroUtils {
 
                 throw new UnsupportedOperationException();
             }
+
+            @Override
+            public Schema visitSecret(final UseSecret type) {
+
+                return Schema.create(Schema.Type.BYTES);
+            }
         });
     }
 

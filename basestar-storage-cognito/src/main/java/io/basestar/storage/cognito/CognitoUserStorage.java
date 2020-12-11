@@ -28,10 +28,8 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.type.Values;
 import io.basestar.jackson.BasestarModule;
 import io.basestar.schema.*;
-import io.basestar.schema.use.Use;
-import io.basestar.schema.use.UseRef;
-import io.basestar.schema.use.UseScalar;
-import io.basestar.schema.use.UseStruct;
+import io.basestar.schema.use.*;
+import io.basestar.secret.Secret;
 import io.basestar.storage.*;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
@@ -351,6 +349,17 @@ public class CognitoUserStorage implements DefaultLayerStorage {
             }
 
             @Override
+            public Map<Name, String> visitSecret(final UseSecret type) {
+
+                if(value == null) {
+                    return ImmutableMap.of();
+                } else {
+                    final Secret secret = type.create(value);
+                    return ImmutableMap.of(path, secret.encryptedBase64());
+                }
+            }
+
+            @Override
             public Map<Name, String> visitStruct(final UseStruct type) {
 
                 final Map<String, Object> instance = type.create(value);
@@ -457,6 +466,17 @@ public class CognitoUserStorage implements DefaultLayerStorage {
             public <T> Object visitScalar(final UseScalar<T> type) {
 
                 return type.create(attrs.get(path));
+            }
+
+            @Override
+            public Secret visitSecret(final UseSecret type) {
+
+                final String value = attrs.get(path);
+                if(value == null) {
+                    return null;
+                } else {
+                    return Secret.encrypted(value);
+                }
             }
 
             @Override

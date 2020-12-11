@@ -43,7 +43,7 @@ import java.util.Map;
 @Slf4j
 public class Codegen {
 
-    private static final ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory()).registerModule(new BasestarModule());
+    private static final ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory()).registerModule(BasestarModule.INSTANCE);
 
     private final Configuration cfg;
 

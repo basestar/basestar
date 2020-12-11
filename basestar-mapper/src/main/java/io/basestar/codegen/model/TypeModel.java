@@ -214,6 +214,12 @@ public interface TypeModel {
             }
 
             @Override
+            public TypeModel visitSecret(final UseSecret type) {
+
+                return () -> "Secret";
+            }
+
+            @Override
             public TypeModel visitBinary(final UseBinary type) {
 
                 return () -> "Binary";

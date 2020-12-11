@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.Reserved;
+import io.basestar.secret.Secret;
 import io.basestar.util.CompletableFutures;
 import io.basestar.util.ISO8601;
 import lombok.extern.slf4j.Slf4j;
@@ -90,10 +91,12 @@ public class DynamoDBUtils {
         } else if(value instanceof Instant) {
             return s(ISO8601.toString((Instant)value));
         } else if(value instanceof Map) {
-            return m(((Map<?, ?>)value).entrySet().stream()
-                            .collect(Collectors.toMap(
-                                    entry -> entry.getKey().toString(),
-                                    entry -> toAttributeValue(entry.getValue()))));
+            return m(((Map<?, ?>) value).entrySet().stream()
+                    .collect(Collectors.toMap(
+                            entry -> entry.getKey().toString(),
+                            entry -> toAttributeValue(entry.getValue()))));
+        } else if(value instanceof Secret) {
+            return b(((Secret) value).encrypted());
         } else {
             throw new IllegalStateException();
         }

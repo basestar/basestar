@@ -1,7 +1,7 @@
 //package io.basestar.schema.secret.aws;
 //
-//import io.basestar.schema.secret.Secret;
-//import io.basestar.schema.secret.SecretContext;
+//import io.basestar.secret.Secret;
+//import io.basestar.secret.SecretContext;
 //import software.amazon.awssdk.core.SdkBytes;
 //import software.amazon.awssdk.services.kms.KmsAsyncClient;
 //import software.amazon.awssdk.services.kms.KmsClient;

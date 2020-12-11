@@ -91,6 +91,11 @@
     }
   },
   "User": {
+    "properties": {
+      "password": {
+        "type": "secret"
+      }
+    }
   },
   "MultiIndexed": {
     "@merge": "./merge",

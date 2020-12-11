@@ -79,7 +79,7 @@ public class DynamoDBStreamHandler implements RequestHandler<DynamodbEvent, Void
         this.target = target;
         this.sourceOversize = sourceOversize;
         this.objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new BasestarModule());
+        objectMapper.registerModule(BasestarModule.INSTANCE);
     }
 
     public DynamoDBStreamHandler() {

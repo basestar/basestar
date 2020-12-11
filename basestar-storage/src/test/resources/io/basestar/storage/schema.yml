@@ -198,3 +198,9 @@ ExtendB:
   properties:
     propB:
       type: string
+
+Secret:
+  type: object
+  properties:
+    secret:
+      type: secret
