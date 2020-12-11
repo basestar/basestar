@@ -64,7 +64,7 @@ public class Transient implements Member {
     @Nonnull
     private final Name qualifiedName;
 
-    @Nullable
+    @Nonnull
     private final Use<?> type;
 
     @Nullable
@@ -177,11 +177,6 @@ public class Transient implements Member {
         this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
     }
 
-    public boolean isTyped() {
-
-        return type != null;
-    }
-
     @Override
     public boolean supportsTrivialJoin(final Set<Name> expand) {
 
@@ -222,11 +217,7 @@ public class Transient implements Member {
     public Object evaluateTransients(final Context context, final Object value, final Set<Name> expand) {
 
         final Object raw = expression.evaluate(context);
-        if(type != null) {
-            return type.create(raw);
-        } else {
-            return raw;
-        }
+        return type.create(raw);
     }
 
     @Override
@@ -243,36 +234,22 @@ public class Transient implements Member {
     }
 
     @Override
-    public Object create(final Object value, final Set<Name> expand, final boolean suppress) {
+    public Object create(final ValueContext context, final Object value, final Set<Name> expand) {
 
-        if(value == null) {
-            return null;
-        } else if(type == null) {
-            return value;
-        } else {
-            return type.create(value, expand, suppress);
-        }
+        return type.create(context, value, expand);
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <T> Use<T> typeOf(final Name name) {
 
-        if(type != null) {
-            return (Use<T>)type.typeOf(name);
-        } else {
-            return (Use<T>)UseAny.DEFAULT;
-        }
+        return (Use<T>)type.typeOf(name);
     }
 
     @Override
     public Type javaType(final Name name) {
 
-        if(type != null) {
-            return type.javaType(name);
-        } else {
-            return Object.class;
-        }
+        return type.javaType(name);
     }
 
     @Override

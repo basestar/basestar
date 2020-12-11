@@ -39,7 +39,6 @@ import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Set Type
@@ -105,11 +104,12 @@ public class UseSet<T> implements UseCollection<T, Set<T>> {
     }
 
     @Override
-    public Set<T> create(final Stream<T> values) {
+    public Set<T> create(final ValueContext context, final Object value, final Set<Name> expand) {
 
-        return values.collect(Collectors.toSet());
+        return context.createSet(this, value, expand);
     }
 
+    @Deprecated
     public static <T> Set<T> create(final Object value, final boolean suppress, final Function<Object, T> fn) {
 
         if(value == null) {

@@ -266,14 +266,14 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
     }
 
     @Override
-    default Instance create(final Map<String, Object> value, final Set<Name> expand, final boolean suppress) {
+    default Instance create(final ValueContext context, final Map<String, Object> value, final Set<Name> expand) {
 
         if (value == null) {
             return null;
         }
         final Name schemaName = Instance.getSchema(value);
-        final HashMap<String, Object> result = new HashMap<>(readProperties(value, expand, suppress));
-        result.putAll(readMeta(value, suppress));
+        final HashMap<String, Object> result = new HashMap<>(readProperties(context, value, expand));
+        result.putAll(readMeta(context, value));
         if (schemaName == null) {
             Instance.setSchema(result, this.getQualifiedName());
         }
@@ -289,7 +289,7 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
             final Map<String, Set<Name>> branches = Name.branch(expand);
             Stream.of(getLinks(), getTransients()).forEach(members -> members.forEach((name, link) -> {
                 if (value.containsKey(name)) {
-                    result.put(name, link.create(value.get(name), branches.get(name), suppress));
+                    result.put(name, link.create(context, value.get(name), branches.get(name)));
                 }
             }));
         }

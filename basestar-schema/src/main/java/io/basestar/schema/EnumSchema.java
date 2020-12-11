@@ -29,6 +29,7 @@ import io.basestar.expression.Context;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.use.UseEnum;
+import io.basestar.schema.use.ValueContext;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -112,21 +113,9 @@ public class EnumSchema implements Schema<String> {
         }
 
         @Override
-        default EnumSchema build(final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
+        default EnumSchema build(final Namespace namespace, final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
             return new EnumSchema(this, resolver, qualifiedName, slot);
-        }
-
-        @Override
-        default EnumSchema build(final Name qualifiedName) {
-
-            return build(Resolver.Constructing.ANONYMOUS, Version.CURRENT, qualifiedName, Schema.anonymousSlot());
-        }
-
-        @Override
-        default EnumSchema build() {
-
-            return build(Schema.anonymousQualifiedName());
         }
     }
 
@@ -169,12 +158,10 @@ public class EnumSchema implements Schema<String> {
     }
 
     @Override
-    public String create(final Object value, final Set<Name> expand, final boolean suppress) {
+    public String create(final ValueContext context, final Object value, final Set<Name> expand) {
 
         if(value instanceof String && values.contains(value)) {
             return (String) value;
-        } else if(suppress) {
-            return null;
         } else {
             throw new UnexpectedTypeException(this, value);
         }

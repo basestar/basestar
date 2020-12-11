@@ -227,7 +227,7 @@ public class Namespace implements Serializable, Schema.Resolver {
         this.version = version;
     }
 
-    private static Schema<?> resolveCyclic(final Schema.Resolver resolver, final Version version, final Name inputName,
+    private Schema<?> resolveCyclic(final Schema.Resolver resolver, final Version version, final Name inputName,
                                            final Schema.Descriptor<?, ?> descriptor, final NavigableMap<Name, Schema.Descriptor<?, ?>> descriptors,
                                            final Renaming naming, final Map<Name, Schema<?>> out) {
 
@@ -236,7 +236,7 @@ public class Namespace implements Serializable, Schema.Resolver {
             return out.get(outputName);
         } else {
             final int slot = descriptors.headMap(inputName).size();
-            return descriptor.build(new Schema.Resolver.Constructing() {
+            return descriptor.build(this, new Schema.Resolver.Constructing() {
                 @Override
                 public void constructing(final Schema<?> schema) {
 
@@ -256,21 +256,6 @@ public class Namespace implements Serializable, Schema.Resolver {
                     }
                 }
 
-                @Override
-                public Collection<Schema<?>> getExtendedSchemas(final Name qualifiedName) {
-
-                    return descriptors.entrySet().stream().filter(e -> {
-                        final Schema.Descriptor<?, ?> descriptor = e.getValue();
-                        final List<Name> extend;
-                        if(descriptor instanceof ReferableSchema.Descriptor) {
-                            extend = Nullsafe.orDefault(((ReferableSchema.Descriptor<?>) descriptor).getExtend());
-                        } else {
-                            extend = Collections.emptyList();
-                        }
-                        return extend.contains(qualifiedName);
-                    }).map(e -> getSchema(e.getKey()))
-                            .collect(Collectors.toList());
-                }
             }, version, outputName, slot);
         }
     }
@@ -281,7 +266,6 @@ public class Namespace implements Serializable, Schema.Resolver {
         return schemas.get(qualifiedName);
     }
 
-    @Override
     public Collection<Schema<?>> getExtendedSchemas(final Name qualifiedName) {
 
         return schemas.values().stream().filter(schema -> {

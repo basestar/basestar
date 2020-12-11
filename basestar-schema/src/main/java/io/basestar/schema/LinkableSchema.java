@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
 
 import java.util.List;
 import java.util.Map;
@@ -18,15 +19,6 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver, Permissio
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Set<Name> getExpand();
-
-        @Override
-        S build(Resolver.Constructing resolver, Version version, Name qualifiedName, int slot);
-
-        @Override
-        S build(Name qualifiedName);
-
-        @Override
-        S build();
 
         interface Self<S extends LinkableSchema> extends InstanceSchema.Descriptor.Self<S>, Descriptor<S> {
 
@@ -58,7 +50,7 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver, Permissio
 
         return Immutable.sortedCopy(Stream.concat(
                 base.stream().flatMap(schema -> schema.getExpand().stream()),
-                extend.stream()
+                Nullsafe.orDefault(extend).stream()
         ).collect(Collectors.toSet()));
     }
 

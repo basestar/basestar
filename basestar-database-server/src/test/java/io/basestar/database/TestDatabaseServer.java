@@ -135,7 +135,7 @@ class TestDatabaseServer {
             return CompletableFuture.completedFuture(null);
         });
         this.storage = MemoryStorage.builder().build();
-        this.database = new DatabaseServer(namespace, storage, emitter);
+        this.database = DatabaseServer.builder().namespace(namespace).storage(storage).emitter(emitter).build();
         this.caller = Mockito.mock(Caller.class);
     }
 
@@ -880,7 +880,8 @@ class TestDatabaseServer {
     @Test
     void testDatabaseReadonly() {
 
-        final Database database = new DatabaseServer(namespace, storage, emitter, DatabaseMode.READONLY);
+        final Database database = DatabaseServer.builder().namespace(namespace).storage(storage)
+                .emitter(emitter).mode(DatabaseMode.READONLY).build();
         assertThrows(DatabaseReadonlyException.class, () -> database.create(Caller.SUPER, CreateOptions.builder()
                     .schema(SIMPLE)
                     .data(ImmutableMap.of())

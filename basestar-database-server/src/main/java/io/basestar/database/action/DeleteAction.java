@@ -28,6 +28,7 @@ import io.basestar.schema.Consistency;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Permission;
+import io.basestar.schema.use.ValueContext;
 import io.basestar.storage.exception.ObjectMissingException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.util.Name;
@@ -69,7 +70,7 @@ public class DeleteAction implements Action {
     }
 
     @Override
-    public Instance after(final Context context, final Instance before) {
+    public Instance after(final ValueContext valueContext, final Context expressionContext, final Instance before) {
 
         final String id = options.getId();
 

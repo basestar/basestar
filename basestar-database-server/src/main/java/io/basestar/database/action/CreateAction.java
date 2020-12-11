@@ -27,6 +27,7 @@ import io.basestar.event.Event;
 import io.basestar.expression.Context;
 import io.basestar.schema.*;
 import io.basestar.schema.exception.ConstraintViolationException;
+import io.basestar.schema.use.ValueContext;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -62,7 +63,7 @@ public class CreateAction implements Action {
     }
 
     @Override
-    public Instance after(final Context context, final Instance before) {
+    public Instance after(final ValueContext valueContext, final Context expressionContext, final Instance before) {
 
         if(before != null) {
             throw new ObjectExistsException(schema.getQualifiedName(), Instance.getId(before));
@@ -73,10 +74,10 @@ public class CreateAction implements Action {
             data.putAll(options.getData());
         }
         if(options.getExpressions() != null) {
-            options.getExpressions().forEach((k, expr) -> data.put(k, expr.evaluate(context)));
+            options.getExpressions().forEach((k, expr) -> data.put(k, expr.evaluate(expressionContext)));
         }
 
-        final Map<String, Object> initial = new HashMap<>(schema.create(data));
+        final Map<String, Object> initial = new HashMap<>(schema.create(valueContext, data, null));
 
         final Instant now = Instant.now();
 
@@ -88,7 +89,7 @@ public class CreateAction implements Action {
 
         final String actualId;
         if(schema.getId() != null) {
-            actualId = schema.getId().evaluate(requestedId, context.with(CommonVars.VAR_THIS, initial));
+            actualId = schema.getId().evaluate(requestedId, expressionContext.with(CommonVars.VAR_THIS, initial));
         } else if(requestedId != null) {
             actualId = requestedId;
         } else {
@@ -101,9 +102,9 @@ public class CreateAction implements Action {
         Instance.setUpdated(initial, now);
         Instance.setHash(initial, schema.hash(initial));
 
-        final Instance evaluated = schema.evaluateProperties(context.with(CommonVars.VAR_THIS, initial), new Instance(initial), Collections.emptySet());
+        final Instance evaluated = schema.evaluateProperties(expressionContext.with(CommonVars.VAR_THIS, initial), new Instance(initial), Collections.emptySet());
 
-        final Set<Constraint.Violation> violations = schema.validate(context.with(CommonVars.VAR_THIS, evaluated), evaluated, evaluated);
+        final Set<Constraint.Violation> violations = schema.validate(expressionContext.with(CommonVars.VAR_THIS, evaluated), evaluated, evaluated);
         if(!violations.isEmpty()) {
             throw new ConstraintViolationException(violations);
         }

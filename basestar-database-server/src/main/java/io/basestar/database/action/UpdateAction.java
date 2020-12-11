@@ -28,6 +28,7 @@ import io.basestar.event.Event;
 import io.basestar.expression.Context;
 import io.basestar.schema.*;
 import io.basestar.schema.exception.ConstraintViolationException;
+import io.basestar.schema.use.ValueContext;
 import io.basestar.storage.exception.ObjectMissingException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.util.Name;
@@ -71,13 +72,12 @@ public class UpdateAction implements Action {
     }
 
     @Override
-    public Instance after(final Context context, final Instance before) {
+    public Instance after(final ValueContext valueContext, final Context expressionContext, final Instance before) {
 
         final String id = options.getId();
 
         final Map<String, Object> data = new HashMap<>();
         final UpdateOptions.Mode mode = Nullsafe.orDefault(options.getMode(), UpdateOptions.Mode.REPLACE);
-
 
         final long version;
         final Instant created;
@@ -91,7 +91,7 @@ public class UpdateAction implements Action {
                 throw new ObjectMissingException(options.getSchema(), id);
             }
         } else {
-            if(!Instance.getSchema(before).equals(schema.getQualifiedName())) {
+            if(!schema.getQualifiedName().equals(Instance.getSchema(before))) {
                 throw new IllegalStateException("Cannot change instance schema");
             }
 
@@ -118,9 +118,9 @@ public class UpdateAction implements Action {
             }
         }
         if(options.getExpressions() != null) {
-            options.getExpressions().forEach((k, expr) -> data.put(k, expr.evaluate(context)));
+            options.getExpressions().forEach((k, expr) -> data.put(k, expr.evaluate(expressionContext)));
         }
-        final Map<String, Object> initial = new HashMap<>(schema.create(data));
+        final Map<String, Object> initial = new HashMap<>(schema.create(valueContext, data, null));
 
         Instance.setId(initial, id);
         Instance.setSchema(initial, schema.getQualifiedName());
@@ -129,9 +129,9 @@ public class UpdateAction implements Action {
         Instance.setUpdated(initial, updated);
         Instance.setHash(initial, schema.hash(initial));
 
-        final Instance evaluated = schema.evaluateProperties(context.with(CommonVars.VAR_THIS, initial), new Instance(initial), Collections.emptySet());
+        final Instance evaluated = schema.evaluateProperties(expressionContext.with(CommonVars.VAR_THIS, initial), new Instance(initial), Collections.emptySet());
 
-        final Set<Constraint.Violation> violations = schema.validate(context.with(CommonVars.VAR_THIS, evaluated), before == null ? evaluated : before, evaluated);
+        final Set<Constraint.Violation> violations = schema.validate(expressionContext.with(CommonVars.VAR_THIS, evaluated), before == null ? evaluated : before, evaluated);
         if(!violations.isEmpty()) {
             throw new ConstraintViolationException(violations);
         }

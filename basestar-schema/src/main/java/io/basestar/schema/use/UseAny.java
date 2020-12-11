@@ -49,9 +49,9 @@ public class UseAny implements Use<Object> {
     }
 
     @Override
-    public Object create(final Object value, final Set<Name> expand, final boolean suppress) {
+    public Object create(final ValueContext context, final Object value, final Set<Name> expand) {
 
-        return value;
+        return context.createAny(this, value, expand);
     }
 
     @Override

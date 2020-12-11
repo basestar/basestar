@@ -26,7 +26,6 @@ import io.basestar.schema.Constraint;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Schema;
 import io.basestar.schema.ViewSchema;
-import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
@@ -73,18 +72,9 @@ public class UseView implements UseLinkable {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public Instance create(final Object value, final Set<Name> expand, final boolean suppress) {
+    public Instance create(final ValueContext context, final Object value, final Set<Name> expand) {
 
-        if(value == null) {
-            return null;
-        } else if(value instanceof Map) {
-            return schema.create((Map<String, Object>) value, expand, suppress);
-        } else if(suppress) {
-            return null;
-        } else {
-            throw new UnexpectedTypeException(this, value);
-        }
+        return context.createView(this, value, expand);
     }
 
     @Override

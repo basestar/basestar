@@ -27,10 +27,12 @@ import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.collect.ImmutableSortedMap;
 import io.basestar.expression.Context;
+import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseStruct;
+import io.basestar.schema.use.ValueContext;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -112,21 +114,9 @@ public class StructSchema implements InstanceSchema {
         }
 
         @Override
-        default StructSchema build(final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
+        default StructSchema build(final Namespace namespace, final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
             return new StructSchema(this, resolver, version, qualifiedName, slot);
-        }
-
-        @Override
-        default StructSchema build(final Name qualifiedName) {
-
-            return build(Resolver.Constructing.ANONYMOUS, Version.CURRENT, qualifiedName, Schema.anonymousSlot());
-        }
-
-        @Override
-        default StructSchema build() {
-
-            return build(Schema.anonymousQualifiedName());
         }
     }
 
@@ -140,6 +130,7 @@ public class StructSchema implements InstanceSchema {
         private Long version;
 
         @Nullable
+        @JsonDeserialize(using = AbbrevListDeserializer.class)
         private List<Name> extend;
 
         @Nullable
@@ -242,9 +233,9 @@ public class StructSchema implements InstanceSchema {
     }
 
     @Override
-    public Instance create(final Map<String, Object> value, final Set<Name> expand, final boolean suppress) {
+    public Instance create(final ValueContext context, final Map<String, Object> value, final Set<Name> expand) {
 
-        return new Instance(readProperties(value, expand, suppress));
+        return new Instance(readProperties(context, value, expand));
     }
 
     public void serialize(final Map<String, Object> object, final DataOutput out) throws IOException {

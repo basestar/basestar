@@ -29,6 +29,7 @@ import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.expression.InferenceVisitor;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseAny;
+import io.basestar.schema.use.ValueContext;
 import io.basestar.schema.use.Widening;
 import io.basestar.schema.util.Expander;
 import io.basestar.util.Name;
@@ -160,7 +161,7 @@ public interface Member extends Named, Described, Serializable, Extendable {
         return getType().openApi(expand).description(getDescription());
     }
 
-    Object create(Object value, Set<Name> expand, boolean suppress);
+    Object create(ValueContext context, Object value, Set<Name> expand);
 
     Descriptor descriptor();
 
