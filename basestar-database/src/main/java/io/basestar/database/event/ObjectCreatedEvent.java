@@ -20,7 +20,7 @@ package io.basestar.database.event;
  * #L%
  */
 
-import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.util.Name;
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -48,6 +48,6 @@ public class ObjectCreatedEvent implements ObjectEvent {
         return new ObjectCreatedEvent()
                 .setSchema(schema)
                 .setId(id)
-                .setAfter(ObjectSchema.copyMeta(after));
+                .setAfter(ReferableSchema.copyMeta(after));
     }
 }

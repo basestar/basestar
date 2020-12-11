@@ -1,6 +1,8 @@
 $version: LATEST
 
 Post:
+  extensions:
+    "io.basestar.test": "test"
   properties:
     string:
       type: string?

@@ -29,6 +29,7 @@ import io.basestar.expression.Context;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.use.UseEnum;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.swagger.v3.oas.models.media.StringSchema;
@@ -89,7 +90,7 @@ public class EnumSchema implements Schema<String> {
     private final Map<String, Serializable> extensions;
 
     @JsonDeserialize(as = Builder.class)
-    public interface Descriptor extends Schema.Descriptor<String> {
+    public interface Descriptor extends Schema.Descriptor<EnumSchema, String> {
 
         String TYPE = "enum";
 
@@ -100,6 +101,15 @@ public class EnumSchema implements Schema<String> {
         }
 
         List<String> getValues();
+
+        interface Self extends Schema.Descriptor.Self<EnumSchema, String>, Descriptor {
+
+            @Override
+            default List<String> getValues() {
+
+                return self().getValues();
+            }
+        }
 
         @Override
         default EnumSchema build(final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
@@ -123,7 +133,7 @@ public class EnumSchema implements Schema<String> {
     @Data
     @Accessors(chain = true)
     @JsonPropertyOrder({"type", "description", "version", "values", "extensions"})
-    public static class Builder implements Schema.Builder<String>, Descriptor {
+    public static class Builder implements Schema.Builder<Builder, EnumSchema, String>, Descriptor {
 
         private Long version;
 
@@ -151,8 +161,8 @@ public class EnumSchema implements Schema<String> {
         this.slot = slot;
         this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
         this.description = descriptor.getDescription();
-        this.values = Nullsafe.immutableCopy(descriptor.getValues());
-        this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());
+        this.values = Immutable.copy(descriptor.getValues());
+        this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
@@ -206,33 +216,7 @@ public class EnumSchema implements Schema<String> {
     @Override
     public Descriptor descriptor() {
 
-        return new Descriptor() {
-
-            @Override
-            public Long getVersion() {
-
-                return version;
-            }
-
-            @Override
-            public List<String> getValues() {
-
-                return values;
-            }
-
-            @Nullable
-            @Override
-            public String getDescription() {
-
-                return description;
-            }
-
-            @Override
-            public Map<String, Serializable> getExtensions() {
-
-                return extensions;
-            }
-        };
+        return (Descriptor.Self) () -> EnumSchema.this;
     }
 
     @Override

@@ -23,8 +23,8 @@ package io.basestar.mapper.internal;
 import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.exception.MappingException;
-import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Link;
+import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.type.PropertyContext;
 import io.basestar.type.SerializableAccessor;
@@ -34,7 +34,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Map;
 
-public class LinkMapper implements MemberMapper<InstanceSchema.Builder> {
+public class LinkMapper<B extends LinkableSchema.Builder<B, ?>> implements MemberMapper<B> {
 
     private final String name;
 
@@ -82,7 +82,7 @@ public class LinkMapper implements MemberMapper<InstanceSchema.Builder> {
         this.description = null;
     }
 
-    public LinkMapper(final LinkMapper copy, final String description) {
+    public LinkMapper(final LinkMapper<B> copy, final String description) {
 
         this.name = copy.name;
         this.property = copy.property;
@@ -95,9 +95,9 @@ public class LinkMapper implements MemberMapper<InstanceSchema.Builder> {
     }
 
     @Override
-    public LinkMapper withDescription(final String description) {
+    public LinkMapper<B> withDescription(final String description) {
 
-        return new LinkMapper(this, description);
+        return new LinkMapper<>(this, description);
     }
 
     @Override
@@ -113,7 +113,7 @@ public class LinkMapper implements MemberMapper<InstanceSchema.Builder> {
     }
 
     @Override
-    public void addToSchema(final InstanceSchemaMapper<?, InstanceSchema.Builder> mapper, final InstanceSchema.Builder builder) {
+    public void addToSchema(final InstanceSchemaMapper<B, ?> mapper, final B builder) {
 
         mapper.addLink(builder, name, Link.builder()
                 .setExpression(expression)

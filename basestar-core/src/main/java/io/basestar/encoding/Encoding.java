@@ -22,7 +22,22 @@ package io.basestar.encoding;
 
 public interface Encoding<I, O> {
 
-    O encode(I v);
+    O encode(I input);
 
-    I decode(O v);
+    I decode(O input);
+
+    class NoOp<T> implements Encoding<T, T> {
+
+        @Override
+        public T encode(final T input) {
+
+            return input;
+        }
+
+        @Override
+        public T decode(final T input) {
+
+            return input;
+        }
+    }
 }

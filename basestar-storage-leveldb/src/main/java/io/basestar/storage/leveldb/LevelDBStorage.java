@@ -28,10 +28,7 @@ import io.basestar.storage.*;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;
-import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
-import io.basestar.util.Page;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 import lombok.RequiredArgsConstructor;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBIterator;
@@ -43,7 +40,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
-public class LevelDBStorage extends PartitionedStorage implements Storage.WithWriteHistory, Storage.WithoutAggregate, Storage.WithoutExpand, Storage.WithoutRepair {
+public class LevelDBStorage implements DefaultIndexStorage {
 
     private final DB db;
 
@@ -57,40 +54,18 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+    public Pager<Map<String, Object>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfy, final Map<Name, Range<Object>> query, final List<Sort> sort, final Set<Name> expand) {
 
-        return CompletableFuture.supplyAsync(() -> {
-            final byte[] key = key(schema, id);
-            final byte[] data = db.get(key);
-            return fromBytes(data);
-        });
-    }
+        return (stats, token, count) -> CompletableFuture.supplyAsync(() -> {
 
-    @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
-
-        return CompletableFuture.supplyAsync(() -> {
-            final byte[] key = key(schema, id, version);
-            final byte[] data = db.get(key);
-            return fromBytes(data);
-        });
-    }
-
-    @Override
-    protected CompletableFuture<Page<Map<String, Object>>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfyResult,
-                                                                      final Map<Name, Range<Object>> query, final List<Sort> sort, final Set<Name> expand,
-                                                                      final int count, final Page.Token paging) {
-
-        return CompletableFuture.supplyAsync(() -> {
-
-            final byte[] partitionKey = UseBinary.binaryKey(satisfyResult.getPartition());
-            final byte[] sortKey = UseBinary.binaryKey(satisfyResult.getSort());
+            final byte[] partitionKey = UseBinary.binaryKey(satisfy.getPartition());
+            final byte[] sortKey = UseBinary.binaryKey(satisfy.getSort());
 
             final byte[] key = key(schema, index, partitionKey, sortKey);
 
             final DBIterator iter = db.iterator();
-            if(paging != null) {
-                iter.seek(paging.getValue());
+            if(token != null) {
+                iter.seek(token.getValue());
             } else {
                 iter.seek(key);
             }
@@ -119,7 +94,38 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
     @Override
     public ReadTransaction read(final Consistency consistency) {
 
-        return new Storage.ReadTransaction.Basic(this);
+        return new ReadTransaction() {
+
+            final BatchCapture capture = new BatchCapture();
+
+            @Override
+            public ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+
+                capture.captureLatest(schema, id, expand);
+                return this;
+            }
+
+            @Override
+            public ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+
+                capture.captureVersion(schema, id, version, expand);
+                return this;
+            }
+
+            @Override
+            public CompletableFuture<BatchResponse> read() {
+
+                return CompletableFuture.supplyAsync(() -> {
+                    final Map<BatchResponse.RefKey, Map<String, Object>> refs = new HashMap<>();
+                    capture.forEachRef((schema, refKey, args) -> {
+                        final byte[] key = key(schema, refKey);
+                        final byte[] data = db.get(key);
+                        refs.put(refKey, fromBytes(data));
+                    });
+                    return BatchResponse.fromRefs(refs);
+                });
+            }
+        };
     }
 
     @Override
@@ -129,7 +135,7 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
     }
 
     @RequiredArgsConstructor
-    protected class WriteTransaction extends PartitionedStorage.WriteTransaction implements WithWriteHistory.WriteTransaction {
+    protected class WriteTransaction implements DefaultIndexStorage.WriteTransaction {
 
         private final Consistency consistency;
 
@@ -139,25 +145,29 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
 
         private final Set<String> checkedKeys = new HashSet<>();
 
-        private final SortedMap<BatchResponse.Key, Map<String, Object>> changes = new TreeMap<>();
+        private final SortedMap<BatchResponse.RefKey, Map<String, Object>> changes = new TreeMap<>();
 
         @Override
-        public Storage.WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+        public StorageTraits storageTraits(final ReferableSchema schema) {
 
-            writeVersion(schema, id, 0L, after);
-            return createIndexes(schema, id, after);
+            return LevelDBStorage.this.storageTraits(schema);
         }
 
         @Override
-        public Storage.WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
+        public void createObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
+
+            writeVersion(schema, id, 0L, after);
+        }
+
+        @Override
+        public void updateObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
             final Long beforeVersion = before == null ? null : Instance.getVersion(before);
             writeVersion(schema, id, beforeVersion, after);
-            return updateIndexes(schema, id, before, after);
         }
 
         @Override
-        public Storage.WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
+        public void deleteObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> before) {
 
             final Long beforeVersion = before == null ? null : Instance.getVersion(before);
             final byte[] key = key(schema, id);
@@ -165,10 +175,9 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
                 checkExisting(schema, id, beforeVersion);
             }
             writes.add(batch -> batch.delete(key));
-            return deleteIndexes(schema, id, before);
         }
 
-        private void writeVersion(final ObjectSchema schema, final String id, final Long beforeVersion, final Map<String, Object> after) {
+        private void writeVersion(final ReferableSchema schema, final String id, final Long beforeVersion, final Map<String, Object> after) {
 
             final long afterVersion = Nullsafe.require(Instance.getVersion(after));
             final byte[] key = key(schema, id);
@@ -183,17 +192,17 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
                 final byte[] data = toBytes(schema, afterVersion, after);
                 batch.put(key, data);
             });
-            createHistory(schema, id, afterVersion, after);
-            changes.put(BatchResponse.Key.version(schema.getQualifiedName(), id, afterVersion), after);
+//            createHistory(schema, id, afterVersion, after);
+            changes.put(BatchResponse.RefKey.version(schema.getQualifiedName(), id, afterVersion), after);
         }
 
-        private void checkNew(final ObjectSchema schema, final String id) {
+        private void checkNew(final ReferableSchema schema, final String id) {
 
             final byte[] key = key(schema, id);
             checkNew(schema, id, key);
         }
 
-        private void checkNew(final ObjectSchema schema, final String id, final byte[] key) {
+        private void checkNew(final ReferableSchema schema, final String id, final byte[] key) {
 
             check(key, db -> {
                 final byte[] data = db.get(key);
@@ -204,13 +213,13 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
             });
         }
 
-        private void checkExisting(final ObjectSchema schema, final String id, final long version) {
+        private void checkExisting(final ReferableSchema schema, final String id, final long version) {
 
             final byte[] key = key(schema, id);
             checkExisting(schema, id, version, key);
         }
 
-        private void checkExisting(final ObjectSchema schema, final String id, final long version, final byte[] key) {
+        private void checkExisting(final ReferableSchema schema, final String id, final long version, final byte[] key) {
 
             check(key, db -> {
                 final byte[] data = db.get(key);
@@ -233,7 +242,7 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
         }
 
         @Override
-        public WriteTransaction createIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+        public void createIndex(final ReferableSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
 
             final byte[] indexKey = key(schema, index, key.binary(), id);
             checkExisting(schema, id, 0L, indexKey);
@@ -241,34 +250,32 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
                 final byte[] data = toBytes(schema, version, projection);
                 batch.put(indexKey, data);
             });
-            return this;
         }
 
         @Override
-        public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
+        public void updateIndex(final ReferableSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
 
-            return createIndex(schema, index, id, version, key, projection);
+            createIndex(schema, index, id, version, key, projection);
         }
 
         @Override
-        public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
+        public void deleteIndex(final ReferableSchema schema, final Index index, final String id, final long version, final Index.Key key) {
 
             final byte[] indexKey = key(schema, index, key.binary(), id);
             checkExisting(schema, id, version, indexKey);
             writes.add(batch -> batch.delete(indexKey));
-            return this;
         }
 
         @Override
-        public WriteTransaction createHistory(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
+        public void writeHistoryLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
 
+            final long version = Instance.getVersion(after);
             final byte[] key = key(schema, id, version);
             checkExisting(schema, id, 0L, key);
             writes.add(batch -> {
                 final byte[] data = toBytes(schema, version, after);
                 batch.put(key, data);
             });
-            return this;
         }
 
         @Override
@@ -285,35 +292,40 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
 
                     db.write(batch, new WriteOptions().sync(consistency.isStrongerOrEqual(Consistency.QUORUM)));
 
-                    return new BatchResponse.Basic(changes);
+                    return BatchResponse.fromRefs(changes);
                 }
             });
         }
     }
 
     @Override
-    public EventStrategy eventStrategy(final ObjectSchema schema) {
+    public EventStrategy eventStrategy(final ReferableSchema schema) {
 
         return EventStrategy.EMIT;
     }
 
     @Override
-    public StorageTraits storageTraits(final ObjectSchema schema) {
+    public StorageTraits storageTraits(final ReferableSchema schema) {
 
         return LevelDBStorageTraits.INSTANCE;
     }
 
-    private static byte[] key(final ObjectSchema schema, final String id) {
+    private byte[] key(final ReferableSchema schema, final BatchResponse.RefKey refKey) {
+
+        return refKey.hasVersion() ? key(schema, refKey.getId(), refKey.getVersion()) : key(schema, refKey.getId());
+    }
+
+    private static byte[] key(final ReferableSchema schema, final String id) {
 
         return UseBinary.binaryKey(Arrays.asList(schema.getQualifiedName().toString(), null, id));
     }
 
-    private static byte[] key(final ObjectSchema schema, final String id, final long version) {
+    private static byte[] key(final ReferableSchema schema, final String id, final long version) {
 
         return UseBinary.binaryKey(Arrays.asList(schema.getQualifiedName().toString(), Reserved.PREFIX + ObjectSchema.VERSION, id, invert(version)));
     }
 
-    private static byte[] key(final ObjectSchema schema, final Index index, final Index.Key.Binary key, final String id) {
+    private static byte[] key(final ReferableSchema schema, final Index index, final Index.Key.Binary key, final String id) {
 
         final byte[] partition = key.getPartition();
         final byte[] sort;
@@ -325,7 +337,7 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
         return key(schema, index, partition, sort);
     }
 
-    private static byte[] key(final ObjectSchema schema, final Index index, final byte[] partition, final byte[] sort) {
+    private static byte[] key(final ReferableSchema schema, final Index index, final byte[] partition, final byte[] sort) {
 
         final List<Object> prefix = new ArrayList<>();
         prefix.add(schema.getQualifiedName().toString());
@@ -346,14 +358,14 @@ public class LevelDBStorage extends PartitionedStorage implements Storage.WithWr
             try(final ByteArrayInputStream bais = new ByteArrayInputStream(data);
                 final DataInputStream dis = new DataInputStream(bais)) {
                 dis.readLong();
-                return ObjectSchema.deserialize(dis);
+                return ReferableSchema.deserialize(dis);
             } catch (final IOException e) {
                 throw new IllegalStateException(e);
             }
         }
     }
 
-    private static byte[] toBytes(final ObjectSchema schema, final long version, final Map<String, Object> data) {
+    private static byte[] toBytes(final ReferableSchema schema, final long version, final Map<String, Object> data) {
 
         if(data == null) {
             return null;

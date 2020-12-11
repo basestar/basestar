@@ -32,7 +32,6 @@ import io.basestar.util.Name;
 import io.basestar.util.Page;
 import io.basestar.util.Sort;
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -71,13 +70,6 @@ public class BasestarModule extends SimpleModule {
         addSerializer(Enum.class, new EnumSerializer());
         addDeserializer(Enum.class, new EnumDeserializer());
 
-        addDeserializer(Serializable.class, new JsonDeserializer<Serializable>() {
-
-            @Override
-            public Serializable deserialize(final JsonParser jsonParser, final DeserializationContext deserializationContext) throws IOException {
-
-                return (Serializable)jsonParser.readValueAs(Object.class);
-            }
-        });
+        addDeserializer(Serializable.class, new SerializableDeserializer());
     }
 }

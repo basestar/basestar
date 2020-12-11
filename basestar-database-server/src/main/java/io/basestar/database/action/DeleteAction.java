@@ -84,7 +84,7 @@ public class DeleteAction implements Action {
         final Name schemaName = Instance.getSchema(before);
         assert schemaName != null;
         if(!schemaName.equals(schema.getQualifiedName())) {
-            if(schema.isSubclassOf(schemaName)) {
+            if(schema.isOrExtending(schemaName)) {
                 throw new IllegalStateException("Must delete using actual schema");
             } else {
                 log.warn("Allowing delete of object {} with mismatched schema", id);

@@ -83,7 +83,7 @@ public class EnumSchemaMapper<T extends Enum<?>> implements SchemaMapper<T, Stri
     }
 
     @Override
-    public Schema.Builder<String> schemaBuilder() {
+    public Schema.Builder<?, ?, String> schemaBuilder() {
 
         final List<String> values = Arrays.stream(constants).map(Enum::name).collect(Collectors.toList());
         return io.basestar.schema.EnumSchema.builder()

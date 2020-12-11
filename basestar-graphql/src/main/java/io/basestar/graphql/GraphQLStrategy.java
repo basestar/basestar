@@ -45,7 +45,7 @@ public interface GraphQLStrategy {
 
     default String missingInterfaceRefTypeName(final Schema<?> type) {
 
-        return typeName(type) + Reserved.PREFIX;
+        return "Unresolved" + typeName(type);
     }
 
     String inputRefTypeName(boolean versioned);
@@ -70,7 +70,7 @@ public interface GraphQLStrategy {
 
     String pagePagingFieldName();
 
-    String readMethodName(ObjectSchema type);
+    String readMethodName(ReferableSchema type);
 
     String subscribeMethodName(ObjectSchema type);
 
@@ -247,7 +247,7 @@ public interface GraphQLStrategy {
         }
 
         @Override
-        public String readMethodName(final ObjectSchema type) {
+        public String readMethodName(final ReferableSchema type) {
 
             return "read" + typeName(type);
         }
@@ -423,7 +423,7 @@ public interface GraphQLStrategy {
             }
 
             @Override
-            public String visitObject(final UseObject type) {
+            public String visitRef(final UseRef type) {
 
                 return typeName(type.getSchema());
             }

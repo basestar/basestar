@@ -5,7 +5,7 @@
     <groupId>io.basestar</groupId>
     <artifactId>basestar</artifactId>
     <packaging>pom</packaging>
-    <version>1.2.3-SNAPSHOT</version>
+    <version>1.3.1-SNAPSHOT</version>
 
     <inceptionYear>2019</inceptionYear>
     <organization>
@@ -88,7 +88,6 @@
         <module>basestar-storage-dynamodb</module>
         <module>basestar-storage-elasticsearch</module>
         <module>basestar-storage-s3</module>
-        <module>basestar-storage-spark</module>
         <module>basestar-storage-sql</module>
         <module>basestar-storage-cognito</module>
         <module>basestar-storage-hazelcast</module>
@@ -100,6 +99,15 @@
         <module>basestar-storage-leveldb</module>
         <module>basestar-storage-aws</module>
     </modules>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 
 <!--    <reporting>-->
 <!--        <plugins>-->

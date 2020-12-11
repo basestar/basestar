@@ -36,7 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
+public class PropertyMapper<B extends InstanceSchema.Builder<B, ?>> implements MemberMapper<B> {
 
     private final String name;
 
@@ -63,7 +63,7 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
         this.immutable = false;
     }
 
-    private PropertyMapper(final PropertyMapper copy, final String description, final Expression expression, final boolean immutable) {
+    private PropertyMapper(final PropertyMapper<B> copy, final String description, final Expression expression, final boolean immutable) {
 
         this.name = copy.name;
         this.property = copy.property;
@@ -75,20 +75,20 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
     }
 
     @Override
-    public PropertyMapper withExpression(final Expression expression) {
+    public PropertyMapper<B> withExpression(final Expression expression) {
 
-        return new PropertyMapper(this, description, expression, immutable);
+        return new PropertyMapper<>(this, description, expression, immutable);
     }
 
     @Override
-    public PropertyMapper withDescription(final String description) {
+    public PropertyMapper<B> withDescription(final String description) {
 
-        return new PropertyMapper(this, description, expression, immutable);
+        return new PropertyMapper<>(this, description, expression, immutable);
     }
 
-    public PropertyMapper withImmutable(final boolean immutable) {
+    public PropertyMapper<B> withImmutable(final boolean immutable) {
 
-        return new PropertyMapper(this, description, expression, immutable);
+        return new PropertyMapper<>(this, description, expression, immutable);
     }
 
     @Override
@@ -104,7 +104,7 @@ public class PropertyMapper implements MemberMapper<InstanceSchema.Builder> {
     }
 
     @Override
-    public void addToSchema(final InstanceSchemaMapper<?, InstanceSchema.Builder> mapper, final InstanceSchema.Builder builder) {
+    public void addToSchema(final InstanceSchemaMapper<B, ?> mapper, final B builder) {
 
         mapper.addProperty(builder, name, Property.builder()
                 .setExpression(expression)

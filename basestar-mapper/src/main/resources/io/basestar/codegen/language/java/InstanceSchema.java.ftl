@@ -6,7 +6,7 @@ package ${packageName};
 </#list>
 @com.fasterxml.jackson.databind.annotation.JsonSerialize(using = io.basestar.mapper.jackson.UnmarshallingSerializer.class)
 @com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = io.basestar.mapper.jackson.MarshallingDeserializer.class)
-public class ${className} <#if extend??>extends ${extend.fullyQualifiedClassName}</#if> {
+public class ${className}<@macros.extend schemas=extend/><#nt> {
 
 <#list members as member>
     <#list member.annotations as annot>

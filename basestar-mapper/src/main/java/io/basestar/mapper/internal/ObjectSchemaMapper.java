@@ -28,7 +28,7 @@ import io.basestar.util.Name;
 
 import java.util.Map;
 
-public class ObjectSchemaMapper<T> extends InstanceSchemaMapper<T, ObjectSchema.Builder> {
+public class ObjectSchemaMapper<T> extends InstanceSchemaMapper<ObjectSchema.Builder, T> {
 
     private final Map<String, Index.Descriptor> indexes;
 
@@ -65,11 +65,11 @@ public class ObjectSchemaMapper<T> extends InstanceSchemaMapper<T, ObjectSchema.
     }
 
     @Override
-    public ObjectSchema.Builder schemaBuilder() {
+    public Schema.Builder<?, ?, Instance> schemaBuilder() {
 
         return addMembers(ObjectSchema.builder()
                 .setConcrete(concrete ? null : false)
-                .setExtend(extend)
+//                .setExtend(extend)
                 .setIndexes(indexes.isEmpty() ? null : indexes));
     }
 

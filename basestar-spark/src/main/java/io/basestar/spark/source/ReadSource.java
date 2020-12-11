@@ -22,6 +22,7 @@ package io.basestar.spark.source;
 
 import io.basestar.spark.sink.Sink;
 import io.basestar.spark.util.Format;
+import io.basestar.util.Immutable;
 import io.basestar.util.Nullsafe;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -49,7 +50,7 @@ public class ReadSource implements Source<Dataset<Row>> {
         this.session = Nullsafe.require(session);
         this.format = Nullsafe.orDefault(format, Format.DEFAULT);
         this.path = Nullsafe.orDefault(path);
-        this.options = Nullsafe.immutableCopy(options);
+        this.options = Immutable.copy(options);
     }
 
     @Override

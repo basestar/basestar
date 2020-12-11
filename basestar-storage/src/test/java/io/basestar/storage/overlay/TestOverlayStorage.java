@@ -5,8 +5,8 @@ import io.basestar.storage.MemoryStorage;
 import io.basestar.storage.Storage;
 import io.basestar.storage.TestStorage;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
-@Disabled
 class TestOverlayStorage extends TestStorage {
 
     @Override
@@ -19,5 +19,12 @@ class TestOverlayStorage extends TestStorage {
                 .baseline(storageA)
                 .overlay(storageB)
                 .build();
+    }
+
+    @Test
+    @Disabled
+    @Override
+    protected void testNullBeforeDelete() {
+
     }
 }

@@ -20,7 +20,6 @@ package io.basestar.util;
  * #L%
  */
 
-import com.google.common.base.Charsets;
 import com.google.common.io.BaseEncoding;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -28,6 +27,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.With;
 
 import java.io.Serializable;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.AbstractList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -151,8 +152,15 @@ public class Page<T> extends AbstractList<T> implements Serializable {
 
         private final byte[] value;
 
+        public static final int MAX_SIZE = 10000;
+
         public Token(final byte[] value) {
 
+            if(value.length  == 0) {
+                throw new IllegalStateException("Cannot create empty token");
+            } else if(value.length > MAX_SIZE) {
+                throw new IllegalStateException("Token is too long (was " + value.length + " bytes)");
+            }
             this.value = Arrays.copyOf(value, value.length);
         }
 
@@ -169,12 +177,25 @@ public class Page<T> extends AbstractList<T> implements Serializable {
 
         public static Token fromStringValue(final String value) {
 
-            return new Token(value.getBytes(Charsets.UTF_8));
+            return new Token(value.getBytes(StandardCharsets.UTF_8));
         }
 
         public String getStringValue() {
 
-            return new String(value, Charsets.UTF_8);
+            return new String(value, StandardCharsets.UTF_8);
+        }
+
+        public static Token fromLongValue(final Long value) {
+
+            final ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+            buffer.putLong(value);
+            return new Token(buffer.array());
+        }
+
+        public Long getLongValue() {
+
+            final ByteBuffer buffer = ByteBuffer.wrap(getValue());
+            return buffer.getLong();
         }
     }
 }

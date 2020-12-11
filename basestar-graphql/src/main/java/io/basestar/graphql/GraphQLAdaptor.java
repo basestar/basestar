@@ -111,8 +111,8 @@ public class GraphQLAdaptor {
 
         final Map<String, DataFetcher> results = new HashMap<>();
         namespace.forEachLinkableSchema((schemaName, schema) -> {
-            if(schema instanceof ObjectSchema) {
-                final ObjectSchema objectSchema = (ObjectSchema)schema;
+            if(schema instanceof ReferableSchema) {
+                final ReferableSchema objectSchema = (ReferableSchema)schema;
                 results.put(strategy.readMethodName(objectSchema), readFetcher(objectSchema));
             }
             results.put(strategy.queryMethodName(schema), queryFetcher(schema));
@@ -123,7 +123,7 @@ public class GraphQLAdaptor {
         return results;
     }
 
-    private DataFetcher<CompletableFuture<?>> readFetcher(final ObjectSchema schema) {
+    private DataFetcher<CompletableFuture<?>> readFetcher(final ReferableSchema schema) {
 
         return (env) -> {
             final Caller caller = GraphQLUtils.caller(env.getContext());
@@ -134,7 +134,7 @@ public class GraphQLAdaptor {
         };
     }
 
-    private CompletableFuture<?> read(final Caller caller, final ObjectSchema schema, final String id, final Long version, final Set<Name> expand) {
+    private CompletableFuture<?> read(final Caller caller, final ReferableSchema schema, final String id, final Long version, final Set<Name> expand) {
 
         final ReadOptions options = ReadOptions.builder()
                 .schema(schema.getQualifiedName()).id(id)

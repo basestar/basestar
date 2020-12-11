@@ -40,7 +40,8 @@ import java.util.List;
 public class Methods implements Serializable {
 
     public static final List<Serializable> DEFAULT_FILTERS = ImmutableList.of(
-            new ObjectMethods(), new StringMethods(), new ListMethods(), new SetMethods(), new MapMethods(), new DateMethods(), new DateTimeMethods()
+            new ObjectMethods(), new StringMethods(), new ListMethods(), new SetMethods(),
+            new NumberMethods(), new MapMethods(), new DateMethods(), new DateTimeMethods()
     );
 
     private final List<Serializable> filters;

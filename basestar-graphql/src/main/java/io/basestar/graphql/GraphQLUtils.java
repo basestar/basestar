@@ -234,6 +234,10 @@ public class GraphQLUtils {
             final Map<String, Object> result = new HashMap<>();
             resolvedSchema.metadataSchema().forEach((k, use) -> result.put(k, toResponse(namespace, use, input.get(k))));
             resolvedSchema.getProperties().forEach((k, prop) -> result.put(k, toResponse(namespace, prop.getType(), input.get(k))));
+            if (resolvedSchema instanceof Transient.Resolver) {
+                ((Transient.Resolver) resolvedSchema).getTransients()
+                        .forEach((k, prop) -> result.put(k, toResponse(namespace, prop.getType(), input.get(k))));
+            }
             if (resolvedSchema instanceof Link.Resolver) {
                 ((Link.Resolver) resolvedSchema).getLinks().forEach((k, link) -> {
                     final List<Map<String, Object>> values = (List<Map<String, Object>>) input.get(k);
@@ -262,7 +266,7 @@ public class GraphQLUtils {
 
                 @Override
                 @SuppressWarnings("unchecked")
-                public Object visitObject(final UseObject type) {
+                public Object visitRef(final UseRef type) {
 
                     return toResponse(namespace, type.getSchema(), (Map<String, Object>) value);
                 }
@@ -404,11 +408,11 @@ public class GraphQLUtils {
                 }
 
                 @Override
-                public Object visitObject(final UseObject type) {
+                public Object visitRef(final UseRef type) {
 
                     if (value instanceof ObjectValue) {
                         final String id = fromInput(context, UseString.DEFAULT, get((ObjectValue) value, ObjectSchema.ID));
-                        return ObjectSchema.ref(id);
+                        return ReferableSchema.ref(id);
                     } else {
                         throw new IllegalStateException();
                     }
@@ -533,10 +537,10 @@ public class GraphQLUtils {
 
                 @Override
                 @SuppressWarnings("unchecked")
-                public Object visitObject(final UseObject type) {
+                public Object visitRef(final UseRef type) {
 
                     if (value instanceof Map) {
-                        return ObjectSchema.ref(Instance.getId((Map<String, Object>) value));
+                        return ReferableSchema.ref(Instance.getId((Map<String, Object>) value));
                     } else {
                         throw new IllegalStateException();
                     }
@@ -666,7 +670,7 @@ public class GraphQLUtils {
 
                 @Override
                 @SuppressWarnings("unchecked")
-                public Object visitObject(final UseObject type) {
+                public Object visitRef(final UseRef type) {
 
                     return toResponse(type.getSchema(), selections, (Map<String, Object>) value);
                 }
@@ -887,7 +891,12 @@ public class GraphQLUtils {
                         final Name name = Name.of(field.getName());
                         final Member member = schema.getMember(field.getName(), true);
                         if(member != null) {
-                            return expand(namespace, member.getType(), field.getSelectionSet()).stream().map(name::with);
+                            final Stream<Name> result = expand(namespace, member.getType(), field.getSelectionSet()).stream().map(name::with);
+                            if(member instanceof Transient) {
+                                return Stream.concat(Stream.of(name), result);
+                            } else {
+                                return result;
+                            }
                         } else {
                             return Stream.empty();
                         }

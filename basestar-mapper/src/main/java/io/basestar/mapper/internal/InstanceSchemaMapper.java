@@ -39,11 +39,11 @@ import java.util.stream.Collectors;
 
 // FIXME: inheritance not implemented
 
-public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> implements SchemaMapper<T, Map<String, Object>> {
+public abstract class InstanceSchemaMapper<B extends InstanceSchema.Builder<B, ?>, T> implements SchemaMapper<T, Map<String, Object>> {
 
     protected final Name name;
 
-    protected final Name extend;
+    protected final List<Name> extend;
 
     protected final boolean concrete;
 
@@ -58,17 +58,23 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
     @SuppressWarnings("unchecked")
     protected InstanceSchemaMapper(final Class<B> builderType, final MappingContext context, final Name name, final TypeContext type) {
 
+        final List<TypeContext> extendTypes = context.strategy().extend(type);
+
         this.name = name;
-        this.extend = context.strategy().extend(type).map(e -> context.schemaName(e.erasedType())).orElse(null);
+        this.extend = extendTypes.stream()
+                .map(TypeContext::erasedType)
+                .filter(context::isSchema)
+                .map(context::schemaName)
+                .collect(Collectors.toList());
         this.concrete = context.strategy().concrete(type);
         this.erasedType = type.erasedType();
         this.description = null;
         this.packageName = type.packageName();
 
         // Filter out properties that appear in base types
-        final Set<String> skipNames = context.strategy().extend(type)
-                .map(extend -> extend.properties().stream().map(PropertyContext::name).collect(Collectors.toSet()))
-                .orElse(Collections.emptySet());
+        final Set<String> skipNames = extendTypes.stream()
+                .flatMap(extend -> extend.properties().stream().map(PropertyContext::name))
+                .collect(Collectors.toSet());
 
         final List<MemberMapper<B>> members = new ArrayList<>();
         type.properties().forEach(prop -> {
@@ -93,7 +99,7 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
                         final TypeContext mapperType = TypeContext.from(member.getClass());
                         final Class<?> memberBuilderType = mapperType.find(MemberMapper.class).typeParameters().get(0).type().erasedType();
                         if (memberBuilderType.isAssignableFrom(builderType)) {
-                            members.add(applyModifiers(context, prop, (MemberMapper<B>) member));
+                            members.add(applyModifiers(context, prop, (MemberMapper<B>)member));
                         } else {
                             throw new IllegalStateException("Member " + member.getClass() + " not supported on " + this.getClass());
                         }
@@ -113,7 +119,7 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
         this.members = members;
     }
 
-    protected InstanceSchemaMapper(final InstanceSchemaMapper<T, B> copy, final String description) {
+    protected InstanceSchemaMapper(final InstanceSchemaMapper<B, T> copy, final String description) {
 
         this.name = copy.name;
         this.concrete = copy.concrete;
@@ -148,9 +154,6 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
         return output;
     }
 
-    @Override
-    public abstract B schemaBuilder();
-
     protected B addMembers(final B builder) {
 
         members.forEach(m -> m.addToSchema(this, builder));
@@ -169,7 +172,7 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
     protected void addLink(final B builder, final String name, final Link.Builder link) {
 
         if(builder instanceof Link.Resolver.Builder) {
-            ((Link.Resolver.Builder)builder).setLink(name, link);
+            ((Link.Resolver.Builder<?>)builder).setLink(name, link);
         } else {
             throw new IllegalStateException("Cannot add link to " + builder.getType());
         }
@@ -178,7 +181,7 @@ public abstract class InstanceSchemaMapper<T, B extends InstanceSchema.Builder> 
     protected void addTransient(final B builder, final String name, final Transient.Builder trans) {
 
         if(builder instanceof Transient.Resolver.Builder) {
-            ((Transient.Resolver.Builder)builder).setTransient(name, trans);
+            ((Transient.Resolver.Builder<?>)builder).setTransient(name, trans);
         } else {
             throw new IllegalStateException("Cannot add link to " + builder.getType());
         }

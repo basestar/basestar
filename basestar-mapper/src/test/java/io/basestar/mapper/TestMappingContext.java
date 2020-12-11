@@ -128,7 +128,7 @@ public class TestMappingContext {
         final MappingContext mappingContext = new MappingContext();
 
         final SchemaMapper<Post, Instance> schemaMapper = mappingContext.schemaMapper(Post.class);
-        final Schema.Builder<?> schema = schemaMapper.schemaBuilder();
+        final Schema.Builder<?, ?, ?> schema = schemaMapper.schemaBuilder();
 
         final Post post = schemaMapper.marshall(new Instance(ImmutableMap.<String, Object>builder()
                 .put(io.basestar.schema.ObjectSchema.ID, "test")
@@ -162,7 +162,7 @@ public class TestMappingContext {
         final MappingContext mappingContext = new MappingContext();
 
         final SchemaMapper<PostView, Instance> schemaMapper = mappingContext.schemaMapper(PostView.class);
-        final Schema.Builder<?> schema = schemaMapper.schemaBuilder();
+        final Schema.Builder<?, ?, ?> schema = schemaMapper.schemaBuilder();
 
         System.err.println(schema);
     }

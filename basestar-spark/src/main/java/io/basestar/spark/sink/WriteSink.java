@@ -21,6 +21,7 @@ package io.basestar.spark.sink;
  */
 
 import io.basestar.spark.util.Format;
+import io.basestar.util.Immutable;
 import io.basestar.util.Nullsafe;
 import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Dataset;
@@ -47,8 +48,8 @@ public class WriteSink<T> implements Sink<Dataset<T>> {
         this.format = Nullsafe.orDefault(format, Format.DEFAULT);
         this.path = Nullsafe.orDefault(path);
         this.mode = Nullsafe.orDefault(mode, SaveMode.ErrorIfExists);
-        this.options = Nullsafe.immutableCopy(options);
-        this.partitionBy = Nullsafe.immutableCopy(partitionBy);
+        this.options = Immutable.copy(options);
+        this.partitionBy = Immutable.copy(partitionBy);
     }
 
     @Override

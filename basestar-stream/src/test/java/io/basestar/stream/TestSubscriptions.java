@@ -9,7 +9,6 @@ import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.schema.use.UseBinary;
 import io.basestar.util.Name;
-import io.basestar.util.Pager;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -52,6 +51,6 @@ abstract class TestSubscriptions {
 
     private List<Subscription> query(final Subscriptions subscriptions, final Set<Subscription.Key> keys) {
 
-        return new Pager<>(Subscription.COMPARATOR, subscriptions.query(keys), null).page(10).join();
+        return subscriptions.query(keys).page(10).join();
     }
 }

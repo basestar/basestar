@@ -28,13 +28,13 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 import java.util.Set;
 
-public interface MemberMapper<B extends InstanceSchema.Builder> extends Serializable {
+public interface MemberMapper<B extends InstanceSchema.Builder<B, ?>> extends Serializable {
 
     TypeMapper getType();
 
     String memberType();
 
-    void addToSchema(InstanceSchemaMapper<?, B> mapper, B builder);
+    void addToSchema(InstanceSchemaMapper<B, ?> mapper, B builder);
 
     void unmarshall(Object source, Map<String, Object> target) throws InvocationTargetException, IllegalAccessException;
 

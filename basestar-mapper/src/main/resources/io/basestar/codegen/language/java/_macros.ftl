@@ -19,3 +19,4 @@
 <#macro object of><#if of.className??><@annotation name=of.className values=of.values/><#else>${of}</#if></#macro>
 <#macro annotation name values>@${name}<#if values?has_content>(<#list values as k,v>${k} = <@value of=v/><#sep>, </#list>)</#if></#macro>
 
+<#macro extend schemas><#if schemas?has_content> implements <#list schemas as v>${v.className}<#sep>, </#list></#if></#macro>

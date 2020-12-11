@@ -1,5 +1,8 @@
 {
   "Simple": {
+    "extensions": {
+      "test": "test"
+    },
     "properties": {
       "boolean": {
         "type": "boolean?"
@@ -137,6 +140,7 @@
     }
   },
   "Animal": {
+    "type": "interface",
     "properties": {
       "name": {
         "type": "string?"

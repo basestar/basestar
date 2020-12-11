@@ -35,6 +35,11 @@ public interface StorageTraits {
 
     boolean supportsMultiObject();
 
+    default boolean supportsHistory() {
+
+        return true;
+    }
+
     default boolean supportsAggregation() {
 
         return false;

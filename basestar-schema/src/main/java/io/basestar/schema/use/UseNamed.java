@@ -84,8 +84,8 @@ public interface UseNamed<T> extends Use<T> {
                 return UseEnum.from((EnumSchema) schema, config);
             } else if(schema instanceof StructSchema) {
                 return UseStruct.from((StructSchema) schema, config);
-            } else if(schema instanceof ObjectSchema) {
-                return UseObject.from((ObjectSchema) schema, config);
+            } else if(schema instanceof ReferableSchema) {
+                return UseRef.from((ReferableSchema) schema, config);
             } else {
                 throw new MissingSchemaException(name);
             }

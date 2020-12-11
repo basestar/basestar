@@ -25,7 +25,11 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.exception.MissingMemberException;
+import io.basestar.schema.expression.InferenceContext;
+import io.basestar.schema.expression.InferenceVisitor;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseAny;
+import io.basestar.schema.use.Widening;
 import io.basestar.schema.util.Expander;
 import io.basestar.util.Name;
 
@@ -41,38 +45,41 @@ public interface Member extends Named, Described, Serializable, Extendable {
 
     boolean supportsTrivialJoin(Set<Name> expand);
 
+    boolean canModify(Member member, Widening widening);
+
+    boolean canCreate();
+
     interface Descriptor extends Described, Extendable {
 
         @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         Visibility getVisibility();
 
-        interface Delegating extends Descriptor {
+        interface Self<M extends Member> extends Descriptor {
 
-            Descriptor delegate();
+            M self();
 
             @Override
             default Visibility getVisibility() {
 
-                return delegate().getVisibility();
+                return self().getVisibility();
             }
 
             @Override
             default String getDescription() {
 
-                return delegate().getDescription();
+                return self().getDescription();
             }
 
             @Override
             default Map<String, Serializable> getExtensions() {
 
-                return delegate().getExtensions();
+                return self().getExtensions();
             }
         }
     }
 
-    interface Builder extends Descriptor {
+    interface Builder<B extends Builder<B>> extends Descriptor, Extendable.Builder<B> {
 
-        Builder setExtensions(Map<String, Serializable> extensions);
     }
 
     interface Resolver {
@@ -156,4 +163,22 @@ public interface Member extends Named, Described, Serializable, Extendable {
     Object create(Object value, Set<Name> expand, boolean suppress);
 
     Descriptor descriptor();
+
+    static Use<?> type(final Use<?> type, final Expression expression, final InferenceContext context) {
+
+        if(type == null) {
+            if(context != null && expression != null) {
+                final Use<?> inferredType = new InferenceVisitor(context).visit(expression);
+                if(inferredType instanceof UseAny) {
+                    throw new IllegalStateException("Cannot infer type from expression " + expression);
+                } else {
+                    return inferredType;
+                }
+            } else {
+                throw new IllegalStateException("Property type or expression must be specified");
+            }
+        } else {
+            return type;
+        }
+    }
 }

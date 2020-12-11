@@ -10,6 +10,7 @@ import io.basestar.schema.Reserved;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseBoolean;
 import io.basestar.spark.util.SparkSchemaUtils;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import org.apache.spark.api.java.function.FlatMapFunction;
@@ -156,7 +157,7 @@ public interface Combiner extends Serializable {
             } else if(after == null) {
                 return Optional.of(schema.deleted(Instance.getId(before)));
             } else {
-                return Optional.of(Nullsafe.immutableCopyPut(after, Reserved.DELETED, false));
+                return Optional.of(Immutable.copyPut(after, Reserved.DELETED, false));
             }
         }
     }

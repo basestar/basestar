@@ -52,7 +52,7 @@ class TestIndex {
                     Name.of("d")
             )).setSort(ImmutableList.of(
                     Sort.asc(Name.of("e"))
-            )).build(Name.of("test"));
+            )).build(null, Name.of("test"));
 
         final Map<String, Object> data = new HashMap<>();
         data.put("as", ImmutableList.of(

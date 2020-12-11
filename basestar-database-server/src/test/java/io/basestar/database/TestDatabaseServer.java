@@ -38,7 +38,7 @@ import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.logical.Or;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Namespace;
-import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.schema.util.Ref;
@@ -698,6 +698,8 @@ class TestDatabaseServer {
         final Instance member = init.get("member");
         assertNotNull(member);
 
+        assertNotNull(database.read(Caller.SUPER, TEAM, "t1").join());
+
         final Map<String, Instance> update = database.batch(Caller.SUPER, BatchOptions.builder()
                 .action("team", UpdateOptions.builder()
                         .schema(TEAM)
@@ -731,14 +733,14 @@ class TestDatabaseServer {
                 .schema(TEAM)
                 .data(ImmutableMap.of(
                         "name", "b",
-                        "parent", ObjectSchema.ref(teamA.getId())
+                        "parent", ReferableSchema.ref(teamA.getId())
                 ))
                 .build()).get();
 
         final Instance member = database.create(Caller.SUPER, CreateOptions.builder()
                 .schema(TEAM_MEMBER)
                 .data(ImmutableMap.of(
-                        "team", ObjectSchema.ref(teamB.getId())
+                        "team", ReferableSchema.ref(teamB.getId())
                 ))
                 .build()).get();
 
@@ -768,26 +770,26 @@ class TestDatabaseServer {
         assertEquals("a2", Instance.get(get, Name.parse("team.parent.name")));
     }
 
-    @Test
-    void aggregate() throws Exception {
-
-        database.batch(Caller.SUPER, BatchOptions.builder()
-                .action("a", CreateOptions.builder()
-                        .schema(TEAM_MEMBER)
-                        .data(ImmutableMap.of(
-                                "user", ImmutableMap.of("id", "u1"),
-                                "team", ImmutableMap.of("id", "t1"),
-                                "role", "owner",
-                                "accepted", true
-                        )).build())
-                .build()).get();
-
-        final Page<Instance> results = database.query(Caller.SUPER, QueryOptions.builder()
-                .schema(Name.of("TeamMemberStats"))
-                .build()).get();
-
-        log.debug("Aggregate results: {}", results);
-    }
+//    @Test
+//    void aggregate() throws Exception {
+//
+//        database.batch(Caller.SUPER, BatchOptions.builder()
+//                .action("a", CreateOptions.builder()
+//                        .schema(TEAM_MEMBER)
+//                        .data(ImmutableMap.of(
+//                                "user", ImmutableMap.of("id", "u1"),
+//                                "team", ImmutableMap.of("id", "t1"),
+//                                "role", "owner",
+//                                "accepted", true
+//                        )).build())
+//                .build()).get();
+//
+//        final Page<Instance> results = database.query(Caller.SUPER, QueryOptions.builder()
+//                .schema(Name.of("TeamMemberStats"))
+//                .build()).get();
+//
+//        log.debug("Aggregate results: {}", results);
+//    }
 
     @Test
     void merge() throws Exception {
@@ -919,7 +921,7 @@ class TestDatabaseServer {
                 .schema(WITH_VERSIONED_REF)
                 .id(id)
                 .data(ImmutableMap.of(
-                        "ref", ObjectSchema.versionedRef(id, 1L)
+                        "ref", ReferableSchema.versionedRef(id, 1L)
                 ))
                 .build()).get();
 

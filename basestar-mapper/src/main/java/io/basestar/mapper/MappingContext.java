@@ -80,6 +80,17 @@ public class MappingContext implements Serializable {
         return builder;
     }
 
+    public boolean isSchema(final Class<?> cls) {
+
+        final SchemaMapper<?, ?> mapper = this.mappers.get(cls);
+        if(mapper != null) {
+            return true;
+        } else {
+            final TypeContext type = TypeContext.from(cls);
+            return !declarationAnnotations(type).isEmpty();
+        }
+    }
+
     public Name schemaName(final Class<?> cls) {
 
         final SchemaMapper<?, ?>  mapper = this.mappers.get(cls);
@@ -133,12 +144,17 @@ public class MappingContext implements Serializable {
         return applyModifiers(type, (SchemaMapper<T, O>) decl.mapper(this, type));
     }
 
-    private SchemaDeclaration.Declaration declaration(final TypeContext type) {
+    private List<AnnotationContext<?>> declarationAnnotations(final TypeContext type) {
 
-        final List<AnnotationContext<?>> declAnnotations = type.annotations().stream()
+        return type.annotations().stream()
                 .filter(a -> a.type().annotations().stream()
                         .anyMatch(HasType.match(SchemaDeclaration.class)))
                 .collect(Collectors.toList());
+    }
+
+    private SchemaDeclaration.Declaration declaration(final TypeContext type) {
+
+        final List<AnnotationContext<?>> declAnnotations = declarationAnnotations(type);
 
         if (declAnnotations.size() == 0) {
             return SchemaDeclaration.Declaration.Basic.INSTANCE;

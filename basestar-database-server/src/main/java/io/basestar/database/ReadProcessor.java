@@ -20,7 +20,9 @@ package io.basestar.database;
  * #L%
  */
 
-import com.google.common.collect.*;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Sets;
 import io.basestar.auth.Caller;
 import io.basestar.database.util.ExpandKey;
 import io.basestar.database.util.LinkKey;
@@ -31,7 +33,6 @@ import io.basestar.schema.*;
 import io.basestar.schema.util.Expander;
 import io.basestar.storage.Storage;
 import io.basestar.util.*;
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
@@ -52,29 +53,28 @@ public class ReadProcessor {
 
     protected final Storage storage;
 
-    public ReadProcessor(Namespace namespace, Storage storage) {
+    public ReadProcessor(final Namespace namespace, final Storage storage) {
+
         this.namespace = namespace;
         this.storage = storage;
     }
 
-    protected ObjectSchema objectSchema(final Name schema) {
+    protected ReferableSchema referableSchema(final Name schema) {
 
-        return namespace.requireObjectSchema(schema);
+        return namespace.requireReferableSchema(schema);
     }
 
-    protected CompletableFuture<Instance> readImpl(final ObjectSchema objectSchema, final String id, final Long version, final Set<Name> expand) {
+    protected CompletableFuture<Instance> readImpl(final ReferableSchema objectSchema, final String id, final Long version, final Set<Name> expand) {
 
-        // Will make 2 reads if the request schema doesn't match result schema
-
-        return readRaw(objectSchema, id, version, expand).thenCompose(raw -> cast(objectSchema, raw, expand));
+        return readRaw(objectSchema, id, version, expand).thenApply(raw -> create(raw, expand));
     }
 
-    private CompletableFuture<Map<String, Object>> readRaw(final ObjectSchema objectSchema, final String id, final Long version, final Set<Name> expand) {
+    private CompletableFuture<Map<String, Object>> readRaw(final ReferableSchema objectSchema, final String id, final Long version, final Set<Name> expand) {
 
         if (version == null) {
-            return storage.readObject(objectSchema, id, expand);
+            return storage.get(consistency(objectSchema), objectSchema, id, expand);
         } else {
-            return storage.readObject(objectSchema, id, expand)
+            return storage.get(consistency(objectSchema), objectSchema, id, expand)
                     .thenCompose(current -> {
                         if (current == null) {
                             return CompletableFuture.completedFuture(null);
@@ -86,11 +86,16 @@ public class ReadProcessor {
                             } else if (version > currentVersion) {
                                 return CompletableFuture.completedFuture(null);
                             } else {
-                                return storage.readObjectVersion(objectSchema, id, version, expand);
+                                return storage.getVersion(Consistency.ATOMIC, objectSchema, id, version, expand);
                             }
                         }
                     });
         }
+    }
+
+    private Consistency consistency(final ReferableSchema objectSchema) {
+
+        return Consistency.ATOMIC;
     }
 
     protected CompletableFuture<Page<Instance>> queryLinkImpl(final Context context, final Link link, final Instance owner,
@@ -106,7 +111,7 @@ public class ReadProcessor {
         return queryImpl(context, linkSchema, expression, link.getSort(), expand, count, paging);
     }
 
-    protected CompletableFuture<Page<Instance>> queryImpl(final Context context, final ObjectSchema objectSchema, final Expression expression,
+    protected CompletableFuture<Page<Instance>> queryImpl(final Context context, final ReferableSchema objectSchema, final Expression expression,
                                                           final List<Sort> sort, final Set<Name> expand, final int count, final Page.Token paging) {
 
         final List<Sort> pageSort = ImmutableList.<Sort>builder()
@@ -116,37 +121,22 @@ public class ReadProcessor {
 
         final Set<Name> queryExpand = Sets.union(Nullsafe.orDefault(expand), Nullsafe.orDefault(objectSchema.getExpand()));
 
-        final List<Pager.Source<Instance>> sources = storage.query(objectSchema, expression, sort, queryExpand).stream()
-                .map(source -> (Pager.Source<Instance>) (c, t, stats) -> source.page(c, t, stats)
-                        .thenCompose(data -> cast(objectSchema, data, queryExpand)))
-                .collect(Collectors.toList());
+        final Pager<Instance> pager = storage.query(objectSchema, expression, pageSort, queryExpand)
+                .map(v -> create(v, expand));
 
-        return pageImpl(context, sources, expression, pageSort, count, paging);
-    }
-
-    protected CompletableFuture<Page<Instance>> pageImpl(final Context context, final List<Pager.Source<Instance>> sources, final Expression expression,
-                                                         final List<Sort> sort, final int count, final Page.Token paging) {
-
-        if(sources.isEmpty()) {
-            throw new IllegalStateException("Query not supported");
-        } else {
-
-            final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
-            final Pager<Instance> pager = new Pager<>(comparator, sources, paging);
-            return pager.page(count)
-                    .thenApply(results -> {
-                        // Expressions that could not be pushed down are applied after auto-paging.
-                        return results.filter(instance -> {
-                            try {
-                                return expression.evaluatePredicate(context.with(instance));
-                            } catch (final Exception e) {
-                                // FIXME:
-                                log.warn("Failed to evaluate predicate", e);
-                                return false;
-                            }
-                        });
+        return pager.page(paging, count)
+                .thenApply(results -> {
+                    // Expressions that could not be pushed down are applied after auto-paging.
+                    return results.filter(instance -> {
+                        try {
+                            return expression.evaluatePredicate(context.with(instance));
+                        } catch (final Exception e) {
+                            // FIXME:
+                            log.warn("Failed to evaluate predicate", e);
+                            return false;
+                        }
                     });
-        }
+                });
     }
 
     protected CompletableFuture<Instance> expand(final Context context, final Instance item, final Set<Name> expand) {
@@ -189,7 +179,7 @@ public class ReadProcessor {
                 .thenApply(results -> {
                     final Map<ExpandKey<RefKey>, Instance> evaluated = new HashMap<>();
                     results.forEach((k, v) -> {
-                        final ObjectSchema schema = objectSchema(Instance.getSchema(v));
+                        final ReferableSchema schema = referableSchema(Instance.getSchema(v));
                         evaluated.put(k, schema.evaluateTransients(context, v, k.getExpand()));
                     });
                     return evaluated;
@@ -208,10 +198,10 @@ public class ReadProcessor {
             if(!ref.getExpand().isEmpty()) {
                 final Name baseSchemaName = ref.getKey().getSchema();
                 final Name instanceSchemaName = Instance.getSchema(object);
-                final ObjectSchema resolvedSchema = objectSchema(Nullsafe.orDefault(instanceSchemaName, baseSchemaName));
+                final ReferableSchema resolvedSchema = referableSchema(Nullsafe.orDefault(instanceSchemaName, baseSchemaName));
                 resolvedSchema.expand(object, new Expander() {
                     @Override
-                    public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
+                    public Instance expandRef(final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
                         if(ref == null) {
                             return null;
@@ -222,7 +212,7 @@ public class ReadProcessor {
                     }
 
                     @Override
-                    public Instance expandVersionedRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
+                    public Instance expandVersionedRef(final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
                         if(ref == null) {
                             return null;
@@ -262,24 +252,22 @@ public class ReadProcessor {
                 final Storage.ReadTransaction readTransaction = storage.read(consistency);
                 refs.forEach(ref -> {
                     final RefKey refKey = ref.getKey();
-                    final ObjectSchema objectSchema = objectSchema(refKey.getSchema());
-                    if(refKey.getVersion() != null) {
-                        readTransaction.readObjectVersion(objectSchema, refKey.getId(), refKey.getVersion(), ref.getExpand());
+                    final ReferableSchema schema = referableSchema(refKey.getSchema());
+                    if (refKey.getVersion() != null) {
+                        readTransaction.getVersion(schema, refKey.getId(), refKey.getVersion(), ref.getExpand());
                     } else {
-                        readTransaction.readObject(objectSchema, refKey.getId(), ref.getExpand());
+                        readTransaction.get(schema, refKey.getId(), ref.getExpand());
                     }
                 });
 
                 return readTransaction.read().thenCompose(results -> {
 
                     final Map<ExpandKey<RefKey>, Instance> resolved = new HashMap<>();
-                    for (final Map<String, Object> initial : results.values()) {
+                    for (final Map<String, Object> initial : results.getRefs().values()) {
 
-                        final Name schemaName = Instance.getSchema(initial);
                         final String id = Instance.getId(initial);
                         final Long version = Instance.getVersion(initial);
-                        final ObjectSchema schema = objectSchema(schemaName);
-                        final Instance object = create(schema, initial);
+                        final Instance object = create(initial);
 
                         refs.forEach(ref -> {
                             final RefKey refKey = ref.getKey();
@@ -300,7 +288,7 @@ public class ReadProcessor {
                         });
                     }
 
-                    return cast(resolved).thenCompose(v -> expand(context, v)).thenApply(expanded -> {
+                    return expand(context, resolved).thenApply(expanded -> {
 
                         final Map<ExpandKey<RefKey>, Instance> result = new HashMap<>();
 
@@ -308,27 +296,27 @@ public class ReadProcessor {
                             final RefKey refKey = ref.getKey();
                             final Name baseSchemaName = ref.getKey().getSchema();
                             final Name instanceSchemaName = Instance.getSchema(object);
-                            final ObjectSchema resolvedSchema = objectSchema(Nullsafe.orDefault(instanceSchemaName, baseSchemaName));
+                            final ReferableSchema resolvedSchema = referableSchema(Nullsafe.orDefault(instanceSchemaName, baseSchemaName));
 
                             result.put(ref, resolvedSchema.expand(object, new Expander() {
                                 @Override
-                                public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
+                                public Instance expandRef(final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
                                     final ExpandKey<RefKey> expandKey = ExpandKey.from(RefKey.latest(schema.getQualifiedName(), ref), expand);
                                     Instance result = expanded.get(expandKey);
                                     if (result == null) {
-                                        result = ObjectSchema.ref(Instance.getId(ref));
+                                        result = ReferableSchema.ref(Instance.getId(ref));
                                     }
                                     return result;
                                 }
 
                                 @Override
-                                public Instance expandVersionedRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
+                                public Instance expandVersionedRef(final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
                                     final ExpandKey<RefKey> expandKey = ExpandKey.from(RefKey.versioned(schema.getQualifiedName(), ref), expand);
                                     Instance result = expanded.get(expandKey);
                                     if (result == null) {
-                                        result = ObjectSchema.versionedRef(Instance.getId(ref), Instance.getVersion(ref));
+                                        result = ReferableSchema.versionedRef(Instance.getId(ref), Instance.getVersion(ref));
                                     }
                                     return result;
                                 }
@@ -358,118 +346,22 @@ public class ReadProcessor {
         }
     }
 
-    protected CompletableFuture<Instance> cast(final ObjectSchema baseSchema, final Map<String, Object> data, final Set<Name> expand) {
+    protected Instance create(final Map<String, Object> data) {
 
         if(data == null) {
-            return CompletableFuture.completedFuture(null);
+            return null;
         }
-        final Name castSchemaName = Instance.getSchema(data);
-        if(baseSchema.getQualifiedName().equals(castSchemaName)) {
-            return CompletableFuture.completedFuture(create(baseSchema, data));
-        } else {
-            final String id = Instance.getId(data);
-            final Long version = Instance.getVersion(data);
-            final ObjectSchema castSchema = objectSchema(castSchemaName);
-            return readRaw(castSchema, id, version, expand)
-                    .thenApply(v -> create(castSchema, v));
-        }
+        final ReferableSchema schema = referableSchema(Instance.getSchema(data));
+        return schema.create(data, schema.getExpand(), true);
     }
 
-    protected Instance create(final InstanceSchema schema, final Map<String, Object> data) {
+    protected Instance create(final Map<String, Object> data, final Set<Name> expand) {
 
-        return schema.create(data, Collections.emptySet(), true);
-    }
-
-    protected CompletableFuture<Page<Instance>> cast(final ObjectSchema baseSchema, final Page<? extends Map<String, Object>> data, final Set<Name> expand) {
-
-        final Multimap<Name, Map<String, Object>> needed = ArrayListMultimap.create();
-        data.forEach(v -> {
-            final Name actualSchema = Instance.getSchema(v);
-            if(!baseSchema.getQualifiedName().equals(actualSchema)) {
-                needed.put(actualSchema, v);
-            }
-        });
-        if(needed.isEmpty()) {
-            return CompletableFuture.completedFuture(data.map(v -> {
-                final ObjectSchema schema = objectSchema(Instance.getSchema(v));
-                return schema.create(v, expand, true);
-            }));
-        } else {
-            final Storage.ReadTransaction readTransaction = storage.read(Consistency.NONE);
-            needed.asMap().forEach((schemaName, items) -> {
-                final ObjectSchema schema = objectSchema(schemaName);
-                items.forEach(item -> {
-                    final String id = Instance.getId(item);
-                    final Long version = Instance.getVersion(item);
-                    assert version != null;
-                    readTransaction.readObjectVersion(schema, id, version, expand);
-                });
-            });
-            return readTransaction.read().thenApply(results -> data.map(v -> {
-                final Name schemaName = Instance.getSchema(v);
-                final String id = Instance.getId(v);
-                final Map<String, Object> mappedResult = results.getObject(schemaName, id);
-                final Map<String, Object> result = Nullsafe.orDefault(mappedResult, v);
-                final ObjectSchema schema = objectSchema(Instance.getSchema(result));
-                return schema.create(result, expand, true);
-            }));
+        if(data == null) {
+            return null;
         }
-    }
-
-    @Data
-    private static class InstanceExpand {
-
-        private final Map<String, Object> instance;
-
-        private final Set<Name> expand;
-    }
-
-    protected CompletableFuture<Map<ExpandKey<RefKey>, Instance>> cast(final Map<ExpandKey<RefKey>, ? extends Map<String, Object>> data) {
-
-        final Multimap<Name, InstanceExpand> needed = ArrayListMultimap.create();
-        data.forEach((k, v) -> {
-            final Name actualSchema = Instance.getSchema(v);
-            if(!k.getKey().getSchema().equals(actualSchema)) {
-                needed.put(actualSchema, new InstanceExpand(v, k.getExpand()));
-            }
-        });
-        if(needed.isEmpty()) {
-            final Map<ExpandKey<RefKey>, Instance> results = new HashMap<>();
-            data.forEach((k, v) -> {
-                final ObjectSchema schema = objectSchema(Instance.getSchema(v));
-                final Instance instance = create(schema, v);
-                results.put(k, instance);
-            });
-            return CompletableFuture.completedFuture(results);
-        } else {
-            final Storage.ReadTransaction readTransaction = storage.read(Consistency.NONE);
-            needed.asMap().forEach((schemaName, items) -> {
-                final ObjectSchema schema = objectSchema(schemaName);
-                items.forEach(item -> {
-                    final Map<String, Object> instance = item.getInstance();
-                    final Set<Name> expand = item.getExpand();
-                    final String id = Instance.getId(instance);
-                    final Long version = Instance.getVersion(instance);
-                    assert version != null;
-                    readTransaction.readObjectVersion(schema, id, version, expand);
-                });
-            });
-            return readTransaction.read().thenApply(results -> {
-
-                final Map<ExpandKey<RefKey>, Instance> remapped = new HashMap<>();
-                data.forEach((k, v) ->  {
-                    final Name schemaName = Instance.getSchema(v);
-                    final String id = Instance.getId(v);
-                    final Long version = Instance.getVersion(v);
-                    final Map<String, Object> mappedResult = results.getObjectVersion(schemaName, id, version);
-                    final Map<String, Object> result = Nullsafe.orDefault(mappedResult, v);
-                    final ObjectSchema schema = objectSchema(Instance.getSchema(result));
-                    final Instance instance = create(schema, result);
-                    remapped.put(k, instance);
-                });
-                return remapped;
-            });
-        }
+        final ReferableSchema schema = referableSchema(Instance.getSchema(data));
+        return schema.create(data, Immutable.copyAddAll(schema.getExpand(), expand), true);
     }
 
     protected CompletableFuture<Caller> expandCaller(final Context context, final Caller caller, final Set<Name> expand) {

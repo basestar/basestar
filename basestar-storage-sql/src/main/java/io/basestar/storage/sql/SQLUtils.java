@@ -26,7 +26,7 @@ import com.google.common.base.Charsets;
 import io.basestar.jackson.BasestarModule;
 import io.basestar.schema.Index;
 import io.basestar.schema.Instance;
-import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.schema.use.*;
 import io.basestar.util.Name;
@@ -85,7 +85,7 @@ public class SQLUtils {
             }
 
             @Override
-            public DataType<?> visitObject(final UseObject type) {
+            public DataType<?> visitRef(final UseRef type) {
 
                 return SQLDataType.LONGVARCHAR;
             }
@@ -188,7 +188,7 @@ public class SQLUtils {
 
             @Override
             @SuppressWarnings("unchecked")
-            public String visitObject(final UseObject type) {
+            public String visitRef(final UseRef type) {
 
                 if(value == null) {
                     return null;
@@ -311,13 +311,13 @@ public class SQLUtils {
             }
 
             @Override
-            public Map<String, Object> visitObject(final UseObject type) {
+            public Map<String, Object> visitRef(final UseRef type) {
 
                 if(value == null) {
                     return null;
                 } else {
                     final String id = (String)value;
-                    return ObjectSchema.ref(id);
+                    return ReferableSchema.ref(id);
                 }
             }
 
@@ -419,10 +419,10 @@ public class SQLUtils {
         });
     }
 
-    public static List<Field<?>> fields(final ObjectSchema schema) {
+    public static List<Field<?>> fields(final ReferableSchema schema) {
 
         return Stream.concat(
-                ObjectSchema.METADATA_SCHEMA.entrySet().stream()
+                schema.metadataSchema().entrySet().stream()
                         .map(e -> DSL.field(DSL.name(e.getKey()), dataType(e.getValue()))),
                 schema.getProperties().entrySet().stream()
                         .map(e -> DSL.field(DSL.name(e.getKey()),
@@ -435,7 +435,7 @@ public class SQLUtils {
         return order == Sort.Order.ASC ? SortOrder.ASC : SortOrder.DESC;
     }
 
-    public static List<OrderField<?>> indexKeys(final ObjectSchema schema, final Index index) {
+    public static List<OrderField<?>> indexKeys(final ReferableSchema schema, final Index index) {
 
         return Stream.concat(
                 index.getPartition().stream().map(v -> indexField(schema, index, v)),
@@ -444,17 +444,17 @@ public class SQLUtils {
         ).collect(Collectors.toList());
     }
 
-    private static Field<Object> indexField(final ObjectSchema schema, final Index index, final Name name) {
+    private static Field<Object> indexField(final ReferableSchema schema, final Index index, final Name name) {
 
         // FIXME: BUG: hacky heuristic
-        if(ObjectSchema.ID.equals(name.last())) {
+        if(ReferableSchema.ID.equals(name.last())) {
             return DSL.field(DSL.name(name.withoutLast().toString()));
         } else {
             return DSL.field(DSL.name(name.toString()));
         }
     }
 
-    public static List<Field<?>> fields(final ObjectSchema schema, final Index index) {
+    public static List<Field<?>> fields(final ReferableSchema schema, final Index index) {
 
         final List<Name> partitionNames = index.resolvePartitionNames();
         final List<Sort> sortPaths = index.getSort();
@@ -481,7 +481,7 @@ public class SQLUtils {
         return DSL.name(v.toString(Reserved.PREFIX));
     }
 
-    public static Constraint primaryKey(final ObjectSchema schema, final Index index) {
+    public static Constraint primaryKey(final ReferableSchema schema, final Index index) {
 
         final List<org.jooq.Name> names = new ArrayList<>();
         index.resolvePartitionNames().forEach(v -> names.add(columnName(v)));

@@ -25,6 +25,7 @@ import io.basestar.codegen.Codebehind;
 import io.basestar.codegen.CodegenContext;
 import io.basestar.schema.*;
 
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -43,13 +44,11 @@ public abstract class InstanceSchemaModel extends SchemaModel {
 
     public List<MemberModel> getMembers() {
 
-        return Stream.concat(Stream.concat(
-                schema.getExtend() != null ? Stream.<MemberModel>empty() : schema.metadataSchema().entrySet().stream()
-                        .filter(entry -> !ObjectSchema.SCHEMA.equals(entry.getKey()) && !entry.getKey().startsWith(Reserved.PREFIX))
-                        .map(entry -> new MetadataModel(getContext(), entry.getKey(), entry.getValue())),
+        return Stream.concat(
                 schema.getDeclaredProperties().values().stream()
-                        .map(v -> new PropertyModel(getContext(), v))
-        ), getAdditionalMembers().stream()).sorted(Comparator.comparing(MemberModel::getName)).collect(Collectors.toList());
+                        .map(v -> new PropertyModel(getContext(), v)),
+                getAdditionalMembers().stream()
+        ).sorted(Comparator.comparing(MemberModel::getName)).collect(Collectors.toList());
     }
 
     protected List<MemberModel> getAdditionalMembers() {
@@ -62,15 +61,9 @@ public abstract class InstanceSchemaModel extends SchemaModel {
         return !schema.isConcrete();
     }
 
-    public InstanceSchemaModel getExtend() {
+    public List<InstanceSchemaModel> getExtend() {
 
-        final InstanceSchema extend = schema.getExtend();
-        final CodegenContext context = getContext();
-        if(extend != null) {
-            return from(context, extend);
-        } else {
-            return null;
-        }
+        return Collections.emptyList();
     }
 
     protected static InstanceSchemaModel from(final CodegenContext context, final InstanceSchema schema) {
@@ -80,6 +73,8 @@ public abstract class InstanceSchemaModel extends SchemaModel {
             return new CodebehindModel(context, codebehind, schema);
         } else if (schema instanceof ObjectSchema) {
             return new ObjectSchemaModel(context, (ObjectSchema) schema);
+        } else if (schema instanceof InterfaceSchema) {
+            return new InterfaceSchemaModel(context, (InterfaceSchema) schema);
         } else if (schema instanceof StructSchema) {
             return new StructSchemaModel(context, (StructSchema) schema);
         } else if (schema instanceof ViewSchema) {

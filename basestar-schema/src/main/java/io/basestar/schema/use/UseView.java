@@ -71,6 +71,7 @@ public class UseView implements UseLinkable {
             }
         }
     }
+
     @Override
     @SuppressWarnings("unchecked")
     public Instance create(final Object value, final Set<Name> expand, final boolean suppress) {

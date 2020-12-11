@@ -23,7 +23,7 @@ package io.basestar.schema.util;
 import io.basestar.schema.Instance;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Link;
-import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.util.Name;
 import io.basestar.util.Page;
 
@@ -35,7 +35,7 @@ public interface Expander {
 
         return new Expander() {
             @Override
-            public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
+            public Instance expandRef(final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
                 if(ref == null) {
                     return null;
@@ -45,7 +45,7 @@ public interface Expander {
             }
 
             @Override
-            public Instance expandVersionedRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
+            public Instance expandVersionedRef(final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
                 if(ref == null) {
                     return null;
@@ -67,9 +67,9 @@ public interface Expander {
         };
     }
 
-    Instance expandRef(ObjectSchema schema, Instance ref, Set<Name> expand);
+    Instance expandRef(ReferableSchema schema, Instance ref, Set<Name> expand);
 
-    Instance expandVersionedRef(ObjectSchema schema, Instance ref, Set<Name> expand);
+    Instance expandVersionedRef(ReferableSchema schema, Instance ref, Set<Name> expand);
 
     Page<Instance> expandLink(Link link, Page<Instance> value, Set<Name> expand);
 }

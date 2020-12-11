@@ -25,6 +25,7 @@ import com.hazelcast.config.IndexType;
 import com.hazelcast.config.MapConfig;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.util.Nullsafe;
 import lombok.Builder;
 
@@ -37,9 +38,9 @@ import java.util.stream.Stream;
 
 public interface HazelcastStrategy {
 
-    String objectMapName(ObjectSchema schema);
+    String objectMapName(ReferableSchema schema);
 
-    String historyMapName(ObjectSchema schema);
+    String historyMapName(ReferableSchema schema);
 
     default Map<String,MapConfig> mapConfigs(final Namespace namespace) {
 
@@ -60,7 +61,7 @@ public interface HazelcastStrategy {
         return results;
     }
 
-    static List<IndexConfig> indexes(final ObjectSchema schema) {
+    static List<IndexConfig> indexes(final ReferableSchema schema) {
 
         return schema.getIndexes().values().stream()
                 .flatMap(index -> {
@@ -88,13 +89,13 @@ public interface HazelcastStrategy {
         private final String historySuffix;
 
         @Override
-        public String objectMapName(final ObjectSchema schema) {
+        public String objectMapName(final ReferableSchema schema) {
 
             return Nullsafe.orDefault(objectPrefix) + schema.getQualifiedName() + Nullsafe.orDefault(objectSuffix);
         }
 
         @Override
-        public String historyMapName(final ObjectSchema schema) {
+        public String historyMapName(final ReferableSchema schema) {
 
             return Nullsafe.orDefault(historyPrefix) + schema.getQualifiedName() + Nullsafe.orDefault(historySuffix);
         }

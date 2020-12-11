@@ -3,16 +3,13 @@ package io.basestar.storage.aws.stepfunction;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.BasestarModule;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.storage.BatchResponse;
-import io.basestar.storage.Storage;
-import io.basestar.storage.StorageTraits;
-import io.basestar.storage.Versioning;
+import io.basestar.schema.ReferableSchema;
+import io.basestar.storage.*;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.util.*;
 import lombok.RequiredArgsConstructor;
@@ -31,8 +28,7 @@ import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class StepFunctionStorage implements Storage, Storage.WithoutAggregate,
-        Storage.WithoutWriteIndex, Storage.WithoutExpand, Storage.WithoutRepair {
+public class StepFunctionStorage implements DefaultLayerStorage {
 
     // An execution object is at version 1 if running, 2 if complete
     private static final long MIN_VERSION = 1L;
@@ -55,14 +51,12 @@ public class StepFunctionStorage implements Storage, Storage.WithoutAggregate,
         this.payloadMapper = Nullsafe.orDefault(payloadMapper, () -> new ObjectMapper().registerModule(BasestarModule.INSTANCE));
     }
 
-    @Override
-    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+    private CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
         return readImpl(schema, id);
     }
 
-    @Override
-    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+    private CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
 
         if(version >= MIN_VERSION && version <= MAX_VERSION) {
             return readImpl(schema, id, version);
@@ -84,12 +78,12 @@ public class StepFunctionStorage implements Storage, Storage.WithoutAggregate,
         return Joiner.on(":").join(outputParts);
     }
 
-    private CompletableFuture<Map<String, Object>> readImpl(final ObjectSchema schema, final String id) {
+    private CompletableFuture<Map<String, Object>> readImpl(final ReferableSchema schema, final String id) {
 
         return readImpl(schema, id, MAX_VERSION);
     }
 
-    private CompletableFuture<Map<String, Object>> readImpl(final ObjectSchema schema, final String id, final long maxVersion) {
+    private CompletableFuture<Map<String, Object>> readImpl(final ReferableSchema schema, final String id, final long maxVersion) {
 
         final String stepFunctionArn = strategy.stateMachineArn(schema);
         return client.describeExecution(DescribeExecutionRequest.builder()
@@ -97,7 +91,7 @@ public class StepFunctionStorage implements Storage, Storage.WithoutAggregate,
                 .build()).thenApply(v -> toResponse(schema, v, maxVersion));
     }
 
-    private Map<String, Object> toResponse(final ObjectSchema schema, final DescribeExecutionResponse response, final long maxVersion) {
+    private Map<String, Object> toResponse(final ReferableSchema schema, final DescribeExecutionResponse response, final long maxVersion) {
 
         final String id = response.name();
         final Instant created = response.startDate();
@@ -174,22 +168,51 @@ public class StepFunctionStorage implements Storage, Storage.WithoutAggregate,
     }
 
     @Override
-    public List<Pager.Source<Map<String, Object>>> query(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    public Pager<Map<String, Object>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         final String stepFunctionArn = strategy.stateMachineArn(schema);
-        return ImmutableList.of(
-                (count, paging, stats) -> client.listExecutions(ListExecutionsRequest.builder()
-                        .stateMachineArn(stepFunctionArn)
-                        .nextToken(toRequestToken(paging))
-                        .maxResults(count)
-                        .build()).thenCompose(v -> toResponse(schema, v))
-        );
+        return (stats, paging, count) -> client.listExecutions(ListExecutionsRequest.builder()
+            .stateMachineArn(stepFunctionArn)
+            .nextToken(toRequestToken(paging))
+            .maxResults(count)
+            .build()).thenCompose(v -> toResponse(schema, v));
     }
 
     @Override
     public ReadTransaction read(final Consistency consistency) {
 
-        return new ReadTransaction.Basic(this);
+        return new ReadTransaction() {
+
+            private final BatchCapture capture = new BatchCapture();
+
+            @Override
+            public ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
+
+                capture.captureLatest(schema, id, expand);
+                return this;
+            }
+
+            @Override
+            public ReadTransaction getObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
+
+                capture.captureVersion(schema, id, version, expand);
+                return this;
+            }
+
+            @Override
+            public CompletableFuture<BatchResponse> read() {
+
+                final Map<BatchResponse.RefKey, CompletableFuture<Map<String, Object>>> futures = new HashMap<>();
+                capture.forEachRef((schema, key, args) -> {
+                    if(key.hasVersion()) {
+                        futures.put(key, readImpl(schema, key.getId(), key.getVersion()));
+                    } else {
+                        futures.put(key, readImpl(schema, key.getId()));
+                    }
+                });
+                return CompletableFutures.allOf(futures).thenApply(BatchResponse::new);
+            }
+        };
     }
 
     @Override
@@ -197,12 +220,12 @@ public class StepFunctionStorage implements Storage, Storage.WithoutAggregate,
 
         return new WriteTransaction() {
 
-            final Map<BatchResponse.Key, CreateAction> creates = new HashMap<>();
+            final Map<BatchResponse.RefKey, CreateAction> creates = new HashMap<>();
 
             @RequiredArgsConstructor
             class CreateAction {
 
-                private final ObjectSchema schema;
+                private final ReferableSchema schema;
 
                 private final String id;
 
@@ -227,53 +250,58 @@ public class StepFunctionStorage implements Storage, Storage.WithoutAggregate,
             }
 
             @Override
-            public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+            public StorageTraits storageTraits(final ReferableSchema schema) {
 
-                final BatchResponse.Key key = BatchResponse.Key.version(schema.getQualifiedName(), id, MIN_VERSION);
+                return StepFunctionStorage.this.storageTraits(schema);
+            }
+
+            @Override
+            public void createObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
+
+                final BatchResponse.RefKey key = BatchResponse.RefKey.version(schema.getQualifiedName(), id, MIN_VERSION);
                 creates.put(key, new CreateAction(schema, id, after));
-                return this;
             }
 
             @Override
-            public WriteTransaction updateObject(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
+            public void updateObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
                 throw new UnsupportedOperationException();
             }
 
             @Override
-            public WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
+            public void deleteObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> before) {
 
                 throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public void writeHistoryLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
+
+//                throw new UnsupportedOperationException();
             }
 
             @Override
             public CompletableFuture<BatchResponse> write() {
 
-                final Map<BatchResponse.Key, CompletableFuture<Map<String, Object>>> futures = creates.entrySet().stream().collect(Collectors.toMap(
+                final Map<BatchResponse.RefKey, CompletableFuture<Map<String, Object>>> futures = creates.entrySet().stream().collect(Collectors.toMap(
                         Map.Entry::getKey,
                         e -> e.getValue().apply()
                 ));
 
-                return CompletableFutures.allOf(futures).thenApply(BatchResponse.Basic::new);
+                return CompletableFutures.allOf(futures).thenApply(BatchResponse::new);
             }
         };
     }
 
     @Override
-    public EventStrategy eventStrategy(final ObjectSchema schema) {
+    public EventStrategy eventStrategy(final ReferableSchema schema) {
 
         return strategy.eventStrategy(schema);
     }
 
     @Override
-    public StorageTraits storageTraits(final ObjectSchema schema) {
+    public StorageTraits storageTraits(final ReferableSchema schema) {
 
         return StepFunctionStorageTraits.INSTANCE;
-    }
-
-    @Override
-    public CompletableFuture<?> asyncHistoryCreated(final ObjectSchema schema, final String id, final long version, final Map<String, Object> after) {
-
-        throw new UnsupportedOperationException();
     }
 }

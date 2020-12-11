@@ -1,0 +1,2 @@
+id, username, firstName, lastName, email, password, phone, userStatus, store
+user1,matt,Matt,Evans,no@thanks.com,supersecret,+4400000000000,registered,store1

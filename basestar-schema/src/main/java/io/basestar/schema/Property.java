@@ -32,11 +32,14 @@ import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.schema.exception.MissingPropertyException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.exception.UnexpectedTypeException;
+import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseInstance;
 import io.basestar.schema.use.UseScalar;
+import io.basestar.schema.use.Widening;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.AccessLevel;
@@ -52,6 +55,8 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Property
@@ -101,55 +106,57 @@ public class Property implements Member {
 
         Expression getExpression();
 
-        Object getDefault();
+        Serializable getDefault();
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         List<? extends Constraint> getConstraints();
 
         default Property build(final Schema.Resolver resolver, final Version version, final Name qualifiedName) {
 
-            return new Property(this, resolver, version, qualifiedName);
+            return build(resolver, null, version, qualifiedName);
         }
 
-        interface Delegating extends Descriptor, Member.Descriptor.Delegating {
+        default Property build(final Schema.Resolver resolver, final InferenceContext context, final Version version, final Name qualifiedName) {
 
-            @Override
-            Descriptor delegate();
+            return new Property(this, resolver, context, version, qualifiedName);
+        }
+
+        interface Self extends Descriptor, Member.Descriptor.Self<Property> {
 
             @Override
             default Use<?> getType() {
 
-                return delegate().getType();
+                return self().getType();
             }
 
             @Override
             default Boolean getRequired() {
 
-                return delegate().getRequired();
+                return false;
             }
 
             @Override
             default Boolean getImmutable() {
 
-                return delegate().getImmutable();
+                return self().isImmutable();
             }
 
             @Override
             default Expression getExpression() {
 
-                return delegate().getExpression();
+                return self().getExpression();
             }
 
             @Override
-            default Object getDefault() {
+            default Serializable getDefault() {
 
-                return delegate().getDefault();
+                return self().getDefaultValue();
             }
 
             @Override
             default List<? extends Constraint> getConstraints() {
 
-                return delegate().getConstraints();
+                return self().getConstraints();
             }
         }
     }
@@ -157,7 +164,7 @@ public class Property implements Member {
     @Data
     @Accessors(chain = true)
     @JsonPropertyOrder({"type", "description", "immutable", "expression", "constraints", "visibility", "extensions"})
-    public static class Builder implements Descriptor, Member.Builder {
+    public static class Builder implements Descriptor, Member.Builder<Builder> {
 
         private Use<?> type;
 
@@ -184,7 +191,7 @@ public class Property implements Member {
         @Nullable
         private Map<String, Serializable> extensions;
 
-        public Object getDefault() {
+        public Serializable getDefault() {
 
             return defaultValue;
         }
@@ -196,9 +203,9 @@ public class Property implements Member {
 
         @JsonCreator
         @SuppressWarnings("unused")
-        public static Builder fromExpression(final String expression) {
+        public static Property.Builder fromExpression(final String expression) {
 
-            return new Builder()
+            return new Property.Builder()
                     .setExpression(Expression.parse(expression));
         }
     }
@@ -208,20 +215,20 @@ public class Property implements Member {
         return new Builder();
     }
 
-    public Property(final Descriptor builder, final Schema.Resolver schemaResolver, final Version version, final Name qualifiedName) {
+    public Property(final Descriptor builder, final Schema.Resolver schemaResolver, final InferenceContext context, final Version version, final Name qualifiedName) {
 
         this.qualifiedName = qualifiedName;
         this.description = builder.getDescription();
-        this.type = legacyFix(qualifiedName, builder.getType().resolve(schemaResolver), builder.getRequired(), version);
+        this.type = legacyFix(qualifiedName, Member.type(builder.getType(), builder.getExpression(), context).resolve(schemaResolver), builder.getRequired(), version);
         this.defaultValue = (Serializable)Nullsafe.map(builder.getDefault(), type::create);
         this.immutable = Nullsafe.orDefault(builder.getImmutable());
         this.expression = builder.getExpression();
-        this.constraints = Nullsafe.immutableCopy(builder.getConstraints());
+        this.constraints = Immutable.copy(builder.getConstraints());
         this.visibility = builder.getVisibility();
-        this.extensions = Nullsafe.immutableSortedCopy(builder.getExtensions());
+        this.extensions = Immutable.sortedCopy(builder.getExtensions());
     }
 
-    private Use<?> legacyFix(final Name qualifiedName, final Use<?> type, final Boolean required, final Version version) {
+    private static Use<?> legacyFix(final Name qualifiedName, final Use<?> type, final Boolean required, final Version version) {
 
         if(version == Version.LEGACY) {
             return type.optional(!Nullsafe.orDefault(required));
@@ -255,6 +262,28 @@ public class Property implements Member {
                 return type.getSchema().supportsTrivialJoin(expand);
             }
         });
+    }
+
+    @Override
+    public boolean canModify(final Member member, final Widening widening) {
+
+        if(!(member instanceof Property)) {
+            return canCreate();
+        }
+        final Property target = (Property)member;
+        if(!Objects.equals(expression, target.getExpression())) {
+            return false;
+        }
+        if(!widening.canWiden(type, target.getType())) {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public boolean canCreate() {
+
+        return expression == null;
     }
 
     @Override
@@ -385,18 +414,53 @@ public class Property implements Member {
         return violations;
     }
 
+    public Property extend(final Property ext) {
+
+        return ext;
+    }
+
+    public static SortedMap<String, Property> extend(final Map<String, Property> base, final Map<String, Property> ext) {
+
+        return Immutable.sortedMerge(base, ext, Property::extend);
+    }
+
+    public static SortedMap<String, Property> extend(final Collection<? extends Resolver> base, final Map<String, Property> ext) {
+
+        return Immutable.sortedCopy(Stream.concat(
+                base.stream().map(Resolver::getProperties),
+                Stream.of(ext)
+        ).reduce(Property::extend).orElse(Collections.emptyMap()));
+    }
+
     public interface Resolver {
 
-        interface Builder {
+        interface Descriptor {
 
-            Builder setProperty(String name, Property.Descriptor v);
+            @JsonInclude(JsonInclude.Include.NON_EMPTY)
+            Map<String, Property.Descriptor> getProperties();
+        }
 
-            Builder setProperties(Map<String, Property.Descriptor> vs);
+        interface Builder<B extends Builder<B>> extends Descriptor {
+
+            default B setProperty(final String name, final Property.Descriptor v) {
+
+                return setProperties(Immutable.copyPut(getProperties(), name, v));
+            }
+
+            B setProperties(Map<String, Property.Descriptor> vs);
         }
 
         Map<String, Property> getDeclaredProperties();
 
         Map<String, Property> getProperties();
+
+        default Map<String, Property.Descriptor> describeDeclaredProperties() {
+
+            return getDeclaredProperties().entrySet().stream().collect(Collectors.toMap(
+                    Map.Entry::getKey,
+                    entry -> entry.getValue().descriptor()
+            ));
+        }
 
         default Property getProperty(final String name, final boolean inherited) {
 
@@ -421,60 +485,6 @@ public class Property implements Member {
     @Override
     public Descriptor descriptor() {
 
-        return new Descriptor() {
-            @Override
-            public Use<?> getType() {
-
-                return type.optional(false);
-            }
-
-            @Override
-            public Boolean getRequired() {
-
-                return !type.isOptional();
-            }
-
-            @Override
-            public String getDescription() {
-
-                return description;
-            }
-
-            @Override
-            public Boolean getImmutable() {
-
-                return immutable;
-            }
-
-            @Override
-            public Expression getExpression() {
-
-                return expression;
-            }
-
-            @Override
-            public Object getDefault() {
-
-                return defaultValue;
-            }
-
-            @Override
-            public List<? extends Constraint> getConstraints() {
-
-                return constraints;
-            }
-
-            @Override
-            public Visibility getVisibility() {
-
-                return visibility;
-            }
-
-            @Override
-            public Map<String, Serializable> getExtensions() {
-
-                return extensions;
-            }
-        };
+        return (Descriptor.Self) () -> Property.this;
     }
 }

@@ -178,3 +178,23 @@ VersionedRef:
       type:
         VersionedRef?:
           versioned: true
+
+Interface:
+  type: interface
+  properties:
+    propBase:
+      type: string
+
+ExtendA:
+  type: object
+  extend: Interface
+  properties:
+    propA:
+      type: string
+
+ExtendB:
+  type: object
+  extend: Interface
+  properties:
+    propB:
+      type: string

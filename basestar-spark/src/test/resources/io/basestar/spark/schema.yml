@@ -2,6 +2,8 @@ $version: LATEST
 
 A:
   type: object
+  extensions:
+    test: test
   properties:
     ref:
       type: B?

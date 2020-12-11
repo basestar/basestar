@@ -8,6 +8,7 @@ import io.basestar.schema.Reserved;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseBoolean;
 import io.basestar.spark.util.SparkSchemaUtils;
+import io.basestar.util.Immutable;
 import io.basestar.util.Nullsafe;
 import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.sql.Dataset;
@@ -52,7 +53,7 @@ public class IndexDeltaTransform implements Transform<Dataset<Tuple2<Row, Row>>,
             final Stream<Row> upsert = Stream.of(diff.getCreate(), diff.getUpdate())
                     .flatMap(source -> source.entrySet().stream())
                     .map(entry -> {
-                        final Map<String, Object> data = Nullsafe.immutableCopyPut(entry.getValue(), Reserved.DELETED, false);
+                        final Map<String, Object> data = Immutable.copyPut(entry.getValue(), Reserved.DELETED, false);
                         return SparkSchemaUtils.toSpark(schema, index, extraMetadata, structType, entry.getKey().binary(), data);
                     });
 

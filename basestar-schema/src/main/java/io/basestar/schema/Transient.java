@@ -34,8 +34,10 @@ import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
+import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.*;
 import io.basestar.schema.util.Expander;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.Data;
@@ -48,6 +50,8 @@ import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Transient
@@ -89,9 +93,36 @@ public class Transient implements Member {
 
         Set<Name> getExpand();
 
-        default Transient build(final Name qualifiedName) {
+        interface Self extends Member.Descriptor.Self<Transient>, Descriptor {
 
-            return new Transient(this, qualifiedName);
+            @Override
+            default Use<?> getType() {
+
+                return self().getType();
+            }
+
+            @Override
+            default Expression getExpression() {
+
+                return self().getExpression();
+            }
+
+            @Override
+            default Set<Name> getExpand() {
+
+                return self().getExpand();
+            }
+
+            @Override
+            default Visibility getVisibility() {
+
+                return self().getVisibility();
+            }
+        }
+
+        default Transient build(final Schema.Resolver schemaResolver, final InferenceContext context, final Name qualifiedName) {
+
+            return new Transient(this, schemaResolver, context, qualifiedName);
         }
     }
 
@@ -129,21 +160,21 @@ public class Transient implements Member {
         return new Builder();
     }
 
-    private Transient(final Descriptor descriptor, final Name qualifiedName) {
+    private Transient(final Descriptor descriptor, final Schema.Resolver schemaResolver, final InferenceContext context, final Name qualifiedName) {
 
         this.qualifiedName = qualifiedName;
-        this.type = descriptor.getType();
+        this.type = Member.type(descriptor.getType(), descriptor.getExpression(), context).resolve(schemaResolver);
         this.description = descriptor.getDescription();
         this.expression =  Nullsafe.require(descriptor.getExpression());
         this.visibility = descriptor.getVisibility();
-        this.expand = Nullsafe.immutableSortedCopy(descriptor.getExpand());
+        this.expand = Immutable.sortedCopy(descriptor.getExpand());
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
         if(type != null) {
             type.visit(new TypeValidator(qualifiedName));
         }
-        this.extensions = Nullsafe.immutableSortedCopy(descriptor.getExtensions());
+        this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
     }
 
     public boolean isTyped() {
@@ -155,6 +186,18 @@ public class Transient implements Member {
     public boolean supportsTrivialJoin(final Set<Name> expand) {
 
         return false;
+    }
+
+    @Override
+    public boolean canModify(final Member member, final Widening widening) {
+
+        return true;
+    }
+
+    @Override
+    public boolean canCreate() {
+
+        return true;
     }
 
     @Override
@@ -254,18 +297,53 @@ public class Transient implements Member {
         return ImmutableSet.of(Name.of());
     }
 
+    public Transient extend(final Transient ext) {
+
+        return ext;
+    }
+
+    public static SortedMap<String, Transient> extend(final Map<String, Transient> base, final Map<String, Transient> ext) {
+
+        return Immutable.sortedMerge(base, ext, Transient::extend);
+    }
+
+    public static SortedMap<String, Transient> extend(final Collection<? extends Resolver> base, final Map<String, Transient> ext) {
+
+        return Immutable.sortedCopy(Stream.concat(
+                base.stream().map(Resolver::getTransients),
+                Stream.of(ext)
+        ).reduce(Transient::extend).orElse(Collections.emptyMap()));
+    }
+
     public interface Resolver {
 
-        interface Builder {
+        interface Descriptor {
 
-            Builder setTransient(String name, Transient.Descriptor v);
+            @JsonInclude(JsonInclude.Include.NON_EMPTY)
+            Map<String, Transient.Descriptor> getTransients();
+        }
 
-            Builder setTransients(Map<String, Transient.Descriptor> vs);
+        interface Builder<B extends Builder<B>> extends Descriptor {
+
+            default B setTransient(String name, Transient.Descriptor v) {
+
+                return setTransients(Immutable.copyPut(getTransients(), name, v));
+            }
+
+            B setTransients(Map<String, Transient.Descriptor> vs);
         }
 
         Map<String, Transient> getDeclaredTransients();
 
         Map<String, Transient> getTransients();
+
+        default Map<String, Transient.Descriptor> describeDeclaredTransients() {
+
+            return getDeclaredTransients().entrySet().stream().collect(Collectors.toMap(
+                    Map.Entry::getKey,
+                    entry -> entry.getValue().descriptor()
+            ));
+        }
 
         default Transient getTransient(final String name, final boolean inherited) {
 
@@ -299,7 +377,7 @@ public class Transient implements Member {
         }
 
         @Override
-        public Void visitObject(final UseObject type) {
+        public Void visitRef(final UseRef type) {
 
             throw new SchemaValidationException(qualifiedName,  "Transients cannot use references");
         }
@@ -320,43 +398,6 @@ public class Transient implements Member {
     @Override
     public Descriptor descriptor() {
 
-        return new Descriptor() {
-            @Override
-            public Use<?> getType() {
-
-                return type;
-            }
-
-            @Override
-            public Expression getExpression() {
-
-                return expression;
-            }
-
-            @Override
-            public Set<Name> getExpand() {
-
-                return expand;
-            }
-
-            @Override
-            public Visibility getVisibility() {
-
-                return visibility;
-            }
-
-            @Nullable
-            @Override
-            public String getDescription() {
-
-                return description;
-            }
-
-            @Override
-            public Map<String, Serializable> getExtensions() {
-
-                return extensions;
-            }
-        };
+        return (Descriptor.Self) () -> Transient.this;
     }
 }

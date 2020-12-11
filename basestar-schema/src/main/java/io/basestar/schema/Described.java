@@ -24,6 +24,11 @@ import javax.annotation.Nullable;
 
 public interface Described {
 
+    interface Builder<B extends Builder<B>> {
+
+        B setDescription(String description);
+    }
+
     @Nullable
     String getDescription();
 }

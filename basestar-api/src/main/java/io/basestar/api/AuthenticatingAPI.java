@@ -37,7 +37,7 @@ import java.util.regex.Pattern;
 @Slf4j
 public class AuthenticatingAPI implements API {
 
-    private final Pattern CUSTOM_AUTH_HEADER_PATTERN = Pattern.compile("x-(\\w+)-authorization", Pattern.CASE_INSENSITIVE);
+    private static final Pattern CUSTOM_AUTH_HEADER_PATTERN = Pattern.compile("x-(\\w+)-authorization", Pattern.CASE_INSENSITIVE);
 
     private final Authenticator authenticator;
 

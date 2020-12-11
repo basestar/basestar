@@ -117,12 +117,6 @@ public class DatabaseClient implements Database {
         return null;
     }
 
-    @Override
-    public CompletableFuture<?> repair(final Caller caller, final RepairOptions options) {
-
-        return null;
-    }
-
     private void addVersion(final Multimap<String, String> query, final Long version) {
 
         if(version != null) {

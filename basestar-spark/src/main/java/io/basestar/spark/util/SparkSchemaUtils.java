@@ -145,7 +145,7 @@ public class SparkSchemaUtils {
         });
     }
 
-    public static StructType refType(final ObjectSchema schema, final Set<Name> expand) {
+    public static StructType refType(final ReferableSchema schema, final Set<Name> expand) {
 
         if(expand == null) {
             return refType();
@@ -225,7 +225,7 @@ public class SparkSchemaUtils {
             }
 
             @Override
-            public DataType visitObject(final UseObject type) {
+            public DataType visitRef(final UseRef type) {
 
                 return refType(type.getSchema(), expand);
             }
@@ -281,7 +281,7 @@ public class SparkSchemaUtils {
             @Override
             public <T> DataType visitOptional(final UseOptional<T> type) {
 
-                return type.getType().visit(this);
+                return type.getType().visit(this).asNullable();
             }
 
             @Override
@@ -410,10 +410,10 @@ public class SparkSchemaUtils {
             }
 
             @Override
-            public Object visitObject(final UseObject type) {
+            public Object visitRef(final UseRef type) {
 
                 if(value instanceof String) {
-                    return ObjectSchema.ref((String)value);
+                    return ReferableSchema.ref((String)value);
                 } else if(value instanceof Row) {
                     if(expand != null) {
                         return fromSpark(type.getSchema(), naming, expand, (Row)value);
@@ -594,7 +594,7 @@ public class SparkSchemaUtils {
 
         final StructField[] fields = structType.fields();
         final Object[] values = new Object[fields.length];
-        ObjectSchema.REF_SCHEMA.forEach((name, type) -> {
+        ReferableSchema.REF_SCHEMA.forEach((name, type) -> {
             final int i = structType.fieldIndex(name);
             values[i] = toSpark(type, Collections.emptySet(), fields[i].dataType(), object.get(name));
         });
@@ -645,7 +645,7 @@ public class SparkSchemaUtils {
 
             @Override
             @SuppressWarnings("unchecked")
-            public Object visitObject(final UseObject type) {
+            public Object visitRef(final UseRef type) {
 
                 if(value instanceof Map<?, ?> && dataType instanceof StructType) {
                     if(expand != null) {
@@ -1012,7 +1012,7 @@ public class SparkSchemaUtils {
             }
 
             @Override
-            public Encoder<?> visitObject(final UseObject type) {
+            public Encoder<?> visitRef(final UseRef type) {
 
                 return RowEncoder.apply(refType().asNullable());
             }

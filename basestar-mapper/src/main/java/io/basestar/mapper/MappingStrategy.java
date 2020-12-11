@@ -3,11 +3,12 @@ package io.basestar.mapper;
 import io.basestar.mapper.internal.TypeMapper;
 import io.basestar.type.PropertyContext;
 import io.basestar.type.TypeContext;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 
 import javax.annotation.Nullable;
 import java.io.Serializable;
-import java.util.Optional;
+import java.util.List;
 
 public interface MappingStrategy extends Serializable {
 
@@ -25,13 +26,13 @@ public interface MappingStrategy extends Serializable {
         return name;
     }
 
-    default Optional<TypeContext> extend(final TypeContext type) {
+    default List<TypeContext> extend(final TypeContext type) {
 
         final TypeContext parent = type.superclass();
         if(parent == null || (parent.erasedType() == Object.class)) {
-            return Optional.empty();
+            return Immutable.list();
         } else {
-            return Optional.of(parent);
+            return Immutable.list(parent);
         }
     }
 

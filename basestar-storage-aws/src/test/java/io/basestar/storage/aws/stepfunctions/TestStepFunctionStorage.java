@@ -1,7 +1,9 @@
 package io.basestar.storage.aws.stepfunctions;
 
 import io.basestar.schema.Namespace;
-import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
+import io.basestar.storage.MemoryStorage;
+import io.basestar.storage.SplitIndexStorage;
 import io.basestar.storage.Storage;
 import io.basestar.storage.TestStorage;
 import io.basestar.storage.aws.stepfunction.StepFunctionStorage;
@@ -11,7 +13,6 @@ import io.basestar.util.Name;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
@@ -24,7 +25,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
-@Disabled
 public class TestStepFunctionStorage extends TestStorage {
 
     private static SfnAsyncClient sfn;
@@ -71,32 +71,34 @@ public class TestStepFunctionStorage extends TestStorage {
         final StepFunctionStrategy strategy = new StepFunctionStrategy() {
 
             @Override
-            public String stateMachineArn(final ObjectSchema schema) {
+            public String stateMachineArn(final ReferableSchema schema) {
 
                 return stateMachineArns.get(schema.getQualifiedName());
             }
 
             @Override
-            public Storage.EventStrategy eventStrategy(final ObjectSchema schema) {
+            public Storage.EventStrategy eventStrategy(final ReferableSchema schema) {
 
                 return Storage.EventStrategy.EMIT;
             }
         };
 
-        return StepFunctionStorage.builder()
+        final StepFunctionStorage storage = StepFunctionStorage.builder()
                 .strategy(strategy)
                 .client(sfn)
                 .build();
+
+        return new SplitIndexStorage(storage, MemoryStorage.builder().build());
     }
 
     @Override
-    protected boolean supportsOversize() {
+    protected boolean supportsPolymorphism() {
 
         return false;
     }
 
     @Override
-    protected boolean supportsIndexes() {
+    protected boolean supportsOversize() {
 
         return false;
     }

@@ -23,7 +23,11 @@ public class ReplicaSyncEvent implements Event {
 
         CREATE,
         UPDATE,
-        DELETE
+        DELETE,
+        HISTORY,
+        INDEX_CREATE,
+        INDEX_UPDATE,
+        INDEX_DELETE
     }
 
     private Action action;

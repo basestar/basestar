@@ -27,6 +27,7 @@ import io.basestar.mapper.annotation.Group;
 import io.basestar.mapper.annotation.Where;
 import io.basestar.schema.ViewSchema;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -67,9 +68,9 @@ public class ViewSchemaModel extends InstanceSchemaModel {
     }
 
     @Override
-    public InstanceSchemaModel getExtend() {
+    public List<InstanceSchemaModel> getExtend() {
 
-        return null;
+        return Collections.emptyList();
     }
 
     @Override

@@ -26,7 +26,7 @@ import com.hazelcast.nio.serialization.ClassDefinitionBuilder;
 import com.hazelcast.nio.serialization.PortableFactory;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Namespace;
-import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.Schema;
 
 import java.util.*;
@@ -77,7 +77,7 @@ public class PortableSchemaFactory implements PortableFactory {
     private static SortedMap<String, AttributeType<?>> refAttributes(final boolean versioned) {
 
         final SortedMap<String, AttributeType<?>> attributes = new TreeMap<>();
-        ObjectSchema.refSchema(versioned).forEach((k, v) -> {
+        ReferableSchema.refSchema(versioned).forEach((k, v) -> {
             final AttributeType<?> type = v.visit(AttributeTypeVisitor.INSTANCE);
             attributes.put(k, type);
         });

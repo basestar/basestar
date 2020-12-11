@@ -31,6 +31,7 @@ import io.basestar.expression.logical.And;
 import io.basestar.jackson.serde.ExpressionDeserializer;
 import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.Data;
@@ -41,6 +42,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Permission
@@ -145,8 +148,8 @@ public class Permission implements Serializable {
         this.description = descriptor.getDescription();
         this.anonymous = Nullsafe.orDefault(descriptor.getAnonymous(), false);
         this.expression = Nullsafe.require(descriptor.getExpression());
-        this.expand = Nullsafe.immutableSortedCopy(descriptor.getExpand());
-        this.inherit = Nullsafe.immutableSortedCopy(descriptor.getInherit());
+        this.expand = Immutable.sortedCopy(descriptor.getExpand());
+        this.inherit = Immutable.sortedCopy(descriptor.getInherit());
         if(Reserved.isReserved(name)) {
             throw new ReservedNameException(name);
         }
@@ -170,16 +173,53 @@ public class Permission implements Serializable {
         this.inherit = Collections.unmodifiableSortedSet(inherit);
     }
 
-    public Permission merge(final Permission b) {
+    public Permission extend(final Permission ext) {
 
-        return new Permission(this, b);
+        return new Permission(this, ext);
+    }
+
+    public static SortedMap<String, Permission> extend(final Map<String, Permission> base, final Map<String, Permission> ext) {
+
+        return Immutable.sortedMerge(base, ext, Permission::extend);
+    }
+
+    public static SortedMap<String, Permission> extend(final Collection<? extends Resolver> base, final Map<String, Permission> ext) {
+
+        return Immutable.sortedCopy(Stream.concat(
+                base.stream().map(Resolver::getPermissions),
+                Stream.of(ext)
+        ).reduce(Permission::extend).orElse(Collections.emptyMap()));
     }
 
     public interface Resolver {
 
+        interface Descriptor {
+
+            @JsonInclude(JsonInclude.Include.NON_EMPTY)
+            Map<String, Permission.Descriptor> getPermissions();
+        }
+
+        interface Builder<B extends Builder<B>> extends Descriptor {
+
+            default B setPermission(final String name, final Permission.Descriptor v) {
+
+                return setPermissions(Immutable.copyPut(getPermissions(), name, v));
+            }
+
+            B setPermissions(Map<String, Permission.Descriptor> vs);
+        }
+
         Map<String, Permission> getDeclaredPermissions();
 
         Map<String, Permission> getPermissions();
+
+        default Map<String, Permission.Descriptor> describeDeclaredPermissions() {
+
+            return getDeclaredPermissions().entrySet().stream().collect(Collectors.toMap(
+                    Map.Entry::getKey,
+                    entry -> entry.getValue().descriptor()
+            ));
+        }
 
         default Permission getPermission(final String name) {
 

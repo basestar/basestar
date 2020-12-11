@@ -43,15 +43,15 @@ import io.basestar.event.Handlers;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.Renaming;
-import io.basestar.expression.aggregate.Aggregate;
-import io.basestar.expression.aggregate.AggregateExtractingVisitor;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Or;
 import io.basestar.schema.*;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
-import io.basestar.storage.*;
+import io.basestar.storage.ConstantStorage;
+import io.basestar.storage.Storage;
+import io.basestar.storage.Versioning;
 import io.basestar.storage.exception.ObjectMissingException;
 import io.basestar.storage.overlay.OverlayStorage;
 import io.basestar.util.*;
@@ -60,7 +60,6 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Slf4j
 public class DatabaseServer extends ReadProcessor implements Database, Handler<Event>, CommonVars {
@@ -68,8 +67,6 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
     private static final String SINGLE_BATCH_ROOT = "$";
 
     private static final int REF_QUERY_BATCH_SIZE = 100;
-
-    private static final int REPAIR_PAGE_SIZE = 500;
 
     private final Emitter emitter;
 
@@ -80,14 +77,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             .on(ObjectUpdatedEvent.class, DatabaseServer::onObjectUpdated)
             .on(ObjectDeletedEvent.class, DatabaseServer::onObjectDeleted)
             .on(ObjectRefreshedEvent.class, DatabaseServer::onObjectRefreshed)
-            .on(AsyncIndexCreatedEvent.class, DatabaseServer::onAsyncIndexCreated)
-            .on(AsyncIndexUpdatedEvent.class, DatabaseServer::onAsyncIndexUpdated)
-            .on(AsyncIndexDeletedEvent.class, DatabaseServer::onAsyncIndexDeleted)
-            .on(AsyncIndexDeletedEvent.class, DatabaseServer::onAsyncIndexDeleted)
-            .on(AsyncHistoryCreatedEvent.class, DatabaseServer::onAsyncHistoryCreated)
             .on(RefQueryEvent.class, DatabaseServer::onRefQuery)
             .on(RefRefreshEvent.class, DatabaseServer::onRefRefresh)
-            .on(RepairEvent.class, DatabaseServer::onRepair)
             .build();
 
     public DatabaseServer(final Namespace namespace, final Storage storage) {
@@ -128,37 +119,17 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         options.getActions().forEach((name, action) -> {
             if (action instanceof CreateOptions) {
                 final CreateOptions create = (CreateOptions)action;
-                actions.put(name, new CreateAction(objectSchema(create.getSchema()), create));
+                actions.put(name, new CreateAction(namespace.requireObjectSchema(create.getSchema()), create));
             } else if (action instanceof UpdateOptions) {
                 final UpdateOptions update = (UpdateOptions)action;
-                actions.put(name, new UpdateAction(objectSchema(update.getSchema()), update));
+                actions.put(name, new UpdateAction(namespace.requireObjectSchema(update.getSchema()), update));
             } else if (action instanceof DeleteOptions) {
                 final DeleteOptions delete = (DeleteOptions)action;
-                actions.put(name, new DeleteAction(objectSchema(delete.getSchema()), delete));
+                actions.put(name, new DeleteAction(namespace.requireObjectSchema(delete.getSchema()), delete));
             }
         });
 
         return batch(caller, options.getConsistency(), actions);
-    }
-
-    private List<Pager.Source<RepairInfo>> repairSources(final Name schemaName, final String indexName) {
-
-        final ObjectSchema schema = objectSchema(schemaName);
-        if(indexName == null) {
-            return storage.repair(schema);
-        } else {
-            final Index index = schema.requireIndex(indexName, true);
-            return storage.repairIndex(schema, index);
-        }
-    }
-
-    @Override
-    public CompletableFuture<?> repair(final Caller caller, final RepairOptions options) {
-
-        final List<Pager.Source<RepairInfo>> sources = repairSources(options.getSchema(), options.getIndex());
-        final List<Event> events = new ArrayList<>();
-        sources.forEach(source -> events.add(RepairEvent.of(options.getSchema(), options.getIndex(), events.size(), null)));
-        return emitter.emit(events);
     }
 
     private CompletableFuture<Instance> single(final Caller caller, final Action action) {
@@ -168,7 +139,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                 .thenApply(v -> v.get(SINGLE_BATCH_ROOT));
     }
 
-    private Set<Name> permissionExpand(final ObjectSchema schema, final Permission permission) {
+    private Set<Name> permissionExpand(final ReferableSchema schema, final Permission permission) {
 
         return permission == null ? Collections.emptySet() : Nullsafe.orDefault(permission.getExpand());
     }
@@ -211,16 +182,17 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                 final Storage.ReadTransaction read = storage.read(consistency);
                 beforeKeys.forEach(expandKey -> {
                     final RefKey key = expandKey.getKey();
-                    read.readObject(objectSchema(key.getSchema()), key.getId(), expandKey.getExpand());
+                    final ReferableSchema objectSchema = referableSchema(key.getSchema());
+                    read.get(objectSchema, key.getId(), expandKey.getExpand());
                 });
                 beforeFuture = read.read().thenCompose(readResults -> {
 
                     final Map<ExpandKey<RefKey>, Instance> beforeUnexpanded = new HashMap<>();
                     beforeKeys.forEach(expandKey -> {
                         final RefKey key = expandKey.getKey();
-                        final Map<String, Object> data = readResults.getObject(key.getSchema(), key.getId());
+                        final Map<String, Object> data = readResults.get(key.getSchema(), key.getId());
                         if (data != null) {
-                            beforeUnexpanded.put(expandKey, objectSchema(key.getSchema()).create(data));
+                            beforeUnexpanded.put(expandKey, referableSchema(key.getSchema()).create(data));
                         }
                     });
 
@@ -394,49 +366,17 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         schema.validateObject(id, after);
         write.createObject(schema, id, after);
-
-        objectHierarchy(schema).forEach(superSchema -> {
-
-            final Instance superAfter = superSchema.create(after);
-            write.createObject(superSchema, id, superAfter);
-        });
     }
 
     private void writeUpdate(final Storage.WriteTransaction write, final ObjectSchema schema, final String id, final Instance before, final Instance after) {
 
         schema.validateObject(id, after);
         write.updateObject(schema, id, before, after);
-
-        objectHierarchy(schema).forEach(superSchema -> {
-
-            final Instance superBefore = superSchema.create(before);
-            final Instance superAfter = superSchema.create(after);
-            write.updateObject(superSchema, id, superBefore, superAfter);
-        });
     }
 
     private void writeDelete(final Storage.WriteTransaction write, final ObjectSchema schema, final String id, final Instance before) {
 
         write.deleteObject(schema, id, before);
-
-        objectHierarchy(schema).forEach(superSchema -> {
-            final Instance superBefore = superSchema.create(before);
-            write.deleteObject(superSchema, id, superBefore);
-        });
-    }
-
-    private List<ObjectSchema> objectHierarchy(final ObjectSchema schema) {
-
-        final InstanceSchema parent = schema.getExtend();
-        if(parent instanceof ObjectSchema) {
-            final ObjectSchema objectParent = (ObjectSchema)parent;
-            return ImmutableList.<ObjectSchema>builder()
-                    .addAll(objectHierarchy(objectParent))
-                    .add(objectParent)
-                    .build();
-        } else {
-            return ImmutableList.of();
-        }
     }
 
     @Override
@@ -445,7 +385,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         log.debug("Read: options={}", options);
 
         final String id = options.getId();
-        final ObjectSchema objectSchema = namespace.requireObjectSchema(options.getSchema());
+        final ReferableSchema objectSchema = namespace.requireReferableSchema(options.getSchema());
 
         return readImpl(objectSchema, id, options.getVersion(), options.getExpand())
                 .thenCompose(initial -> expandAndRestrict(caller, initial, options.getExpand()));
@@ -454,7 +394,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
     // FIXME need to apply nested permissions
     private Instance restrict(final Caller caller, final Instance instance, final Set<Name> expand) {
 
-        final ObjectSchema schema = objectSchema(Instance.getSchema(instance));
+        final ReferableSchema schema = referableSchema(Instance.getSchema(instance));
         final Permission read = schema.getPermission(Permission.READ);
         checkPermission(caller, schema, read, ImmutableMap.of(VAR_THIS, instance));
         final Instance visible = schema.applyVisibility(context(caller), instance);
@@ -468,7 +408,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             return CompletableFuture.completedFuture(null);
         }
 
-        final ObjectSchema schema = objectSchema(Instance.getSchema(instance));
+        final ReferableSchema schema = referableSchema(Instance.getSchema(instance));
         final Permission read = schema.getPermission(Permission.READ);
         final Set<Name> permissionExpand = permissionExpand(schema, read);
         final Set<Name> callerExpand = Name.children(permissionExpand, Name.of(VAR_CALLER));
@@ -486,7 +426,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final Set<Name> callerExpand = new HashSet<>();
         final Set<Name> transientExpand = new HashSet<>();
         for(final Instance instance : instances) {
-            final ObjectSchema schema = objectSchema(Instance.getSchema(instance));
+            final ReferableSchema schema = referableSchema(Instance.getSchema(instance));
             final Permission read = schema.getPermission(Permission.READ);
             final Set<Name> permissionExpand = permissionExpand(schema, read);
             callerExpand.addAll(Name.children(permissionExpand, Name.of(VAR_CALLER)));
@@ -504,7 +444,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         log.debug("Create: options={}", options);
 
-        return single(caller, new CreateAction(objectSchema(options.getSchema()), options));
+        return single(caller, new CreateAction(namespace.requireObjectSchema(options.getSchema()), options));
     }
 
     @Override
@@ -512,7 +452,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         log.debug("Update: options={}", options);
 
-        return single(caller, new UpdateAction(objectSchema(options.getSchema()), options));
+        return single(caller, new UpdateAction(namespace.requireObjectSchema(options.getSchema()), options));
     }
 
     @Override
@@ -520,7 +460,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         log.debug("Delete: options={}", options);
 
-        return single(caller, new DeleteAction(objectSchema(options.getSchema()), options));
+        return single(caller, new DeleteAction(namespace.requireObjectSchema(options.getSchema()), options));
     }
 
     @Override
@@ -565,72 +505,11 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         if(schema instanceof ViewSchema) {
 
-            final ViewSchema viewSchema = (ViewSchema)schema;
-            final Expression expression = options.getExpression();
+            throw new UnsupportedOperationException();
 
-            final Permission permission = viewSchema.getPermission(Permission.READ);
+        } else if(schema instanceof ReferableSchema) {
 
-            final Context context = context(caller, ImmutableMap.of());
-
-            Expression bound;
-            if(expression != null) {
-                bound = expression.bind(context);
-            } else {
-                bound = new Constant(true);
-            }
-
-            if(viewSchema.getWhere() != null) {
-                bound = new And(bound, viewSchema.getWhere());
-            }
-
-            final AggregateExtractingVisitor visitor = new AggregateExtractingVisitor();
-            final Map<String, Expression> columns = new HashMap<>();
-            viewSchema.getSelectProperties().forEach((name, prop) -> {
-                final Expression expr = Nullsafe.require(prop.getExpression()).bind(context);
-                columns.put(name, visitor.visit(expr));
-            });
-            final Map<String, Aggregate> aggregates = visitor.getAggregates();
-
-            // FIXME: nested aggregates
-            final ObjectSchema objectSchema = (ObjectSchema) viewSchema.getFrom().getSchema();
-
-            final Map<String, Expression> group = new HashMap<>();
-            viewSchema.getGroupProperties().forEach((name, prop) -> {
-                final Expression expr = Nullsafe.require(prop.getExpression()).bind(context);
-                group.put(name, expr);
-            });
-
-            if(aggregates.isEmpty() && group.isEmpty()) {
-
-                // FIXME: need to reconcile with Object query behaviour
-                throw new UnsupportedOperationException();
-
-            } else {
-
-                //FIXME: should de-duplicate sort keys, also need to deal with empty case
-                final List<Sort> sort = ImmutableList.<Sort>builder()
-                        .addAll(Nullsafe.orDefault(options.getSort(), viewSchema.getSort()))
-                        .addAll(group.keySet().stream().map(k -> Sort.asc(Name.of(k))).collect(Collectors.toList()))
-                        .build();
-
-                final List<Pager.Source<Instance>> sources = storage.aggregate(objectSchema, bound, group, aggregates).stream()
-                        .map(source -> (Pager.Source<Instance>) (c, t, stats) -> source.page(c, t, stats)
-                                .thenApply(data -> data.map(row -> {
-                                    final Map<String, Object> values = new HashMap<>();
-                                    columns.forEach((name, column) -> {
-                                        values.put(name, column.evaluate(context.with(row)));
-                                    });
-                                    group.keySet().forEach(name -> values.put(name, row.get(name)));
-                                    return create(viewSchema, values);
-                                })))
-                        .collect(Collectors.toList());
-
-                return pageImpl(context, sources, new Constant(true), sort, count, paging);
-            }
-
-        } else if(schema instanceof ObjectSchema) {
-
-            final ObjectSchema objectSchema = (ObjectSchema)schema;
+            final ReferableSchema objectSchema = (ReferableSchema)schema;
             final Expression expression = options.getExpression();
 
             final Permission permission = objectSchema.getPermission(Permission.READ);
@@ -664,7 +543,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         }
     }
 
-    protected void checkPermission(final Caller caller, final ObjectSchema schema, final Permission permission, final Map<String, Object> scope) {
+    protected void checkPermission(final Caller caller, final ReferableSchema schema, final Permission permission, final Map<String, Object> scope) {
 
         if(caller.isAnon()) {
             if(permission == null || !permission.isAnonymous()) {
@@ -699,100 +578,48 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
     protected CompletableFuture<?> onObjectCreated(final ObjectCreatedEvent event) {
 
-        final ObjectSchema schema = objectSchema(event.getSchema());
-        final StorageTraits traits = storage.storageTraits(schema);
+        final ObjectSchema schema = namespace.requireObjectSchema(event.getSchema());
         final String id = event.getId();
         final Map<String, Object> after = event.getAfter();
-        final Long afterVersion = Instance.getVersion(after);
-        assert afterVersion != null;
-        final Set<Event> events = new HashSet<>();
-        events.addAll(historyEvents(schema, id, after));
-        events.addAll(schema.getIndexes().values().stream().flatMap(index -> {
-            final Consistency best = traits.getIndexConsistency(index.isMultiValue());
-            if(index.getConsistency(best).isAsync()) {
-                final Map<Index.Key, Map<String, Object>> records = index.readValues(after);
-                return records.entrySet().stream()
-                        .map(e -> AsyncIndexCreatedEvent.of(schema.getQualifiedName(), index.getName(), id, 0L, e.getKey(), e.getValue()));
-            } else {
-                return Stream.empty();
-            }
-        }).collect(Collectors.toSet()));
-        events.addAll(refQueryEvents(schema, id));
-        return emitter.emit(events);
+        return storage.afterCreate(schema, id, after)
+                .thenCompose(events -> emitter.emit(Immutable.copyAddAll(events, refQueryEvents(schema, id))));
     }
 
     protected CompletableFuture<?> onObjectUpdated(final ObjectUpdatedEvent event) {
 
-        final ObjectSchema schema = objectSchema(event.getSchema());
+        final ObjectSchema schema = namespace.requireObjectSchema(event.getSchema());
         final String id = event.getId();
+        final long version = event.getVersion();
         final Map<String, Object> before = event.getBefore();
         final Map<String, Object> after = event.getAfter();
-        final Set<Event> events = new HashSet<>();
-        events.addAll(refreshObjectEvents(schema, id, before, after));
-        events.addAll(refQueryEvents(schema, id));
-        return emitter.emit(events);
+        return storage.afterUpdate(schema, id, version, before, after)
+                .thenCompose(events -> emitter.emit(Immutable.copyAddAll(events, refQueryEvents(schema, id))));
     }
 
     protected CompletableFuture<?> onObjectDeleted(final ObjectDeletedEvent event) {
 
-        final ObjectSchema schema = objectSchema(event.getSchema());
-        final StorageTraits traits = storage.storageTraits(schema);
+        final ObjectSchema schema = namespace.requireObjectSchema(event.getSchema());
         final String id = event.getId();
         final long version = event.getVersion();
         final Map<String, Object> before = event.getBefore();
-        final Set<Event> events = new HashSet<>();
-        schema.getIndexes().values().forEach(index -> {
-            final Consistency best = traits.getIndexConsistency(index.isMultiValue());
-            if(index.getConsistency(best).isAsync()) {
-                final Map<Index.Key, Map<String, Object>> records = index.readValues(before);
-                records.keySet()
-                        .forEach(key -> events.add(AsyncIndexDeletedEvent.of(schema.getQualifiedName(), index.getName(), id, version, key)));
-            }
-        });
-        events.addAll(refQueryEvents(schema, id));
-        return emitter.emit(events);
+        return storage.afterDelete(schema, id, version, before)
+                .thenCompose(events -> emitter.emit(Immutable.copyAddAll(events, refQueryEvents(schema, id))));
     }
 
     protected CompletableFuture<?> onObjectRefreshed(final ObjectRefreshedEvent event) {
 
-        final ObjectSchema schema = objectSchema(event.getSchema());
+        final ObjectSchema schema = namespace.requireObjectSchema(event.getSchema());
         final String id = event.getId();
         final Map<String, Object> before = event.getBefore();
         final Map<String, Object> after = event.getAfter();
-        final Set<Event> events = new HashSet<>(refreshObjectEvents(schema, id, before, after));
-        return emitter.emit(events);
-    }
-
-    protected CompletableFuture<?> onAsyncIndexCreated(final AsyncIndexCreatedEvent event) {
-
-        final ObjectSchema schema = objectSchema(event.getSchema());
-        final Index index = schema.requireIndex(event.getIndex(), true);
-        return storage.asyncIndexCreated(schema, index, event.getId(), event.getVersion(), event.getKey(), event.getProjection());
-    }
-
-    protected CompletableFuture<?> onAsyncIndexUpdated(final AsyncIndexUpdatedEvent event) {
-
-        final ObjectSchema schema = objectSchema(event.getSchema());
-        final Index index = schema.requireIndex(event.getIndex(), true);
-        return storage.asyncIndexUpdated(schema, index, event.getId(), event.getVersion(), event.getKey(), event.getProjection());
-    }
-
-    protected CompletableFuture<?> onAsyncIndexDeleted(final AsyncIndexDeletedEvent event) {
-
-        final ObjectSchema schema = objectSchema(event.getSchema());
-        final Index index = schema.requireIndex(event.getIndex(), true);
-        return storage.asyncIndexDeleted(schema, index, event.getId(), event.getVersion(), event.getKey());
-    }
-
-    protected CompletableFuture<?> onAsyncHistoryCreated(final AsyncHistoryCreatedEvent event) {
-
-        final ObjectSchema schema = objectSchema(event.getSchema());
-        return storage.asyncHistoryCreated(schema, event.getId(), event.getVersion(), event.getAfter());
+        final long version = event.getVersion();
+        return storage.afterUpdate(schema, id, version, before, after)
+                .thenCompose(emitter::emit);
     }
 
     protected CompletableFuture<?> onRefQuery(final RefQueryEvent event) {
 
-        final ObjectSchema schema = objectSchema(event.getSchema());
+        final ObjectSchema schema = namespace.requireObjectSchema(event.getSchema());
         final CompletableFuture<Page<Instance>> query = queryImpl(context(Caller.SUPER), schema,
                 event.getExpression(), ImmutableList.of(), ImmutableSet.of(), REF_QUERY_BATCH_SIZE, event.getPaging());
         return query.thenApply(page -> {
@@ -807,19 +634,19 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
     protected CompletableFuture<?> onRefRefresh(final RefRefreshEvent event) {
 
-        final ObjectSchema schema = objectSchema(event.getSchema());
+        final ObjectSchema schema = namespace.requireObjectSchema(event.getSchema());
         final String id = event.getId();
-        final ObjectSchema refSchema = objectSchema(event.getRef().getSchema());
+        final ObjectSchema refSchema = namespace.requireObjectSchema(event.getRef().getSchema());
         final String refId = event.getRef().getId();
         final Storage.ReadTransaction read = storage.read(Consistency.ATOMIC);
-        read.readObject(schema, id, ImmutableSet.of());
-        read.readObject(refSchema, refId, ImmutableSet.of());
+        read.get(schema, id, ImmutableSet.of());
+        read.get(refSchema, refId, ImmutableSet.of());
         final Set<Name> expand = schema.getExpand();
         return read.read().thenCompose(readResponse -> {
-            final Instance before = schema.create(readResponse.getObject(schema, id), expand, true);
+            final Instance before = schema.create(readResponse.get(schema, id), expand, true);
             if(before != null) {
                 final Set<Name> refExpand = schema.refExpand(refSchema.getQualifiedName(), schema.getExpand());
-                final Instance refAfter = refSchema.create(readResponse.getObject(refSchema, refId), expand, true);
+                final Instance refAfter = refSchema.create(readResponse.get(refSchema, refId), expand, true);
                 final Long refAfterVersion = refAfter == null ? null : Instance.getVersion(refAfter);
                 return expand(context(Caller.SUPER), refAfter, refExpand).thenCompose(expandedRefAfter -> {
 
@@ -827,25 +654,23 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                     assert version != null;
                     final Instance after = schema.expand(before, new Expander() {
                         @Override
-                        public Instance expandRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
+                        public Instance expandRef(final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
                             if (ref == null) {
                                 return null;
                             }
-                            if (schema.getQualifiedName().equals(refSchema.getQualifiedName())) {
-                                if (refId.equals(Instance.getId(ref))) {
-                                    if (refAfter == null) {
-                                        return ObjectSchema.ref(refId);
-                                    } else {
-                                        return schema.expand(refAfter, Expander.noop(), expand);
-                                    }
+                            if (schema.getQualifiedName().equals(refSchema.getQualifiedName()) && refId.equals(Instance.getId(ref))) {
+                                if (refAfter == null) {
+                                    return ReferableSchema.ref(refId);
+                                } else {
+                                    return schema.expand(refAfter, Expander.noop(), expand);
                                 }
                             }
                             return schema.expand(ref, this, expand);
                         }
 
                         @Override
-                        public Instance expandVersionedRef(final ObjectSchema schema, final Instance ref, final Set<Name> expand) {
+                        public Instance expandVersionedRef(final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
                             if (ref == null) {
                                 return null;
@@ -877,19 +702,6 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         });
     }
 
-    protected CompletableFuture<?> onRepair(final RepairEvent event) {
-
-        final List<Pager.Source<RepairInfo>> sources = repairSources(event.getSchema(), event.getIndex());
-        final Pager.Source<RepairInfo> source = sources.get(event.getSource());
-        return source.page(REPAIR_PAGE_SIZE, event.getPaging(), null).thenCompose(page -> {
-            if(page.getPaging() == null) {
-                return CompletableFuture.completedFuture(null);
-            } else {
-                return emitter.emit(event.withPaging(page.getPaging()));
-            }
-        });
-    }
-
     private Set<Event> refQueryEvents(final ObjectSchema schema, final String id) {
 
         final Set<Event> events = new HashSet<>();
@@ -897,50 +709,10 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             final Set<Expression> queries = v.refQueries(schema.getQualifiedName(), v.getExpand());
             if(!queries.isEmpty()) {
                 final Or merged = new Or(queries.toArray(new Expression[0]));
-                final Expression bound = merged.bind(context(Caller.ANON, ImmutableMap.of(Reserved.THIS, ObjectSchema.ref(id))));
+                final Expression bound = merged.bind(context(Caller.ANON, ImmutableMap.of(Reserved.THIS, ReferableSchema.ref(id))));
                 events.add(RefQueryEvent.of(Ref.of(schema.getQualifiedName(), id), k, bound));
             }
         });
-        return events;
-    }
-
-    private Set<Event> historyEvents(final ObjectSchema schema, final String id, final Map<String, Object> after) {
-
-        final Long afterVersion = Instance.getVersion(after);
-        assert afterVersion != null;
-        final StorageTraits traits = storage.storageTraits(schema);
-        final History history = schema.getHistory();
-        if(history.isEnabled() && history.getConsistency(traits.getHistoryConsistency()).isAsync()) {
-            return Collections.singleton(AsyncHistoryCreatedEvent.of(schema.getQualifiedName(), id, afterVersion, after));
-        } else {
-            return Collections.emptySet();
-        }
-    }
-
-    private Set<Event> refreshObjectEvents(final ObjectSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
-
-        final StorageTraits traits = storage.storageTraits(schema);
-        final Long beforeVersion = Instance.getVersion(before);
-        final Long afterVersion = Instance.getVersion(after);
-        assert beforeVersion != null && afterVersion != null;
-        final Set<Event> events = new HashSet<>();
-        events.addAll(historyEvents(schema, id, after));
-        events.addAll(schema.getIndexes().values().stream().flatMap(index -> {
-            final Consistency best = traits.getIndexConsistency(index.isMultiValue());
-            if(index.getConsistency(best).isAsync()) {
-                final Index.Diff diff = Index.Diff.from(index.readValues(before), index.readValues(after));
-                final Stream<Event> create = diff.getCreate().entrySet().stream()
-                        .map(e -> AsyncIndexCreatedEvent.of(schema.getQualifiedName(), index.getName(), id, beforeVersion, e.getKey(), e.getValue()));
-                final Stream<Event> update = diff.getUpdate().entrySet().stream()
-                        .map(e -> AsyncIndexUpdatedEvent.of(schema.getQualifiedName(), index.getName(), id, beforeVersion, e.getKey(), e.getValue()));
-                final Stream<Event> delete = diff.getDelete().stream()
-                        .map(key-> AsyncIndexDeletedEvent.of(schema.getQualifiedName(), index.getName(), id, beforeVersion, key));
-                return Stream.of(create, update, delete)
-                        .flatMap(v -> v);
-            } else {
-                return Stream.empty();
-            }
-        }).collect(Collectors.toSet()));
         return events;
     }
 }

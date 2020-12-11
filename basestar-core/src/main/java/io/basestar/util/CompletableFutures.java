@@ -26,6 +26,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class CompletableFutures {
 
@@ -40,6 +41,12 @@ public class CompletableFutures {
         return future;
     }
 
+    public static <T> CompletableFuture<Stream<T>> allOf(final Stream<? extends CompletableFuture<T>> futures) {
+
+        final List<CompletableFuture<T>> list = futures.collect(Collectors.toList());
+        return allOf(list).thenApply(List::stream);
+    }
+
     public static <T> CompletableFuture<List<T>> allOf(final List<? extends CompletableFuture<T>> futures) {
 
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]))
@@ -49,10 +56,7 @@ public class CompletableFutures {
     public static <K, T> CompletableFuture<Map<K, T>> allOf(final Map<? extends K, ? extends CompletableFuture<T>> futures) {
 
         return CompletableFuture.allOf(futures.values().toArray(new CompletableFuture<?>[0]))
-                .thenApply(ignored -> futures.entrySet().stream().collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        e -> e.getValue().getNow(null)
-                )));
+                .thenApply(ignored -> Immutable.transformValues(futures, (k, v) -> v.getNow(null)));
     }
 
     public static <T> CompletableFuture<T> allOf(final T identity, final BinaryOperator<T> accumulator, final List<CompletableFuture<T>> futures) {

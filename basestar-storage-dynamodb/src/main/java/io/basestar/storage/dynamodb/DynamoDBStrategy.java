@@ -21,10 +21,7 @@ package io.basestar.storage.dynamodb;
  */
 
 import com.google.common.collect.ImmutableMap;
-import io.basestar.schema.Consistency;
-import io.basestar.schema.Index;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.Reserved;
+import io.basestar.schema.*;
 import io.basestar.util.Nullsafe;
 import lombok.Data;
 import software.amazon.awssdk.services.dynamodb.model.*;
@@ -37,31 +34,31 @@ import java.util.Map;
 
 public interface DynamoDBStrategy extends Serializable {
 
-    String objectTableName(ObjectSchema schema);
+    String objectTableName(ReferableSchema schema);
 
-    String historyTableName(ObjectSchema schema);
+    String historyTableName(ReferableSchema schema);
 
-    String indexTableName(ObjectSchema schema, Index index);
+    String indexTableName(ReferableSchema schema, Index index);
 
-    String objectPartitionPrefix(ObjectSchema schema);
+    String objectPartitionPrefix(ReferableSchema schema);
 
-    String historyPartitionPrefix(ObjectSchema schema);
+    String historyPartitionPrefix(ReferableSchema schema);
 
-    String indexPartitionPrefix(ObjectSchema schema, Index index);
+    String indexPartitionPrefix(ReferableSchema schema, Index index);
 
-    String objectPartitionName(ObjectSchema schema);
+    String objectPartitionName(ReferableSchema schema);
 
-    String historyPartitionName(ObjectSchema schema);
+    String historyPartitionName(ReferableSchema schema);
 
-    String historySortName(ObjectSchema schema);
+    String historySortName(ReferableSchema schema);
 
-    String indexPartitionName(ObjectSchema schema, Index index);
+    String indexPartitionName(ReferableSchema schema, Index index);
 
-    String indexSortName(ObjectSchema schema, Index index);
+    String indexSortName(ReferableSchema schema, Index index);
 
-    IndexType indexType(ObjectSchema schema, Index index);
+    IndexType indexType(ReferableSchema schema, Index index);
 
-    Map<String, TableDescription> tables(List<ObjectSchema> schemas);
+    Map<String, TableDescription> tables(List<? extends ReferableSchema> schemas);
 
     enum IndexType {
 
@@ -94,80 +91,80 @@ public interface DynamoDBStrategy extends Serializable {
         }
 
         @Override
-        public String objectPartitionPrefix(final ObjectSchema schema) {
+        public String objectPartitionPrefix(final ReferableSchema schema) {
 
             return dataPrefix + schema.getQualifiedName() + Reserved.DELIMITER + schema.getVersion();
         }
 
         @Override
-        public String historyPartitionPrefix(final ObjectSchema schema) {
+        public String historyPartitionPrefix(final ReferableSchema schema) {
 
             return objectPartitionPrefix(schema);
         }
 
         @Override
-        public String indexPartitionPrefix(final ObjectSchema schema, final Index index) {
+        public String indexPartitionPrefix(final ReferableSchema schema, final Index index) {
 
             return  dataPrefix + schema.getQualifiedName() + Reserved.DELIMITER + schema.getVersion()
                     + Reserved.DELIMITER + index.getName() + Reserved.DELIMITER + index.getVersion();
         }
 
         @Override
-        public String objectPartitionName(final ObjectSchema schema) {
+        public String objectPartitionName(final ReferableSchema schema) {
 
             return OBJECT_PARTITION_KEY;
         }
 
         @Override
-        public String historyPartitionName(final ObjectSchema schema) {
+        public String historyPartitionName(final ReferableSchema schema) {
 
             return HISTORY_PARTITION_KEY;
         }
 
         @Override
-        public String historySortName(final ObjectSchema schema) {
+        public String historySortName(final ReferableSchema schema) {
 
             return HISTORY_SORT_KEY;
         }
 
         @Override
-        public String indexPartitionName(final ObjectSchema schema, final Index index) {
+        public String indexPartitionName(final ReferableSchema schema, final Index index) {
 
             return INDEX_PARTITION_KEY;
         }
 
         @Override
-        public String indexSortName(final ObjectSchema schema, final Index index) {
+        public String indexSortName(final ReferableSchema schema, final Index index) {
 
             return INDEX_SORT_KEY;
         }
 
         @Override
-        public IndexType indexType(final ObjectSchema schema, final Index index) {
+        public IndexType indexType(final ReferableSchema schema, final Index index) {
 
             return IndexType.EXT;
         }
 
         @Override
-        public String objectTableName(final ObjectSchema schema) {
+        public String objectTableName(final ReferableSchema schema) {
 
             return tablePrefix + "Object";
         }
 
         @Override
-        public String historyTableName(final ObjectSchema schema) {
+        public String historyTableName(final ReferableSchema schema) {
 
             return tablePrefix + "History";
         }
 
         @Override
-        public String indexTableName(final ObjectSchema schema, final Index index) {
+        public String indexTableName(final ReferableSchema schema, final Index index) {
 
             return tablePrefix + "Index";
         }
 
         @Override
-        public Map<String, TableDescription> tables(final List<ObjectSchema> schemas) {
+        public Map<String, TableDescription> tables(final List<? extends ReferableSchema> schemas) {
 
             return ImmutableMap.of(
                     "Object", TableDescription.builder()
@@ -225,43 +222,43 @@ public interface DynamoDBStrategy extends Serializable {
         }
 
         @Override
-        public String objectPartitionPrefix(final ObjectSchema schema) {
+        public String objectPartitionPrefix(final ReferableSchema schema) {
 
             return null;
         }
 
         @Override
-        public String historyPartitionPrefix(final ObjectSchema schema) {
+        public String historyPartitionPrefix(final ReferableSchema schema) {
 
             return null;
         }
 
         @Override
-        public String indexPartitionPrefix(final ObjectSchema schema, final Index index) {
+        public String indexPartitionPrefix(final ReferableSchema schema, final Index index) {
 
             return null;
         }
 
         @Override
-        public String objectPartitionName(final ObjectSchema schema) {
+        public String objectPartitionName(final ReferableSchema schema) {
 
             return OBJECT_PARTITION_KEY;
         }
 
         @Override
-        public String historyPartitionName(final ObjectSchema schema) {
+        public String historyPartitionName(final ReferableSchema schema) {
 
             return HISTORY_PARTITION_KEY;
         }
 
         @Override
-        public String historySortName(final ObjectSchema schema) {
+        public String historySortName(final ReferableSchema schema) {
 
             return HISTORY_PARTITION_KEY;
         }
 
         @Override
-        public String indexPartitionName(final ObjectSchema schema, final Index index) {
+        public String indexPartitionName(final ReferableSchema schema, final Index index) {
 
             switch(indexType(schema, index)) {
                 case EXT:
@@ -274,7 +271,7 @@ public interface DynamoDBStrategy extends Serializable {
         }
 
         @Override
-        public String indexSortName(final ObjectSchema schema, final Index index) {
+        public String indexSortName(final ReferableSchema schema, final Index index) {
 
             switch(indexType(schema, index)) {
                 case EXT:
@@ -297,20 +294,20 @@ public interface DynamoDBStrategy extends Serializable {
         }
 
         @Override
-        public String objectTableName(final ObjectSchema schema) {
+        public String objectTableName(final ReferableSchema schema) {
 
             return tablePrefix + schema.getQualifiedName() + NAME_DELIMITER + schema.getVersion();
         }
 
         @Override
-        public String historyTableName(final ObjectSchema schema) {
+        public String historyTableName(final ReferableSchema schema) {
 
             return tablePrefix + schema.getQualifiedName() + NAME_DELIMITER + schema.getVersion()
                     + NAME_DELIMITER + "History";
         }
 
         @Override
-        public String indexTableName(final ObjectSchema schema, final Index index) {
+        public String indexTableName(final ReferableSchema schema, final Index index) {
 
             switch(indexType(schema, index)) {
                 case EXT:
@@ -324,7 +321,7 @@ public interface DynamoDBStrategy extends Serializable {
         }
 
         @Override
-        public IndexType indexType(final ObjectSchema schema, final Index index) {
+        public IndexType indexType(final ReferableSchema schema, final Index index) {
 
             if(index.getConsistency() == Consistency.EVENTUAL) {
                 return IndexType.GSI;
@@ -334,7 +331,7 @@ public interface DynamoDBStrategy extends Serializable {
         }
 
         @Override
-        public Map<String, TableDescription> tables(final List<ObjectSchema> schemas) {
+        public Map<String, TableDescription> tables(final List<? extends ReferableSchema> schemas) {
 
             final Map<String, TableDescription> tables = new HashMap<>();
 

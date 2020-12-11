@@ -20,9 +20,10 @@ package io.basestar.storage.cognito;
  * #L%
  */
 
-import io.basestar.schema.ObjectSchema;
+
+import io.basestar.schema.ReferableSchema;
 
 public interface CognitoGroupStrategy {
 
-    String getUserPoolId(ObjectSchema schema);
+    String getUserPoolId(ReferableSchema schema);
 }

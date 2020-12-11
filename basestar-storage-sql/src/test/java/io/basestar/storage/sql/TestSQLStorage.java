@@ -21,7 +21,7 @@ package io.basestar.storage.sql;
  */
 
 import io.basestar.schema.Namespace;
-import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.Schema;
 import io.basestar.storage.Storage;
 import io.basestar.storage.TestStorage;
@@ -55,10 +55,10 @@ class TestSQLStorage extends TestStorage {
                 .columnStrategy(ColumnStrategy.Simple.builder().build())
                 .build();
 
-        final List<ObjectSchema> schemas = new ArrayList<>();
+        final List<ReferableSchema> schemas = new ArrayList<>();
         for(final Schema<?> schema : namespace.getSchemas().values()) {
-            if(schema instanceof ObjectSchema) {
-                schemas.add((ObjectSchema)schema);
+            if(schema instanceof ReferableSchema) {
+                schemas.add((ReferableSchema)schema);
             }
         }
 
@@ -81,6 +81,11 @@ class TestSQLStorage extends TestStorage {
     protected boolean supportsLike() {
 
         return true;
+    }
+
+    @Override
+    protected void testMultiValueIndex() {
+
     }
 
     @Override
