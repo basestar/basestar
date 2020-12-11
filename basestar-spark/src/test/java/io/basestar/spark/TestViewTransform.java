@@ -30,6 +30,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -101,6 +102,7 @@ class TestViewTransform extends AbstractSparkTest {
     }
 
     @Test
+    @Disabled
     void testLinkingViewTransform() throws IOException {
 
         final SparkSession session = session();
@@ -143,6 +145,7 @@ class TestViewTransform extends AbstractSparkTest {
     }
 
     @Test
+    @Disabled
     void testLinkingViewToViewTransform() throws IOException {
 
         final SparkSession session = session();
