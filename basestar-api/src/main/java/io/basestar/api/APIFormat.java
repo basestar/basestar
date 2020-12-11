@@ -35,8 +35,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public enum APIFormat {
 
-    JSON("application/json", new ObjectMapper().registerModule(BasestarModule.INSTANCE).setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)),
-    YAML("application/yaml", new YAMLMapper().registerModule(BasestarModule.INSTANCE).setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL));
+    JSON("application/json", new ObjectMapper().registerModule(BasestarModule.WITH_VISIBLE_SECRETS)
+            .setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)),
+
+    YAML("application/yaml", new YAMLMapper().registerModule(BasestarModule.WITH_VISIBLE_SECRETS)
+            .setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL));
 
     private final String contentType;
 

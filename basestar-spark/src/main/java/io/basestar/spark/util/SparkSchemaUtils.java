@@ -289,6 +289,12 @@ public class SparkSchemaUtils {
 
                 throw new UnsupportedOperationException();
             }
+
+            @Override
+            public DataType visitSecret(final UseSecret type) {
+
+                return DataTypes.BinaryType.asNullable();
+            }
         });
     }
 
@@ -542,6 +548,12 @@ public class SparkSchemaUtils {
                     return value;
                 }
             }
+
+            @Override
+            public Object visitSecret(final UseSecret type) {
+
+                return type.create(value, expand, suppress);
+            }
         });
     }
 
@@ -757,6 +769,12 @@ public class SparkSchemaUtils {
                 } else {
                     return value;
                 }
+            }
+
+            @Override
+            public Object visitSecret(final UseSecret type) {
+
+                return type.create(value, expand, suppress);
             }
         });
     }
@@ -1069,6 +1087,12 @@ public class SparkSchemaUtils {
             public Encoder<?> visitAny(final UseAny type) {
 
                 throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public Encoder<byte[]> visitSecret(final UseSecret type) {
+
+                return Encoders.BINARY();
             }
 
             @Override

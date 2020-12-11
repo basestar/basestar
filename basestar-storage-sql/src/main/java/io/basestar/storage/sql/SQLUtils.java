@@ -149,6 +149,12 @@ public class SQLUtils {
 
                 return SQLDataType.LONGVARCHAR;//JSONB;
             }
+
+            @Override
+            public DataType<?> visitSecret(final UseSecret type) {
+
+                return SQLDataType.LONGVARBINARY;
+            }
         });
     }
 
@@ -271,6 +277,16 @@ public class SQLUtils {
                     return null;
                 } else {
                     return type.getType().visit(this);
+                }
+            }
+
+            @Override
+            public byte[] visitSecret(final UseSecret type) {
+
+                if(value == null) {
+                    return null;
+                } else {
+                    return type.create(value).encrypted();
                 }
             }
         });
@@ -415,6 +431,12 @@ public class SQLUtils {
             public Object visitAny(final UseAny type) {
 
                 return type.create(fromJson(value, new TypeReference<Object>() {}));
+            }
+
+            @Override
+            public Object visitSecret(final UseSecret type) {
+
+                return type.create(value);
             }
         });
     }

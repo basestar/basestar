@@ -171,7 +171,6 @@ public interface DefaultIndexStorage extends IndexStorage, DefaultLayerStorage {
 
             final StorageTraits traits = storageTraits(schema);
             DefaultLayerStorage.WriteTransaction.super.deleteObject(schema, id, before);
-            schema.getIndirectExtend().forEach(layer -> deleteObjectLayer(layer, id, before));
             deleteIndexes(schema, IndexStorage.getSyncIndexes(traits, schema), id, before);
             return this;
         }

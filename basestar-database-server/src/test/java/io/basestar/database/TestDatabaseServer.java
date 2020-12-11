@@ -42,6 +42,8 @@ import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.schema.util.Ref;
+import io.basestar.secret.Secret;
+import io.basestar.secret.SecretContext;
 import io.basestar.storage.MemoryStorage;
 import io.basestar.storage.Storage;
 import io.basestar.storage.exception.UnsupportedWriteException;
@@ -135,7 +137,22 @@ class TestDatabaseServer {
             return CompletableFuture.completedFuture(null);
         });
         this.storage = MemoryStorage.builder().build();
-        this.database = DatabaseServer.builder().namespace(namespace).storage(storage).emitter(emitter).build();
+        final SecretContext secretContext = new SecretContext() {
+            @Override
+            public Secret.Encrypted encrypt(final Secret.Plaintext plaintext) {
+
+                return Secret.encrypted(plaintext.plaintext());
+            }
+
+            @Override
+            public Secret.Plaintext decrypt(final Secret.Encrypted encrypted) {
+
+                return Secret.plaintext(encrypted.encrypted());
+            }
+        };
+        this.database = DatabaseServer.builder()
+                .namespace(namespace).storage(storage)
+                .emitter(emitter).secretContext(secretContext).build();
         this.caller = Mockito.mock(Caller.class);
     }
 
@@ -934,6 +951,30 @@ class TestDatabaseServer {
 
         assertEquals(1L, Instance.<Long>get(read, Name.parse("ref.version")));
         assertEquals(true,  Instance.get(read, Name.parse("ref.boolean")));
+    }
+
+    @Test
+    void testSecret() throws Exception {
+
+        final String id = UUID.randomUUID().toString();
+
+        database.create(Caller.SUPER, CreateOptions.builder()
+                .schema(USER)
+                .id(id)
+                .data(ImmutableMap.of(
+                        "password", "drowssap"
+                ))
+                .build()).get();
+
+        final Instance read = database.read(Caller.SUPER, ReadOptions.builder()
+                .schema(USER)
+                .id(id)
+                .build()).get();
+
+        assertEquals(
+                Secret.plaintext("drowssap"),
+                Instance.<Secret>get(read, Name.parse("password"))
+        );
     }
 
     private Executable cause(final Executable target) {

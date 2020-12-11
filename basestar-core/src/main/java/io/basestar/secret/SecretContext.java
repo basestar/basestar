@@ -1,4 +1,4 @@
-package io.basestar.schema.secret;
+package io.basestar.secret;
 
 public interface SecretContext {
 
@@ -6,25 +6,20 @@ public interface SecretContext {
 
         return new SecretContext() {
             @Override
-            public Secret encrypt(final byte[] plaintext) {
+            public Secret.Encrypted encrypt(final Secret.Plaintext plaintext) {
 
                 throw new IllegalStateException("Secret context not provided");
             }
 
             @Override
-            public byte[] decrypt(final Secret secret) {
+            public Secret.Plaintext decrypt(final Secret.Encrypted encrypted) {
 
                 throw new IllegalStateException("Secret context not provided");
             }
         };
     }
 
-    Secret encrypt(byte[] plaintext);
+    Secret.Encrypted encrypt(Secret.Plaintext plaintext);
 
-    byte[] decrypt(Secret secret);
-
-    default EncryptingValueContext encryptingValueContext() {
-
-        return new EncryptingValueContext(this);
-    }
+    Secret.Plaintext decrypt(Secret.Encrypted secret);
 }

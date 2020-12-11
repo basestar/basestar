@@ -23,6 +23,7 @@ package io.basestar.storage.elasticsearch.mapping;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.BaseEncoding;
+import io.basestar.secret.Secret;
 import lombok.Data;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -62,6 +63,8 @@ public interface FieldType {
                     IKEYWORD_FIELD, KeywordType.CASE_INSENSITIVE
             )
     );
+
+    SecretType SECRET = new SecretType();
 
     static String keywordSuffix(boolean caseSensitive) {
 
@@ -431,6 +434,39 @@ public interface FieldType {
         public Object fromSource(final Object value) {
 
             return base.fromSource(value);
+        }
+    }
+
+    class SecretType implements FieldType {
+
+        @Override
+        public Map<String, ?> source() {
+
+            return ImmutableMap.of("type", "binary");
+        }
+
+        @Override
+        public String toSource(final Object value) {
+
+            if(value == null) {
+                return null;
+            } else if(value instanceof Secret) {
+                return BaseEncoding.base64().encode(((Secret)value).encrypted());
+            } else {
+                throw new IllegalStateException();
+            }
+        }
+
+        @Override
+        public Secret.Encrypted fromSource(final Object value) {
+
+            if(value == null) {
+                return null;
+            } else if(value instanceof String) {
+                return Secret.encrypted((String)value);
+            } else {
+                throw new IllegalStateException();
+            }
         }
     }
 }

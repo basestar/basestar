@@ -5,6 +5,7 @@ import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.schema.use.*;
+import io.basestar.secret.Secret;
 import io.basestar.storage.sql.mapper.column.ColumnMapper;
 import io.basestar.storage.sql.mapper.column.FlatColumnMapper;
 import io.basestar.storage.sql.mapper.column.JsonColumnMapper;
@@ -128,6 +129,13 @@ public interface ColumnStrategy {
                 public ColumnMapper<T> visitAny(final UseAny type) {
 
                     return json();
+                }
+
+                @Override
+                public ColumnMapper<T> visitSecret(final UseSecret type) {
+
+                    return (ColumnMapper<T>)(new SimpleColumnMapper<>(SQLDataType.LONGVARBINARY.nullable(nullable), type::create,
+                            v -> Nullsafe.map(type.create(v), Secret::encrypted)));
                 }
 
                 @Override

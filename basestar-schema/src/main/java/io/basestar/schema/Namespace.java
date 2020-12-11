@@ -104,7 +104,7 @@ public class Namespace implements Serializable, Schema.Resolver {
     }
 
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper(new BasestarFactory())
-            .registerModule(new BasestarModule())
+            .registerModule(BasestarModule.INSTANCE)
             // Do not use, Spark compatibility issue
             //.setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)
             .configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
@@ -113,7 +113,7 @@ public class Namespace implements Serializable, Schema.Resolver {
             .configure(YAMLGenerator.Feature.USE_NATIVE_TYPE_ID, false)
             .configure(YAMLGenerator.Feature.WRITE_DOC_START_MARKER, false)
             .configure(YAMLGenerator.Feature.SPLIT_LINES, false)))
-            .registerModule(new BasestarModule())
+            .registerModule(BasestarModule.INSTANCE)
             .configure(JsonParser.Feature.ALLOW_COMMENTS, true)
             // Do not use, Spark compatibility issue
             //.setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)

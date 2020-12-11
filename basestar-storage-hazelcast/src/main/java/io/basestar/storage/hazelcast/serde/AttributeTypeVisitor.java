@@ -105,6 +105,12 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
     }
 
     @Override
+    public AttributeType<?> visitSecret(final UseSecret type) {
+
+        return AttributeType.SECRET;
+    }
+
+    @Override
     public AttributeType<?> visitView(final UseView type) {
 
         return AttributeType.struct(type.getSchema());
@@ -221,5 +227,12 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
 
             return AttributeType.encodedArray(type);
         }
+
+        @Override
+        public AttributeType<?> visitSecret(final UseSecret type) {
+
+            return AttributeType.encodedArray(type);
+        }
+
     }
 }

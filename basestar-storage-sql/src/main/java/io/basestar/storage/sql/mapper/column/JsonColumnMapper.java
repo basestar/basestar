@@ -13,7 +13,7 @@ public
 class JsonColumnMapper<T> implements SingleColumnMapper<T, String> {
 
     private static final ObjectMapper objectMapper = new ObjectMapper()
-            .registerModule(new BasestarModule());
+            .registerModule(BasestarModule.INSTANCE);
 
     private final DataType<String> dataType;
 
