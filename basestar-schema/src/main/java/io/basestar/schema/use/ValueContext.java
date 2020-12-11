@@ -20,7 +20,7 @@ public interface ValueContext {
 
     static ValueContext standardOrSuppressing(boolean suppress) {
 
-        return suppress ? ValueContext.suppressing(ValueContext.standard()) : ValueContext.standard();
+        return suppress ? ValueContext.suppressing() : ValueContext.standard();
     }
 
     Object createAny(UseAny type, Object value, Set<Name> expand);
@@ -60,9 +60,9 @@ public interface ValueContext {
         return Standard.INSTANCE;
     }
 
-    static ValueContext suppressing(final ValueContext context) {
+    static ValueContext suppressing() {
 
-        return new Suppressing(context);
+        return Suppressing.INSTANCE;
     }
 
     class Standard implements ValueContext {
@@ -232,15 +232,15 @@ public interface ValueContext {
     }
 
     @RequiredArgsConstructor
-    class Suppressing implements ValueContext {
+    class Suppressing extends Standard {
 
-        private final ValueContext context;
+        public static Suppressing INSTANCE = new Suppressing();
 
         @Override
         public Object createAny(final UseAny type, final Object value, final Set<Name> expand) {
 
             try {
-                return context.createAny(type, value, expand);
+                return super.createAny(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
                 return null;
             }
@@ -250,7 +250,7 @@ public interface ValueContext {
         public Boolean createBoolean(final UseBoolean type, final Object value, final Set<Name> expand) {
 
             try {
-                return context.createBoolean(type, value, expand);
+                return super.createBoolean(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
                 return null;
             }
@@ -260,7 +260,7 @@ public interface ValueContext {
         public String createString(final UseString type, final Object value, final Set<Name> expand) {
 
             try {
-                return context.createString(type, value, expand);
+                return super.createString(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
                 return null;
             }
@@ -270,7 +270,7 @@ public interface ValueContext {
         public Double createNumber(final UseNumber type, final Object value, final Set<Name> expand) {
 
             try {
-                return context.createNumber(type, value, expand);
+                return super.createNumber(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
                 return null;
             }
@@ -280,7 +280,7 @@ public interface ValueContext {
         public Long createInteger(final UseInteger type, final Object value, final Set<Name> expand) {
 
             try {
-                return context.createInteger(type, value, expand);
+                return super.createInteger(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
                 return null;
             }
@@ -290,7 +290,7 @@ public interface ValueContext {
         public <T> List<T> createArray(final UseArray<T> type, final Object value, final Set<Name> expand) {
 
             try {
-                return context.createArray(type, value, expand);
+                return super.createArray(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
                 return null;
             }
@@ -300,7 +300,7 @@ public interface ValueContext {
         public <T> Set<T> createSet(final UseSet<T> type, final Object value, final Set<Name> expand) {
 
             try {
-                return context.createSet(type, value, expand);
+                return super.createSet(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
                 return null;
             }
@@ -310,7 +310,7 @@ public interface ValueContext {
         public <T> Map<String, T> createMap(final UseMap<T> type, final Object value, final Set<Name> expand) {
 
             try {
-                return context.createMap(type, value, expand);
+                return super.createMap(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
                 return null;
             }
@@ -320,7 +320,7 @@ public interface ValueContext {
         public byte[] createBinary(final UseBinary type, final Object value, final Set<Name> expand) {
 
             try {
-                return context.createBinary(type, value, expand);
+                return super.createBinary(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
                 return null;
             }
@@ -330,7 +330,7 @@ public interface ValueContext {
         public LocalDate createDate(final UseDate type, final Object value, final Set<Name> expand) {
 
             try {
-                return context.createDate(type, value, expand);
+                return super.createDate(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
                 return null;
             }
@@ -340,7 +340,7 @@ public interface ValueContext {
         public Instant createDateTime(final UseDateTime type, final Object value, final Set<Name> expand) {
 
             try {
-                return context.createDateTime(type, value, expand);
+                return super.createDateTime(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
                 return null;
             }
@@ -350,7 +350,7 @@ public interface ValueContext {
         public String createEnum(final UseEnum type, final Object value, final Set<Name> expand) {
 
             try {
-                return context.createEnum(type, value, expand);
+                return super.createEnum(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
                 return null;
             }
@@ -360,7 +360,7 @@ public interface ValueContext {
         public Instance createStruct(final UseStruct type, final Object value, final Set<Name> expand) {
 
             try {
-                return context.createStruct(type, value, expand);
+                return super.createStruct(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
                 return null;
             }
@@ -370,7 +370,7 @@ public interface ValueContext {
         public Instance createRef(final UseRef type, final Object value, final Set<Name> expand) {
 
             try {
-                return context.createRef(type, value, expand);
+                return super.createRef(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
                 return null;
             }
@@ -380,7 +380,7 @@ public interface ValueContext {
         public Instance createView(final UseView type, final Object value, final Set<Name> expand) {
 
             try {
-                return context.createView(type, value, expand);
+                return super.createView(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
                 return null;
             }
@@ -390,7 +390,7 @@ public interface ValueContext {
         public Secret createSecret(final UseSecret type, final Object value, final Set<Name> expand) {
 
             try {
-                return context.createSecret(type, value, expand);
+                return super.createSecret(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
                 return null;
             }

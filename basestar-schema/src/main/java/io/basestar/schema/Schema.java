@@ -125,7 +125,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
 
     default T create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        return create(suppress ? ValueContext.suppressing(ValueContext.standard()) : ValueContext.standard(), value, expand);
+        return create(ValueContext.standardOrSuppressing(suppress), value, expand);
     }
 
     T create(ValueContext context, Object value, Set<Name> expand);

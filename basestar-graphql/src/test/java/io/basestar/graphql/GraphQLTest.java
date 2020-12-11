@@ -66,7 +66,7 @@ class GraphQLTest {
     private GraphQL graphQL(final Namespace namespace) throws Exception {
 
         final MemoryStorage storage = MemoryStorage.builder().build();
-        final DatabaseServer databaseServer = new DatabaseServer(namespace, storage);
+        final DatabaseServer databaseServer = DatabaseServer.builder().namespace(namespace).storage(storage).build();
 
         databaseServer.create(Caller.SUPER, CreateOptions.builder()
                 .schema(Name.of("Test4"))

@@ -91,7 +91,7 @@ public interface Use<T> extends Serializable {
 
     default T create(final Object value, final Set<Name> expand, final boolean suppress) {
 
-        return create(suppress ? ValueContext.suppressing(ValueContext.standard()) : ValueContext.standard(), value, expand);
+        return create(ValueContext.standardOrSuppressing(suppress), value, expand);
     }
 
     default T create(final Object value, final Set<Name> expand) {
