@@ -36,7 +36,6 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Array Type
@@ -102,11 +101,12 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
     }
 
     @Override
-    public List<T> create(final Stream<T> values) {
+    public List<T> create(final ValueContext context, final Object value, final Set<Name> expand) {
 
-        return values.collect(Collectors.toList());
+        return context.createArray(this, value, expand);
     }
 
+    @Deprecated
     public static <T> List<T> create(final Object value, final boolean suppress, final Function<Object, T> fn) {
 
         if(value == null) {

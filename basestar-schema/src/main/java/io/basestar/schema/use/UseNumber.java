@@ -20,8 +20,6 @@ package io.basestar.schema.use;
  * #L%
  */
 
-import io.basestar.expression.type.Values;
-import io.basestar.expression.type.exception.TypeConversionException;
 import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.NumberSchema;
 import lombok.Data;
@@ -70,17 +68,9 @@ public class UseNumber implements UseNumeric<Double> {
     }
 
     @Override
-    public Double create(final Object value, final Set<Name> expand, final boolean suppress) {
+    public Double create(final ValueContext context, final Object value, final Set<Name> expand) {
 
-        try {
-            return Values.toFloat(value);
-        } catch (final TypeConversionException e) {
-            if(suppress) {
-                return null;
-            } else {
-                throw e;
-            }
-        }
+        return context.createNumber(this, value, expand);
     }
 
     @Override

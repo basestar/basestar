@@ -26,6 +26,7 @@ import io.basestar.schema.Consistency;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Permission;
+import io.basestar.schema.use.ValueContext;
 import io.basestar.storage.exception.UnsupportedWriteException;
 import io.basestar.util.Name;
 
@@ -39,7 +40,7 @@ public interface Action {
 
     Permission permission(Instance before);
 
-    Instance after(Context context, Instance before);
+    Instance after(ValueContext valueContext, Context expressionContext, Instance before);
 
     Set<Name> afterExpand();
 

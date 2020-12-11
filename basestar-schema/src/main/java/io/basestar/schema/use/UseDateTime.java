@@ -20,8 +20,6 @@ package io.basestar.schema.use;
  * #L%
  */
 
-import io.basestar.exception.InvalidDateTimeException;
-import io.basestar.expression.type.exception.TypeConversionException;
 import io.basestar.util.ISO8601;
 import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.DateTimeSchema;
@@ -52,17 +50,9 @@ public class UseDateTime implements UseStringLike<Instant> {
     }
 
     @Override
-    public Instant create(final Object value, final Set<Name> expand, final boolean suppress) {
+    public Instant create(final ValueContext context, final Object value, final Set<Name> expand) {
 
-        try {
-            return ISO8601.toDateTime(value);
-        } catch (final InvalidDateTimeException e) {
-            if(suppress) {
-                return null;
-            } else {
-                throw new TypeConversionException(Instant.class, value);
-            }
-        }
+        return context.createDateTime(this, value, expand);
     }
 
     @Override

@@ -114,12 +114,12 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     }
 
     @Override
-    public Map<String, T> create(final Object value, final Set<Name> expand, final boolean suppress) {
+    public Map<String, T> create(final ValueContext context, final Object value, final Set<Name> expand) {
 
-        final Map<String, Set<Name>> branches = Name.branch(expand);
-        return create(value, suppress, (k, v) -> type.create(v, branch(branches, k), suppress));
+        return context.createMap(this, value, expand);
     }
 
+    @Deprecated
     public static <T> Map<String, T> create(final Object value, final boolean suppress, final BiFunction<String, Object, T> fn) {
 
         if(value == null) {

@@ -33,10 +33,7 @@ import io.basestar.schema.exception.MissingPropertyException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.expression.InferenceContext;
-import io.basestar.schema.use.Use;
-import io.basestar.schema.use.UseInstance;
-import io.basestar.schema.use.UseScalar;
-import io.basestar.schema.use.Widening;
+import io.basestar.schema.use.*;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Immutable;
@@ -358,10 +355,10 @@ public class Property implements Member {
     }
 
     @Override
-    public Object create(final Object value, final Set<Name> expand, final boolean suppress) {
+    public Object create(final ValueContext context, final Object value, final Set<Name> expand) {
 
         try {
-            return type.create(value, expand, suppress);
+            return type.create(context, value, expand);
         } catch (final UnexpectedTypeException e) {
             throw new ConstraintViolationException(ImmutableSet.of(
                     new Constraint.Violation(getQualifiedName(), "type", e.getMessage())

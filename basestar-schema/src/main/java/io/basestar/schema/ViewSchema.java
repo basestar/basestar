@@ -36,10 +36,7 @@ import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.expression.InferenceVisitor;
-import io.basestar.schema.use.Use;
-import io.basestar.schema.use.UseAny;
-import io.basestar.schema.use.UseBinary;
-import io.basestar.schema.use.UseView;
+import io.basestar.schema.use.*;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -194,21 +191,9 @@ public class ViewSchema implements LinkableSchema {
         }
 
         @Override
-        default ViewSchema build(final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
+        default ViewSchema build(final Namespace namespace, final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
             return new ViewSchema(this, resolver, version, qualifiedName, slot);
-        }
-
-        @Override
-        default ViewSchema build(final Name qualifiedName) {
-
-            return build(Resolver.Constructing.ANONYMOUS, Version.CURRENT, qualifiedName, Schema.anonymousSlot());
-        }
-
-        @Override
-        default ViewSchema build() {
-
-            return build(Schema.anonymousQualifiedName());
         }
     }
 
@@ -360,10 +345,10 @@ public class ViewSchema implements LinkableSchema {
     }
 
     @Override
-    public Instance create(final Map<String, Object> value, final Set<Name> expand, final boolean suppress) {
+    public Instance create(final ValueContext context, final Map<String, Object> value, final Set<Name> expand) {
 
-        final Map<String, Object> result = new HashMap<>(readProperties(value, expand, suppress));
-        result.putAll(readMeta(value, suppress));
+        final Map<String, Object> result = new HashMap<>(readProperties(context, value, expand));
+        result.putAll(readMeta(context, value));
         if(Instance.getSchema(result) == null) {
             Instance.setSchema(result, this.getQualifiedName());
         }
@@ -371,7 +356,7 @@ public class ViewSchema implements LinkableSchema {
             final Map<String, Set<Name>> branches = Name.branch(expand);
             getLinks().forEach((name, link) -> {
                 if(value.containsKey(name)) {
-                    result.put(name, link.create(value.get(name), branches.get(name), suppress));
+                    result.put(name, link.create(context, value.get(name), branches.get(name)));
                 }
             });
         }

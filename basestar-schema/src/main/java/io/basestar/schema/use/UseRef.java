@@ -28,7 +28,6 @@ import io.basestar.expression.compare.Eq;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.type.Values;
 import io.basestar.schema.*;
-import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
@@ -106,35 +105,9 @@ public class UseRef implements UseLinkable {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Instance create(final Object value, final Set<Name> expand, final boolean suppress) {
+    public Instance create(final ValueContext context, final Object value, final Set<Name> expand) {
 
-        if(value == null) {
-            return null;
-        } else if(value instanceof Map) {
-            final Map<String, Object> map = (Map<String, Object>)value;
-            final String id = Instance.getId(map);
-            if (id == null) {
-                return null;
-            } else {
-                if(expand != null) {
-                    return schema.create(map, expand, suppress);
-                } else {
-                    if(versioned) {
-                        final Long version = Instance.getVersion(map);
-                        if(version == null && !suppress) {
-                            throw new UnexpectedTypeException(this, value);
-                        }
-                        return ReferableSchema.versionedRef(id, version);
-                    } else {
-                        return ReferableSchema.ref(id);
-                    }
-                }
-            }
-        } else if(suppress) {
-            return null;
-        } else {
-            throw new UnexpectedTypeException(this, value);
-        }
+        return context.createRef(this, value, expand);
     }
 
     @Override

@@ -20,8 +20,6 @@ package io.basestar.schema.use;
  * #L%
  */
 
-import io.basestar.expression.type.Values;
-import io.basestar.expression.type.exception.TypeConversionException;
 import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.BooleanSchema;
 import lombok.Data;
@@ -69,17 +67,9 @@ public class UseBoolean implements UseScalar<Boolean> {
     }
 
     @Override
-    public Boolean create(final Object value, final Set<Name> expand, final boolean suppress) {
+    public Boolean create(final ValueContext context, final Object value, final Set<Name> expand) {
 
-        try {
-            return Values.toBoolean(value);
-        } catch (final TypeConversionException e) {
-            if(suppress) {
-                return null;
-            } else {
-                throw e;
-            }
-        }
+        return context.createBoolean(this, value, expand);
     }
 
     @Override

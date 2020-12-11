@@ -64,12 +64,12 @@ public class UseOptional<T> implements UseContainer<T, T> {
     }
 
     @Override
-    public T create(final Object value, final Set<Name> expand, final boolean suppress) {
+    public T create(final ValueContext context, final Object value, final Set<Name> expand) {
 
         if(value == null) {
             return null;
         } else {
-            return type.create(value, expand, suppress);
+            return type.create(context, value, expand);
         }
     }
 

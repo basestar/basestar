@@ -102,9 +102,9 @@ public class UseEnum implements UseStringLike<String>, UseNamed<String> {
     }
 
     @Override
-    public String create(final Object value, final Set<Name> expand, final boolean suppress) {
+    public String create(final ValueContext context, final Object value, final Set<Name> expand) {
 
-        return schema.create(value, expand, suppress);
+        return context.createEnum(this, value, expand);
     }
 
     @Override

@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import io.basestar.expression.Context;
+import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.expression.InferenceContext;
@@ -242,21 +243,9 @@ public class ObjectSchema implements ReferableSchema {
         }
 
         @Override
-        default ObjectSchema build(final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
+        default ObjectSchema build(final Namespace namespace, final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
             return new ObjectSchema(this, resolver, version, qualifiedName, slot);
-        }
-
-        @Override
-        default ObjectSchema build(final Name qualifiedName) {
-
-            return build(Resolver.Constructing.ANONYMOUS, Version.CURRENT, qualifiedName, Schema.anonymousSlot());
-        }
-
-        @Override
-        default ObjectSchema build() {
-
-            return build(Schema.anonymousQualifiedName());
         }
     }
 
@@ -269,6 +258,7 @@ public class ObjectSchema implements ReferableSchema {
         private Long version;
 
         @Nullable
+        @JsonDeserialize(using = AbbrevListDeserializer.class)
         private List<Name> extend;
 
         @Nullable

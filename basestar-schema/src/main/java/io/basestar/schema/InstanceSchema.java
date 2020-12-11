@@ -28,6 +28,7 @@ import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseInstance;
 import io.basestar.schema.use.UseString;
+import io.basestar.schema.use.ValueContext;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
@@ -59,7 +60,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
 
     SortedMap<String, Use<?>> metadataSchema();
 
-    Instance create(Map<String, Object> value, Set<Name> expand, boolean suppress);
+    Instance create(ValueContext context, Map<String, Object> value, Set<Name> expand);
 
     @Override
     UseInstance typeOf();
@@ -111,12 +112,12 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
 
     @Override
     @SuppressWarnings("unchecked")
-    default Instance create(final Object value, final Set<Name> expand, final boolean suppress) {
+    default Instance create(final ValueContext context, final Object value, final Set<Name> expand) {
 
         if(value == null) {
             return null;
         } else if(value instanceof Map) {
-            return create((Map<String, Object>) value, expand, suppress);
+            return create(context, (Map<String, Object>) value, expand);
         } else {
             throw new UnexpectedTypeException(this, value);
         }
@@ -185,20 +186,30 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
 
     default Map<String, Object> readProperties(final Map<String, Object> object, final Set<Name> expand, final boolean suppress) {
 
+        return readProperties(ValueContext.standardOrSuppressing(suppress), object, expand);
+    }
+
+    default Map<String, Object> readProperties(final ValueContext context, final Map<String, Object> object, final Set<Name> expand) {
+
         final Map<String, Set<Name>> branches = Name.branch(expand);
         final Map<String, Object> result = new HashMap<>();
-        getProperties().forEach((k, v) -> result.put(k, v.create(object.get(k), branches.get(k), suppress)));
+        getProperties().forEach((k, v) -> result.put(k, v.create(context, object.get(k), branches.get(k))));
         return Collections.unmodifiableMap(result);
     }
 
     default Map<String, Object> readMeta(final Map<String, Object> object, final boolean suppress) {
+
+        return readMeta(ValueContext.standardOrSuppressing(suppress), object);
+    }
+
+    default Map<String, Object> readMeta(final ValueContext context, final Map<String, Object> object) {
 
         final Map<String, Use<?>> metadataSchema = metadataSchema();
         final HashMap<String, Object> result = new HashMap<>();
         object.forEach((k, v) -> {
             final Use<?> type = metadataSchema.get(k);
             if(type != null) {
-                result.put(k, type.create(v, null, suppress));
+                result.put(k, type.create(context, v, null));
             } else if(Reserved.isMeta(k)) {
                 result.put(k, v);
             }

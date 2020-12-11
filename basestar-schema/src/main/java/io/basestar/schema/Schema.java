@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.basestar.expression.Context;
 import io.basestar.schema.exception.MissingSchemaException;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.ValueContext;
 import io.basestar.util.Name;
 
 import javax.annotation.Nonnull;
@@ -61,11 +62,17 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
 
         Long getVersion();
 
-        S build(Resolver.Constructing resolver, Version version, Name qualifiedName, int slot);
+        S build(Namespace namespace, Resolver.Constructing resolver, Version version, Name qualifiedName, int slot);
 
-        S build(Name qualifiedName);
+        default S build(final Name qualifiedName) {
 
-        S build();
+            return build(null, Resolver.Constructing.ANONYMOUS, Version.CURRENT, qualifiedName, Schema.anonymousSlot());
+        }
+
+        default S build() {
+
+            return build(Schema.anonymousQualifiedName());
+        }
 
         interface Self<S extends Schema<V>, V> extends Descriptor<S, V> {
 
@@ -116,7 +123,12 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         return create(value, Collections.emptySet(), false);
     }
 
-    T create(Object value, Set<Name> expand, boolean suppress);
+    default T create(final Object value, final Set<Name> expand, final boolean suppress) {
+
+        return create(suppress ? ValueContext.suppressing(ValueContext.standard()) : ValueContext.standard(), value, expand);
+    }
+
+    T create(ValueContext context, Object value, Set<Name> expand);
 
     int getSlot();
 
@@ -190,12 +202,6 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
 
                     return null;
                 }
-
-                @Override
-                public Collection<Schema<?>> getExtendedSchemas(final Name qualifiedName) {
-
-                    return Collections.emptyList();
-                }
             };
         }
 
@@ -207,18 +213,10 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
 
                 return null;
             }
-
-            @Override
-            public Collection<Schema<?>> getExtendedSchemas(final Name qualifiedName) {
-
-                return Collections.emptyList();
-            }
         };
 
         @Nullable
         Schema<?> getSchema(Name qualifiedName);
-
-        Collection<Schema<?>> getExtendedSchemas(Name qualifiedName);
 
         @Nonnull
         default Schema<?> requireSchema(final Name qualifiedName) {

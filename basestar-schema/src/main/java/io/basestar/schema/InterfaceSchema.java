@@ -6,9 +6,11 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.basestar.expression.Context;
+import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.expression.InferenceContext;
+import io.basestar.schema.use.ValueContext;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -138,7 +140,7 @@ public class InterfaceSchema implements ReferableSchema {
     @Nonnull
     private final SortedMap<String, Serializable> extensions;
 
-    private final Collection<ReferableSchema> directlyExtended;
+    private final Namespace namespace;
 
     @JsonDeserialize(as = InterfaceSchema.Builder.class)
     public interface Descriptor extends ReferableSchema.Descriptor<InterfaceSchema> {
@@ -156,15 +158,15 @@ public class InterfaceSchema implements ReferableSchema {
         }
 
         @Override
-        default InterfaceSchema build(final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
+        default InterfaceSchema build(final Namespace namespace, final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
-            return new InterfaceSchema(this, resolver, version, qualifiedName, slot);
+            return new InterfaceSchema(this, namespace, resolver, version, qualifiedName, slot);
         }
 
         @Override
         default InterfaceSchema build(final Name qualifiedName) {
 
-            return build(Resolver.Constructing.ANONYMOUS, Version.CURRENT, qualifiedName, Schema.anonymousSlot());
+            return build(null, Resolver.Constructing.ANONYMOUS, Version.CURRENT, qualifiedName, Schema.anonymousSlot());
         }
 
         @Override
@@ -184,7 +186,7 @@ public class InterfaceSchema implements ReferableSchema {
 
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
-        @JsonDeserialize(contentUsing = NameDeserializer.class)
+        @JsonDeserialize(using = AbbrevListDeserializer.class)
         private List<Name> extend;
 
         @Nullable
@@ -230,9 +232,10 @@ public class InterfaceSchema implements ReferableSchema {
         return new Builder();
     }
 
-    private InterfaceSchema(final Descriptor descriptor, final Schema.Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
+    private InterfaceSchema(final Descriptor descriptor, final Namespace namespace, final Schema.Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
         resolver.constructing(this);
+        this.namespace = namespace;
         this.qualifiedName = qualifiedName;
         this.slot = slot;
         this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
@@ -263,8 +266,6 @@ public class InterfaceSchema implements ReferableSchema {
                 throw new ReservedNameException(k);
             }
         });
-
-        this.directlyExtended = Immutable.transform(resolver.getExtendedSchemas(qualifiedName), v -> (ReferableSchema) v);
     }
 
     @Override
@@ -277,6 +278,12 @@ public class InterfaceSchema implements ReferableSchema {
     public Descriptor descriptor() {
 
         return (Descriptor.Self) () -> InterfaceSchema.this;
+    }
+
+    @Override
+    public Collection<ReferableSchema> getDirectlyExtended() {
+
+        return Immutable.transform(namespace.getExtendedSchemas(qualifiedName), v -> (ReferableSchema) v);
     }
 
     @Override
@@ -314,13 +321,13 @@ public class InterfaceSchema implements ReferableSchema {
     }
 
     @Override
-    public Instance create(final Map<String, Object> value, final Set<Name> expand, final boolean suppress) {
+    public Instance create(final ValueContext context, final Map<String, Object> value, final Set<Name> expand) {
 
         final ReferableSchema resolvedSchema = getExtendedOrThis(Instance.getSchema(value));
         if (resolvedSchema == this) {
-            return ReferableSchema.super.create(value, expand, suppress);
+            return ReferableSchema.super.create(context, value, expand);
         } else {
-            return resolvedSchema.create(value, expand, suppress);
+            return resolvedSchema.create(context, value, expand);
         }
     }
 

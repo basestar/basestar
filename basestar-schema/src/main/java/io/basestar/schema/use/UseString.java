@@ -21,8 +21,6 @@ package io.basestar.schema.use;
  */
 
 import com.google.common.base.Charsets;
-import io.basestar.expression.type.Values;
-import io.basestar.expression.type.exception.TypeConversionException;
 import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.StringSchema;
 import lombok.Data;
@@ -71,17 +69,9 @@ public class UseString implements UseStringLike<String> {
     }
 
     @Override
-    public String create(final Object value, final Set<Name> expand, final boolean suppress) {
+    public String create(final ValueContext context, final Object value, final Set<Name> expand) {
 
-        try {
-            return Values.toString(value);
-        } catch (final TypeConversionException e) {
-            if(suppress) {
-                return null;
-            } else {
-                throw e;
-            }
-        }
+        return context.createString(this, value, expand);
     }
 
     @Override

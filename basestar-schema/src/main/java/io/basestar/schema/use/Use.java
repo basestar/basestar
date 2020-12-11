@@ -87,7 +87,12 @@ public interface Use<T> extends Serializable {
 
     Use<?> resolve(Schema.Resolver resolver);
 
-    T create(Object value, Set<Name> expand, boolean suppress);
+    T create(ValueContext context, Object value, Set<Name> expand);
+
+    default T create(final Object value, final Set<Name> expand, final boolean suppress) {
+
+        return create(suppress ? ValueContext.suppressing(ValueContext.standard()) : ValueContext.standard(), value, expand);
+    }
 
     default T create(final Object value, final Set<Name> expand) {
 

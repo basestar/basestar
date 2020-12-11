@@ -1,6 +1,5 @@
 package io.basestar.schema.use;
 
-import io.basestar.expression.type.exception.TypeConversionException;
 import io.basestar.schema.secret.Secret;
 import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.Schema;
@@ -40,17 +39,9 @@ public class UseSecret implements UseStringLike<Secret> {
     }
 
     @Override
-    public Secret create(final Object value, final Set<Name> expand, final boolean suppress) {
+    public Secret create(final ValueContext context, final Object value, final Set<Name> expand) {
 
-        if(value instanceof Secret) {
-            return (Secret)value;
-        } else {
-            if(suppress) {
-                return null;
-            } else {
-                throw new TypeConversionException(Secret.class, "<redacted>");
-            }
-        }
+        return context.createSecret(this, value, expand);
     }
 
     @Override

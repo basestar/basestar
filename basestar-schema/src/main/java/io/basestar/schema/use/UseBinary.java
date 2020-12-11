@@ -21,8 +21,6 @@ package io.basestar.schema.use;
  */
 
 import com.google.common.base.Charsets;
-import io.basestar.expression.type.Values;
-import io.basestar.expression.type.exception.TypeConversionException;
 import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.BinarySchema;
 import lombok.Data;
@@ -82,17 +80,9 @@ public class UseBinary implements UseScalar<byte[]> {
     }
 
     @Override
-    public byte[] create(final Object value, final Set<Name> expand, final boolean suppress) {
+    public byte[] create(final ValueContext context, final Object value, final Set<Name> expand) {
 
-        try {
-            return Values.toBinary(value);
-        } catch (final TypeConversionException e) {
-            if(suppress) {
-                return null;
-            } else {
-                throw e;
-            }
-        }
+        return context.createBinary(this, value, expand);
     }
 
     @Override

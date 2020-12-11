@@ -47,6 +47,8 @@ import io.basestar.expression.constant.Constant;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Or;
 import io.basestar.schema.*;
+import io.basestar.schema.secret.SecretContext;
+import io.basestar.schema.use.ValueContext;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.storage.ConstantStorage;
@@ -72,6 +74,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
     private final DatabaseMode mode;
 
+    private final SecretContext secretContext;
+
     private static final Handlers<DatabaseServer> HANDLERS = Handlers.<DatabaseServer>builder()
             .on(ObjectCreatedEvent.class, DatabaseServer::onObjectCreated)
             .on(ObjectUpdatedEvent.class, DatabaseServer::onObjectUpdated)
@@ -81,21 +85,15 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             .on(RefRefreshEvent.class, DatabaseServer::onRefRefresh)
             .build();
 
-    public DatabaseServer(final Namespace namespace, final Storage storage) {
-
-        this(namespace, storage, Emitter.skip());
-    }
-
-    public DatabaseServer(final Namespace namespace, final Storage storage, final Emitter emitter) {
-
-        this(namespace, storage, emitter, DatabaseMode.DEFAULT);
-    }
-
-    public DatabaseServer(final Namespace namespace, final Storage storage, final Emitter emitter, final DatabaseMode mode) {
+    @lombok.Builder(builderClassName = "Builder")
+    protected DatabaseServer(final Namespace namespace, final Storage storage,
+                             final Emitter emitter, final DatabaseMode mode,
+                             final SecretContext secretContext) {
 
         super(namespace, storage);
-        this.emitter = Nullsafe.require(emitter);
-        this.mode = Nullsafe.require(mode);
+        this.emitter = Nullsafe.orDefault(emitter, Emitter::skip);
+        this.mode = Nullsafe.orDefault(mode, DatabaseMode.DEFAULT);
+        this.secretContext = Nullsafe.orDefault(secretContext, SecretContext::none);
     }
 
     @Override
@@ -145,6 +143,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
     }
 
     private CompletableFuture<Map<String, Instance>> batch(final Caller caller, final Consistency consistency, final Map<String, Action> actions) {
+
+        final ValueContext valueContext = secretContext.valueContext();
 
         final Set<RefKey> beforeCheck = new HashSet<>();
         final Set<ExpandKey<RefKey>> beforeKeys = new HashSet<>();
@@ -228,7 +228,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         beforeKey = null;
                         before = null;
                     }
-                    final Instance after = action.after(beforeContext.with(VAR_BATCH, overlay), before);
+                    final Instance after = action.after(valueContext, beforeContext.with(VAR_BATCH, overlay), before);
                     if (after != null) {
                         final RefKey afterKey = RefKey.latest(after);
                         if (!afterCheck.add(afterKey)) {

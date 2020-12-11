@@ -35,6 +35,7 @@ import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseArray;
+import io.basestar.schema.use.ValueContext;
 import io.basestar.schema.use.Widening;
 import io.basestar.schema.util.Expander;
 import io.basestar.util.*;
@@ -286,15 +287,15 @@ public class Link implements Member {
     }
 
     @Override
-    public Object create(final Object value, final Set<Name> expand, final boolean suppress) {
+    public Object create(final ValueContext context, final Object value, final Set<Name> expand) {
 
         if(value == null) {
             return null;
         } else if(single) {
-            return schema.create(value, expand, suppress);
+            return schema.create(context, value, expand);
         } else {
             return ((Collection<?>)value).stream()
-                    .map(v -> schema.create(v, expand, suppress))
+                    .map(v -> schema.create(context, v, expand))
                     .collect(Collectors.toList());
         }
     }
