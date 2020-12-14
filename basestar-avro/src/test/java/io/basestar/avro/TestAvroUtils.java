@@ -54,6 +54,7 @@ class TestAvroUtils {
                         .put("value", "Test")
                         .put("ref", ImmutableMap.builder()
                                 .put("id", "b")
+                                .put("schema", "C")
                                 .put("created", now)
                                 .put("updated", now)
                                 .put("version", 1L)
@@ -63,6 +64,7 @@ class TestAvroUtils {
                 .put("array", ImmutableList.of(
                         ImmutableMap.builder()
                                 .put("id", "c")
+                                .put("schema", "C")
                                 .put("created", now)
                                 .put("updated", now)
                                 .put("version", 1L)
@@ -76,6 +78,5 @@ class TestAvroUtils {
         final Map<String, Object> after = AvroUtils.decode(schema, avroSchema, record);
 
         assertEquals(before, after);
-
     }
 }

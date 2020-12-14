@@ -398,9 +398,9 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final Permission read = schema.getPermission(Permission.READ);
         checkPermission(caller, schema, read, ImmutableMap.of(VAR_THIS, instance));
         final Instance visible = schema.applyVisibility(context(caller), instance);
-//        final ValueContext valueContext = ValueContext.decrypting(secretContext);
-//        final Instance decrypted = schema.create(valueContext, visible, expand);
-        return schema.expand(visible, Expander.noop(), expand);
+        final ValueContext valueContext = ValueContext.decrypting(secretContext);
+        final Instance decrypted = schema.create(valueContext, visible, expand);
+        return schema.expand(decrypted, Expander.noop(), expand);
     }
 
     // FIXME need to create a deeper permission expand for nested permissions

@@ -10,6 +10,8 @@
     <#case "Date">java.time.LocalDate<#break>
     <#case "DateTime">java.time.Instant<#break>
     <#case "Any">Object<#break>
+    <#case "Page">io.basestar.util.Page<<@type of=of.type/>><#break>
+    <#case "Secret">io.basestar.secret.Secret<#break>
     <#default>${of.schema.fullyQualifiedClassName}<#break>
 </#switch></#macro>
 

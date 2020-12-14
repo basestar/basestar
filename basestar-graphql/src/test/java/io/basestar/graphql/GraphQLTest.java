@@ -164,6 +164,7 @@ class GraphQLTest {
                 .query("query {\n" +
                         "  readTest1(id:\"test1\") {\n" +
                         "    id\n" +
+                        "    a { items { schema id test { x } } }\n" +
                         "    z {\n" +
                         "      key\n" +
                         "      value {\n" +
@@ -179,6 +180,17 @@ class GraphQLTest {
         assertEquals(Collections.singletonMap(
                 "readTest1", ImmutableMap.of(
                         "id", "test1",
+                        "a", ImmutableMap.of(
+                                "items", ImmutableList.of(
+                                        ImmutableMap.of(
+                                            "schema", "Test4",
+                                            "id", "test4",
+                                            "test", ImmutableMap.of(
+                                                    "x", "test1"
+                                            )
+                                        )
+                                )
+                        ),
                         "z", ImmutableList.of(ImmutableMap.of(
                                 "key", "test",
                                 "value", ImmutableMap.of("test", ImmutableMap.of(

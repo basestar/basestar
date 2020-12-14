@@ -2,14 +2,16 @@ package io.basestar.graphql.subscription;
 
 import io.basestar.auth.Caller;
 import io.basestar.database.Database;
-import io.basestar.graphql.GraphQLUtils;
+import io.basestar.graphql.GraphQLStrategy;
 import io.basestar.graphql.api.GraphQLAPI;
 import io.basestar.graphql.api.GraphQLWebsocketAPI;
+import io.basestar.graphql.transform.GraphQLResponseTransform;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.stream.Change;
 import io.basestar.stream.SubscriptionInfo;
 import io.basestar.stream.TransportPublisher;
 import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,12 +25,16 @@ public class GraphQLPublisher implements TransportPublisher<GraphQLWebsocketAPI.
 
     private final Transport<? super GraphQLWebsocketAPI.ResponseBody> transport;
 
+    private final GraphQLResponseTransform responseTransform;
+
     @lombok.Builder(builderClassName = "Builder")
     public GraphQLPublisher(final Database database,
+                            final GraphQLStrategy strategy,
                             final Transport<? super GraphQLWebsocketAPI.ResponseBody> transport) {
 
         this.database = database;
         this.transport = transport;
+        this.responseTransform = Nullsafe.orDefault(strategy, GraphQLStrategy.DEFAULT).responseTransform();
     }
 
     @Override
@@ -50,7 +56,7 @@ public class GraphQLPublisher implements TransportPublisher<GraphQLWebsocketAPI.
                 return database.expand(caller, change.getAfter(), expand)
                         .thenApply(after -> {
                             final Map<String, Object> data = new HashMap<>();
-                            data.put(alias, GraphQLUtils.toResponse(database.namespace(), schema, after));
+                            data.put(alias, responseTransform.toResponse(schema, after));
                             final GraphQLAPI.ResponseBody payload = new GraphQLAPI.ResponseBody(data, null, null);
                             final GraphQLWebsocketAPI.ResponseBody response = new GraphQLWebsocketAPI.ResponseBody();
                             response.setId(channel);

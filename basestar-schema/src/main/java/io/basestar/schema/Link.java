@@ -34,7 +34,7 @@ import io.basestar.jackson.serde.ExpressionDeserializer;
 import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
-import io.basestar.schema.use.UseArray;
+import io.basestar.schema.use.UsePage;
 import io.basestar.schema.use.ValueContext;
 import io.basestar.schema.use.Widening;
 import io.basestar.schema.util.Expander;
@@ -211,7 +211,7 @@ public class Link implements Member {
         if(single) {
             return schema.typeOf();
         } else {
-            return new UseArray<>(schema.typeOf());
+            return new UsePage<>(schema.typeOf());
         }
     }
 

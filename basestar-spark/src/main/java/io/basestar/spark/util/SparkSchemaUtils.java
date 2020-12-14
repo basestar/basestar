@@ -28,6 +28,7 @@ import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import io.basestar.util.ISO8601;
 import io.basestar.util.Name;
+import io.basestar.util.Page;
 import io.basestar.util.Sort;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.*;
@@ -232,6 +233,12 @@ public class SparkSchemaUtils {
 
             @Override
             public <T> DataType visitArray(final UseArray<T> type) {
+
+                return DataTypes.createArrayType(type.getType().visit(this)).asNullable();
+            }
+
+            @Override
+            public <T> DataType visitPage(final UsePage<T> type) {
 
                 return DataTypes.createArrayType(type.getType().visit(this)).asNullable();
             }
@@ -442,6 +449,22 @@ public class SparkSchemaUtils {
                         return null;
                     }));
                     return result;
+                } else {
+                    throw new IllegalStateException();
+                }
+            }
+
+            @Override
+            @SuppressWarnings("unchecked")
+            public <T> Object visitPage(final UsePage<T> type) {
+
+                if(value instanceof Seq<?>) {
+                    final List<T> result = new ArrayList<>();
+                    ((Seq<?>)value).foreach(ScalaUtils.scalaFunction(v -> {
+                        result.add((T)fromSpark(type.getType(), naming, expand, v, suppress));
+                        return null;
+                    }));
+                    return new Page<>(result, null);
                 } else {
                     throw new IllegalStateException();
                 }
@@ -685,6 +708,12 @@ public class SparkSchemaUtils {
 
             @Override
             public <T> Object visitArray(final UseArray<T> type) {
+
+                return visitCollection(type);
+            }
+
+            @Override
+            public <T> Object visitPage(final UsePage<T> type) {
 
                 return visitCollection(type);
             }
@@ -1037,6 +1066,12 @@ public class SparkSchemaUtils {
 
             @Override
             public <V> Encoder<?> visitArray(final UseArray<V> type) {
+
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public <V> Encoder<?> visitPage(final UsePage<V> type) {
 
                 throw new UnsupportedOperationException();
             }

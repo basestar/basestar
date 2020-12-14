@@ -51,6 +51,11 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
             .put(VERSION, UseInteger.DEFAULT)
             .build();
 
+    static boolean isResolved(final Map<String, Object> instance) {
+
+        return instance != null && instance.containsKey(ReferableSchema.SCHEMA);
+    }
+
     interface Descriptor<S extends ReferableSchema> extends LinkableSchema.Descriptor<S>, Transient.Resolver.Descriptor, Index.Resolver.Descriptor {
 
         @Nullable
@@ -245,9 +250,9 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
     default Map<String, ? extends Member> getMembers() {
 
         final Map<String, Member> members = new HashMap<>();
-        members.putAll(getDeclaredProperties());
-        members.putAll(getDeclaredTransients());
-        members.putAll(getDeclaredLinks());
+        members.putAll(getProperties());
+        members.putAll(getTransients());
+        members.putAll(getLinks());
         return members;
     }
 

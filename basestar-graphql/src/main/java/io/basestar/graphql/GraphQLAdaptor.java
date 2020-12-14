@@ -39,6 +39,8 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.constant.Constant;
 import io.basestar.graphql.schema.SchemaAdaptor;
 import io.basestar.graphql.subscription.SubscriberContext;
+import io.basestar.graphql.transform.GraphQLRequestTransform;
+import io.basestar.graphql.transform.GraphQLResponseTransform;
 import io.basestar.graphql.wiring.AnyCoercing;
 import io.basestar.graphql.wiring.InterfaceResolver;
 import io.basestar.schema.*;
@@ -61,12 +63,18 @@ public class GraphQLAdaptor {
 
     private final GraphQLStrategy strategy;
 
+    private final GraphQLRequestTransform requestTransform;
+
+    private final GraphQLResponseTransform responseTransform;
+
     @lombok.Builder(builderClassName = "Builder")
     GraphQLAdaptor(final Database database, final Namespace namespace, final GraphQLStrategy strategy) {
 
         this.database = Nullsafe.require(database);
         this.namespace = Nullsafe.require(namespace);
         this.strategy = Nullsafe.orDefault(strategy, GraphQLStrategy.DEFAULT);
+        this.requestTransform = this.strategy.requestTransform();
+        this.responseTransform = this.strategy.responseTransform();
     }
 
     public GraphQL graphQL() {
@@ -141,7 +149,7 @@ public class GraphQLAdaptor {
                 .version(version).expand(expand)
                 .build();
         return database.read(caller, options)
-                .thenApply(object -> GraphQLUtils.toResponse(namespace, schema, object));
+                .thenApply(object -> responseTransform.toResponse(schema, object));
     }
 
     private DataFetcher<CompletableFuture<?>> queryFetcher(final LinkableSchema schema) {
@@ -165,8 +173,7 @@ public class GraphQLAdaptor {
                     .expand(expand)
                     .build();
             return database.query(caller, options)
-                    .thenApply(objects -> objects.map(object -> GraphQLUtils.toResponse(namespace, schema, object)))
-                    .thenApply(this::toPage);
+                    .thenApply(result -> responseTransform.toResponsePage(schema, result));
         };
     }
 
@@ -191,8 +198,7 @@ public class GraphQLAdaptor {
                     .stats(stats)
                     .build();
             return database.queryLink(caller, options)
-                    .thenApply(objects -> objects.map(object -> GraphQLUtils.toResponse(namespace, linkSchema, object)))
-                    .thenApply(this::toPage);
+                    .thenApply(result -> responseTransform.toResponsePage(linkSchema, result));
         };
     }
 
@@ -207,25 +213,6 @@ public class GraphQLAdaptor {
             stats.add(Page.Stat.APPROX_TOTAL);
         }
         return stats;
-    }
-
-    private Map<String, Object> toPage(final Page<?> page) {
-
-        final Map<String, Object> result = new HashMap<>();
-        result.put(strategy.pageItemsFieldName(), page.getPage());
-        if(page.hasMore()) {
-            result.put(strategy.pagePagingFieldName(), page.getPaging().toString());
-        }
-        final Page.Stats stats = page.getStats();
-        if(stats != null) {
-            if(stats.getTotal() != null) {
-                result.put(strategy.pageTotalFieldName(), stats.getTotal());
-            }
-            if(stats.getApproxTotal() != null) {
-                result.put(strategy.pageApproxTotalFieldName(), stats.getApproxTotal());
-            }
-        }
-        return result;
     }
 
     @SuppressWarnings("rawtypes")
@@ -251,7 +238,7 @@ public class GraphQLAdaptor {
             final Caller caller = GraphQLUtils.caller(env.getContext());
             final Set<Name> expand = expand(schema, env);
             final String id = env.getArgumentOrDefault(strategy.idArgumentName(), null);
-            final Map<String, Object> data = GraphQLUtils.fromRequest(schema, env.getArgument(strategy.dataArgumentName()));
+            final Map<String, Object> data = requestTransform.fromRequest(schema, env.getArgument(strategy.dataArgumentName()));
             final Consistency consistency = consistency(env);
             final Map<String, Expression> expressions = parseExpressions(env.getArgument(strategy.expressionsArgumentName()));
             final CreateOptions options = CreateOptions.builder()
@@ -260,7 +247,7 @@ public class GraphQLAdaptor {
                     .expressions(expressions)
                     .build();
             return database.create(caller, options)
-                    .thenApply(object -> GraphQLUtils.toResponse(namespace, schema, object));
+                    .thenApply(object -> responseTransform.toResponse(schema, object));
         };
     }
 
@@ -271,7 +258,7 @@ public class GraphQLAdaptor {
             final Set<Name> expand = expand(schema, env);
             final String id = env.getArgument(strategy.idArgumentName());
             final Long version = version(env);
-            final Map<String, Object> data = GraphQLUtils.fromRequest(schema, env.getArgument(strategy.dataArgumentName()));
+            final Map<String, Object> data = requestTransform.fromRequest(schema, env.getArgument(strategy.dataArgumentName()));
             final Consistency consistency = consistency(env);
             final Map<String, Expression> expressions = parseExpressions(env.getArgument(strategy.expressionsArgumentName()));
 
@@ -283,7 +270,7 @@ public class GraphQLAdaptor {
                     .expand(expand)
                     .build();
             return database.update(caller, options)
-                    .thenApply(object -> GraphQLUtils.toResponse(namespace, schema, object));
+                    .thenApply(object -> responseTransform.toResponse(schema, object));
         };
     }
 
@@ -309,7 +296,7 @@ public class GraphQLAdaptor {
                     .version(version).consistency(consistency)
                     .build();
             return database.delete(caller, options)
-                    .thenApply(object -> GraphQLUtils.toResponse(namespace, schema, object));
+                    .thenApply(object -> responseTransform.toResponse(schema, object));
         };
     }
 
@@ -339,7 +326,7 @@ public class GraphQLAdaptor {
 
             final Set<Name> expand = expand(schema, field);
             final String id = argument(field, strategy.idArgumentName());
-            final Map<String, Object> data = GraphQLUtils.fromRequest(schema, argument(field, strategy.dataArgumentName()));
+            final Map<String, Object> data = requestTransform.fromRequest(schema, argument(field, strategy.dataArgumentName()));
             final Map<String, Expression> expressions = parseExpressions(argument(field, strategy.expressionsArgumentName()));
             return CreateOptions.builder()
                     .schema(schema.getQualifiedName()).id(id)
@@ -357,7 +344,7 @@ public class GraphQLAdaptor {
             final Set<Name> expand = expand(schema, field);
             final String id = argument(field, strategy.idArgumentName());
             final Long version = version(field);
-            final Map<String, Object> data = GraphQLUtils.fromRequest(schema, argument(field, strategy.dataArgumentName()));
+            final Map<String, Object> data = requestTransform.fromRequest(schema, argument(field, strategy.dataArgumentName()));
             final Map<String, Expression> expressions = parseExpressions(argument(field, strategy.expressionsArgumentName()));
             return UpdateOptions.builder()
                     .schema(schema.getQualifiedName()).id(id)
@@ -424,7 +411,7 @@ public class GraphQLAdaptor {
                         final Map<String, Object> response = new HashMap<>();
                         results.forEach((k, v) -> {
                             final ObjectSchema schema = namespace.requireObjectSchema(Instance.getSchema(v));
-                            response.put(k, GraphQLUtils.toResponse(namespace, schema, v));
+                            response.put(k, responseTransform.toResponse(schema, v));
                         });
                         return response;
                     });
@@ -488,7 +475,7 @@ public class GraphQLAdaptor {
             if(selection instanceof Field) {
                 final Field field = (Field)selection;
                 if(fieldName.equals(field.getName())) {
-                    return GraphQLUtils.expand(namespace, schema, field.getSelectionSet());
+                    return GraphQLUtils.expand(strategy, namespace, schema, field.getSelectionSet());
                 }
             }
         }
@@ -497,12 +484,12 @@ public class GraphQLAdaptor {
 
     private Set<Name> expand(final InstanceSchema schema, final DataFetchingEnvironment env) {
 
-        return GraphQLUtils.expand(namespace, schema, env.getMergedField().getSingleField().getSelectionSet());
+        return GraphQLUtils.expand(strategy, namespace, schema, env.getMergedField().getSingleField().getSelectionSet());
     }
 
     private Set<Name> expand(final InstanceSchema schema, final Field field) {
 
-        return GraphQLUtils.expand(namespace, schema, field.getSelectionSet());
+        return GraphQLUtils.expand(strategy, namespace, schema, field.getSelectionSet());
     }
 
     @Deprecated

@@ -65,6 +65,7 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
         return visitor.visitArray(this);
     }
 
+    @Override
     @SuppressWarnings("unchecked")
     public <T2> UseArray<T2> transform(final Function<Use<T>, Use<T2>> fn) {
 

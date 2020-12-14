@@ -106,12 +106,11 @@ public class ReadProcessor {
                         Reserved.THIS, owner
                 )));
 
-        //FIXME: must support views
-        final ObjectSchema linkSchema = (ObjectSchema)link.getSchema();
+        final LinkableSchema linkSchema = link.getSchema();
         return queryImpl(context, linkSchema, expression, link.getSort(), expand, count, paging);
     }
 
-    protected CompletableFuture<Page<Instance>> queryImpl(final Context context, final ReferableSchema objectSchema, final Expression expression,
+    protected CompletableFuture<Page<Instance>> queryImpl(final Context context, final LinkableSchema objectSchema, final Expression expression,
                                                           final List<Sort> sort, final Set<Name> expand, final int count, final Page.Token paging) {
 
         final List<Sort> pageSort = ImmutableList.<Sort>builder()

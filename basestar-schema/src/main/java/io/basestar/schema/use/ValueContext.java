@@ -10,6 +10,7 @@ import io.basestar.secret.Secret;
 import io.basestar.secret.SecretContext;
 import io.basestar.util.ISO8601;
 import io.basestar.util.Name;
+import io.basestar.util.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -77,6 +78,8 @@ public interface ValueContext {
 
     Secret createSecret(UseSecret type, Object value, Set<Name> expand);
 
+    <T> Page<T> createPage(UsePage<T> type, Object value, Set<Name> expand);
+
     class Standard implements ValueContext {
 
         public static Standard INSTANCE = new Standard();
@@ -84,6 +87,9 @@ public interface ValueContext {
         @Override
         public LocalDate createDate(final UseDate type, final Object value, final Set<Name> expand) {
 
+            if(value instanceof LocalDate) {
+                return (LocalDate)value;
+            }
             try {
                 return ISO8601.toDate(value);
             } catch (final InvalidDateTimeException e) {
@@ -94,6 +100,9 @@ public interface ValueContext {
         @Override
         public Instant createDateTime(final UseDateTime type, final Object value, final Set<Name> expand) {
 
+            if(value instanceof Instant) {
+                return (Instant)value;
+            }
             try {
                 return ISO8601.toDateTime(value);
             } catch (final InvalidDateTimeException e) {
@@ -127,7 +136,7 @@ public interface ValueContext {
                 if (id == null) {
                     return null;
                 } else {
-                    if(expand != null) {
+                    if(expand != null && ReferableSchema.isResolved(map)) {
                         return schema.create(this, map, expand);
                     } else {
                         if(versioned) {
@@ -243,6 +252,25 @@ public interface ValueContext {
 
             return Values.toBinary(value);
         }
+
+        @Override
+        public <T> Page<T> createPage(final UsePage<T> type, final Object value, final Set<Name> expand) {
+
+            if(value instanceof Collection) {
+                final Use<T> valueType = type.getType();
+                final List<T> values = ((Collection<?>) value).stream()
+                        .map(v -> valueType.create(this, v, expand))
+                        .collect(Collectors.toList());
+                if(value instanceof Page) {
+                    final Page<?> page = (Page<?>)value;
+                    return new Page<>(values, page.getPaging(), page.getStats());
+                } else {
+                    return new Page<>(values, null);
+                }
+            } else {
+                throw new UnexpectedTypeException(type, value);
+            }
+        }
     }
 
     @Slf4j
@@ -311,6 +339,17 @@ public interface ValueContext {
 
             try {
                 return super.createArray(type, value, expand);
+            } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
+                log.warn("Suppressing type conversion error", e);
+                return null;
+            }
+        }
+
+        @Override
+        public <T> Page<T> createPage(final UsePage<T> type, final Object value, final Set<Name> expand) {
+
+            try {
+                return super.createPage(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
                 log.warn("Suppressing type conversion error", e);
                 return null;
@@ -441,9 +480,9 @@ public interface ValueContext {
         public Secret createSecret(final UseSecret secret, final Object value, final Set<Name> expand) {
 
             if(value instanceof Secret.Plaintext) {
-                return secretContext.encrypt((Secret.Plaintext)value);
+                return secretContext.encrypt((Secret.Plaintext)value).join();
             } else if(value instanceof String) {
-                return secretContext.encrypt(Secret.plaintext((String) value));
+                return secretContext.encrypt(Secret.plaintext((String) value)).join();
             } else {
                 throw new TypeConversionException(Secret.class, "<redacted>");
             }
@@ -463,11 +502,11 @@ public interface ValueContext {
         public Secret createSecret(final UseSecret secret, final Object value, final Set<Name> expand) {
 
             if(value instanceof Secret.Encrypted) {
-                return secretContext.decrypt((Secret.Encrypted) value);
+                return secretContext.decrypt((Secret.Encrypted) value).join();
             } else if(value instanceof byte[]) {
-                return secretContext.decrypt(Secret.encrypted((byte[])value));
+                return secretContext.decrypt(Secret.encrypted((byte[])value)).join();
             } else if(value instanceof String) {
-                return secretContext.decrypt(Secret.encrypted((String)value));
+                return secretContext.decrypt(Secret.encrypted((String)value)).join();
             } else {
                 throw new TypeConversionException(Secret.class, "<redacted>");
             }

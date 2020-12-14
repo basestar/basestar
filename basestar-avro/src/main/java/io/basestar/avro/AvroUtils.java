@@ -136,6 +136,12 @@ public class AvroUtils {
             }
 
             @Override
+            public <T> Schema visitPage(final UsePage<T> type) {
+
+                return Schema.createArray(schema(type.getType(), expand));
+            }
+
+            @Override
             public <T> Schema visitSet(final UseSet<T> type) {
 
                 return Schema.createArray(schema(type.getType(), expand));

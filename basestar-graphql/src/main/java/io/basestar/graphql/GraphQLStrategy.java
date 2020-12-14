@@ -21,6 +21,8 @@ package io.basestar.graphql;
  */
 
 import io.basestar.database.options.UpdateOptions;
+import io.basestar.graphql.transform.GraphQLRequestTransform;
+import io.basestar.graphql.transform.GraphQLResponseTransform;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import io.basestar.util.Name;
@@ -117,6 +119,16 @@ public interface GraphQLStrategy {
     String pageApproxTotalFieldName();
 
     String anyTypeName();
+
+    default GraphQLRequestTransform requestTransform() {
+
+        return new GraphQLRequestTransform.Default(this);
+    }
+
+    default GraphQLResponseTransform responseTransform() {
+
+        return new GraphQLResponseTransform.Default(this);
+    }
 
     class Default implements GraphQLStrategy {
 

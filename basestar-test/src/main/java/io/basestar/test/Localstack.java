@@ -42,6 +42,8 @@ public class Localstack {
 
     public static final String SFN_ENDPOINT = ENDPOINT_PREFIX + LOCALSTACK_PORT;
 
+    public static final String KMS_ENDPOINT = ENDPOINT_PREFIX + LOCALSTACK_PORT;
+
     public static void startDynamoDB() {
 
         // Localstack's Dynamodb is total crap - fails and requires a restart after a handful of requests.
@@ -58,7 +60,7 @@ public class Localstack {
 
         TestContainers.ensure(ContainerSpec.builder()
                 .image("localstack/localstack:latest")
-                .env("SERVICES=s3,sqs,sns,stepfunctions")
+                .env("SERVICES=s3,sqs,sns,stepfunctions,kms")
                 .env("DEFAULT_REGION=us-east-1")
                 .port(LOCALSTACK_PORT)
                 .waitFor(Pattern.compile("Ready\\."))

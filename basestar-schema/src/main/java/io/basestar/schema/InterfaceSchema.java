@@ -287,6 +287,23 @@ public class InterfaceSchema implements ReferableSchema {
     }
 
     @Override
+    public InstanceSchema resolveExtended(final Name name) {
+
+        if(getQualifiedName().equals(name)) {
+            return this;
+        } else {
+            final Optional<ReferableSchema> schema = getIndirectlyExtended().stream()
+                    .filter(v -> v.getQualifiedName().equals(name))
+                    .findFirst();
+            if(schema.isPresent()) {
+                return schema.get();
+            } else {
+                throw new IllegalStateException(name + " is not a valid subtype of " + getQualifiedName());
+            }
+        }
+    }
+
+    @Override
     public boolean equals(final Object other) {
 
         return other instanceof InterfaceSchema && qualifiedNameEquals(other);
