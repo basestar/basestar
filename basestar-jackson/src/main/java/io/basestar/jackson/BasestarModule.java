@@ -36,11 +36,9 @@ import java.time.LocalDate;
 
 public class BasestarModule extends SimpleModule {
 
-    public static BasestarModule INSTANCE = new BasestarModule(false);
+    public static BasestarModule INSTANCE = new BasestarModule();
 
-    public static BasestarModule WITH_VISIBLE_SECRETS = new BasestarModule(true);
-
-    public BasestarModule(final boolean visibleSecrets) {
+    public BasestarModule() {
 
         super("Basestar", new Version(1, 0, 0, null, null, null));
 
@@ -67,8 +65,8 @@ public class BasestarModule extends SimpleModule {
         addSerializer(Page.Token.class, toString);
         addDeserializer(Page.Token.class, new PagingTokenDeserializer());
 
-        addSerializer(Secret.class, new SecretSerializer(visibleSecrets));
-        addDeserializer(Secret.class, new SecretDeserializer(visibleSecrets));
+        addSerializer(Secret.class, new SecretSerializer());
+        addDeserializer(Secret.class, new SecretDeserializer());
 
         addSerializer(Enum.class, new EnumSerializer());
         addDeserializer(Enum.class, new EnumDeserializer());

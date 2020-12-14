@@ -11,6 +11,8 @@ import java.util.Map;
 
 public class AnyCoercing implements Coercing<Object, Object> {
 
+    public static AnyCoercing INSTANCE = new AnyCoercing();
+
     @Override
     public Object serialize(final Object input) throws CoercingSerializeException {
 
@@ -20,7 +22,7 @@ public class AnyCoercing implements Coercing<Object, Object> {
     @Override
     public Object parseValue(final Object input) throws CoercingParseValueException {
 
-        return GraphQLUtils.fromValue(input, Collections.emptyMap());
+        return input;
     }
 
     @Override
@@ -32,6 +34,6 @@ public class AnyCoercing implements Coercing<Object, Object> {
     @Override
     public Object parseLiteral(final Object input, final Map<String, Object> variables) throws CoercingParseLiteralException {
 
-        return GraphQLUtils.fromValue(input, variables);
+        return parseValue(GraphQLUtils.fromValue(input, variables));
     }
 }

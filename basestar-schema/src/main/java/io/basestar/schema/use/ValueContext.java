@@ -8,7 +8,6 @@ import io.basestar.schema.*;
 import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.secret.Secret;
-import io.basestar.secret.SecretContext;
 import io.basestar.util.ISO8601;
 import io.basestar.util.Name;
 import io.basestar.util.Page;
@@ -35,16 +34,6 @@ public interface ValueContext {
     static ValueContext standardOrSuppressing(boolean suppress) {
 
         return suppress ? ValueContext.suppressing() : ValueContext.standard();
-    }
-
-    static ValueContext encrypting(final SecretContext secretContext) {
-
-        return new Encrypting(secretContext);
-    }
-
-    static ValueContext decrypting(final SecretContext secretContext) {
-
-        return new Decrypting(secretContext);
     }
 
     Object createAny(UseAny type, Object value, Set<Name> expand);
@@ -464,52 +453,6 @@ public interface ValueContext {
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
                 log.warn("Suppressing type conversion error", e);
                 return null;
-            }
-        }
-    }
-
-    class Encrypting extends Standard {
-
-        private final SecretContext secretContext;
-
-        public Encrypting(final SecretContext secretContext) {
-
-            this.secretContext = secretContext;
-        }
-
-        @Override
-        public Secret createSecret(final UseSecret secret, final Object value, final Set<Name> expand) {
-
-            if(value instanceof Secret.Plaintext) {
-                return secretContext.encrypt((Secret.Plaintext)value).join();
-            } else if(value instanceof String) {
-                return secretContext.encrypt(Secret.plaintext((String) value)).join();
-            } else {
-                throw new TypeConversionException(Secret.class, "<redacted>");
-            }
-        }
-    }
-
-    class Decrypting extends Standard {
-
-        private final SecretContext secretContext;
-
-        public Decrypting(final SecretContext secretContext) {
-
-            this.secretContext = secretContext;
-        }
-
-        @Override
-        public Secret createSecret(final UseSecret secret, final Object value, final Set<Name> expand) {
-
-            if(value instanceof Secret.Encrypted) {
-                return secretContext.decrypt((Secret.Encrypted) value).join();
-            } else if(value instanceof byte[]) {
-                return secretContext.decrypt(Secret.encrypted((byte[])value)).join();
-            } else if(value instanceof String) {
-                return secretContext.decrypt(Secret.encrypted((String)value)).join();
-            } else {
-                throw new TypeConversionException(Secret.class, "<redacted>");
             }
         }
     }

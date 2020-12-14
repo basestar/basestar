@@ -120,6 +120,12 @@ public interface GraphQLStrategy {
 
     String anyTypeName();
 
+    String dateTypeName();
+
+    String dateTimeTypeName();
+
+    String secretTypeName();
+
     default GraphQLRequestTransform requestTransform() {
 
         return new GraphQLRequestTransform.Default(this);
@@ -129,6 +135,8 @@ public interface GraphQLStrategy {
 
         return new GraphQLResponseTransform.Default(this);
     }
+
+    String binaryTypeName();
 
     class Default implements GraphQLStrategy {
 
@@ -400,6 +408,30 @@ public interface GraphQLStrategy {
         public String anyTypeName() {
 
             return "Any";
+        }
+
+        @Override
+        public String dateTypeName() {
+
+            return "Date";
+        }
+
+        @Override
+        public String dateTimeTypeName() {
+
+            return "DateTime";
+        }
+
+        @Override
+        public String secretTypeName() {
+
+            return "Secret";
+        }
+
+        @Override
+        public String binaryTypeName() {
+
+            return "Binary";
         }
 
         protected final Use.Visitor<String> typeNameVisitor = new Use.Visitor.Defaulting<String>() {

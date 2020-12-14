@@ -152,7 +152,7 @@ class TestDatabaseServer {
         };
         this.database = DatabaseServer.builder()
                 .namespace(namespace).storage(storage)
-                .emitter(emitter).secretContext(secretContext).build();
+                .emitter(emitter).build();
         this.caller = Mockito.mock(Caller.class);
     }
 
@@ -962,7 +962,7 @@ class TestDatabaseServer {
                 .schema(USER)
                 .id(id)
                 .data(ImmutableMap.of(
-                        "password", "drowssap"
+                        "password", Secret.encrypted("ABC")
                 ))
                 .build()).get();
 
@@ -972,7 +972,7 @@ class TestDatabaseServer {
                 .build()).get();
 
         assertEquals(
-                Secret.plaintext("drowssap"),
+                Secret.encrypted("ABC"),
                 Instance.<Secret>get(read, Name.parse("password"))
         );
     }

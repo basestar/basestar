@@ -107,5 +107,10 @@ public interface Secret {
 
             throw new IllegalStateException("Will not process unencrypted secret");
         }
+
+        public String plaintextString() {
+
+            return new String(plaintext, StandardCharsets.UTF_8);
+        }
     }
 }

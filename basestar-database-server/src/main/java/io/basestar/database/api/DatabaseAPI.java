@@ -59,6 +59,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 // FIXME: move to new module
+// TODO: implement secret handling
 
 public class DatabaseAPI implements API {
 
