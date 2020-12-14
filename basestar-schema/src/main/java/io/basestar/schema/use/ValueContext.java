@@ -1,5 +1,6 @@
 package io.basestar.schema.use;
 
+import io.basestar.exception.InvalidDateException;
 import io.basestar.exception.InvalidDateTimeException;
 import io.basestar.expression.type.Values;
 import io.basestar.expression.type.exception.TypeConversionException;
@@ -92,7 +93,7 @@ public interface ValueContext {
             }
             try {
                 return ISO8601.toDate(value);
-            } catch (final InvalidDateTimeException e) {
+            } catch (final InvalidDateException e) {
                 throw new TypeConversionException(LocalDate.class, value);
             }
         }

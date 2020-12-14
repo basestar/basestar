@@ -187,6 +187,7 @@ public class GraphQLAdaptor {
             final String id = env.getArgument(strategy.idArgumentName());
             final Page.Token paging = paging(env);
             final Integer count = count(env);
+            final List<Sort> sort = sort(env);
             final Set<Page.Stat> stats = stats(env);
             final QueryLinkOptions options = QueryLinkOptions.builder()
                     .schema(schema.getQualifiedName())
@@ -196,6 +197,7 @@ public class GraphQLAdaptor {
                     .paging(paging)
                     .count(count)
                     .stats(stats)
+                    .sort(sort)
                     .build();
             return database.queryLink(caller, options)
                     .thenApply(result -> responseTransform.toResponsePage(linkSchema, result));

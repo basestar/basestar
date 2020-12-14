@@ -156,12 +156,7 @@ public class SchemaAdaptor {
         builder.type(new TypeName(strategy.pageTypeName(schema)));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(strategy.queryArgumentName()).type(new TypeName(GraphQLUtils.STRING_TYPE)).build());
-        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(strategy.sortArgumentName()).type(new ListType(new TypeName(GraphQLUtils.STRING_TYPE))).build());
-        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(strategy.countArgumentName()).type(new TypeName(GraphQLUtils.INT_TYPE)).build());
-        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(strategy.pagingArgumentName()).type(new TypeName(GraphQLUtils.STRING_TYPE)).build());
+        addQueryArguments(builder);
         return builder.build();
     }
 
@@ -172,11 +167,18 @@ public class SchemaAdaptor {
         builder.type(new TypeName(strategy.pageTypeName(link.getSchema())));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(strategy.idArgumentName()).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build());
+        addQueryArguments(builder);
+        return builder.build();
+    }
+
+    private void addQueryArguments(final FieldDefinition.Builder builder) {
+
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name(strategy.sortArgumentName()).type(new ListType(new TypeName(GraphQLUtils.STRING_TYPE))).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(strategy.countArgumentName()).type(new TypeName(GraphQLUtils.INT_TYPE)).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(strategy.pagingArgumentName()).type(new TypeName(GraphQLUtils.STRING_TYPE)).build());
-        return builder.build();
     }
 
     private ObjectTypeDefinition mutationDefinition() {
