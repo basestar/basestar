@@ -186,4 +186,18 @@ public class Text {
             return Long.parseLong(str);
         }
     }
+
+    public static String indent(final String input) {
+
+        return indent(input, "\t");
+    }
+
+    public static String indent(final String input, final String using) {
+
+        if(input.isEmpty()) {
+            return input;
+        } else {
+            return using + input.replaceAll("\n", "\n" + using);
+        }
+    }
 }

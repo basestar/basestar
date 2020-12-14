@@ -21,19 +21,14 @@ package io.basestar.graphql;
  */
 
 import com.google.common.collect.ImmutableSet;
-import com.google.common.io.BaseEncoding;
 import graphql.GraphQLContext;
-import graphql.execution.ExecutionContext;
 import graphql.language.*;
 import io.basestar.auth.Caller;
-import io.basestar.expression.type.Values;
 import io.basestar.graphql.subscription.SubscriberContext;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import io.basestar.util.Name;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -59,8 +54,6 @@ public class GraphQLUtils {
     public static final String MUTATION_TYPE = "Mutation";
 
     public static final String SUBSCRIPTION_TYPE = "Subscription";
-
-    private static final SelectionSet EMPTY_SELECTION = SelectionSet.newSelectionSet().build();
 
     private GraphQLUtils() {
 
@@ -139,654 +132,10 @@ public class GraphQLUtils {
         });
     }
 
-    public static Map<String, Object> fromRequest(final InstanceSchema schema, final Map<String, Object> input) {
-
-        if (input == null) {
-            return null;
-        } else {
-            final Map<String, Object> result = new HashMap<>();
-            schema.getProperties().forEach((k, prop) -> {
-                if (input.containsKey(k)) {
-                    result.put(k, fromRequest(prop.getType(), input.get(k)));
-                }
-            });
-            return result;
-        }
-    }
-
-    protected static Object fromRequest(final Use<?> type, final Object value) {
-
-        if (value == null) {
-            return null;
-        } else {
-            return type.visit(new Use.Visitor.Defaulting<Object>() {
-
-                @Override
-                public <T> Object visitDefault(final Use<T> type) {
-
-                    return type.create(value);
-                }
-
-                @Override
-                public <T> Object visitArray(final UseArray<T> type) {
-
-                    return ((Collection<?>) value).stream()
-                            .map(v -> fromRequest(type.getType(), v))
-                            .collect(Collectors.toList());
-                }
-
-                @Override
-                public <T> Object visitSet(final UseSet<T> type) {
-
-                    return ((Collection<?>) value).stream()
-                            .map(v -> fromRequest(type.getType(), v))
-                            .collect(Collectors.toSet());
-                }
-
-                @Override
-                @SuppressWarnings("unchecked")
-                public <T> Object visitMap(final UseMap<T> type) {
-
-                    final Map<String, Object> result = new HashMap<>();
-                    ((Collection<Map<String, ?>>) value).forEach(v -> {
-                        final String key = (String) v.get(GraphQLUtils.MAP_KEY);
-                        final Object value = fromRequest(type.getType(), v.get(GraphQLUtils.MAP_VALUE));
-                        result.put(key, value);
-                    });
-                    return result;
-                }
-
-                @Override
-                @SuppressWarnings("unchecked")
-                public Object visitStruct(final UseStruct type) {
-
-                    return fromRequest(type.getSchema(), (Map<String, Object>) value);
-                }
-
-                @Override
-                public Object visitBinary(final UseBinary type) {
-
-                    return type.create(BaseEncoding.base64().decode(value.toString()));
-                }
-
-                @Override
-                public Object visitAny(final UseAny type) {
-
-                    return value;
-                }
-            });
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    public static Map<String, Object> toResponse(final Namespace namespace, final InstanceSchema schema, final Map<String, Object> input) {
-
-        if (input == null) {
-            return null;
-        } else {
-            final InstanceSchema resolvedSchema;
-            final Name schemaName = Instance.getSchema(input);
-            if (schemaName != null) {
-                resolvedSchema = namespace.requireInstanceSchema(schemaName);
-            } else {
-                resolvedSchema = schema;
-            }
-            final Map<String, Object> result = new HashMap<>();
-            resolvedSchema.metadataSchema().forEach((k, use) -> result.put(k, toResponse(namespace, use, input.get(k))));
-            resolvedSchema.getProperties().forEach((k, prop) -> result.put(k, toResponse(namespace, prop.getType(), input.get(k))));
-            if (resolvedSchema instanceof Transient.Resolver) {
-                ((Transient.Resolver) resolvedSchema).getTransients()
-                        .forEach((k, prop) -> result.put(k, toResponse(namespace, prop.getType(), input.get(k))));
-            }
-            if (resolvedSchema instanceof Link.Resolver) {
-                ((Link.Resolver) resolvedSchema).getLinks().forEach((k, link) -> {
-                    final List<Map<String, Object>> values = (List<Map<String, Object>>) input.get(k);
-                    if (values != null) {
-                        result.put(k, values.stream().map(value -> toResponse(namespace, link.getSchema(), value))
-                                .collect(Collectors.toList()));
-                    }
-                });
-            }
-            return result;
-        }
-    }
-
-    public static Object toResponse(final Namespace namespace, final Use<?> type, final Object value) {
-
-        if (value == null) {
-            return null;
-        } else {
-            return type.visit(new Use.Visitor.Defaulting<Object>() {
-
-                @Override
-                public <T> Object visitDefault(final Use<T> type) {
-
-                    return type.create(value);
-                }
-
-                @Override
-                @SuppressWarnings("unchecked")
-                public Object visitRef(final UseRef type) {
-
-                    return toResponse(namespace, type.getSchema(), (Map<String, Object>) value);
-                }
-
-                @Override
-                public <T> Object visitArray(final UseArray<T> type) {
-
-                    return ((Collection<?>) value).stream()
-                            .map(v -> toResponse(namespace, type.getType(), v))
-                            .collect(Collectors.toList());
-                }
-
-                @Override
-                public <T> Object visitSet(final UseSet<T> type) {
-
-                    return ((Collection<?>) value).stream()
-                            .map(v -> toResponse(namespace, type.getType(), v))
-                            .collect(Collectors.toSet());
-                }
-
-                @Override
-                @SuppressWarnings("unchecked")
-                public <T> Object visitMap(final UseMap<T> type) {
-
-                    return ((Map<String, ?>) value).entrySet().stream()
-                            .map(e -> {
-                                final Map<String, Object> result = new HashMap<>();
-                                result.put(MAP_KEY, e.getKey());
-                                result.put(MAP_VALUE, toResponse(namespace, type.getType(), e.getValue()));
-                                return result;
-                            })
-                            .collect(Collectors.toList());
-                }
-
-                @Override
-                @SuppressWarnings("unchecked")
-                public Object visitStruct(final UseStruct type) {
-
-                    return toResponse(namespace, type.getSchema(), (Map<String, Object>) value);
-                }
-
-                @Override
-                public Object visitBinary(final UseBinary type) {
-
-                    return BaseEncoding.base64().encode(type.create(value));
-                }
-
-                @Override
-                public <T> Object visitStringLike(final UseStringLike<T> type) {
-
-                    return type.toString(type.create(value));
-                }
-
-                @Override
-                public Object visitAny(final UseAny type) {
-
-                    return value;
-                }
-            });
-        }
-    }
-
-    public static Map<String, Object> fromInput(final ExecutionContext context, final InstanceSchema schema, final ObjectValue input) {
-
-        if (input == null) {
-            return null;
-        } else {
-            final Map<String, Object> result = new HashMap<>();
-            schema.getProperties().forEach((k, prop) -> result.put(k, fromInput(context, prop.getType(), get(input, k))));
-            return result;
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    public static <T> T fromInput(final ExecutionContext context, final Use<T> type, final Value<?> value) {
-
-        if (value == null) {
-            return null;
-        } else if (value instanceof VariableReference) {
-
-            final String name = ((VariableReference) value).getName();
-            return fromInput(type, context.getVariables().get(name));
-
-        } else {
-
-            return (T) type.visit(new Use.Visitor.Defaulting<Object>() {
-                @Override
-                public Object visitBoolean(final UseBoolean type) {
-
-                    if (value instanceof BooleanValue) {
-                        return ((BooleanValue) value).isValue();
-                    } else {
-                        throw new IllegalStateException();
-                    }
-                }
-
-                @Override
-                public Object visitInteger(final UseInteger type) {
-
-                    if (value instanceof IntValue) {
-                        return ((IntValue) value).getValue().longValue();
-                    } else if (value instanceof FloatValue) {
-                        return ((FloatValue) value).getValue().longValue();
-                    } else {
-                        throw new IllegalStateException();
-                    }
-                }
-
-                @Override
-                public Object visitNumber(final UseNumber type) {
-
-                    if (value instanceof IntValue) {
-                        return ((IntValue) value).getValue().doubleValue();
-                    } else if (value instanceof FloatValue) {
-                        return ((FloatValue) value).getValue().doubleValue();
-                    } else {
-                        throw new IllegalStateException();
-                    }
-                }
-
-                @Override
-                public Object visitString(final UseString type) {
-
-                    if (value instanceof StringValue) {
-                        return ((StringValue) value).getValue();
-                    } else {
-                        throw new IllegalStateException();
-                    }
-                }
-
-                @Override
-                public Object visitEnum(final UseEnum type) {
-
-                    if (value instanceof EnumValue) {
-                        return ((EnumValue) value).getName();
-                    } else {
-                        throw new IllegalStateException();
-                    }
-                }
-
-                @Override
-                public Object visitRef(final UseRef type) {
-
-                    if (value instanceof ObjectValue) {
-                        final String id = fromInput(context, UseString.DEFAULT, get((ObjectValue) value, ObjectSchema.ID));
-                        return ReferableSchema.ref(id);
-                    } else {
-                        throw new IllegalStateException();
-                    }
-                }
-
-                @Override
-                public <T2> Object visitArray(final UseArray<T2> type) {
-
-                    if (value instanceof ArrayValue) {
-                        return ((ArrayValue) value).getValues().stream()
-                                .map(v -> fromInput(context, type.getType(), v))
-                                .collect(Collectors.toList());
-                    } else {
-                        throw new IllegalStateException();
-                    }
-                }
-
-                @Override
-                public <T2> Object visitSet(final UseSet<T2> type) {
-
-                    if (value instanceof ArrayValue) {
-                        return ((ArrayValue) value).getValues().stream()
-                                .map(v -> fromInput(context, type.getType(), v))
-                                .collect(Collectors.toSet());
-                    } else {
-                        throw new IllegalStateException();
-                    }
-                }
-
-                @Override
-                public <T2> Object visitMap(final UseMap<T2> type) {
-
-                    if (value instanceof ArrayValue) {
-                        final Map<String, Object> result = new HashMap<>();
-                        ((ArrayValue) value).getValues().forEach(v -> {
-                            final ObjectValue entry = (ObjectValue) v;
-                            final Value<?> keyValue = get(entry, GraphQLUtils.MAP_KEY);
-                            final String key = ((StringValue) keyValue).getValue();
-                            final Object value = fromInput(context, type.getType(), get(entry, GraphQLUtils.MAP_VALUE));
-                            result.put(key, value);
-                        });
-                        return result;
-                    } else {
-                        throw new IllegalStateException();
-                    }
-                }
-
-                @Override
-                public Object visitStruct(final UseStruct type) {
-
-                    if (value instanceof ObjectValue) {
-                        return fromInput(context, type.getSchema(), (ObjectValue) value);
-                    } else {
-                        throw new IllegalStateException();
-                    }
-                }
-
-                @Override
-                public Object visitView(final UseView type) {
-
-                    if (value instanceof ObjectValue) {
-                        return fromInput(context, type.getSchema(), (ObjectValue) value);
-                    } else {
-                        throw new IllegalStateException();
-                    }
-                }
-
-                @Override
-                public Object visitBinary(final UseBinary type) {
-
-                    if (value instanceof StringValue) {
-                        return BaseEncoding.base64().decode(((StringValue) value).getValue());
-                    } else {
-                        throw new IllegalStateException();
-                    }
-                }
-
-                @Override
-                public <T2> Object visitStringLike(final UseStringLike<T2> type) {
-
-                    if (value instanceof StringValue) {
-                        return type.create(((StringValue) value).getValue());
-                    } else {
-                        throw new IllegalStateException();
-                    }
-                }
-
-                @Override
-                public Object visitAny(final UseAny type) {
-
-                    return value;
-                }
-            });
-        }
-    }
-
-    public static Map<String, Object> fromInput(final InstanceSchema schema, final Map<String, Object> input) {
-
-        if (input == null) {
-            return null;
-        } else {
-            final Map<String, Object> result = new HashMap<>();
-            schema.getProperties().forEach((k, prop) -> result.put(k, fromInput(prop.getType(), input.get(k))));
-            return result;
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    public static <T> T fromInput(final Use<T> type, final Object value) {
-
-        if (value == null) {
-            return null;
-        } else {
-
-            return (T) type.visit(new Use.Visitor.Defaulting<Object>() {
-
-                @Override
-                public <T2> Object visitDefault(final Use<T2> type) {
-
-                    return type.create(value);
-                }
-
-                @Override
-                @SuppressWarnings("unchecked")
-                public Object visitRef(final UseRef type) {
-
-                    if (value instanceof Map) {
-                        return ReferableSchema.ref(Instance.getId((Map<String, Object>) value));
-                    } else {
-                        throw new IllegalStateException();
-                    }
-                }
-
-                @Override
-                public <T2> Object visitArray(final UseArray<T2> type) {
-
-                    if (value instanceof Collection) {
-                        return ((Collection<?>) value).stream()
-                                .map(v -> fromInput(type.getType(), v))
-                                .collect(Collectors.toList());
-                    } else {
-                        throw new IllegalStateException();
-                    }
-                }
-
-                @Override
-                public <T2> Object visitSet(final UseSet<T2> type) {
-
-                    if (value instanceof Collection) {
-                        return ((Collection<?>) value).stream()
-                                .map(v -> fromInput(type.getType(), v))
-                                .collect(Collectors.toList());
-                    } else {
-                        throw new IllegalStateException();
-                    }
-                }
-
-                @Override
-                @SuppressWarnings("unchecked")
-                public <T2> Object visitMap(final UseMap<T2> type) {
-
-                    if (value instanceof Collection) {
-                        final Map<String, Object> result = new HashMap<>();
-                        ((Collection<Map<String, ?>>) value).forEach(entry -> {
-                            final String key = (String) entry.get(GraphQLUtils.MAP_KEY);
-                            final Object value = fromInput(type.getType(), entry.get(GraphQLUtils.MAP_VALUE));
-                            result.put(key, value);
-                        });
-                        return result;
-                    } else {
-                        throw new IllegalStateException();
-                    }
-                }
-
-                @Override
-                @SuppressWarnings("unchecked")
-                public Object visitStruct(final UseStruct type) {
-
-                    if (value instanceof Map) {
-                        return fromInput(type.getSchema(), (Map<String, Object>) value);
-                    } else {
-                        throw new IllegalStateException();
-                    }
-                }
-
-                @Override
-                @SuppressWarnings("unchecked")
-                public Object visitView(final UseView type) {
-
-                    if (value instanceof Map) {
-                        return fromInput(type.getSchema(), (Map<String, Object>) value);
-                    } else {
-                        throw new IllegalStateException();
-                    }
-                }
-
-                @Override
-                public Object visitBinary(final UseBinary type) {
-
-                    if (value instanceof String) {
-                        return BaseEncoding.base64().decode((String) value);
-                    } else {
-                        throw new IllegalStateException();
-                    }
-                }
-            });
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    public static Map<String, Object> toResponse(final InstanceSchema schema, final SelectionSet selections, final Map<String, Object> input) {
-
-        if (input == null) {
-            return null;
-        } else {
-            final Map<String, Object> result = new HashMap<>();
-
-            schema.metadataSchema().forEach((k, use) -> {
-                if (selected(selections, k)) {
-                    result.put(k, toResponse(use, select(selections, k), input.get(k)));
-                }
-            });
-            schema.getProperties().forEach((k, prop) -> {
-                if (selected(selections, k)) {
-                    result.put(k, toResponse(prop.getType(), select(selections, k), input.get(k)));
-                }
-            });
-            if (schema instanceof Link.Resolver) {
-                ((Link.Resolver) schema).getLinks().forEach((k, link) -> {
-                    if (selected(selections, k)) {
-                        final List<Map<String, Object>> values = (List<Map<String, Object>>) input.get(k);
-                        if (values != null) {
-                            result.put(k, values.stream().map(value -> toResponse(link.getSchema(), select(selections, k), value))
-                                    .collect(Collectors.toList()));
-                        }
-                    }
-                });
-            }
-            return result;
-        }
-    }
-
-    public static Object toResponse(final Use<?> type, final SelectionSet selections, final Object value) {
-
-        if (value == null) {
-            return null;
-        } else {
-            return type.visit(new Use.Visitor.Defaulting<Object>() {
-
-                @Override
-                public <T> Object visitDefault(final Use<T> type) {
-
-                    return type.create(value);
-                }
-
-                @Override
-                @SuppressWarnings("unchecked")
-                public Object visitRef(final UseRef type) {
-
-                    return toResponse(type.getSchema(), selections, (Map<String, Object>) value);
-                }
-
-                @Override
-                public <T> Object visitArray(final UseArray<T> type) {
-
-                    return ((Collection<?>) value).stream()
-                            .map(v -> toResponse(type.getType(), selections, v))
-                            .collect(Collectors.toList());
-                }
-
-                @Override
-                public <T> Object visitSet(final UseSet<T> type) {
-
-                    return ((Collection<?>) value).stream()
-                            .map(v -> toResponse(type.getType(), selections, v))
-                            .collect(Collectors.toSet());
-                }
-
-                @Override
-                @SuppressWarnings("unchecked")
-                public <T> Object visitMap(final UseMap<T> type) {
-
-                    return ((Map<String, ?>) value).entrySet().stream()
-                            .map(e -> {
-                                final Map<String, Object> result = new HashMap<>();
-                                if (selected(selections, MAP_KEY)) {
-                                    result.put(MAP_KEY, e.getKey());
-                                }
-                                if (selected(selections, MAP_VALUE)) {
-                                    result.put(MAP_VALUE, toResponse(type.getType(), select(selections, MAP_VALUE), e.getValue()));
-                                }
-                                return result;
-                            })
-                            .collect(Collectors.toList());
-                }
-
-                @Override
-                @SuppressWarnings("unchecked")
-                public Object visitStruct(final UseStruct type) {
-
-                    return toResponse(type.getSchema(), selections, (Map<String, Object>) value);
-                }
-
-                @Override
-                @SuppressWarnings("unchecked")
-                public Object visitView(final UseView type) {
-
-                    return toResponse(type.getSchema(), selections, (Map<String, Object>) value);
-                }
-
-                @Override
-                public Object visitBinary(final UseBinary type) {
-
-                    return BaseEncoding.base64().encode(type.create(value));
-                }
-
-                @Override
-                public <T> Object visitStringLike(final UseStringLike<T> type) {
-
-                    return type.create(value).toString();
-                }
-
-                @Override
-                public Object visitAny(final UseAny type) {
-
-                    return value;
-                }
-            });
-        }
-    }
-
-    public static Value<?> argValue(final Field field, final String name) {
-
-        final Argument arg = arg(field, name);
-        return arg == null ? null : arg.getValue();
-    }
-
     public static Argument arg(final Field field, final String name) {
 
         return field.getArguments().stream().filter(v -> v.getName().equals(name))
                 .findFirst().orElse(null);
-    }
-
-    public static Value<?> get(final ObjectValue input, final String name) {
-
-        return input.getObjectFields().stream()
-                .filter(v -> v.getName().equals(name))
-                .map(ObjectField::getValue)
-                .findFirst().orElse(null);
-    }
-
-    private static SelectionSet select(final SelectionSet selections, final String k) {
-
-        for (final Selection<?> v : selections.getSelections()) {
-            if (v instanceof Field && ((Field) v).getName().equals(k)) {
-                return ((Field) v).getSelectionSet();
-            }
-        }
-        return EMPTY_SELECTION;
-    }
-
-    private static boolean selected(final SelectionSet selections, final String k) {
-
-        if (selections == null) {
-            return false;
-        } else {
-            return selections.getSelections().stream().anyMatch(v -> {
-                if (v instanceof Field) {
-                    return k.equals(((Field) v).getName());
-                } else {
-                    return false;
-                }
-            });
-        }
     }
 
     public static Caller caller(final GraphQLContext context) {
@@ -810,6 +159,7 @@ public class GraphQLUtils {
         }
         throw new IllegalStateException("Subscription not available");
     }
+
 
     public static Object fromValue(final Object value, final Map<String, Object> variables) {
 
@@ -849,37 +199,7 @@ public class GraphQLUtils {
         }
     }
 
-    public static Value<?> toValue(final Object value) {
-
-        if (value instanceof Value<?>) {
-            return (Value<?>) value;
-        } else if (value == null) {
-            return NullValue.newNullValue().build();
-        } else if (value instanceof Map<?, ?>) {
-            return ObjectValue.newObjectValue().objectFields(((Map<?, ?>) value).entrySet().stream()
-                    .map(e -> ObjectField.newObjectField().name((String) e.getKey()).value(toValue(e.getValue())).build())
-                    .collect(Collectors.toList())).build();
-        } else if (value instanceof Collection<?>) {
-            return ArrayValue.newArrayValue().values(((Collection<?>) value).stream()
-                    .map(GraphQLUtils::toValue)
-                    .collect(Collectors.toList())).build();
-        } else if (value instanceof String) {
-            return StringValue.newStringValue((String) value).build();
-        } else if (value instanceof Boolean) {
-            return BooleanValue.newBooleanValue((Boolean) value).build();
-        } else if (value instanceof Number) {
-            final Number number = (Number) value;
-            if (Values.isInteger((number))) {
-                return IntValue.newIntValue(BigInteger.valueOf(number.longValue())).build();
-            } else {
-                return FloatValue.newFloatValue(BigDecimal.valueOf(number.doubleValue())).build();
-            }
-        } else {
-            throw new UnsupportedOperationException("Cannot understand " + value.getClass());
-        }
-    }
-
-    public static Set<Name> expand(final Namespace namespace, final InstanceSchema schema, final SelectionSet selections) {
+    public static Set<Name> expand(final GraphQLStrategy strategy, final Namespace namespace, final InstanceSchema schema, final SelectionSet selections) {
 
         if (selections == null || selections.getSelections() == null) {
             return Collections.emptySet();
@@ -891,7 +211,7 @@ public class GraphQLUtils {
                         final Name name = Name.of(field.getName());
                         final Member member = schema.getMember(field.getName(), true);
                         if(member != null) {
-                            final Stream<Name> result = expand(namespace, member.getType(), field.getSelectionSet()).stream().map(name::with);
+                            final Stream<Name> result = expand(strategy, namespace, member.getType(), field.getSelectionSet()).stream().map(name::with);
                             if(member instanceof Transient) {
                                 return Stream.concat(Stream.of(name), result);
                             } else {
@@ -905,9 +225,9 @@ public class GraphQLUtils {
                         if(fragment.getTypeCondition() != null) {
                             final String name = fragment.getTypeCondition().getName();
                             final InstanceSchema resolvedSchema = namespace.requireInstanceSchema(name);
-                            return expand(namespace, resolvedSchema, fragment.getSelectionSet()).stream();
+                            return expand(strategy, namespace, resolvedSchema, fragment.getSelectionSet()).stream();
                         } else {
-                            return expand(namespace, schema, fragment.getSelectionSet()).stream();
+                            return expand(strategy, namespace, schema, fragment.getSelectionSet()).stream();
                         }
                     } else {
                         return Stream.empty();
@@ -917,7 +237,7 @@ public class GraphQLUtils {
                 .collect(Collectors.toSet());
     }
 
-    public static Set<Name> expand(final Namespace namespace, final Use<?> type, final SelectionSet selections) {
+    public static Set<Name> expand(final GraphQLStrategy strategy, final Namespace namespace, final Use<?> type, final SelectionSet selections) {
 
         return type.visit(new Use.Visitor.Defaulting<Set<Name>>() {
 
@@ -932,7 +252,18 @@ public class GraphQLUtils {
 
                 final Field field = findField(selections, GraphQLUtils.MAP_VALUE);
                 if(field != null) {
-                    return expand(namespace, type.getType(), field.getSelectionSet());
+                    return expand(strategy, namespace, type.getType(), field.getSelectionSet());
+                } else {
+                    return Collections.emptySet();
+                }
+            }
+
+            @Override
+            public <T> Set<Name> visitPage(final UsePage<T> type) {
+
+                final Field field = findField(selections, strategy.pageItemsFieldName());
+                if(field != null) {
+                    return expand(strategy, namespace, type.getType(), field.getSelectionSet());
                 } else {
                     return Collections.emptySet();
                 }
@@ -941,7 +272,7 @@ public class GraphQLUtils {
             @Override
             public <V, T extends Collection<V>> Set<Name> visitCollection(final UseCollection<V, T> type) {
 
-                return expand(namespace, type.getType(), selections);
+                return expand(strategy, namespace, type.getType(), selections);
             }
 
             @Override
@@ -949,7 +280,7 @@ public class GraphQLUtils {
 
                 final Set<Name> result = new HashSet<>();
                 result.add(Name.empty());
-                result.addAll(expand(namespace, type.getSchema(), selections));
+                result.addAll(expand(strategy, namespace, type.getSchema(), selections));
                 return result;
             }
         });

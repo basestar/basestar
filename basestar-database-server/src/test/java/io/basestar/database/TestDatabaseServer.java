@@ -51,7 +51,6 @@ import io.basestar.util.Name;
 import io.basestar.util.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.mockito.ArgumentCaptor;
@@ -140,15 +139,15 @@ class TestDatabaseServer {
         this.storage = MemoryStorage.builder().build();
         final SecretContext secretContext = new SecretContext() {
             @Override
-            public Secret.Encrypted encrypt(final Secret.Plaintext plaintext) {
+            public CompletableFuture<Secret.Encrypted> encrypt(final Secret.Plaintext plaintext) {
 
-                return Secret.encrypted(plaintext.plaintext());
+                return CompletableFuture.completedFuture(Secret.encrypted(plaintext.plaintext()));
             }
 
             @Override
-            public Secret.Plaintext decrypt(final Secret.Encrypted encrypted) {
+            public CompletableFuture<Secret.Plaintext> decrypt(final Secret.Encrypted encrypted) {
 
-                return Secret.plaintext(encrypted.encrypted());
+                return CompletableFuture.completedFuture(Secret.plaintext(encrypted.encrypted()));
             }
         };
         this.database = DatabaseServer.builder()
@@ -955,7 +954,6 @@ class TestDatabaseServer {
     }
 
     @Test
-    @Disabled
     void testSecret() throws Exception {
 
         final String id = UUID.randomUUID().toString();

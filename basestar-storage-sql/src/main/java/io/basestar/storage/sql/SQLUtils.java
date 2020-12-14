@@ -97,6 +97,12 @@ public class SQLUtils {
             }
 
             @Override
+            public <T> DataType<?> visitPage(final UsePage<T> type) {
+
+                return SQLDataType.LONGVARCHAR;//JSONB;
+            }
+
+            @Override
             public <T> DataType<?> visitSet(final UseSet<T> type) {
 
                 return SQLDataType.LONGVARCHAR;//JSONB;
@@ -218,6 +224,12 @@ public class SQLUtils {
 
             @Override
             public <T> String visitArray(final UseArray<T> type) {
+
+                return toJson(value);
+            }
+
+            @Override
+            public <T> String visitPage(final UsePage<T> type) {
 
                 return toJson(value);
             }
@@ -369,6 +381,13 @@ public class SQLUtils {
 
             @Override
             public <T> Collection<T> visitArray(final UseArray<T> type) {
+
+                final Collection<?> results = fromJson(value, new TypeReference<Collection<?>>() {});
+                return type.create(results);
+            }
+
+            @Override
+            public <T> Collection<T> visitPage(final UsePage<T> type) {
 
                 final Collection<?> results = fromJson(value, new TypeReference<Collection<?>>() {});
                 return type.create(results);

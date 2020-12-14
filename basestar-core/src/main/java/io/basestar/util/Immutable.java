@@ -83,7 +83,7 @@ public class Immutable {
     }
 
     @Nonnull
-    public static <V> Set<V> copyAddAll(@Nullable final Set<V> s, final Collection<? extends V> vs) {
+    public static <V> Set<V> copyAddAll(@Nullable final Set<V> s, @Nullable final Collection<? extends V> vs) {
 
         if (s == null || s.isEmpty()) {
             if (vs == null) {
@@ -102,7 +102,21 @@ public class Immutable {
     }
 
     @Nonnull
-    public static <V extends Comparable<V>> SortedSet<V> sortedCopyAddAll(@Nullable final Set<V> s, final Collection<? extends V> vs) {
+    public static <V> Set<V> copyRemoveAll(@Nullable final Set<V> s, @Nullable final Collection<? extends V> vs) {
+
+        if (s == null || s.isEmpty()) {
+            return Collections.emptySet();
+        } else {
+            final Set<V> copy = new HashSet<>(s);
+            if(vs != null) {
+                copy.removeAll(vs);
+            }
+            return Collections.unmodifiableSet(copy);
+        }
+    }
+
+    @Nonnull
+    public static <V extends Comparable<V>> SortedSet<V> sortedCopyAddAll(@Nullable final Set<V> s, @Nullable final Collection<? extends V> vs) {
 
         return sortedCopy(copyAddAll(s, vs));
     }

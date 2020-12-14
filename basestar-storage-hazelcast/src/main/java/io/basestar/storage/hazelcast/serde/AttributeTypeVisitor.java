@@ -69,6 +69,12 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
     }
 
     @Override
+    public <T> AttributeType<?> visitPage(final UsePage<T> type) {
+
+        return type.getType().visit(OfArray.INSTANCE);
+    }
+
+    @Override
     public <T> AttributeType<?> visitSet(final UseSet<T> type) {
 
         return type.getType().visit(OfArray.INSTANCE);
@@ -170,6 +176,12 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
 
         @Override
         public <T> AttributeType<?> visitArray(final UseArray<T> type) {
+
+            return AttributeType.encodedArray(type);
+        }
+
+        @Override
+        public <T> AttributeType<?> visitPage(final UsePage<T> type) {
 
             return AttributeType.encodedArray(type);
         }

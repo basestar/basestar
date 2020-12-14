@@ -110,6 +110,15 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         return !getProperties().values().stream().map(Property::isImmutable).reduce(true, (a, b) -> a && b);
     }
 
+    default InstanceSchema resolveExtended(final Name name) {
+
+        if(getQualifiedName().equals(name)) {
+            return this;
+        } else {
+            throw new IllegalStateException(name + " is not a valid subtype of " + getQualifiedName());
+        }
+    }
+
     @Override
     @SuppressWarnings("unchecked")
     default Instance create(final ValueContext context, final Object value, final Set<Name> expand) {

@@ -136,6 +136,12 @@ public class Mappings {
                     }
 
                     @Override
+                    public <T> FieldType visitPage(final UsePage<T> type) {
+
+                        return new FieldType.ArrayType(type.getType().visit(this));
+                    }
+
+                    @Override
                     public <T> FieldType visitSet(final UseSet<T> type) {
 
                         return new FieldType.ArrayType(type.getType().visit(this));

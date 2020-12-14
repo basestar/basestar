@@ -220,6 +220,25 @@ public interface TypeModel {
             }
 
             @Override
+            public <T> TypeModel visitPage(final UsePage<T> type) {
+
+                return new TypeModel() {
+
+                    @Override
+                    public String getName() {
+
+                        return "Page";
+                    }
+
+                    @Override
+                    public TypeModel getType() {
+
+                        return TypeModel.from(context, type.getType());
+                    };
+                };
+            }
+
+            @Override
             public TypeModel visitBinary(final UseBinary type) {
 
                 return () -> "Binary";

@@ -1,25 +1,27 @@
 package io.basestar.secret;
 
+import java.util.concurrent.CompletableFuture;
+
 public interface SecretContext {
 
     static SecretContext none() {
 
         return new SecretContext() {
             @Override
-            public Secret.Encrypted encrypt(final Secret.Plaintext plaintext) {
+            public CompletableFuture<Secret.Encrypted> encrypt(final Secret.Plaintext plaintext) {
 
                 throw new IllegalStateException("Secret context not provided");
             }
 
             @Override
-            public Secret.Plaintext decrypt(final Secret.Encrypted encrypted) {
+            public CompletableFuture<Secret.Plaintext> decrypt(final Secret.Encrypted encrypted) {
 
                 throw new IllegalStateException("Secret context not provided");
             }
         };
     }
 
-    Secret.Encrypted encrypt(Secret.Plaintext plaintext);
+    CompletableFuture<Secret.Encrypted> encrypt(Secret.Plaintext plaintext);
 
-    Secret.Plaintext decrypt(Secret.Encrypted secret);
+    CompletableFuture<Secret.Plaintext> decrypt(Secret.Encrypted secret);
 }

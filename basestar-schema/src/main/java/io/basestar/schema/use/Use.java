@@ -75,7 +75,8 @@ public interface Use<T> extends Serializable {
         DATE,
         DATETIME,
         VIEW,
-        SECRET;
+        SECRET,
+        PAGE;
     }
 
     <R> R visit(Visitor<R> visitor);
@@ -418,6 +419,8 @@ public interface Use<T> extends Serializable {
 
         R visitSecret(UseSecret type);
 
+        <T> R visitPage(UsePage<T> type);
+
         interface Defaulting<R> extends Visitor<R> {
 
             default <T> R visitDefault(final Use<T> type) {
@@ -498,6 +501,12 @@ public interface Use<T> extends Serializable {
 
             @Override
             default <T> R visitArray(final UseArray<T> type) {
+
+                return visitCollection(type);
+            }
+
+            @Override
+            default <T> R visitPage(final UsePage<T> type) {
 
                 return visitCollection(type);
             }

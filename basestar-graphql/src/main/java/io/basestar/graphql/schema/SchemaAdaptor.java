@@ -467,9 +467,7 @@ public class SchemaAdaptor {
                         if(!v.isAlwaysHidden()) {
                             fields.add(FieldDefinition.newFieldDefinition()
                                     .name(k)
-                                    .type(new ListType(new TypeName(strategy.typeName(v.getSchema()))))
-                                    .inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                                            .name(strategy.queryArgumentName()).type(new TypeName(GraphQLUtils.STRING_TYPE)).build())
+                                    .type(new TypeName(strategy.pageTypeName(v.getSchema())))
                                     .build());
                         }
                     });
@@ -601,6 +599,18 @@ public class SchemaAdaptor {
             public <V, T extends Collection<V>> Type<?> visitCollection(final UseCollection<V, T> type) {
 
                 return new ListType(type(type.getType()));
+            }
+
+            @Override
+            public <T> Type<?> visitPage(final UsePage<T> type) {
+
+                final Use<T> itemType = type.getType();
+                if(itemType instanceof UseLinkable) {
+                    final LinkableSchema schema = ((UseLinkable) itemType).getSchema();
+                    return new TypeName(strategy.pageTypeName(schema));
+                } else {
+                    throw new UnsupportedOperationException();
+                }
             }
 
             @Override
