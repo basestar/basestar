@@ -20,6 +20,7 @@ package io.basestar.expression.methods;
  * #L%
  */
 
+import com.google.common.base.CharMatcher;
 import io.basestar.util.ISO8601;
 
 import java.io.Serializable;
@@ -57,6 +58,16 @@ public class StringMethods implements Serializable {
     public String trim(final String target) {
 
         return target.trim();
+    }
+
+    public String trimLeading(final String target) {
+
+        return CharMatcher.whitespace().trimLeadingFrom(target);
+    }
+
+    public String trimTrailing(final String target) {
+
+        return CharMatcher.whitespace().trimTrailingFrom(target);
     }
 
     public LocalDate toDate(final String value, final String format) {
