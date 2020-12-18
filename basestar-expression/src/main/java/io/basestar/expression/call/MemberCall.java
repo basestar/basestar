@@ -28,6 +28,7 @@ import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.Renaming;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.function.Member;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import lombok.Data;
 
@@ -66,7 +67,7 @@ public class MemberCall implements Expression {
 
         this.with = with;
         this.member = member;
-        this.args = args;
+        this.args = Immutable.copy(args);
     }
 
     @Override

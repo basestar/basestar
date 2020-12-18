@@ -1,12 +1,13 @@
 package io.basestar.storage.view;
 
+import io.basestar.schema.Layout;
 import io.basestar.util.Sort;
 import io.basestar.util.Text;
-import lombok.RequiredArgsConstructor;
+import lombok.Data;
 
 import java.util.List;
 
-@RequiredArgsConstructor
+@Data
 public class SortStage implements QueryStage {
 
     private final QueryStage input;
@@ -16,12 +17,18 @@ public class SortStage implements QueryStage {
     @Override
     public String toString() {
 
-        return "- Sort:\n" + Text.indent(input.toString());
+        return "- Sort(using=" + sort + "):\n" + Text.indent(input.toString());
     }
 
     @Override
-    public boolean isSorted() {
+    public Layout outputLayout() {
 
-        return true;
+        return input.outputLayout();
+    }
+
+    @Override
+    public <T> T visit(final Visitor<T> visitor) {
+
+        return visitor.visitSort(this);
     }
 }

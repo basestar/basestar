@@ -9,7 +9,7 @@ import io.basestar.schema.util.Ref;
 import io.basestar.spark.database.SparkDatabase;
 import io.basestar.spark.hadoop.StorageInputFormat;
 import io.basestar.spark.hadoop.StorageProvider;
-import io.basestar.spark.resolver.SchemaResolver;
+import io.basestar.spark.query.QueryResolver;
 import io.basestar.storage.MemoryStorage;
 import io.basestar.storage.Storage;
 import io.basestar.util.Name;
@@ -68,7 +68,7 @@ public class TestStorageIO extends AbstractSparkTest {
 
         final ObjectSchema schemaA = namespace.requireObjectSchema("A");
 
-        final SchemaResolver resolver = new SchemaResolver.Automatic((schema, expand) -> datasets.get(schema.getQualifiedName()));
+        final QueryResolver resolver = new QueryResolver.Automatic(QueryResolver.source(schema -> datasets.get(schema.getQualifiedName())));
 
         final SparkDatabase database = SparkDatabase.builder()
                 .resolver(resolver).namespace(namespace)

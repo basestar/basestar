@@ -244,7 +244,7 @@ public class InterfaceSchema implements ReferableSchema {
         this.description = descriptor.getDescription();
         this.declaredProperties = Immutable.transformValuesSorted(descriptor.getProperties(), (k, v) -> v.build(resolver, version, qualifiedName.with(k)));
         this.properties = Property.extend(extend, declaredProperties);
-        final InferenceContext context = InferenceContext.empty().with(Immutable.transformValues(this.properties, (k, v) -> v.getType()));
+        final InferenceContext context = InferenceContext.from(Immutable.transformValues(this.properties, (k, v) -> v.getType()));
         this.declaredTransients = Immutable.transformValuesSorted(descriptor.getTransients(), (k, v) -> v.build(resolver, context, qualifiedName.with(k)));
         this.transients = Transient.extend(extend, declaredTransients);
         this.declaredLinks = Immutable.transformValuesSorted(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));

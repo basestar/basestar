@@ -36,6 +36,7 @@ import org.apache.spark.sql.Row;
 
 import java.util.Set;
 
+@Deprecated
 public class ExpressionTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
     private final InstanceSchema schema;
@@ -52,7 +53,7 @@ public class ExpressionTransform implements Transform<Dataset<Row>, Dataset<Row>
     @Override
     public Dataset<Row> accept(final Dataset<Row> input) {
 
-        final InferenceContext inferenceContext = new InferenceContext.FromSchema(schema);
+        final InferenceContext inferenceContext = InferenceContext.from(schema);
 
         Dataset<Row> output = input;
         if(schema instanceof ObjectSchema) {

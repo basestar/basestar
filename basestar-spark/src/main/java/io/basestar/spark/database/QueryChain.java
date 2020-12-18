@@ -6,7 +6,6 @@ import com.google.common.collect.Sets;
 import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
 import io.basestar.schema.Reserved;
-import io.basestar.spark.transform.ConformTransform;
 import io.basestar.spark.transform.MarshallTransform;
 import io.basestar.spark.transform.Transform;
 import io.basestar.util.Name;
@@ -62,11 +61,11 @@ public interface QueryChain<T> {
 
     default <T2> QueryChain<T2> as(final Encoder<T2> encoder) {
 
-        final ConformTransform conform = ConformTransform.builder()
-                .structType(encoder.schema()).build();
+//        final ConformTransform conform = ConformTransform.builder()
+//                .structType(encoder.schema()).build();
 
         final QueryChain<T> self = this;
-        return (query, sort, expand) -> conform.accept(self.query(query, sort, expand).toDF()).as(encoder);
+        return (query, sort, expand) -> self.query(query, sort, expand).toDF().as(encoder);
     }
 
     default <T2> QueryChain<T2> as(final Class<T2> marshallAs) {

@@ -5,6 +5,7 @@ import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.aggregate.*;
 import io.basestar.expression.arithmetic.*;
 import io.basestar.expression.bitwise.*;
+import io.basestar.expression.call.Callable;
 import io.basestar.expression.call.LambdaCall;
 import io.basestar.expression.call.MemberCall;
 import io.basestar.expression.compare.*;
@@ -18,10 +19,12 @@ import io.basestar.expression.literal.LiteralSet;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
+import io.basestar.expression.methods.Methods;
 import io.basestar.expression.text.Like;
 import io.basestar.schema.use.*;
 import io.basestar.util.Name;
 
+import java.lang.reflect.Type;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -30,9 +33,17 @@ public class InferenceVisitor implements ExpressionVisitor<Use<?>> {
 
     private final InferenceContext context;
 
+    private final Methods methods;
+
     public InferenceVisitor(final InferenceContext context) {
 
+        this(context, Methods.builder().defaults().build());
+    }
+
+    public InferenceVisitor(final InferenceContext context, final Methods methods) {
+
         this.context = context;
+        this.methods = methods;
     }
 
     @Override
@@ -208,7 +219,7 @@ public class InferenceVisitor implements ExpressionVisitor<Use<?>> {
     public Use<?> visitNameConstant(final NameConstant expression) {
 
         final Name name = expression.getName();
-        return context.typeOfMember(name);
+        return context.typeOf(name);
     }
 
     @Override
@@ -261,7 +272,7 @@ public class InferenceVisitor implements ExpressionVisitor<Use<?>> {
         final String member = expression.getMember();
         final List<Use<?>> args = expression.getArgs().stream()
                 .map(this::visit).collect(Collectors.toList());
-        return context.typeOfCall(with, member, args);
+        return typeOfCall(with, member, args);
     }
 
     @Override
@@ -284,7 +295,7 @@ public class InferenceVisitor implements ExpressionVisitor<Use<?>> {
                 e -> visit(e.getValue())
         ));
         final InferenceContext newContext = context.with(with);
-        return new InferenceVisitor(newContext).visit(expression.getYield());
+        return new InferenceVisitor(newContext, methods).visit(expression.getYield());
     }
 
     @Override
@@ -409,5 +420,12 @@ public class InferenceVisitor implements ExpressionVisitor<Use<?>> {
     public Use<?> visitSum(final Sum expression) {
 
         return visit(expression.getInput());
+    }
+
+    protected Use<?> typeOfCall(final Use<?> target, final String member, final List<Use<?>> args) {
+
+        final Type[] argTypes = args.stream().map(Use::javaType).toArray(Type[]::new);
+        final Callable callable = methods.callable(target.javaType(), member, argTypes);
+        return Use.fromJavaType(callable.type());
     }
 }

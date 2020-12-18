@@ -33,43 +33,48 @@ public interface Expander {
 
     static Expander noop() {
 
-        return new Expander() {
-            @Override
-            public Instance expandRef(final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
-
-                if(ref == null) {
-                    return null;
-                } else {
-                    return schema.expand(ref, this, expand);
-                }
-            }
-
-            @Override
-            public Instance expandVersionedRef(final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
-
-                if(ref == null) {
-                    return null;
-                } else {
-                    return schema.expand(ref, this, expand);
-                }
-            }
-
-            @Override
-            public Page<Instance> expandLink(final Link link, final Page<Instance> value, final Set<Name> expand) {
-
-                if(value == null) {
-                    return null;
-                } else {
-                    final InstanceSchema schema = link.getSchema();
-                    return value.map(v -> v == null ? null : schema.expand(v, this, expand));
-                }
-            }
-        };
+        return Noop.INSTANCE;
     }
 
-    Instance expandRef(ReferableSchema schema, Instance ref, Set<Name> expand);
+    Instance expandRef(Name name, ReferableSchema schema, Instance ref, Set<Name> expand);
 
-    Instance expandVersionedRef(ReferableSchema schema, Instance ref, Set<Name> expand);
+    Instance expandVersionedRef(Name name, ReferableSchema schema, Instance ref, Set<Name> expand);
 
-    Page<Instance> expandLink(Link link, Page<Instance> value, Set<Name> expand);
+    Page<Instance> expandLink(Name name, Link link, Page<Instance> value, Set<Name> expand);
+
+    class Noop implements Expander {
+
+        public static final Noop INSTANCE = new Noop();
+
+        @Override
+        public Instance expandRef(final Name name, final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
+
+            if(ref == null) {
+                return null;
+            } else {
+                return schema.expand(ref, this, expand);
+            }
+        }
+
+        @Override
+        public Instance expandVersionedRef(final Name name, final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
+
+            if(ref == null) {
+                return null;
+            } else {
+                return schema.expand(ref, this, expand);
+            }
+        }
+
+        @Override
+        public Page<Instance> expandLink(final Name name, final Link link, final Page<Instance> value, final Set<Name> expand) {
+
+            if(value == null) {
+                return null;
+            } else {
+                final InstanceSchema schema = link.getSchema();
+                return value.map(v -> v == null ? null : schema.expand(v, this, expand));
+            }
+        }
+    }
 }

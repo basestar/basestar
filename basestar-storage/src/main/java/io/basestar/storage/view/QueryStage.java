@@ -1,20 +1,31 @@
 package io.basestar.storage.view;
 
-import io.basestar.expression.Expression;
-import io.basestar.schema.use.Use;
-import lombok.RequiredArgsConstructor;
+import io.basestar.schema.Layout;
 
 public interface QueryStage {
 
-    boolean isSorted();
+    Layout outputLayout();
 
-    @RequiredArgsConstructor
-    class Field {
+    <T> T visit(Visitor<T> visitor);
 
-        private final Expression expression;
+    interface Visitor<T> {
 
-        private final Use<?> type;
+        T visitAgg(AggStage stage);
+
+        T visitEmpty(EmptyStage stage);
+
+        T visitExpand(ExpandStage stage);
+
+        T visitFilter(FilterStage stage);
+
+        T visitMap(MapStage stage);
+
+        T visitSort(SortStage stage);
+
+        T visitSource(SourceStage stage);
+
+        T visitUnion(UnionStage stage);
+
+        T visitSchema(SchemaStage schemaStage);
     }
-
-
 }

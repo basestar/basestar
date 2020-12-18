@@ -1,6 +1,7 @@
 package io.basestar.storage.view;
 
 import io.basestar.expression.Expression;
+import io.basestar.schema.Layout;
 import io.basestar.util.Text;
 import lombok.Data;
 
@@ -9,17 +10,23 @@ public class FilterStage implements QueryStage {
 
     private final QueryStage input;
 
-    private final Expression filter;
+    private final Expression condition;
 
     @Override
     public String toString() {
 
-        return "- Filter:\n" + Text.indent(input.toString());
+        return "- Filter(condition=" + condition + "):\n" + Text.indent(input.toString());
     }
 
     @Override
-    public boolean isSorted() {
+    public Layout outputLayout() {
 
-        return input.isSorted();
+        return input.outputLayout();
+    }
+
+    @Override
+    public <T> T visit(final Visitor<T> visitor) {
+
+        return visitor.visitFilter(this);
     }
 }

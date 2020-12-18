@@ -1,30 +1,25 @@
 package io.basestar.spark.database;
 
-import io.basestar.expression.Context;
-import io.basestar.expression.Expression;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Namespace;
-import io.basestar.schema.expression.InferenceContext;
-import io.basestar.spark.expression.SparkExpressionVisitor;
-import io.basestar.spark.resolver.ColumnResolver;
-import io.basestar.spark.resolver.SchemaResolver;
-import io.basestar.spark.transform.SortTransform;
+import io.basestar.spark.query.QueryResolver;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
 import javax.annotation.Nullable;
+import java.util.HashSet;
+import java.util.Set;
 
 public class SparkDatabase {
 
-    private final SchemaResolver resolver;
+    private final QueryResolver resolver;
 
     @Nullable
     private final Namespace namespace;
 
     @lombok.Builder(builderClassName = "Builder")
-    SparkDatabase(final SchemaResolver resolver, @Nullable final Namespace namespace) {
+    SparkDatabase(final QueryResolver resolver, @Nullable final Namespace namespace) {
 
         this.resolver = Nullsafe.require(resolver);
         this.namespace = namespace;
@@ -44,7 +39,19 @@ public class SparkDatabase {
 
         return (query, sort, expand) -> {
 
-            final Dataset<Row> input = resolver.resolve(schema, expand);
+            final Set<Name> mergedExpand;
+            if(expand.contains(QueryChain.DEFAULT_EXPAND)) {
+                mergedExpand = new HashSet<>(expand);
+                mergedExpand.remove(QueryChain.DEFAULT_EXPAND);
+                mergedExpand.addAll(schema.getExpand());
+            } else {
+                mergedExpand = expand;
+            }
+
+            return resolver.resolve(schema, query, sort, mergedExpand).result();
+
+
+            /*final Dataset<Row> input = resolver.resolve(schema, expand);
 
             final InferenceContext inferenceContext = new InferenceContext.FromSchema(schema);
 
@@ -64,7 +71,7 @@ public class SparkDatabase {
                 output = transform.accept(output);
             }
 
-            return output;
+            return output;*/
         };
     }
 }

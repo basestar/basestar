@@ -20,6 +20,7 @@ package io.basestar.expression.methods;
  * #L%
  */
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.basestar.expression.call.Callable;
 import io.basestar.expression.type.Values;
@@ -114,5 +115,10 @@ public abstract class CollectionMethods<T extends Collection<?>> implements Seri
         final List<Comparable<Object>> copy = Lists.newArrayList((Collection<Comparable<Object>>)target);
         copy.sort((Comparator<Object>) (o1, o2) -> ((Number)fn.call(o1, o2)).intValue());
         return copy;
+    }
+
+    public byte[] binaryKey(final T target) {
+
+        return Values.binaryKey(ImmutableList.copyOf(target));
     }
 }

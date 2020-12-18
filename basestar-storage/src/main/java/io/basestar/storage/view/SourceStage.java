@@ -1,5 +1,6 @@
 package io.basestar.storage.view;
 
+import io.basestar.schema.Layout;
 import io.basestar.schema.LinkableSchema;
 import lombok.Data;
 
@@ -11,12 +12,18 @@ public class SourceStage implements QueryStage {
     @Override
     public String toString() {
 
-        return "- Source: " + schema.getQualifiedName();
+        return "- Source(schema=" + schema.getQualifiedName() + ")";
     }
 
     @Override
-    public boolean isSorted() {
+    public Layout outputLayout() {
 
-        return false;
+        return schema;
+    }
+
+    @Override
+    public <T> T visit(final Visitor<T> visitor) {
+
+        return visitor.visitSource(this);
     }
 }

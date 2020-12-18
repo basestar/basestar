@@ -88,7 +88,7 @@ public class Min implements Aggregate {
     }
 
     @Override
-    public Expression copy(final List<Expression> expressions) {
+    public Aggregate copy(final List<Expression> expressions) {
 
         return new Min(expressions.get(0));
     }

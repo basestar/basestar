@@ -176,7 +176,7 @@ class TestInference {
 
     private void test(final String expressionStr, final Use<?> expected) {
 
-        final InferenceContext context = new InferenceContext.FromSchema(schema);
+        final InferenceContext context = InferenceContext.from(schema);
         final InferenceVisitor visitor = new InferenceVisitor(context);
         final Expression expression = Expression.parseAndBind(Context.init(), expressionStr);
         final Use<?> actual = visitor.visit(expression);

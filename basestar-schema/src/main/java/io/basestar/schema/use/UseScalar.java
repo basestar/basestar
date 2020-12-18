@@ -48,9 +48,14 @@ public interface UseScalar<T> extends Use<T> {
     }
 
     @Override
-    default T expand(final T value, final Expander expander, final Set<Name> expand) {
+    default T expand(final Name parent, final T value, final Expander expander, final Set<Name> expand) {
 
         return value;
+    }
+
+    @Override
+    default void expand(final Name parent, final Expander expander, final Set<Name> expand) {
+
     }
 
     @Override

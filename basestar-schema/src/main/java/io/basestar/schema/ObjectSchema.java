@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import io.basestar.expression.Context;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
@@ -326,8 +325,8 @@ public class ObjectSchema implements ReferableSchema {
         this.history = Nullsafe.orDefault(descriptor.getHistory(), History.ENABLED);
         this.declaredProperties = Immutable.transformValuesSorted(descriptor.getProperties(), (k, v) -> v.build(resolver, version, qualifiedName.with(k)));
         this.properties = Property.extend(extend, declaredProperties);
-        final InferenceContext context = new InferenceContext.Overlay(InferenceContext.empty(),
-                ImmutableMap.of(Reserved.THIS, InferenceContext.empty().with(Immutable.transformValues(this.properties, (k, v) -> v.getType()))));
+        final InferenceContext context = InferenceContext.empty()
+                .overlay(Reserved.THIS, InferenceContext.from(Immutable.transformValues(this.properties, (k, v) -> v.getType())));
         this.declaredTransients = Immutable.transformValuesSorted(descriptor.getTransients(), (k, v) -> v.build(resolver, context, qualifiedName.with(k)));
         this.transients = Transient.extend(extend, declaredTransients);
         this.declaredLinks = Immutable.transformValuesSorted(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));

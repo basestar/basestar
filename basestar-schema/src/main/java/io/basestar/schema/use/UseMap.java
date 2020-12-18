@@ -240,17 +240,27 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     }
 
     @Override
-    public Map<String, T> expand(final Map<String, T> value, final Expander expander, final Set<Name> expand) {
+    public Map<String, T> expand(final Name parent, final Map<String, T> value, final Expander expander, final Set<Name> expand) {
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
         return transformKeyValues(value, (key, before) -> {
             final Set<Name> branch = branch(branches, key);
             if(branch != null) {
-                return type.expand(before, expander, branch);
+                return type.expand(parent.with(key), before, expander, branch);
             } else {
                 return before;
             }
         });
+    }
+
+    @Override
+    public void expand(final Name parent, final Expander expander, final Set<Name> expand) {
+
+        final Map<String, Set<Name>> branches = Name.branch(expand);
+        if(!branches.isEmpty()) {
+            final Set<Name> rest = branches.values().stream().flatMap(Set::stream).collect(Collectors.toSet());
+            type.expand(parent.with(EXPAND_WILDCARD), expander, rest);
+        }
     }
 
     @Override

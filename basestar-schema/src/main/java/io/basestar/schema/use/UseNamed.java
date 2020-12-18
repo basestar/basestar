@@ -129,7 +129,13 @@ public interface UseNamed<T> extends Use<T> {
         }
 
         @Override
-        public Object expand(final Object value, final Expander expander, final Set<Name> expand) {
+        public Object expand(final Name parent, final Object value, final Expander expander, final Set<Name> expand) {
+
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void expand(final Name parent, final Expander expander, final Set<Name> expand) {
 
             throw new UnsupportedOperationException();
         }

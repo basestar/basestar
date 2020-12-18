@@ -116,7 +116,9 @@ public interface Use<T> extends Serializable {
 
     Type javaType(Name name);
 
-    T expand(T value, Expander expander, Set<Name> expand);
+    T expand(Name parent, T value, Expander expander, Set<Name> expand);
+
+    void expand(Name parent, Expander expander, Set<Name> expand);
 
     Set<Name> requiredExpand(Set<Name> names);
 

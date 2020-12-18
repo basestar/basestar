@@ -1,44 +1,38 @@
 package io.basestar.storage.view;
 
-import io.basestar.expression.Expression;
+import io.basestar.schema.Layout;
+import io.basestar.schema.LinkableSchema;
+import io.basestar.util.Name;
 import io.basestar.util.Text;
 import lombok.Data;
 
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 @Data
 public class ExpandStage implements QueryStage {
 
     private final QueryStage input;
 
-    private final Map<String, Join> joins;
+    private final LinkableSchema schema;
 
-    @Data
-    public static class Join {
-
-        private final QueryStage input;
-
-        private final Expression condition;
-
-        @Override
-        public String toString() {
-
-            return "- Join:\n" + Text.indent(input.toString());
-        }
-    }
+    private final Set<Name> expand;
 
     @Override
     public String toString() {
 
-        return "- Expand:\n" + Text.indent(input.toString() + "\n" + joins.values().stream()
-                .map(join -> Text.indent(join.toString()))
-                .collect(Collectors.joining("\n")));
+        return "- Expand(schema=" + schema.getQualifiedName() + ", expand=" + expand + ")\n"
+                + Text.indent(input.toString());
     }
 
     @Override
-    public boolean isSorted() {
+    public Layout outputLayout() {
 
-        return input.isSorted();
+        return Layout.simple(schema.getSchema(), expand);
+    }
+
+    @Override
+    public <T> T visit(final Visitor<T> visitor) {
+
+        return visitor.visitExpand(this);
     }
 }

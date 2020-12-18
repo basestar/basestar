@@ -200,7 +200,7 @@ public class ReadProcessor {
                 final ReferableSchema resolvedSchema = referableSchema(Nullsafe.orDefault(instanceSchemaName, baseSchemaName));
                 resolvedSchema.expand(object, new Expander() {
                     @Override
-                    public Instance expandRef(final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
+                    public Instance expandRef(final Name name, final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
                         if(ref == null) {
                             return null;
@@ -211,7 +211,7 @@ public class ReadProcessor {
                     }
 
                     @Override
-                    public Instance expandVersionedRef(final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
+                    public Instance expandVersionedRef(final Name name, final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
                         if(ref == null) {
                             return null;
@@ -222,7 +222,7 @@ public class ReadProcessor {
                     }
 
                     @Override
-                    public Page<Instance> expandLink(final Link link, final Page<Instance> value, final Set<Name> expand) {
+                    public Page<Instance> expandLink(final Name name, final Link link, final Page<Instance> value, final Set<Name> expand) {
 
                         final RefKey refKey = ref.getKey();
                         final ExpandKey<LinkKey> linkKey = ExpandKey.from(LinkKey.from(refKey, link.getName()), expand);
@@ -299,7 +299,7 @@ public class ReadProcessor {
 
                             result.put(ref, resolvedSchema.expand(object, new Expander() {
                                 @Override
-                                public Instance expandRef(final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
+                                public Instance expandRef(final Name name, final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
                                     final ExpandKey<RefKey> expandKey = ExpandKey.from(RefKey.latest(schema.getQualifiedName(), ref), expand);
                                     Instance result = expanded.get(expandKey);
@@ -310,7 +310,7 @@ public class ReadProcessor {
                                 }
 
                                 @Override
-                                public Instance expandVersionedRef(final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
+                                public Instance expandVersionedRef(final Name name, final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
                                     final ExpandKey<RefKey> expandKey = ExpandKey.from(RefKey.versioned(schema.getQualifiedName(), ref), expand);
                                     Instance result = expanded.get(expandKey);
@@ -321,7 +321,7 @@ public class ReadProcessor {
                                 }
 
                                 @Override
-                                public Page<Instance> expandLink(final Link link, final Page<Instance> value, final Set<Name> expand) {
+                                public Page<Instance> expandLink(final Name name, final Link link, final Page<Instance> value, final Set<Name> expand) {
 
                                     final ExpandKey<LinkKey> linkKey = ExpandKey.from(LinkKey.from(refKey, link.getName()), expand);
                                     final CompletableFuture<Page<Instance>> future = links.get(linkKey);

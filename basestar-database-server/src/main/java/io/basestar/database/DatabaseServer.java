@@ -649,7 +649,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                     assert version != null;
                     final Instance after = schema.expand(before, new Expander() {
                         @Override
-                        public Instance expandRef(final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
+                        public Instance expandRef(final Name name, final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
                             if (ref == null) {
                                 return null;
@@ -665,7 +665,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         }
 
                         @Override
-                        public Instance expandVersionedRef(final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
+                        public Instance expandVersionedRef(final Name name, final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
                             if (ref == null) {
                                 return null;
@@ -680,7 +680,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         }
 
                         @Override
-                        public Page<Instance> expandLink(final Link link, final Page<Instance> value, final Set<Name> expand) {
+                        public Page<Instance> expandLink(final Name name, final Link link, final Page<Instance> value, final Set<Name> expand) {
 
                             return value;
                         }

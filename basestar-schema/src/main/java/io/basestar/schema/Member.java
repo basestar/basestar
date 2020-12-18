@@ -110,7 +110,9 @@ public interface Member extends Named, Described, Serializable, Extendable {
 
     Visibility getVisibility();
 
-    Object expand(Object value, Expander expander, Set<Name> expand);
+    void expand(Name parent, Expander expander, Set<Name> expand);
+
+    Object expand(Name parent, Object value, Expander expander, Set<Name> expand);
 
     Set<Name> requiredExpand(Set<Name> names);
 

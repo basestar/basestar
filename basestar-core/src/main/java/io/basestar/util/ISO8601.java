@@ -1,6 +1,5 @@
 package io.basestar.util;
 
-import io.basestar.exception.InvalidDateException;
 import io.basestar.exception.InvalidDateTimeException;
 
 import java.time.*;
@@ -142,7 +141,7 @@ public class ISO8601 {
         } else if(value instanceof Number) {
             return toDate(toDateTime(((Number)value).longValue()));
         } else {
-            throw new InvalidDateException(value);
+            throw new InvalidDateTimeException(value);
         }
     }
 
@@ -163,7 +162,7 @@ public class ISO8601 {
         try {
             return DateTimeFormatter.ofPattern(format).parse(value, LocalDate::from);
         } catch (final DateTimeParseException e) {
-            throw new InvalidDateException(value);
+            throw new InvalidDateTimeException(value);
         }
     }
 
@@ -174,7 +173,7 @@ public class ISO8601 {
         } else if(value instanceof Instant) {
             return toString((Instant)value);
         } else {
-            throw new InvalidDateException(value);
+            throw new InvalidDateTimeException(value);
         }
     }
 
