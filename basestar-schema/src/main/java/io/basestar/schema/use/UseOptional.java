@@ -92,9 +92,15 @@ public class UseOptional<T> implements UseContainer<T, T> {
     }
 
     @Override
-    public T expand(final T value, final Expander expander, final Set<Name> expand) {
+    public T expand(final Name parent, final T value, final Expander expander, final Set<Name> expand) {
 
-        return type.expand(value, expander, expand);
+        return type.expand(parent, value, expander, expand);
+    }
+
+    @Override
+    public void expand(final Name parent, final Expander expander, final Set<Name> expand) {
+
+        type.expand(parent, expander, expand);
     }
 
     @Override

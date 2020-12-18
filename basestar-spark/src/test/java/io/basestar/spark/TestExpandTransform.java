@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.spark.resolver.SchemaResolver;
+import io.basestar.spark.query.QueryResolver;
 import io.basestar.spark.transform.ConformTransform;
 import io.basestar.util.Name;
 import lombok.AllArgsConstructor;
@@ -112,9 +112,9 @@ public class TestExpandTransform extends AbstractSparkTest {
 
         final Set<Name> expand = Name.parseSet("ref,single,multi,structRef.ref,arrayRef,mapRef.*");
 
-        final SchemaResolver resolver = new SchemaResolver.Automatic((schema, exp) -> datasets.get(schema.getQualifiedName()));
+        final QueryResolver resolver = new QueryResolver.Automatic(QueryResolver.source(schema -> datasets.get(schema.getQualifiedName())));
 
-        final Dataset<Row> dataset = resolver.resolve(a, expand);
+        final Dataset<Row> dataset = resolver.resolve(a, expand).result();
 
         final Encoder<ExpandedA> encoder = Encoders.bean(ExpandedA.class);
         final ConformTransform conform = ConformTransform.builder().structType(encoder.schema()).build();

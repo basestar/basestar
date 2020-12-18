@@ -96,7 +96,7 @@ public class Count implements Aggregate {
     }
 
     @Override
-    public Expression copy(final List<Expression> expressions) {
+    public Aggregate copy(final List<Expression> expressions) {
 
         return new Count(expressions.get(0));
     }

@@ -1,6 +1,5 @@
 package io.basestar.graphql.transform;
 
-import com.google.common.io.BaseEncoding;
 import io.basestar.graphql.GraphQLStrategy;
 import io.basestar.graphql.GraphQLUtils;
 import io.basestar.schema.Instance;
@@ -138,21 +137,9 @@ public interface GraphQLResponseTransform {
                     }
 
                     @Override
-                    public Object visitBinary(final UseBinary type) {
-
-                        return BaseEncoding.base64().encode(type.create(value));
-                    }
-
-                    @Override
                     public <T> Object visitStringLike(final UseStringLike<T> type) {
 
                         return type.toString(type.create(value));
-                    }
-
-                    @Override
-                    public Object visitAny(final UseAny type) {
-
-                        return value;
                     }
                 });
             }

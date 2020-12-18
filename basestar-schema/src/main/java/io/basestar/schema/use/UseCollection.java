@@ -104,10 +104,17 @@ public interface UseCollection<V, T extends Collection<V>> extends UseContainer<
     }
 
     @Override
-    default T expand(final T value, final Expander expander, final Set<Name> expand) {
+    default T expand(final Name parent, final T value, final Expander expander, final Set<Name> expand) {
 
         final Use<V> type = getType();
-        return transformValues(value, before -> type.expand(before, expander, expand));
+        return transformValues(value, before -> type.expand(parent, before, expander, expand));
+    }
+
+    @Override
+    default void expand(final Name parent, final Expander expander, final Set<Name> expand) {
+
+        final Use<V> type = getType();
+        type.expand(parent, expander, expand);
     }
 
     @Override

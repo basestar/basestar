@@ -324,7 +324,7 @@ public class ViewSchema implements LinkableSchema {
         this.description = descriptor.getDescription();
         this.group = Immutable.copy(descriptor.getGroup());
         this.where = descriptor.getWhere();
-        final InferenceContext context = new InferenceContext.FromSchema(this.from.getSchema());
+        final InferenceContext context = InferenceContext.from(this.from.getSchema());
         this.declaredProperties = Immutable.transformValuesSorted(descriptor.getProperties(),
                 (k, v) -> v.build(resolver, context, version, qualifiedName.with(k)));
         this.declaredLinks = Immutable.transformValuesSorted(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
@@ -352,6 +352,15 @@ public class ViewSchema implements LinkableSchema {
         if(Instance.getSchema(result) == null) {
             Instance.setSchema(result, this.getQualifiedName());
         }
+        if(result.get(KEY) == null) {
+            final List<Object> key = new ArrayList<>();
+            if(group.isEmpty()) {
+                key.add(value.get(Reserved.PREFIX + ReferableSchema.ID));
+            } else {
+                group.forEach(name -> key.add(value.get(name)));
+            }
+            result.put(KEY, UseBinary.binaryKey(key));
+        }
         if(expand != null && !expand.isEmpty()) {
             final Map<String, Set<Name>> branches = Name.branch(expand);
             getLinks().forEach((name, link) -> {
@@ -363,16 +372,16 @@ public class ViewSchema implements LinkableSchema {
         return new Instance(result);
     }
 
-    public byte[] key(final Map<String, Object> value) {
-
-        final List<Object> key = new ArrayList<>();
-        if(group.isEmpty()) {
-            key.add(value.get(from.getSchema().id()));
-        } else {
-            group.forEach(name -> key.add(value.get(name)));
-        }
-        return UseBinary.binaryKey(key);
-    }
+//    public byte[] key(final Map<String, Object> value) {
+//
+//        final List<Object> key = new ArrayList<>();
+//        if(group.isEmpty()) {
+//            key.add(value.get(Reserved.PREFIX + Reserved.ID));
+//        } else {
+//            group.forEach(name -> key.add(value.get(name)));
+//        }
+//        return UseBinary.binaryKey(key);
+//    }
 
     public void serialize(final Map<String, Object> object, final DataOutput out) throws IOException {
 
@@ -407,6 +416,21 @@ public class ViewSchema implements LinkableSchema {
         return declaredProperties.entrySet().stream().filter(e -> group.contains(e.getKey()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
+
+//    public Expression keyExpression() {
+//
+//        final List<Expression> args = new ArrayList<>();
+//        if(group.isEmpty()) {
+//            args.add(new NameConstant(from.getSchema().id()));
+//        } else {
+//            group.forEach(name -> args.add(new NameConstant(Name.parse(name))));
+//        }
+//        return new MemberCall(
+//                new LiteralArray(args),
+//                "binaryKey",
+//                ImmutableList.of()
+//        );
+//    }
 
     @Override
     public Map<String, Permission> getPermissions() {
@@ -526,7 +550,7 @@ public class ViewSchema implements LinkableSchema {
             public Use<?> getType() {
 
                 if(descriptor.getType() == null && descriptor.getExpression() != null) {
-                    final InferenceContext context = new InferenceContext.FromSchema(fromSchema);
+                    final InferenceContext context = InferenceContext.from(fromSchema);
                     final Use<?> type = new InferenceVisitor(context).visit(descriptor.getExpression());
                     if(type instanceof UseAny) {
                         throw new IllegalStateException("Cannot infer type from expression " + descriptor.getExpression());

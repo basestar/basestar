@@ -28,6 +28,7 @@ import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.Renaming;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.function.Member;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import lombok.Data;
 
@@ -62,7 +63,7 @@ public class LambdaCall implements Expression {
     public LambdaCall(final Expression with, final List<Expression> args) {
 
         this.with = with;
-        this.args = args;
+        this.args = Immutable.copy(args);
     }
 
     @Override

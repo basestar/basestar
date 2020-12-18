@@ -1,6 +1,5 @@
 package io.basestar.schema.use;
 
-import io.basestar.exception.InvalidDateException;
 import io.basestar.exception.InvalidDateTimeException;
 import io.basestar.expression.type.Values;
 import io.basestar.expression.type.exception.TypeConversionException;
@@ -8,7 +7,6 @@ import io.basestar.schema.*;
 import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.secret.Secret;
-import io.basestar.secret.SecretContext;
 import io.basestar.util.ISO8601;
 import io.basestar.util.Name;
 import io.basestar.util.Page;
@@ -35,16 +33,6 @@ public interface ValueContext {
     static ValueContext standardOrSuppressing(boolean suppress) {
 
         return suppress ? ValueContext.suppressing() : ValueContext.standard();
-    }
-
-    static ValueContext encrypting(final SecretContext secretContext) {
-
-        return new Encrypting(secretContext);
-    }
-
-    static ValueContext decrypting(final SecretContext secretContext) {
-
-        return new Decrypting(secretContext);
     }
 
     Object createAny(UseAny type, Object value, Set<Name> expand);
@@ -93,7 +81,7 @@ public interface ValueContext {
             }
             try {
                 return ISO8601.toDate(value);
-            } catch (final InvalidDateException e) {
+            } catch (final InvalidDateTimeException e) {
                 throw new TypeConversionException(LocalDate.class, value);
             }
         }
@@ -283,10 +271,12 @@ public interface ValueContext {
         @Override
         public Object createAny(final UseAny type, final Object value, final Set<Name> expand) {
 
+            if(value == null) {
+                return null;
+            }
             try {
                 return super.createAny(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
-                log.warn("Suppressing type conversion error", e);
                 return null;
             }
         }
@@ -294,10 +284,12 @@ public interface ValueContext {
         @Override
         public Boolean createBoolean(final UseBoolean type, final Object value, final Set<Name> expand) {
 
+            if(value == null) {
+                return null;
+            }
             try {
                 return super.createBoolean(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
-                log.warn("Suppressing type conversion error", e);
                 return null;
             }
         }
@@ -305,10 +297,12 @@ public interface ValueContext {
         @Override
         public String createString(final UseString type, final Object value, final Set<Name> expand) {
 
+            if(value == null) {
+                return null;
+            }
             try {
                 return super.createString(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
-                log.warn("Suppressing type conversion error", e);
                 return null;
             }
         }
@@ -316,10 +310,12 @@ public interface ValueContext {
         @Override
         public Double createNumber(final UseNumber type, final Object value, final Set<Name> expand) {
 
+            if(value == null) {
+                return null;
+            }
             try {
                 return super.createNumber(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
-                log.warn("Suppressing type conversion error", e);
                 return null;
             }
         }
@@ -327,10 +323,12 @@ public interface ValueContext {
         @Override
         public Long createInteger(final UseInteger type, final Object value, final Set<Name> expand) {
 
+            if(value == null) {
+                return null;
+            }
             try {
                 return super.createInteger(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
-                log.warn("Suppressing type conversion error", e);
                 return null;
             }
         }
@@ -338,10 +336,12 @@ public interface ValueContext {
         @Override
         public <T> List<T> createArray(final UseArray<T> type, final Object value, final Set<Name> expand) {
 
+            if(value == null) {
+                return null;
+            }
             try {
                 return super.createArray(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
-                log.warn("Suppressing type conversion error", e);
                 return null;
             }
         }
@@ -349,10 +349,12 @@ public interface ValueContext {
         @Override
         public <T> Page<T> createPage(final UsePage<T> type, final Object value, final Set<Name> expand) {
 
+            if(value == null) {
+                return null;
+            }
             try {
                 return super.createPage(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
-                log.warn("Suppressing type conversion error", e);
                 return null;
             }
         }
@@ -360,10 +362,12 @@ public interface ValueContext {
         @Override
         public <T> Set<T> createSet(final UseSet<T> type, final Object value, final Set<Name> expand) {
 
+            if(value == null) {
+                return null;
+            }
             try {
                 return super.createSet(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
-                log.warn("Suppressing type conversion error", e);
                 return null;
             }
         }
@@ -371,10 +375,12 @@ public interface ValueContext {
         @Override
         public <T> Map<String, T> createMap(final UseMap<T> type, final Object value, final Set<Name> expand) {
 
+            if(value == null) {
+                return null;
+            }
             try {
                 return super.createMap(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
-                log.warn("Suppressing type conversion error", e);
                 return null;
             }
         }
@@ -382,10 +388,12 @@ public interface ValueContext {
         @Override
         public byte[] createBinary(final UseBinary type, final Object value, final Set<Name> expand) {
 
+            if(value == null) {
+                return null;
+            }
             try {
                 return super.createBinary(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
-                log.warn("Suppressing type conversion error", e);
                 return null;
             }
         }
@@ -393,10 +401,12 @@ public interface ValueContext {
         @Override
         public LocalDate createDate(final UseDate type, final Object value, final Set<Name> expand) {
 
+            if(value == null) {
+                return null;
+            }
             try {
                 return super.createDate(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
-                log.warn("Suppressing type conversion error", e);
                 return null;
             }
         }
@@ -404,10 +414,12 @@ public interface ValueContext {
         @Override
         public Instant createDateTime(final UseDateTime type, final Object value, final Set<Name> expand) {
 
+            if(value == null) {
+                return null;
+            }
             try {
                 return super.createDateTime(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
-                log.warn("Suppressing type conversion error", e);
                 return null;
             }
         }
@@ -415,10 +427,12 @@ public interface ValueContext {
         @Override
         public String createEnum(final UseEnum type, final Object value, final Set<Name> expand) {
 
+            if(value == null) {
+                return null;
+            }
             try {
                 return super.createEnum(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
-                log.warn("Suppressing type conversion error", e);
                 return null;
             }
         }
@@ -426,10 +440,12 @@ public interface ValueContext {
         @Override
         public Instance createStruct(final UseStruct type, final Object value, final Set<Name> expand) {
 
+            if(value == null) {
+                return null;
+            }
             try {
                 return super.createStruct(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
-                log.warn("Suppressing type conversion error", e);
                 return null;
             }
         }
@@ -437,10 +453,12 @@ public interface ValueContext {
         @Override
         public Instance createRef(final UseRef type, final Object value, final Set<Name> expand) {
 
+            if(value == null) {
+                return null;
+            }
             try {
                 return super.createRef(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
-                log.warn("Suppressing type conversion error", e);
                 return null;
             }
         }
@@ -448,10 +466,12 @@ public interface ValueContext {
         @Override
         public Instance createView(final UseView type, final Object value, final Set<Name> expand) {
 
+            if(value == null) {
+                return null;
+            }
             try {
                 return super.createView(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
-                log.warn("Suppressing type conversion error", e);
                 return null;
             }
         }
@@ -459,57 +479,13 @@ public interface ValueContext {
         @Override
         public Secret createSecret(final UseSecret type, final Object value, final Set<Name> expand) {
 
+            if(value == null) {
+                return null;
+            }
             try {
                 return super.createSecret(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
-                log.warn("Suppressing type conversion error", e);
                 return null;
-            }
-        }
-    }
-
-    class Encrypting extends Standard {
-
-        private final SecretContext secretContext;
-
-        public Encrypting(final SecretContext secretContext) {
-
-            this.secretContext = secretContext;
-        }
-
-        @Override
-        public Secret createSecret(final UseSecret secret, final Object value, final Set<Name> expand) {
-
-            if(value instanceof Secret.Plaintext) {
-                return secretContext.encrypt((Secret.Plaintext)value).join();
-            } else if(value instanceof String) {
-                return secretContext.encrypt(Secret.plaintext((String) value)).join();
-            } else {
-                throw new TypeConversionException(Secret.class, "<redacted>");
-            }
-        }
-    }
-
-    class Decrypting extends Standard {
-
-        private final SecretContext secretContext;
-
-        public Decrypting(final SecretContext secretContext) {
-
-            this.secretContext = secretContext;
-        }
-
-        @Override
-        public Secret createSecret(final UseSecret secret, final Object value, final Set<Name> expand) {
-
-            if(value instanceof Secret.Encrypted) {
-                return secretContext.decrypt((Secret.Encrypted) value).join();
-            } else if(value instanceof byte[]) {
-                return secretContext.decrypt(Secret.encrypted((byte[])value)).join();
-            } else if(value instanceof String) {
-                return secretContext.decrypt(Secret.encrypted((String)value)).join();
-            } else {
-                throw new TypeConversionException(Secret.class, "<redacted>");
             }
         }
     }

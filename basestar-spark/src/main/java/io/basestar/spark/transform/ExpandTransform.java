@@ -20,7 +20,6 @@ package io.basestar.spark.transform;
  * #L%
  */
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
@@ -50,6 +49,7 @@ import scala.Tuple2;
 import javax.annotation.Nullable;
 import java.util.*;
 
+@Deprecated
 @Builder(builderClassName = "Builder")
 public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
@@ -113,16 +113,16 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
     @SuppressWarnings("unchecked")
     private <T> Dataset<Row> linkExpand(final LinkableSchema schema, final Dataset<Row> input, final Link link, final Set<Name> expand, final String rootIdColumn, final Use<T> rootIdType) {
 
+        System.err.println("Resolving link " + link.getQualifiedName() + " expand: " + expand);
+
         final String linkName = link.getName();
 
         final LinkableSchema linkSchema = link.getSchema();
 
         final Dataset<Row> linkInput = resolver.resolveAndConform(linkSchema, expand);
 
-        final InferenceContext inferenceContext = new InferenceContext.Overlay(
-                new InferenceContext.FromSchema(linkSchema),
-                ImmutableMap.of(Reserved.THIS, new InferenceContext.FromSchema(schema))
-        );
+        final InferenceContext inferenceContext = InferenceContext.from(linkSchema)
+                .overlay(Reserved.THIS, InferenceContext.from(schema));
 
         final Expression expression = link.getExpression();
         final Column joinCondition = expression.visit(new SparkExpressionVisitor(name -> {
@@ -198,6 +198,8 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
         Dataset<Row> output = input;
         for (final RequiredRef requiredRef : requiredRefs) {
+
+            System.err.println("Resolving refs to " + requiredRef.getSchema().getQualifiedName() + " expand: " + requiredRef.getExpand());
 
             final Dataset<Row> refInput = cache(resolver.resolveAndConform(requiredRef.getSchema(), requiredRef.getExpand()));
 

@@ -59,6 +59,20 @@ public class SparkSchemaUtils {
 
     }
 
+    public static StructType structType(final Layout layout) {
+
+        return structType(layout.getSchema(), layout.getExpand());
+    }
+
+    public static StructType structType(final Map<String, Use<?>> schema, final Set<Name> expand) {
+
+        final Map<String, Set<Name>> branches = Name.branch(expand);
+        final List<StructField> fields = new ArrayList<>();
+        schema.forEach((name, type) -> fields.add(field(name, type, branches.get(name))));
+        fields.sort(Comparator.comparing(StructField::name));
+        return DataTypes.createStructType(fields).asNullable();
+    }
+
     public static StructType structType(final InstanceSchema schema, final Set<Name> expand) {
 
         return structType(schema, expand, ImmutableMap.of());
@@ -303,6 +317,22 @@ public class SparkSchemaUtils {
                 return DataTypes.BinaryType.asNullable();
             }
         });
+    }
+
+    public static Map<String, Object> fromSpark(final Layout layout, final Row row) {
+
+        return fromSpark(layout, NamingConvention.DEFAULT, row);
+    }
+
+    public static Map<String, Object> fromSpark(final Layout layout, final NamingConvention naming, final Row row) {
+
+        if(row == null) {
+            return null;
+        }
+        final Map<String, Set<Name>> branches = Name.branch(layout.getExpand());
+        final Map<String, Object> object = new HashMap<>();
+        layout.getSchema().forEach((name, type) -> object.put(name, fromSpark(type, naming, branches.get(name), get(naming, row, name))));
+        return new Instance(object);
     }
 
     public static Map<String, Object> fromSpark(final InstanceSchema schema, final Row row) {
@@ -624,6 +654,21 @@ public class SparkSchemaUtils {
         return new GenericRowWithSchema(values, structType);
     }
 
+    public static Row toSpark(final Layout layout, final StructType structType, final Map<String, Object> object) {
+
+        if(object == null) {
+            return null;
+        }
+        final Map<String, Set<Name>> branches = Name.branch(layout.getExpand());
+        final StructField[] fields = structType.fields();
+        final Object[] values = new Object[fields.length];
+        layout.getSchema().forEach((name, type) -> {
+            final int i = structType.fieldIndex(name);
+            values[i] = toSpark(type, branches.get(name), fields[i].dataType(), object.get(name));
+        });
+        return new GenericRowWithSchema(values, structType);
+    }
+
     // FIXME::
     public static Row refToSpark(final StructType structType, final Map<String, Object> object) {
 
@@ -868,18 +913,15 @@ public class SparkSchemaUtils {
             return null;
         } else if (targetType instanceof ArrayType) {
             final DataType elementType = ((ArrayType) targetType).elementType();
-            final List<Object> tmp = new ArrayList<>();
-            ScalaUtils.asJavaStream((Seq<?>) source).forEach(v -> {
-                tmp.add(conform(v, elementType));
-            });
-            return ScalaUtils.asScalaSeq(tmp);
+            final Seq<?> seq = (Seq<?>)source;
+            final Object[] arr = new Object[seq.size()];
+            for(int i = 0; i != seq.size(); ++i) {
+                arr[i] = conform(seq.apply(i), elementType);
+            }
+            return scala.Predef.wrapRefArray(arr);
         } else if (targetType instanceof MapType) {
             final DataType valueType = ((MapType) targetType).valueType();
-            final Map<Object, Object> tmp = new HashMap<>();
-            ScalaUtils.asJavaMap((scala.collection.Map<?, ?>) source).forEach((k, v) -> {
-                tmp.put(k, conform(v, valueType));
-            });
-            return ScalaUtils.asScalaMap(tmp);
+            return ((scala.collection.Map<?, ?>) source).mapValues(v -> conform(v, valueType));
         } else if (targetType instanceof StructType) {
             return conform((Row) source, (StructType) targetType);
         } else {
@@ -887,10 +929,53 @@ public class SparkSchemaUtils {
         }
     }
 
+    public static boolean areStrictlyEqual(final DataType a, final DataType b) {
+
+        if(a.getClass().equals(b.getClass())) {
+            if(a instanceof ArrayType) {
+                final ArrayType arrA = (ArrayType)a;
+                final ArrayType arrB = (ArrayType)b;
+                return arrA.containsNull() == arrB.containsNull()
+                        && areStrictlyEqual(arrA.elementType(), arrB.elementType());
+            } else if(a instanceof MapType) {
+                final MapType mapA = (MapType) a;
+                final MapType mapB = (MapType) b;
+                return mapA.valueContainsNull() == mapB.valueContainsNull()
+                        && areStrictlyEqual(mapA.keyType(), mapB.keyType())
+                        && areStrictlyEqual(mapA.valueType(), mapB.valueType());
+            } else if(a instanceof StructType) {
+                final StructType objA = (StructType) a;
+                final StructType objB = (StructType) b;
+                final StructField[] fieldsA = objA.fields();
+                final StructField[] fieldsB = objB.fields();
+                if(fieldsA.length == fieldsB.length) {
+                    for(int i = 0; i != fieldsA.length; ++i) {
+                        final StructField fieldA = fieldsA[i];
+                        final StructField fieldB = fieldsB[i];
+                        if(!(fieldA.name().equals(fieldB.name())
+                                && fieldA.nullable() == fieldB.nullable()
+                                && areStrictlyEqual(fieldA.dataType(), fieldB.dataType()))) {
+                            return false;
+                        }
+                    }
+                    return true;
+                } else {
+                    return false;
+                }
+            } else {
+                return a.equals(b);
+            }
+        } else {
+            return false;
+        }
+    }
+
     public static Row conform(final Row source, final StructType targetType) {
 
         if(source == null) {
             return null;
+//        } else if(source.schema().equals(targetType)) {
+//            return source;
         } else {
             final StructType sourceType = source.schema();
             final StructField[] sourceFields = sourceType.fields();
@@ -901,7 +986,11 @@ public class SparkSchemaUtils {
                 final StructField targetField = targetFields[i];
                 for (int j = 0; j != sourceFields.length; ++j) {
                     if (sourceFields[j].name().equalsIgnoreCase(targetField.name())) {
-                        targetValues[i] = conform(sourceValues.apply(j), targetField.dataType());
+//                        if(sourceFields[j].dataType().equals(targetField.dataType())) {
+//                            targetValues[i] = sourceValues.apply(j);
+//                        } else {
+                            targetValues[i] = conform(sourceValues.apply(j), targetField.dataType());
+//                        }
                         break;
                     }
                 }
@@ -958,6 +1047,7 @@ public class SparkSchemaUtils {
 
     public static Row set(final Row source, final String name, final Object newValue) {
 
+        assert(Arrays.asList(source.schema().fieldNames()).contains(name));
         return transform(source, (field, value) -> {
             if(name.equals(field.name())) {
                 return newValue;
@@ -965,6 +1055,30 @@ public class SparkSchemaUtils {
                 return value;
             }
         });
+    }
+
+    public static Object get(final Row source, final Name name) {
+
+        return get(NamingConvention.DEFAULT, source, name);
+    }
+
+    public static Object get(final NamingConvention naming, final Row source, final Name name) {
+
+        if(name.isEmpty()) {
+            return source;
+        } else {
+            final Object first = get(naming, source, name.first());
+            final Name rest = name.withoutFirst();
+            if(!rest.isEmpty()) {
+                if(first instanceof Row) {
+                    return get(naming, (Row) first, rest);
+                } else {
+                    return null;
+                }
+            } else {
+                return first;
+            }
+        }
     }
 
     public static Object get(final Row source, final String name) {

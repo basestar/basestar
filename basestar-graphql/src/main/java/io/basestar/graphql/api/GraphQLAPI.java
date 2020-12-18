@@ -55,22 +55,21 @@ public class GraphQLAPI implements API {
     @Override
     public CompletableFuture<APIResponse> handle(final APIRequest request) throws IOException {
 
+        final Caller caller = request.getCaller();
 
-            final Caller caller = request.getCaller();
-
-            switch(request.getMethod()) {
-                case HEAD:
-                case OPTIONS:
-                    return CompletableFuture.completedFuture(APIResponse.success(request));
-                case GET:
-                    final String query = request.getFirstQuery("query");
-                    return query(request, ExecutionInput.newExecutionInput(query).build());
-                case POST:
-                    final RequestBody body = request.readBody(RequestBody.class);
-                    return query(request, body.toInput(caller));
-                default:
-                    return CompletableFuture.completedFuture(APIResponse.error(request, ExceptionMetadata.notFound()));
-            }
+        switch(request.getMethod()) {
+            case HEAD:
+            case OPTIONS:
+                return CompletableFuture.completedFuture(APIResponse.success(request));
+            case GET:
+                final String query = request.getFirstQuery("query");
+                return query(request, ExecutionInput.newExecutionInput(query).build());
+            case POST:
+                final RequestBody body = request.readBody(RequestBody.class);
+                return query(request, body.toInput(caller));
+            default:
+                return CompletableFuture.completedFuture(APIResponse.error(request, ExceptionMetadata.notFound()));
+        }
 
     }
 
@@ -82,16 +81,9 @@ public class GraphQLAPI implements API {
 
     private CompletableFuture<APIResponse> query(final APIRequest request, final ExecutionInput input) {
 
-        if(log.isDebugEnabled()) {
-            log.debug("GraphQL request: {}", input.toString().replaceAll("\n", " "));
-        }
+        // LOGGING REQUEST RESPONSE IS NOT ALLOWED, MAY CONTAIN PLAINTEXT SECRETS
         return graphQL.executeAsync(input)
-                .thenApply(response -> {
-                    if(log.isDebugEnabled()) {
-                        log.debug("GraphQL response: {}", response.toString().replaceAll("\n", " "));
-                    }
-                    return APIResponse.success(request, ResponseBody.from(response));
-                });
+                .thenApply(response -> APIResponse.success(request, ResponseBody.from(response)));
     }
 
     @Data

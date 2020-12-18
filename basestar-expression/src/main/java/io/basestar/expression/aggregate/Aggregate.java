@@ -84,4 +84,7 @@ public interface Aggregate extends Expression {
 
         return LambdaCall.TOKEN;
     }
+
+    @Override
+    Aggregate copy(List<Expression> expressions);
 }

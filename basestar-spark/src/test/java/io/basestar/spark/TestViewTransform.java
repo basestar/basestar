@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Namespace;
 import io.basestar.spark.database.SparkDatabase;
-import io.basestar.spark.resolver.SchemaResolver;
+import io.basestar.spark.query.QueryResolver;
 import io.basestar.util.Name;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
@@ -71,8 +71,8 @@ class TestViewTransform extends AbstractSparkTest {
 
         final List<AggView> rows = view("AggView", AggView.class, datasets);
         assertEquals(2, rows.size());
-        assertTrue(rows.contains(new AggView("a", 8, ImmutableList.of(b3.withoutKeys(), b2.withoutKeys(), b1.withoutKeys()))));
-        assertTrue(rows.contains(new AggView("b", 14, ImmutableList.of(b4.withoutKeys(), b5.withoutKeys(), b6.withoutKeys()))));
+        assertTrue(rows.contains(new AggView("a", 8.0, ImmutableList.of(b3.withoutKeys(), b2.withoutKeys(), b1.withoutKeys()))));
+        assertTrue(rows.contains(new AggView("b", 14.0, ImmutableList.of(b4.withoutKeys(), b5.withoutKeys(), b6.withoutKeys()))));
     }
 
     @Test
@@ -207,7 +207,7 @@ class TestViewTransform extends AbstractSparkTest {
 
         final Namespace namespace = Namespace.load(TestViewTransform.class.getResourceAsStream("schema.yml"));
 
-        final SchemaResolver resolver = new SchemaResolver.Automatic((schema, expand) -> datasets.get(schema.getQualifiedName()));
+        final QueryResolver resolver = new QueryResolver.Automatic(QueryResolver.source(schema -> datasets.get(schema.getQualifiedName())));
 
         final SparkDatabase database = SparkDatabase.builder()
                 .resolver(resolver).namespace(namespace)

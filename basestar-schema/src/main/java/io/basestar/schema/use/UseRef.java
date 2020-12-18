@@ -162,7 +162,7 @@ public class UseRef implements UseLinkable {
     }
 
     @Override
-    public Instance expand(final Instance value, final Expander expander, final Set<Name> expand) {
+    public Instance expand(final Name parent, final Instance value, final Expander expander, final Set<Name> expand) {
 
         if(value != null) {
             if(expand == null) {
@@ -182,12 +182,22 @@ public class UseRef implements UseLinkable {
                     }
                 }
             } else if(versioned) {
-                return expander.expandVersionedRef(schema, value, expand);
+                return expander.expandVersionedRef(parent, schema, value, expand);
             } else {
-                return expander.expandRef(schema, value, expand);
+                return expander.expandRef(parent, schema, value, expand);
             }
         } else {
             return null;
+        }
+    }
+
+    @Override
+    public void expand(final Name parent, final Expander expander, final Set<Name> expand) {
+
+        if(isVersioned()) {
+            expander.expandVersionedRef(parent, schema, null, expand);
+        } else {
+            expander.expandRef(parent, schema, null, expand);
         }
     }
 

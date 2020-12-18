@@ -1,93 +1,99 @@
 package io.basestar.schema.expression;
 
-import io.basestar.expression.call.Callable;
-import io.basestar.expression.methods.Methods;
-import io.basestar.schema.InstanceSchema;
+import com.google.common.collect.ImmutableMap;
+import io.basestar.schema.Layout;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseAny;
 import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
 
-import java.lang.reflect.Type;
-import java.util.List;
 import java.util.Map;
 
 public interface InferenceContext {
 
-    Use<?> typeOfMember(Name name);
+    Use<?> typeOf(Name name);
 
-    Use<?> typeOfCall(Use<?> target, String member, List<Use<?>> args);
+    default InferenceContext overlay(final String name, final InferenceContext override) {
+
+        return overlay(ImmutableMap.of(name, override));
+    }
+
+    default InferenceContext overlay(final Map<String, InferenceContext> overrides) {
+
+        return new InferenceContext.Overlay(this, overrides);
+    }
+
+    static InferenceContext from(final Map<String, Use<?>> context) {
+
+        return from(Layout.simple(context));
+    }
+
+    static InferenceContext from(final Layout layout) {
+
+        return new FromLayout(layout);
+    }
 
     static InferenceContext empty() {
 
-        final Methods methods = Methods.builder().defaults().build();
-        return new InferenceContext() {
-            @Override
-            public Use<?> typeOfMember(final Name name) {
-
-                return UseAny.DEFAULT;
-            }
-
-            @Override
-            public Use<?> typeOfCall(final Use<?> target, final String member, final List<Use<?>> args) {
-
-                final Type[] argTypes = args.stream().map(Use::javaType).toArray(Type[]::new);
-                final Callable callable = methods.callable(target.javaType(), member, argTypes);
-                return Use.fromJavaType(callable.type());
-            }
-        };
+        return name -> UseAny.DEFAULT;
     }
 
     default InferenceContext with(final Map<String, Use<?>> context) {
 
-        return new InferenceContext() {
-            @Override
-            public Use<?> typeOfMember(final Name name) {
+        return name -> {
 
-                final String first = name.first();
-                final Use<?> use = context.get(first);
-                if(use != null) {
-                    return use.typeOf(name.withoutFirst());
-                } else {
-                    return InferenceContext.this.typeOfMember(name);
-                }
-            }
-
-            @Override
-            public Use<?> typeOfCall(final Use<?> target, final String member, final List<Use<?>> args) {
-
-                return InferenceContext.this.typeOfCall(target, member, args);
+            final String first = name.first();
+            final Use<?> use = context.get(first);
+            if(use != null) {
+                return use.typeOf(name.withoutFirst());
+            } else {
+                return InferenceContext.this.typeOf(name);
             }
         };
     }
 
-    @RequiredArgsConstructor
-    class FromSchema implements InferenceContext {
+    class FromLayout implements InferenceContext {
 
-        private final InstanceSchema schema;
+        private final Layout layout;
 
-        private final Methods methods;
+        public FromLayout(final Layout layout) {
 
-        public FromSchema(final InstanceSchema schema) {
-
-            this.schema = schema;
-            this.methods = Methods.builder().defaults().build();
+            this.layout = layout;
         }
 
         @Override
-        public Use<?> typeOfMember(final Name name) {
+        public Use<?> typeOf(final Name name) {
 
-            return schema.typeOf(name);
-        }
-
-        @Override
-        public Use<?> typeOfCall(final Use<?> target, final String member, final List<Use<?>> args) {
-
-            final Type[] argTypes = args.stream().map(Use::javaType).toArray(Type[]::new);
-            final Callable callable = methods.callable(target.javaType(), member, argTypes);
-            return Use.fromJavaType(callable.type());
+            return layout.typeOf(name);
         }
     }
+
+//    class FromSchema implements InferenceContext {
+//
+//        private final InstanceSchema schema;
+//
+//        private final Methods methods;
+//
+//        public FromSchema(final InstanceSchema schema, final Methods methods) {
+//
+//            this.schema = schema;
+//            this.methods = Methods.builder().defaults().build();
+//        }
+//
+//        @Override
+//        public Use<?> typeOf(final Name name) {
+//
+//            return schema.typeOf(name);
+//        }
+//
+//        @Override
+//        public Use<?> typeOfCall(final Use<?> target, final String member, final List<Use<?>> args) {
+//
+//            final Type[] argTypes = args.stream().map(Use::javaType).toArray(Type[]::new);
+//            final Callable callable = methods.callable(target.javaType(), member, argTypes);
+//            return Use.fromJavaType(callable.type());
+//        }
+//    }
 
     @RequiredArgsConstructor
     class Overlay implements InferenceContext {
@@ -97,21 +103,15 @@ public interface InferenceContext {
         private final Map<String, InferenceContext> overrides;
 
         @Override
-        public Use<?> typeOfMember(final Name name) {
+        public Use<?> typeOf(final Name name) {
 
             final String first = name.first();
             final InferenceContext override = overrides.get(first);
             if(override != null) {
-                return override.typeOfMember(name.withoutFirst());
+                return override.typeOf(name.withoutFirst());
             } else {
-                return parent.typeOfMember(name);
+                return parent.typeOf(name);
             }
-        }
-
-        @Override
-        public Use<?> typeOfCall(final Use<?> target, final String member, final List<Use<?>> args) {
-
-            return parent.typeOfCall(target, member, args);
         }
     }
 }

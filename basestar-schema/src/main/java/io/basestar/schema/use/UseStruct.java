@@ -135,13 +135,19 @@ public class UseStruct implements UseInstance {
     }
 
     @Override
-    public Instance expand(final Instance value, final Expander expander, final Set<Name> expand) {
+    public Instance expand(final Name parent, final Instance value, final Expander expander, final Set<Name> expand) {
 
         if(value != null) {
-            return schema.expand(value, expander, expand);
+            return schema.expand(parent, value, expander, expand);
         } else {
             return null;
         }
+    }
+
+    @Override
+    public void expand(final Name parent, final Expander expander, final Set<Name> expand) {
+
+        schema.expand(parent, expander, expand);
     }
 
     @Override

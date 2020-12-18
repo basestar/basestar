@@ -93,7 +93,7 @@ public class CollectArray implements Aggregate {
     }
 
     @Override
-    public Expression copy(final List<Expression> expressions) {
+    public Aggregate copy(final List<Expression> expressions) {
 
         return new CollectArray(expressions.get(0));
     }

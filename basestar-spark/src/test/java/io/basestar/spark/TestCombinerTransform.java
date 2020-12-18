@@ -8,7 +8,7 @@ import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.spark.combiner.Combiner;
 import io.basestar.spark.database.SparkDatabase;
-import io.basestar.spark.resolver.SchemaResolver;
+import io.basestar.spark.query.QueryResolver;
 import io.basestar.spark.sink.MultiSink;
 import io.basestar.spark.source.JoinedSource;
 import io.basestar.spark.transform.CombinerTransform;
@@ -65,10 +65,10 @@ class TestCombinerTransform extends AbstractSparkTest {
                 Name.of("A"), session.createDataset(ImmutableList.of(a2b, a3), Encoders.bean(AbstractSparkTest.A.class)).toDF()
         );
 
-        final SchemaResolver baseline = (schema, expand) -> datasets1.get(schema.getQualifiedName());
-        final SchemaResolver overlay = (schema, expand) -> datasets2.get(schema.getQualifiedName());
+        final QueryResolver baseline = QueryResolver.source(schema -> datasets1.get(schema.getQualifiedName()));
+        final QueryResolver overlay = QueryResolver.source(schema -> datasets2.get(schema.getQualifiedName()));
 
-        final SchemaResolver combinedResolver = new SchemaResolver.Automatic(new SchemaResolver.Combining(baseline, overlay, Combiner.Consistent.builder().build()));
+        final QueryResolver combinedResolver = new QueryResolver.Automatic(new QueryResolver.Combining(baseline, overlay, Combiner.Consistent.builder().build()));
 
         final SparkDatabase combinedDatabase = SparkDatabase.builder()
                 .resolver(combinedResolver).namespace(namespace)
@@ -84,9 +84,9 @@ class TestCombinerTransform extends AbstractSparkTest {
                 new AbstractSparkTest.StatsA("b:3", 1L)
         ), combinedStatsA);
 
-        final SchemaResolver baselineResolver = new SchemaResolver.Automatic(baseline);
+        final QueryResolver baselineResolver = new QueryResolver.Automatic(baseline);
 
-        final SchemaResolver deltaResolver = new SchemaResolver.Combining(baselineResolver, combinedResolver, Combiner.DELTA);
+        final QueryResolver deltaResolver = new QueryResolver.Combining(baselineResolver, combinedResolver, Combiner.DELTA);
 
         final SparkDatabase deltaDatabase = SparkDatabase.builder()
                 .resolver(deltaResolver).namespace(namespace)

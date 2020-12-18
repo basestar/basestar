@@ -314,7 +314,7 @@ public class PartitionedUpsertSink extends PartitionedUpsertUtils implements Sin
 
         final URI tableLocation = table.location();
 
-        final Dataset<Row> changes = clean(input).cache();
+        final Dataset<Row> changes = clean(input);
 
         final Map<Partition, CatalogTablePartition> existingPartitions = existing(catalog, databaseName, tableName, partitionColumns, changes);
 

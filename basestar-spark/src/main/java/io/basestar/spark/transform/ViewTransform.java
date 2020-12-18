@@ -21,7 +21,6 @@ package io.basestar.spark.transform;
  */
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
@@ -80,10 +79,8 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         final Context context = Context.init();
 
         final InstanceSchema from = schema.getFrom().getSchema();
-        final InferenceContext fromContext = new InferenceContext.Overlay(
-                new InferenceContext.FromSchema(from),
-                ImmutableMap.of(Reserved.THIS, new InferenceContext.FromSchema(from))
-        );
+        final InferenceContext fromContext = InferenceContext.from(from)
+                .overlay(Reserved.THIS, InferenceContext.from(from));
 
         Dataset<Row> output = input;
         if(schema.getWhere() != null) {

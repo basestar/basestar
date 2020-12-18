@@ -41,9 +41,9 @@ import io.basestar.graphql.schema.SchemaAdaptor;
 import io.basestar.graphql.subscription.SubscriberContext;
 import io.basestar.graphql.transform.GraphQLRequestTransform;
 import io.basestar.graphql.transform.GraphQLResponseTransform;
-import io.basestar.graphql.wiring.AnyCoercing;
-import io.basestar.graphql.wiring.InterfaceResolver;
+import io.basestar.graphql.wiring.*;
 import io.basestar.schema.*;
+import io.basestar.secret.SecretContext;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Page;
@@ -67,14 +67,18 @@ public class GraphQLAdaptor {
 
     private final GraphQLResponseTransform responseTransform;
 
+    private final SecretContext secretContext;
+
     @lombok.Builder(builderClassName = "Builder")
-    GraphQLAdaptor(final Database database, final Namespace namespace, final GraphQLStrategy strategy) {
+    GraphQLAdaptor(final Database database, final Namespace namespace, final GraphQLStrategy strategy,
+                   final SecretContext secretContext) {
 
         this.database = Nullsafe.require(database);
         this.namespace = Nullsafe.require(namespace);
         this.strategy = Nullsafe.orDefault(strategy, GraphQLStrategy.DEFAULT);
         this.requestTransform = this.strategy.requestTransform();
         this.responseTransform = this.strategy.responseTransform();
+        this.secretContext = Nullsafe.orDefault(secretContext, SecretContext::none);
     }
 
     public GraphQL graphQL() {
@@ -90,19 +94,41 @@ public class GraphQLAdaptor {
                 .build();
     }
 
-    public RuntimeWiring runtimeWiring() {
+    public static RuntimeWiring.Builder runtimeWiringBuilder(final GraphQLStrategy strategy, final SecretContext secretContext) {
 
         final RuntimeWiring.Builder builder = RuntimeWiring.newRuntimeWiring();
+        builder.scalar(GraphQLScalarType.newScalar()
+                .name(strategy.anyTypeName())
+                .coercing(AnyCoercing.INSTANCE)
+                .build());
+        builder.scalar(GraphQLScalarType.newScalar()
+                .name(strategy.dateTypeName())
+                .coercing(DateCoercing.INSTANCE)
+                .build());
+        builder.scalar(GraphQLScalarType.newScalar()
+                .name(strategy.dateTimeTypeName())
+                .coercing(DateTimeCoercing.INSTANCE)
+                .build());
+        builder.scalar(GraphQLScalarType.newScalar()
+                .name(strategy.binaryTypeName())
+                .coercing(BinaryCoercing.INSTANCE)
+                .build());
+        builder.scalar(GraphQLScalarType.newScalar()
+                .name(strategy.secretTypeName())
+                .coercing(new SecretCoercing(secretContext))
+                .build());
+        return builder;
+    }
+
+    public RuntimeWiring runtimeWiring() {
+
+        final RuntimeWiring.Builder builder = runtimeWiringBuilder(strategy, secretContext);
         builder.type(TypeRuntimeWiring.newTypeWiring(GraphQLUtils.QUERY_TYPE)
                 .dataFetchers(queryFetchers()));
         builder.type(TypeRuntimeWiring.newTypeWiring(GraphQLUtils.MUTATION_TYPE)
                 .dataFetchers(mutationFetchers()));
         builder.type(TypeRuntimeWiring.newTypeWiring(GraphQLUtils.SUBSCRIPTION_TYPE)
                 .dataFetchers(subscriptionFetchers()));
-        builder.scalar(GraphQLScalarType.newScalar()
-                .name(strategy.anyTypeName())
-                .coercing(new AnyCoercing())
-                .build());
         namespace.getSchemas().forEach((k, schema) -> {
             if(schema instanceof InstanceSchema) {
                 if(!((InstanceSchema) schema).isConcrete()) {

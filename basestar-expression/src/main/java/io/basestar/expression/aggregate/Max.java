@@ -88,7 +88,7 @@ public class Max implements Aggregate {
     }
 
     @Override
-    public Expression copy(final List<Expression> expressions) {
+    public Aggregate copy(final List<Expression> expressions) {
 
         return new Max(expressions.get(0));
     }

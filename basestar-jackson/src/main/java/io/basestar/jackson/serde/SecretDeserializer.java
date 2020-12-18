@@ -11,16 +11,10 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class SecretDeserializer extends JsonDeserializer<Secret> {
 
-    private final boolean visibleSecrets;
-
     @Override
     public Secret deserialize(final JsonParser parser, final DeserializationContext deserializationContext) throws IOException {
 
         final String str = parser.getValueAsString();
-        if(visibleSecrets) {
-            return Secret.plaintext(str);
-        } else {
-            return Secret.encrypted(str);
-        }
+        return Secret.encrypted(str);
     }
 }

@@ -28,7 +28,6 @@ import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
 import graphql.GraphQLContext;
-import graphql.schema.GraphQLScalarType;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.idl.*;
 import io.basestar.auth.Caller;
@@ -38,10 +37,10 @@ import io.basestar.event.EventSerialization;
 import io.basestar.graphql.schema.SchemaAdaptor;
 import io.basestar.graphql.schema.SchemaConverter;
 import io.basestar.graphql.subscription.SubscriberContext;
-import io.basestar.graphql.wiring.AnyCoercing;
 import io.basestar.graphql.wiring.InterfaceResolver;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Namespace;
+import io.basestar.secret.SecretContext;
 import io.basestar.storage.MemoryStorage;
 import io.basestar.stream.event.SubscriptionPublishEvent;
 import io.basestar.util.Name;
@@ -539,11 +538,8 @@ class GraphQLTest {
 
         final SchemaGenerator generator = new SchemaGenerator();
 
-        final RuntimeWiring.Builder builder = RuntimeWiring.newRuntimeWiring();
-        builder.scalar(GraphQLScalarType.newScalar()
-                .name(GraphQLStrategy.DEFAULT.anyTypeName())
-                .coercing(new AnyCoercing())
-                .build());
+        final RuntimeWiring.Builder builder = GraphQLAdaptor.runtimeWiringBuilder(GraphQLStrategy.DEFAULT, SecretContext.none());
+
         namespace.getSchemas().forEach((k, schema) -> {
             if(schema instanceof InstanceSchema) {
                 if(!((InstanceSchema) schema).isConcrete()) {

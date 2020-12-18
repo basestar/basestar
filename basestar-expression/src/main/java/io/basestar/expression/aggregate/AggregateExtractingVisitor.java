@@ -43,7 +43,7 @@ public class AggregateExtractingVisitor implements ExpressionVisitor.Defaulting<
     @Override
     public Expression visitAggregate(final Aggregate expression) {
 
-        final String id = "v" + System.identityHashCode(expression);
+        final String id = "_" + expression.digest();
         aggregates.put(id, expression);
         return new NameConstant(Name.of(id));
     }

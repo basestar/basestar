@@ -235,6 +235,7 @@ public class Link implements Member {
         }
     }
 
+
     public List<Sort> getEffectiveSort() {
 
         if(sort.isEmpty()) {
@@ -277,12 +278,20 @@ public class Link implements Member {
     }
 
     @Override
-    public Object expand(final Object value, final Expander expander, final Set<Name> expand) {
+    public Object expand(final Name parent, final Object value, final Expander expander, final Set<Name> expand) {
 
         if(expand == null) {
             return null;
         } else {
-            return fromArray(expander.expandLink(this, toArray(value), expand));
+            return fromArray(expander.expandLink(parent,this, toArray(value), expand));
+        }
+    }
+
+    @Override
+    public void expand(final Name parent, final Expander expander, final Set<Name> expand) {
+
+        if(expand != null) {
+            expander.expandLink(parent,this, null, expand);
         }
     }
 

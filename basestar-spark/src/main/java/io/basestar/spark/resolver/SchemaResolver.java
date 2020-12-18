@@ -21,14 +21,11 @@ package io.basestar.spark.resolver;
  */
 
 import com.google.common.collect.ImmutableSet;
-import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.LinkableSchema;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.ViewSchema;
 import io.basestar.spark.combiner.Combiner;
-import io.basestar.spark.database.QueryChain;
 import io.basestar.spark.source.Source;
-import io.basestar.spark.transform.*;
+import io.basestar.spark.transform.SchemaTransform;
+import io.basestar.spark.transform.Transform;
 import io.basestar.spark.util.NamingConvention;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -38,10 +35,10 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+@Deprecated
 public interface SchemaResolver {
 
     Dataset<Row> resolve(LinkableSchema schema, Set<Name> expand);
@@ -89,49 +86,55 @@ public interface SchemaResolver {
             this(resolver, NamingConvention.DEFAULT);
         }
 
-        protected Dataset<Row> object(final ObjectSchema schema, final Set<Name> expand) {
-
-            final Set<Name> mergedExpand = expand(schema, expand);
-            final SchemaTransform schemaTransform = SchemaTransform.builder().schema(schema).naming(naming).build();
-            final ExpressionTransform expressionTransform = ExpressionTransform.builder().schema(schema).expand(mergedExpand).build();
-            final ExpandTransform expandTransform = ExpandTransform.builder().resolver(this).schema(schema).expand(mergedExpand).build();
-            final Dataset<Row> base = Nullsafe.require(resolver.resolve(schema, schema.getExpand()));
-            return schemaTransform.then(expressionTransform).then(expandTransform).accept(base);
-        }
-
-        protected Dataset<Row> view(final ViewSchema schema, final Set<Name> expand) {
-
-            final Set<Name> mergedExpand = expand(schema, expand);
-            final ViewTransform viewTransform = ViewTransform.builder().schema(schema).build();
-            final ExpandTransform expandTransform = ExpandTransform.builder().resolver(this).schema(schema).expand(mergedExpand).build();
-            final ViewSchema.From from = schema.getFrom();
-            final Dataset<Row> base = resolve(from.getSchema(), from.getExpand());
-            return viewTransform.then(expandTransform).accept(base);
-        }
-
         @Override
         public Dataset<Row> resolve(final LinkableSchema schema, final Set<Name> expand) {
 
-            if(schema instanceof ObjectSchema) {
-                return object((ObjectSchema)schema, expand);
-            } else if(schema instanceof ViewSchema) {
-                return view((ViewSchema)schema, expand);
-            } else {
-                throw new IllegalStateException("Cannot resolve dataset for schema: " + schema.getQualifiedName());
-            }
+            return resolver.resolve(schema, expand);
         }
 
-        protected Set<Name> expand(final InstanceSchema schema, final Set<Name> expand) {
-
-            if(expand.contains(QueryChain.DEFAULT_EXPAND)) {
-                final Set<Name> mergedExpand = new HashSet<>(expand);
-                mergedExpand.remove(QueryChain.DEFAULT_EXPAND);
-                mergedExpand.addAll(schema.getExpand());
-                return mergedExpand;
-            } else {
-                return expand;
-            }
-        }
+        //        protected Dataset<Row> object(final ObjectSchema schema, final Set<Name> expand) {
+//
+//            final Set<Name> mergedExpand = expand(schema, expand);
+//            final SchemaTransform schemaTransform = SchemaTransform.builder().schema(schema).naming(naming).build();
+//            final ExpressionTransform expressionTransform = ExpressionTransform.builder().schema(schema).expand(mergedExpand).build();
+//            final ExpandTransform expandTransform = ExpandTransform.builder().resolver(this).schema(schema).expand(mergedExpand).build();
+//            final Dataset<Row> base = Nullsafe.require(resolver.resolve(schema, schema.getExpand()));
+//            return schemaTransform.then(expressionTransform).then(expandTransform).accept(base);
+//        }
+//
+//        protected Dataset<Row> view(final ViewSchema schema, final Set<Name> expand) {
+//
+//            final Set<Name> mergedExpand = expand(schema, expand);
+//            final ViewTransform viewTransform = ViewTransform.builder().schema(schema).build();
+//            final ExpandTransform expandTransform = ExpandTransform.builder().resolver(this).schema(schema).expand(mergedExpand).build();
+//            final ViewSchema.From from = schema.getFrom();
+//            final Dataset<Row> base = resolve(from.getSchema(), from.getExpand());
+//            return viewTransform.then(expandTransform).accept(base);
+//        }
+//
+//        @Override
+//        public Dataset<Row> resolve(final LinkableSchema schema, final Set<Name> expand) {
+//
+//            if(schema instanceof ObjectSchema) {
+//                return object((ObjectSchema)schema, expand);
+//            } else if(schema instanceof ViewSchema) {
+//                return view((ViewSchema)schema, expand);
+//            } else {
+//                throw new IllegalStateException("Cannot resolve dataset for schema: " + schema.getQualifiedName());
+//            }
+//        }
+//
+//        protected Set<Name> expand(final InstanceSchema schema, final Set<Name> expand) {
+//
+//            if(expand.contains(QueryChain.DEFAULT_EXPAND)) {
+//                final Set<Name> mergedExpand = new HashSet<>(expand);
+//                mergedExpand.remove(QueryChain.DEFAULT_EXPAND);
+//                mergedExpand.addAll(schema.getExpand());
+//                return mergedExpand;
+//            } else {
+//                return expand;
+//            }
+//        }
     }
 
     class Combining implements SchemaResolver {

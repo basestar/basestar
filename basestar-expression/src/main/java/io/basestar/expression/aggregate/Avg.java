@@ -88,7 +88,7 @@ public class Avg implements Aggregate {
     }
 
     @Override
-    public Expression copy(final List<Expression> expressions) {
+    public Aggregate copy(final List<Expression> expressions) {
 
         return new Avg(expressions.get(0));
     }

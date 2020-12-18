@@ -291,9 +291,17 @@ public class Property implements Member {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Object expand(final Object value, final Expander expander, final Set<Name> expand) {
+    public Object expand(final Name parent, final Object value, final Expander expander, final Set<Name> expand) {
 
-        return ((Use<Object>)type).expand(value, expander, expand);
+        return ((Use<Object>)type).expand(parent, value, expander, expand);
+    }
+
+    @Override
+    public void expand(final Name parent, final Expander expander, final Set<Name> expand) {
+
+        if(expand != null) {
+            type.expand(parent, expander, expand);
+        }
     }
 
     @Override

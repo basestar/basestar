@@ -1,6 +1,7 @@
 package io.basestar.storage.view;
 
 import io.basestar.expression.aggregate.Aggregate;
+import io.basestar.schema.Layout;
 import io.basestar.util.Text;
 import lombok.Data;
 
@@ -16,15 +17,23 @@ public class AggStage implements QueryStage {
 
     private final Map<String, Aggregate> aggregates;
 
+    private final Layout outputLayout;
+
     @Override
     public String toString() {
 
-        return "- Aggregate:\n" + Text.indent(input.toString());
+        return "- Aggregate(group=" + group + ", aggregates=" + aggregates + "):\n" + Text.indent(input.toString());
     }
 
     @Override
-    public boolean isSorted() {
+    public Layout outputLayout() {
 
-        return true;
+        return outputLayout;
+    }
+
+    @Override
+    public <T> T visit(final Visitor<T> visitor) {
+
+        return visitor.visitAgg(this);
     }
 }

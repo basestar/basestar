@@ -104,10 +104,14 @@ public class Methods implements Serializable {
                     actualTarget = target;
                     actualArgs = args;
                 }
-                try {
-                    return method.invoke(actualTarget, actualArgs);
-                } catch (final Exception e) {
-                    throw new IllegalStateException("Cannot call method " + method + " on object " + actualTarget, e);
+                if(actualTarget != null) {
+                    try {
+                        return method.invoke(actualTarget, actualArgs);
+                    } catch (final Exception e) {
+                        throw new IllegalStateException("Cannot call method " + method + " on object " + actualTarget, e);
+                    }
+                } else {
+                    return null;
                 }
             }
 

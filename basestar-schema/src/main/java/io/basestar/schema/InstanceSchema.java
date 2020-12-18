@@ -40,7 +40,7 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
-public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Property.Resolver {
+public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Property.Resolver, Layout {
 
     interface Descriptor<S extends InstanceSchema> extends Schema.Descriptor<S, Instance>, Property.Resolver.Descriptor {
 
@@ -72,9 +72,19 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
     @Override
     Descriptor<? extends InstanceSchema> descriptor();
 
+    @Override
     default Set<Name> getExpand() {
 
         return Collections.emptySet();
+    }
+
+    @Override
+    default Map<String, Use<?>> getSchema() {
+
+        final SortedMap<String, Use<?>> result = new TreeMap<>();
+        metadataSchema().forEach(result::put);
+        getMembers().forEach((name, member) -> result.put(name, member.getType()));
+        return result;
     }
 
     default boolean hasMember(final String name) {
@@ -273,12 +283,33 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
                 .name(getQualifiedName().toString());
     }
 
+    default void expand(final Expander expander, final Set<Name> expand) {
+
+        expand(Name.empty(), expander, expand);
+    }
+
+    default void expand(final Name parent, final Expander expander, final Set<Name> expand) {
+
+        if(!expand.isEmpty()) {
+            final Map<String, Set<Name>> branches = Name.branch(expand);
+            getMembers().forEach((name, member) -> {
+                final Set<Name> branch = branches.get(member.getName());
+                member.expand(parent.with(name), expander, branch);
+            });
+        }
+    }
+
     default Instance expand(final Instance object, final Expander expander, final Set<Name> expand) {
+
+        return expand(Name.empty(), object, expander, expand);
+    }
+
+    default Instance expand(final Name parent, final Instance object, final Expander expander, final Set<Name> expand) {
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
         return transformMembers(object, (member, before) -> {
             final Set<Name> branch = branches.get(member.getName());
-            return member.expand(before, expander, branch);
+            return member.expand(parent.with(member.getName()), before, expander, branch);
         });
     }
 

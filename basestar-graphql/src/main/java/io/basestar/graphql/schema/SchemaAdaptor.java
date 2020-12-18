@@ -27,8 +27,10 @@ import io.basestar.graphql.GraphQLUtils;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import io.basestar.util.Immutable;
+import io.basestar.util.Name;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 public class SchemaAdaptor {
 
@@ -45,7 +47,14 @@ public class SchemaAdaptor {
     public TypeDefinitionRegistry typeDefinitionRegistry() {
 
         final TypeDefinitionRegistry registry = new TypeDefinitionRegistry();
-        registry.add(new ScalarTypeDefinition(strategy.anyTypeName()));
+        Stream.of(strategy.anyTypeName(), strategy.dateTimeTypeName(),
+                strategy.dateTimeTypeName(), strategy.secretTypeName(),
+                strategy.binaryTypeName()).forEach(scalar -> {
+            registry.add(new ScalarTypeDefinition(scalar));
+            if(namespace.getSchema(Name.parse(scalar)) != null) {
+                throw new IllegalStateException("Namespace defines a schema called '" + scalar + "' but this is a scalar type name");
+            }
+        });
         final Map<String, Use<?>> mapTypes = new HashMap<>();
         namespace.getSchemas().forEach((k, schema) -> {
             registry.add(typeDefinition(schema));
@@ -592,6 +601,24 @@ public class SchemaAdaptor {
             }
 
             @Override
+            public Type<?> visitDate(final UseDate type) {
+
+                return new TypeName(strategy.dateTypeName());
+            }
+
+            @Override
+            public Type<?> visitDateTime(final UseDateTime type) {
+
+                return new TypeName(strategy.dateTimeTypeName());
+            }
+
+            @Override
+            public Type<?> visitSecret(final UseSecret type) {
+
+                return new TypeName(strategy.secretTypeName());
+            }
+
+            @Override
             public Type<?> visitEnum(final UseEnum type) {
 
                 return new TypeName(strategy.typeName(type.getSchema()));
@@ -630,7 +657,7 @@ public class SchemaAdaptor {
             @Override
             public Type<?> visitBinary(final UseBinary type) {
 
-                return new TypeName(GraphQLUtils.STRING_TYPE);
+                return new TypeName(strategy.binaryTypeName());
             }
 
             @Override
@@ -686,6 +713,12 @@ public class SchemaAdaptor {
             }
 
             @Override
+            public Type<?> visitSecret(final UseSecret type) {
+
+                return new TypeName(strategy.secretTypeName());
+            }
+
+            @Override
             public Type<?> visitEnum(final UseEnum type) {
 
                 return new TypeName(strategy.typeName(type.getSchema()));
@@ -724,7 +757,7 @@ public class SchemaAdaptor {
             @Override
             public Type<?> visitBinary(final UseBinary type) {
 
-                return new TypeName(GraphQLUtils.STRING_TYPE);
+                return new TypeName(strategy.binaryTypeName());
             }
 
             @Override
