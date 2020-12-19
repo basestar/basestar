@@ -47,7 +47,7 @@ public class SchemaAdaptor {
     public TypeDefinitionRegistry typeDefinitionRegistry() {
 
         final TypeDefinitionRegistry registry = new TypeDefinitionRegistry();
-        Stream.of(strategy.anyTypeName(), strategy.dateTimeTypeName(),
+        Stream.of(strategy.anyTypeName(), strategy.dateTypeName(),
                 strategy.dateTimeTypeName(), strategy.secretTypeName(),
                 strategy.binaryTypeName()).forEach(scalar -> {
             registry.add(new ScalarTypeDefinition(scalar));

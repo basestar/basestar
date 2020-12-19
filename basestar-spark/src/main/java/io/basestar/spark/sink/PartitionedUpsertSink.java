@@ -241,7 +241,7 @@ public class PartitionedUpsertSink extends PartitionedUpsertUtils implements Sin
                     .schema(structType)
                     .load(partitions.stream().map(v -> v.location().toString()).toArray(String[]::new))
                     .withColumn(STATE_COLUMN, functions.lit(IGNORE_STATE))
-                    .map((MapFunction<Row, Row>) row -> SparkSchemaUtils.conform(row, structType), RowEncoder.apply(structType));
+                    .map((MapFunction<Row, Row>) row -> SparkRowUtils.conform(row, structType), RowEncoder.apply(structType));
         }
     }
 
@@ -259,10 +259,10 @@ public class PartitionedUpsertSink extends PartitionedUpsertUtils implements Sin
                         if(t._2() != null) {
                             return t._1();
                         } else {
-                            return SparkSchemaUtils.set(t._1(), ImmutableMap.of(STATE_COLUMN, CREATE_STATE));
+                            return SparkRowUtils.set(t._1(), ImmutableMap.of(STATE_COLUMN, CREATE_STATE));
                         }
                     } else {
-                        return SparkSchemaUtils.conform(t._2(), dataSchema);
+                        return SparkRowUtils.conform(t._2(), dataSchema);
                     }
 
                 }, RowEncoder.apply(changes.schema()));
@@ -276,7 +276,7 @@ public class PartitionedUpsertSink extends PartitionedUpsertUtils implements Sin
         for(int i = 0; i != inputFields.length; ++i) {
             outputFields[i] = inputFields[i];
         }
-        outputFields[inputFields.length] = SparkSchemaUtils.field(UPSERT_PARTITION, DataTypes.StringType);
+        outputFields[inputFields.length] = SparkRowUtils.field(UPSERT_PARTITION, DataTypes.StringType);
         final StructType outputSchema = DataTypes.createStructType(outputFields);
 
         final int[] partitionIndexes = partitionColumns.stream().mapToInt(inputSchema::fieldIndex).toArray();

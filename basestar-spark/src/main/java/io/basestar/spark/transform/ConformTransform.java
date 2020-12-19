@@ -20,7 +20,7 @@ package io.basestar.spark.transform;
  * #L%
  */
 
-import io.basestar.spark.util.SparkSchemaUtils;
+import io.basestar.spark.util.SparkRowUtils;
 import lombok.AllArgsConstructor;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.StructType;
@@ -60,7 +60,7 @@ public class ConformTransform implements DatasetMapTransform {
         @Override
         public Row accept(final Row input) {
 
-            return SparkSchemaUtils.conform(input, structType);
+            return SparkRowUtils.conform(input, structType);
         }
     }
 }

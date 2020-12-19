@@ -29,6 +29,7 @@ import io.basestar.spark.expression.SparkExpressionVisitor;
 import io.basestar.spark.resolver.ColumnResolver;
 import io.basestar.spark.resolver.SchemaResolver;
 import io.basestar.spark.util.ScalaUtils;
+import io.basestar.spark.util.SparkRowUtils;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
@@ -143,7 +144,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
         final Dataset<Tuple2<Row, Row>> sorted = sortTransform.accept(joined);
 
-        final MapFunction<Tuple2<Row, Row>, T> groupBy = v -> (T) SparkSchemaUtils.get(v._1(), rootIdColumn);
+        final MapFunction<Tuple2<Row, Row>, T> groupBy = v -> (T) SparkRowUtils.get(v._1(), rootIdColumn);
         final KeyValueGroupedDataset<T, Tuple2<Row, Row>> grouped = sorted.groupByKey(groupBy, (Encoder<T>)SparkSchemaUtils.encoder(rootIdType));
 
         final MapGroupsFunction<T, Tuple2<Row, Row>, Row> collect = (id, iter) -> {
@@ -167,7 +168,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
             } else {
                 outputValue = ScalaUtils.asScalaSeq(values);
             }
-            return SparkSchemaUtils.transform(root, (field, value) -> field.name().equals(linkName) ? outputValue : value);
+            return SparkRowUtils.transform(root, (field, value) -> field.name().equals(linkName) ? outputValue : value);
         };
 
         return grouped.mapGroups(collect, RowEncoder.apply(input.schema()));
@@ -203,7 +204,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
             final Dataset<Row> refInput = cache(resolver.resolveAndConform(requiredRef.getSchema(), requiredRef.getExpand()));
 
-            final StructField refIdField = SparkSchemaUtils.field(REF_ID_COLUMN, DataTypes.StringType);
+            final StructField refIdField = SparkRowUtils.field(REF_ID_COLUMN, DataTypes.StringType);
 
             final FlatMapFunction<Row, Row> refIds = row -> {
 
@@ -211,7 +212,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
                 schema.getProperties().forEach((name, property) -> {
                     final Set<Name> branch = branches.get(name);
                     if(branch != null) {
-                        ids.addAll(refIds(property.getType(), branch, SparkSchemaUtils.get(row, name)));
+                        ids.addAll(refIds(property.getType(), branch, SparkRowUtils.get(row, name)));
                     }
                 });
                 // Make sure we always have at least one output row else this will act like an inner join
@@ -219,17 +220,17 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
                     ids.add(null);
                 }
 
-                return ids.stream().map(id -> SparkSchemaUtils.append(row, refIdField, id)).iterator();
+                return ids.stream().map(id -> SparkRowUtils.append(row, refIdField, id)).iterator();
             };
 
-            final StructType flatMapType = SparkSchemaUtils.append(output.schema(), refIdField);
+            final StructType flatMapType = SparkRowUtils.append(output.schema(), refIdField);
             final Dataset<Row> withRefIds = output.flatMap(refIds, RowEncoder.apply(flatMapType));
 
             final String refIdColumn = requiredRef.getSchema().id();
             final Column joinCondition = refInput.col(refIdColumn).equalTo(withRefIds.col(REF_ID_COLUMN));
             final Dataset<Tuple2<Row, Row>> joined = withRefIds.joinWith(refInput, joinCondition, "left_outer");
 
-            final MapFunction<Tuple2<Row, Row>, T> groupBy = v -> rootIdType.create(SparkSchemaUtils.get(v._1(), rootIdColumn));
+            final MapFunction<Tuple2<Row, Row>, T> groupBy = v -> rootIdType.create(SparkRowUtils.get(v._1(), rootIdColumn));
             final KeyValueGroupedDataset<T, Tuple2<Row, Row>> grouped = joined.groupByKey(groupBy, encoder);
 
             final MapGroupsFunction<T, Tuple2<Row, Row>, Row> collect = (id, iter) -> {
@@ -238,17 +239,17 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
                 final Map<String, Row> lookup = new HashMap<>();
                 while (iter.hasNext()) {
                     final Tuple2<Row, Row> tuple = iter.next();
-                    final Row _1 = SparkSchemaUtils.remove(tuple._1(), REF_ID_COLUMN);
+                    final Row _1 = SparkRowUtils.remove(tuple._1(), REF_ID_COLUMN);
                     final Row _2 = tuple._2();
                     if (_2 != null) {
-                        lookup.put((String) SparkSchemaUtils.get(_2, refIdColumn), _2);
+                        lookup.put((String) SparkRowUtils.get(_2, refIdColumn), _2);
                     }
 //                    assert (root == null || root.equals(_1));
                     root = _1;
                 }
                 assert root != null;
 
-                return SparkSchemaUtils.transform(root, (field, oldValue) -> {
+                return SparkRowUtils.transform(root, (field, oldValue) -> {
                     final String name = field.name();
                     final Set<Name> branch = branches.get(name);
                     if(branch != null) {
@@ -386,7 +387,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
                             final String name = entry.getKey();
                             final Set<Name> branch = branches.get(name);
                             if (branch != null) {
-                                results.addAll(refIds(entry.getValue().getType(), branch, SparkSchemaUtils.get(row, name)));
+                                results.addAll(refIds(entry.getValue().getType(), branch, SparkRowUtils.get(row, name)));
                             }
                         }
                         return results;
@@ -400,7 +401,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
                     if (input instanceof Row) {
                         final Row row = (Row) input;
-                        final String id = (String) SparkSchemaUtils.get(row, ObjectSchema.ID);
+                        final String id = (String) SparkRowUtils.get(row, ObjectSchema.ID);
                         return id == null ? ImmutableSet.of() : ImmutableSet.of(id);
                     } else {
                         throw new IllegalStateException();
@@ -459,7 +460,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
                     if (input instanceof Row) {
                         final Row row = (Row) input;
                         final Map<String, Set<Name>> branches = Name.branch(expand);
-                        return SparkSchemaUtils.transform(row, (field, oldValue) -> {
+                        return SparkRowUtils.transform(row, (field, oldValue) -> {
                             final String name = field.name();
                             final Set<Name> branch = branches.get(name);
                             if(branch != null) {
@@ -479,7 +480,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
                     if (input instanceof Row) {
                         final Row row = (Row) input;
-                        final String id = (String) SparkSchemaUtils.get(row, ObjectSchema.ID);
+                        final String id = (String) SparkRowUtils.get(row, ObjectSchema.ID);
                         if (id != null && lookup.get(id) != null) {
                             return lookup.get(id);
                         } else {

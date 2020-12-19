@@ -24,7 +24,7 @@
         <unirest.version>3.4.01</unirest.version>
         <avro.version>1.9.2</avro.version>
         <scala.version>2.12.12</scala.version>
-        <spark.version>2.4.4</spark.version>
+        <spark.version>2.4.7</spark.version>
         <hadoop.version>2.8.5</hadoop.version>
         <hazelcast.version>4.0</hazelcast.version>
         <swagger.version>2.1.2</swagger.version>

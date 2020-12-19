@@ -32,6 +32,7 @@ import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseBinary;
 import io.basestar.schema.use.UseBoolean;
 import io.basestar.spark.expression.SparkExpressionVisitor;
+import io.basestar.spark.util.SparkRowUtils;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -65,7 +66,7 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         this.keyFunction = functions.udf(
                 (UDF1<Row, byte[]>) row -> {
                     final List<Object> values = new ArrayList<>();
-                    keyColumnNames.forEach(key -> values.add(SparkSchemaUtils.get(row, key)));
+                    keyColumnNames.forEach(key -> values.add(SparkRowUtils.get(row, key)));
                     return UseBinary.binaryKey(values);
                 },
                 DataTypes.BinaryType
@@ -211,7 +212,7 @@ public class ViewTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
         final Function<Name, Column> columnResolver = columnResolver(from, ds);
         return ds.sort(sort.stream()
-                .map(v -> SparkSchemaUtils.order(columnResolver.apply(v.getName()), v.getOrder(), v.getNulls()))
+                .map(v -> SparkRowUtils.order(columnResolver.apply(v.getName()), v.getOrder(), v.getNulls()))
                 .toArray(Column[]::new));
     }
 

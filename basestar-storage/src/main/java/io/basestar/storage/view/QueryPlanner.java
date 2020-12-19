@@ -34,14 +34,20 @@ public interface QueryPlanner {
                 return new EmptyStage(schema, expand);
             } else {
                 QueryStage stage = stage(schema);
-                if(!expand.isEmpty() && !expand.equals(ImmutableSet.of(Name.empty()))) {
-                    stage = new ExpandStage(stage, schema, expand);
-                }
+                final Set<Name> expandAfter = new HashSet<>(expand);
                 if (!constExpr && expression != null) {
+                    final Set<Name> expandBefore = schema.requiredExpand(expression.names());
+                    if(!expandBefore.isEmpty()) {
+                        expandBefore.forEach(e1 -> expandAfter.removeIf(e2 -> e2.isChildOrEqual(e1)));
+                        stage = new ExpandStage(stage, schema, expandBefore);
+                    }
                     stage = new FilterStage(stage, expression);
                 }
                 if(!sort.isEmpty()) {
                     stage = new SortStage(stage, sort);
+                }
+                if(!expandAfter.isEmpty()) {
+                    stage = new ExpandStage(stage, schema, expand);
                 }
                 return stage;
             }

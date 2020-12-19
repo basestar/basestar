@@ -12,6 +12,8 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
 import org.apache.spark.sql.types.StructType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.util.Iterator;
@@ -42,6 +44,8 @@ public interface FoldingStepTransform extends Transform<Dataset<Row>, Dataset<Ro
     @Override
     default Dataset<Row> accept(final Dataset<Row> input) {
 
+        final Logger log = LoggerFactory.getLogger(getClass());
+
         final Arity arity = getArity();
         final Layout outputLayout = getOutputLayout();
         final Layout inputLayout = getInputLayout();
@@ -49,7 +53,7 @@ public interface FoldingStepTransform extends Transform<Dataset<Row>, Dataset<Ro
 
             final Step step = step();
             final StructType outputStructType = SparkSchemaUtils.structType(outputLayout);
-            return input.flatMap((FlatMapFunction<Row, Row>) row -> {
+            final Dataset<Row> output = input.flatMap((FlatMapFunction<Row, Row>) row -> {
 
                 final Map<String, Object> source = SparkSchemaUtils.fromSpark(inputLayout, row);
                 final Iterator<? extends Map<String, Object>> result = step.apply(source);
@@ -57,20 +61,27 @@ public interface FoldingStepTransform extends Transform<Dataset<Row>, Dataset<Ro
 
             }, RowEncoder.apply(outputStructType));
 
+            log.warn("Flat mapping folded step has i/o partitions {}->{}", input.rdd().partitions().length, output.rdd().partitions().length);
+
+            return output;
+
         } else if(arity == Arity.FILTERING) {
 
             final Step step = step();
-            return input.filter((FilterFunction<Row>) row -> {
+            final Dataset<Row> output = input.filter((FilterFunction<Row>) row -> {
                 final Map<String, Object> source = SparkSchemaUtils.fromSpark(inputLayout, row);
                 final Iterator<? extends Map<String, Object>> result = step.apply(source);
                 return result.hasNext();
             });
 
+            log.warn("Filtering folded step has i/o partitions {}->{}", input.rdd().partitions().length, output.rdd().partitions().length);
+
+            return output;
         } else if(arity == Arity.MAPPING) {
 
             final Step step = step();
             final StructType outputStructType = SparkSchemaUtils.structType(outputLayout);
-            return input.map((MapFunction<Row, Row>) row -> {
+            final Dataset<Row> output = input.map((MapFunction<Row, Row>) row -> {
 
                 final Map<String, Object> source = SparkSchemaUtils.fromSpark(inputLayout, row);
                 final Iterator<? extends Map<String, Object>> result = step.apply(source);
@@ -80,6 +91,9 @@ public interface FoldingStepTransform extends Transform<Dataset<Row>, Dataset<Ro
 
             }, RowEncoder.apply(outputStructType));
 
+            log.warn("Mapping folded step has i/o partitions {}->{}", input.rdd().partitions().length, output.rdd().partitions().length);
+
+            return output;
         } else {
             throw new IllegalStateException("Mergeable transform must be mapping or filtering");
         }

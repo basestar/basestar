@@ -224,7 +224,7 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
         return results.asMap().entrySet().stream()
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
-                        entry -> ImmutableSet.copyOf(entry.getValue())
+                        entry -> ImmutableSet.copyOf(entry.getValue().stream().filter(v -> !v.isEmpty()).collect(Collectors.toSet()))
                 ));
     }
 

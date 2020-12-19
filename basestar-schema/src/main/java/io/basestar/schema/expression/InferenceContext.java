@@ -1,6 +1,7 @@
 package io.basestar.schema.expression;
 
 import com.google.common.collect.ImmutableMap;
+import io.basestar.expression.Expression;
 import io.basestar.schema.Layout;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseAny;
@@ -12,6 +13,11 @@ import java.util.Map;
 public interface InferenceContext {
 
     Use<?> typeOf(Name name);
+
+    default Use<?> typeOf(Expression expression) {
+
+        return new InferenceVisitor(this).visit(expression);
+    }
 
     default InferenceContext overlay(final String name, final InferenceContext override) {
 
