@@ -21,6 +21,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.catalog.ExternalCatalog;
 import org.apache.spark.sql.types.StructType;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -33,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class TestUpsertTable extends AbstractSparkTest {
 
     @Test
+    @Disabled
     void testUpsertChanges() throws Exception {
 
         final SparkSession session = session();

@@ -65,8 +65,8 @@ class TestCombinerTransform extends AbstractSparkTest {
                 Name.of("A"), session.createDataset(ImmutableList.of(a2b, a3), Encoders.bean(AbstractSparkTest.A.class)).toDF()
         );
 
-        final QueryResolver baseline = QueryResolver.source(schema -> datasets1.get(schema.getQualifiedName()));
-        final QueryResolver overlay = QueryResolver.source(schema -> datasets2.get(schema.getQualifiedName()));
+        final QueryResolver baseline = QueryResolver.ofSources(schema -> datasets1.get(schema.getQualifiedName()));
+        final QueryResolver overlay = QueryResolver.ofSources(schema -> datasets2.get(schema.getQualifiedName()));
 
         final QueryResolver combinedResolver = new QueryResolver.Automatic(new QueryResolver.Combining(baseline, overlay, Combiner.Consistent.builder().build()));
 
@@ -103,8 +103,8 @@ class TestCombinerTransform extends AbstractSparkTest {
         final ObjectSchema schemaA = namespace.requireObjectSchema("A");
 
         final JoinedSource<Row> joined = JoinedSource.<Row>builder()
-                .left(baselineResolver.source(schemaA))
-                .right(combinedResolver.source(schemaA))
+                .left(baselineResolver.ofSource(schemaA))
+                .right(combinedResolver.ofSource(schemaA))
                 .idColumns(ImmutableList.of(schemaA.id()))
                 .build();
 

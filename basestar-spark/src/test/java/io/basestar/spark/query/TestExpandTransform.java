@@ -87,7 +87,7 @@ public class TestExpandTransform extends AbstractSparkTest {
                 schema.getQualifiedName(), dataset
         );
 
-        final QueryResolver resolver = new QueryResolver.Automatic(QueryResolver.source(s -> datasets.get(s.getQualifiedName())));
+        final QueryResolver resolver = new QueryResolver.Automatic(QueryResolver.ofSources(s -> datasets.get(s.getQualifiedName())));
 
         final Set<Expansion> expansion = Expansion.expansion(schema, expand);
         final ExpandStep step = ExpandStep.from(schema, expansion);

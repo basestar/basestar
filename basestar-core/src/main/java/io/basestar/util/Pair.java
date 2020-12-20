@@ -44,6 +44,16 @@ public interface Pair<T1, T2> extends Serializable {
         return com.google.common.collect.Streams.zip(first, second, Pair::of);
     }
 
+    default <T3> Pair<T3, T2> withFirst(final T3 first) {
+
+        return of(first, getSecond());
+    }
+
+    default <T3> Pair<T1, T3> withSecond(final T3 second) {
+
+        return of(getFirst(), second);
+    }
+
     @Data
     class Simple<T1, T2> implements Pair<T1, T2> {
 
