@@ -68,53 +68,10 @@ public class SparkRowUtils {
         }
     }
 
-    public static boolean areStrictlyEqual(final DataType a, final DataType b) {
-
-        if(a.getClass().equals(b.getClass())) {
-            if(a instanceof ArrayType) {
-                final ArrayType arrA = (ArrayType)a;
-                final ArrayType arrB = (ArrayType)b;
-                return arrA.containsNull() == arrB.containsNull()
-                        && areStrictlyEqual(arrA.elementType(), arrB.elementType());
-            } else if(a instanceof MapType) {
-                final MapType mapA = (MapType) a;
-                final MapType mapB = (MapType) b;
-                return mapA.valueContainsNull() == mapB.valueContainsNull()
-                        && areStrictlyEqual(mapA.keyType(), mapB.keyType())
-                        && areStrictlyEqual(mapA.valueType(), mapB.valueType());
-            } else if(a instanceof StructType) {
-                final StructType objA = (StructType) a;
-                final StructType objB = (StructType) b;
-                final StructField[] fieldsA = objA.fields();
-                final StructField[] fieldsB = objB.fields();
-                if(fieldsA.length == fieldsB.length) {
-                    for(int i = 0; i != fieldsA.length; ++i) {
-                        final StructField fieldA = fieldsA[i];
-                        final StructField fieldB = fieldsB[i];
-                        if(!(fieldA.name().equals(fieldB.name())
-                                && fieldA.nullable() == fieldB.nullable()
-                                && areStrictlyEqual(fieldA.dataType(), fieldB.dataType()))) {
-                            return false;
-                        }
-                    }
-                    return true;
-                } else {
-                    return false;
-                }
-            } else {
-                return a.equals(b);
-            }
-        } else {
-            return false;
-        }
-    }
-
     public static Row conform(final Row source, final StructType targetType) {
 
         if(source == null) {
             return null;
-//        } else if(source.schema().equals(targetType)) {
-//            return source;
         } else {
             final StructType sourceType = source.schema();
             final StructField[] sourceFields = sourceType.fields();
@@ -125,11 +82,7 @@ public class SparkRowUtils {
                 final StructField targetField = targetFields[i];
                 for (int j = 0; j != sourceFields.length; ++j) {
                     if (sourceFields[j].name().equalsIgnoreCase(targetField.name())) {
-//                        if(sourceFields[j].dataType().equals(targetField.dataType())) {
-//                            targetValues[i] = sourceValues.apply(j);
-//                        } else {
-                            targetValues[i] = conform(sourceValues.apply(j), targetField.dataType());
-//                        }
+                        targetValues[i] = conform(sourceValues.apply(j), targetField.dataType());
                         break;
                     }
                 }
@@ -412,6 +365,5 @@ public class SparkRowUtils {
                 return value;
             }
         }
-
     }
 }
