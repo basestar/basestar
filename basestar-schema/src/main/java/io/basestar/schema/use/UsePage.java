@@ -26,6 +26,11 @@ public class UsePage<T> implements UseCollection<T, Page<T>> {
 
     private final Use<T> type;
 
+    public static <T> UsePage<T> from(final Use<T> type) {
+
+        return new UsePage<>(type);
+    }
+
     @Override
     public Page<T> transformValues(final Page<T> value, final BiFunction<Use<T>, T, T> fn) {
 
