@@ -1,17 +1,15 @@
 package io.basestar.spark.transform;
 
-import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Layout;
-import io.basestar.schema.Reserved;
-import io.basestar.spark.util.SparkSchemaUtils;
+import io.basestar.schema.expression.InferenceContext;
+import io.basestar.spark.expression.SparkExpressionVisitor;
+import io.basestar.spark.resolver.ColumnResolver;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.api.java.function.FilterFunction;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-
-import java.util.Map;
 
 @Slf4j
 @Getter
@@ -25,19 +23,11 @@ public class PredicateTransform implements Transform<Dataset<Row>, Dataset<Row>>
     @Override
     public Dataset<Row> accept(final Dataset<Row> input) {
 
-        final Expression expression = this.predicate;
-        final Layout inputLayout = this.inputLayout;
+        final InferenceContext inference = InferenceContext.from(inputLayout);
+        final ColumnResolver<Row> columnResolver = ColumnResolver.lowercase(ColumnResolver::nested);
+        final Column condition = new SparkExpressionVisitor(name -> columnResolver.resolve(input, name), inference)
+                .visit(predicate);
 
-        return input.filter((FilterFunction<Row>) row -> {
-
-            final Map<String, Object> object = SparkSchemaUtils.fromSpark(inputLayout, row);
-            try {
-                final Context context = Context.init(object).with(Reserved.THIS, object);
-                return expression.evaluatePredicate(context);
-            } catch (final Exception e) {
-                log.error("Failed to process filter expression " + expression + " (" + e.getMessage() + ")");
-                return false;
-            }
-        });
+        return input.filter(condition);
     }
 }
