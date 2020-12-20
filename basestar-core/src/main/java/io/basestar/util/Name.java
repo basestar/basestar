@@ -23,10 +23,8 @@ package io.basestar.util;
 import com.google.common.base.Splitter;
 import lombok.EqualsAndHashCode;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import javax.annotation.Nullable;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -195,5 +193,10 @@ public class Name extends AbstractPath<Name> implements Comparable<Name> {
             return true;
         }
         return false;
+    }
+
+    public static <SELF extends AbstractPath<SELF>> Map<String, Set<SELF>> branch(@Nullable final Collection<SELF> paths) {
+
+        return AbstractPath.branch(paths);
     }
 }

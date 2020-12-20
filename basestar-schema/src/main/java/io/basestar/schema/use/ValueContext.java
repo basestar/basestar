@@ -71,7 +71,7 @@ public interface ValueContext {
 
     class Standard implements ValueContext {
 
-        public static Standard INSTANCE = new Standard();
+        public static final Standard INSTANCE = new Standard();
 
         @Override
         public LocalDate createDate(final UseDate type, final Object value, final Set<Name> expand) {
@@ -266,7 +266,7 @@ public interface ValueContext {
     @RequiredArgsConstructor
     class Suppressing extends Standard {
 
-        public static Suppressing INSTANCE = new Suppressing();
+        public static final Suppressing INSTANCE = new Suppressing();
 
         @Override
         public Object createAny(final UseAny type, final Object value, final Set<Name> expand) {
@@ -282,6 +282,7 @@ public interface ValueContext {
         }
 
         @Override
+        @SuppressWarnings("java:S2447")
         public Boolean createBoolean(final UseBoolean type, final Object value, final Set<Name> expand) {
 
             if(value == null) {
@@ -334,6 +335,7 @@ public interface ValueContext {
         }
 
         @Override
+        @SuppressWarnings("java:S1168")
         public <T> List<T> createArray(final UseArray<T> type, final Object value, final Set<Name> expand) {
 
             if(value == null) {
@@ -360,6 +362,7 @@ public interface ValueContext {
         }
 
         @Override
+        @SuppressWarnings("java:S1168")
         public <T> Set<T> createSet(final UseSet<T> type, final Object value, final Set<Name> expand) {
 
             if(value == null) {
@@ -386,6 +389,7 @@ public interface ValueContext {
         }
 
         @Override
+        @SuppressWarnings("java:S1168")
         public byte[] createBinary(final UseBinary type, final Object value, final Set<Name> expand) {
 
             if(value == null) {

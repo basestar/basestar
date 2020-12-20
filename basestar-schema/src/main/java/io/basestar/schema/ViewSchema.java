@@ -58,7 +58,7 @@ import java.util.stream.Collectors;
 @Getter
 public class ViewSchema implements LinkableSchema {
 
-    public static String ID = Reserved.PREFIX + "key";
+    public static final String ID = Reserved.PREFIX + "key";
 
     @Getter
     @RequiredArgsConstructor
@@ -106,7 +106,7 @@ public class ViewSchema implements LinkableSchema {
             @SuppressWarnings("unused")
             public static Builder fromSchema(final String schema) {
 
-                return fromSchema(Name.parse(schema.toString()));
+                return fromSchema(Name.parse(schema));
             }
 
             public static Builder fromSchema(final Name schema) {
@@ -353,11 +353,11 @@ public class ViewSchema implements LinkableSchema {
             Instance.setSchema(result, this.getQualifiedName());
         }
         if(isAggregating() || isGrouping()) {
-            if(result.get(ID) == null) {
+            result.computeIfAbsent(ID, k -> {
                 final List<Object> values = new ArrayList<>();
                 group.forEach(name -> values.add(result.get(name)));
-                result.put(ID, UseBinary.binaryKey(values));
-            }
+                return UseBinary.binaryKey(values);
+            });
         }
         if(expand != null && !expand.isEmpty()) {
             final Map<String, Set<Name>> branches = Name.branch(expand);
@@ -369,17 +369,6 @@ public class ViewSchema implements LinkableSchema {
         }
         return new Instance(result);
     }
-
-//    public byte[] key(final Map<String, Object> value) {
-//
-//        final List<Object> key = new ArrayList<>();
-//        if(group.isEmpty()) {
-//            key.add(value.get(Reserved.PREFIX + Reserved.ID));
-//        } else {
-//            group.forEach(name -> key.add(value.get(name)));
-//        }
-//        return UseBinary.binaryKey(key);
-//    }
 
     public void serialize(final Map<String, Object> object, final DataOutput out) throws IOException {
 
@@ -414,22 +403,7 @@ public class ViewSchema implements LinkableSchema {
         return declaredProperties.entrySet().stream().filter(e -> group.contains(e.getKey()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
-
-//    public Expression keyExpression() {
-//
-//        final List<Expression> args = new ArrayList<>();
-//        if(group.isEmpty()) {
-//            args.add(new NameConstant(from.getSchema().id()));
-//        } else {
-//            group.forEach(name -> args.add(new NameConstant(Name.parse(name))));
-//        }
-//        return new MemberCall(
-//                new LiteralArray(args),
-//                "binaryKey",
-//                ImmutableList.of()
-//        );
-//    }
-
+    
     @Override
     public Map<String, Permission> getPermissions() {
 
