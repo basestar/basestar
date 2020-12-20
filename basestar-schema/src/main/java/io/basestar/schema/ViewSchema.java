@@ -58,11 +58,7 @@ import java.util.stream.Collectors;
 @Getter
 public class ViewSchema implements LinkableSchema {
 
-    public static String KEY = Reserved.PREFIX + "key";
-
-    public static final SortedMap<String, Use<?>> METADATA_SCHEMA = ImmutableSortedMap.<String, Use<?>>orderedBy(Comparator.naturalOrder())
-            .put(KEY, UseBinary.DEFAULT)
-            .build();
+    public static String ID = Reserved.PREFIX + "key";
 
     @Getter
     @RequiredArgsConstructor
@@ -303,6 +299,8 @@ public class ViewSchema implements LinkableSchema {
     @Nonnull
     private final SortedMap<String, Serializable> extensions;
 
+    private final boolean isAggregating;
+
     public static Builder builder() {
 
         return new Builder();
@@ -335,6 +333,8 @@ public class ViewSchema implements LinkableSchema {
             throw new ReservedNameException(qualifiedName.toString());
         }
         this.declaredProperties.values().forEach(ViewSchema::validateProperty);
+        this.isAggregating = getProperties().values().stream().map(Property::getExpression)
+                .filter(Objects::nonNull).anyMatch(Expression::isAggregate);
     }
 
     private static void validateProperty(final Property property) {
@@ -352,14 +352,12 @@ public class ViewSchema implements LinkableSchema {
         if(Instance.getSchema(result) == null) {
             Instance.setSchema(result, this.getQualifiedName());
         }
-        if(result.get(KEY) == null) {
-            final List<Object> key = new ArrayList<>();
-            if(group.isEmpty()) {
-                key.add(value.get(Reserved.PREFIX + ReferableSchema.ID));
-            } else {
-                group.forEach(name -> key.add(value.get(name)));
+        if(isAggregating() || isGrouping()) {
+            if(result.get(ID) == null) {
+                final List<Object> values = new ArrayList<>();
+                group.forEach(name -> values.add(result.get(name)));
+                result.put(ID, UseBinary.binaryKey(values));
             }
-            result.put(KEY, UseBinary.binaryKey(key));
         }
         if(expand != null && !expand.isEmpty()) {
             final Map<String, Set<Name>> branches = Name.branch(expand);
@@ -441,7 +439,9 @@ public class ViewSchema implements LinkableSchema {
     @Override
     public SortedMap<String, Use<?>> metadataSchema() {
 
-        return METADATA_SCHEMA;
+        return ImmutableSortedMap.of(
+                ID, typeOfId()
+        );
     }
 
     @Override
@@ -453,7 +453,13 @@ public class ViewSchema implements LinkableSchema {
     @Override
     public String id() {
 
-        return KEY;
+        return ID;
+    }
+
+    @Override
+    public Use<?> typeOfId() {
+
+        return isGrouping() || isAggregating() ? UseBinary.DEFAULT : from.getSchema().typeOfId();
     }
 
     @Override
@@ -514,12 +520,6 @@ public class ViewSchema implements LinkableSchema {
     public boolean isGrouping() {
 
         return !group.isEmpty();
-    }
-
-    public boolean isAggregating() {
-
-        return getProperties().values().stream().map(Property::getExpression)
-                .filter(Objects::nonNull).anyMatch(Expression::isAggregate);
     }
 
     private static Property.Descriptor viewPropertyDescriptor(final Property.Descriptor descriptor, final From from) {

@@ -2,6 +2,7 @@ package io.basestar.schema;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.common.collect.ImmutableMap;
+import io.basestar.schema.use.Use;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -60,6 +61,10 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver, Permissio
 
     @Override
     Descriptor<? extends LinkableSchema> descriptor();
+
+    String id();
+
+    Use<?> typeOfId();
 
     default Instance deleted(final String id) {
 

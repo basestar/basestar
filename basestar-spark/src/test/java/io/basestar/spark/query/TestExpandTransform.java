@@ -27,7 +27,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-public class TestExpandStepTransform extends AbstractSparkTest {
+public class TestExpandTransform extends AbstractSparkTest {
 
     @Test
     void testExpansion() throws IOException {

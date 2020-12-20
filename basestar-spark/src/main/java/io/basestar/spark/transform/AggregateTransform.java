@@ -1,11 +1,10 @@
-package io.basestar.spark.query;
+package io.basestar.spark.transform;
 
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Layout;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.spark.expression.SparkExpressionVisitor;
 import io.basestar.spark.resolver.ColumnResolver;
-import io.basestar.spark.transform.Transform;
 import io.basestar.spark.util.SparkRowUtils;
 import io.basestar.spark.util.SparkSchemaUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +21,7 @@ import java.util.Map;
 
 @Slf4j
 @lombok.Builder(builderClassName = "Builder")
-public class AggStepTransform implements Transform<Dataset<Row>, Dataset<Row>> {
+public class AggregateTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
     private final List<String> group;
 
@@ -46,17 +45,11 @@ public class AggStepTransform implements Transform<Dataset<Row>, Dataset<Row>> {
                 .map(v -> expressionVisitor.visit(v.getValue()).as(v.getKey()))
                 .toArray(Column[]::new);
 
-        final int inputPartitions = input.rdd().partitions().length;
-
         final Column[] groupCols = group.stream().map(input::col).toArray(Column[]::new);
         final Dataset<Row> grouped = input.groupBy(groupCols)
                 .agg(aggs[0], Arrays.copyOfRange(aggs, 1, aggs.length));
 
-        final Dataset<Row> output = grouped.map((MapFunction<Row, Row>)(row -> SparkRowUtils.conform(row, outputStructType)),
+        return grouped.map((MapFunction<Row, Row>)(row -> SparkRowUtils.conform(row, outputStructType)),
                 RowEncoder.apply(outputStructType));
-
-        log.warn("Aggregation of ({}) has i/o partitions {}->{}", aggregates.keySet(), inputPartitions, output.rdd().partitions().length);
-
-        return output;
     }
 }

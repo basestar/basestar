@@ -57,7 +57,7 @@ public class ExpandRefsStep extends AbstractExpandStep {
     @Override
     public Iterator<Row> projectKeys(final StructType outputType, final Row row) {
 
-        final StructField field = SparkRowUtils.getField(outputType, KEY);
+        final StructField field = SparkRowUtils.requireField(outputType, KEY);
 
         final Set<String> refIds = refKeys(root, names, row);
 
@@ -92,11 +92,7 @@ public class ExpandRefsStep extends AbstractExpandStep {
 
     protected <T> Dataset<Row> applyImpl(final QueryResolver resolver, final Dataset<Row> input, final Use<T> typeOfId) {
 
-        final int inputPartitions = input.rdd().partitions().length;
-
-        final Dataset<Row> joinTo = resolver.resolve(target, Constant.TRUE, ImmutableList.of(), ImmutableSet.of()).result();
-
-        log.warn("{} has {} source partitions", describe(), joinTo.rdd().partitions().length);
+        final Dataset<Row> joinTo = resolver.resolve(target, Constant.TRUE, ImmutableList.of(), ImmutableSet.of()).dataset();
 
         final StructType joinToType = joinTo.schema();
         // Input is already partitioned by the key columns by chain fusing
@@ -119,8 +115,6 @@ public class ExpandRefsStep extends AbstractExpandStep {
                 },
                 Encoders.tuple(RowEncoder.apply(input.schema()), RowEncoder.apply(joinTo.schema()))
         );
-
-        log.warn("{} has {} join partitions", describe(), joined.rdd().partitions().length);
 
         final KeyValueGroupedDataset<T, Tuple2<Row, Row>> grouped = groupResults(joined);
 

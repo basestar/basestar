@@ -9,6 +9,7 @@ import io.basestar.schema.Layout;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.spark.combiner.Combiner;
 import io.basestar.spark.source.Source;
+import io.basestar.spark.transform.*;
 import io.basestar.storage.view.*;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -27,17 +28,17 @@ import java.util.function.Function;
 
 public interface QueryResolver {
 
-    default Query resolve(final LinkableSchema schema) {
+    default Query<Row> resolve(final LinkableSchema schema) {
 
         return resolve(schema, ImmutableSet.of());
     }
 
-    default Query resolve(final LinkableSchema schema, final Set<Name> expand) {
+    default Query<Row> resolve(final LinkableSchema schema, final Set<Name> expand) {
 
         return resolve(schema, Constant.TRUE, ImmutableList.of(), expand);
     }
 
-    Query resolve(LinkableSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
+    Query<Row> resolve(LinkableSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
 
     default Source<Dataset<Row>> source(final LinkableSchema schema) {
 
@@ -46,7 +47,7 @@ public interface QueryResolver {
 
     default Source<Dataset<Row>> source(final LinkableSchema schema, final Set<Name> expand) {
 
-        return sink -> sink.accept(resolve(schema, expand).result());
+        return sink -> sink.accept(resolve(schema, expand).dataset());
     }
 
     default Caching caching() {
@@ -81,7 +82,7 @@ public interface QueryResolver {
         public Query resolve(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
             return () -> results.computeIfAbsent(new Key(schema, query, sort, expand),
-                    ignored -> resolver.resolve(schema, query, sort, expand).result().cache());
+                    ignored -> resolver.resolve(schema, query, sort, expand).dataset().cache());
         }
 
         @Override
@@ -103,7 +104,7 @@ public interface QueryResolver {
         }
     }
 
-    class Automatic implements QueryResolver, QueryStage.Visitor<Query> {
+    class Automatic implements QueryResolver, QueryStage.Visitor<Query<Row>> {
 
         private final QueryPlanner planner;
 
@@ -121,80 +122,85 @@ public interface QueryResolver {
         }
 
         @Override
-        public Query resolve(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+        public Query<Row> resolve(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
             final QueryStage stage = planner.plan(schema, query, sort, expand);
             return stage.visit(this);
         }
 
         @Override
-        public Query visitAgg(final AggStage stage) {
+        public Query<Row> visitAgg(final AggStage stage) {
 
             final Layout inputLayout = stage.getInput().outputLayout();
             final Layout outputLayout = stage.getOutputLayout();
 
             return stage.getInput().visit(this)
-                    .then(new AggStepTransform(stage.getGroup(), stage.getAggregates(), inputLayout, outputLayout));
+                    .then(AggregateTransform.builder()
+                            .group(stage.getGroup())
+                            .aggregates(stage.getAggregates())
+                            .inputLayout(inputLayout)
+                            .outputLayout(outputLayout).build());
         }
 
         @Override
-        public Query visitEmpty(final EmptyStage stage) {
+        public Query<Row> visitEmpty(final EmptyStage stage) {
 
             return resolver.resolve(stage.getSchema(), Constant.FALSE, ImmutableList.of(), stage.getExpand());
         }
 
         @Override
-        public Query visitExpand(final ExpandStage stage) {
+        public Query<Row> visitExpand(final ExpandStage stage) {
 
             return stage.getInput().visit(this)
-                    .then(ExpandStepTransform.builder().expand(stage.getExpand()).schema(stage.getSchema()).resolver(this).build());
+                    .then(ExpandTransform.builder()
+                            .expand(stage.getExpand())
+                            .schema(stage.getSchema())
+                            .resolver(this).build());
         }
 
         @Override
-        public Query visitFilter(final FilterStage stage) {
-
-            final Layout layout = stage.getInput().outputLayout();
+        public Query<Row> visitFilter(final FilterStage stage) {
 
             return stage.getInput().visit(this)
-                    .then(FilterStepTransform.builder().layout(layout).expression(stage.getCondition()).build());
+                    .then(PredicateTransform.builder()
+                            .inputLayout(stage.getInput().outputLayout())
+                            .predicate(stage.getCondition()).build());
         }
 
         @Override
-        public Query visitMap(final MapStage stage) {
+        public Query<Row> visitMap(final MapStage stage) {
 
-            final Layout inputLayout = stage.getInput().outputLayout();
             final Layout outputLayout = stage.getOutputLayout();
 
             return stage.getInput().visit(this)
-                    .then(MapStepTransform.builder().inputLayout(inputLayout).outputLayout(outputLayout)
+                    .then(ExpressionTransform.builder()
+                            .inputLayout(stage.getInput().outputLayout())
+                            .outputLayout(outputLayout)
                             .expressions(stage.getOutputs()).build());
         }
 
         @Override
-        public Query visitSchema(final SchemaStage stage) {
-
-            final Layout inputLayout = stage.getInput().outputLayout();
+        public Query<Row> visitSchema(final SchemaStage stage) {
 
             return stage.getInput().visit(this)
-                    .then(SchemaStepTransform.builder().inputLayout(inputLayout)
-                            .schema(stage.getSchema()).build());
+                    .then(SchemaTransform.builder().schema(stage.getSchema()).build());
         }
 
         @Override
-        public Query visitSort(final SortStage stage) {
+        public Query<Row> visitSort(final SortStage stage) {
 
             return stage.getInput().visit(this)
-                    .then(new SortStepTransform(stage.getSort()));
+                    .then(SortTransform.<Row>builder().sort(stage.getSort()).build());
         }
 
         @Override
-        public Query visitSource(final SourceStage stage) {
+        public Query<Row> visitSource(final SourceStage stage) {
 
             return resolver.resolve(stage.getSchema());
         }
 
         @Override
-        public Query visitUnion(final UnionStage stage) {
+        public Query<Row> visitUnion(final UnionStage stage) {
 
             throw new UnsupportedOperationException();
         }
@@ -229,10 +235,10 @@ public interface QueryResolver {
         }
 
         @Override
-        public Query resolve(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+        public Query<Row> resolve(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-            final Dataset<Row> baseline = this.baseline.resolve(schema, query, sort, expand).result();
-            final Dataset<Row> overlay = this.overlay.resolve(schema, query, sort, expand).result();
+            final Dataset<Row> baseline = this.baseline.resolve(schema, query, sort, expand).dataset();
+            final Dataset<Row> overlay = this.overlay.resolve(schema, query, sort, expand).dataset();
             return () -> combiner.apply(schema, expand, baseline, overlay, joinType);
         }
     }

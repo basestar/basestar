@@ -22,6 +22,7 @@ package io.basestar.storage.util;
 
 import com.google.common.collect.ImmutableList;
 import io.basestar.schema.InstanceSchema;
+import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.use.Use;
 import io.basestar.util.Name;
 import io.basestar.util.Page;
@@ -38,7 +39,7 @@ public class KeysetPagingUtils {
 
     }
 
-    public static List<Sort> normalizeSort(final InstanceSchema schema, final List<Sort> sort) {
+    public static List<Sort> normalizeSort(final LinkableSchema schema, final List<Sort> sort) {
 
         final Name id = Name.of(schema.id());
         if(sort == null) {

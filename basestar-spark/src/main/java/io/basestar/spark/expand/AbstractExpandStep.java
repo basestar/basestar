@@ -35,8 +35,7 @@ public abstract class AbstractExpandStep implements ExpandStep {
     @Override
     public Dataset<Row> apply(final QueryResolver resolver, final Dataset<Row> input) {
 
-        final int inputPartitions = input.rdd().partitions().length;
-        log.warn("{} has {} input partitions", describe(), inputPartitions);
+        log.warn(describe());
         final Dataset<Row> output;
         if (hasProjectedKeys(input.schema())) {
             output = applyImpl(resolver, input, getRoot().typeOfId());
@@ -48,8 +47,7 @@ public abstract class AbstractExpandStep implements ExpandStep {
                     RowEncoder.apply(projectedType)
             ), getRoot().typeOfId());
         }
-        log.warn("{} has {} output partitions, squashing to {}", describe(), output.rdd().partitions().length, inputPartitions);
-        return output.coalesce(inputPartitions);
+        return output;
     }
 
     protected abstract LinkableSchema getRoot();
@@ -63,10 +61,7 @@ public abstract class AbstractExpandStep implements ExpandStep {
     @SuppressWarnings("unchecked")
     protected <T> KeyValueGroupedDataset<T, Tuple2<Row, Row>> groupResults(final Dataset<Tuple2<Row, Row>> input) {
 
-        final int inputPartitions = input.rdd().partitions().length;
         final LinkableSchema root = getRoot();
-
-        log.warn("{} has {} result group input partitions", describe(), inputPartitions);
 
         final Encoder<T> keyEncoder = (Encoder<T>) SparkSchemaUtils.encoder(root.typeOfId());
         return input

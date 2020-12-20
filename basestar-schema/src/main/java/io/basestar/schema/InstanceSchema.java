@@ -65,8 +65,6 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
     @Override
     UseInstance typeOf();
 
-    String id();
-
     boolean isConcrete();
 
     @Override
@@ -103,11 +101,6 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
             member.layout(branch).ifPresent(memberLayout -> result.put(name, memberLayout));
         });
         return result;
-    }
-
-    default Use<?> typeOfId() {
-
-        return metadataSchema().get(id());
     }
 
     default boolean hasProperties() {

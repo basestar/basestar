@@ -23,6 +23,7 @@ package io.basestar.util;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.util.stream.Stream;
 
 public interface Pair<T1, T2> extends Serializable {
 
@@ -35,6 +36,12 @@ public interface Pair<T1, T2> extends Serializable {
     static <T1, T2> Simple<T1, T2> of(final T1 first, final T2 second) {
 
         return new Simple<>(first, second);
+    }
+
+    @SuppressWarnings("UnstableApiUsage")
+    static <T1, T2> Stream<Pair<T1, T2>> zip(final Stream<T1> first, final Stream<T2> second) {
+
+        return com.google.common.collect.Streams.zip(first, second, Pair::of);
     }
 
     @Data

@@ -1,4 +1,4 @@
-package io.basestar.spark.query;
+package io.basestar.spark.expand;
 
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;

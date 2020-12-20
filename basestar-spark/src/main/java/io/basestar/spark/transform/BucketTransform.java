@@ -20,50 +20,58 @@ package io.basestar.spark.transform;
  * #L%
  */
 
-import com.google.common.collect.ImmutableList;
-import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.Reserved;
 import io.basestar.spark.util.BucketFunction;
+import io.basestar.spark.util.SparkRowUtils;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import org.apache.spark.sql.Column;
+import lombok.Getter;
+import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.api.java.UDF1;
-import org.apache.spark.sql.expressions.UserDefinedFunction;
-import org.apache.spark.sql.functions;
+import org.apache.spark.sql.catalyst.encoders.RowEncoder;
 import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 
 import java.util.List;
 
+@Getter
 public class BucketTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
-    private static final List<Name> DEFAULT_INPUT_NAMES = ImmutableList.of(ObjectSchema.ID_NAME);
+    public static final String DEFAULT_OUTPUT_COLUMN = Reserved.PREFIX + "bucket";
 
     private final List<Name> inputNames;
 
-    private final String outputColumnName;
+    private final String outputColumn;
 
-    private final UserDefinedFunction bucket;
+    private final BucketFunction bucketFunction;
 
     @lombok.Builder(builderClassName = "Builder")
     BucketTransform(final List<Name> inputNames, final String outputColumnName, final BucketFunction bucketFunction) {
 
-        this.inputNames = Nullsafe.orDefault(inputNames, DEFAULT_INPUT_NAMES);
-        this.outputColumnName = Nullsafe.require(outputColumnName);
-        Nullsafe.require(bucketFunction);
-        this.bucket = functions.udf(
-                (UDF1<String, Object>) bucketFunction::apply,
-                DataTypes.StringType
-        );
+        this.inputNames = Nullsafe.require(inputNames);
+        this.outputColumn = Nullsafe.orDefault(outputColumnName, DEFAULT_OUTPUT_COLUMN);
+        this.bucketFunction = Nullsafe.require(bucketFunction);
     }
 
     @Override
     public Dataset<Row> accept(final Dataset<Row> input) {
 
-        // FIXME: need to handle nested paths
-        final Column concat = functions.concat_ws("", inputNames.stream().map(Name::toString).map(input::col).toArray(Column[]::new));
-        final Column bucketValue = bucket.apply(concat);
-        return input.withColumn(outputColumnName, bucketValue);
-    }
+        final StructField field = SparkRowUtils.field(outputColumn, DataTypes.StringType);
+        final StructType outputType = SparkRowUtils.append(input.schema(), field);
+        final List<Name> inputNames = this.inputNames;
+        final BucketFunction bucketFunction = this.bucketFunction;
 
+        return input.map((MapFunction<Row, Row>) row -> {
+
+            final StringBuilder input1 = new StringBuilder();
+            for(final Name name : inputNames) {
+                input1.append(Nullsafe.map(SparkRowUtils.get(row, name), Object::toString));
+            }
+            final String bucket = bucketFunction.apply(input1.toString());
+            return SparkRowUtils.append(row, field, bucket);
+
+        }, RowEncoder.apply(outputType));
+    }
 }

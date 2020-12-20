@@ -14,7 +14,6 @@ import io.basestar.schema.use.UseCollection;
 import io.basestar.schema.use.UseInstance;
 import io.basestar.schema.use.UseMap;
 import io.basestar.spark.expression.SparkExpressionVisitor;
-import io.basestar.spark.query.LinkExpressionVisitor;
 import io.basestar.spark.query.QueryResolver;
 import io.basestar.spark.util.ScalaUtils;
 import io.basestar.spark.util.SparkRowUtils;
@@ -169,7 +168,7 @@ public class ExpandLinkStep extends AbstractExpandStep {
             final Context context = Context.init(ImmutableMap.of(Reserved.THIS, instance));
             Row merged = row;
             for(final Map.Entry<String, Expression> entry : constants.entrySet()) {
-                final StructField field = SparkRowUtils.getField(outputType, entry.getKey());
+                final StructField field = SparkRowUtils.requireField(outputType, entry.getKey());
                 final Object value = entry.getValue().evaluate(context);
                 merged = SparkRowUtils.append(merged, field, value);
             }
@@ -178,7 +177,7 @@ public class ExpandLinkStep extends AbstractExpandStep {
         if(result.isEmpty()) {
             Row merged = row;
             for(final Map.Entry<String, Expression> entry : constants.entrySet()) {
-                final StructField field = SparkRowUtils.getField(outputType, entry.getKey());
+                final StructField field = SparkRowUtils.requireField(outputType, entry.getKey());
                 merged = SparkRowUtils.append(merged, field, null);
             }
             result.add(merged);
@@ -190,14 +189,10 @@ public class ExpandLinkStep extends AbstractExpandStep {
     @Override
     protected <T> Dataset<Row> applyImpl(final QueryResolver resolver, final Dataset<Row> input, final Use<T> typeOfId) {
 
-        final int inputPartitions = input.rdd().partitions().length;
-
         final LinkableSchema linkSchema = link.getSchema();
 
         final Dataset<Row> joinTo = resolver.resolve(linkSchema, Constant.TRUE, ImmutableList.of(), ImmutableSet.of())
-                .result();
-
-        log.warn("{} has {} source partitions", describe(), joinTo.rdd().partitions().length);
+                .dataset();
 
         final StructType joinToType = joinTo.schema();
         final Column[] groupColumns = projectedKeyColumns();
@@ -213,8 +208,6 @@ public class ExpandLinkStep extends AbstractExpandStep {
         final Column condition = new SparkExpressionVisitor(columnResolver, inferenceContext)
                 .visit(closedExpression);
 
-        log.warn("{} has {} collected input partitions", describe(), collectedInput.rdd().partitions().length);
-
         final Dataset<Tuple2<Row, Row>> groupJoined = collectedInput.joinWith(joinTo, condition, "left_outer");
 
         final int seqIndex = groupColumns.length;
@@ -228,8 +221,6 @@ public class ExpandLinkStep extends AbstractExpandStep {
                 },
                 Encoders.tuple(RowEncoder.apply(input.schema()), RowEncoder.apply(joinTo.schema()))
         );
-
-        log.warn("{} has {} join partitions", describe(), joined.rdd().partitions().length);
 
         final DataType linkType;
         if (link.isSingle()) {
@@ -312,18 +303,18 @@ public class ExpandLinkStep extends AbstractExpandStep {
         }
     }
 
-    private static Set<Row> linkKeys(final InstanceSchema root, final Name name, final Row row) {
+    private static Set<Row> linkKeys(final InstanceSchema schema, final Name name, final Row row) {
 
-        final Set<Row> refKeys = new HashSet<>();
-        final Member member = root.getMember(name.first(), true);
+        final Set<Row> linkKeys = new HashSet<>();
+        final Member member = schema.getMember(name.first(), true);
         if (member != null) {
             if (member instanceof Link && name.size() == 1) {
-                refKeys.add(row);
+                linkKeys.add(row);
             } else {
-                refKeys.addAll(linkKeys(member.getType(), name.withoutFirst(), SparkRowUtils.get(row, name)));
+                linkKeys.addAll(linkKeys(member.getType(), name.withoutFirst(), SparkRowUtils.get(row, name.first())));
             }
         }
-        return refKeys;
+        return linkKeys;
     }
 
     private static Set<Row> linkKeys(final Use<?> type, final Name name, final Object input) {

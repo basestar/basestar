@@ -10,8 +10,6 @@ import io.basestar.schema.*;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.expression.InferenceVisitor;
 import io.basestar.schema.use.Use;
-import io.basestar.schema.use.UseBinary;
-import io.basestar.schema.use.UseString;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Sort;
@@ -34,20 +32,20 @@ public interface QueryPlanner {
                 return new EmptyStage(schema, expand);
             } else {
                 QueryStage stage = stage(schema);
-                final Set<Name> expandAfter = new HashSet<>(expand);
+                if(!expand.isEmpty()) {
+                    stage = new ExpandStage(stage, schema, expand);
+                }
+//                final Set<Name> expandAfter = new HashSet<>(expand);
                 if (!constExpr && expression != null) {
-                    final Set<Name> expandBefore = schema.requiredExpand(expression.names());
-                    if(!expandBefore.isEmpty()) {
-                        expandBefore.forEach(e1 -> expandAfter.removeIf(e2 -> e2.isChildOrEqual(e1)));
-                        stage = new ExpandStage(stage, schema, expandBefore);
-                    }
+//                    final Set<Name> expandBefore = schema.requiredExpand(expression.names());
+//                    if(!expandBefore.isEmpty()) {
+//                        expandBefore.forEach(e1 -> expandAfter.removeIf(e2 -> e2.isChildOrEqual(e1)));
+//                        stage = new ExpandStage(stage, schema, expandBefore);
+//                    }
                     stage = new FilterStage(stage, expression);
                 }
                 if(!sort.isEmpty()) {
                     stage = new SortStage(stage, sort);
-                }
-                if(!expandAfter.isEmpty()) {
-                    stage = new ExpandStage(stage, schema, expand);
                 }
                 return stage;
             }
@@ -72,8 +70,8 @@ public interface QueryPlanner {
             final ViewSchema.From from = schema.getFrom();
             final LinkableSchema fromSchema = from.getSchema();
             QueryStage stage = plan(fromSchema, schema.getWhere(), schema.getSort(), from.getExpand());
-            final Map<String, Use<?>> outputSchema = schema.getSchema();
             if (schema.isAggregating() || schema.isGrouping()) {
+                final Map<String, Use<?>> outputSchema = schema.getSchema();
                 final List<String> group = schema.getGroup();
 
                 // Extract aggregates and create output map stage
@@ -133,22 +131,17 @@ public interface QueryPlanner {
                 stage = new SchemaStage(stage, schema);
 
             } else {
-                final Map<String, Expression> input = new HashMap<>();
-                final Map<String, Use<?>> inputSchema = new HashMap<>();
+                final Map<String, Expression> output = new HashMap<>();
+                final Map<String, Use<?>> outputSchema = new HashMap<>();
                 for(final Map.Entry<String, Property> entry : schema.getProperties().entrySet()) {
                     final String name = entry.getKey();
                     final Property property = entry.getValue();
-                    input.put(name, Nullsafe.require(property.getExpression()));
-                    inputSchema.put(name, property.getType());
+                    output.put(name, Nullsafe.require(property.getExpression()));
+                    outputSchema.put(name, property.getType());
                 }
-                if(fromSchema instanceof ReferableSchema) {
-                    input.put(Reserved.PREFIX + ReferableSchema.ID, new NameConstant(ReferableSchema.ID));
-                    inputSchema.put(Reserved.PREFIX + ReferableSchema.ID, UseString.DEFAULT);
-                } else {
-                    input.put(ViewSchema.KEY, new NameConstant(ViewSchema.KEY));
-                    inputSchema.put(ViewSchema.KEY, UseBinary.DEFAULT);
-                }
-                stage = new MapStage(stage, input, Layout.simple(inputSchema, ImmutableSet.of()));
+                output.put(schema.id(), new NameConstant(fromSchema.id()));
+                outputSchema.put(schema.id(), schema.typeOfId());
+                stage = new MapStage(stage, output, Layout.simple(outputSchema, ImmutableSet.of()));
                 stage = new SchemaStage(stage, schema);
             }
             return stage;

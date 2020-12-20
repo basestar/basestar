@@ -5,6 +5,8 @@ import io.basestar.util.ISO8601;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Encoder;
+import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.*;
@@ -15,8 +17,10 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
+import java.util.stream.Collectors;
 
 public class SparkRowUtils {
+
     public static StructType remove(final StructType structType, final String fieldName) {
 
         final List<StructField> fields = Lists.newArrayList(structType.fields());
@@ -302,34 +306,112 @@ public class SparkRowUtils {
         }
     }
 
+    public static Map<String, Object> fromSpark(final Row row) {
+
+        final Map<String, Object> tmp = new HashMap<>();
+        final StructField[] fields = row.schema().fields();
+        for(int i = 0; i != fields.length; ++i) {
+            tmp.put(fields[i].name(), fromSpark(row.get(i)));
+        }
+        return tmp;
+    }
+
     public static Object fromSpark(final Object value) {
 
-        if(value instanceof scala.collection.Map) {
-            final Map<Object, Object> tmp = new HashMap<>();
-            ScalaUtils.asJavaMap((scala.collection.Map<?, ?>)value).forEach((k, v) -> tmp.put(k, fromSpark(v)));
-            return tmp;
+        if(value == null) {
+            return null;
         } else if(value instanceof Seq) {
             final List<Object> tmp = new ArrayList<>();
-            ScalaUtils.asJavaStream((Seq<?>)value).forEach(v -> tmp.add(fromSpark(v)));
+            ScalaUtils.asJavaStream((Seq<?>)value)
+                    .forEach(v -> tmp.add(fromSpark(v)));
             return tmp;
-        } else if(value instanceof java.sql.Timestamp) {
-            return ISO8601.toDateTime(value);
+        } else if(value instanceof scala.collection.Map) {
+            final Map<Object, Object> tmp = new HashMap<>();
+            ScalaUtils.asJavaMap((scala.collection.Map<?, ?>)value)
+                    .forEach((k, v) -> tmp.put(fromSpark(k), fromSpark(v)));
+            return tmp;
+        } else if(value instanceof Row) {
+            return fromSpark((Row)value);
         } else if(value instanceof java.sql.Date) {
             return ISO8601.toDate(value);
+        } else if(value instanceof java.sql.Timestamp) {
+            return ISO8601.toDateTime(value);
         } else {
             return value;
         }
     }
 
-    public static StructField getField(final StructType outputType, final String key) {
+    public static StructField requireField(final StructType type, final String key) {
 
-        return findField(outputType, key).orElseThrow(() ->
+        return findField(type, key).orElseThrow(() ->
                 new IllegalStateException("Struct type missing " + key
-                        + " (got " + Arrays.toString(outputType.fieldNames()) + ")"));
+                        + " (got " + Arrays.toString(type.fieldNames()) + ")"));
     }
 
     public static StructField field(final String name, final DataType type) {
 
         return StructField.apply(name, type, true, Metadata.empty());
+    }
+
+    public static Encoder<?> keyEncoder(final DataType type) {
+
+        if(type instanceof StringType) {
+            return Encoders.STRING();
+        } else if(type instanceof ShortType) {
+            return Encoders.SHORT();
+        } else if(type instanceof IntegerType) {
+            return Encoders.INT();
+        } else if(type instanceof LongType) {
+            return Encoders.LONG();
+        } else if(type instanceof ByteType) {
+            return Encoders.BYTE();
+        } else if(type instanceof BinaryType) {
+            return Encoders.BINARY();
+        } else {
+            throw new IllegalStateException("Cannot create key encoder for " + type);
+        }
+    }
+
+    public static Row toSpark(final StructType structType, final Map<String, Object> data) {
+
+        if(data == null) {
+            return null;
+        } else {
+            final StructField[] fields = structType.fields();
+            final Object[] values = new Object[fields.length];
+            for(int i = 0; i != fields.length; ++i) {
+                values[i] = toSpark(fields[i].dataType(), data.get(fields[i].name()));
+            }
+            return new GenericRowWithSchema(values, structType);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Object toSpark(final DataType dataType, final Object value) {
+
+        if(value == null) {
+            return null;
+        } else {
+            if(dataType instanceof ArrayType) {
+                final ArrayType arrType = (ArrayType)dataType;
+                return ScalaUtils.asScalaSeq(((Collection<?>)value).stream()
+                        .map(v -> toSpark(arrType.elementType(), v)).iterator());
+            } else if(dataType instanceof MapType) {
+                final MapType mapType = (MapType)dataType;
+                return ScalaUtils.asScalaMap(((Map<?, ?>)value).entrySet().stream().collect(Collectors.toMap(
+                        e -> toSpark(mapType.keyType(), e.getKey()),
+                        e -> toSpark(mapType.valueType(), e.getValue())
+                )));
+            } else if(dataType instanceof StructType) {
+                return toSpark((StructType)dataType, (Map<String, Object>)value);
+            } else if(dataType instanceof DateType) {
+                return ISO8601.toSqlDate(ISO8601.toDate(value));
+            } else if(dataType instanceof TimestampType) {
+                return ISO8601.toSqlTimestamp(ISO8601.toDateTime(value));
+            } else {
+                return value;
+            }
+        }
+
     }
 }
