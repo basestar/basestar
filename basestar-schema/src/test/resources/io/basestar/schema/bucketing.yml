@@ -1,0 +1,91 @@
+Point:
+  type: object
+  bucket:
+    using:
+      - x
+      - y
+  properties:
+    x:
+      type: integer
+    y:
+      type: integer
+
+Simple:
+  type: object
+
+SimpleView:
+  type: view
+  from:
+    schema: Simple
+
+DifferentOrderPointView:
+  type: view
+  bucket:
+    using:
+      - py
+      - px
+  properties:
+    px:
+      expression: x
+    py:
+      expression: y
+  from:
+    schema: Point
+
+DifferentCountPointView:
+  type: view
+  bucket:
+    using:
+      - px
+      - py
+    count: 5
+  properties:
+    px:
+      expression: x
+    py:
+      expression: y
+  from:
+    schema: Point
+
+DifferentFunctionPointView:
+  type: view
+  bucket:
+    using:
+      - px
+      - py
+    function: adler-32
+  properties:
+    px:
+      expression: x
+    py:
+      expression: y
+  from:
+    schema: Point
+
+CompatiblePointView:
+  type: view
+  bucket:
+    using:
+      - px
+      - py
+  properties:
+    px:
+      expression: x
+    py:
+      expression: y
+  from:
+    schema: Point
+
+NestedCompatiblePointView:
+  type: view
+  bucket:
+    using:
+      - px
+      - py
+  properties:
+    px:
+      expression: px
+    py:
+      expression: py
+  from:
+    schema: CompatiblePointView

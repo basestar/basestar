@@ -9,13 +9,11 @@ import io.basestar.spark.query.QueryResolver;
 import io.basestar.spark.util.ScalaUtils;
 import io.basestar.spark.util.SparkRowUtils;
 import io.basestar.spark.util.SparkSchemaUtils;
+import io.basestar.spark.util.SparkUtils;
 import io.basestar.util.Name;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.api.java.function.FlatMapFunction;
-import org.apache.spark.api.java.function.FlatMapGroupsFunction;
-import org.apache.spark.api.java.function.MapGroupsFunction;
 import org.apache.spark.sql.*;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
@@ -23,7 +21,6 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import scala.Tuple2;
-import scala.collection.Seq;
 
 import java.util.*;
 
@@ -95,27 +92,10 @@ public class ExpandRefsStep extends AbstractExpandStep {
         final Dataset<Row> joinTo = resolver.resolve(target, Constant.TRUE, ImmutableList.of(), ImmutableSet.of()).dataset();
 
         final StructType joinToType = joinTo.schema();
-        // Input is already partitioned by the key columns by chain fusing
-        final RelationalGroupedDataset groupedInput = input.groupBy(functions.col(KEY));
 
-        final Dataset<Row> collectedInput = groupedInput
-            .agg(functions.collect_list(functions.struct(functions.col("*"))).as("_rows"));
+        final Column condition = input.col(KEY).equalTo(joinTo.col(ReferableSchema.ID));
 
-        final Column condition = collectedInput.col(KEY).equalTo(joinTo.col(ReferableSchema.ID));
-
-        final Dataset<Tuple2<Row, Row>> groupJoined = collectedInput.joinWith(joinTo, condition, "left_outer");
-
-        final Dataset<Tuple2<Row, Row>> joined = groupJoined.flatMap(
-                (FlatMapFunction<Tuple2<Row, Row>, Tuple2<Row, Row>>) tuple -> {
-
-                    final Seq<Row> left = tuple._1().getSeq(1);
-                    return ScalaUtils.asJavaStream(left)
-                            .map(l -> Tuple2.apply(l, tuple._2()))
-                            .iterator();
-                },
-                Encoders.tuple(RowEncoder.apply(input.schema()), RowEncoder.apply(joinTo.schema()))
-        );
-
+        final Dataset<Tuple2<Row, Row>> joined = input.joinWith(joinTo, condition, "left_outer");
         final KeyValueGroupedDataset<T, Tuple2<Row, Row>> grouped = groupResults(joined);
 
         final StructType outputType = expandedType(root, names, SparkRowUtils.remove(input.schema(), KEY), joinToType);
@@ -125,23 +105,23 @@ public class ExpandRefsStep extends AbstractExpandStep {
             // Fuse the initial flat map part of the next step
 
             final StructType projectedType = next.projectKeysType(outputType);
-            return next.apply(resolver, grouped.flatMapGroups((FlatMapGroupsFunction<T, Tuple2<Row, Row>, Row>) (ignored, tuples) -> {
+            return next.apply(resolver, grouped.flatMapGroups(SparkUtils.flatMapGroups((ignored, tuples) -> {
 
                 final Row resolved = applyRefs(root, names, joinToType, tuples);
                 // Remove the old key field
                 final Row clean = SparkRowUtils.remove(resolved, KEY);
                 return next.projectKeys(projectedType, clean);
 
-            }, RowEncoder.apply(projectedType)));
+            }), RowEncoder.apply(projectedType)));
 
         } else {
 
             return grouped.mapGroups(
-                    (MapGroupsFunction<T, Tuple2<Row, Row>, Row>) (ignored, tuples) -> {
+                    SparkUtils.mapGroups((ignored, tuples) -> {
 
                         final Row resolved = applyRefs(root, names, joinToType, tuples);
                         return SparkRowUtils.remove(resolved, KEY);
-                    },
+                    }),
                     RowEncoder.apply(outputType)
             );
         }
