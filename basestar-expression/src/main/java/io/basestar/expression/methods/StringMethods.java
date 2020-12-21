@@ -70,7 +70,7 @@ public class StringMethods implements Serializable {
 
     public static String rtrim(final String target) {
         int i = target.length()-1;
-        while (i > 0 && Character.isWhitespace(target.charAt(i))) {
+        while (i >= 0 && Character.isWhitespace(target.charAt(i))) {
             i--;
         }
         return target.substring(0,i+1);
