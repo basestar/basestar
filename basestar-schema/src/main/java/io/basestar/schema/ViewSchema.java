@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.expression.constant.NameConstant;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.jackson.serde.AbbrevSetDeserializer;
 import io.basestar.jackson.serde.ExpressionDeserializer;
@@ -523,5 +524,59 @@ public class ViewSchema implements LinkableSchema {
     public int hashCode() {
 
         return qualifiedNameHashCode();
+    }
+
+    public boolean isCompatibleBucketing() {
+
+        final List<Bucketing> viewBucketing = getEffectingBucketing();
+        final List<Bucketing> fromBucketing = from.getSchema().getEffectingBucketing();
+        if(viewBucketing.size() != fromBucketing.size()) {
+            return false;
+        }
+        for(int i = 0; i != viewBucketing.size(); ++i) {
+            if(!isCompatibleBucketing(viewBucketing.get(i), fromBucketing.get(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isCompatibleBucketing(final Bucketing viewBucketing, final Bucketing fromBucketing) {
+
+        if(viewBucketing.getCount() != fromBucketing.getCount()) {
+            return false;
+        }
+        if(viewBucketing.getFunction() != fromBucketing.getFunction()) {
+            return false;
+        }
+        final List<Name> viewNames = viewBucketing.getUsing();
+        final List<Name> fromNames = fromBucketing.getUsing();
+        if(viewNames.size() != fromNames.size()) {
+            return false;
+        }
+        for(int i = 0; i != viewNames.size(); ++i) {
+            if(!isSameName(viewNames.get(i), fromNames.get(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isSameName(final Name viewName, final Name fromName) {
+
+        final LinkableSchema fromSchema = from.getSchema();
+        final Name fromId = Name.of(fromSchema.id());
+        final Name viewId = Name.of(id());
+        if(fromName.equals(fromId) && viewName.equals(viewId)) {
+            return true;
+        }
+        if(viewName.size() == 1) {
+            final Property viewProp = getProperty(viewName.first(), true);
+            if (viewProp != null) {
+                final Expression viewExpr = viewProp.getExpression();
+                return viewExpr != null && viewExpr.equals(new NameConstant(fromName));
+            }
+        }
+        return false;
     }
 }
