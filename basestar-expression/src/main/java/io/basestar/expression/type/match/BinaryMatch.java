@@ -588,14 +588,16 @@ public interface BinaryMatch<T> {
 
         default Number toNumber(final Boolean v) {
 
-            return v ? 1 : 0;
+            return Boolean.TRUE.equals(v) ? 1 : 0;
         }
 
+        @Override
         default T apply(final Boolean lhs, final Number rhs) {
 
             return apply(toNumber(lhs), rhs);
         }
 
+        @Override
         default T apply(final Number lhs, final Boolean rhs) {
 
             return apply(lhs, toNumber(rhs));
@@ -614,21 +616,25 @@ public interface BinaryMatch<T> {
             return v.toString();
         }
 
+        @Override
         default T apply(final Boolean lhs, final String rhs) {
 
             return apply(toString(lhs), rhs);
         }
 
+        @Override
         default T apply(final String lhs, final Boolean rhs) {
 
             return apply(lhs, toString(rhs));
         }
 
+        @Override
         default T apply(final String lhs, final Number rhs) {
 
             return apply(lhs, toString(rhs));
         }
 
+        @Override
         default T apply(final Number lhs, final String rhs) {
 
             return apply(toString(lhs), rhs);

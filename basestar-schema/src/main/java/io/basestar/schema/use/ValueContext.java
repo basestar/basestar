@@ -10,6 +10,7 @@ import io.basestar.secret.Secret;
 import io.basestar.util.ISO8601;
 import io.basestar.util.Name;
 import io.basestar.util.Page;
+import io.basestar.util.Warnings;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -282,7 +283,7 @@ public interface ValueContext {
         }
 
         @Override
-        @SuppressWarnings("java:S2447")
+        @SuppressWarnings(Warnings.RETURN_NULL_BOXED_BOOLEAN)
         public Boolean createBoolean(final UseBoolean type, final Object value, final Set<Name> expand) {
 
             if(value == null) {
@@ -335,7 +336,7 @@ public interface ValueContext {
         }
 
         @Override
-        @SuppressWarnings("java:S1168")
+        @SuppressWarnings(Warnings.RETURN_NULL_ARRAY_OR_COLLECTION)
         public <T> List<T> createArray(final UseArray<T> type, final Object value, final Set<Name> expand) {
 
             if(value == null) {
@@ -362,7 +363,7 @@ public interface ValueContext {
         }
 
         @Override
-        @SuppressWarnings("java:S1168")
+        @SuppressWarnings(Warnings.RETURN_NULL_ARRAY_OR_COLLECTION)
         public <T> Set<T> createSet(final UseSet<T> type, final Object value, final Set<Name> expand) {
 
             if(value == null) {
@@ -389,7 +390,7 @@ public interface ValueContext {
         }
 
         @Override
-        @SuppressWarnings("java:S1168")
+        @SuppressWarnings(Warnings.RETURN_NULL_ARRAY_OR_COLLECTION)
         public byte[] createBinary(final UseBinary type, final Object value, final Set<Name> expand) {
 
             if(value == null) {

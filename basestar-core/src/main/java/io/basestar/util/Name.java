@@ -137,6 +137,7 @@ public class Name extends AbstractPath<Name> implements Comparable<Name> {
         return new Name(parts);
     }
 
+    @SuppressWarnings(Warnings.SAME_METHOD_AND_FIELD_NAMES)
     public static Name empty() {
 
         return new Name(Collections.emptyList());
@@ -195,8 +196,18 @@ public class Name extends AbstractPath<Name> implements Comparable<Name> {
         return false;
     }
 
-    public static <SELF extends AbstractPath<SELF>> Map<String, Set<SELF>> branch(@Nullable final Collection<SELF> paths) {
+    public static <S extends AbstractPath<S>> Map<String, Set<S>> branch(@Nullable final Collection<S> paths) {
 
         return AbstractPath.branch(paths);
+    }
+
+    public static <S extends AbstractPath<S>> Set<S> children(final Collection<S> paths, final String parent) {
+
+        return AbstractPath.children(paths, parent);
+    }
+
+    public static <S extends AbstractPath<S>> Set<S> children(final Collection<S> paths, final S parent) {
+
+        return AbstractPath.children(paths, parent);
     }
 }

@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Reserved;
 import io.basestar.spark.query.Query;
-import io.basestar.spark.sink.Sink;
 import io.basestar.spark.source.Source;
 import io.basestar.spark.util.Format;
 import io.basestar.spark.util.ScalaUtils;
@@ -25,7 +24,6 @@ import org.apache.spark.sql.catalyst.catalog.CatalogTablePartition;
 import org.apache.spark.sql.catalyst.catalog.ExternalCatalog;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
-import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
@@ -49,10 +47,6 @@ public class UpsertTable {
 
     protected static final String OPERATION = Reserved.PREFIX + "operation";
 
-    protected static final String BEFORE = Reserved.PREFIX + "before";
-
-    protected static final String AFTER = Reserved.PREFIX + "after";
-
     protected static final String NO_SEQUENCE = "";
 
     private static final Format FORMAT = Format.PARQUET;
@@ -65,7 +59,7 @@ public class UpsertTable {
 
     protected final String idColumn;
 
-    protected final DataType idType;
+    protected final String versionColumn;
 
     protected final List<String> basePartition;
 
@@ -77,15 +71,16 @@ public class UpsertTable {
 
     @lombok.Builder(builderClassName = "Builder")
     protected UpsertTable(final String database, final String name, final StructType structType,
-                          final String idColumn, final String location, final List<String> partition) {
+                          final String idColumn, final String versionColumn, final String location,
+                          final List<String> partition) {
 
         this.database = Nullsafe.require(database);
         this.name = Nullsafe.require(name);
         this.idColumn = Nullsafe.require(idColumn);
-        this.idType = SparkRowUtils.requireField(structType, idColumn).dataType();
+        this.versionColumn = versionColumn;
         this.basePartition = Immutable.copy(partition);
         this.baseType = Nullsafe.require(structType);
-        this.deltaType = createDeltaType(basePartition, idColumn, idType, structType);
+        this.deltaType = createDeltaType(basePartition, structType);
         this.deltaPartition = Immutable.copyAddAll(ImmutableList.of(SEQUENCE, OPERATION), basePartition);
         if(Nullsafe.require(location).endsWith("/")) {
             this.location = location;
@@ -94,16 +89,12 @@ public class UpsertTable {
         }
     }
 
-    private static StructType createDeltaType(final List<String> partition, final String idColumn,
-                                              final DataType idType, final StructType structType) {
+    private static StructType createDeltaType(final List<String> partition, final StructType structType) {
 
         final List<StructField> fields = new ArrayList<>();
         fields.add(SparkRowUtils.field(SEQUENCE, DataTypes.StringType));
         fields.add(SparkRowUtils.field(OPERATION, DataTypes.StringType));
-        partition.forEach(name -> fields.add(SparkRowUtils.field(name, SparkRowUtils.requireField(structType, name).dataType())));
-        fields.add(SparkRowUtils.field(idColumn, idType));
-        fields.add(SparkRowUtils.field(BEFORE, structType));
-        fields.add(SparkRowUtils.field(AFTER, structType));
+        fields.addAll(Arrays.asList(structType.fields()));
         return DataTypes.createStructType(fields);
     }
 
@@ -127,84 +118,9 @@ public class UpsertTable {
         return URI.create(location + "delta");
     }
 
-    public Dataset<Row> selectBase(final SparkSession session) {
-
-        final String tableName = baseTableName();
-        return session.sqlContext().read()
-                .table(database + "." + tableName)
-                .select(baseColumns());
-    }
-
-    public Dataset<Row> selectDelta(final SparkSession session) {
-
-        final String tableName = deltaTableName();
-        return session.sqlContext().read()
-                .table(database + "." + tableName)
-                .select(deltaColumns());
-    }
-
-    public Dataset<Row> selectDeltaAfter(final SparkSession session, final Instant timestamp) {
-
-        return selectDeltaAfter(session, sequence(timestamp, ""));
-    }
-
-    public Dataset<Row> selectDeltaAfter(final SparkSession session, final String sequence) {
-
-        return selectDelta(session).filter(functions.col(SEQUENCE).gt(sequence));
-    }
-
-    protected Dataset<Row> latestDeltas(final Dataset<Row> input) {
-
-        final String idColumn = this.idColumn;
-        final UpsertReducer reducer = new UpsertReducer(deltaType);
-        return input.select(deltaColumns())
-                .groupBy(functions.col(idColumn))
-                .agg(reducer.apply(deltaColumns()).as("_2"))
-                .select(functions.col("_2.*"))
-                .select(deltaColumns());
-    }
-
-    public Dataset<Row> selectLatestDelta(final SparkSession session) {
-
-        return latestDeltas(selectDelta(session));
-    }
-
     public Dataset<Row> select(final SparkSession session) {
 
         return baseWithDeltas(selectBase(session), selectLatestDelta(session));
-    }
-
-    private Dataset<Row> baseWithDeltas(final Dataset<Row> base, final Dataset<Row> deltas) {
-
-        final StructType deltaType = this.deltaType;
-        // Treat the base as a delta so we can use a single groupBy stage
-        return latestDeltas(base
-                .map(
-                        (MapFunction<Row, Row>)row -> createDelta(deltaType, NO_SEQUENCE, null, null, row),
-                        RowEncoder.apply(deltaType)
-                ).union(deltas))
-                .filter(functions.col(OPERATION).notEqual(UpsertOp.DELETE.name()))
-                .select(functions.col(AFTER + ".*"))
-                .select(baseColumns());
-    }
-
-    private Column[] deltaColumns() {
-
-        final List<Column> cols = new ArrayList<>();
-        cols.add(functions.col(SEQUENCE));
-        cols.add(functions.col(OPERATION));
-        basePartition.forEach(name -> cols.add(functions.col(name)));
-        cols.add(functions.col(idColumn));
-        cols.add(functions.col(BEFORE));
-        cols.add(functions.col(AFTER));
-        return cols.toArray(new Column[0]);
-    }
-
-    private Column[] baseColumns() {
-
-        final List<Column> cols = new ArrayList<>();
-        Arrays.stream(baseType.fieldNames()).forEach(name -> cols.add(functions.col(name)));
-        return cols.toArray(new Column[0]);
     }
 
     public String sequence(final Instant timestamp) {
@@ -217,24 +133,13 @@ public class UpsertTable {
         return timestamp.toString().replaceAll("[:.Z\\-]", "") + "-" + random;
     }
 
-    public void applyDelta(final Dataset<Tuple2<Row, Row>> changes) {
+    public void applyChanges(final Dataset<Tuple2<Row, Row>> changes, final String sequence) {
 
-        applyDelta(changes, Instant.now());
+        applyChanges(changes, sequence, v -> operation(v._1(), v._2()), v -> Nullsafe.orDefault(v._2(), v._1()));
     }
 
-    protected void applyDelta(final Dataset<Tuple2<Row, Row>> changes, final Instant now) {
-
-        final String sequence = sequence(now);
-        applyDelta(changes, sequence);
-    }
-
-    public void applyDelta(final Dataset<Tuple2<Row, Row>> changes, final String sequence) {
-
-        applyDelta(changes, sequence, row -> operation(row._1(), row._2()), Tuple2::_1, Tuple2::_2);
-    }
-
-    public <T> void applyDelta(final Dataset<T> changes, final String sequence, final MapFunction<T, UpsertOp> operation,
-                               final MapFunction<T, Row> before, final MapFunction<T, Row> after) {
+    public <T> void applyChanges(final Dataset<T> changes, final String sequence,
+                                 final MapFunction<T, UpsertOp> op, final MapFunction<T, Row> row) {
 
         final String deltaTable = deltaTableName();
         final URI deltaLocation = deltaLocation();
@@ -244,9 +149,8 @@ public class UpsertTable {
                 (MapFunction<T, Row>) change -> createDelta(
                         deltaType,
                         sequence,
-                        operation.call(change),
-                        before.call(change),
-                        after.call(change)
+                        op.call(change),
+                        row.call(change)
                 ), RowEncoder.apply(deltaType));
 
         upsert.write().format(FORMAT.getSparkFormat())
@@ -274,6 +178,72 @@ public class UpsertTable {
         catalog.createPartitions(database, deltaTable, ScalaUtils.asScalaSeq(partitions), false);
     }
 
+    protected Dataset<Row> selectBase(final SparkSession session) {
+
+        final String tableName = baseTableName();
+        return session.sqlContext().read()
+                .table(database + "." + tableName)
+                .select(baseColumns());
+    }
+
+    protected Dataset<Row> selectDelta(final SparkSession session) {
+
+        final String tableName = deltaTableName();
+        return session.sqlContext().read()
+                .table(database + "." + tableName)
+                .select(deltaColumns());
+    }
+
+    protected Dataset<Row> selectDeltaAfter(final SparkSession session, final String sequence) {
+
+        return selectDelta(session).filter(functions.col(SEQUENCE).gt(sequence));
+    }
+
+    protected Dataset<Row> selectLatestDelta(final SparkSession session) {
+
+        return latestDeltas(selectDelta(session));
+    }
+
+    protected Dataset<Row> latestDeltas(final Dataset<Row> input) {
+
+        final String idColumn = this.idColumn;
+        final UpsertReducer reducer = new UpsertReducer(deltaType, versionColumn);
+        return input.select(deltaColumns())
+                .groupBy(functions.col(idColumn))
+                .agg(reducer.apply(deltaColumns()).as("_2"))
+                .select(functions.col("_2.*"))
+                .select(deltaColumns());
+    }
+
+    protected Dataset<Row> baseWithDeltas(final Dataset<Row> base, final Dataset<Row> deltas) {
+
+        final StructType deltaType = this.deltaType;
+        // Treat the base as a delta so we can use a single groupBy stage
+        return latestDeltas(base
+                .map(
+                        (MapFunction<Row, Row>)row -> createDelta(deltaType, NO_SEQUENCE, null, row),
+                        RowEncoder.apply(deltaType)
+                ).union(deltas))
+                .filter(functions.col(OPERATION).notEqual(UpsertOp.DELETE.name()))
+                .select(baseColumns());
+    }
+
+    private Column[] deltaColumns() {
+
+        final List<Column> cols = new ArrayList<>();
+        cols.add(functions.col(SEQUENCE));
+        cols.add(functions.col(OPERATION));
+        cols.addAll(Arrays.asList(baseColumns()));
+        return cols.toArray(new Column[0]);
+    }
+
+    private Column[] baseColumns() {
+
+        final List<Column> cols = new ArrayList<>();
+        Arrays.stream(baseType.fieldNames()).forEach(name -> cols.add(functions.col(name)));
+        return cols.toArray(new Column[0]);
+    }
+
     private static UpsertOp operation(final Row before, final Row after) {
 
         if(before == null) {
@@ -289,24 +259,19 @@ public class UpsertTable {
         }
     }
 
-    private static Row createDelta(final StructType deltaType, final String sequence, final UpsertOp operation, final Row before, final Row after) {
+    protected static Row createDelta(final StructType deltaType, final String sequence, final UpsertOp op, final Row row) {
 
         final StructField[] fields = deltaType.fields();
         final int size = fields.length;
         final Object[] data = new Object[size];
         // Sequence, operation
         data[0] = sequence;
-        data[1] = Nullsafe.mapOrDefault(operation, UpsertOp::name, "");
-        // Partition columns
-        for(int i = 2; i != size - 3; ++i) {
-            final String partition = fields[i].name();
-            data[i] = SparkRowUtils.get(Nullsafe.orDefault(after, before), partition);
+        data[1] = Nullsafe.mapOrDefault(op, UpsertOp::name, "");
+        // Data columns
+        for(int i = 2; i != size; ++i) {
+            final String field = fields[i].name();
+            data[i] = SparkRowUtils.get(row, field);
         }
-        // Id
-        data[size - 3] = SparkRowUtils.get(Nullsafe.orDefault(after, before), fields[size - 3].name());
-        // Before, after
-        data[size - 2] = SparkRowUtils.conform(before, fields[size - 2].dataType());
-        data[size - 1] = SparkRowUtils.conform(after, fields[size - 1].dataType());
         return new GenericRowWithSchema(data, deltaType);
     }
 
@@ -381,7 +346,7 @@ public class UpsertTable {
                 }
             });
 
-            writeToBase(appendDeltas.select(functions.col(AFTER + ".*")), sequences);
+            writeToBase(appendDeltas, sequences);
 
             final Configuration configuration = session.sparkContext().hadoopConfiguration();
             repairBase(catalog, configuration);
@@ -513,14 +478,14 @@ public class UpsertTable {
             repairBase(catalog, configuration);
         }
         if (!catalog.tableExists(database, deltaTableName())) {
-            repairDelta(catalog, configuration);
+            repairDelta(catalog);
         }
     }
 
     public void repair(final ExternalCatalog catalog, final Configuration configuration) {
 
         repairBase(catalog, configuration);
-        repairDelta(catalog, configuration);
+        repairDelta(catalog);
     }
 
     public void repairBase(final ExternalCatalog catalog, final Configuration configuration) {
@@ -536,44 +501,38 @@ public class UpsertTable {
     private static class BasePartitionStrategy extends SparkCatalogUtils.FindPartitionsStrategy.Default {
 
         @Override
-        public Optional<URI> location(final FileSystem fileSystem, final Path path) {
+        public Optional<URI> location(final FileSystem fs, final Path path) {
 
-            return lastSequencePath(fileSystem, path);
-        }
-    }
-
-    private static Optional<URI> lastSequencePath(final FileSystem fs, final Path path) {
-
-        Path latest = null;
-        String latestValue = null;
-        try {
-            for (final FileStatus status : fs.listStatus(path)) {
-                final Path next = status.getPath();
-                final String pathName = next.getName();
-                final Pair<String, String> entry = SparkCatalogUtils.fromPartitionPathTerm(pathName);
-                assert entry.getFirst().equals(SEQUENCE);
-                final String nextValue = entry.getSecond();
-                if (latestValue == null || nextValue.compareTo(latestValue) > 0) {
-                    // Deleted partitions will be empty files
-                    if (status.isDirectory()) {
-                        latest = next;
-                    } else {
-                        log.debug("Found empty partition " + next);
+            Path latest = null;
+            String latestValue = null;
+            try {
+                for (final FileStatus status : fs.listStatus(path)) {
+                    final Path next = status.getPath();
+                    final String pathName = next.getName();
+                    final Pair<String, String> entry = SparkCatalogUtils.fromPartitionPathTerm(pathName);
+                    assert entry.getFirst().equals(SEQUENCE);
+                    final String nextValue = entry.getSecond();
+                    if (latestValue == null || nextValue.compareTo(latestValue) > 0) {
+                        // Deleted partitions will be empty files
+                        if (status.isDirectory()) {
+                            latest = next;
+                        } else {
+                            log.debug("Found empty partition " + next);
+                        }
+                        latestValue = nextValue;
                     }
-                    latestValue = nextValue;
                 }
+            } catch (final IOException e) {
+                throw new IllegalStateException(e);
             }
-        } catch (final IOException e) {
-            throw new IllegalStateException(e);
+            return Optional.ofNullable(latest).map(Path::toUri);
         }
-        return Optional.ofNullable(latest).map(Path::toUri);
     }
 
-    public void repairDelta(final ExternalCatalog catalog, final Configuration configuration) {
+    public void repairDelta(final ExternalCatalog catalog) {
 
         final String tableName = deltaTableName();
-        final URI location = deltaLocation();
-        SparkCatalogUtils.ensureTable(catalog, database, tableName, deltaType, deltaPartition, FORMAT, location, TABLE_PROPERTIES);
+        SparkCatalogUtils.ensureTable(catalog, database, tableName, deltaType, deltaPartition, FORMAT, deltaLocation(), TABLE_PROPERTIES);
     }
 
     public Source<Dataset<Row>> source(final SparkSession session) {
@@ -594,11 +553,5 @@ public class UpsertTable {
     public Query<Row> queryBase(final SparkSession session) {
 
         return () -> selectBase(session);
-    }
-
-    public Sink<Dataset<Tuple2<Row, Row>>> sink() {
-
-        final String sequence = sequence(Instant.now());
-        return input -> applyDelta(input, sequence);
     }
 }

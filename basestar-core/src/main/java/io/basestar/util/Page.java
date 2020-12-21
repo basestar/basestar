@@ -51,7 +51,7 @@ public class Page<T> extends AbstractList<T> implements Serializable {
 
     @Data
     @With
-    public static class Stats {
+    public static class Stats implements Serializable {
 
         public static final Stats ZERO = new Stats(0L, 0L);
 

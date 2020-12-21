@@ -28,14 +28,14 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.*;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Data
-public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements Iterable<String>, Comparable<SELF>, Serializable {
+public abstract class AbstractPath<S extends AbstractPath<S>> implements Iterable<String>, Comparable<S>, Serializable {
 
-    public static final String SELF = ".";
+    public static final String S = ".";
 
     public static final String UP = "..";
 
@@ -58,9 +58,9 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
 
     protected abstract char delimiter();
 
-    protected abstract SELF create();
+    protected abstract S create();
 
-    protected abstract SELF create(final List<String> parts);
+    protected abstract S create(final List<String> parts);
 
     public boolean isEmpty() {
 
@@ -81,7 +81,7 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
         }
     }
 
-    public SELF withoutFirst() {
+    public S withoutFirst() {
 
         if(parts.isEmpty() || parts.size() == 1) {
             return create();
@@ -90,7 +90,7 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
         }
     }
 
-    public SELF withoutFirst(final int size) {
+    public S withoutFirst(final int size) {
 
         if(parts.isEmpty() || parts.size() < size) {
             return create();
@@ -99,7 +99,7 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
         }
     }
 
-    public SELF withFirst() {
+    public S withFirst() {
 
         return parts.isEmpty() ? self() : create(parts.subList(0, 1));
     }
@@ -113,7 +113,7 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
         }
     }
 
-    public SELF withoutLast() {
+    public S withoutLast() {
 
         if(parts.isEmpty() || parts.size() == 1) {
             return create();
@@ -122,24 +122,24 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
         }
     }
 
-    public SELF withLast() {
+    public S withLast() {
 
         return parts.isEmpty() ? self() : create(parts.subList(parts.size() - 2, parts.size() - 1));
     }
 
-    public SELF with(final SELF tail) {
+    public S with(final S tail) {
 
         return with(tail.getParts());
     }
 
-    public SELF with(final List<String> parts) {
+    public S with(final List<String> parts) {
 
         final List<String> merged = new ArrayList<>(this.parts);
         merged.addAll(parts);
         return create(merged);
     }
 
-    public SELF with(final String ... parts) {
+    public S with(final String ... parts) {
 
         return with(Arrays.asList(parts));
     }
@@ -149,12 +149,12 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
         return this.parts.size();
     }
 
-    public SELF range(final int from) {
+    public S range(final int from) {
 
         return range(from, this.parts.size());
     }
 
-    public SELF range(final int from, final int to) {
+    public S range(final int from, final int to) {
 
         return create(this.parts.subList(from, to));
     }
@@ -179,7 +179,7 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
     public Object get(final Map<String, Object> data) {
 
         final Object target = data.get(first());
-        final AbstractPath<SELF> tail = withoutFirst();
+        final AbstractPath<S> tail = withoutFirst();
         if(tail.isEmpty()) {
             return target;
         } else if(target instanceof Map) {
@@ -194,7 +194,7 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
 
         final String first = first();
         final Object target = data.get(first);
-        final AbstractPath<SELF> tail = withoutFirst();
+        final AbstractPath<S> tail = withoutFirst();
         if(tail.isEmpty()) {
             return Immutable.copyPut(data, first, value);
         } else if(target instanceof Map) {
@@ -207,16 +207,16 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
     }
 
     @Nonnull
-    public static <SELF extends AbstractPath<SELF>> Map<String, Set<SELF>> branch(@Nullable final Collection<SELF> paths) {
+    public static <S extends AbstractPath<S>> Map<String, Set<S>> branch(@Nullable final Collection<S> paths) {
 
         if(paths == null) {
             return Collections.emptyMap();
         }
-        final Multimap<String, SELF> results = HashMultimap.create();
-        for(final SELF path : paths) {
+        final Multimap<String, S> results = HashMultimap.create();
+        for(final S path : paths) {
             if(!path.isEmpty()) {
                 final String head = path.first();
-                final SELF tail = path.withoutFirst();
+                final S tail = path.withoutFirst();
                 results.put(head, tail);
             }
         }
@@ -240,7 +240,7 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
         return results;
     }
 
-    public boolean isParentOrEqual(final SELF of) {
+    public boolean isParentOrEqual(final S of) {
 
         if(this.parts.size() <= of.size()) {
             for(int i = 0; i != this.parts.size(); ++i) {
@@ -254,7 +254,7 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
         }
     }
 
-    public boolean isParent(final SELF of) {
+    public boolean isParent(final S of) {
 
         if(this.parts.size() < of.size()) {
             return isParentOrEqual(of);
@@ -263,28 +263,28 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
         }
     }
 
-    public boolean isChild(final SELF of) {
+    public boolean isChild(final S of) {
 
         return of.isParent(self());
     }
 
-    public boolean isChildOrEqual(final SELF of) {
+    public boolean isChildOrEqual(final S of) {
 
         return of.isParentOrEqual(self());
     }
 
     @SuppressWarnings("unchecked")
-    private SELF self() {
+    private S self() {
 
-        return (SELF)this;
+        return (S)this;
     }
 
-    public static <SELF extends AbstractPath<SELF>> Set<SELF> children(final Collection<SELF> paths, final String parent) {
+    public static <S extends AbstractPath<S>> Set<S> children(final Collection<S> paths, final String parent) {
 
-        final Set<SELF> results = new HashSet<>();
-        for(final SELF path : paths) {
+        final Set<S> results = new HashSet<>();
+        for(final S path : paths) {
             if(!path.isEmpty() && path.first().equals(parent)) {
-                final SELF tail = path.withoutFirst();
+                final S tail = path.withoutFirst();
                 if(!tail.isEmpty()) {
                     results.add(tail);
                 }
@@ -293,10 +293,10 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
         return results;
     }
 
-    public static <SELF extends AbstractPath<SELF>> Set<SELF> children(final Collection<SELF> paths, final SELF parent) {
+    public static <S extends AbstractPath<S>> Set<S> children(final Collection<S> paths, final S parent) {
 
-        final Set<SELF> results = new HashSet<>();
-        for(final SELF path : paths) {
+        final Set<S> results = new HashSet<>();
+        for(final S path : paths) {
             if(parent.isParentOrEqual(path)) {
                 results.add(path.range(parent.size()));
             }
@@ -312,7 +312,7 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
     }
 
     @Override
-    public int compareTo(@Nonnull final SELF other) {
+    public int compareTo(@Nonnull final S other) {
 
         return toString().compareTo(other.toString());
     }
@@ -327,12 +327,12 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
         return Joiner.on(delimiter);
     }
 
-    public SELF transform(final Function<String, String> fn) {
+    public S transform(final UnaryOperator<String> fn) {
 
         return create(parts.stream().map(fn).collect(Collectors.toList()));
     }
 
-    public SELF relative(final SELF other) {
+    public S relative(final S other) {
 
         final int thisSize = size();
         final int otherSize = other.size();
@@ -355,7 +355,7 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
         return create(parts);
     }
 
-    public SELF canonical() {
+    public S canonical() {
 
         final LinkedList<String> parts = new LinkedList<>();
         for(final String part : this.parts) {
@@ -365,14 +365,14 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
                 } else {
                     parts.pop();
                 }
-            } else if(!part.equals(SELF)) {
+            } else if(!part.equals(S)) {
                 parts.add(part);
             }
         }
         return create(parts);
     }
 
-    public SELF up(final int count) {
+    public S up(final int count) {
 
         final List<String> parts = Lists.newArrayList(this.parts);
         for(int i = 0; i != count; ++i) {
@@ -381,12 +381,12 @@ public abstract class AbstractPath<SELF extends AbstractPath<SELF>> implements I
         return create(parts);
     }
 
-    public SELF toLowerCase() {
+    public S toLowerCase() {
 
         return transform(String::toLowerCase);
     }
 
-    public SELF toUpperCase() {
+    public S toUpperCase() {
 
         return transform(String::toUpperCase);
     }

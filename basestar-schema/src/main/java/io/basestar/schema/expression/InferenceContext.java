@@ -6,14 +6,17 @@ import io.basestar.schema.Layout;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseAny;
 import io.basestar.util.Name;
+import io.basestar.util.Warnings;
 import lombok.RequiredArgsConstructor;
 
 import java.util.Map;
 
 public interface InferenceContext {
 
+    @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
     Use<?> typeOf(Name name);
 
+    @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
     default Use<?> typeOf(Expression expression) {
 
         return new InferenceVisitor(this).visit(expression);
@@ -73,33 +76,6 @@ public interface InferenceContext {
             return layout.typeOf(name);
         }
     }
-
-//    class FromSchema implements InferenceContext {
-//
-//        private final InstanceSchema schema;
-//
-//        private final Methods methods;
-//
-//        public FromSchema(final InstanceSchema schema, final Methods methods) {
-//
-//            this.schema = schema;
-//            this.methods = Methods.builder().defaults().build();
-//        }
-//
-//        @Override
-//        public Use<?> typeOf(final Name name) {
-//
-//            return schema.typeOf(name);
-//        }
-//
-//        @Override
-//        public Use<?> typeOfCall(final Use<?> target, final String member, final List<Use<?>> args) {
-//
-//            final Type[] argTypes = args.stream().map(Use::javaType).toArray(Type[]::new);
-//            final Callable callable = methods.callable(target.javaType(), member, argTypes);
-//            return Use.fromJavaType(callable.type());
-//        }
-//    }
 
     @RequiredArgsConstructor
     class Overlay implements InferenceContext {

@@ -6,6 +6,7 @@ import io.basestar.schema.use.Use;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
+import io.basestar.util.Warnings;
 
 import java.util.List;
 import java.util.Map;
@@ -57,13 +58,12 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver, Permissio
 
     Set<Name> getDeclaredExpand();
 
-    Set<Name> getExpand();
-
     @Override
     Descriptor<? extends LinkableSchema> descriptor();
 
     String id();
 
+    @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
     Use<?> typeOfId();
 
     default Instance deleted(final String id) {

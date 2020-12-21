@@ -84,11 +84,13 @@ public interface BinaryNumberMatch<T> {
 
     interface Promoting<T> extends BinaryNumberMatch<T> {
 
+        @Override
         default T apply(final Long lhs, final Double rhs) {
 
             return apply(lhs.doubleValue(), rhs);
         }
 
+        @Override
         default T apply(final Double lhs, final Long rhs) {
 
             return apply(lhs, rhs.doubleValue());

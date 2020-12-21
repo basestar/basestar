@@ -22,7 +22,6 @@ package io.basestar.storage.sql;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import io.basestar.jackson.BasestarModule;
 import io.basestar.schema.Index;
 import io.basestar.schema.Instance;
@@ -31,12 +30,14 @@ import io.basestar.schema.Reserved;
 import io.basestar.schema.use.*;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
+import io.basestar.util.Warnings;
 import org.apache.commons.text.StringEscapeUtils;
 import org.jooq.*;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -50,6 +51,7 @@ public class SQLUtils {
 
     private static final ObjectMapper objectMapper = new ObjectMapper().registerModule(BasestarModule.INSTANCE);
 
+    @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
     public static DataType<?> dataType(final Use<?> type) {
 
         return type.visit(new Use.Visitor<DataType<?>>() {
@@ -93,31 +95,31 @@ public class SQLUtils {
             @Override
             public <T> DataType<?> visitArray(final UseArray<T> type) {
 
-                return SQLDataType.LONGVARCHAR;//JSONB;
+                return SQLDataType.LONGVARCHAR;
             }
 
             @Override
             public <T> DataType<?> visitPage(final UsePage<T> type) {
 
-                return SQLDataType.LONGVARCHAR;//JSONB;
+                return SQLDataType.LONGVARCHAR;
             }
 
             @Override
             public <T> DataType<?> visitSet(final UseSet<T> type) {
 
-                return SQLDataType.LONGVARCHAR;//JSONB;
+                return SQLDataType.LONGVARCHAR;
             }
 
             @Override
             public <T> DataType<?> visitMap(final UseMap<T> type) {
 
-                return SQLDataType.LONGVARCHAR;//JSONB;
+                return SQLDataType.LONGVARCHAR;
             }
 
             @Override
             public DataType<?> visitStruct(final UseStruct type) {
 
-                return SQLDataType.LONGVARCHAR;//JSONB;
+                return SQLDataType.LONGVARCHAR;
             }
 
             @Override
@@ -141,7 +143,7 @@ public class SQLUtils {
             @Override
             public DataType<?> visitView(final UseView type) {
 
-                return SQLDataType.LONGVARCHAR;//JSONB;
+                return SQLDataType.LONGVARCHAR;
             }
 
             @Override
@@ -153,7 +155,7 @@ public class SQLUtils {
             @Override
             public DataType<?> visitAny(final UseAny type) {
 
-                return SQLDataType.LONGVARCHAR;//JSONB;
+                return SQLDataType.LONGVARCHAR;
             }
 
             @Override
@@ -293,6 +295,7 @@ public class SQLUtils {
             }
 
             @Override
+            @SuppressWarnings(Warnings.RETURN_NULL_ARRAY_OR_COLLECTION)
             public byte[] visitSecret(final UseSecret type) {
 
                 if(value == null) {
@@ -359,7 +362,7 @@ public class SQLUtils {
                     if(value instanceof String) {
                         str = (String) value;
                     } else if(value instanceof byte[]) {
-                        str = new String((byte[])value, Charsets.UTF_8);
+                        str = new String((byte[])value, StandardCharsets.UTF_8);
                     } else if(value instanceof JSON) {
                         str = unescape(((JSON)value).data());
                     } else if(value instanceof JSONB) {
@@ -460,6 +463,7 @@ public class SQLUtils {
         });
     }
 
+    @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
     public static List<Field<?>> fields(final ReferableSchema schema) {
 
         return Stream.concat(
@@ -476,6 +480,7 @@ public class SQLUtils {
         return order == Sort.Order.ASC ? SortOrder.ASC : SortOrder.DESC;
     }
 
+    @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
     public static List<OrderField<?>> indexKeys(final ReferableSchema schema, final Index index) {
 
         return Stream.concat(
@@ -495,6 +500,7 @@ public class SQLUtils {
         }
     }
 
+    @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
     public static List<Field<?>> fields(final ReferableSchema schema, final Index index) {
 
         final List<Name> partitionNames = index.resolvePartitionNames();
@@ -530,6 +536,7 @@ public class SQLUtils {
         return DSL.primaryKey(names.toArray(new org.jooq.Name[0]));
     }
 
+    @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
     public static Field<?> selectField(final Field<?> field, final Use<?> type) {
 
         return type.visit(new Use.Visitor.Defaulting<Field<?>>() {
@@ -588,6 +595,7 @@ public class SQLUtils {
         }
     }
 
+    @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
     public static Field<?> field(final QueryPart part) {
 
         if(part == null) {

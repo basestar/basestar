@@ -71,38 +71,32 @@ class TestUpsertTable extends AbstractSparkTest {
 
         table.provision(session);
 
-        table.applyDelta(createSource, table.sequence(Instant.now()), r -> UpsertOp.CREATE, r -> null, r -> r);
+        table.applyChanges(createSource, table.sequence(Instant.now()), r -> UpsertOp.CREATE, r -> r);
         assertState("After create", session, table, ImmutableList.of(), createDeltas, create);
 
         table.flattenDeltas(session);
         assertState("After create + flatten", session, table, create, ImmutableList.of(), create);
 
         final List<D> update = ImmutableList.of(new D("d:1", 2L), new D("d:3", 4L));
-        final List<Delta> updateDeltas = ImmutableList.of(Delta.update(update.get(0), update.get(0)),
-                Delta.update(update.get(1), update.get(1)));
+        final List<Delta> updateDeltas = ImmutableList.of(Delta.update(update.get(0)), Delta.update(update.get(1)));
         final List<D> updateMerged = ImmutableList.of(update.get(0), create.get(1), update.get(1), create.get(3));
 
         final Dataset<Row> updateSource = bucket.accept(session.createDataset(update, Encoders.bean(D.class)).toDF());
 
-        table.applyDelta(updateSource, table.sequence(Instant.now()), r -> UpsertOp.UPDATE, r -> r, r -> r);
+        table.applyChanges(updateSource, table.sequence(Instant.now()), r -> UpsertOp.UPDATE, r -> r);
         assertState("After update", session, table, create, updateDeltas, updateMerged);
 
         table.flattenDeltas(session);
         assertState("After update + flatten", session, table, updateMerged, ImmutableList.of(), updateMerged);
 
         // FIXME: failing periodically because of a possible list-after-write inconsistency
-//        final List<D> delete = ImmutableList.of(new D("d:2", 3L), new D("d:4", 5L));
-//        final List<Delta> deleteDeltas = ImmutableList.of(Delta.delete(delete.get(0)), Delta.delete(delete.get(1)));
-//        final List<D> deleteMerged = ImmutableList.of(updateMerged.get(0), updateMerged.get(2));
+        final List<D> delete = ImmutableList.of(new D("d:2", 3L), new D("d:4", 5L));
+        final List<Delta> deleteDeltas = ImmutableList.of(Delta.delete(delete.get(0)), Delta.delete(delete.get(1)));
+        final List<D> deleteMerged = ImmutableList.of(updateMerged.get(0), updateMerged.get(2));
 
-//        final Dataset<Row> deleteSource = bucket.accept(session.createDataset(delete, Encoders.bean(D.class)).toDF());
-//        table.applyDelta(deleteSource, table.sequence(Instant.now()), r -> UpsertOp.DELETE, r -> r, r -> null);
-//        assertState("After delete", session, table, updateMerged, deleteDeltas, deleteMerged);
-//
-//        table.flattenDeltas(session);
-//        assertState("After delete + flatten", session, table, deleteMerged, ImmutableList.of(), deleteMerged);
-
-//        Thread.sleep(500000);
+        final Dataset<Row> deleteSource = bucket.accept(session.createDataset(delete, Encoders.bean(D.class)).toDF());
+        table.applyChanges(deleteSource, table.sequence(Instant.now()), r -> UpsertOp.DELETE, r -> r);
+        assertState("After delete", session, table, updateMerged, deleteDeltas, deleteMerged);
     }
 
     private void assertState(final String step, final SparkSession session, final UpsertTable table,
@@ -133,25 +127,22 @@ class TestUpsertTable extends AbstractSparkTest {
         @Property(name = "id")
         private String id;
 
-        @Property(name = "__before")
-        private D before;
-
-        @Property(name = "__after")
-        private D after;
+        @Property(name = "x")
+        private Long x;
 
         public static Delta create(final D after) {
 
-            return new Delta("CREATE", after.getId(), null, after);
+            return new Delta(UpsertOp.CREATE.name(), after.getId(), after.getX());
         }
 
-        public static Delta update(final D before, final D after) {
+        public static Delta update(final D after) {
 
-            return new Delta("UPDATE", after.getId(), before, after);
+            return new Delta(UpsertOp.UPDATE.name(), after.getId(), after.getX());
         }
 
         public static Delta delete(final D before) {
 
-            return new Delta("DELETE", before.getId(), before, null);
+            return new Delta(UpsertOp.DELETE.name(), before.getId(), before.getX());
         }
     }
 }

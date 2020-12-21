@@ -32,6 +32,7 @@ import io.basestar.schema.use.*;
 import io.basestar.type.TypeContext;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
+import io.basestar.util.Warnings;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -45,6 +46,7 @@ import java.util.function.Function;
 
 // Make generic TypeMapper<I, O> (but have to make consistent with weird SchemaMapper<T, O> generic order)
 
+@SuppressWarnings({Warnings.RETURN_GENERIC_WILDCARD, Warnings.GUAVA})
 public interface TypeMapper extends Serializable {
 
     Use<?> use();
@@ -427,7 +429,6 @@ public interface TypeMapper extends Serializable {
     }
 
     @RequiredArgsConstructor
-    @SuppressWarnings("Guava")
     class OfCustom implements TypeMapper {
 
         private final Class<?> erasedType;
@@ -534,9 +535,6 @@ public interface TypeMapper extends Serializable {
 
             return UseDateTime.DEFAULT;
         }
-
-        @Override
-        public abstract Class<T> erasedType();
 
         public abstract T marshallInstant(final Instant value);
 

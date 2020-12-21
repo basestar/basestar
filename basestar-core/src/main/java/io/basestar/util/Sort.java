@@ -20,6 +20,7 @@ package io.basestar.util;
  * #L%
  */
 
+import com.google.common.base.CharMatcher;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import lombok.AllArgsConstructor;
@@ -34,11 +35,15 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class Sort implements Serializable {
 
-    public static final String DELIMITER = ":";
+    public static final char DELIMITER = ':';
+
+    public static final char ALT_DELIMITER = ' ';
 
     public static final char MULTIPLE_DELIMITER = ',';
 
-    private static final Splitter SPLITTER = Splitter.on(DELIMITER).trimResults().omitEmptyStrings().limit(2);
+    private static final CharMatcher DELIMITER_MATCHER = CharMatcher.is(DELIMITER).or(CharMatcher.is(ALT_DELIMITER));
+
+    private static final Splitter SPLITTER = Splitter.on(DELIMITER_MATCHER).trimResults().omitEmptyStrings().limit(2);
 
     private final Name name;
 
@@ -96,7 +101,7 @@ public class Sort implements Serializable {
     public static Sort parse(final String v) {
 
         final List<String> parts = Lists.newArrayList(SPLITTER.split(v));
-        if(parts.size() < 1) {
+        if(parts.isEmpty()) {
             throw new IllegalStateException();
         } else {
             final Name name = Name.parse(parts.get(0));
@@ -142,7 +147,7 @@ public class Sort implements Serializable {
 //    @JsonValue
     public String toString() {
 
-        return name + DELIMITER + order;
+        return name + String.valueOf(DELIMITER) + order;
     }
 
     public enum Order {

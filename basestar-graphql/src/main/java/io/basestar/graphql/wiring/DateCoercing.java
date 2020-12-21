@@ -1,9 +1,6 @@
 package io.basestar.graphql.wiring;
 
 import graphql.schema.Coercing;
-import graphql.schema.CoercingParseLiteralException;
-import graphql.schema.CoercingParseValueException;
-import graphql.schema.CoercingSerializeException;
 import io.basestar.graphql.GraphQLUtils;
 import io.basestar.util.ISO8601;
 
@@ -13,29 +10,29 @@ import java.util.Map;
 
 public class DateCoercing implements Coercing<LocalDate, String> {
 
-    public static DateCoercing INSTANCE = new DateCoercing();
+    public static final DateCoercing INSTANCE = new DateCoercing();
 
     @Override
-    public String serialize(final Object o) throws CoercingSerializeException {
+    public String serialize(final Object o) {
 
         final LocalDate value = ISO8601.toDate(o);
         return value == null ? null : ISO8601.toString(value);
     }
 
     @Override
-    public LocalDate parseValue(final Object o) throws CoercingParseValueException {
+    public LocalDate parseValue(final Object o) {
 
         return ISO8601.toDate(o);
     }
 
     @Override
-    public LocalDate parseLiteral(final Object input) throws CoercingParseLiteralException {
+    public LocalDate parseLiteral(final Object input) {
 
         return parseLiteral(input, Collections.emptyMap());
     }
 
     @Override
-    public LocalDate parseLiteral(final Object input, final Map<String, Object> variables) throws CoercingParseLiteralException {
+    public LocalDate parseLiteral(final Object input, final Map<String, Object> variables) {
 
         return parseValue(GraphQLUtils.fromValue(input, variables));
     }
