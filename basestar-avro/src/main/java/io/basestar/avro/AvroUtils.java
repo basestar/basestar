@@ -82,7 +82,7 @@ public class AvroUtils {
 
     public static Schema schema(final Property property, final Set<Name> expand) {
 
-        return schema(property.getType(), expand);
+        return schema(property.typeOf(), expand);
     }
 
     public static Schema schema(final Use<?> use, final Set<Name> expand) {
@@ -218,7 +218,7 @@ public class AvroUtils {
         final Map<String, Set<Name>> branches = Name.branch(expand);
         instanceSchema.getProperties().forEach((k, v) -> {
             final Schema.Field field = schema.getField(k);
-            record.put(k, encode(v.getType(), field.schema(), branches.get(k), object.get(k)));
+            record.put(k, encode(v.typeOf(), field.schema(), branches.get(k), object.get(k)));
         });
         return record;
     }
@@ -318,7 +318,7 @@ public class AvroUtils {
         final Map<String, Set<Name>> branches = Name.branch(expand);
         instanceSchema.getProperties().forEach((k, v) -> {
             final Schema.Field field = schema.getField(k);
-            object.put(k, decode(v.getType(), field.schema(), branches.get(k), record.get(field.pos())));
+            object.put(k, decode(v.typeOf(), field.schema(), branches.get(k), record.get(field.pos())));
         });
         return object;
     }

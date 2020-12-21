@@ -39,7 +39,7 @@ class TestViewSchema {
         final ViewSchema schema = namespace.requireViewSchema("View");
         final Property emailProp = schema.getProperties().get("email");
 
-        assertTrue(emailProp.getType() instanceof UseString);
+        assertTrue(emailProp.typeOf() instanceof UseString);
         assertEquals(Expression.parse("email"), emailProp.getExpression());
     }
 }

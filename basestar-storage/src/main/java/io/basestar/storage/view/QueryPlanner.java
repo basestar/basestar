@@ -96,8 +96,8 @@ public interface QueryPlanner {
                     final String name = entry.getKey();
                     final Property property = entry.getValue();
                     input.put(name, Nullsafe.require(property.getExpression()));
-                    inputSchema.put(name, property.getType());
-                    aggSchema.put(name, property.getType());
+                    inputSchema.put(name, property.typeOf());
+                    aggSchema.put(name, property.typeOf());
                 }
 
                 final InferenceContext context = InferenceContext.from(from.getSchema())
@@ -136,7 +136,7 @@ public interface QueryPlanner {
                     final String name = entry.getKey();
                     final Property property = entry.getValue();
                     output.put(name, Nullsafe.require(property.getExpression()));
-                    outputSchema.put(name, property.getType());
+                    outputSchema.put(name, property.typeOf());
                 }
                 output.put(schema.id(), new NameConstant(fromSchema.id()));
                 outputSchema.put(schema.id(), schema.typeOfId());

@@ -207,7 +207,7 @@ public class UseStruct implements UseInstance {
             return ImmutableMap.of(
                     Use.name(NAME, optional), schema.getProperties().entrySet().stream().collect(Collectors.toMap(
                             Map.Entry::getKey,
-                            e -> e.getValue().getType().toConfig()
+                            e -> e.getValue().typeOf().toConfig()
                     ))
             );
         } else {

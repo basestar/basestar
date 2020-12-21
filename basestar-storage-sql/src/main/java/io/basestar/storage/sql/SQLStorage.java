@@ -112,7 +112,7 @@ public class SQLStorage implements DefaultLayerStorage {
             fields.add(SQLUtils.selectField(DSL.field(DSL.name(name)), type).as(DSL.name(name)));
         });
         schema.getProperties().forEach((name, prop) -> {
-            fields.add(SQLUtils.selectField(DSL.field(DSL.name(name)), prop.getType()).as(DSL.name(name)));
+            fields.add(SQLUtils.selectField(DSL.field(DSL.name(name)), prop.typeOf()).as(DSL.name(name)));
         });
         return fields;
     }
@@ -283,7 +283,7 @@ public class SQLStorage implements DefaultLayerStorage {
                 if (rest.isEmpty()) {
                     return DSL.field(DSL.name(name.first()));
                 } else {
-                    return prop.getType().visit(new Use.Visitor.Defaulting<QueryPart>() {
+                    return prop.typeOf().visit(new Use.Visitor.Defaulting<QueryPart>() {
                         @Override
                         public <T> QueryPart visitDefault(final Use<T> type) {
 
@@ -730,7 +730,7 @@ public class SQLStorage implements DefaultLayerStorage {
         schema.metadataSchema().forEach((k, v) ->
                 result.put(k, SQLUtils.fromSQLValue(v, data.get(k))));
         schema.getProperties().forEach((k, v) ->
-                result.put(k, SQLUtils.fromSQLValue(v.getType(), data.get(k))));
+                result.put(k, SQLUtils.fromSQLValue(v.typeOf(), data.get(k))));
         return result;
     }
 
@@ -740,7 +740,7 @@ public class SQLStorage implements DefaultLayerStorage {
         schema.metadataSchema().forEach((k, v) ->
                 result.put(DSL.field(DSL.name(k)), SQLUtils.toSQLValue(v, object.get(k))));
         schema.getProperties().forEach((k, v) ->
-                result.put(DSL.field(DSL.name(k)), SQLUtils.toSQLValue(v.getType(), object.get(k))));
+                result.put(DSL.field(DSL.name(k)), SQLUtils.toSQLValue(v.typeOf(), object.get(k))));
         return result;
     }
 

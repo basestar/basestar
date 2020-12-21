@@ -35,8 +35,10 @@ import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.expression.InferenceContext;
-import io.basestar.schema.expression.InferenceVisitor;
-import io.basestar.schema.use.*;
+import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseBinary;
+import io.basestar.schema.use.UseView;
+import io.basestar.schema.use.ValueContext;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -235,6 +237,10 @@ public class ViewSchema implements LinkableSchema {
         private Set<Name> expand;
 
         @Nullable
+        @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
+        private List<Bucketing> bucket;
+
+        @Nullable
         @JsonSerialize(using = ToStringSerializer.class)
         @JsonDeserialize(using = ExpressionDeserializer.class)
         private Expression where;
@@ -297,6 +303,9 @@ public class ViewSchema implements LinkableSchema {
     private final SortedSet<Name> declaredExpand;
 
     @Nonnull
+    private final List<Bucketing> declaredBucketing;
+
+    @Nonnull
     private final SortedMap<String, Serializable> extensions;
 
     private final boolean isAggregating;
@@ -327,6 +336,7 @@ public class ViewSchema implements LinkableSchema {
                 (k, v) -> v.build(resolver, context, version, qualifiedName.with(k)));
         this.declaredLinks = Immutable.transformValuesSorted(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
         this.declaredPermissions = Immutable.transformValuesSorted(descriptor.getPermissions(), (k, v) -> v.build(k));
+        this.declaredBucketing = Immutable.copy(descriptor.getBucket());
         this.declaredExpand = Immutable.sortedCopy(descriptor.getExpand());
         this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
         if(Reserved.isReserved(qualifiedName.last())) {
@@ -488,85 +498,13 @@ public class ViewSchema implements LinkableSchema {
             out.put(qualifiedName, this);
             from.getSchema().collectDependencies(expand, out);
             declaredProperties.forEach((k, v) -> v.collectDependencies(expand, out));
+            declaredLinks.forEach((k, v) -> v.collectDependencies(expand, out));
         }
     }
 
     public boolean isGrouping() {
 
         return !group.isEmpty();
-    }
-
-    private static Property.Descriptor viewPropertyDescriptor(final Property.Descriptor descriptor, final From from) {
-
-        final InstanceSchema fromSchema = from.getSchema();
-        return (new Property.Descriptor() {
-
-            @Override
-            public Map<String, Serializable> getExtensions() {
-
-                return descriptor.getExtensions();
-            }
-
-            @Nullable
-            @Override
-            public String getDescription() {
-
-                return descriptor.getDescription();
-            }
-
-            @Override
-            public Visibility getVisibility() {
-
-                return descriptor.getVisibility();
-            }
-
-            @Override
-            public Use<?> getType() {
-
-                if(descriptor.getType() == null && descriptor.getExpression() != null) {
-                    final InferenceContext context = InferenceContext.from(fromSchema);
-                    final Use<?> type = new InferenceVisitor(context).visit(descriptor.getExpression());
-                    if(type instanceof UseAny) {
-                        throw new IllegalStateException("Cannot infer type from expression " + descriptor.getExpression());
-                    } else {
-                        return type;
-                    }
-                } else {
-                    return descriptor.getType();
-                }
-            }
-
-            @Override
-            @Deprecated
-            public Boolean getRequired() {
-
-                return descriptor.getRequired();
-            }
-
-            @Override
-            public Boolean getImmutable() {
-
-                return descriptor.getImmutable();
-            }
-
-            @Override
-            public Expression getExpression() {
-
-                return descriptor.getExpression();
-            }
-
-            @Override
-            public Serializable getDefault() {
-
-                return descriptor.getDefault();
-            }
-
-            @Override
-            public List<? extends Constraint> getConstraints() {
-
-                return descriptor.getConstraints();
-            }
-        });
     }
 
     @Override

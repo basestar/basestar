@@ -77,11 +77,17 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
     }
 
     @Override
+    default Map<Name, Schema<?>> dependencies() {
+
+        return dependencies(getExpand());
+    }
+
+    @Override
     default Map<String, Use<?>> getSchema() {
 
         final SortedMap<String, Use<?>> result = new TreeMap<>();
         metadataSchema().forEach(result::put);
-        getMembers().forEach((name, member) -> result.put(name, member.getType()));
+        getMembers().forEach((name, member) -> result.put(name, member.typeOf()));
         return result;
     }
 
@@ -429,7 +435,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
                 }
             }
             for(final Map.Entry<String, ? extends Member> entry : getMembers().entrySet()) {
-                if(!((Use<Object>)entry.getValue().getType()).areEqual(a.get(entry.getKey()), b.get(entry.getKey()))) {
+                if(!((Use<Object>)entry.getValue().typeOf()).areEqual(a.get(entry.getKey()), b.get(entry.getKey()))) {
                     return false;
                 }
             }

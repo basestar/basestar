@@ -5,9 +5,9 @@ import io.basestar.expression.Expression;
 import io.basestar.schema.Layout;
 import io.basestar.schema.Reserved;
 import io.basestar.spark.util.SparkSchemaUtils;
+import io.basestar.spark.util.SparkUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
@@ -36,7 +36,7 @@ public class ExpressionTransform implements Transform<Dataset<Row>, Dataset<Row>
 
         final StructType outputType = SparkSchemaUtils.structType(outputLayout);
 
-        return input.map((MapFunction<Row, Row>) row -> {
+        return input.map(SparkUtils.map(row -> {
 
             final Map<String, Object> object = SparkSchemaUtils.fromSpark(inputLayout, row);
             final Context context = Context.init(object).with(Reserved.THIS, object);
@@ -49,6 +49,6 @@ public class ExpressionTransform implements Transform<Dataset<Row>, Dataset<Row>
                 }
             }
             return SparkSchemaUtils.toSpark(outputLayout, outputType, output);
-        }, RowEncoder.apply(outputType));
+        }), RowEncoder.apply(outputType));
     }
 }

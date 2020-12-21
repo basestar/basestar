@@ -83,7 +83,7 @@ public abstract class AbstractExpandStep implements ExpandStep {
             if(expand.isEmpty() && member instanceof Link) {
                 fields.set(i, SparkRowUtils.field(name, joinToType));
             } else {
-                fields.set(i, SparkRowUtils.field(name, expandedType(member.getType(), expand, field.dataType(), joinToType)));
+                fields.set(i, SparkRowUtils.field(name, expandedType(member.typeOf(), expand, field.dataType(), joinToType)));
             }
         });
         return DataTypes.createStructType(fields).asNullable();

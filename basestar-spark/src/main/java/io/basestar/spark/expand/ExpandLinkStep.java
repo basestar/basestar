@@ -116,7 +116,7 @@ public class ExpandLinkStep extends AbstractExpandStep {
             return type;
         } else {
             final StructField field = SparkRowUtils.findField(type, name.first()).orElseThrow(IllegalStateException::new);
-            return linkKeyType(member.getType(), name.withoutFirst(), field.dataType());
+            return linkKeyType(member.typeOf(), name.withoutFirst(), field.dataType());
         }
     }
 
@@ -311,7 +311,7 @@ public class ExpandLinkStep extends AbstractExpandStep {
             if (member instanceof Link && name.size() == 1) {
                 linkKeys.add(row);
             } else {
-                linkKeys.addAll(linkKeys(member.getType(), name.withoutFirst(), SparkRowUtils.get(row, name.first())));
+                linkKeys.addAll(linkKeys(member.typeOf(), name.withoutFirst(), SparkRowUtils.get(row, name.first())));
             }
         }
         return linkKeys;
@@ -413,7 +413,7 @@ public class ExpandLinkStep extends AbstractExpandStep {
                     if(member instanceof Link && name.size() == 1) {
                         return value;
                     } else {
-                        return applyLink(member.getType(), name.withoutFirst(), oldValue, value);
+                        return applyLink(member.typeOf(), name.withoutFirst(), oldValue, value);
                     }
                 }
             }

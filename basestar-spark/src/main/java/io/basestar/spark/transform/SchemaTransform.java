@@ -2,9 +2,9 @@ package io.basestar.spark.transform;
 
 import io.basestar.schema.InstanceSchema;
 import io.basestar.spark.util.SparkSchemaUtils;
+import io.basestar.spark.util.SparkUtils;
 import io.basestar.util.Nullsafe;
 import lombok.Getter;
-import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
@@ -29,12 +29,12 @@ public class SchemaTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         final InstanceSchema schema = this.schema;
         final StructType outputType = SparkSchemaUtils.structType(schema);
 
-        return input.map((MapFunction<Row, Row>) row -> {
+        return input.map(SparkUtils.map(row -> {
 
             final Map<String, Object> object = SparkSchemaUtils.fromSpark(schema, row);
             final Map<String, Object> instance = schema.create(object, schema.getExpand(), true);
             return SparkSchemaUtils.toSpark(schema, outputType, instance);
 
-        }, RowEncoder.apply(outputType));
+        }), RowEncoder.apply(outputType));
     }
 }

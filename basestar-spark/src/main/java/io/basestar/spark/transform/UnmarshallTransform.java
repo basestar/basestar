@@ -7,10 +7,10 @@ import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Namespace;
 import io.basestar.spark.util.SparkSchemaUtils;
+import io.basestar.spark.util.SparkUtils;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.RequiredArgsConstructor;
-import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
@@ -52,9 +52,9 @@ public class UnmarshallTransform<T> implements Transform<Dataset<T>, Dataset<Row
         final InstanceSchema schema = this.schema;
         final Set<Name> expand = this.expand;
         final StructType structType = SparkSchemaUtils.structType(schema, ImmutableSet.of());
-        return input.map((MapFunction<T, Row>) object -> {
+        return input.map(SparkUtils.map(object -> {
             final Map<String, Object> data = mapper.unmarshall(object);
             return SparkSchemaUtils.toSpark(schema, expand, structType, data);
-        }, RowEncoder.apply(structType));
+        }), RowEncoder.apply(structType));
     }
 }

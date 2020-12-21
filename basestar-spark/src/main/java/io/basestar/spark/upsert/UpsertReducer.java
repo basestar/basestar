@@ -52,7 +52,7 @@ class UpsertReducer extends UserDefinedAggregateFunction {
     @Override
     public void initialize(final MutableAggregationBuffer buffer) {
 
-        buffer.update(sequenceOffset, UpsertTable.NO_SEQUENCE);
+        buffer.update(sequenceOffset, UpsertTable.EMPTY_PARTITION);
     }
 
     @Override
@@ -83,7 +83,13 @@ class UpsertReducer extends UserDefinedAggregateFunction {
         } else {
             final T current = (T) buffer.get(field);
             final T incoming = (T) row.get(field);
-            return incoming.compareTo(current);
+            if(incoming == null) {
+                return current == null ? 0 : -1;
+            } else if(current == null) {
+                return 1;
+            } else {
+                return incoming.compareTo(current);
+            }
         }
     }
 

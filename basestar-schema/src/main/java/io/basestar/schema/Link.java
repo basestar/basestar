@@ -206,7 +206,7 @@ public class Link implements Member {
     }
 
     @Override
-    public Use<?> getType() {
+    public Use<?> typeOf() {
 
         if(single) {
             return schema.typeOf();
@@ -231,7 +231,7 @@ public class Link implements Member {
         if(expand == null) {
             return Optional.empty();
         } else {
-            return Optional.of(getType());
+            return Optional.of(typeOf());
         }
     }
 
@@ -323,7 +323,7 @@ public class Link implements Member {
     @SuppressWarnings("unchecked")
     public <T> Use<T> typeOf(final Name name) {
 
-        return (Use<T>)getType().typeOf(name);
+        return (Use<T>) typeOf().typeOf(name);
     }
 
     @Override

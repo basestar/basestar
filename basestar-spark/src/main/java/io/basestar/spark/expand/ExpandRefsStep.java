@@ -155,7 +155,7 @@ public class ExpandRefsStep extends AbstractExpandStep {
         root.getMembers().forEach((name, member) -> {
             final Set<Name> branch = branches.get(name);
             if(branch != null) {
-                refIds.addAll(refKeys(member.getType(), branch, SparkRowUtils.get(row, name)));
+                refIds.addAll(refKeys(member.typeOf(), branch, SparkRowUtils.get(row, name)));
             }
         });
         return refIds;
@@ -264,7 +264,7 @@ public class ExpandRefsStep extends AbstractExpandStep {
             if(branch != null) {
                 final Member member = schema.getMember(name, true);
                 if(member != null) {
-                    return applyRefs(member.getType(), branch, joinType, oldValue, lookup);
+                    return applyRefs(member.typeOf(), branch, joinType, oldValue, lookup);
                 }
             }
             return oldValue;

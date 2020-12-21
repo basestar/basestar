@@ -33,6 +33,7 @@ import io.basestar.schema.use.ValueContext;
 import io.basestar.schema.use.Widening;
 import io.basestar.schema.util.Expander;
 import io.basestar.util.Name;
+import io.basestar.util.Warnings;
 
 import java.io.Serializable;
 import java.lang.reflect.Type;
@@ -104,8 +105,10 @@ public interface Member extends Named, Described, Serializable, Extendable {
         }
     }
 
-    Use<?> getType();
+    @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
+    Use<?> typeOf();
 
+    @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
     Optional<Use<?>> layout(Set<Name> expand);
 
     Visibility getVisibility();
@@ -132,7 +135,7 @@ public interface Member extends Named, Described, Serializable, Extendable {
 
     default void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
-        getType().collectDependencies(expand, out);
+        typeOf().collectDependencies(expand, out);
     }
 
     default boolean isVisible(final Context context, final Object value) {
@@ -160,7 +163,7 @@ public interface Member extends Named, Described, Serializable, Extendable {
 
     default io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
-        return getType().openApi(expand).description(getDescription());
+        return typeOf().openApi(expand).description(getDescription());
     }
 
     Object create(ValueContext context, Object value, Set<Name> expand);

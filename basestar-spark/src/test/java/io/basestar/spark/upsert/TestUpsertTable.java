@@ -2,12 +2,10 @@ package io.basestar.spark.upsert;
 
 import com.google.common.collect.ImmutableList;
 import io.basestar.mapper.annotation.Property;
-import io.basestar.schema.Namespace;
-import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.Bucketing;
 import io.basestar.schema.ReferableSchema;
 import io.basestar.spark.AbstractSparkTest;
 import io.basestar.spark.transform.BucketTransform;
-import io.basestar.spark.util.BucketFunction;
 import io.basestar.spark.util.SparkCatalogUtils;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
@@ -33,17 +31,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class TestUpsertTable extends AbstractSparkTest {
 
     @Test
-    void testUpsertChanges() throws Exception {
+    void testUpsertChanges() {
 
         final SparkSession session = session();
 
-        final Namespace namespace = Namespace.load(TestUpsertTable.class.getResourceAsStream("../schema.yml"));
-
-        final ObjectSchema d = namespace.requireObjectSchema("D");
-
         final BucketTransform bucket = BucketTransform.builder()
-                .bucketFunction(BucketFunction.murmer3Modulo(10))
-                .inputNames(ImmutableList.of(Name.of(ReferableSchema.ID)))
+                .bucketing(new Bucketing(Name.of(ReferableSchema.ID)))
                 .build();
 
         final String database = "tmp_" + UUID.randomUUID().toString().replaceAll("-", "_");

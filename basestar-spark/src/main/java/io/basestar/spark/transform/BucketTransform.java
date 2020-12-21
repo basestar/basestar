@@ -20,13 +20,12 @@ package io.basestar.spark.transform;
  * #L%
  */
 
+import io.basestar.schema.Bucketing;
 import io.basestar.schema.Reserved;
-import io.basestar.spark.util.BucketFunction;
 import io.basestar.spark.util.SparkRowUtils;
-import io.basestar.util.Name;
+import io.basestar.spark.util.SparkUtils;
 import io.basestar.util.Nullsafe;
 import lombok.Getter;
-import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
@@ -34,44 +33,34 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 
-import java.util.List;
-
 @Getter
 public class BucketTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
     public static final String DEFAULT_OUTPUT_COLUMN = Reserved.PREFIX + "bucket";
 
-    private final List<Name> inputNames;
+    private final Bucketing bucketing;
 
     private final String outputColumn;
 
-    private final BucketFunction bucketFunction;
-
     @lombok.Builder(builderClassName = "Builder")
-    BucketTransform(final List<Name> inputNames, final String outputColumnName, final BucketFunction bucketFunction) {
+    BucketTransform(final Bucketing bucketing, final String outputColumnName) {
 
-        this.inputNames = Nullsafe.require(inputNames);
+        this.bucketing = Nullsafe.require(bucketing);
         this.outputColumn = Nullsafe.orDefault(outputColumnName, DEFAULT_OUTPUT_COLUMN);
-        this.bucketFunction = Nullsafe.require(bucketFunction);
     }
 
     @Override
     public Dataset<Row> accept(final Dataset<Row> input) {
 
-        final StructField field = SparkRowUtils.field(outputColumn, DataTypes.StringType);
+        final StructField field = SparkRowUtils.field(outputColumn, DataTypes.IntegerType);
         final StructType outputType = SparkRowUtils.append(input.schema(), field);
-        final List<Name> inputNames = this.inputNames;
-        final BucketFunction bucketFunction = this.bucketFunction;
+        final Bucketing bucketing = this.bucketing;
 
-        return input.map((MapFunction<Row, Row>) row -> {
+        return input.map(SparkUtils.map(row -> {
 
-            final StringBuilder input1 = new StringBuilder();
-            for(final Name name : inputNames) {
-                input1.append(Nullsafe.map(SparkRowUtils.get(row, name), Object::toString));
-            }
-            final String bucket = bucketFunction.apply(input1.toString());
+            final int bucket = bucketing.apply(n -> SparkRowUtils.get(row, n));
             return SparkRowUtils.append(row, field, bucket);
 
-        }, RowEncoder.apply(outputType));
+        }), RowEncoder.apply(outputType));
     }
 }

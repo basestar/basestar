@@ -48,7 +48,7 @@ public class Migration implements Serializable {
         });
         final Map<String, Set<Name>> branches = Name.branch(schema.getExpand());
         schema.getProperties().forEach((k, v) -> {
-            result.put(k, property(k, v.getType(), branches.get(k), source));
+            result.put(k, property(k, v.typeOf(), branches.get(k), source));
         });
         final String operation = operation(source);
         if("delete".equalsIgnoreCase(operation)) {

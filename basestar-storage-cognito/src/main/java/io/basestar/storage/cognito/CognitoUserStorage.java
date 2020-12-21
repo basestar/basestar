@@ -316,7 +316,7 @@ public class CognitoUserStorage implements DefaultLayerStorage {
         }
         for(final Map.Entry<String, Property> entry : schema.getProperties().entrySet()) {
             final String name = entry.getKey();
-            attributes(Name.of(name), entry.getValue().getType(), after.get(name)).forEach((k, v) -> {
+            attributes(Name.of(name), entry.getValue().typeOf(), after.get(name)).forEach((k, v) -> {
                 final String attrName = k.toString();
                 if(REQUIRED_ATTRS.contains(attrName)) {
                     result.add(AttributeType.builder().name(attrName).value(v).build());
@@ -366,7 +366,7 @@ public class CognitoUserStorage implements DefaultLayerStorage {
                 if(instance != null) {
                     final Map<Name, String> result = new HashMap<>();
                     type.getSchema().getProperties().forEach((name, prop) -> {
-                        result.putAll(attributes(path.with(name), prop.getType(), instance.get(name)));
+                        result.putAll(attributes(path.with(name), prop.typeOf(), instance.get(name)));
                     });
                     return result;
                 } else {
@@ -437,7 +437,7 @@ public class CognitoUserStorage implements DefaultLayerStorage {
             Instance.setVersion(result, Long.valueOf(version));
         }
         schema.getProperties().forEach((name, prop) -> {
-            result.put(name, from(Name.of(name), prop.getType(), attrs));
+            result.put(name, from(Name.of(name), prop.typeOf(), attrs));
         });
 
         if(userStatus != null) {
@@ -484,7 +484,7 @@ public class CognitoUserStorage implements DefaultLayerStorage {
 
                 final Map<String, Object> result = new HashMap<>();
                 type.getSchema().getProperties().forEach((name, prop) -> {
-                    result.put(name, from(path.with(name), prop.getType(), attrs));
+                    result.put(name, from(path.with(name), prop.typeOf(), attrs));
                 });
                 if(result.isEmpty()) {
                     return null;

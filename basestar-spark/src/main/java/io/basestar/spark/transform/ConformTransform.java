@@ -21,8 +21,8 @@ package io.basestar.spark.transform;
  */
 
 import io.basestar.spark.util.SparkRowUtils;
+import io.basestar.spark.util.SparkUtils;
 import io.basestar.util.Nullsafe;
-import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
@@ -48,7 +48,7 @@ public class ConformTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
         final StructType structType = this.structType;
         return input.map(
-                (MapFunction<Row, Row>) row -> SparkRowUtils.conform(row, structType),
+                SparkUtils.map(row -> SparkRowUtils.conform(row, structType)),
                 RowEncoder.apply(structType)
         );
     }

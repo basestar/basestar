@@ -138,6 +138,9 @@ public class InterfaceSchema implements ReferableSchema {
     private final SortedSet<Name> expand;
 
     @Nonnull
+    private final List<Bucketing> declaredBucketing;
+
+    @Nonnull
     private final SortedMap<String, Serializable> extensions;
 
     private final Namespace namespace;
@@ -221,6 +224,10 @@ public class InterfaceSchema implements ReferableSchema {
         private Set<Name> expand;
 
         @Nullable
+        @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
+        private List<Bucketing> bucket;
+
+        @Nullable
         private History history;
 
         @Nullable
@@ -244,7 +251,7 @@ public class InterfaceSchema implements ReferableSchema {
         this.description = descriptor.getDescription();
         this.declaredProperties = Immutable.transformValuesSorted(descriptor.getProperties(), (k, v) -> v.build(resolver, version, qualifiedName.with(k)));
         this.properties = Property.extend(extend, declaredProperties);
-        final InferenceContext context = InferenceContext.from(Immutable.transformValues(this.properties, (k, v) -> v.getType()));
+        final InferenceContext context = InferenceContext.from(Immutable.transformValues(this.properties, (k, v) -> v.typeOf()));
         this.declaredTransients = Immutable.transformValuesSorted(descriptor.getTransients(), (k, v) -> v.build(resolver, context, qualifiedName.with(k)));
         this.transients = Transient.extend(extend, declaredTransients);
         this.declaredLinks = Immutable.transformValuesSorted(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
@@ -256,6 +263,7 @@ public class InterfaceSchema implements ReferableSchema {
         this.permissions = Permission.extend(extend, declaredPermissions);
         this.declaredExpand = Immutable.sortedCopy(descriptor.getExpand());
         this.expand = LinkableSchema.extendExpand(extend, declaredExpand);
+        this.declaredBucketing = Immutable.copy(descriptor.getBucket());
         this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
         if (Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);

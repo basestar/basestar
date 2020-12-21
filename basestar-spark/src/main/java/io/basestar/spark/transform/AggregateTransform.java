@@ -7,8 +7,8 @@ import io.basestar.spark.expression.SparkExpressionVisitor;
 import io.basestar.spark.resolver.ColumnResolver;
 import io.basestar.spark.util.SparkRowUtils;
 import io.basestar.spark.util.SparkSchemaUtils;
+import io.basestar.spark.util.SparkUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -49,7 +49,7 @@ public class AggregateTransform implements Transform<Dataset<Row>, Dataset<Row>>
         final Dataset<Row> grouped = input.groupBy(groupCols)
                 .agg(aggs[0], Arrays.copyOfRange(aggs, 1, aggs.length));
 
-        return grouped.map((MapFunction<Row, Row>)(row -> SparkRowUtils.conform(row, outputStructType)),
+        return grouped.map(SparkUtils.map(row -> SparkRowUtils.conform(row, outputStructType)),
                 RowEncoder.apply(outputStructType));
     }
 }

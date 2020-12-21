@@ -123,7 +123,7 @@ public class Property implements Member {
             @Override
             default Use<?> getType() {
 
-                return self().getType();
+                return self().typeOf();
             }
 
             @Override
@@ -237,6 +237,12 @@ public class Property implements Member {
     }
 
     @Override
+    public Use<?> typeOf() {
+
+        return type;
+    }
+
+    @Override
     public boolean supportsTrivialJoin(final Set<Name> expand) {
 
         return type.visit(new Use.Visitor.Defaulting<Boolean>() {
@@ -271,7 +277,7 @@ public class Property implements Member {
         if(!Objects.equals(expression, target.getExpression())) {
             return false;
         }
-        if(!widening.canWiden(type, target.getType())) {
+        if(!widening.canWiden(type, target.typeOf())) {
             return false;
         }
         return true;
@@ -286,7 +292,7 @@ public class Property implements Member {
     @Override
     public Optional<Use<?>> layout(final Set<Name> expand) {
 
-        return Optional.of(getType());
+        return Optional.of(typeOf());
     }
 
     @Override

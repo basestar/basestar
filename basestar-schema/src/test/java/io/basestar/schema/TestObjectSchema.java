@@ -20,6 +20,7 @@ package io.basestar.schema;
  * #L%
  */
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
@@ -64,8 +65,8 @@ class TestObjectSchema {
 
         final ObjectSchema schema = namespace.requireObjectSchema("Legacy");
 
-        assertEquals(UseString.DEFAULT, schema.requireProperty("name", true).getType());
-        assertEquals(new UseOptional<>(UseInteger.DEFAULT), schema.requireProperty("age", true).getType());
+        assertEquals(UseString.DEFAULT, schema.requireProperty("name", true).typeOf());
+        assertEquals(new UseOptional<>(UseInteger.DEFAULT), schema.requireProperty("age", true).typeOf());
     }
 
     @Test
@@ -105,15 +106,15 @@ class TestObjectSchema {
 
                 return null;
             }
-        },  ImmutableSet.of(Name.of("ref")));
+        }, ImmutableSet.of(Name.of("ref")));
 
         final Instance expanded = schema.expand(instance, Expander.noop(), ImmutableSet.of(Name.of("ref")));
-        final Map expandedRef = (Map)expanded.get("ref");
+        final Map expandedRef = (Map) expanded.get("ref");
         assertNotNull(expandedRef.get(ObjectSchema.SCHEMA));
         assertNotNull(expandedRef.get(ObjectSchema.ID));
 
         final Instance collapsed = schema.expand(instance, Expander.noop(), ImmutableSet.of());
-        final Map collapsedRef = (Map)collapsed.get("ref");
+        final Map collapsedRef = (Map) collapsed.get("ref");
         assertNull(collapsedRef.get(ObjectSchema.SCHEMA));
         assertNotNull(collapsedRef.get(ObjectSchema.ID));
     }
@@ -142,5 +143,22 @@ class TestObjectSchema {
         final Map<Name, Schema<?>> deps = schema.dependencies();
 
         assertEquals(2, deps.size());
+    }
+
+    @Test
+    void testBucketing() throws IOException {
+
+        final Namespace namespace = Namespace.load(TestObjectSchema.class.getResource("schema.yml"));
+
+        final ObjectSchema comment = namespace.requireObjectSchema("Comment");
+        assertEquals(ImmutableList.of(
+                new Bucketing(ImmutableList.of(Name.of("created")), 20)
+        ), comment.getDeclaredBucketing());
+
+        final ObjectSchema post = namespace.requireObjectSchema("Post");
+        assertEquals(ImmutableList.of(
+                new Bucketing(ImmutableList.of(Name.of("created"))),
+                new Bucketing(ImmutableList.of(Name.of("id")), 50)
+        ), post.getDeclaredBucketing());
     }
 }

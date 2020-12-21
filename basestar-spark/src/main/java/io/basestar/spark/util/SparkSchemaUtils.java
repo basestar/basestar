@@ -105,7 +105,7 @@ public class SparkSchemaUtils {
         // FIXME: remove
         final SortedMap<String, Use<?>> tmp = new TreeMap<>();
         schema.metadataSchema().forEach(tmp::put);
-        schema.getMembers().forEach((name, member) -> tmp.put(name, member.getType()));
+        schema.getMembers().forEach((name, member) -> tmp.put(name, member.typeOf()));
 
         final Set<Name> names = new HashSet<>();
         tmp.forEach((name, type) -> SparkRowUtils.findField(structType, name)

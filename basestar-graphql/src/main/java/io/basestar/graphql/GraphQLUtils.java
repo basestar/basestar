@@ -84,7 +84,7 @@ public class GraphQLUtils {
                 }
             }
             final Property property = schema.requireProperty(name, true);
-            return paths(property.getType(), Name.of(name), field.getSelectionSet());
+            return paths(property.typeOf(), Name.of(name), field.getSelectionSet());
 
         } else {
             throw new IllegalStateException();
@@ -211,7 +211,7 @@ public class GraphQLUtils {
                         final Name name = Name.of(field.getName());
                         final Member member = schema.getMember(field.getName(), true);
                         if(member != null) {
-                            final Stream<Name> result = expand(strategy, namespace, member.getType(), field.getSelectionSet()).stream().map(name::with);
+                            final Stream<Name> result = expand(strategy, namespace, member.typeOf(), field.getSelectionSet()).stream().map(name::with);
                             if(member instanceof Transient) {
                                 return Stream.concat(Stream.of(name), result);
                             } else {

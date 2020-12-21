@@ -50,7 +50,7 @@ public interface RowMapper<T> {
         });
         schema.getProperties().forEach((k, v) -> {
             final Set<Name> branch = branches.get(k);
-            mappers.put(k, (ColumnMapper<Object>) strategy.columnMapper(v.getType(), false, branch));
+            mappers.put(k, (ColumnMapper<Object>) strategy.columnMapper(v.typeOf(), false, branch));
         });
 
         final String rootTable = Reserved.PREFIX;

@@ -471,7 +471,7 @@ public class SQLUtils {
                         .map(e -> DSL.field(DSL.name(e.getKey()), dataType(e.getValue()))),
                 schema.getProperties().entrySet().stream()
                         .map(e -> DSL.field(DSL.name(e.getKey()),
-                                dataType(e.getValue().getType())))
+                                dataType(e.getValue().typeOf())))
         ).collect(Collectors.toList());
     }
 
