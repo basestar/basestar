@@ -171,7 +171,7 @@ public interface ColumnStrategy {
                     final Map<String, ColumnMapper<Object>> mappers = new HashMap<>();
                     type.getSchema().getProperties().forEach((k, v) -> {
                         final Set<Name> branch = branches.get(k);
-                        mappers.put(k, (ColumnMapper<Object>)columnMapper(v.getType(), false, branch));
+                        mappers.put(k, (ColumnMapper<Object>)columnMapper(v.typeOf(), false, branch));
                     });
                     return new FlatColumnMapper<T>(mappers, v -> (T)type.create(v), type::create, delimiter);
                 }
@@ -188,7 +188,7 @@ public interface ColumnStrategy {
                         });
                         schema.getProperties().forEach((k, v) -> {
                             final Set<Name> branch = branches.get(k);
-                            mappers.put(k, (ColumnMapper<Object>) columnMapper(v.getType(), false, branch));
+                            mappers.put(k, (ColumnMapper<Object>) columnMapper(v.typeOf(), false, branch));
                         });
                     }
 

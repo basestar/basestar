@@ -27,6 +27,7 @@ import io.basestar.schema.exception.MissingSchemaException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.ValueContext;
 import io.basestar.util.Name;
+import io.basestar.util.Warnings;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -42,6 +43,7 @@ import java.util.*;
  * @param <T>
  */
 
+@SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
 public interface Schema<T> extends Named, Described, Serializable, Extendable {
 
     Name ANONYMOUS_NAME = Name.of(Reserved.PREFIX + "anon");
@@ -50,11 +52,11 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
 
     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = ObjectSchema.Builder.class)
     @JsonSubTypes({
-            @JsonSubTypes.Type(name = EnumSchema.Builder.TYPE, value = EnumSchema.Builder.class),
-            @JsonSubTypes.Type(name = StructSchema.Builder.TYPE, value = StructSchema.Builder.class),
-            @JsonSubTypes.Type(name = ObjectSchema.Builder.TYPE, value = ObjectSchema.Builder.class),
-            @JsonSubTypes.Type(name = InterfaceSchema.Builder.TYPE, value = InterfaceSchema.Builder.class),
-            @JsonSubTypes.Type(name = ViewSchema.Builder.TYPE, value = ViewSchema.Builder.class)
+            @JsonSubTypes.Type(name = EnumSchema.Descriptor.TYPE, value = EnumSchema.Builder.class),
+            @JsonSubTypes.Type(name = StructSchema.Descriptor.TYPE, value = StructSchema.Builder.class),
+            @JsonSubTypes.Type(name = ObjectSchema.Descriptor.TYPE, value = ObjectSchema.Builder.class),
+            @JsonSubTypes.Type(name = InterfaceSchema.Descriptor.TYPE, value = InterfaceSchema.Builder.class),
+            @JsonSubTypes.Type(name = ViewSchema.Descriptor.TYPE, value = ViewSchema.Builder.class)
     })
     interface Descriptor<S extends Schema<V>, V> extends Described, Extendable {
 

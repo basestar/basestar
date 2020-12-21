@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.Index;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
+import io.basestar.spark.util.SparkRowUtils;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.storage.dynamodb.DynamoDBLegacyUtils;
 import io.basestar.storage.dynamodb.DynamoDBStorage;
@@ -47,12 +48,12 @@ public class DynamoDBSparkSchemaUtils {
 
         final StructType type = SparkSchemaUtils.structType(schema, ImmutableSet.of());
         final List<StructField> fields = new ArrayList<>();
-        fields.add(SparkSchemaUtils.field(ObjectSchema.SCHEMA, DataTypes.StringType));
-        fields.add(SparkSchemaUtils.field(ObjectSchema.ID, DataTypes.StringType));
-        fields.add(SparkSchemaUtils.field("eventName", DataTypes.StringType));
-        fields.add(SparkSchemaUtils.field("sequenceNumber", DataTypes.StringType));
-        fields.add(SparkSchemaUtils.field("oldImage", type));
-        fields.add(SparkSchemaUtils.field("newImage", type));
+        fields.add(SparkRowUtils.field(ObjectSchema.SCHEMA, DataTypes.StringType));
+        fields.add(SparkRowUtils.field(ObjectSchema.ID, DataTypes.StringType));
+        fields.add(SparkRowUtils.field("eventName", DataTypes.StringType));
+        fields.add(SparkRowUtils.field("sequenceNumber", DataTypes.StringType));
+        fields.add(SparkRowUtils.field("oldImage", type));
+        fields.add(SparkRowUtils.field("newImage", type));
         fields.sort(Comparator.comparing(StructField::name));
         return DataTypes.createStructType(fields);
     }
@@ -61,8 +62,8 @@ public class DynamoDBSparkSchemaUtils {
 
         final List<StructField> fields = new ArrayList<>();
         index.projectionSchema(schema).forEach((name, type) -> fields.add(SparkSchemaUtils.field(name, type, null)));
-        fields.add(SparkSchemaUtils.field(strategy.indexPartitionName(schema, index), DataTypes.BinaryType));
-        fields.add(SparkSchemaUtils.field(strategy.indexSortName(schema, index), DataTypes.BinaryType));
+        fields.add(SparkRowUtils.field(strategy.indexPartitionName(schema, index), DataTypes.BinaryType));
+        fields.add(SparkRowUtils.field(strategy.indexSortName(schema, index), DataTypes.BinaryType));
         fields.sort(Comparator.comparing(StructField::name));
         return DataTypes.createStructType(fields);
     }

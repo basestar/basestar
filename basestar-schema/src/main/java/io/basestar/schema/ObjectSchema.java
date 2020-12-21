@@ -199,6 +199,9 @@ public class ObjectSchema implements ReferableSchema {
     @Nonnull
     private final SortedSet<Name> expand;
 
+    @Nonnull
+    private final List<Bucketing> declaredBucketing;
+
     private final boolean readonly;
 
     @Nonnull
@@ -305,6 +308,10 @@ public class ObjectSchema implements ReferableSchema {
         private Set<Name> expand;
 
         @Nullable
+        @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
+        private List<Bucketing> bucket;
+
+        @Nullable
         private Map<String, Serializable> extensions;
     }
 
@@ -326,7 +333,7 @@ public class ObjectSchema implements ReferableSchema {
         this.declaredProperties = Immutable.transformValuesSorted(descriptor.getProperties(), (k, v) -> v.build(resolver, version, qualifiedName.with(k)));
         this.properties = Property.extend(extend, declaredProperties);
         final InferenceContext context = InferenceContext.empty()
-                .overlay(Reserved.THIS, InferenceContext.from(Immutable.transformValues(this.properties, (k, v) -> v.getType())));
+                .overlay(Reserved.THIS, InferenceContext.from(Immutable.transformValues(this.properties, (k, v) -> v.typeOf())));
         this.declaredTransients = Immutable.transformValuesSorted(descriptor.getTransients(), (k, v) -> v.build(resolver, context, qualifiedName.with(k)));
         this.transients = Transient.extend(extend, declaredTransients);
         this.declaredLinks = Immutable.transformValuesSorted(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
@@ -338,6 +345,7 @@ public class ObjectSchema implements ReferableSchema {
         this.permissions = Permission.extend(extend, declaredPermissions);
         this.declaredExpand = Immutable.sortedCopy(descriptor.getExpand());
         this.expand = LinkableSchema.extendExpand(extend, declaredExpand);
+        this.declaredBucketing = Immutable.copy(descriptor.getBucket());
         this.readonly = Nullsafe.orDefault(descriptor.getReadonly());
         this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
         if (Reserved.isReserved(qualifiedName.last())) {

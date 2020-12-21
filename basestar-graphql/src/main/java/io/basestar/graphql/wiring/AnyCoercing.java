@@ -1,9 +1,6 @@
 package io.basestar.graphql.wiring;
 
 import graphql.schema.Coercing;
-import graphql.schema.CoercingParseLiteralException;
-import graphql.schema.CoercingParseValueException;
-import graphql.schema.CoercingSerializeException;
 import io.basestar.graphql.GraphQLUtils;
 
 import java.util.Collections;
@@ -11,28 +8,28 @@ import java.util.Map;
 
 public class AnyCoercing implements Coercing<Object, Object> {
 
-    public static AnyCoercing INSTANCE = new AnyCoercing();
+    public static final AnyCoercing INSTANCE = new AnyCoercing();
 
     @Override
-    public Object serialize(final Object input) throws CoercingSerializeException {
+    public Object serialize(final Object input) {
 
         return input;
     }
 
     @Override
-    public Object parseValue(final Object input) throws CoercingParseValueException {
+    public Object parseValue(final Object input) {
 
         return input;
     }
 
     @Override
-    public Object parseLiteral(final Object input) throws CoercingParseLiteralException {
+    public Object parseLiteral(final Object input) {
 
         return parseLiteral(input, Collections.emptyMap());
     }
 
     @Override
-    public Object parseLiteral(final Object input, final Map<String, Object> variables) throws CoercingParseLiteralException {
+    public Object parseLiteral(final Object input, final Map<String, Object> variables) {
 
         return parseValue(GraphQLUtils.fromValue(input, variables));
     }

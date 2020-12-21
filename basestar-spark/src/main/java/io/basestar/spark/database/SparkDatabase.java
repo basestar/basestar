@@ -48,7 +48,7 @@ public class SparkDatabase {
                 mergedExpand = expand;
             }
 
-            return resolver.resolve(schema, query, sort, mergedExpand).result();
+            return resolver.resolve(schema, query, sort, mergedExpand).dataset();
 
 
             /*final Dataset<Row> input = resolver.resolve(schema, expand);

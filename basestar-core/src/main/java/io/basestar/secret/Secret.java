@@ -2,6 +2,7 @@ package io.basestar.secret;
 
 
 import com.google.common.io.BaseEncoding;
+import io.basestar.util.Warnings;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -37,6 +38,7 @@ public interface Secret {
 
     class Encrypted implements Secret {
 
+        @SuppressWarnings(Warnings.FIELD_NAMED_AS_CLASS)
         private final byte[] encrypted;
 
         private Encrypted(final byte[] encrypted) {
@@ -71,6 +73,7 @@ public interface Secret {
 
     class Plaintext implements Secret {
 
+        @SuppressWarnings(Warnings.FIELD_NAMED_AS_CLASS)
         private final byte[] plaintext;
 
         private Plaintext(final byte[] plaintext) {

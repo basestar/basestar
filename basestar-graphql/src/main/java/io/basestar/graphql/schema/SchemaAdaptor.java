@@ -47,7 +47,7 @@ public class SchemaAdaptor {
     public TypeDefinitionRegistry typeDefinitionRegistry() {
 
         final TypeDefinitionRegistry registry = new TypeDefinitionRegistry();
-        Stream.of(strategy.anyTypeName(), strategy.dateTimeTypeName(),
+        Stream.of(strategy.anyTypeName(), strategy.dateTypeName(),
                 strategy.dateTimeTypeName(), strategy.secretTypeName(),
                 strategy.binaryTypeName()).forEach(scalar -> {
             registry.add(new ScalarTypeDefinition(scalar));
@@ -395,7 +395,7 @@ public class SchemaAdaptor {
         if(property.getDescription() != null) {
             builder.description(new Description(property.getDescription(), null, true));
         }
-        final Type<?> type = inputType(required ? property.getType() : property.getType().optional(true));
+        final Type<?> type = inputType(required ? property.typeOf() : property.typeOf().optional(true));
         builder.type(type);
         return builder.build();
     }
@@ -487,10 +487,10 @@ public class SchemaAdaptor {
             ((Transient.Resolver) schema).getDeclaredTransients()
                     .forEach((k, v) -> {
                         // Can only show typed transients
-                        if(!v.isAlwaysHidden() && v.getType() != null) {
+                        if(!v.isAlwaysHidden() && v.typeOf() != null) {
                             fields.add(FieldDefinition.newFieldDefinition()
                                     .name(k)
-                                    .type(type(v.getType()))
+                                    .type(type(v.typeOf()))
                                     .build());
                         }
                     });
@@ -526,7 +526,7 @@ public class SchemaAdaptor {
         if(property.getDescription() != null) {
             builder.description(new Description(property.getDescription(), null, true));
         }
-        final Type<?> type = type(property.getType());
+        final Type<?> type = type(property.typeOf());
         builder.type(type);
         return builder.build();
     }
@@ -790,7 +790,7 @@ public class SchemaAdaptor {
 
         final Map<String, Use<?>> mapTypes = new HashMap<>();
         schema.getDeclaredProperties().forEach((k, v) -> {
-            v.getType().visit(new Use.Visitor.Defaulting<Void>() {
+            v.typeOf().visit(new Use.Visitor.Defaulting<Void>() {
 
                 @Override
                 public <T> Void visitDefault(final Use<T> type) {

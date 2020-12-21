@@ -22,14 +22,12 @@ package io.basestar.spark.util;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import io.basestar.expression.call.Callable;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import io.basestar.util.ISO8601;
 import io.basestar.util.Name;
 import io.basestar.util.Page;
-import io.basestar.util.Sort;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.*;
 import org.apache.spark.sql.api.java.UDF1;
@@ -43,8 +41,6 @@ import java.lang.reflect.Type;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
-import java.util.function.BiFunction;
-import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -96,8 +92,8 @@ public class SparkSchemaUtils {
     public static StructType structType(final ObjectSchema schema, final Index index, final Map<String, Use<?>> extraMetadata) {
 
         final List<StructField> fields = new ArrayList<>();
-        fields.add(field(PARTITION, DataTypes.BinaryType));
-        fields.add(field(SORT, DataTypes.BinaryType));
+        fields.add(SparkRowUtils.field(PARTITION, DataTypes.BinaryType));
+        fields.add(SparkRowUtils.field(SORT, DataTypes.BinaryType));
         index.projectionSchema(schema).forEach((name, type) -> fields.add(field(name, type, null)));
         extraMetadata.forEach((name, type) -> fields.add(field(name, type, null)));
         fields.sort(Comparator.comparing(StructField::name));
@@ -109,10 +105,10 @@ public class SparkSchemaUtils {
         // FIXME: remove
         final SortedMap<String, Use<?>> tmp = new TreeMap<>();
         schema.metadataSchema().forEach(tmp::put);
-        schema.getMembers().forEach((name, member) -> tmp.put(name, member.getType()));
+        schema.getMembers().forEach((name, member) -> tmp.put(name, member.typeOf()));
 
         final Set<Name> names = new HashSet<>();
-        tmp.forEach((name, type) -> findField(structType, name)
+        tmp.forEach((name, type) -> SparkRowUtils.findField(structType, name)
                 .ifPresent(field -> names(type, field.dataType())
                         .forEach(rest -> names.add(Name.of(name).with(rest)))));
         return names;
@@ -179,12 +175,7 @@ public class SparkSchemaUtils {
 
     public static StructField field(final String name, final Use<?> type, final Set<Name> expand) {
 
-        return field(name, type(type, expand));
-    }
-
-    public static StructField field(final String name, final DataType type) {
-
-        return StructField.apply(name, type, true, Metadata.empty());
+        return SparkRowUtils.field(name, type(type, expand));
     }
 
     public static DataType type(final Schema<?> schema, final Set<Name> expand) {
@@ -331,7 +322,7 @@ public class SparkSchemaUtils {
         }
         final Map<String, Set<Name>> branches = Name.branch(layout.getExpand());
         final Map<String, Object> object = new HashMap<>();
-        layout.getSchema().forEach((name, type) -> object.put(name, fromSpark(type, naming, branches.get(name), get(naming, row, name))));
+        layout.getSchema().forEach((name, type) -> object.put(name, fromSpark(type, naming, branches.get(name), SparkRowUtils.get(naming, row, name))));
         return new Instance(object);
     }
 
@@ -367,8 +358,8 @@ public class SparkSchemaUtils {
         }
         final Map<String, Set<Name>> branches = Name.branch(expand);
         final Map<String, Object> object = new HashMap<>();
-        schema.layoutSchema(expand).forEach((name, type) -> object.put(name, fromSpark(type, naming, branches.get(name), get(naming, row, name))));
-        extraMetadata.forEach((name, type) -> object.put(name, fromSpark(type, naming, branches.get(name), get(naming, row, name))));
+        schema.layoutSchema(expand).forEach((name, type) -> object.put(name, fromSpark(type, naming, branches.get(name), SparkRowUtils.get(naming, row, name))));
+        extraMetadata.forEach((name, type) -> object.put(name, fromSpark(type, naming, branches.get(name), SparkRowUtils.get(naming, row, name))));
         return new Instance(object);
     }
 
@@ -391,14 +382,14 @@ public class SparkSchemaUtils {
         if(row == null) {
             return null;
         }
-        final byte[] partition = (byte[])get(row, PARTITION);
-        final byte[] sort = (byte[])get(row, SORT);
+        final byte[] partition = (byte[]) SparkRowUtils.get(row, PARTITION);
+        final byte[] sort = (byte[]) SparkRowUtils.get(row, SORT);
         final Index.Key.Binary key = Index.Key.Binary.of(partition, sort);
         final Map<String, Set<Name>> branches = Name.branch(expand);
         final NamingConvention naming = NamingConvention.DEFAULT;
         final Map<String, Object> projection = new HashMap<>();
-        index.projectionSchema(schema).forEach((name, type) -> projection.put(name, fromSpark(type, naming, branches.get(name), get(naming, row, name))));
-        extraMetadata.forEach((name, type) -> projection.put(name, fromSpark(type, naming, branches.get(name), get(naming, row, name))));
+        index.projectionSchema(schema).forEach((name, type) -> projection.put(name, fromSpark(type, naming, branches.get(name), SparkRowUtils.get(naming, row, name))));
+        extraMetadata.forEach((name, type) -> projection.put(name, fromSpark(type, naming, branches.get(name), SparkRowUtils.get(naming, row, name))));
         return new AbstractMap.SimpleImmutableEntry<>(key, projection);
     }
 
@@ -406,7 +397,7 @@ public class SparkSchemaUtils {
 
         final Map<String, Object> object = new HashMap<>();
         ObjectSchema.REF_SCHEMA
-                .forEach((name, type) -> object.put(name, fromSpark(type, naming, Collections.emptySet(), get(naming, row, name))));
+                .forEach((name, type) -> object.put(name, fromSpark(type, naming, Collections.emptySet(), SparkRowUtils.get(naming, row, name))));
         return new Instance(object);
     }
 
@@ -853,11 +844,6 @@ public class SparkSchemaUtils {
         });
     }
 
-    public static Optional<StructField> findField(final StructType type, final String name) {
-
-        return Arrays.stream(type.fields()).filter(f -> name.equalsIgnoreCase(f.name())).findFirst();
-    }
-
     public static StructSchema structSchema(final DataType dataType) {
 
         return StructSchema.builder()
@@ -899,243 +885,6 @@ public class SparkSchemaUtils {
         } else {
             throw new UnsupportedOperationException("Cannot understand " + dataType);
         }
-    }
-
-    /**
-     * Move row fields around and insert nulls to match the target schema.
-     *
-     * Note: this will not try to cast or coerce scalars.
-     */
-
-    public static Object conform(final Object source, final DataType targetType) {
-
-        if (source == null) {
-            return null;
-        } else if (targetType instanceof ArrayType) {
-            final DataType elementType = ((ArrayType) targetType).elementType();
-            final Seq<?> seq = (Seq<?>)source;
-            final Object[] arr = new Object[seq.size()];
-            for(int i = 0; i != seq.size(); ++i) {
-                arr[i] = conform(seq.apply(i), elementType);
-            }
-            return scala.Predef.wrapRefArray(arr);
-        } else if (targetType instanceof MapType) {
-            final DataType valueType = ((MapType) targetType).valueType();
-            return ((scala.collection.Map<?, ?>) source).mapValues(v -> conform(v, valueType));
-        } else if (targetType instanceof StructType) {
-            return conform((Row) source, (StructType) targetType);
-        } else {
-            return source;
-        }
-    }
-
-    public static boolean areStrictlyEqual(final DataType a, final DataType b) {
-
-        if(a.getClass().equals(b.getClass())) {
-            if(a instanceof ArrayType) {
-                final ArrayType arrA = (ArrayType)a;
-                final ArrayType arrB = (ArrayType)b;
-                return arrA.containsNull() == arrB.containsNull()
-                        && areStrictlyEqual(arrA.elementType(), arrB.elementType());
-            } else if(a instanceof MapType) {
-                final MapType mapA = (MapType) a;
-                final MapType mapB = (MapType) b;
-                return mapA.valueContainsNull() == mapB.valueContainsNull()
-                        && areStrictlyEqual(mapA.keyType(), mapB.keyType())
-                        && areStrictlyEqual(mapA.valueType(), mapB.valueType());
-            } else if(a instanceof StructType) {
-                final StructType objA = (StructType) a;
-                final StructType objB = (StructType) b;
-                final StructField[] fieldsA = objA.fields();
-                final StructField[] fieldsB = objB.fields();
-                if(fieldsA.length == fieldsB.length) {
-                    for(int i = 0; i != fieldsA.length; ++i) {
-                        final StructField fieldA = fieldsA[i];
-                        final StructField fieldB = fieldsB[i];
-                        if(!(fieldA.name().equals(fieldB.name())
-                                && fieldA.nullable() == fieldB.nullable()
-                                && areStrictlyEqual(fieldA.dataType(), fieldB.dataType()))) {
-                            return false;
-                        }
-                    }
-                    return true;
-                } else {
-                    return false;
-                }
-            } else {
-                return a.equals(b);
-            }
-        } else {
-            return false;
-        }
-    }
-
-    public static Row conform(final Row source, final StructType targetType) {
-
-        if(source == null) {
-            return null;
-//        } else if(source.schema().equals(targetType)) {
-//            return source;
-        } else {
-            final StructType sourceType = source.schema();
-            final StructField[] sourceFields = sourceType.fields();
-            final StructField[] targetFields = targetType.fields();
-            final Seq<Object> sourceValues = source.toSeq();
-            final Object[] targetValues = new Object[targetFields.length];
-            for (int i = 0; i != targetFields.length; ++i) {
-                final StructField targetField = targetFields[i];
-                for (int j = 0; j != sourceFields.length; ++j) {
-                    if (sourceFields[j].name().equalsIgnoreCase(targetField.name())) {
-//                        if(sourceFields[j].dataType().equals(targetField.dataType())) {
-//                            targetValues[i] = sourceValues.apply(j);
-//                        } else {
-                            targetValues[i] = conform(sourceValues.apply(j), targetField.dataType());
-//                        }
-                        break;
-                    }
-                }
-            }
-            return new GenericRowWithSchema(targetValues, targetType);
-        }
-    }
-
-    public static Row transform(final Row source, final BiFunction<StructField, Object, ?> fn) {
-
-        final StructType sourceType = source.schema();
-        final StructField[] sourceFields = sourceType.fields();
-        final Object[] targetValues = new Object[sourceFields.length];
-        for (int i = 0; i != sourceFields.length; ++i) {
-            final StructField sourceField = sourceFields[i];
-            targetValues[i] = fn.apply(sourceField, source.get(i));
-        }
-        return new GenericRowWithSchema(targetValues, sourceType);
-    }
-
-    public static Row remove(final Row source, final String name) {
-
-        return remove(source, (field, value) -> name.equals(field.name()));
-    }
-
-    public static Row remove(final Row source, final BiPredicate<StructField, Object> fn) {
-
-        final StructType sourceType = source.schema();
-        final StructField[] sourceFields = sourceType.fields();
-        final List<StructField> outputFields = new ArrayList<>();
-        final List<Object> outputValues = new ArrayList<>();
-        for (int i = 0; i != sourceFields.length; ++i) {
-            final StructField sourceField = sourceFields[i];
-            final Object sourceValue = source.get(i);
-            if(!fn.test(sourceField, sourceValue)) {
-                outputFields.add(sourceField);
-                outputValues.add(sourceValue);
-            }
-        }
-        return new GenericRowWithSchema(outputValues.toArray(),
-                DataTypes.createStructType(outputFields.toArray(new StructField[0])));
-    }
-
-    public static Row set(final Row source, final Map<String, ?> of) {
-
-        return transform(source, (field, value) -> {
-            if(of.containsKey(field.name())) {
-                return of.get(field.name());
-            } else {
-                return value;
-            }
-        });
-    }
-
-    public static Row set(final Row source, final String name, final Object newValue) {
-
-        assert(Arrays.asList(source.schema().fieldNames()).contains(name));
-        return transform(source, (field, value) -> {
-            if(name.equals(field.name())) {
-                return newValue;
-            } else {
-                return value;
-            }
-        });
-    }
-
-    public static Object get(final Row source, final Name name) {
-
-        return get(NamingConvention.DEFAULT, source, name);
-    }
-
-    public static Object get(final NamingConvention naming, final Row source, final Name name) {
-
-        if(name.isEmpty()) {
-            return source;
-        } else {
-            final Object first = get(naming, source, name.first());
-            final Name rest = name.withoutFirst();
-            if(!rest.isEmpty()) {
-                if(first instanceof Row) {
-                    return get(naming, (Row) first, rest);
-                } else {
-                    return null;
-                }
-            } else {
-                return first;
-            }
-        }
-    }
-
-    public static Object get(final Row source, final String name) {
-
-        return get(NamingConvention.DEFAULT, source, name);
-    }
-
-    public static Object get(final NamingConvention naming, final Row source, final String name) {
-
-        final StructType sourceType = source.schema();
-        final StructField[] sourceFields = sourceType.fields();
-        for (int i = 0; i != sourceFields.length; ++i) {
-            final StructField sourceField = sourceFields[i];
-            if(naming.equals(name, sourceField.name())) {
-                return source.get(i);
-            }
-        }
-        return null;
-    }
-
-    public static Row append(final Row source, final StructField field, final Object value) {
-
-        final StructType sourceType = source.schema();
-        final StructField[] sourceFields = sourceType.fields();
-        final StructType outputType = append(sourceType, field);
-        final List<Object> outputValues = new ArrayList<>();
-        for (int i = 0; i != sourceFields.length; ++i) {
-            outputValues.add(source.get(i));
-        }
-        outputValues.add(value);
-        return new GenericRowWithSchema(outputValues.toArray(), outputType);
-    }
-
-    public static StructType append(final StructType sourceType, final StructField field) {
-
-        final List<StructField> fields = Lists.newArrayList(sourceType.fields());
-        fields.add(field);
-        return DataTypes.createStructType(fields.toArray(new StructField[0]));
-    }
-
-    // Presto in default config wants partition columns after all other columns
-    public static StructType orderForPresto(final StructType structType, final List<String> partitionColumns) {
-
-        final SortedMap<String, StructField> data = new TreeMap<>();
-        final SortedMap<Integer, StructField> partition = new TreeMap<>();
-        Arrays.stream(structType.fields()).forEach(field -> {
-            final int indexOf = partitionColumns.indexOf(field.name());
-            if(indexOf < 0) {
-                data.put(field.name(), field);
-            } else {
-                partition.put(0, field);
-            }
-        });
-        final List<StructField> fields = new ArrayList<>();
-        fields.addAll(data.values());
-        fields.addAll(partition.values());
-        return DataTypes.createStructType(fields);
     }
 
     public static Encoder<?> encoder(final Use<?> type) {
@@ -1252,126 +1001,29 @@ public class SparkSchemaUtils {
         });
     }
 
-    public static Column order(final Column column, final Sort.Order order, final Sort.Nulls nulls) {
-
-        if(order == Sort.Order.ASC) {
-            if(nulls == Sort.Nulls.FIRST) {
-                return column.asc_nulls_first();
-            } else {
-                return column.asc_nulls_last();
-            }
-        } else {
-            if(nulls == Sort.Nulls.FIRST) {
-                return column.desc_nulls_first();
-            } else {
-                return column.desc_nulls_last();
-            }
-        }
-    }
-
-    public static Object toSpark(final Object value) {
-
-        if(value instanceof Map) {
-            final Map<Object, Object> tmp = new HashMap<>();
-            ((Map<?, ?>) value).forEach((k, v) -> tmp.put(k, toSpark(v)));
-            return ScalaUtils.asScalaMap(tmp);
-        } else if(value instanceof Collection) {
-            final List<Object> tmp = new ArrayList<>();
-            ((Collection<?>) value).forEach(v -> tmp.add(toSpark(v)));
-            return ScalaUtils.asScalaSeq(tmp);
-        } else if(value instanceof Instant) {
-            return ISO8601.toSqlTimestamp((Instant)value);
-        } else if(value instanceof LocalDate) {
-            return ISO8601.toSqlDate((LocalDate)value);
-        } else {
-            return value;
-        }
-    }
-
-    public static Object fromSpark(final Object value) {
-
-        if(value instanceof scala.collection.Map) {
-            final Map<Object, Object> tmp = new HashMap<>();
-            ScalaUtils.asJavaMap((scala.collection.Map<?, ?>)value).forEach((k, v) -> tmp.put(k, fromSpark(v)));
-            return tmp;
-        } else if(value instanceof scala.collection.Seq) {
-            final List<Object> tmp = new ArrayList<>();
-            ScalaUtils.asJavaStream((scala.collection.Seq<?>)value).forEach(v -> tmp.add(fromSpark(v)));
-            return tmp;
-        } else if(value instanceof java.sql.Timestamp) {
-            return ISO8601.toDateTime(value);
-        } else if(value instanceof java.sql.Date) {
-            return ISO8601.toDate(value);
-        } else {
-            return value;
-        }
-    }
-
-    public static UserDefinedFunction udf(final Callable callable) {
-
-        final DataType returnType = type(callable.type());
-        switch (callable.args().length) {
-            case 0:
-                return functions.udf(() -> toSpark(callable.call()), returnType);
-            case 1:
-                return functions.udf(v1 -> toSpark(callable.call(fromSpark(v1))), returnType);
-            case 2:
-                return functions.udf((v1, v2) -> toSpark(callable.call(fromSpark(v1), fromSpark(v2))), returnType);
-            case 3:
-                return functions.udf((v1, v2, v3) -> toSpark(callable.call(fromSpark(v1), fromSpark(v2),
-                        fromSpark(v3))), returnType);
-            case 4:
-                return functions.udf((v1, v2, v3, v4) -> toSpark(callable.call(fromSpark(v1), fromSpark(v2),
-                        fromSpark(v3), fromSpark(v4))), returnType);
-            case 5:
-                return functions.udf((v1, v2, v3, v4, v5) -> toSpark(callable.call(fromSpark(v1), fromSpark(v2),
-                        fromSpark(v3), fromSpark(v4), fromSpark(v5))), returnType);
-            case 6:
-                return functions.udf((v1, v2, v3, v4, v5, v6) -> toSpark(callable.call(fromSpark(v1), fromSpark(v2),
-                        fromSpark(v3), fromSpark(v4), fromSpark(v5), fromSpark(v6))), returnType);
-            case 7:
-                return functions.udf((v1, v2, v3, v4, v5, v6, v7) -> toSpark(callable.call(fromSpark(v1), fromSpark(v2),
-                        fromSpark(v3), fromSpark(v4), fromSpark(v5), fromSpark(v6), fromSpark(v7))), returnType);
-            case 8:
-                return functions.udf((v1, v2, v3, v4, v5, v6, v7, v8) -> toSpark(callable.call(fromSpark(v1),
-                        fromSpark(v2), fromSpark(v3), fromSpark(v4), fromSpark(v5), fromSpark(v6), fromSpark(v7),
-                        fromSpark(v8))), returnType);
-            case 9:
-                return functions.udf((v1, v2, v3, v4, v5, v6, v7, v8, v9) -> toSpark(callable.call(fromSpark(v1),
-                        fromSpark(v2), fromSpark(v3), fromSpark(v4), fromSpark(v5), fromSpark(v6), fromSpark(v7),
-                        fromSpark(v8), fromSpark(v9))), returnType);
-            case 10:
-                return functions.udf((v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) -> toSpark(callable.call(fromSpark(v1),
-                        fromSpark(v2), fromSpark(v3), fromSpark(v4), fromSpark(v5), fromSpark(v6), fromSpark(v7),
-                        fromSpark(v8), fromSpark(v9), fromSpark(v10))), returnType);
-            default:
-                throw new IllegalStateException("Too many UDF parameters");
-        }
-    }
-
     public static String getId(final Row row) {
 
-        return (String)SparkSchemaUtils.get(row, ObjectSchema.ID);
+        return (String) SparkRowUtils.get(row, ObjectSchema.ID);
     }
 
     public static Long getVersion(final Row row) {
 
-        return (Long)SparkSchemaUtils.get(row, ObjectSchema.VERSION);
+        return (Long) SparkRowUtils.get(row, ObjectSchema.VERSION);
     }
 
     public static java.sql.Timestamp getCreated(final Row row) {
 
-        return (java.sql.Timestamp)SparkSchemaUtils.get(row, ObjectSchema.CREATED);
+        return (java.sql.Timestamp) SparkRowUtils.get(row, ObjectSchema.CREATED);
     }
 
     public static java.sql.Timestamp getUpdated(final Row row) {
 
-        return (java.sql.Timestamp)SparkSchemaUtils.get(row, ObjectSchema.UPDATED);
+        return (java.sql.Timestamp) SparkRowUtils.get(row, ObjectSchema.UPDATED);
     }
 
     public static String getHash(final Row row) {
 
-        return (String)SparkSchemaUtils.get(row, ObjectSchema.HASH);
+        return (String) SparkRowUtils.get(row, ObjectSchema.HASH);
     }
 
     public static Column cast(final Column column, final Use<?> fromType, final Use<?> toType, final Set<Name> expand) {
@@ -1387,6 +1039,48 @@ public class SparkSchemaUtils {
 
             }, toDataType);
             return udf.apply(column);
+        }
+    }
+
+    public static UserDefinedFunction udf(final Callable callable) {
+
+        final DataType returnType = type(callable.type());
+        switch (callable.args().length) {
+            case 0:
+                return functions.udf(() -> SparkRowUtils.toSpark(callable.call()), returnType);
+            case 1:
+                return functions.udf(v1 -> SparkRowUtils.toSpark(callable.call(SparkRowUtils.fromSpark(v1))), returnType);
+            case 2:
+                return functions.udf((v1, v2) -> SparkRowUtils.toSpark(callable.call(SparkRowUtils.fromSpark(v1), SparkRowUtils.fromSpark(v2))), returnType);
+            case 3:
+                return functions.udf((v1, v2, v3) -> SparkRowUtils.toSpark(callable.call(SparkRowUtils.fromSpark(v1), SparkRowUtils.fromSpark(v2),
+                        SparkRowUtils.fromSpark(v3))), returnType);
+            case 4:
+                return functions.udf((v1, v2, v3, v4) -> SparkRowUtils.toSpark(callable.call(SparkRowUtils.fromSpark(v1), SparkRowUtils.fromSpark(v2),
+                        SparkRowUtils.fromSpark(v3), SparkRowUtils.fromSpark(v4))), returnType);
+            case 5:
+                return functions.udf((v1, v2, v3, v4, v5) -> SparkRowUtils.toSpark(callable.call(SparkRowUtils.fromSpark(v1), SparkRowUtils.fromSpark(v2),
+                        SparkRowUtils.fromSpark(v3), SparkRowUtils.fromSpark(v4), SparkRowUtils.fromSpark(v5))), returnType);
+            case 6:
+                return functions.udf((v1, v2, v3, v4, v5, v6) -> SparkRowUtils.toSpark(callable.call(SparkRowUtils.fromSpark(v1), SparkRowUtils.fromSpark(v2),
+                        SparkRowUtils.fromSpark(v3), SparkRowUtils.fromSpark(v4), SparkRowUtils.fromSpark(v5), SparkRowUtils.fromSpark(v6))), returnType);
+            case 7:
+                return functions.udf((v1, v2, v3, v4, v5, v6, v7) -> SparkRowUtils.toSpark(callable.call(SparkRowUtils.fromSpark(v1), SparkRowUtils.fromSpark(v2),
+                        SparkRowUtils.fromSpark(v3), SparkRowUtils.fromSpark(v4), SparkRowUtils.fromSpark(v5), SparkRowUtils.fromSpark(v6), SparkRowUtils.fromSpark(v7))), returnType);
+            case 8:
+                return functions.udf((v1, v2, v3, v4, v5, v6, v7, v8) -> SparkRowUtils.toSpark(callable.call(SparkRowUtils.fromSpark(v1),
+                        SparkRowUtils.fromSpark(v2), SparkRowUtils.fromSpark(v3), SparkRowUtils.fromSpark(v4), SparkRowUtils.fromSpark(v5), SparkRowUtils.fromSpark(v6), SparkRowUtils.fromSpark(v7),
+                        SparkRowUtils.fromSpark(v8))), returnType);
+            case 9:
+                return functions.udf((v1, v2, v3, v4, v5, v6, v7, v8, v9) -> SparkRowUtils.toSpark(callable.call(SparkRowUtils.fromSpark(v1),
+                        SparkRowUtils.fromSpark(v2), SparkRowUtils.fromSpark(v3), SparkRowUtils.fromSpark(v4), SparkRowUtils.fromSpark(v5), SparkRowUtils.fromSpark(v6), SparkRowUtils.fromSpark(v7),
+                        SparkRowUtils.fromSpark(v8), SparkRowUtils.fromSpark(v9))), returnType);
+            case 10:
+                return functions.udf((v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) -> SparkRowUtils.toSpark(callable.call(SparkRowUtils.fromSpark(v1),
+                        SparkRowUtils.fromSpark(v2), SparkRowUtils.fromSpark(v3), SparkRowUtils.fromSpark(v4), SparkRowUtils.fromSpark(v5), SparkRowUtils.fromSpark(v6), SparkRowUtils.fromSpark(v7),
+                        SparkRowUtils.fromSpark(v8), SparkRowUtils.fromSpark(v9), SparkRowUtils.fromSpark(v10))), returnType);
+            default:
+                throw new IllegalStateException("Too many UDF parameters");
         }
     }
 }

@@ -61,7 +61,7 @@ public class Mappings {
                 final Map<String, FieldType> properties = new HashMap<>();
                 final Map<String, Set<Name>> branches = Name.branch(expand);
                 schema.metadataSchema().forEach((k, v) -> properties.put(k, fieldType(schema, k, v, branches.get(k))));
-                schema.getProperties().forEach((k, v) -> properties.put(k, fieldType(schema, k, v.getType(), branches.get(k))));
+                schema.getProperties().forEach((k, v) -> properties.put(k, fieldType(schema, k, v.typeOf(), branches.get(k))));
                 return properties;
             }
 

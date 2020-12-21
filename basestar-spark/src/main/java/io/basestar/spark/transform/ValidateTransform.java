@@ -11,8 +11,8 @@ import io.basestar.schema.use.UseArray;
 import io.basestar.schema.use.UseString;
 import io.basestar.schema.use.UseStruct;
 import io.basestar.spark.util.SparkSchemaUtils;
+import io.basestar.spark.util.SparkUtils;
 import io.basestar.util.Nullsafe;
-import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
@@ -45,7 +45,7 @@ public class ValidateTransform implements Transform<Dataset<Row>, Dataset<Row>> 
     public Dataset<Row> accept(final Dataset<Row> input) {
 
         final StructType structType = SparkSchemaUtils.structType(schema, schema.getExpand(), extraMetadata);
-        return input.map((MapFunction<Row, Row>) row -> {
+        return input.map(SparkUtils.map(row -> {
 
             final Instance instance = schema.create(SparkSchemaUtils.fromSpark(schema, schema.getExpand(), row));
             final Set<Constraint.Violation> violations = schema.validate(Context.init(), instance);
@@ -59,6 +59,6 @@ public class ValidateTransform implements Transform<Dataset<Row>, Dataset<Row>> 
                     .collect(Collectors.toList()));
             return SparkSchemaUtils.toSpark(schema, schema.getExpand(), extraMetadata, structType, result);
 
-        }, RowEncoder.apply(structType));
+        }), RowEncoder.apply(structType));
     }
 }

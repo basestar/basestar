@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.BaseEncoding;
 import io.basestar.secret.Secret;
+import io.basestar.util.Warnings;
 import lombok.Data;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ import lombok.RequiredArgsConstructor;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
 public interface FieldType {
 
     String TEXT_FIELD = "text";
@@ -302,6 +304,7 @@ public interface FieldType {
         }
 
         @Override
+        @SuppressWarnings(Warnings.RETURN_NULL_ARRAY_OR_COLLECTION)
         public List<?> toSource(final Object value) {
 
             if(value == null) {
@@ -351,6 +354,7 @@ public interface FieldType {
         }
 
         @Override
+        @SuppressWarnings(Warnings.RETURN_NULL_ARRAY_OR_COLLECTION)
         public Collection<?> toSource(final Object value) {
 
             if(value == null) {

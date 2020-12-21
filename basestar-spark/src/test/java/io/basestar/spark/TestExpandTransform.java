@@ -112,9 +112,9 @@ public class TestExpandTransform extends AbstractSparkTest {
 
         final Set<Name> expand = Name.parseSet("ref,single,multi,structRef.ref,arrayRef,mapRef.*");
 
-        final QueryResolver resolver = new QueryResolver.Automatic(QueryResolver.source(schema -> datasets.get(schema.getQualifiedName())));
+        final QueryResolver resolver = new QueryResolver.Automatic(QueryResolver.ofSources(schema -> datasets.get(schema.getQualifiedName())));
 
-        final Dataset<Row> dataset = resolver.resolve(a, expand).result();
+        final Dataset<Row> dataset = resolver.resolve(a, expand).dataset();
 
         final Encoder<ExpandedA> encoder = Encoders.bean(ExpandedA.class);
         final ConformTransform conform = ConformTransform.builder().structType(encoder.schema()).build();

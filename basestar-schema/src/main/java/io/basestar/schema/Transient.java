@@ -98,7 +98,7 @@ public class Transient implements Member {
             @Override
             default Use<?> getType() {
 
-                return self().getType();
+                return self().typeOf();
             }
 
             @Override
@@ -175,6 +175,12 @@ public class Transient implements Member {
             type.visit(new TypeValidator(qualifiedName));
         }
         this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
+    }
+
+    @Override
+    public Use<?> typeOf() {
+
+        return type;
     }
 
     @Override

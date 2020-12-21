@@ -33,6 +33,7 @@ import io.basestar.schema.util.Ref;
 import io.basestar.secret.Secret;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
+import io.basestar.util.Warnings;
 import io.leangen.geantyref.GenericTypeReflector;
 
 import java.io.DataInput;
@@ -52,7 +53,7 @@ import java.util.function.BiFunction;
  * @param <T>
  */
 
-//@JsonDeserialize(using = TypeUse.Deserializer.class)
+@SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
 public interface Use<T> extends Serializable {
 
     String OPTIONAL_SYMBOL = "?";

@@ -1,6 +1,12 @@
 $version: LATEST
 
 Post:
+  bucket:
+    - using:
+      - created
+    - using:
+      - id
+      count: 50
   extensions:
     "io.basestar.test": "test"
   properties:
@@ -10,6 +16,9 @@ Post:
       type: Post?
 
 Comment:
+  bucket:
+    using: created
+    count: 20
   properties:
     string:
       type: string

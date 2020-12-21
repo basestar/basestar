@@ -20,9 +20,12 @@ package io.basestar.spark.transform;
  * #L%
  */
 
-import io.basestar.spark.util.SparkSchemaUtils;
-import lombok.AllArgsConstructor;
+import io.basestar.spark.util.SparkRowUtils;
+import io.basestar.spark.util.SparkUtils;
+import io.basestar.util.Nullsafe;
+import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.catalyst.encoders.RowEncoder;
 import org.apache.spark.sql.types.StructType;
 
 
@@ -30,37 +33,23 @@ import org.apache.spark.sql.types.StructType;
  * Force the input to match the field order in the provided schema.
  */
 
-public class ConformTransform implements DatasetMapTransform {
+public class ConformTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
-    private final RowTransformImpl rowTransform;
+    private final StructType structType;
 
     @lombok.Builder(builderClassName = "Builder")
     public ConformTransform(final StructType structType) {
 
-        this.rowTransform = new RowTransformImpl(structType);
+        this.structType = Nullsafe.require(structType);
     }
 
     @Override
-    public RowTransform rowTransform() {
+    public Dataset<Row> accept(final Dataset<Row> input) {
 
-        return rowTransform;
-    }
-
-    @AllArgsConstructor
-    private static class RowTransformImpl implements RowTransform {
-
-        private final StructType structType;
-
-        @Override
-        public StructType schema(final StructType input) {
-
-            return structType;
-        }
-
-        @Override
-        public Row accept(final Row input) {
-
-            return SparkSchemaUtils.conform(input, structType);
-        }
+        final StructType structType = this.structType;
+        return input.map(
+                SparkUtils.map(row -> SparkRowUtils.conform(row, structType)),
+                RowEncoder.apply(structType)
+        );
     }
 }

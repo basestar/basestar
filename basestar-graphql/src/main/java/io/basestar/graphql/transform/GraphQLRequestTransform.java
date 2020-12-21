@@ -29,7 +29,7 @@ public interface GraphQLRequestTransform {
                 final Map<String, Object> result = new HashMap<>();
                 schema.getProperties().forEach((k, prop) -> {
                     if (input.containsKey(k)) {
-                        result.put(k, fromRequest(prop.getType(), input.get(k)));
+                        result.put(k, fromRequest(prop.typeOf(), input.get(k)));
                     }
                 });
                 return result;

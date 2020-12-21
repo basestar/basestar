@@ -61,7 +61,7 @@ public interface GraphQLResponseTransform {
                 }
                 final Map<String, Object> result = new HashMap<>();
                 resolvedSchema.metadataSchema().forEach((k, use) -> result.put(k, toResponse(use, input.get(k))));
-                resolvedSchema.getMembers().forEach((k, prop) -> result.put(k, toResponse(prop.getType(), input.get(k))));
+                resolvedSchema.getMembers().forEach((k, prop) -> result.put(k, toResponse(prop.typeOf(), input.get(k))));
                 return result;
             }
         }

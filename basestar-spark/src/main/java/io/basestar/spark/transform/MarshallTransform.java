@@ -5,9 +5,9 @@ import io.basestar.mapper.SchemaMapper;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Namespace;
 import io.basestar.spark.util.SparkSchemaUtils;
+import io.basestar.spark.util.SparkUtils;
 import io.basestar.util.Nullsafe;
 import lombok.RequiredArgsConstructor;
-import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
@@ -37,9 +37,9 @@ public class MarshallTransform<T> implements Transform<Dataset<Row>, Dataset<T>>
         final SchemaMapper<T, ? extends Map<String, Object>> mapper = this.mapper;
         final InstanceSchema schema = this.schema;
         final Class<T> beanClass = mapper.marshalledType();
-        return input.map((MapFunction<Row, T>) row -> {
+        return input.map(SparkUtils.map(row -> {
             final Map<String, Object> object = SparkSchemaUtils.fromSpark(schema, row);
             return mapper.marshall(object);
-        }, Encoders.bean(beanClass));
+        }), Encoders.bean(beanClass));
     }
 }

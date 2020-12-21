@@ -1,13 +1,14 @@
-package io.basestar.spark.query;
+package io.basestar.spark.transform;
 
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Layout;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.spark.expression.SparkExpressionVisitor;
 import io.basestar.spark.resolver.ColumnResolver;
-import io.basestar.spark.transform.Transform;
+import io.basestar.spark.util.SparkRowUtils;
 import io.basestar.spark.util.SparkSchemaUtils;
-import org.apache.spark.api.java.function.MapFunction;
+import io.basestar.spark.util.SparkUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -18,8 +19,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @lombok.Builder(builderClassName = "Builder")
-public class AggStepTransform implements Transform<Dataset<Row>, Dataset<Row>> {
+public class AggregateTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
     private final List<String> group;
 
@@ -43,10 +45,11 @@ public class AggStepTransform implements Transform<Dataset<Row>, Dataset<Row>> {
                 .map(v -> expressionVisitor.visit(v.getValue()).as(v.getKey()))
                 .toArray(Column[]::new);
 
-        final Dataset<Row> output = input.groupBy(group.stream().map(input::col).toArray(Column[]::new))
+        final Column[] groupCols = group.stream().map(input::col).toArray(Column[]::new);
+        final Dataset<Row> grouped = input.groupBy(groupCols)
                 .agg(aggs[0], Arrays.copyOfRange(aggs, 1, aggs.length));
 
-        return output.map((MapFunction<Row, Row>)(row -> SparkSchemaUtils.conform(row, outputStructType)),
+        return grouped.map(SparkUtils.map(row -> SparkRowUtils.conform(row, outputStructType)),
                 RowEncoder.apply(outputStructType));
     }
 }

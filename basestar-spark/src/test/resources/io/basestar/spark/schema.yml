@@ -201,3 +201,14 @@ Expressions:
       expression: "{'loremipsum': 'x'}['' + id] ?? ('' + id)"
       type: string
   from: File
+
+NestedExpand:
+  type: object
+  properties:
+    ref:
+      type: NestedExpand
+  links:
+    link:
+      single: true
+      schema: NestedExpand
+      expression: this.id == ref.id

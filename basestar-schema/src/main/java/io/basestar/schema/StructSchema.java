@@ -189,12 +189,6 @@ public class StructSchema implements InstanceSchema {
     }
 
     @Override
-    public String id() {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public boolean isConcrete() {
 
         return true;

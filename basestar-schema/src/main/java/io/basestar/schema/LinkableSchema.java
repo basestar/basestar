@@ -1,10 +1,15 @@
 package io.basestar.schema;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.basestar.jackson.serde.AbbrevListDeserializer;
+import io.basestar.schema.use.Use;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
+import io.basestar.util.Warnings;
 
 import java.util.List;
 import java.util.Map;
@@ -20,12 +25,21 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver, Permissio
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Set<Name> getExpand();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        @JsonDeserialize(using = AbbrevListDeserializer.class)
+        List<Bucketing> getBucket();
+
         interface Self<S extends LinkableSchema> extends InstanceSchema.Descriptor.Self<S>, Descriptor<S> {
 
             @Override
             default Set<Name> getExpand() {
 
                 return self().getDeclaredExpand();
+            }
+
+            default List<Bucketing> getBucket() {
+
+                return self().getDeclaredBucketing();
             }
 
             @Override
@@ -56,10 +70,27 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver, Permissio
 
     Set<Name> getDeclaredExpand();
 
-    Set<Name> getExpand();
+    List<Bucketing> getDeclaredBucketing();
+
+    default List<Bucketing> getEffectingBucketing() {
+
+        final List<Bucketing> bucketing = getDeclaredBucketing();
+        if(bucketing.isEmpty()) {
+            return ImmutableList.of(
+                    new Bucketing(ImmutableList.of(Name.of(id())))
+            );
+        } else {
+            return bucketing;
+        }
+    }
 
     @Override
     Descriptor<? extends LinkableSchema> descriptor();
+
+    String id();
+
+    @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
+    Use<?> typeOfId();
 
     default Instance deleted(final String id) {
 

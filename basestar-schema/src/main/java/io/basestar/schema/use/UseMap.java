@@ -89,6 +89,11 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
         }
     }
 
+    public static <T> UseMap<T> from(final Use<T> type) {
+
+        return new UseMap<>(type);
+    }
+
     public static UseMap<?> from(final Object config) {
 
         return Use.fromNestedConfig(config, (type, nestedConfig) -> new UseMap<>(type));

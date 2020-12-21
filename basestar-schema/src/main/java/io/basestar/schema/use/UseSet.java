@@ -62,6 +62,11 @@ public class UseSet<T> implements UseCollection<T, Set<T>> {
 
     private final Use<T> type;
 
+    public static <T> UseSet<T> from(final Use<T> type) {
+
+        return new UseSet<>(type);
+    }
+
     public static UseSet<?> from(final Object config) {
 
         return Use.fromNestedConfig(config, (type, nestedConfig) -> new UseSet<>(type));

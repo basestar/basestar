@@ -60,7 +60,7 @@ public class LinkModel extends MemberModel {
     @Override
     public TypeModel getType() {
 
-        return TypeModel.from(getContext(), link.getType());
+        return TypeModel.from(getContext(), link.typeOf());
     }
 
     @Override

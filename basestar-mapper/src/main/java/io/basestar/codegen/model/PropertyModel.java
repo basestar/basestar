@@ -55,14 +55,14 @@ public class PropertyModel extends MemberModel {
         if(property.getExpression() != null) {
             annotations.add(new AnnotationModel<>(getContext(), Expression.Modifier.annotation(property.getExpression())));
         }
-        if(!property.getType().isOptional()) {
+        if(!property.typeOf().isOptional()) {
             annotations.add(new AnnotationModel<>(getContext(), NOT_NULL));
 //            annotations.add(new AnnotationModel<>(getSettings(), Required.Modifier.annotation(true)));
         }
         if(property.isImmutable()) {
             annotations.add(new AnnotationModel<>(getContext(), Immutable.Modifier.annotation(true)));
         }
-        property.getConstraints().forEach(constraint -> annotations.add(new AnnotationModel<>(getContext(), constraint.toJsr380(property.getType()))));
+        property.getConstraints().forEach(constraint -> annotations.add(new AnnotationModel<>(getContext(), constraint.toJsr380(property.typeOf()))));
         if(property.getDescription() != null) {
             annotations.add(new AnnotationModel<>(getContext(), Description.Modifier.annotation(property.getDescription())));
         }
@@ -72,12 +72,12 @@ public class PropertyModel extends MemberModel {
     @Override
     public TypeModel getType() {
 
-        return TypeModel.from(getContext(), property.getType());
+        return TypeModel.from(getContext(), property.typeOf());
     }
 
     @Override
     public boolean isRequired() {
 
-        return !property.getType().isOptional();
+        return !property.typeOf().isOptional();
     }
 }

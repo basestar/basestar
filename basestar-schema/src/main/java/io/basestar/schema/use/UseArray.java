@@ -77,6 +77,11 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
         }
     }
 
+    public static <T> UseArray<T> from(final Use<T> type) {
+
+        return new UseArray<>(type);
+    }
+
     public static UseArray<?> from(final Object config) {
 
         return Use.fromNestedConfig(config, (type, nestedConfig) -> new UseArray<>(type));

@@ -26,6 +26,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.apache.spark.sql.SparkSession;
 
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -36,10 +37,17 @@ public abstract class AbstractSparkTest {
     protected SparkSession session() {
 
         final SparkSession session = SparkSession.builder()
+                .enableHiveSupport()
                 .master("local[*]")
                 .getOrCreate();
         session.sparkContext().setLogLevel("WARN");
+        session.sqlContext().setConf("spark.sql.shuffle.partitions", "2");
         return session;
+    }
+
+    protected static String testDataPath(final String s) {
+
+        return Paths.get("target").resolve(s).toAbsolutePath().normalize().toUri().toString();
     }
 
     @Data

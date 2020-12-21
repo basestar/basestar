@@ -68,7 +68,7 @@ public class TestStorageIO extends AbstractSparkTest {
 
         final ObjectSchema schemaA = namespace.requireObjectSchema("A");
 
-        final QueryResolver resolver = new QueryResolver.Automatic(QueryResolver.source(schema -> datasets.get(schema.getQualifiedName())));
+        final QueryResolver resolver = new QueryResolver.Automatic(QueryResolver.ofSources(schema -> datasets.get(schema.getQualifiedName())));
 
         final SparkDatabase database = SparkDatabase.builder()
                 .resolver(resolver).namespace(namespace)

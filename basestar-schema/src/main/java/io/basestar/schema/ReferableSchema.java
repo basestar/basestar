@@ -237,6 +237,12 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
     }
 
     @Override
+    default Use<?> typeOfId() {
+
+        return UseString.DEFAULT;
+    }
+
+    @Override
     default Map<String, ? extends Member> getDeclaredMembers() {
 
         final Map<String, Member> members = new HashMap<>();

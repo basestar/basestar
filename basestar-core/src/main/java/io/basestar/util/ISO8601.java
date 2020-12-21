@@ -18,13 +18,13 @@ import java.util.Date;
 
 public class ISO8601 {
 
-    public static final DateTimeFormatter DATE_OUTPUT_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static final DateTimeFormatter DATE_OUTPUT_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     private ISO8601() {
 
     }
 
-    public static final DateTimeFormatter[] DATE_INPUT_FORMATS = {
+    private static final DateTimeFormatter[] DATE_INPUT_FORMATS = {
             DATE_OUTPUT_FORMAT,
             DateTimeFormatter.ISO_LOCAL_DATE,
             DateTimeFormatter.ofPattern("yyyyMMdd"),
@@ -34,14 +34,14 @@ public class ISO8601 {
             DateTimeFormatter.ofPattern("yyyyDDD")
     };
 
-    public static final DateTimeFormatter DATE_TIME_OUTPUT_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+    private static final DateTimeFormatter DATE_TIME_OUTPUT_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 
-    public static final DateTimeFormatter[] ZONED_DATE_TIME_INPUT_FORMATS = {
+    private static final DateTimeFormatter[] ZONED_DATE_TIME_INPUT_FORMATS = {
             DateTimeFormatter.ISO_ZONED_DATE_TIME,
             new DateTimeFormatterBuilder().append(DateTimeFormatter.ISO_LOCAL_DATE_TIME).appendPattern("[ ]").appendPattern("z").toFormatter()
     };
 
-    public static final DateTimeFormatter[] LOCAL_DATE_TIME_INPUT_FORMATS = {
+    private static final DateTimeFormatter[] LOCAL_DATE_TIME_INPUT_FORMATS = {
             DateTimeFormatter.ISO_LOCAL_DATE_TIME
     };
 
