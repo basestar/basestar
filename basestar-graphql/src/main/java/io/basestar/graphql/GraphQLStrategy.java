@@ -28,8 +28,6 @@ import io.basestar.schema.use.*;
 import io.basestar.util.Name;
 import io.basestar.util.Text;
 
-// FIXME: rename to GraphQL strategy, also create a corresponding RestStrategy
-
 public interface GraphQLStrategy {
 
     Default DEFAULT = new Default();
@@ -461,6 +459,36 @@ public interface GraphQLStrategy {
             }
 
             @Override
+            public String visitAny(final UseAny type) {
+
+                return anyTypeName();
+            }
+
+            @Override
+            public String visitBinary(final UseBinary type) {
+
+                return binaryTypeName();
+            }
+
+            @Override
+            public String visitDate(final UseDate type) {
+
+                return dateTypeName();
+            }
+
+            @Override
+            public String visitDateTime(final UseDateTime type) {
+
+                return dateTimeTypeName();
+            }
+
+            @Override
+            public String visitSecret(final UseSecret type) {
+
+                return secretTypeName();
+            }
+
+            @Override
             public String visitEnum(final UseEnum type) {
 
                 return typeName(type.getSchema());
@@ -497,21 +525,9 @@ public interface GraphQLStrategy {
             }
 
             @Override
-            public String visitBinary(final UseBinary type) {
-
-                return GraphQLUtils.STRING_TYPE;
-            }
-
-            @Override
             public String visitView(final UseView type) {
 
                 return typeName(type.getSchema());
-            }
-
-            @Override
-            public String visitAny(final UseAny type) {
-
-                return anyTypeName();
             }
         };
     }

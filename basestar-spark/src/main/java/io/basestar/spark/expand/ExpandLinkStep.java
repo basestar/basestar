@@ -59,7 +59,7 @@ public class ExpandLinkStep extends AbstractExpandStep {
         this.link = link;
         this.name = name;
 
-        final LinkExpressionVisitor closeLeft = new LinkExpressionVisitor(Reserved.PREFIX + "l_", ImmutableSet.of(Reserved.THIS));
+        final ClosureExtractingVisitor closeLeft = new ClosureExtractingVisitor(Reserved.PREFIX + "l_", ImmutableSet.of(Reserved.THIS));
         final Expression closedLeft = closeLeft.visit(link.getExpression());
         this.constants = new TreeMap<>(closeLeft.getConstants());
         if(constants.isEmpty()) {
@@ -192,8 +192,6 @@ public class ExpandLinkStep extends AbstractExpandStep {
                 .dataset();
 
         final StructType joinToType = joinTo.schema();
-        final Column[] groupColumns = projectedKeyColumns();
-
         final Function<Name, Column> columnResolver = columnResolver(input, joinTo);
 
         final InferenceContext inferenceContext = InferenceContext.from(linkSchema)

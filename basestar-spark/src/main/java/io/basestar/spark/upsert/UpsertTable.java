@@ -120,7 +120,22 @@ public class UpsertTable {
 
     public Dataset<Row> select(final SparkSession session) {
 
-        return baseWithDeltas(selectBase(session), selectLatestDelta(session));
+        if(hasDeltas(session)) {
+            return baseWithDeltas(selectBase(session), selectLatestDelta(session));
+        } else {
+            return selectBase(session);
+        }
+    }
+
+    private boolean hasDeltas(final SparkSession session) {
+
+        final String tableName = deltaTableName();
+        final ExternalCatalog catalog = session.sharedState().externalCatalog();
+        if(SparkCatalogUtils.tableExists(catalog, database, tableName)) {
+            return !catalog.listPartitions(database, tableName, Option.empty()).isEmpty();
+        } else {
+            return false;
+        }
     }
 
     public static String sequence(final Instant timestamp) {
@@ -284,7 +299,7 @@ public class UpsertTable {
         return new GenericRowWithSchema(data, deltaType);
     }
 
-    public void flattenDeltas(final SparkSession session) {
+    public void squashDeltas(final SparkSession session) {
 
         final ExternalCatalog catalog = session.sharedState().externalCatalog();
 
@@ -320,15 +335,15 @@ public class UpsertTable {
 
         log.warn("Flatten operations for {} are append: {} replace: {}", name, append.keySet(), merge.keySet());
 
-        appendToBase(session, current, append);
-        mergeToBase(session, current,  merge);
+        squashAppend(session, current, append);
+        squashMerge(session, current,  merge);
 
         final Set<scala.collection.immutable.Map<String, String>> drop = new HashSet<>();
         delta.values().forEach(parts -> parts.forEach(part -> drop.add(part.spec())));
         catalog.dropPartitions(database, deltaTableName(), ScalaUtils.asScalaSeq(drop), false, true, true);
     }
 
-    private void appendToBase(final SparkSession session,
+    private void squashAppend(final SparkSession session,
                               final Map<List<String>, CatalogTablePartition> current,
                               final Map<List<String>, List<CatalogTablePartition>> append) {
 
@@ -359,7 +374,7 @@ public class UpsertTable {
                     }
                 });
 
-                writeToBase(appendDeltas, sequences);
+                squash(appendDeltas, sequences);
 
                 final Configuration configuration = session.sparkContext().hadoopConfiguration();
                 repairBase(catalog, configuration);
@@ -368,7 +383,7 @@ public class UpsertTable {
         }
     }
 
-    private void mergeToBase(final SparkSession session,
+    private void squashMerge(final SparkSession session,
                              final Map<List<String>, CatalogTablePartition> current,
                              final Map<List<String>, List<CatalogTablePartition>> merge) {
 
@@ -403,7 +418,7 @@ public class UpsertTable {
                     sequences.put(spec, sequence);
                 });
 
-                writeToBase(baseWithDeltas(mergeBase, mergeDeltas), sequences);
+                squash(baseWithDeltas(mergeBase, mergeDeltas), sequences);
 
                 final Configuration configuration = session.sparkContext().hadoopConfiguration();
                 repairBase(catalog, configuration);
@@ -413,7 +428,7 @@ public class UpsertTable {
         }
     }
 
-    private void writeToBase(final Dataset<Row> output, final Map<List<String>, String> sequences) {
+    private void squash(final Dataset<Row> output, final Map<List<String>, String> sequences) {
 
         final List<String> outputPartition = new ArrayList<>(basePartition);
         outputPartition.add(SEQUENCE);

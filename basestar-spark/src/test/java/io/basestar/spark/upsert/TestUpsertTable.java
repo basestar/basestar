@@ -67,7 +67,7 @@ class TestUpsertTable extends AbstractSparkTest {
         table.applyChanges(createSource, table.sequence(Instant.now()), r -> UpsertOp.CREATE, r -> r);
         assertState("After create", session, table, ImmutableList.of(), createDeltas, create);
 
-        table.flattenDeltas(session);
+        table.squashDeltas(session);
         assertState("After create + flatten", session, table, create, ImmutableList.of(), create);
 
         final List<D> update = ImmutableList.of(new D("d:1", 2L), new D("d:3", 4L));
@@ -79,7 +79,7 @@ class TestUpsertTable extends AbstractSparkTest {
         table.applyChanges(updateSource, table.sequence(Instant.now()), r -> UpsertOp.UPDATE, r -> r);
         assertState("After update", session, table, create, updateDeltas, updateMerged);
 
-        table.flattenDeltas(session);
+        table.squashDeltas(session);
         assertState("After update + flatten", session, table, updateMerged, ImmutableList.of(), updateMerged);
 
         // FIXME: failing periodically because of a possible list-after-write inconsistency

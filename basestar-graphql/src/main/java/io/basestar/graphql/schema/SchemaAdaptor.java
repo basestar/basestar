@@ -763,13 +763,13 @@ public class SchemaAdaptor {
             @Override
             public Type<?> visitDate(final UseDate type) {
 
-                return new TypeName(GraphQLUtils.STRING_TYPE);
+                return new TypeName(strategy.dateTypeName());
             }
 
             @Override
             public Type<?> visitDateTime(final UseDateTime type) {
 
-                return new TypeName(GraphQLUtils.STRING_TYPE);
+                return new TypeName(strategy.dateTimeTypeName());
             }
 
             @Override
