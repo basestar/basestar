@@ -9,48 +9,49 @@ import io.basestar.schema.*;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.expression.InferenceVisitor;
 import io.basestar.schema.use.Use;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import io.basestar.util.Pair;
 import io.basestar.util.Sort;
 
 import java.util.*;
 
-public interface QueryPlanner {
+public interface QueryPlanner<T extends QueryStage> {
 
-    <T> T plan(QueryStageVisitor<T> visitor, LinkableSchema schema, Expression expression, List<Sort> sort, Set<Name> expand);
+    T plan(QueryStageVisitor<T> visitor, LinkableSchema schema, Expression expression, List<Sort> sort, Set<Name> expand);
 
-    class Default implements QueryPlanner {
-
-        public static final QueryPlanner INSTANCE = new Default();
+    class Default<T extends QueryStage> implements QueryPlanner<T> {
 
         @Override
-        public <T> T plan(final QueryStageVisitor<T> visitor, final LinkableSchema schema, final Expression expression, final List<Sort> sort, final Set<Name> expand) {
+        public T plan(final QueryStageVisitor<T> visitor, final LinkableSchema schema, final Expression expression, final List<Sort> sort, final Set<Name> expand) {
 
-            return stage(visitor, schema, expression, sort, expand).getFirst();
+            return stage(visitor, schema, expression, sort, expand);
         }
 
-        private <T> Pair<T, Layout> stage(final QueryStageVisitor<T> visitor, final LinkableSchema schema, final Expression expression, final List<Sort> sort, final Set<Name> expand) {
+        protected T stage(final QueryStageVisitor<T> visitor, final LinkableSchema schema, final Expression expression, final List<Sort> sort, final Set<Name> expand) {
 
             final boolean constExpr = expression != null && expression.isConstant();
             if(constExpr && !expression.evaluatePredicate(Context.init())) {
                 return visitor.empty(schema, expand);
             } else {
-                Pair<T, Layout> stage = stage(visitor, schema);
-                if(!expand.isEmpty()) {
-                    stage = visitor.expand(stage, schema, expand);
+                T stage = stage(visitor, schema);
+                final Set<Name> remainingExpand = Immutable.copyRemoveAll(expand, stage.getLayout().getExpand());
+                if(!remainingExpand.isEmpty()) {
+                    stage = visitor.expand(stage, schema, remainingExpand);
                 }
+                // TODO check if expression is already covered in the stage
                 if (!constExpr && expression != null) {
                     stage = visitor.filter(stage, expression);
                 }
-                if(!sort.isEmpty()) {
+                // TODO check enclosing/equivalent rather than only equal
+                if(!sort.isEmpty() && !sort.equals(stage.getSort())) {
                     stage = visitor.sort(stage, sort);
                 }
                 return stage;
             }
         }
 
-        protected <T> Pair<T, Layout> stage(final QueryStageVisitor<T> visitor, final LinkableSchema schema) {
+        protected T stage(final QueryStageVisitor<T> visitor, final LinkableSchema schema) {
 
             if (schema instanceof ViewSchema) {
                 return viewStage(visitor, (ViewSchema)schema);
@@ -59,16 +60,16 @@ public interface QueryPlanner {
             }
         }
 
-        protected <T> Pair<T, Layout> refStage(final QueryStageVisitor<T> visitor, final ReferableSchema schema) {
+        protected T refStage(final QueryStageVisitor<T> visitor, final ReferableSchema schema) {
 
             return visitor.schema(visitor.source(schema), schema);
         }
 
-        protected <T> Pair<T, Layout> viewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema) {
+        protected T viewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema) {
 
             final ViewSchema.From from = schema.getFrom();
             final LinkableSchema fromSchema = from.getSchema();
-            Pair<T, Layout> stage = stage(visitor, fromSchema, schema.getWhere(), schema.getSort(), from.getExpand());
+            T stage = stage(visitor, fromSchema, schema.getWhere(), schema.getSort(), from.getExpand());
             if (schema.isAggregating() || schema.isGrouping()) {
                 final Map<String, Use<?>> outputSchema = schema.getSchema();
                 final List<String> group = schema.getGroup();
