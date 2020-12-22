@@ -20,12 +20,12 @@ package io.basestar.util;
  * #L%
  */
 
-import com.google.common.base.Charsets;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 
 import java.io.Serializable;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -33,7 +33,7 @@ import java.util.stream.Stream;
 @SuppressWarnings("UnstableApiUsage")
 public enum BucketFunction implements Serializable {
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings("all")
     MD5(Hashing.md5()),
     MURMER3_32(Hashing.murmur3_32()),
     ADLER_32(Hashing.adler32());
@@ -55,7 +55,7 @@ public enum BucketFunction implements Serializable {
         if(count < 2) {
             throw new IllegalStateException("Count must be at least 2");
         }
-        final BigInteger value = new BigInteger(hash.hashString(input, Charsets.UTF_8).asBytes());
+        final BigInteger value = new BigInteger(hash.hashString(input, StandardCharsets.UTF_8).asBytes());
         return value.mod(BigInteger.valueOf(count)).intValue();
     }
 }

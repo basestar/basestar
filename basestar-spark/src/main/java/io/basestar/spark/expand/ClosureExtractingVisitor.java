@@ -12,7 +12,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
-public class LinkExpressionVisitor implements ExpressionVisitor.Defaulting<Expression> {
+public class ClosureExtractingVisitor implements ExpressionVisitor.Defaulting<Expression> {
 
     private final String prefix;
 

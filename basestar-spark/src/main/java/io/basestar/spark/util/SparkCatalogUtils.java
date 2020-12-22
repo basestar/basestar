@@ -124,6 +124,18 @@ public class SparkCatalogUtils {
 
         final long now = Instant.now().toEpochMilli();
 
+        final long created;
+        final boolean exists = catalog.tableExists(databaseName, tableName);
+        final Option<CatalogStatistics> stats;
+        if(exists) {
+            final CatalogTable table = catalog.getTable(databaseName, tableName);
+            created = table.createTime();
+            stats = table.stats();
+        } else {
+            created = now;
+            stats = Option.empty();
+        }
+
         final CatalogTable table = CatalogTable.apply(
                 TableIdentifier.apply(tableName, Option.apply(databaseName)),
                 CatalogTableType.EXTERNAL(),
@@ -133,10 +145,10 @@ public class SparkCatalogUtils {
                 ScalaUtils.asScalaSeq(partitionColumns),
                 Option.empty(),
                 "basestar",
-                now, now,
+                created, now,
                 "2.4.0",
                 ScalaUtils.asScalaMap(properties),
-                Option.empty(),
+                stats,
                 Option.empty(),
                 Option.empty(),
                 ScalaUtils.emptyScalaSeq(),
@@ -144,7 +156,7 @@ public class SparkCatalogUtils {
                 ScalaUtils.emptyScalaMap()
         );
 
-        if(catalog.tableExists(databaseName, tableName)) {
+        if(exists) {
 
             catalog.alterTable(table);
 

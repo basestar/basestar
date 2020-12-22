@@ -120,7 +120,22 @@ public class UpsertTable {
 
     public Dataset<Row> select(final SparkSession session) {
 
-        return baseWithDeltas(selectBase(session), selectLatestDelta(session));
+        if(hasDeltas(session)) {
+            return baseWithDeltas(selectBase(session), selectLatestDelta(session));
+        } else {
+            return selectBase(session);
+        }
+    }
+
+    private boolean hasDeltas(final SparkSession session) {
+
+        final String tableName = deltaTableName();
+        final ExternalCatalog catalog = session.sharedState().externalCatalog();
+        if(SparkCatalogUtils.tableExists(catalog, database, tableName)) {
+            return !catalog.listPartitions(database, tableName, Option.empty()).isEmpty();
+        } else {
+            return false;
+        }
     }
 
     public static String sequence(final Instant timestamp) {
