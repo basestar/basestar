@@ -270,7 +270,7 @@ public interface QueryResolver {
 
         static Stage source(final QueryResolver resolver, final LinkableSchema schema) {
 
-            return from(resolver.resolve(schema), schema);
+            return from(resolver.resolve(schema), Layout.simple(schema.getSchema(), ImmutableSet.of()));
         }
 
         static Stage empty(final QueryResolver resolver, final LinkableSchema schema, final Set<Name> expand) {
@@ -332,7 +332,7 @@ public interface QueryResolver {
         default Stage schema(final InstanceSchema schema) {
 
             return then(SchemaTransform.builder()
-                            .schema(schema).build(), schema);
+                            .schema(schema).build(), Layout.simple(schema.getSchema(), ImmutableSet.of()));
         }
     }
 }
