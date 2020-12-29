@@ -11,6 +11,7 @@ import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseInteger;
 import io.basestar.schema.use.UseOptional;
 import io.basestar.schema.use.UseString;
+import io.basestar.storage.TestStorage;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
 import lombok.Data;
@@ -28,40 +29,40 @@ class TestQueryPlanner {
     @Test
     void testQueryPlanner() throws IOException {
         
-        final Namespace namespace = Namespace.load(TestQueryPlanner.class.getResource("/schema/PetStore.yml"));
-        final ViewSchema viewSchema = namespace.requireViewSchema("PetStats");
+        final Namespace namespace = Namespace.load(TestStorage.class.getResource("schema.yml"));
+        final ViewSchema viewSchema = namespace.requireViewSchema("AddressStats");
         
         final QueryPlanner<QueryStage> planner = new QueryPlanner.Default<>();
         
-        final QueryStage stage = planner.plan(new SimpleVisitor(), viewSchema, Expression.parse("schema == 'Cat'"), ImmutableList.of(), ImmutableSet.of());
+        final QueryStage stage = planner.plan(new SimpleVisitor(), viewSchema, Expression.parse("count > 5"), ImmutableList.of(), ImmutableSet.of());
 
-        final InterfaceSchema sourceSchema = namespace.requireInterfaceSchema("Pet");
+        final ObjectSchema sourceSchema = namespace.requireObjectSchema("Address");
 
         final String aggDigest = "_" + Expression.parse("count()").digest();
 
         final SourceStage sourceStage = new SourceStage(sourceSchema);
         final SchemaStage sourceSchemaStage = new SchemaStage(sourceStage, sourceSchema);
-        final FilterStage sourceFilterStage = new FilterStage(sourceSchemaStage, Expression.parse("status == 'available'"));
+        final FilterStage sourceFilterStage = new FilterStage(sourceSchemaStage, Expression.parse("country == 'US'"));
         final MapStage sourceMapStage = new MapStage(sourceFilterStage, ImmutableMap.of(
-                "schema", Expression.parse("schema")
+                "state", Expression.parse("state")
         ), ImmutableMap.of(
-                "schema", UseOptional.from(UseString.DEFAULT)
+                "state", UseOptional.from(UseString.DEFAULT)
         ));
-        final AggregateStage aggStage = new AggregateStage(sourceMapStage, ImmutableList.of("schema"), ImmutableMap.of(
+        final AggregateStage aggStage = new AggregateStage(sourceMapStage, ImmutableList.of("state"), ImmutableMap.of(
                 aggDigest, (Aggregate)Expression.parse("count(true)")
         ), ImmutableMap.of(
-                "schema", UseOptional.from(UseString.DEFAULT),
+                "state", UseOptional.from(UseString.DEFAULT),
                 aggDigest, UseInteger.DEFAULT
         ));
         final MapStage mapStage = new MapStage(aggStage, ImmutableMap.of(
-                "schema", Expression.parse("schema"),
+                "state", Expression.parse("state"),
                 "count", Expression.parse(aggDigest)
         ), ImmutableMap.of(
                 "count", UseOptional.from(UseInteger.DEFAULT),
-                "schema", UseOptional.from(UseString.DEFAULT)
+                "state", UseOptional.from(UseString.DEFAULT)
         ));
         final SchemaStage schemaStage = new SchemaStage(mapStage, viewSchema);
-        final FilterStage filterStage = new FilterStage(schemaStage, Expression.parse("schema == 'Cat'"));
+        final FilterStage filterStage = new FilterStage(schemaStage, Expression.parse("count > 5"));
 
         assertEquals(filterStage, stage);
     }

@@ -204,3 +204,23 @@ Secret:
   properties:
     secret:
       type: secret
+
+
+ViewBase:
+  type: object
+  properties:
+    name:
+      type: string
+    status:
+      type: string
+
+AddressStats:
+  type: view
+  group:
+    - state
+  properties:
+    state: state
+    count: count()
+  from:
+    schema: Address
+  where: country == 'US'
