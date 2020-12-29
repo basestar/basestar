@@ -45,7 +45,7 @@ import java.util.stream.Stream;
 @Slf4j
 public class BasestarFactory extends JsonFactory {
 
-    public static final String SIGIL = "$";
+    public static final String SIGIL = "@";
 
     public static final String MERGE = SIGIL + "merge";
 
