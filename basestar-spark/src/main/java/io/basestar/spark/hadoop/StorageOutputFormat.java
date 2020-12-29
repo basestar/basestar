@@ -43,43 +43,43 @@ public class StorageOutputFormat extends OutputFormat<Ref, WriteAction> {
     }
 
     @Override
-    public void checkOutputSpecs(final JobContext context) throws IOException {
+    public void checkOutputSpecs(final JobContext context) {
 
-        final Configuration configuration = context.getConfiguration();
-        final Storage storage = StorageProvider.provider(configuration).storage(configuration);
+        // no action
     }
 
     @Override
-    public OutputCommitter getOutputCommitter(final TaskAttemptContext context) throws IOException {
+    public OutputCommitter getOutputCommitter(final TaskAttemptContext context) {
 
-        final Configuration configuration = context.getConfiguration();
-        final Storage storage = StorageProvider.provider(configuration).storage(configuration);
         return new OutputCommitter() {
             @Override
-            public void setupJob(final JobContext jobContext) throws IOException {
+            public void setupJob(final JobContext jobContext) {
 
+                // no action
             }
 
             @Override
-            public void setupTask(final TaskAttemptContext context) throws IOException {
+            public void setupTask(final TaskAttemptContext context) {
 
-
+                // no action
             }
 
             @Override
-            public boolean needsTaskCommit(final TaskAttemptContext context) throws IOException {
+            public boolean needsTaskCommit(final TaskAttemptContext context) {
 
                 return false;
             }
 
             @Override
-            public void commitTask(final TaskAttemptContext context) throws IOException {
+            public void commitTask(final TaskAttemptContext context) {
 
+                // no action
             }
 
             @Override
-            public void abortTask(final TaskAttemptContext context) throws IOException {
+            public void abortTask(final TaskAttemptContext context) {
 
+                // no action
             }
         };
     }

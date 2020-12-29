@@ -18,8 +18,6 @@ import java.util.List;
 
 public class StorageInputFormat extends InputFormat<Ref, Instance> {
 
-    String PROVIDER = "io.basestar.storage.provider";
-
     @Getter
     @NoArgsConstructor
     @AllArgsConstructor
@@ -44,20 +42,20 @@ public class StorageInputFormat extends InputFormat<Ref, Instance> {
         }
 
         @Override
-        public long getLength() throws IOException, InterruptedException {
+        public long getLength() {
 
             return 1;
         }
 
         @Override
-        public String[] getLocations() throws IOException, InterruptedException {
+        public String[] getLocations() {
 
             return new String[] { split + ":" + splits };
         }
     }
 
     @Override
-    public List<InputSplit> getSplits(final JobContext job) throws IOException, InterruptedException {
+    public List<InputSplit> getSplits(final JobContext job) throws IOException {
 
         final Configuration configuration = job.getConfiguration();
         final StorageProvider provider = StorageProvider.provider(configuration);
@@ -70,42 +68,42 @@ public class StorageInputFormat extends InputFormat<Ref, Instance> {
     }
 
     @Override
-    public RecordReader<Ref, Instance> createRecordReader(final InputSplit inputSplit, final TaskAttemptContext attempt) throws IOException, InterruptedException {
+    public RecordReader<Ref, Instance> createRecordReader(final InputSplit inputSplit, final TaskAttemptContext attempt) throws IOException {
 
         final Configuration configuration = attempt.getConfiguration();
         final Storage storage = StorageProvider.provider(configuration).storage(configuration);
         return new RecordReader<Ref, Instance>() {
             @Override
-            public void initialize(final InputSplit inputSplit, final TaskAttemptContext taskAttemptContext) throws IOException, InterruptedException {
+            public void initialize(final InputSplit inputSplit, final TaskAttemptContext taskAttemptContext) {
 
             }
 
             @Override
-            public boolean nextKeyValue() throws IOException, InterruptedException {
+            public boolean nextKeyValue() {
 
                 return false;
             }
 
             @Override
-            public Ref getCurrentKey() throws IOException, InterruptedException {
+            public Ref getCurrentKey() {
 
                 return null;
             }
 
             @Override
-            public Instance getCurrentValue() throws IOException, InterruptedException {
+            public Instance getCurrentValue() {
 
                 return null;
             }
 
             @Override
-            public float getProgress() throws IOException, InterruptedException {
+            public float getProgress() {
 
                 return 0;
             }
 
             @Override
-            public void close() throws IOException {
+            public void close() {
 
             }
         };
