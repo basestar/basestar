@@ -25,7 +25,7 @@ class TestValueContext {
         assertEquals(false, standard.createBoolean(UseBoolean.DEFAULT, "", ImmutableSet.of()));
 
         assertThrows(TypeConversionException.class, () -> {
-            assertNull(standard.createBoolean(UseBoolean.DEFAULT, Secret.encrypted(new byte[0]), ImmutableSet.of()));
+            standard.createBoolean(UseBoolean.DEFAULT, Secret.encrypted(new byte[0]), ImmutableSet.of());
         });
 
         final ValueContext suppressing = ValueContext.suppressing();
@@ -41,7 +41,7 @@ class TestValueContext {
         assertEquals(5L, standard.createInteger(UseInteger.DEFAULT, 5.0, ImmutableSet.of()));
 
         assertThrows(TypeConversionException.class, () -> {
-            assertNull(standard.createInteger(UseInteger.DEFAULT, Secret.encrypted(new byte[0]), ImmutableSet.of()));
+            standard.createInteger(UseInteger.DEFAULT, Secret.encrypted(new byte[0]), ImmutableSet.of());
         });
 
         final ValueContext suppressing = ValueContext.suppressing();
@@ -57,7 +57,7 @@ class TestValueContext {
         assertEquals(5.0, standard.createNumber(UseNumber.DEFAULT, 5.0, ImmutableSet.of()));
 
         assertThrows(TypeConversionException.class, () -> {
-            assertNull(standard.createNumber(UseNumber.DEFAULT, Secret.encrypted(new byte[0]), ImmutableSet.of()));
+            standard.createNumber(UseNumber.DEFAULT, Secret.encrypted(new byte[0]), ImmutableSet.of());
         });
 
         final ValueContext suppressing = ValueContext.suppressing();
@@ -73,7 +73,7 @@ class TestValueContext {
         assertEquals("3", standard.createString(UseString.DEFAULT, 3L, ImmutableSet.of()));
 
         assertThrows(TypeConversionException.class, () -> {
-            assertNull(standard.createString(UseString.DEFAULT, Secret.encrypted(new byte[0]), ImmutableSet.of()));
+            standard.createString(UseString.DEFAULT, Secret.encrypted(new byte[0]), ImmutableSet.of());
         });
 
         final ValueContext suppressing = ValueContext.suppressing();
@@ -89,7 +89,7 @@ class TestValueContext {
         assertEquals(ImmutableList.of("test"), standard.createArray(type, ImmutableList.of("test"), ImmutableSet.of()));
 
         assertThrows(UnexpectedTypeException.class, () -> {
-            assertNull(standard.createArray(type, Secret.encrypted(new byte[0]), ImmutableSet.of()));
+            standard.createArray(type, Secret.encrypted(new byte[0]), ImmutableSet.of());
         });
 
         final ValueContext suppressing = ValueContext.suppressing();
@@ -105,7 +105,7 @@ class TestValueContext {
         assertEquals(ImmutableSet.of("test"), standard.createSet(type, ImmutableSet.of("test"), ImmutableSet.of()));
 
         assertThrows(UnexpectedTypeException.class, () -> {
-            assertNull(standard.createSet(type, Secret.encrypted(new byte[0]), ImmutableSet.of()));
+            standard.createSet(type, Secret.encrypted(new byte[0]), ImmutableSet.of());
         });
 
         final ValueContext suppressing = ValueContext.suppressing();
@@ -121,7 +121,7 @@ class TestValueContext {
         assertEquals(ImmutableMap.of("key", "test"), standard.createMap(type, ImmutableMap.of("key", "test"), ImmutableSet.of()));
 
         assertThrows(UnexpectedTypeException.class, () -> {
-            assertNull(standard.createMap(type, Secret.encrypted(new byte[0]), ImmutableSet.of()));
+            standard.createMap(type, Secret.encrypted(new byte[0]), ImmutableSet.of());
         });
 
         final ValueContext suppressing = ValueContext.suppressing();
@@ -135,7 +135,7 @@ class TestValueContext {
         assertEquals(ISO8601.parseDate("2020-01-01"), standard.createDate(UseDate.DEFAULT, "2020-01-01", ImmutableSet.of()));
 
         assertThrows(TypeConversionException.class, () -> {
-            assertNull(standard.createDate(UseDate.DEFAULT, Secret.encrypted(new byte[0]), ImmutableSet.of()));
+            standard.createDate(UseDate.DEFAULT, Secret.encrypted(new byte[0]), ImmutableSet.of());
         });
 
         final ValueContext suppressing = ValueContext.suppressing();
@@ -149,7 +149,7 @@ class TestValueContext {
         assertEquals(ISO8601.parseDateTime("2020-01-01T01:02:03.456Z"), standard.createDateTime(UseDateTime.DEFAULT, "2020-01-01T01:02:03.456Z", ImmutableSet.of()));
 
         assertThrows(TypeConversionException.class, () -> {
-            assertNull(standard.createDateTime(UseDateTime.DEFAULT, Secret.encrypted(new byte[0]), ImmutableSet.of()));
+            standard.createDateTime(UseDateTime.DEFAULT, Secret.encrypted(new byte[0]), ImmutableSet.of());
         });
 
         final ValueContext suppressing = ValueContext.suppressing();

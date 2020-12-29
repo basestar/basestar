@@ -67,8 +67,6 @@ class TestTypeContext {
         final PropertyContext value = derived.properties().stream().filter(HasName.match("value")).findFirst()
                 .orElseThrow(IllegalStateException::new);
 
-        assertEquals(Integer.class, value.erasedType());
-
         final PropertyContext prop = derived.properties().stream().filter(HasAnnotations.match(Nonnull.class)).findFirst()
                 .orElseThrow(IllegalStateException::new);
 
