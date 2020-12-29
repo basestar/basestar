@@ -1,4 +1,4 @@
-package io.basestar.storage.view;
+package io.basestar.storage.query;
 
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
@@ -71,7 +71,7 @@ public interface QueryPlanner<T extends QueryStage> {
             final LinkableSchema fromSchema = from.getSchema();
             T stage = stage(visitor, fromSchema, schema.getWhere(), schema.getSort(), from.getExpand());
             if (schema.isAggregating() || schema.isGrouping()) {
-                final Map<String, Use<?>> outputSchema = schema.getSchema();
+                final Map<String, Use<?>> outputSchema = new HashMap<>();
                 final List<String> group = schema.getGroup();
 
                 // Extract aggregates and create output map stage
@@ -88,6 +88,7 @@ public interface QueryPlanner<T extends QueryStage> {
                     } else {
                         throw new IllegalStateException("Property " + name + " must be group or aggregate");
                     }
+                    outputSchema.put(name, entry.getValue().getType());
                 }
 
                 final Map<String, Expression> input = new HashMap<>();

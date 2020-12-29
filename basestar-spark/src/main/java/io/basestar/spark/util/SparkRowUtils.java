@@ -15,7 +15,6 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
-import java.util.stream.Collectors;
 
 public class SparkRowUtils {
 
@@ -283,47 +282,5 @@ public class SparkRowUtils {
     public static StructField field(final String name, final DataType type) {
 
         return StructField.apply(name, type, true, Metadata.empty());
-    }
-
-    public static Row toSpark(final StructType structType, final Map<String, Object> data) {
-
-        if(data == null) {
-            return null;
-        } else {
-            final StructField[] fields = structType.fields();
-            final Object[] values = new Object[fields.length];
-            for(int i = 0; i != fields.length; ++i) {
-                values[i] = toSpark(fields[i].dataType(), data.get(fields[i].name()));
-            }
-            return new GenericRowWithSchema(values, structType);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Object toSpark(final DataType dataType, final Object value) {
-
-        if(value == null) {
-            return null;
-        } else {
-            if(dataType instanceof ArrayType) {
-                final ArrayType arrType = (ArrayType)dataType;
-                return ScalaUtils.asScalaSeq(((Collection<?>)value).stream()
-                        .map(v -> toSpark(arrType.elementType(), v)).iterator());
-            } else if(dataType instanceof MapType) {
-                final MapType mapType = (MapType)dataType;
-                return ScalaUtils.asScalaMap(((Map<?, ?>)value).entrySet().stream().collect(Collectors.toMap(
-                        e -> toSpark(mapType.keyType(), e.getKey()),
-                        e -> toSpark(mapType.valueType(), e.getValue())
-                )));
-            } else if(dataType instanceof StructType) {
-                return toSpark((StructType)dataType, (Map<String, Object>)value);
-            } else if(dataType instanceof DateType) {
-                return ISO8601.toSqlDate(ISO8601.toDate(value));
-            } else if(dataType instanceof TimestampType) {
-                return ISO8601.toSqlTimestamp(ISO8601.toDateTime(value));
-            } else {
-                return value;
-            }
-        }
     }
 }

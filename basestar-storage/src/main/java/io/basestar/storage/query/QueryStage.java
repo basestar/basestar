@@ -1,4 +1,4 @@
-package io.basestar.storage.view;
+package io.basestar.storage.query;
 
 import io.basestar.expression.Expression;
 import io.basestar.schema.Layout;

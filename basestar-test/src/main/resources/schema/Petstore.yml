@@ -159,4 +159,4 @@ PetStats:
     count: count()
   from:
     schema: Pet
-  where: status == available
+  where: status == 'available'
