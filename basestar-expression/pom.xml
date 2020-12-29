@@ -11,6 +11,8 @@
 
     <properties>
         <antlr.version>4.8</antlr.version>
+        <freemarker.version>2.3.29</freemarker.version>
+        <freemarker-maven-plugin.version>1.0.4</freemarker-maven-plugin.version>
     </properties>
 
     <dependencyManagement>
@@ -63,6 +65,23 @@
                         <id>antlr</id>
                         <goals>
                             <goal>antlr4</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.fugerit.java</groupId>
+                <artifactId>freemarker-maven-plugin</artifactId>
+                <version>${freemarker-maven-plugin.version}</version>
+                <configuration>
+                    <freeMarkerVersion>${freemarker.version}</freeMarkerVersion>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>freemarker</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>generate</goal>
                         </goals>
                     </execution>
                 </executions>

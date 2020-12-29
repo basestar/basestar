@@ -9,9 +9,9 @@ package io.basestar.expression.type.match;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,16 +30,13 @@ public interface UnaryNumberMatch<T> {
         throw new BadOperandsException(this + " cannot be applied to " + value.getClass());
     }
 
-    default T apply(final Long value) {
+<#list types as t>
+    default T apply(final ${t} value) {
 
         return defaultApply(value);
     }
 
-    default T apply(final Double value) {
-
-        return defaultApply(value);
-    }
-
+</#list>
     default T apply(final Number value) {
 
         if(Values.isInteger(value)) {

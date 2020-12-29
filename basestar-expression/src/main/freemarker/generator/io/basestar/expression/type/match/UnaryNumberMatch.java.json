@@ -1,0 +1,9 @@
+{
+  "templateName": "UnaryNumberMatch.java.template",
+  "dataModel": {
+    "types": [
+      "Long",
+      "Double"
+    ]
+  }
+}

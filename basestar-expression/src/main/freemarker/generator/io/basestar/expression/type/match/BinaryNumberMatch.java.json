@@ -1,0 +1,9 @@
+{
+  "templateName": "BinaryNumberMatch.java.template",
+  "dataModel": {
+    "types": [
+      "Long",
+      "Double"
+    ]
+  }
+}
