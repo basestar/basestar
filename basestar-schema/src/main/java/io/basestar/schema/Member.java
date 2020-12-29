@@ -47,9 +47,7 @@ public interface Member extends Named, Described, Serializable, Extendable {
 
     boolean supportsTrivialJoin(Set<Name> expand);
 
-    boolean canModify(Member member, Widening widening);
-
-    boolean canCreate();
+    boolean requiresMigration(Member member, Widening widening);
 
     interface Descriptor extends Described, Extendable {
 

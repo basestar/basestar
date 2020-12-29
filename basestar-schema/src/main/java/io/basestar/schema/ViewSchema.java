@@ -497,7 +497,7 @@ public class ViewSchema implements LinkableSchema {
 
         if(!out.containsKey(qualifiedName)) {
             out.put(qualifiedName, this);
-            from.getSchema().collectDependencies(expand, out);
+            from.getSchema().collectDependencies(from.getExpand(), out);
             declaredProperties.forEach((k, v) -> v.collectDependencies(expand, out));
             declaredLinks.forEach((k, v) -> v.collectDependencies(expand, out));
         }

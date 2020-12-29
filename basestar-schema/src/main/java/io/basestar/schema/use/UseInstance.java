@@ -90,7 +90,6 @@ public interface UseInstance extends UseNamed<Instance> {
     default void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
         final Schema<?> schema = getSchema();
-        // FIXME:?
         if(expand == null || expand.isEmpty()) {
             out.put(schema.getQualifiedName(), schema);
         } else {

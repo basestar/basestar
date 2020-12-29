@@ -276,4 +276,20 @@ public class SparkCatalogUtils {
         return URI.create(location.toString() + "/" + spec.stream().map(v -> toPartitionPathTerm(v.getFirst(), v.getSecond()))
                 .collect(Collectors.joining("/")));
     }
+
+    public static String escapeName(final String ... names) {
+
+        return Arrays.stream(names).map(SparkCatalogUtils::escapeName)
+                .collect(Collectors.joining("."));
+    }
+
+    private static String escapeName(final String name) {
+
+        // Escapes common characters in names like hyphen, dot, etc,
+        // not sure how to escape backticks but not likely to appear anyway
+        if(name.contains("`")) {
+            throw new IllegalStateException("Invalid name");
+        }
+        return "`" + name + "`";
+    }
 }

@@ -400,40 +400,36 @@ public class ObjectSchema implements ReferableSchema {
         return qualifiedNameHashCode();
     }
 
-    public boolean canModify(final Schema<?> schema, final Widening widening) {
+    public boolean requiresMigration(final Schema<?> schema, final Widening widening) {
 
         if(!(schema instanceof ObjectSchema)) {
-            return false;
+            return true;
         }
         final ObjectSchema target = (ObjectSchema)schema;
         if(!Objects.equals(getId(), target.getId())) {
-            return false;
+            return true;
         }
         if(!Sets.difference(target.getExpand(), getExpand()).isEmpty()) {
-            return false;
+            return true;
         }
         for(final Map.Entry<String, ? extends Member> entry : target.getMembers().entrySet()) {
             final Member targetMember = entry.getValue();
             final Member sourceMember = getProperty(entry.getKey(), true);
-            if(sourceMember != null) {
-                if(!sourceMember.canModify(targetMember, widening)) {
-                    return false;
-                }
-            } else if(!targetMember.canCreate()) {
-                return false;
+            if(sourceMember.requiresMigration(targetMember, widening)) {
+                return true;
             }
         }
         for(final Map.Entry<String, Index> entry : target.getIndexes().entrySet()) {
             final Index targetIndex = entry.getValue();
             final Index sourceIndex = getIndex(entry.getKey(), true);
             if(sourceIndex != null) {
-                if(!sourceIndex.canModify(targetIndex)) {
-                    return false;
+                if(sourceIndex.requiresMigration(targetIndex)) {
+                    return true;
                 }
             } else {
-                return false;
+                return true;
             }
         }
-        return true;
+        return false;
     }
 }

@@ -268,25 +268,16 @@ public class Property implements Member {
     }
 
     @Override
-    public boolean canModify(final Member member, final Widening widening) {
+    public boolean requiresMigration(final Member member, final Widening widening) {
 
         if(!(member instanceof Property)) {
-            return canCreate();
+            return expression == null;
         }
         final Property target = (Property)member;
         if(!Objects.equals(expression, target.getExpression())) {
-            return false;
+            return true;
         }
-        if(!widening.canWiden(type, target.typeOf())) {
-            return false;
-        }
-        return true;
-    }
-
-    @Override
-    public boolean canCreate() {
-
-        return expression == null;
+        return !widening.canWiden(type, target.typeOf());
     }
 
     @Override

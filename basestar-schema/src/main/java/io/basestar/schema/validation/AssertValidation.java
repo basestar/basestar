@@ -25,6 +25,9 @@ public class AssertValidation implements Validation {
 
     public static final String TYPE = "assert";
 
+    private static final Expression ASSERT_TRUE = new NameConstant(Reserved.VALUE_NAME);
+    private static final Expression ASSERT_FALSE = new Not(ASSERT_TRUE);
+
     @Override
     public String type() {
 
@@ -59,12 +62,12 @@ public class AssertValidation implements Validation {
 
     public static Validator fromJsr380(final AssertTrue annotation) {
 
-        return new Validator(new NameConstant(Reserved.VALUE_NAME));
+        return new Validator(ASSERT_TRUE);
     }
 
     public static Validator fromJsr380(final AssertFalse annotation) {
 
-        return new Validator(new Not(new NameConstant(Reserved.VALUE_NAME)));
+        return new Validator(ASSERT_FALSE);
     }
 
     @Data
@@ -99,15 +102,23 @@ public class AssertValidation implements Validation {
         @Override
         public boolean validate(final Use<?> type, final Context context, final Object value) {
 
-            return !expression.evaluatePredicate(context);
+            return !expression.evaluatePredicate(context.with("value", value));
         }
 
         @Override
-        public Assert toJsr380(final Use<?> type, final Map<String, Object> values) {
+        public Annotation toJsr380(final Use<?> type, final Map<String, Object> values) {
 
-            return new AnnotationContext<>(Assert.class, ImmutableMap.<String, Object>builder().putAll(values)
-                    .put("value", expression.toString())
-                    .build()).annotation();
+            if(expression.equals(ASSERT_TRUE)) {
+                return new AnnotationContext<>(AssertTrue.class, ImmutableMap.<String, Object>builder().putAll(values)
+                        .build()).annotation();
+            } else if(expression.equals(ASSERT_FALSE)) {
+                return new AnnotationContext<>(AssertFalse.class, ImmutableMap.<String, Object>builder().putAll(values)
+                        .build()).annotation();
+            } else {
+                return new AnnotationContext<>(Assert.class, ImmutableMap.<String, Object>builder().putAll(values)
+                        .put("value", expression.toString())
+                        .build()).annotation();
+            }
         }
 
         @Override

@@ -7,16 +7,6 @@ import java.util.Map;
 
 public class SchemaTestUtils {
 
-//    Namespace coverageNamespace() {
-//
-//
-//    }
-//
-//    public static Map<String, Property.Descriptor> containerProperties() {
-//
-//
-//    }
-
     public static Map<String, Property.Descriptor> scalarProperties() {
 
         return ImmutableMap.<String, Property.Descriptor>builder()

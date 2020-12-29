@@ -98,30 +98,27 @@ public class Index implements Named, Described, Serializable, Extendable {
 
     private final int max;
 
-    public boolean canModify(final Index target) {
+    public boolean requiresMigration(final Index target) {
 
         if(unique != target.isUnique()) {
-            return false;
+            return true;
         }
         if(sparse != target.isSparse()) {
-            return false;
+            return true;
         }
         if(!Objects.equals(partition, target.getPartition())) {
-            return false;
+            return true;
         }
         if(!Objects.equals(sort, target.getSort())) {
-            return false;
+            return true;
         }
         if(!Objects.equals(consistency, target.getConsistency())) {
-            return false;
+            return true;
         }
         if(!Objects.equals(projection, target.getProjection())) {
-            return false;
+            return true;
         }
-        if(!Objects.equals(over, target.getOver())) {
-            return false;
-        }
-        return true;
+        return !Objects.equals(over, target.getOver());
     }
 
     @JsonDeserialize(as = Builder.class)

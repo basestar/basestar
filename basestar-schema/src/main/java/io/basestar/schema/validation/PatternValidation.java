@@ -105,15 +105,19 @@ public class PatternValidation implements Validation {
         @Override
         public boolean validate(final Use<?> type, final Context context, final Object value) {
 
-            return true;
+            if(value instanceof String) {
+                return regex.matcher((String)value).matches();
+            } else {
+                return false;
+            }
         }
 
         @Override
         public javax.validation.constraints.Pattern toJsr380(final Use<?> type, final Map<String, Object> values) {
 
             return new AnnotationContext<>(javax.validation.constraints.Pattern.class, ImmutableMap.<String, Object>builder().putAll(values)
-                    .put("regexp", regex.toString())
-                    .put("flags", flags(regex.flags()).toArray(new javax.validation.constraints.Pattern.Flag[0]))
+                    .put("regexp", getRegex())
+                    .put("flags", getFlags().toArray(new javax.validation.constraints.Pattern.Flag[0]))
                     .build()).annotation();
         }
 

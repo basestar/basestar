@@ -1,0 +1,5 @@
+properties:
+  field1: field1
+  field2: field2
+
+operation: "deleted ? 'delete' : 'upsert'"

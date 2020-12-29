@@ -190,15 +190,9 @@ public class Transient implements Member {
     }
 
     @Override
-    public boolean canModify(final Member member, final Widening widening) {
+    public boolean requiresMigration(final Member member, final Widening widening) {
 
-        return true;
-    }
-
-    @Override
-    public boolean canCreate() {
-
-        return true;
+        return false;
     }
 
     @Override

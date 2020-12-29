@@ -1,0 +1,27 @@
+$version: LATEST
+
+Source:
+  properties:
+    field1:
+      type: string
+    field2:
+      type: number
+    deleted:
+      type: boolean
+
+Target1:
+  properties:
+    field1:
+      type: string
+    field2:
+      type: integer
+
+Target2:
+  properties:
+    field1:
+      type: string
+    field2:
+      type: number
+
+
+
