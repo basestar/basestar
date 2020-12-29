@@ -46,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @Slf4j
+@SuppressWarnings(Warnings.JUNIT_VISIBILITY)
 public abstract class TestStorage {
 
     private static final int RECORD_COUNT = 100;
@@ -998,7 +999,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    void testPolymorphicCreate() {
+    protected void testPolymorphicCreate() {
 
         assumeTrue(supportsPolymorphism());
 
@@ -1033,7 +1034,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    void testPolymorphicDelete() {
+    protected void testPolymorphicDelete() {
 
         assumeTrue(supportsPolymorphism());
         assumeTrue(supportsDelete());

@@ -18,6 +18,8 @@ public final class Warnings {
 
     public static final String REDUNDANT_CAST = "java:S1905";
 
+    public static final String JUNIT_VISIBILITY = "java:S5786";
+
     private Warnings() {
 
     }
