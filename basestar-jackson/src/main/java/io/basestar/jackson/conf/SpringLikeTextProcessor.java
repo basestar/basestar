@@ -28,7 +28,21 @@ import java.util.regex.Pattern;
 
 public class SpringLikeTextProcessor implements Function<String, String> {
 
-    private static final Pattern PATTERN = Pattern.compile("\\$\\{([^:}]+):([^}]+)?}");
+    public static final SpringLikeTextProcessor DEFAULT = new SpringLikeTextProcessor();
+
+    private static final Pattern PATTERN = Pattern.compile("\\$\\{([^:}]+)(?::([^}]*))?}");
+
+    private final Function<String, String> env;
+
+    public SpringLikeTextProcessor() {
+
+        this(System::getenv);
+    }
+
+    public SpringLikeTextProcessor(final Function<String, String> env) {
+
+        this.env = env;
+    }
 
     @Override
     public String apply(final String str) {
@@ -47,7 +61,7 @@ public class SpringLikeTextProcessor implements Function<String, String> {
 
     protected String lookup(final String key, final String defaultValue) {
 
-        final String result = System.getenv(key);
+        final String result = env.apply(key);
         if(result == null) {
             return defaultValue;
         } else {

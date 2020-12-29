@@ -72,6 +72,11 @@
             <groupId>de.undercouch</groupId>
             <artifactId>bson4jackson</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.basestar</groupId>
+            <artifactId>basestar-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
 </project>

@@ -8,11 +8,11 @@ import io.basestar.util.ISO8601;
 import java.io.IOException;
 import java.time.LocalDate;
 
-public class DateDeserializer extends JsonDeserializer<LocalDate> {
+public class LocalDateDeserializer extends JsonDeserializer<LocalDate> {
 
     @Override
     public LocalDate deserialize(final JsonParser jsonParser, final DeserializationContext deserializationContext) throws IOException {
 
-        return ISO8601.toDate(jsonParser.readValuesAs(Object.class));
+        return ISO8601.toDate(jsonParser.readValueAs(Object.class));
     }
 }

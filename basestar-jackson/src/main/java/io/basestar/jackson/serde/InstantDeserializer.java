@@ -8,11 +8,11 @@ import io.basestar.util.ISO8601;
 import java.io.IOException;
 import java.time.Instant;
 
-public class DateTimeDeserializer extends JsonDeserializer<Instant> {
+public class InstantDeserializer extends JsonDeserializer<Instant> {
     
     @Override
     public Instant deserialize(final JsonParser jsonParser, final DeserializationContext deserializationContext) throws IOException {
         
-        return ISO8601.toDateTime(jsonParser.readValuesAs(Object.class));
+        return ISO8601.toDateTime(jsonParser.readValueAs(Object.class));
     }
 }

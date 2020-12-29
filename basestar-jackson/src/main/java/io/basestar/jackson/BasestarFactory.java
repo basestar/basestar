@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.node.TreeTraversingParser;
 import com.google.common.collect.ImmutableList;
 import io.basestar.util.Streams;
 import lombok.experimental.Delegate;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.*;
 import java.net.URI;
@@ -41,11 +42,12 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@Slf4j
 public class BasestarFactory extends JsonFactory {
 
-    public static final String INCLUDE = "@include";
+    public static final String SIGIL = "$";
 
-    public static final String MERGE = "@merge";
+    public static final String MERGE = SIGIL + "merge";
 
     @Delegate(excludes = Excludes.class)
     private final JsonFactory delegate;
@@ -90,7 +92,7 @@ public class BasestarFactory extends JsonFactory {
         final Iterator<Map.Entry<String, JsonNode>> iter = node.fields();
         while(iter.hasNext()) {
             final Map.Entry<String, JsonNode> entry = iter.next();
-            if(!entry.getKey().startsWith("@")) {
+            if(!entry.getKey().startsWith(SIGIL)) {
                 result.set(entry.getKey(), process(entry.getValue(), uri));
             }
         }
@@ -105,16 +107,16 @@ public class BasestarFactory extends JsonFactory {
 
             for (final JsonNode v : merges) {
                 if (v.isTextual()) {
-                    for(final URI u : allUris(uri.resolve(merge.asText()))) {
+                    for(final URI u : allUris(uri.resolve(v.asText()))) {
                         final JsonNode mergeNode = createParser(u.toURL()).readValueAsTree();
                         if (mergeNode.isObject()) {
                             result = merge(result, (ObjectNode)mergeNode);
                         } else {
-                            throw new IllegalStateException("@merge result must be an object");
+                            throw new IllegalStateException(MERGE + " result must be an object");
                         }
                     }
                 } else {
-                    throw new IllegalStateException("@merge entries must be strings");
+                    throw new IllegalStateException(MERGE + " entries must be strings");
                 }
             }
         }
@@ -124,6 +126,7 @@ public class BasestarFactory extends JsonFactory {
 
     private Set<URI> allUris(final URI uri) throws IOException {
 
+        log.debug("Merging {}", uri);
         if(uri.getScheme().equals("file")) {
             try (final Stream<Path> paths = Files.walk(Paths.get(uri))) {
 
