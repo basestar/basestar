@@ -60,7 +60,8 @@ public class Values {
                 return number.floatValue() != 0.0f;
             }
         } else if(value instanceof String) {
-            return ((String)value).length() > 0;
+            final String str = (String)value;
+            return !(str.isEmpty() || str.equalsIgnoreCase("false"));
         } else if(value instanceof Collection) {
             return ((Collection<?>)value).size() > 0;
         } else if(value instanceof Map) {
@@ -79,7 +80,8 @@ public class Values {
         } else if(value instanceof Number) {
             return ((Number)value).intValue() != 0;
         } else if(value instanceof String) {
-            return !(((String) value).isEmpty() || value.equals("false"));
+            final String str = (String)value;
+            return !(str.isEmpty() || str.equalsIgnoreCase("false"));
         } else {
             throw new TypeConversionException(Boolean.class, value);
         }
@@ -191,22 +193,11 @@ public class Values {
     public static boolean equals(final Object a, final Object b) {
 
         return EQUALS.apply(a, b);
-//        if(Objects.equals(a, b)) {
-//            return true;
-//        } else {
-//            final Pair<Object> pair = promote(a, b);
-//            return pair.getFirst().equals(pair.getSecond());
-//        }
     }
 
     public static Pair<Object, Object> promote(final Object a, final Object b) {
 
         return PROMOTE.apply(a, b);
-    }
-
-    public static Pair<Object, Object> coerce(final Object a, final Object b) {
-
-        return COERCER.apply(a, b);
     }
 
     public static String toExpressionString(final Object value) {
@@ -345,27 +336,6 @@ public class Values {
         }
     };
 
-    private static final BinaryMatch<Pair<Object, Object>> COERCER = new BinaryMatch.Coercing<Pair<Object, Object>>() {
-
-        @Override
-        public String toString() {
-
-            return "coerce";
-        }
-
-        @Override
-        public <U> Pair<Object, Object> defaultApplySame(final U a, final U b) {
-
-            return Pair.of(a, b);
-        }
-
-        @Override
-        public Pair<Object, Object> apply(final Number a, final Number b) {
-
-            return NUMBER_PROMOTE.apply(a, b);
-        }
-    };
-
     private static final UnaryMatch<String> TO_EXPRESSION_STRING = new UnaryMatch<String>() {
 
         @Override
@@ -411,7 +381,7 @@ public class Values {
             return (T)(Boolean)false;
         } else if(String.class.isAssignableFrom(of)) {
             return (T)"";
-        } else if(Number.class.isAssignableFrom(of)) {
+        } else if(Numbers.isNumberType(of)) {
             return Numbers.zero(of);
         } else if(List.class.isAssignableFrom(of)) {
             return (T)Collections.emptyList();
@@ -422,11 +392,6 @@ public class Values {
         } else {
             throw new UnsupportedOperationException();
         }
-    }
-
-    public static Type commonType(final Type ... types) {
-
-        return Object.class;
     }
 
     public static byte[] binaryKey(final List<?> keys) {

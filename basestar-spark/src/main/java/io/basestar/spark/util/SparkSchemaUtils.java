@@ -100,62 +100,6 @@ public class SparkSchemaUtils {
         return DataTypes.createStructType(fields).asNullable();
     }
 
-    public static Set<Name> names(final InstanceSchema schema, final StructType structType) {
-
-        // FIXME: remove
-        final SortedMap<String, Use<?>> tmp = new TreeMap<>();
-        schema.metadataSchema().forEach(tmp::put);
-        schema.getMembers().forEach((name, member) -> tmp.put(name, member.typeOf()));
-
-        final Set<Name> names = new HashSet<>();
-        tmp.forEach((name, type) -> SparkRowUtils.findField(structType, name)
-                .ifPresent(field -> names(type, field.dataType())
-                        .forEach(rest -> names.add(Name.of(name).with(rest)))));
-        return names;
-    }
-
-    public static Set<Name> names(final Use<?> type, final DataType dataType) {
-
-        return type.visit(new Use.Visitor.Defaulting<Set<Name>>() {
-
-            @Override
-            public <T> Set<Name> visitDefault(final Use<T> type) {
-
-                return ImmutableSet.of(Name.of());
-            }
-
-            @Override
-            public <V, T extends Collection<V>> Set<Name> visitCollection(final UseCollection<V, T> type) {
-
-                if(dataType instanceof ArrayType) {
-                    return names(type.getType(), ((ArrayType) dataType).elementType());
-                } else {
-                    return ImmutableSet.of();
-                }
-            }
-
-            @Override
-            public <T> Set<Name> visitMap(final UseMap<T> type) {
-
-                if(dataType instanceof MapType) {
-                    return names(type.getType(), ((MapType) dataType).valueType());
-                } else {
-                    return ImmutableSet.of();
-                }
-            }
-
-            @Override
-            public Set<Name> visitInstance(final UseInstance type) {
-
-                if(dataType instanceof StructType) {
-                    return names(type.getSchema(), (StructType)dataType);
-                } else {
-                    return ImmutableSet.of();
-                }
-            }
-        });
-    }
-
     public static StructType refType(final ReferableSchema schema, final Set<Name> expand) {
 
         if(expand == null) {

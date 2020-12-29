@@ -5,8 +5,6 @@ import io.basestar.util.ISO8601;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Encoder;
-import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.*;
@@ -204,25 +202,6 @@ public class SparkRowUtils {
         return new GenericRowWithSchema(outputValues.toArray(), outputType);
     }
 
-    // Presto in default config wants partition columns after all other columns
-    public static StructType orderForPresto(final StructType structType, final List<String> partitionColumns) {
-
-        final SortedMap<String, StructField> data = new TreeMap<>();
-        final SortedMap<Integer, StructField> partition = new TreeMap<>();
-        Arrays.stream(structType.fields()).forEach(field -> {
-            final int indexOf = partitionColumns.indexOf(field.name());
-            if(indexOf < 0) {
-                data.put(field.name(), field);
-            } else {
-                partition.put(0, field);
-            }
-        });
-        final List<StructField> fields = new ArrayList<>();
-        fields.addAll(data.values());
-        fields.addAll(partition.values());
-        return DataTypes.createStructType(fields);
-    }
-
     public static Column order(final Column column, final Sort.Order order, final Sort.Nulls nulls) {
 
         if(order == Sort.Order.ASC) {
@@ -304,25 +283,6 @@ public class SparkRowUtils {
     public static StructField field(final String name, final DataType type) {
 
         return StructField.apply(name, type, true, Metadata.empty());
-    }
-
-    public static Encoder<?> keyEncoder(final DataType type) {
-
-        if(type instanceof StringType) {
-            return Encoders.STRING();
-        } else if(type instanceof ShortType) {
-            return Encoders.SHORT();
-        } else if(type instanceof IntegerType) {
-            return Encoders.INT();
-        } else if(type instanceof LongType) {
-            return Encoders.LONG();
-        } else if(type instanceof ByteType) {
-            return Encoders.BYTE();
-        } else if(type instanceof BinaryType) {
-            return Encoders.BINARY();
-        } else {
-            throw new IllegalStateException("Cannot create key encoder for " + type);
-        }
     }
 
     public static Row toSpark(final StructType structType, final Map<String, Object> data) {
