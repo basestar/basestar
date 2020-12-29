@@ -67,7 +67,7 @@ public abstract class AbstractPath<S extends AbstractPath<S>> implements Iterabl
         return parts.isEmpty();
     }
 
-    public String get(final int i) {
+    public String at(final int i) {
 
         return parts.get(i);
     }
@@ -97,11 +97,6 @@ public abstract class AbstractPath<S extends AbstractPath<S>> implements Iterabl
         } else {
             return create(parts.subList(size, parts.size()));
         }
-    }
-
-    public S withFirst() {
-
-        return parts.isEmpty() ? self() : create(parts.subList(0, 1));
     }
 
     public String last() {
@@ -279,20 +274,6 @@ public abstract class AbstractPath<S extends AbstractPath<S>> implements Iterabl
         return (S)this;
     }
 
-    public static <S extends AbstractPath<S>> Set<S> children(final Collection<S> paths, final String parent) {
-
-        final Set<S> results = new HashSet<>();
-        for(final S path : paths) {
-            if(!path.isEmpty() && path.first().equals(parent)) {
-                final S tail = path.withoutFirst();
-                if(!tail.isEmpty()) {
-                    results.add(tail);
-                }
-            }
-        }
-        return results;
-    }
-
     public static <S extends AbstractPath<S>> Set<S> children(final Collection<S> paths, final S parent) {
 
         final Set<S> results = new HashSet<>();
@@ -330,55 +311,6 @@ public abstract class AbstractPath<S extends AbstractPath<S>> implements Iterabl
     public S transform(final UnaryOperator<String> fn) {
 
         return create(parts.stream().map(fn).collect(Collectors.toList()));
-    }
-
-    public S relative(final S other) {
-
-        final int thisSize = size();
-        final int otherSize = other.size();
-        int i = 0;
-        while(i < thisSize && i < otherSize) {
-            final String part = get(i);
-            if(part.equals(other.get(i))) {
-                ++i;
-            } else {
-                break;
-            }
-        }
-        final List<String> parts = new ArrayList<>();
-        for(int j = i; j != thisSize; ++j) {
-            parts.add("..");
-        }
-        for(int j = i; j != otherSize; ++j) {
-            parts.add(other.get(j));
-        }
-        return create(parts);
-    }
-
-    public S canonical() {
-
-        final LinkedList<String> parts = new LinkedList<>();
-        for(final String part : this.parts) {
-            if(part.equals(UP)) {
-                if(parts.isEmpty()) {
-                    parts.add(UP);
-                } else {
-                    parts.pop();
-                }
-            } else if(!part.equals(S)) {
-                parts.add(part);
-            }
-        }
-        return create(parts);
-    }
-
-    public S up(final int count) {
-
-        final List<String> parts = Lists.newArrayList(this.parts);
-        for(int i = 0; i != count; ++i) {
-            parts.add(UP);
-        }
-        return create(parts);
     }
 
     public S toLowerCase() {

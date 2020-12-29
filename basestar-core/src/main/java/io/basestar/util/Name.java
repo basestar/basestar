@@ -155,7 +155,7 @@ public class Name extends AbstractPath<Name> implements Comparable<Name> {
 
     public boolean equalsSingle(final String path) {
 
-        return size() == 1 && path.equals(get(0));
+        return size() == 1 && path.equals(at(0));
     }
 
     protected static void validateParts(final String... parts) {
@@ -175,35 +175,9 @@ public class Name extends AbstractPath<Name> implements Comparable<Name> {
         parts.forEach(Name::validatePart);
     }
 
-    private static String similarityFold(final String str) {
-
-        return str.toLowerCase().replaceAll("[$\\-]", "_");
-    }
-
-    public boolean isSimilar(final Name other) {
-
-        final int size = size();
-        if (size == other.size()) {
-            for (int i = 0; i != size; ++i) {
-                final String a = similarityFold(get(i));
-                final String b = similarityFold(other.get(i));
-                if (!a.equals(b)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        return false;
-    }
-
     public static <S extends AbstractPath<S>> Map<String, Set<S>> branch(@Nullable final Collection<S> paths) {
 
         return AbstractPath.branch(paths);
-    }
-
-    public static <S extends AbstractPath<S>> Set<S> children(final Collection<S> paths, final String parent) {
-
-        return AbstractPath.children(paths, parent);
     }
 
     public static <S extends AbstractPath<S>> Set<S> children(final Collection<S> paths, final S parent) {

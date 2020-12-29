@@ -92,7 +92,7 @@ public class FlatColumnMapper<T> implements ColumnMapper<T> {
             throw new IllegalStateException(rest + " not found in " + head);
         }
         final String outer = rest.first();
-        final String inner = rest.get(1);
+        final String inner = rest.at(1);
         final ColumnMapper<?> mapper = mappers.get(inner);
         if(mapper == null) {
             throw new IllegalStateException("Flattened column " + inner + " not found in " + head);

@@ -10,7 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 class TestURLs {
 
@@ -30,5 +30,12 @@ class TestURLs {
         assertEquals(2, URLs.all(URLs.toURLUnchecked(base + "**/*.yml")).length);
         assertEquals(1, URLs.all(URLs.toURLUnchecked(base + "**/*.json")).length);
         assertEquals(1, URLs.all(URLs.toURLUnchecked(base + "*/*/*.txt")).length);
+    }
+
+    @Test
+    void testLocalPath() {
+
+        assertTrue(URLs.isLocalFile(URLs.toURLUnchecked("file:somefile")));
+        assertFalse(URLs.isLocalFile(URLs.toURLUnchecked("https://example.com")));
     }
 }
