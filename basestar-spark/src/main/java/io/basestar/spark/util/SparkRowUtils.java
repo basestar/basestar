@@ -1,7 +1,6 @@
 package io.basestar.spark.util;
 
 import com.google.common.collect.Lists;
-import io.basestar.util.ISO8601;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
 import org.apache.spark.sql.Column;
@@ -11,9 +10,10 @@ import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.*;
 import scala.collection.Seq;
 
-import java.time.Instant;
-import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
@@ -225,60 +225,6 @@ public class SparkRowUtils {
             return resolveName(col, (StructType)fieldType, name);
         } else {
             return Optional.empty();
-        }
-    }
-
-    public static Object toSpark(final Object value) {
-
-        if(value instanceof Map) {
-            final Map<Object, Object> tmp = new HashMap<>();
-            ((Map<?, ?>) value).forEach((k, v) -> tmp.put(k, toSpark(v)));
-            return ScalaUtils.asScalaMap(tmp);
-        } else if(value instanceof Collection) {
-            final List<Object> tmp = new ArrayList<>();
-            ((Collection<?>) value).forEach(v -> tmp.add(toSpark(v)));
-            return ScalaUtils.asScalaSeq(tmp);
-        } else if(value instanceof Instant) {
-            return ISO8601.toSqlTimestamp((Instant)value);
-        } else if(value instanceof LocalDate) {
-            return ISO8601.toSqlDate((LocalDate)value);
-        } else {
-            return value;
-        }
-    }
-
-    public static Map<String, Object> fromSpark(final Row row) {
-
-        final Map<String, Object> tmp = new HashMap<>();
-        final StructField[] fields = row.schema().fields();
-        for(int i = 0; i != fields.length; ++i) {
-            tmp.put(fields[i].name(), fromSpark(row.get(i)));
-        }
-        return tmp;
-    }
-
-    public static Object fromSpark(final Object value) {
-
-        if(value == null) {
-            return null;
-        } else if(value instanceof Seq) {
-            final List<Object> tmp = new ArrayList<>();
-            ScalaUtils.asJavaStream((Seq<?>)value)
-                    .forEach(v -> tmp.add(fromSpark(v)));
-            return tmp;
-        } else if(value instanceof scala.collection.Map) {
-            final Map<Object, Object> tmp = new HashMap<>();
-            ScalaUtils.asJavaMap((scala.collection.Map<?, ?>)value)
-                    .forEach((k, v) -> tmp.put(fromSpark(k), fromSpark(v)));
-            return tmp;
-        } else if(value instanceof Row) {
-            return fromSpark((Row)value);
-        } else if(value instanceof java.sql.Date) {
-            return ISO8601.toDate(value);
-        } else if(value instanceof java.sql.Timestamp) {
-            return ISO8601.toDateTime(value);
-        } else {
-            return value;
         }
     }
 
