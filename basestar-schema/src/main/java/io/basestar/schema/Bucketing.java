@@ -48,7 +48,7 @@ public class Bucketing implements Serializable {
 
     public Bucketing(final List<Name> using, final int count, final BucketFunction function) {
 
-        this.using = Immutable.copy(using);
+        this.using = Immutable.list(using);
         if(this.using.isEmpty()) {
             throw new SchemaValidationException("Bucket using must be set");
         }

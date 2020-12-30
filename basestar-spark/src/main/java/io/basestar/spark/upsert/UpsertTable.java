@@ -81,10 +81,10 @@ public class UpsertTable {
         this.name = Nullsafe.require(name);
         this.idColumn = Nullsafe.require(idColumn);
         this.versionColumn = versionColumn;
-        this.basePartition = Immutable.copy(partition);
+        this.basePartition = Immutable.list(partition);
         this.baseType = Nullsafe.require(structType);
         this.deltaType = createDeltaType(structType);
-        this.deltaPartition = Immutable.copyAddAll(ImmutableList.of(SEQUENCE, OPERATION), basePartition);
+        this.deltaPartition = Immutable.addAll(ImmutableList.of(SEQUENCE, OPERATION), basePartition);
         if(Nullsafe.require(location).endsWith("/")) {
             this.location = location;
         } else {
@@ -156,10 +156,10 @@ public class UpsertTable {
         applyChanges(changes, sequence, v -> operation(v._1(), v._2()), v -> Nullsafe.orDefault(v._2(), v._1()));
     }
 
-    public Set<Map<String, String>> deltaPartitions(final SparkSession session) {
+    private static Set<Map<String, String>> partitionSpecs(final SparkSession session, final String database, final String tableName) {
 
         final ExternalCatalog catalog = session.sharedState().externalCatalog();
-        return ScalaUtils.asJavaStream(catalog.listPartitions(database, deltaTableName(), Option.empty()))
+        return ScalaUtils.asJavaStream(catalog.listPartitions(database, tableName, Option.empty()))
             .map(v -> ScalaUtils.asJavaMap(v.spec()))
             .collect(Collectors.toSet());
     }
@@ -216,18 +216,20 @@ public class UpsertTable {
 
         autoProvision(session);
         final String tableName = baseTableName();
-        return session.sqlContext().read()
+        final Dataset<Row> ds = session.sqlContext().read()
                 .table(SparkCatalogUtils.escapeName(database, tableName))
                 .select(baseColumns());
+        return SparkDatasetUtils.addPartitionSpec(ds, partitionSpecs(session, database, tableName));
     }
 
     protected Dataset<Row> selectDelta(final SparkSession session) {
 
         autoProvision(session);
         final String tableName = deltaTableName();
-        return session.sqlContext().read()
+        final Dataset<Row> ds = session.sqlContext().read()
                 .table(SparkCatalogUtils.escapeName(database, tableName))
                 .select(deltaColumns());
+        return SparkDatasetUtils.addPartitionSpec(ds, partitionSpecs(session, database, tableName));
     }
 
     protected Dataset<Row> selectDeltaAfter(final SparkSession session, final String sequence) {
@@ -324,7 +326,7 @@ public class UpsertTable {
         });
         ScalaUtils.asJavaStream(catalog.listPartitions(database, deltaTableName(), Option.empty())).forEach(part -> {
             final List<String> values = basePartitionValues(part);
-            delta.compute(values, (k, v) -> Immutable.copyAdd(v, part));
+            delta.compute(values, (k, v) -> Immutable.add(v, part));
         });
 
         final Map<List<String>, List<CatalogTablePartition>> append = new HashMap<>();
@@ -457,7 +459,7 @@ public class UpsertTable {
         // Create empty files for partitions that were not output
         final Configuration configuration = session.sparkContext().hadoopConfiguration();
         sequences.forEach((values, sequence) -> {
-            final List<String> outputValues = Immutable.copyAdd(values, sequence);
+            final List<String> outputValues = Immutable.add(values, sequence);
             final List<Pair<String, String>> spec = Pair.zip(outputPartition.stream(), outputValues.stream())
                     .collect(Collectors.toList());
             final URI uri = SparkCatalogUtils.partitionLocation(baseLocation(), spec);

@@ -5,6 +5,7 @@ import io.basestar.util.ISO8601;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.*;
@@ -192,6 +193,38 @@ public class SparkRowUtils {
             } else {
                 return column.desc_nulls_last();
             }
+        }
+    }
+
+    public static Column resolveName(final Dataset<?> input, final Name name) {
+
+        if(name.isEmpty()) {
+            return input.col(".*");
+        }
+        final StructType schema = input.schema();
+        return findField(schema, name.first()).flatMap(field -> {
+            final Column next = input.col(field.name());
+            return resolveName(next, field.dataType(), name.withoutFirst());
+        }).orElseThrow(() -> new IllegalStateException("Name " + name + " not found"));
+    }
+
+    private static Optional<Column> resolveName(final Column col, final StructType schema, final Name name) {
+
+        assert !name.isEmpty();
+        return findField(schema, name.first()).flatMap(field -> {
+            final Column next = col.getField(field.name());
+            return resolveName(next, field.dataType(), name.withoutFirst());
+        });
+    }
+
+    private static Optional<Column> resolveName(final Column col, final DataType fieldType, final Name name) {
+
+        if(name.isEmpty()) {
+            return Optional.of(col);
+        } else if(fieldType instanceof StructType) {
+            return resolveName(col, (StructType)fieldType, name);
+        } else {
+            return Optional.empty();
         }
     }
 

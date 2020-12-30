@@ -150,8 +150,8 @@ public class EnumSchema implements Schema<String> {
         this.slot = slot;
         this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
         this.description = descriptor.getDescription();
-        this.values = Immutable.copy(descriptor.getValues());
-        this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
+        this.values = Immutable.list(descriptor.getValues());
+        this.extensions = Immutable.sortedMap(descriptor.getExtensions());
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }

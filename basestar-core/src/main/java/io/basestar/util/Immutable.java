@@ -22,13 +22,28 @@ public class Immutable {
         return Collections.singletonList(value);
     }
 
-    public static <K extends Comparable<K>, V, V2 extends V> SortedMap<K, V> sortedMerge(final Map<K, V> m, final Map<K, V2> vs, final BiFunction<V, V2, V> merge) {
+    public static <T> Set<T> set() {
 
-        return sortedCopy(merge(m, vs, merge));
+        return Collections.emptySet();
+    }
+
+    public static <T> Set<T> set(final T value) {
+
+        return Collections.singleton(value);
+    }
+
+    public static <K, V> Map<K, V> map() {
+
+        return Collections.emptyMap();
+    }
+
+    public static <K, V> Map<K, V> map(final K key, final V value) {
+
+        return Collections.singletonMap(key, value);
     }
 
     @Nonnull
-    public static <K, V> Map<K, V> copyPut(@Nullable final Map<K, V> m, final K k, final V v) {
+    public static <K, V> Map<K, V> put(@Nullable final Map<K, V> m, final K k, final V v) {
 
         if (m == null || m.isEmpty()) {
             return Collections.singletonMap(k, v);
@@ -40,7 +55,7 @@ public class Immutable {
     }
 
     @Nonnull
-    public static <V> List<V> copyAdd(@Nullable final List<V> l, final V v) {
+    public static <V> List<V> add(@Nullable final List<V> l, final V v) {
 
         if (l == null || l.isEmpty()) {
             return Collections.singletonList(v);
@@ -52,7 +67,7 @@ public class Immutable {
     }
 
     @Nonnull
-    public static <V> List<V> copyAddAll(@Nullable final List<V> l, final Collection<? extends V> vs) {
+    public static <V> List<V> addAll(@Nullable final List<V> l, final Collection<? extends V> vs) {
 
         if (l == null || l.isEmpty()) {
             if (vs == null || vs.isEmpty()) {
@@ -71,7 +86,7 @@ public class Immutable {
     }
 
     @Nonnull
-    public static <V> Set<V> copyAdd(@Nullable final Set<V> s, final V v) {
+    public static <V> Set<V> add(@Nullable final Set<V> s, final V v) {
 
         if (s == null || s.isEmpty()) {
             return Collections.singleton(v);
@@ -82,8 +97,13 @@ public class Immutable {
         }
     }
 
+    public static <K extends Comparable<K>, V, V2 extends V> SortedMap<K, V> sortedMerge(final Map<K, V> m, final Map<K, V2> vs, final BiFunction<V, V2, V> merge) {
+
+        return sortedMap(merge(m, vs, merge));
+    }
+
     @Nonnull
-    public static <V> Set<V> copyAddAll(@Nullable final Set<V> s, @Nullable final Collection<? extends V> vs) {
+    public static <V> Set<V> addAll(@Nullable final Set<V> s, @Nullable final Collection<? extends V> vs) {
 
         if (s == null || s.isEmpty()) {
             if (vs == null) {
@@ -102,7 +122,7 @@ public class Immutable {
     }
 
     @Nonnull
-    public static <V> Set<V> copyRemoveAll(@Nullable final Set<V> s, @Nullable final Collection<? extends V> vs) {
+    public static <V> Set<V> removeAll(@Nullable final Set<V> s, @Nullable final Collection<? extends V> vs) {
 
         if (s == null || s.isEmpty()) {
             return Collections.emptySet();
@@ -116,60 +136,48 @@ public class Immutable {
     }
 
     @Nonnull
-    public static <V extends Comparable<V>> SortedSet<V> sortedCopyAddAll(@Nullable final Set<V> s, @Nullable final Collection<? extends V> vs) {
+    public static <V extends Comparable<V>> SortedSet<V> sortedAddAll(@Nullable final Set<V> s, @Nullable final Collection<? extends V> vs) {
 
-        return sortedCopy(copyAddAll(s, vs));
+        return sortedSet(addAll(s, vs));
     }
 
     @Nonnull
-    public static <V> List<V> copy(@Nullable final List<? extends V> l) {
+    public static <V> List<V> list(@Nullable final Collection<? extends V> l) {
 
         return l == null || l.isEmpty() ? Collections.emptyList() : Collections.unmodifiableList(new ArrayList<>(l));
     }
 
     @Nonnull
-    public static <V> Set<V> copy(@Nullable final Set<? extends V> s) {
+    public static <V> Set<V> set(@Nullable final Collection<? extends V> s) {
 
         return s == null || s.isEmpty() ? Collections.emptySet() : Collections.unmodifiableSet(new HashSet<>(s));
     }
 
     @Nonnull
-    public static <V extends Comparable<V>> SortedSet<V> sortedCopy(@Nullable final Set<? extends V> s) {
+    public static <V extends Comparable<V>> SortedSet<V> sortedSet(@Nullable final Collection<? extends V> s) {
 
         return s == null || s.isEmpty() ? Collections.emptySortedSet() : Collections.unmodifiableSortedSet(new TreeSet<>(s));
     }
 
     @Nonnull
-    public static <K, V> Map<K, V> copy(@Nullable final Map<? extends K, ? extends V> m) {
+    public static <K, V> Map<K, V> map(@Nullable final Map<? extends K, ? extends V> m) {
 
         return m == null || m.isEmpty() ? Collections.emptyMap() : Collections.unmodifiableMap(new HashMap<>(m));
     }
 
     @Nonnull
-    public static <K extends Comparable<K>, V> SortedMap<K, V> copy(@Nullable final SortedMap<? extends K, ? extends V> m) {
+    public static <K extends Comparable<K>, V> SortedMap<K, V> sortedMap(@Nullable final Map<? extends K, ? extends V> m) {
 
-        return sortedCopy(m);
+        return navigableMap(m);
     }
 
     @Nonnull
-    public static <K extends Comparable<K>, V> NavigableMap<K, V> copy(@Nullable final NavigableMap<? extends K, ? extends V> m) {
-
-        return navigableCopy(m);
-    }
-
-    @Nonnull
-    public static <K extends Comparable<K>, V> SortedMap<K, V> sortedCopy(@Nullable final Map<? extends K, ? extends V> m) {
-
-        return navigableCopy(m);
-    }
-
-    @Nonnull
-    public static <K extends Comparable<K>, V> NavigableMap<K, V> navigableCopy(@Nullable final Map<? extends K, ? extends V> m) {
+    public static <K extends Comparable<K>, V> NavigableMap<K, V> navigableMap(@Nullable final Map<? extends K, ? extends V> m) {
 
         return m == null || m.isEmpty() ? Collections.emptyNavigableMap() : Collections.unmodifiableNavigableMap(new TreeMap<>(m));
     }
 
-    public static <K, V> Map<K, V> copyPutAll(final Map<K, V> m, final Map<K, ? extends V> vs) {
+    public static <K, V> Map<K, V> putAll(final Map<K, V> m, final Map<K, ? extends V> vs) {
 
         return merge(m, vs, (v1, v2) -> v2);
     }

@@ -112,7 +112,7 @@ public class LiteralSet implements Expression {
     }
 
     @Override
-    public boolean isConstant(final Set<String> closure) {
+    public boolean isConstant(final Closure closure) {
 
         return args.stream().allMatch(arg -> arg.isConstant(closure));
     }

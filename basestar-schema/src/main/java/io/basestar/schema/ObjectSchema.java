@@ -340,14 +340,14 @@ public class ObjectSchema implements ReferableSchema {
         this.links = Link.extend(extend, declaredLinks);
         this.declaredIndexes = Immutable.transformValuesSorted(descriptor.getIndexes(), (k, v) -> v.build(this, qualifiedName.with(k)));
         this.indexes = Index.extend(extend, declaredIndexes);
-        this.constraints = Immutable.copy(descriptor.getConstraints());
+        this.constraints = Immutable.list(descriptor.getConstraints());
         this.declaredPermissions = Immutable.transformValuesSorted(descriptor.getPermissions(), (k, v) -> v.build(k));
         this.permissions = Permission.extend(extend, declaredPermissions);
-        this.declaredExpand = Immutable.sortedCopy(descriptor.getExpand());
+        this.declaredExpand = Immutable.sortedSet(descriptor.getExpand());
         this.expand = LinkableSchema.extendExpand(extend, declaredExpand);
-        this.declaredBucketing = Immutable.copy(descriptor.getBucket());
+        this.declaredBucketing = Immutable.list(descriptor.getBucket());
         this.readonly = Nullsafe.orDefault(descriptor.getReadonly());
-        this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
+        this.extensions = Immutable.sortedMap(descriptor.getExtensions());
         if (Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }

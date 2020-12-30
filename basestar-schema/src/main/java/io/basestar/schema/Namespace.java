@@ -92,7 +92,7 @@ public class Namespace implements Loadable, Schema.Resolver {
 
         public Builder setSchema(final Name name, final Schema.Descriptor<?, ?> schema) {
 
-            schemas = Immutable.copyPut(schemas, name, schema);
+            schemas = Immutable.put(schemas, name, schema);
             return this;
         }
 

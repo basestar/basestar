@@ -90,7 +90,7 @@ public class Constant implements Expression {
     }
 
     @Override
-    public boolean isConstant(final Set<String> closure) {
+    public boolean isConstant(final Closure closure) {
 
         return true;
     }

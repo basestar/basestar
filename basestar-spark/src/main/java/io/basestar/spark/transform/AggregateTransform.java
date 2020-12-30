@@ -2,9 +2,7 @@ package io.basestar.spark.transform;
 
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Layout;
-import io.basestar.schema.expression.InferenceContext;
 import io.basestar.spark.expression.SparkExpressionVisitor;
-import io.basestar.spark.resolver.ColumnResolver;
 import io.basestar.spark.util.SparkRowUtils;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.spark.util.SparkUtils;
@@ -36,10 +34,7 @@ public class AggregateTransform implements Transform<Dataset<Row>, Dataset<Row>>
 
         final StructType outputStructType = SparkSchemaUtils.structType(outputLayout);
 
-        final ColumnResolver<Row> columnResolver = ColumnResolver.lowercase(ColumnResolver::nested);
-
-        final InferenceContext inferenceContext = InferenceContext.from(inputLayout.getSchema());
-        final SparkExpressionVisitor expressionVisitor = new SparkExpressionVisitor(k -> columnResolver.resolve(input, k), inferenceContext);
+        final SparkExpressionVisitor expressionVisitor = new SparkExpressionVisitor(k -> SparkRowUtils.resolveName(input, k));
 
         final Column[] aggs = aggregates.entrySet().stream()
                 .map(v -> expressionVisitor.visit(v.getValue()).as(v.getKey()))

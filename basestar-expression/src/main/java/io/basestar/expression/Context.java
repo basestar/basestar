@@ -75,12 +75,6 @@ public interface Context extends Serializable {
 
                 return methods.callable(target, method, args);
             }
-
-            @Override
-            public Type memberType(final Type target, final String member) {
-
-                return Object.class;
-            }
         };
     }
 
@@ -109,12 +103,6 @@ public interface Context extends Serializable {
             public Callable callable(final Type target, final String method, final Type... args) {
 
                 return delegate.callable(target, method, args);
-            }
-
-            @Override
-            public Type memberType(final Type target, final String member) {
-
-                return delegate.memberType(target, member);
             }
         };
     }
@@ -146,8 +134,6 @@ public interface Context extends Serializable {
     }
 
     Callable callable(Type target, String method, Type... args);
-
-    Type memberType(Type target, String member);
 
     default Object member(final Object target, final String member) {
 

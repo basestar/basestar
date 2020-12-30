@@ -37,7 +37,7 @@ class TestInterfaceSchema {
 
         final FlatEncoding encoding = new FlatEncoding();
         inputs.forEach(input -> {
-            final Map<String, Object> decoded = encoding.decode(Immutable.copyPutAll(metadata, input));
+            final Map<String, Object> decoded = encoding.decode(Immutable.putAll(metadata, input));
             final Instance instance = schema.create(decoded);
             assertNotNull(instance.get("catBreed"));
             final Instance evaluated = schema.evaluateProperties(Context.init(), instance, schema.getExpand());

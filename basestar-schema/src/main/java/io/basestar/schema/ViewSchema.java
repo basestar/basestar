@@ -256,7 +256,7 @@ public class ViewSchema implements LinkableSchema {
 
         public ViewSchema.Builder addGroup(final String name) {
 
-            group = Immutable.copyAdd(group, name);
+            group = Immutable.add(group, name);
             return this;
         }
     }
@@ -328,18 +328,18 @@ public class ViewSchema implements LinkableSchema {
             throw new SchemaValidationException(qualifiedName, "View must specify from.schema");
         }
         this.from = new From(resolver.requireLinkableSchema(from.getSchema()), Nullsafe.orDefault(from.getExpand()));
-        this.sort = Immutable.copy(descriptor.getSort());
+        this.sort = Immutable.list(descriptor.getSort());
         this.description = descriptor.getDescription();
-        this.group = Immutable.copy(descriptor.getGroup());
+        this.group = Immutable.list(descriptor.getGroup());
         this.where = descriptor.getWhere();
         final InferenceContext context = InferenceContext.from(this.from.getSchema());
         this.declaredProperties = Immutable.transformValuesSorted(descriptor.getProperties(),
                 (k, v) -> v.build(resolver, context, version, qualifiedName.with(k)));
         this.declaredLinks = Immutable.transformValuesSorted(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
         this.declaredPermissions = Immutable.transformValuesSorted(descriptor.getPermissions(), (k, v) -> v.build(k));
-        this.declaredBucketing = Immutable.copy(descriptor.getBucket());
-        this.declaredExpand = Immutable.sortedCopy(descriptor.getExpand());
-        this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
+        this.declaredBucketing = Immutable.list(descriptor.getBucket());
+        this.declaredExpand = Immutable.sortedSet(descriptor.getExpand());
+        this.extensions = Immutable.sortedMap(descriptor.getExtensions());
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName.toString());
         }

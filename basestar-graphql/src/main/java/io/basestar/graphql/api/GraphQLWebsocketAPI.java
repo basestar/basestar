@@ -55,7 +55,11 @@ public class GraphQLWebsocketAPI implements API {
                     return CompletableFuture.completedFuture(APIResponse.success(request));
                 default:
                     final RequestBody body = request.readBody(RequestBody.class);
-                    return handle(request, body);
+                    return handle(request, body)
+                            .exceptionally(e -> {
+                                log.error("Uncaught: {}", e.getMessage(), e);
+                                return response(request, "connection_error", body.getId(), null);
+                            });
             }
 
         } catch (final Exception e) {

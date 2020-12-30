@@ -74,7 +74,7 @@ public class Migration implements Loadable {
 
     public Migration(final Map<String, Expression> properties, final Expression operation) {
 
-        this.properties = Immutable.copy(properties);
+        this.properties = Immutable.map(properties);
         this.operation = operation;
     }
 

@@ -191,11 +191,11 @@ public abstract class AbstractPath<S extends AbstractPath<S>> implements Iterabl
         final Object target = data.get(first);
         final AbstractPath<S> tail = withoutFirst();
         if(tail.isEmpty()) {
-            return Immutable.copyPut(data, first, value);
+            return Immutable.put(data, first, value);
         } else if(target instanceof Map) {
-            return Immutable.copyPut(data, first, tail.set((Map<String, Object>)target, value));
+            return Immutable.put(data, first, tail.set((Map<String, Object>)target, value));
         } else if(target == null) {
-            return Immutable.copyPut(data, first, tail.set(ImmutableMap.of(), value));
+            return Immutable.put(data, first, tail.set(ImmutableMap.of(), value));
         } else {
             throw new IllegalStateException();
         }

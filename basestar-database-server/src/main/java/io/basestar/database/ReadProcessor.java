@@ -360,7 +360,7 @@ public class ReadProcessor {
             return null;
         }
         final ReferableSchema schema = referableSchema(Instance.getSchema(data));
-        return schema.create(data, Immutable.copyAddAll(schema.getExpand(), expand), true);
+        return schema.create(data, Immutable.addAll(schema.getExpand(), expand), true);
     }
 
     protected CompletableFuture<Caller> expandCaller(final Context context, final Caller caller, final Set<Name> expand) {

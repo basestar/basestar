@@ -124,7 +124,7 @@ public class IfElse implements Expression {
     }
 
     @Override
-    public boolean isConstant(final Set<String> closure) {
+    public boolean isConstant(final Closure closure) {
 
         return predicate.isConstant(closure) && then.isConstant(closure) && otherwise.isConstant(closure);
     }

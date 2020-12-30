@@ -43,7 +43,7 @@ public class SimpleCaller implements Caller {
         this._super = builder._super;
         this.schema = builder.schema;
         this.id = builder.id;
-        this.claims = Immutable.copy(builder.claims);
+        this.claims = Immutable.map(builder.claims);
     }
 
     public static Builder builder() {

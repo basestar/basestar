@@ -63,7 +63,7 @@ public class LambdaCall implements Expression {
     public LambdaCall(final Expression with, final List<Expression> args) {
 
         this.with = with;
-        this.args = Immutable.copy(args);
+        this.args = Immutable.list(args);
     }
 
     @Override
@@ -121,7 +121,7 @@ public class LambdaCall implements Expression {
     }
 
     @Override
-    public boolean isConstant(final Set<String> closure) {
+    public boolean isConstant(final Closure closure) {
 
         return false;
     }

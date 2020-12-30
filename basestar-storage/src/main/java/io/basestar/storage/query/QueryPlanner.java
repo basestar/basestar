@@ -35,7 +35,7 @@ public interface QueryPlanner<T extends QueryStage> {
                 return visitor.empty(schema, expand);
             } else {
                 T stage = stage(visitor, schema);
-                final Set<Name> remainingExpand = Immutable.copyRemoveAll(expand, stage.getLayout().getExpand());
+                final Set<Name> remainingExpand = Immutable.removeAll(expand, stage.getLayout().getExpand());
                 if(!remainingExpand.isEmpty()) {
                     stage = visitor.expand(stage, schema, remainingExpand);
                 }

@@ -105,7 +105,7 @@ public class LiteralObject implements Expression {
     }
 
     @Override
-    public boolean isConstant(final Set<String> closure) {
+    public boolean isConstant(final Closure closure) {
 
         return args.entrySet().stream()
                 .allMatch(arg -> arg.getKey().isConstant(closure) && arg.getValue().isConstant(closure));

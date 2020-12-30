@@ -22,7 +22,6 @@ package io.basestar.expression.iterate;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
@@ -74,7 +73,7 @@ public class ForObject implements Expression {
     @Override
     public Expression bind(final Context context, final Renaming root) {
 
-        final Set<String> closure = iter.closure();
+        final Closure closure = Closure.from(iter.closure());
         final Renaming closureTransform = Renaming.closure(closure, root);
         final Expression yieldKey = this.yieldKey.bind(context, closureTransform);
         final Expression yieldValue = this.yieldValue.bind(context, closureTransform);
@@ -135,10 +134,10 @@ public class ForObject implements Expression {
     }
 
     @Override
-    public boolean isConstant(final Set<String> closure) {
+    public boolean isConstant(final Closure closure) {
 
         if(iter.isConstant(closure)) {
-            final Set<String> fullClosure = Sets.union(closure, iter.closure());
+            final Closure fullClosure = closure.with(iter.closure());
             return yieldKey.isConstant(fullClosure) && yieldValue.isConstant(fullClosure);
         } else {
             return false;

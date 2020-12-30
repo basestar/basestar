@@ -27,7 +27,6 @@ import io.basestar.expression.call.LambdaCall;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Stream;
 
 public interface Aggregate extends Expression {
@@ -68,7 +67,7 @@ public interface Aggregate extends Expression {
     }
 
     @Override
-    default boolean isConstant(final Set<String> closure) {
+    default boolean isConstant(final Closure closure) {
 
         return false;
     }

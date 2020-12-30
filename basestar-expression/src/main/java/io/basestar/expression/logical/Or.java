@@ -120,7 +120,7 @@ public class Or implements Expression {
     }
 
     @Override
-    public boolean isConstant(final Set<String> closure) {
+    public boolean isConstant(final Closure closure) {
 
         return terms.stream().allMatch(term -> term.isConstant(closure));
     }

@@ -70,7 +70,7 @@ public interface Pager<T> {
             }
             if (offset < list.size()) {
                 final int end = Math.min((int) (offset + count), list.size());
-                final List<T> page = Immutable.copy(list.subList((int) offset, end));
+                final List<T> page = Immutable.list(list.subList((int) offset, end));
                 final Page.Token newToken = end == list.size() ? null : Page.Token.fromLongValue((long) end);
                 return new Page<>(page, newToken, token == null ? Page.Stats.fromTotal(list.size()) : null);
             } else {

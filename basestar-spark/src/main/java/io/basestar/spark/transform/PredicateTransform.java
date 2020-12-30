@@ -2,9 +2,8 @@ package io.basestar.spark.transform;
 
 import io.basestar.expression.Expression;
 import io.basestar.schema.Layout;
-import io.basestar.schema.expression.InferenceContext;
 import io.basestar.spark.expression.SparkExpressionVisitor;
-import io.basestar.spark.resolver.ColumnResolver;
+import io.basestar.spark.util.SparkRowUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
@@ -23,9 +22,7 @@ public class PredicateTransform implements Transform<Dataset<Row>, Dataset<Row>>
     @Override
     public Dataset<Row> accept(final Dataset<Row> input) {
 
-        final InferenceContext inference = InferenceContext.from(inputLayout);
-        final ColumnResolver<Row> columnResolver = ColumnResolver.lowercase(ColumnResolver::nested);
-        final Column condition = new SparkExpressionVisitor(name -> columnResolver.resolve(input, name), inference)
+        final Column condition = new SparkExpressionVisitor(name -> SparkRowUtils.resolveName(input, name))
                 .visit(predicate);
 
         return input.filter(condition);

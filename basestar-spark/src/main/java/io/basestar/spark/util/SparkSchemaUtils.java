@@ -29,11 +29,13 @@ import io.basestar.util.ISO8601;
 import io.basestar.util.Name;
 import io.basestar.util.Page;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.sql.*;
-import org.apache.spark.sql.api.java.UDF1;
+import org.apache.spark.sql.Encoder;
+import org.apache.spark.sql.Encoders;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.expressions.UserDefinedFunction;
+import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.*;
 import scala.collection.Seq;
 
@@ -968,22 +970,6 @@ public class SparkSchemaUtils {
     public static String getHash(final Row row) {
 
         return (String) SparkRowUtils.get(row, ObjectSchema.HASH);
-    }
-
-    public static Column cast(final Column column, final Use<?> fromType, final Use<?> toType, final Set<Name> expand) {
-
-        final DataType toDataType = type(toType, expand);
-        if(fromType.equals(toType)) {
-            return column.cast(toDataType);
-        } else {
-            final UserDefinedFunction udf = functions.udf((UDF1<Object, Object>) sparkValue -> {
-
-                final Object value = fromSpark(fromType, NamingConvention.DEFAULT, expand, sparkValue);
-                return toSpark(toType, expand, toDataType, value);
-
-            }, toDataType);
-            return udf.apply(column);
-        }
     }
 
     public static UserDefinedFunction udf(final Callable callable) {

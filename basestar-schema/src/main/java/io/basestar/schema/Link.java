@@ -179,9 +179,9 @@ public class Link implements Member {
         this.schema = resolver.requireLinkableSchema(descriptor.getSchema());
         this.expression = Nullsafe.require(descriptor.getExpression());
         this.single = Nullsafe.orDefault(descriptor.getSingle());
-        this.sort = Immutable.copy(descriptor.getSort());
+        this.sort = Immutable.list(descriptor.getSort());
         this.visibility = descriptor.getVisibility();
-        this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
+        this.extensions = Immutable.sortedMap(descriptor.getExtensions());
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
@@ -391,7 +391,7 @@ public class Link implements Member {
 
     public static SortedMap<String, Link> extend(final Collection<? extends Resolver> base, final Map<String, Link> ext) {
 
-        return Immutable.sortedCopy(Stream.concat(
+        return Immutable.sortedMap(Stream.concat(
                 base.stream().map(Resolver::getLinks),
                 Stream.of(ext)
         ).reduce(Link::extend).orElse(Collections.emptyMap()));
@@ -409,7 +409,7 @@ public class Link implements Member {
 
             default B setLink(final String name, final Link.Descriptor v) {
 
-                return setLinks(Immutable.copyPut(getLinks(), name, v));
+                return setLinks(Immutable.put(getLinks(), name, v));
             }
 
             B setLinks(Map<String, Link.Descriptor> vs);

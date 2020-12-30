@@ -28,6 +28,7 @@ import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.Renaming;
 import io.basestar.expression.call.Callable;
 import io.basestar.expression.iterate.Of;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import lombok.Data;
 
@@ -71,7 +72,7 @@ public class Lambda implements Expression {
     public Expression bind(final Context context, final Renaming root) {
 
         final BindContext bindContext = new BindContext(context);
-        final Expression yield = this.yield.bind(bindContext, Renaming.closure(args, root));
+        final Expression yield = this.yield.bind(bindContext, Renaming.closure(Immutable.set(args), root));
 
         if(yield == this.yield) {
             return this;
@@ -133,7 +134,7 @@ public class Lambda implements Expression {
     }
 
     @Override
-    public boolean isConstant(final Set<String> closure) {
+    public boolean isConstant(final Closure closure) {
 
         return false;
     }
@@ -194,13 +195,6 @@ public class Lambda implements Expression {
         public Callable callable(final Type target, final String method, final Type... args) {
 
             return context.callable(target, method, args);
-        }
-
-        @Override
-        public Type memberType(final Type target, final String member) {
-
-            //FIXME
-            return context.memberType(target, member);
         }
     }
 }

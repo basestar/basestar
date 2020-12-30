@@ -3,6 +3,7 @@ package io.basestar.spark.expand;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterators;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.Constant;
@@ -13,12 +14,14 @@ import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseCollection;
 import io.basestar.schema.use.UseInstance;
 import io.basestar.schema.use.UseMap;
+import io.basestar.spark.expression.ClosureExtractingVisitor;
 import io.basestar.spark.expression.SparkExpressionVisitor;
 import io.basestar.spark.query.QueryResolver;
 import io.basestar.spark.util.ScalaUtils;
 import io.basestar.spark.util.SparkRowUtils;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.spark.util.SparkUtils;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
 import lombok.Getter;
@@ -38,6 +41,10 @@ import java.util.function.Function;
 @Getter
 public class ExpandLinkStep extends AbstractExpandStep {
 
+    private static final String L_PREFIX = Reserved.PREFIX + "l_";
+
+    private static final String R_PREFIX = Reserved.PREFIX + "r_";
+
     private final ExpandStep next;
 
     private final LinkableSchema root;
@@ -50,9 +57,13 @@ public class ExpandLinkStep extends AbstractExpandStep {
 
     private final Expression closedExpression;
 
-    private final SortedMap<String, Expression> constants;
+    private final SortedMap<String, Expression> leftConstants;
 
-    private final SortedMap<String, Use<?>> keyTypes;
+    private final SortedMap<String, Expression> rightConstants;
+
+    private final SortedMap<String, Use<?>> leftKeyTypes;
+
+    private final SortedMap<String, Use<?>> rightKeyTypes;
 
     public ExpandLinkStep(final ExpandStep next, final LinkableSchema root, final LinkableSchema source, final Link link, final Name name) {
 
@@ -62,21 +73,29 @@ public class ExpandLinkStep extends AbstractExpandStep {
         this.link = link;
         this.name = name;
 
-        final ClosureExtractingVisitor closeLeft = new ClosureExtractingVisitor(Reserved.PREFIX + "l_", ImmutableSet.of(Reserved.THIS));
+        final ClosureExtractingVisitor closeLeft = new ClosureExtractingVisitor(L_PREFIX, Reserved.THIS::equals);
         final Expression closedLeft = closeLeft.visit(link.getExpression());
-        this.constants = new TreeMap<>(closeLeft.getConstants());
-        if(constants.isEmpty()) {
+        this.leftConstants = Immutable.sortedMap(closeLeft.getConstants());
+        if(leftConstants.isEmpty()) {
             throw new IllegalStateException("Link expression must have constants on left side");
         }
-        this.closedExpression = closedLeft;
 
-        final InferenceContext inferenceContext = InferenceContext.empty()
+        final ClosureExtractingVisitor closeRight = new ClosureExtractingVisitor(R_PREFIX, n -> !Reserved.THIS.equals(n) && !n.startsWith(L_PREFIX));
+        final Expression closedRight = closeRight.visit(closedLeft);
+        this.rightConstants = Immutable.sortedMap(closeRight.getConstants());
+        this.closedExpression = closedRight;
+
+        final InferenceContext inferenceContext = InferenceContext.from(link.getSchema())
                 .overlay(Reserved.THIS, InferenceContext.from(source));
         final InferenceVisitor inference = new InferenceVisitor(inferenceContext);
 
-        this.keyTypes = new TreeMap<>();
-        for(final Map.Entry<String, Expression> entry : constants.entrySet()) {
-            keyTypes.put(entry.getKey(), inference.visit(entry.getValue()));
+        this.leftKeyTypes = new TreeMap<>();
+        for(final Map.Entry<String, Expression> entry : leftConstants.entrySet()) {
+            leftKeyTypes.put(entry.getKey(), inference.visit(entry.getValue()));
+        }
+        this.rightKeyTypes = new TreeMap<>();
+        for(final Map.Entry<String, Expression> entry : rightConstants.entrySet()) {
+            rightKeyTypes.put(entry.getKey(), inference.visit(entry.getValue()));
         }
     }
 
@@ -89,11 +108,16 @@ public class ExpandLinkStep extends AbstractExpandStep {
     @Override
     protected boolean hasProjectedKeys(final StructType schema) {
 
-        return SparkRowUtils.findField(schema, constants.keySet().iterator().next()).isPresent();
+        return SparkRowUtils.findField(schema, leftConstants.keySet().iterator().next()).isPresent();
     }
 
     @Override
     public StructType projectKeysType(final StructType inputType) {
+
+        return projectKeysType(inputType, leftKeyTypes);
+    }
+
+    private static StructType projectKeysType(final StructType inputType, final Map<String, Use<?>> keyTypes) {
 
         StructType outputType = inputType;
         for(final Map.Entry<String, Use<?>> entry : keyTypes.entrySet()) {
@@ -105,7 +129,7 @@ public class ExpandLinkStep extends AbstractExpandStep {
     @Override
     public Column[] projectedKeyColumns() {
 
-        return constants.keySet().stream()
+        return leftConstants.keySet().stream()
                 .map(functions::col).toArray(Column[]::new);
     }
 
@@ -120,7 +144,7 @@ public class ExpandLinkStep extends AbstractExpandStep {
             final Map<String, Object> instance = SparkSchemaUtils.fromSpark(source, key);
             final Context context = Context.init(ImmutableMap.of(Reserved.THIS, instance));
             Row merged = row;
-            for(final Map.Entry<String, Expression> entry : constants.entrySet()) {
+            for(final Map.Entry<String, Expression> entry : leftConstants.entrySet()) {
                 final StructField field = SparkRowUtils.requireField(outputType, entry.getKey());
                 final Object value = entry.getValue().evaluate(context);
                 merged = SparkRowUtils.append(merged, field, value);
@@ -129,7 +153,7 @@ public class ExpandLinkStep extends AbstractExpandStep {
         }
         if(result.isEmpty()) {
             Row merged = row;
-            for(final Map.Entry<String, Expression> entry : constants.entrySet()) {
+            for(final Map.Entry<String, Expression> entry : leftConstants.entrySet()) {
                 final StructField field = SparkRowUtils.requireField(outputType, entry.getKey());
                 merged = SparkRowUtils.append(merged, field, null);
             }
@@ -137,6 +161,19 @@ public class ExpandLinkStep extends AbstractExpandStep {
         }
 
         return result.iterator();
+    }
+
+    public Row projectRightKeys(final StructType outputType, final Row row) {
+
+        final Map<String, Object> instance = SparkSchemaUtils.fromSpark(link.getSchema(), row);
+        final Context context = Context.init(instance);
+        Row merged = row;
+        for(final Map.Entry<String, Expression> entry : rightConstants.entrySet()) {
+            final StructField field = SparkRowUtils.requireField(outputType, entry.getKey());
+            final Object value = entry.getValue().evaluate(context);
+            merged = SparkRowUtils.append(merged, field, value);
+        }
+        return merged;
     }
 
     @Override
@@ -147,26 +184,27 @@ public class ExpandLinkStep extends AbstractExpandStep {
         final Dataset<Row> joinTo = resolver.resolve(linkSchema, Constant.TRUE, ImmutableList.of(), ImmutableSet.of())
                 .dataset();
 
-        final StructType joinToType = joinTo.schema();
-        final Function<Name, Column> columnResolver = columnResolver(input, joinTo);
+        final StructType joinToType = projectKeysType(joinTo.schema(), rightKeyTypes);
 
-        final InferenceContext inferenceContext = InferenceContext.from(linkSchema)
-                .with(keyTypes);
-        final Column condition = new SparkExpressionVisitor(columnResolver, inferenceContext)
+        final Dataset<Row> joinToKeyed = joinTo.map(SparkUtils.map(r -> projectRightKeys(joinToType, r)), RowEncoder.apply(joinToType));
+
+        final Function<Name, Column> columnResolver = columnResolver(input, joinToKeyed);
+
+        final Column condition = new SparkExpressionVisitor(columnResolver)
                 .visit(closedExpression);
 
-        final Dataset<Tuple2<Row, Row>> joined = input.joinWith(joinTo, condition, "left_outer");
+        final Dataset<Tuple2<Row, Row>> joined = input.joinWith(joinToKeyed, condition, "left_outer");
 
         final DataType linkType;
         if (link.isSingle()) {
-            linkType = joinToType;
+            linkType = cleanKeys(joinToType, rightKeyTypes);
         } else {
-            linkType = DataTypes.createArrayType(joinToType);
+            linkType = DataTypes.createArrayType(cleanKeys(joinToType, rightKeyTypes));
         }
 
         final KeyValueGroupedDataset<T, Tuple2<Row, Row>> grouped = groupResults(joined);
 
-        final StructType outputType = expandedType(root, ImmutableSet.of(name), cleanKeys(input.schema()), linkType);
+        final StructType outputType = expandedType(root, ImmutableSet.of(name), cleanKeys(input.schema(), leftKeyTypes), linkType);
 
         if (next != null) {
 
@@ -175,39 +213,42 @@ public class ExpandLinkStep extends AbstractExpandStep {
             final StructType projectedType = next.projectKeysType(outputType);
             return next.apply(resolver, grouped.flatMapGroups(SparkUtils.flatMapGroups((ignored, tuples) -> {
 
-                final Row resolved = applyLink(root, name, tuples);
-                final Row clean = cleanKeys(resolved);
-                return next.projectKeys(projectedType, clean);
+                final Row resolved = applyLink(root, name, cleanKeys(tuples));
+                return next.projectKeys(projectedType, resolved);
 
             }), RowEncoder.apply(projectedType)));
 
         } else {
 
             return grouped.mapGroups(
-                    SparkUtils.mapGroups((ignored, tuples) -> {
-
-                        final Row resolved = applyLink(root, name, tuples);
-                        return cleanKeys(resolved);
-                    }),
+                    SparkUtils.mapGroups((ignored, tuples) -> applyLink(root, name, cleanKeys(tuples))),
                     RowEncoder.apply(outputType)
             );
         }
     }
 
-    private Row cleanKeys(final Row row) {
+    private Iterator<Tuple2<Row, Row>> cleanKeys(final Iterator<Tuple2<Row, Row>> tuples) {
 
+        return Iterators.transform(tuples, tuple -> Tuple2.apply(cleanKeys(tuple._1(), leftKeyTypes), cleanKeys(tuple._2(), rightKeyTypes)));
+    }
+
+    private static Row cleanKeys(final Row row, final Map<String, Use<?>> keys) {
+
+        if(row == null) {
+            return null;
+        }
         Row clean = row;
-        for(final Map.Entry<String, Expression> entry : constants.entrySet()) {
-            clean = SparkRowUtils.remove(clean, entry.getKey());
+        for(final String key : keys.keySet()) {
+            clean = SparkRowUtils.remove(clean, key);
         }
         return clean;
     }
 
-    private StructType cleanKeys(final StructType type) {
+    private static StructType cleanKeys(final StructType type, final Map<String, Use<?>> keys) {
 
         StructType clean = type;
-        for(final Map.Entry<String, Expression> entry : constants.entrySet()) {
-            clean = SparkRowUtils.remove(clean, entry.getKey());
+        for(final String key : keys.keySet()) {
+            clean = SparkRowUtils.remove(clean, key);
         }
         return clean;
     }
@@ -216,26 +257,14 @@ public class ExpandLinkStep extends AbstractExpandStep {
 
         return name -> {
             final String first = name.first();
-            if(constants.containsKey(first)) {
-                return next(left.col(first), name.withoutFirst());
+            if(leftConstants.containsKey(first)) {
+                return SparkRowUtils.resolveName(left, name);
+            } else if(rightConstants.containsKey(first)) {
+                return  SparkRowUtils.resolveName(right, name);
             } else {
-                return next(right.col(first), name.withoutFirst());
-//                if(rightConstants.containsKey(first)) {
-//                    return next(right.col(first), name.withoutFirst());
-//                } else {
-//                    throw new IllegalStateException("Name " + name + " must be constant on at least one side of the link");
-//                }
+                throw new IllegalStateException("Link expression of the form " + link.getExpression() + " not supported");
             }
         };
-    }
-
-    private static Column next(final Column col, final Name rest) {
-
-        if (rest.isEmpty()) {
-            return col;
-        } else {
-            return next(col.getField(rest.first()), rest.withoutFirst());
-        }
     }
 
     private static Set<Row> linkKeys(final InstanceSchema schema, final Name name, final Row row) {

@@ -148,8 +148,8 @@ public class Permission implements Serializable {
         this.description = descriptor.getDescription();
         this.anonymous = Nullsafe.orDefault(descriptor.getAnonymous(), false);
         this.expression = Nullsafe.require(descriptor.getExpression());
-        this.expand = Immutable.sortedCopy(descriptor.getExpand());
-        this.inherit = Immutable.sortedCopy(descriptor.getInherit());
+        this.expand = Immutable.sortedSet(descriptor.getExpand());
+        this.inherit = Immutable.sortedSet(descriptor.getInherit());
         if(Reserved.isReserved(name)) {
             throw new ReservedNameException(name);
         }
@@ -185,7 +185,7 @@ public class Permission implements Serializable {
 
     public static SortedMap<String, Permission> extend(final Collection<? extends Resolver> base, final Map<String, Permission> ext) {
 
-        return Immutable.sortedCopy(Stream.concat(
+        return Immutable.sortedMap(Stream.concat(
                 base.stream().map(Resolver::getPermissions),
                 Stream.of(ext)
         ).reduce(Permission::extend).orElse(Collections.emptyMap()));
@@ -203,7 +203,7 @@ public class Permission implements Serializable {
 
             default B setPermission(final String name, final Permission.Descriptor v) {
 
-                return setPermissions(Immutable.copyPut(getPermissions(), name, v));
+                return setPermissions(Immutable.put(getPermissions(), name, v));
             }
 
             B setPermissions(Map<String, Permission.Descriptor> vs);

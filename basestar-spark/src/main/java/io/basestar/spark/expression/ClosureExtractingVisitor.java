@@ -1,4 +1,4 @@
-package io.basestar.spark.expand;
+package io.basestar.spark.expression;
 
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
@@ -16,7 +15,7 @@ public class ClosureExtractingVisitor implements ExpressionVisitor.Defaulting<Ex
 
     private final String prefix;
 
-    private final Set<String> closure;
+    private final Expression.Closure closure;
 
     @Getter
     private final Map<String, Expression> constants = new HashMap<>();
@@ -24,7 +23,7 @@ public class ClosureExtractingVisitor implements ExpressionVisitor.Defaulting<Ex
     @Override
     public Expression visitDefault(final Expression expression) {
 
-        if(expression.isConstant(closure)) {
+        if(!expression.isConstant() && expression.isConstant(closure)) {
             final String id = prefix + expression.digest();
             constants.put(id, expression);
             return new NameConstant(id);

@@ -38,21 +38,21 @@ public class SplitIndexStorage implements IndexStorage {
     public CompletableFuture<Set<Event>> afterCreate(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
         return objectStorage.afterCreate(schema, id, after)
-                .thenCombine(indexStorage.afterCreate(schema, id, after), Immutable::copyAddAll);
+                .thenCombine(indexStorage.afterCreate(schema, id, after), Immutable::addAll);
     }
 
     @Override
     public CompletableFuture<Set<Event>> afterUpdate(final ObjectSchema schema, final String id, final long version, final Map<String, Object> before, final Map<String, Object> after) {
 
         return objectStorage.afterUpdate(schema, id, version, before, after)
-                .thenCombine(indexStorage.afterUpdate(schema, id, version, before, after), Immutable::copyAddAll);
+                .thenCombine(indexStorage.afterUpdate(schema, id, version, before, after), Immutable::addAll);
     }
 
     @Override
     public CompletableFuture<Set<Event>> afterDelete(final ObjectSchema schema, final String id, final long version, final Map<String, Object> before) {
 
         return objectStorage.afterDelete(schema, id, version, before)
-                .thenCombine(indexStorage.afterDelete(schema, id, version, before), Immutable::copyAddAll);
+                .thenCombine(indexStorage.afterDelete(schema, id, version, before), Immutable::addAll);
     }
 
     @Override

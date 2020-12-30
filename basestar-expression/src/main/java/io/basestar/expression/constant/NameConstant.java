@@ -104,9 +104,9 @@ public class NameConstant implements Expression {
     }
 
     @Override
-    public boolean isConstant(final Set<String> closure) {
+    public boolean isConstant(final Closure closure) {
 
-        return closure.stream().anyMatch(c -> name.isChildOrEqual(Name.of(c)));
+        return closure.has(name.first());
     }
 
     @Override

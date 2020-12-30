@@ -48,8 +48,8 @@ public class WriteSink<T> implements Sink<Dataset<T>> {
         this.format = Nullsafe.orDefault(format, Format.DEFAULT);
         this.path = Nullsafe.orDefault(path);
         this.mode = Nullsafe.orDefault(mode, SaveMode.ErrorIfExists);
-        this.options = Immutable.copy(options);
-        this.partitionBy = Immutable.copy(partitionBy);
+        this.options = Immutable.map(options);
+        this.partitionBy = Immutable.list(partitionBy);
     }
 
     @Override

@@ -68,7 +68,7 @@ public interface Unary extends Expression {
     }
 
     @Override
-    default boolean isConstant(final Set<String> closure) {
+    default boolean isConstant(final Closure closure) {
 
         return getOperand().isConstant(closure);
     }

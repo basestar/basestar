@@ -220,9 +220,9 @@ public class Property implements Member {
         this.defaultValue = (Serializable)Nullsafe.map(builder.getDefault(), type::create);
         this.immutable = Nullsafe.orDefault(builder.getImmutable());
         this.expression = builder.getExpression();
-        this.constraints = Immutable.copy(builder.getConstraints());
+        this.constraints = Immutable.list(builder.getConstraints());
         this.visibility = builder.getVisibility();
-        this.extensions = Immutable.sortedCopy(builder.getExtensions());
+        this.extensions = Immutable.sortedMap(builder.getExtensions());
     }
 
     private static Use<?> legacyFix(final Name qualifiedName, final Use<?> type, final Boolean required, final Version version) {
@@ -428,7 +428,7 @@ public class Property implements Member {
 
     public static SortedMap<String, Property> extend(final Collection<? extends Resolver> base, final Map<String, Property> ext) {
 
-        return Immutable.sortedCopy(Stream.concat(
+        return Immutable.sortedMap(Stream.concat(
                 base.stream().map(Resolver::getProperties),
                 Stream.of(ext)
         ).reduce(Property::extend).orElse(Collections.emptyMap()));
@@ -446,7 +446,7 @@ public class Property implements Member {
 
             default B setProperty(final String name, final Property.Descriptor v) {
 
-                return setProperties(Immutable.copyPut(getProperties(), name, v));
+                return setProperties(Immutable.put(getProperties(), name, v));
             }
 
             B setProperties(Map<String, Property.Descriptor> vs);

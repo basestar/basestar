@@ -40,7 +40,7 @@ public interface ExpandStep extends Serializable {
         for(final Expansion expansion : expansions) {
             if(expansion instanceof Expansion.OfRef) {
                 final Expansion.OfRef ofRef = (Expansion.OfRef)expansion;
-                refs.compute(ofRef.getTarget(), (k, v) -> Immutable.copyAdd(v, ofRef.getName()));
+                refs.compute(ofRef.getTarget(), (k, v) -> Immutable.add(v, ofRef.getName()));
             } else {
                 assert expansion instanceof Expansion.OfLink;
                 final Expansion.OfLink ofLink = (Expansion.OfLink)expansion;

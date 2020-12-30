@@ -220,7 +220,7 @@ public class SparkCatalogUtils {
                         assert key.equals(name);
                         final String value = entry.getSecond();
                         if(strategy.include(spec, key, value)) {
-                            final Map<String, String> newValues = Immutable.copyPut(spec, name, value);
+                            final Map<String, String> newValues = Immutable.put(spec, name, value);
                             partitions.addAll(findPartitions(fs, newPath, names.subList(1, names.size()), newValues, strategy));
                         }
                     }

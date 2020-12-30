@@ -205,15 +205,15 @@ public class Index implements Named, Described, Serializable, Extendable {
         this.qualifiedName = qualifiedName;
         this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
         this.description = descriptor.getDescription();
-        this.partition = Immutable.copy(descriptor.getPartition());
-        this.sort = Immutable.copy(descriptor.getSort());
-        this.projection = Immutable.sortedCopy(descriptor.getProjection());
-        this.over = Immutable.sortedCopy(descriptor.getOver());
+        this.partition = Immutable.list(descriptor.getPartition());
+        this.sort = Immutable.list(descriptor.getSort());
+        this.projection = Immutable.sortedSet(descriptor.getProjection());
+        this.over = Immutable.sortedMap(descriptor.getOver());
         this.unique = Nullsafe.orDefault(descriptor.getUnique(), false);
         this.sparse = Nullsafe.orDefault(descriptor.getSparse(), false);
         this.consistency = descriptor.getConsistency();
         this.max = Nullsafe.orDefault(descriptor.getMax(), DEFAULT_MAX);
-        this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
+        this.extensions = Immutable.sortedMap(descriptor.getExtensions());
         if (Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
@@ -438,7 +438,7 @@ public class Index implements Named, Described, Serializable, Extendable {
 
     public static SortedMap<String, Index> extend(final Collection<? extends Resolver> base, final Map<String, Index> ext) {
 
-        return Immutable.sortedCopy(Stream.concat(
+        return Immutable.sortedMap(Stream.concat(
                 base.stream().map(Resolver::getIndexes),
                 Stream.of(ext)
         ).reduce(Index::extend).orElse(Collections.emptyMap()));
@@ -457,7 +457,7 @@ public class Index implements Named, Described, Serializable, Extendable {
 
         public static Key of(final List<?> partition, final List<?> sort) {
 
-            return new Key(Immutable.copy(partition), Immutable.copy(sort));
+            return new Key(Immutable.list(partition), Immutable.list(sort));
         }
 
         public Binary binary() {
@@ -513,7 +513,7 @@ public class Index implements Named, Described, Serializable, Extendable {
 
             default B setIndex(final String name, final Index.Descriptor v) {
 
-                return setIndexes(Immutable.copyPut(getIndexes(), name, v));
+                return setIndexes(Immutable.put(getIndexes(), name, v));
             }
 
             B setIndexes(Map<String, Index.Descriptor> vs);

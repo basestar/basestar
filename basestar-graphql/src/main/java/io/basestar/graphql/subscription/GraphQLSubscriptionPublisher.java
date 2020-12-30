@@ -24,7 +24,7 @@ public class GraphQLSubscriptionPublisher implements Handler<SubscriptionPublish
 
     private final Database database;
 
-    interface Transport {
+    public interface Transport {
 
         CompletableFuture<?> send(String sub, String channel, GraphQLWebsocketAPI.ResponseBody message);
     }

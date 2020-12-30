@@ -22,7 +22,6 @@ package io.basestar.expression.iterate;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
@@ -126,10 +125,10 @@ public class ForArray implements Expression {
     }
 
     @Override
-    public boolean isConstant(final Set<String> closure) {
+    public boolean isConstant(final Closure closure) {
 
         if(iter.isConstant(closure)) {
-            final Set<String> fullClosure = Sets.union(closure, iter.closure());
+            final Closure fullClosure = closure.with(iter.closure());
             return yield.isConstant(fullClosure);
         } else {
             return false;

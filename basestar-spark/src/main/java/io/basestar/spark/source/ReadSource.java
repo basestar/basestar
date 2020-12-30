@@ -50,7 +50,7 @@ public class ReadSource implements Source<Dataset<Row>> {
         this.session = Nullsafe.require(session);
         this.format = Nullsafe.orDefault(format, Format.DEFAULT);
         this.path = Nullsafe.orDefault(path);
-        this.options = Immutable.copy(options);
+        this.options = Immutable.map(options);
     }
 
     @Override

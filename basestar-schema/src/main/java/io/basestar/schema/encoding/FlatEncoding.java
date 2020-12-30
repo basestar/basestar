@@ -12,7 +12,7 @@ public class FlatEncoding implements Encoding<Map<String, Object>, Map<String, O
 
         final Map<String, Object> result = new HashMap<>();
         input.forEach((key, value) -> encode(result, key, value));
-        return Immutable.copy(result);
+        return Immutable.map(result);
     }
 
     private static void encode(final Map<String, Object> output, final String key, final Object value) {
@@ -37,7 +37,7 @@ public class FlatEncoding implements Encoding<Map<String, Object>, Map<String, O
 
         final Map<String, Object> result = new HashMap<>();
         input.forEach((key, value) -> decode(result, key, value));
-        return Immutable.copy(result);
+        return Immutable.map(result);
     }
 
     @SuppressWarnings("unchecked")
