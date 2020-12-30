@@ -23,7 +23,6 @@ package io.basestar.graphql;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.io.BaseEncoding;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
@@ -33,7 +32,6 @@ import graphql.schema.idl.*;
 import io.basestar.auth.Caller;
 import io.basestar.database.DatabaseServer;
 import io.basestar.database.options.CreateOptions;
-import io.basestar.event.EventSerialization;
 import io.basestar.graphql.schema.SchemaAdaptor;
 import io.basestar.graphql.schema.SchemaConverter;
 import io.basestar.graphql.subscription.SubscriberContext;
@@ -42,7 +40,6 @@ import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Namespace;
 import io.basestar.secret.SecretContext;
 import io.basestar.storage.MemoryStorage;
-import io.basestar.stream.event.SubscriptionPublishEvent;
 import io.basestar.util.Name;
 import org.junit.jupiter.api.Test;
 
@@ -518,15 +515,6 @@ class GraphQLTest {
                         "length", 5.0
                 )
         ), read.getData());
-    }
-
-    @Test
-    void testReal() {
-
-        final String input = "H4sIAAAAAAAAAOVXzW7jyBHupb0zjpNsAB/ys8FiNwMESQ6U2CQligq8GNmSLdmy9euxZy5Ck2ySbZNsik1alk95hlwCJC+QQ94jQE655ppbXiGnVFO2VoudzGJmkskhutDs7qqu+uqrr2jyA4QU4YY0Juh7CKGWEDQfONfUzZHCPBTCmjCaMRE5zVSP80xlicPvVKdwb2iu0kJdUJGrWLX1hlav2YZt4lpVpDxn/rLanoxVF1YcSrDqm56vmsS0VdunlkosGyz0mmPoduUujpBCb2mSo6dw5cWw3Zp20JZDfZ5R9Fx5Q5RuRklOPfRj2NA1XVO1hortKcZN02hiraLrJtphYsKLzKUPRh/t3dJMMJ6gj9Hqp6wSQhr8/ZbZoq2IuySX3rrSE8D26/eCDX1w6LeIRBTVH8L/FTwNs66b1LQ00zBc18aGhfWaT82GY7o+9gzs6pqPXcBLcYssg8pNcqgD+g7YjjuHnd6LThspReq9tjhG07CbeqOiGwZSbugS1WS278SakIgQ/QTM8/DM7FkuH1khG9H0qDeZCKO1v48gPR8wRH958l+j0ZP/KI1aynt64osE8v27DIhnAUnYfel4ukwp2obV9mS4RuL78D7YOIR2AZWcJYF4IyhaU8cVUzORkpCYop2v6ldSaPN9jdJHjyj9O1p8ze+6sPHJQu/0p1i/jl4tbxateTqqHpSFfcxBkq7/iN6bo67hSqNugSXNIKwSkS04NwEePuJfLsqK9s4PBldIyTjPhyQPv5Hke7b5W+LyGPkalxcj0Tkd3rXnVtxdXkyMcbUvuosSl/+NfvxZKQnHApaQ6IhF9FxS491b+6G6Tx57FahZrrx4wO1bmxZD026JsmX/D7ph7Xn3wfN2TiDuT+UdGvpESqQseFxIofZsMBDsnqJ/frk6vevRjN1S7yjjMQxjsEU/g2Vs41qdUEwpqXtUtz2iEdfzPQs3fEIBWEWUwv/dUviPe5NpZyyl/23niOLyOM2oWI/l88F5540TxGqatYppgKkPXDviWUzyUgra7c7V7Oqsv9rYqPN4A8cg04cWPYgCw81aB3XLHZun2qjsnncdaIZd0Wr6hxhoonCEm7G0pOgfPpZKWDhluUhRE3WrEWJcTTPuVcfh4M6hU+Oadw5Puq19yC4kSUKjDysQLokiGEn/2PpKtGWNL0CG0Y4oUnjAoYiwWKDfyUMkn5VA/AhO1fDh8OZC1Wbq8EUt7b+8ERFnwSrnn8uctTo1fVpXTQMuN01qqA3fqatGw/NsbNrAOwdtuzxIWM6bQcaLVKBfrNrip/BYZzoLhkX7NMHX6eyY8yCiCO1AqCyaQWsxn0HhgdhCoOdgFeZ5KprV6oNflXlpZe2pQmJyzxOyEBXgdfU1N0jCrwIqAIRSNj6TtCzvnWHNtnVL1zC2NGzbhoF1CyMlgAZNZuVh2eSHYcZEzghIYcIT6MU/SUwvF1mvcVHjr161+9dmNEoN/TJwhTY/WfJEO2s5S6N72wt7tye1uPXSmfLjxmIQ3jUWx0v/Vr2yunF638GjiNS6ly01tW7dc9qtXxyPG1pgDHr5Sbew1X4iZuFlcTlati4i3jLutFZnpp+eL+rng4K7lj45O41S7fT+JZ1OOUkPLi4LL5q/PHI6ZnJPws7xrA2dmzI3L+AT/2oD0Cg0KisYJDIuT3JoxhJGolZbgxCbxyybXy2uuzTuL4tLtz4ZFT27ezKdj4l2dsjH3ml6kt/M94VdV120TQpvs9xGMDcMv26Luh3xZO46nkVsYQeBDpLJPLiM5YwK9Hs4u6Wh30pL2fWHD/ovlRTXbEvXDWgLkDeQBQi056Efyp3XVw6a8RZ8Z+VIlP/jPBBsvVHK1MbGLvCsgLaAAywm2bLslzwrqAwn5zfAA7i1/HgBqd0jRR7OcgbO//Zsfyb1fI/epeiXnzx9msOk2WOgjX/8/K9P5Ivik5hFyxWP5JVDnt3Lhiq5jvZgxZXMSp+DtAe0klMXxGKHAMdW3xbfSlRwdbcW87QM8Yv9/S+efSC9eYa2WOJz9BuJ1XMWpxGNoayriW7LcHjFIQJuI1klyEgazqPKpqZWjuXiqD/ZWOtJj7skYkSgbQmdQJ+vSCXH++PsVXA5a+QIkL9/AQy59uBhDwAA";
-        final byte[] inputBytes = BaseEncoding.base64().decode(input);
-        final SubscriptionPublishEvent event = EventSerialization.gzipBson().deserialize(SubscriptionPublishEvent.class, inputBytes);
-        System.err.println(event);
     }
 
     @Test
