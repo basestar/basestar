@@ -25,7 +25,10 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.*;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
-import org.apache.spark.sql.types.*;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 import scala.Tuple2;
 
 import java.util.*;
@@ -104,53 +107,6 @@ public class ExpandLinkStep extends AbstractExpandStep {
 
         return constants.keySet().stream()
                 .map(functions::col).toArray(Column[]::new);
-    }
-
-    private DataType linkKeyType(final InstanceSchema schema, final Name name, final StructType type) {
-
-        final Member member = schema.requireMember(name.first(), true);
-        if(member instanceof Link && name.size() == 1) {
-            return type;
-        } else {
-            final StructField field = SparkRowUtils.findField(type, name.first()).orElseThrow(IllegalStateException::new);
-            return linkKeyType(member.typeOf(), name.withoutFirst(), field.dataType());
-        }
-    }
-
-    private DataType linkKeyType(final Use<?> type, final Name name, final DataType dataType) {
-
-        return type.visit(new Use.Visitor.Defaulting<DataType>() {
-
-            @Override
-            public <V, T extends Collection<V>> DataType visitCollection(final UseCollection<V, T> type) {
-
-                if (dataType instanceof ArrayType) {
-                    return linkKeyType(type.getType(), name, ((ArrayType) dataType).elementType());
-                } else {
-                    throw new IllegalStateException();
-                }
-            }
-
-            @Override
-            public <T> DataType visitMap(final UseMap<T> type) {
-
-                if (dataType instanceof MapType) {
-                    return linkKeyType(type.getType(), name.withoutFirst(), ((MapType) dataType).valueType());
-                } else {
-                    throw new IllegalStateException();
-                }
-            }
-
-            @Override
-            public DataType visitInstance(final UseInstance type) {
-
-                if (dataType instanceof StructType) {
-                    return linkKeyType(type.getSchema(), name, (StructType) dataType);
-                } else {
-                    throw new IllegalStateException();
-                }
-            }
-        });
     }
 
     @Override

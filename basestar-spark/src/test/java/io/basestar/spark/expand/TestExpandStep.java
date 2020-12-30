@@ -1,4 +1,4 @@
-package io.basestar.spark.query;
+package io.basestar.spark.expand;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -8,8 +8,7 @@ import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.ReferableSchema;
 import io.basestar.spark.AbstractSparkTest;
-import io.basestar.spark.expand.ExpandStep;
-import io.basestar.spark.expand.Expansion;
+import io.basestar.spark.query.QueryResolver;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.util.Name;
 import org.apache.spark.sql.Dataset;
@@ -27,7 +26,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-public class TestExpandTransform extends AbstractSparkTest {
+public class TestExpandStep extends AbstractSparkTest {
 
     @Test
     void testExpansion() throws IOException {

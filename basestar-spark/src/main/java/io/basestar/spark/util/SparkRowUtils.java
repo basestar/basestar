@@ -123,29 +123,6 @@ public class SparkRowUtils {
                 DataTypes.createStructType(outputFields.toArray(new StructField[0])));
     }
 
-    public static Row set(final Row source, final Map<String, ?> of) {
-
-        return transform(source, (field, value) -> {
-            if(of.containsKey(field.name())) {
-                return of.get(field.name());
-            } else {
-                return value;
-            }
-        });
-    }
-
-    public static Row set(final Row source, final String name, final Object newValue) {
-
-        assert(Arrays.asList(source.schema().fieldNames()).contains(name));
-        return transform(source, (field, value) -> {
-            if(name.equals(field.name())) {
-                return newValue;
-            } else {
-                return value;
-            }
-        });
-    }
-
     public static Object get(final Row source, final Name name) {
 
         return get(NamingConvention.DEFAULT, source, name);

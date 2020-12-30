@@ -22,6 +22,8 @@ package io.basestar.codegen.model;
 
 import com.google.common.collect.ImmutableSet;
 import io.basestar.codegen.CodegenContext;
+import io.basestar.mapper.annotation.Description;
+import io.basestar.mapper.annotation.Extension;
 import io.basestar.schema.EnumSchema;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Schema;
@@ -29,6 +31,7 @@ import io.basestar.util.Name;
 import io.basestar.util.Path;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -116,7 +119,15 @@ public abstract class SchemaModel extends Model {
 
     public abstract String getSchemaType();
 
-    public abstract List<AnnotationModel<?>> getAnnotations();
+    public List<AnnotationModel<?>> getAnnotations() {
+
+        final List<AnnotationModel<?>> annotations = new ArrayList<>();
+        if(schema.getDescription() != null) {
+            annotations.add(new AnnotationModel<>(getContext(), Description.Modifier.annotation(schema.getDescription())));
+        }
+        schema.getExtensions().forEach((k, v) -> annotations.add(new AnnotationModel<>(getContext(), Extension.Modifier.annotation(k, v))));
+        return annotations;
+    }
 
     public boolean generate() {
 

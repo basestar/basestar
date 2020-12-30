@@ -21,7 +21,6 @@ package io.basestar.codegen.model;
  */
 
 import io.basestar.codegen.CodegenContext;
-import io.basestar.mapper.annotation.Description;
 import io.basestar.schema.EnumSchema;
 
 import java.util.ArrayList;
@@ -52,11 +51,8 @@ public class EnumSchemaModel extends SchemaModel {
     @Override
     public List<AnnotationModel<?>> getAnnotations() {
 
-        final List<AnnotationModel<?>> annotations = new ArrayList<>();
+        final List<AnnotationModel<?>> annotations = new ArrayList<>(super.getAnnotations());
         annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.EnumSchema.Declaration.annotation(schema)));
-        if(schema.getDescription() != null) {
-            annotations.add(new AnnotationModel<>(getContext(), Description.Modifier.annotation(schema.getDescription())));
-        }
         return annotations;
     }
 }

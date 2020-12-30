@@ -21,19 +21,15 @@ package io.basestar.codegen.model;
  */
 
 import io.basestar.codegen.CodegenContext;
-import io.basestar.mapper.annotation.Description;
 import io.basestar.schema.Index;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.Reserved;
 import io.basestar.util.Immutable;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @SuppressWarnings("unused")
-public class ObjectSchemaModel extends InstanceSchemaModel {
+public class ObjectSchemaModel extends LinkableSchemaModel {
 
     private final ObjectSchema schema;
 
@@ -52,27 +48,12 @@ public class ObjectSchemaModel extends InstanceSchemaModel {
     @Override
     public List<AnnotationModel<?>> getAnnotations() {
 
-        final List<AnnotationModel<?>> annotations = new ArrayList<>();
-        annotations.add(new AnnotationModel<>(getContext(), VALID));
+        final List<AnnotationModel<?>> annotations = new ArrayList<>(super.getAnnotations());
         annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.ObjectSchema.Declaration.annotation(schema)));
         for(final Index index : schema.getIndexes().values()) {
             annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.Index.Modifier.annotation(index)));
         }
-        if(schema.getDescription() != null) {
-            annotations.add(new AnnotationModel<>(getContext(), Description.Modifier.annotation(schema.getDescription())));
-        }
         return annotations;
-    }
-
-    @Override
-    public List<MemberModel> getAdditionalMembers() {
-
-        return Stream.concat(
-                schema.getExtend() != null ? Stream.<MemberModel>empty() : schema.metadataSchema().entrySet().stream()
-                        .filter(entry -> !ObjectSchema.SCHEMA.equals(entry.getKey()) && !entry.getKey().startsWith(Reserved.PREFIX))
-                        .map(entry -> new MetadataModel(getContext(), entry.getKey(), entry.getValue())),
-                schema.getDeclaredLinks().values().stream()
-                        .map(v -> new LinkModel(getContext(), v))).collect(Collectors.toList());
     }
 
     @Override

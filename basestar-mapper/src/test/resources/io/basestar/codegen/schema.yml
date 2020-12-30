@@ -13,6 +13,7 @@ MyBase:
 MyObject:
   type: object
   extend: MyBase
+  description: "Simple test object"
   extensions:
     "io.basestar.bucket": ["x"]
   id:
@@ -20,6 +21,7 @@ MyObject:
   properties:
     test1:
       type: string
+      immutable: true
     test2:
       type:
         array: MyEnum
@@ -29,6 +31,8 @@ MyObject:
       type: date
     mydatetime:
       type: datetime
+    point:
+      type: Point
   links:
     test4:
       expression: id==this.id && "test"==test1
@@ -37,6 +41,10 @@ MyObject:
       expression: id==this.id && "test"==test1
       schema: MyObject
       single: true
+  permissions:
+    read:
+      expression: true
+      anonymous: true
   indexes:
     blah:
       partition:
@@ -44,9 +52,18 @@ MyObject:
       sort:
         - test2
 
+Point:
+  type: struct
+  properties:
+    x:
+      type: number
+    y:
+      type: number
+
 MyView:
   type: view
   from: MyObject
+  group: test1
   where: a + "_" + b
 
 #ns1.ns2.MyObject:
