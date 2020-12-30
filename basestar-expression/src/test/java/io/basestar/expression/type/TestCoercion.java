@@ -99,7 +99,7 @@ class TestCoercion {
         assertEquals("2020-01-01", Coercion.toString(ISO8601.toSqlDate(LocalDate.parse("2020-01-01"))));
         assertEquals("2020-01-01T00:00:00.000Z", Coercion.toString(ISO8601.toSqlTimestamp(Instant.parse("2020-01-01T00:00:00Z"))));
         assertEquals("AQ==", Coercion.toString(new byte[]{1}));
-        assertEquals("{}", Coercion.toString(ImmutableMap.of()));
+        assertThrows(TypeConversionException.class, () -> Coercion.toString(ImmutableList.of()));
     }
 
     @Test

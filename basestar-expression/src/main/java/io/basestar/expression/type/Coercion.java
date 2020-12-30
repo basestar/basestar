@@ -150,7 +150,7 @@ public class Coercion {
         } else if (value instanceof byte[]) {
             return BaseEncoding.base64().encode((byte[]) value);
         } else {
-            return value.toString();
+            throw new TypeConversionException(String.class, value);
         }
     }
 
