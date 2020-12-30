@@ -1,55 +1,56 @@
 package io.basestar.stream;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
 import io.basestar.auth.Caller;
+import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.schema.LinkableSchema;
 import io.basestar.util.Page;
 import io.basestar.util.Pager;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+
+/**
+ * Simple in-memory storage for subscriptiona
+ */
 
 public class MemorySubscriptions implements Subscriptions {
 
-    private final Map<Subscription.Id, Subscription> subscriptions = new HashMap<>();
-
-    private final Multimap<Subscription.Key, Subscription.Id> keyToId = HashMultimap.create();
-
-    private final Multimap<Subscription.Id, Subscription.Key> idToKey = HashMultimap.create();
+    private final List<Subscription> subscriptions = new ArrayList<>();
 
     private final Object lock = new Object();
 
     @Override
-    public CompletableFuture<?> subscribe(final Caller caller, final String sub, final String channel, final Set<Subscription.Key> keys, final Expression expression, final SubscriptionInfo info) {
+    public CompletableFuture<?> subscribe(final Caller caller, final String sub, final String channel, final LinkableSchema schema, final Set<Change.Event> events, final Expression expression, final SubscriptionMetadata metadata) {
 
         final Subscription subscription = new Subscription();
         subscription.setCaller(caller);
         subscription.setSub(sub);
         subscription.setChannel(channel);
+        subscription.setSchema(schema.getQualifiedName());
+        subscription.setEvents(events);
         subscription.setExpression(expression);
-        subscription.setInfo(info);
+        subscription.setMetadata(metadata);
         synchronized (lock) {
-            final Subscription.Id id = new Subscription.Id(sub, channel);
-            subscriptions.put(id, subscription);
-            keys.forEach(key -> {
-                keyToId.put(key, id);
-                idToKey.put(id, key);
-            });
+            subscriptions.removeIf(v -> v.matches(sub, channel));
+            subscriptions.add(subscription);
         }
         return CompletableFuture.completedFuture(null);
     }
 
     @Override
-    public Pager<Subscription> query(final Set<Subscription.Key> keys) {
+    public Pager<Subscription> query(final LinkableSchema schema, final Change.Event event, final Map<String, Object> before, final Map<String, Object> after) {
 
         final List<Subscription> results = new ArrayList<>();
         synchronized (lock) {
-            final Set<Subscription.Id> ids = new HashSet<>();
-            keys.forEach(key -> {
-                ids.addAll(keyToId.get(key));
+            subscriptions.forEach(v -> {
+                if(matches(v, schema, event, before, after)) {
+                    results.add(v);
+                }
             });
-            ids.forEach(id -> results.add(subscriptions.get(id)));
         }
         return (stats, token, count) -> CompletableFuture.completedFuture(Page.from(results));
     }
@@ -58,12 +59,7 @@ public class MemorySubscriptions implements Subscriptions {
     public CompletableFuture<?> unsubscribe(final String sub, final String channel) {
 
         synchronized (lock) {
-            final Subscription.Id id = new Subscription.Id(sub, channel);
-            idToKey.get(id).forEach(key -> {
-                keyToId.remove(key, id);
-            });
-            idToKey.removeAll(id);
-            subscriptions.remove(id);
+            subscriptions.removeIf(v -> v.matches(sub, channel));
         }
         return CompletableFuture.completedFuture(null);
     }
@@ -72,20 +68,21 @@ public class MemorySubscriptions implements Subscriptions {
     public CompletableFuture<?> unsubscribeAll(final String sub) {
 
         synchronized (lock) {
-            final Set<Subscription.Id> ids = new HashSet<>();
-            subscriptions.forEach((id, subscription) -> {
-                if(sub.equals(subscription.getSub())) {
-                    ids.add(id);
-                }
-            });
-            ids.forEach(id -> {
-                idToKey.get(id).forEach(key -> {
-                    keyToId.remove(key, id);
-                });
-                idToKey.removeAll(id);
-                subscriptions.remove(id);
-            });
+            subscriptions.removeIf(v -> v.matches(sub));
         }
         return CompletableFuture.completedFuture(null);
+    }
+
+    private boolean matches(final Subscription subscription, final LinkableSchema schema, final Change.Event event, final Map<String, Object> before, final Map<String, Object> after) {
+
+        return before != null && matches(subscription, schema, event, before)
+                || after != null && matches(subscription, schema, event, after);
+    }
+
+    private boolean matches(final Subscription subscription, final LinkableSchema schema, final Change.Event event, final Map<String, Object> value) {
+
+        return subscription.getSchema().equals(schema.getQualifiedName())
+                && subscription.getEvents().contains(event)
+                && subscription.getExpression().evaluatePredicate(Context.init(value));
     }
 }

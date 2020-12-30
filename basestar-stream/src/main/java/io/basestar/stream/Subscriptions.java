@@ -22,16 +22,18 @@ package io.basestar.stream;
 
 import io.basestar.auth.Caller;
 import io.basestar.expression.Expression;
+import io.basestar.schema.LinkableSchema;
 import io.basestar.util.Pager;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 public interface Subscriptions {
 
-    CompletableFuture<?> subscribe(Caller caller, String sub, String channel, Set<Subscription.Key> keys, Expression expression, SubscriptionInfo info);
+    CompletableFuture<?> subscribe(Caller caller, String sub, String channel, LinkableSchema schema, Set<Change.Event> events, Expression expression, SubscriptionMetadata info);
 
-    Pager<Subscription> query(Set<Subscription.Key> keys);
+    Pager<Subscription> query(LinkableSchema schema, Change.Event event, Map<String, Object> before, Map<String, Object> after);
 
     CompletableFuture<?> unsubscribe(String sub, String channel);
 

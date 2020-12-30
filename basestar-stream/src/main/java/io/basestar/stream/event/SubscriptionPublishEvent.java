@@ -20,11 +20,13 @@ package io.basestar.stream.event;
  * #L%
  */
 
-import io.basestar.database.event.ObjectEvent;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.common.collect.ImmutableMap;
+import io.basestar.auth.Caller;
 import io.basestar.event.Event;
+import io.basestar.schema.ObjectSchema;
 import io.basestar.stream.Change;
-import io.basestar.stream.Subscription;
-import io.basestar.util.Name;
+import io.basestar.stream.SubscriptionMetadata;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -32,28 +34,35 @@ import java.util.Map;
 
 @Data
 @Accessors(chain = true)
-public class SubscriptionPublishEvent implements ObjectEvent {
+public class SubscriptionPublishEvent implements Event {
 
-    private Name schema;
+    private Caller caller;
 
-    private String id;
+    private String sub;
 
-    private Change.Event event;
+    private String channel;
 
-    private Map<String, Object> before;
+    private Change change;
 
-    private Map<String, Object> after;
+    private SubscriptionMetadata metadata;
 
-    private Subscription subscription;
+    public static SubscriptionPublishEvent of(final Caller caller, final String sub, final String channel, final Change change, final SubscriptionMetadata metadata) {
 
-    public static SubscriptionPublishEvent of(final Name schema, final String id, final Change.Event event, final Map<String, Object> before, final Map<String, Object> after, final Subscription subscription) {
-
-        return new SubscriptionPublishEvent().setSchema(schema).setId(id).setEvent(event).setBefore(before).setAfter(after).setSubscription(subscription);
+        return new SubscriptionPublishEvent().setCaller(caller).setSub(sub).setChannel(channel).setChange(change).setMetadata(metadata);
     }
 
     @Override
     public Event abbreviate() {
 
         return this;
+    }
+
+    @Override
+    @JsonIgnore
+    public Map<String, String> eventMetadata() {
+
+        return ImmutableMap.of(
+                ObjectSchema.SCHEMA, change.getSchema().toString()
+        );
     }
 }

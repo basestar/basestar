@@ -8,7 +8,7 @@ import io.basestar.graphql.api.GraphQLWebsocketAPI;
 import io.basestar.graphql.transform.GraphQLResponseTransform;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.stream.Change;
-import io.basestar.stream.SubscriptionInfo;
+import io.basestar.stream.SubscriptionMetadata;
 import io.basestar.stream.TransportPublisher;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -19,7 +19,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-public class GraphQLPublisher implements TransportPublisher<GraphQLWebsocketAPI.ResponseBody> {
+public class GraphQLSubscriptionPublisher implements TransportPublisher<GraphQLWebsocketAPI.ResponseBody> {
 
     private final Database database;
 
@@ -28,9 +28,9 @@ public class GraphQLPublisher implements TransportPublisher<GraphQLWebsocketAPI.
     private final GraphQLResponseTransform responseTransform;
 
     @lombok.Builder(builderClassName = "Builder")
-    public GraphQLPublisher(final Database database,
-                            final GraphQLStrategy strategy,
-                            final Transport<? super GraphQLWebsocketAPI.ResponseBody> transport) {
+    public GraphQLSubscriptionPublisher(final Database database,
+                                        final GraphQLStrategy strategy,
+                                        final Transport<? super GraphQLWebsocketAPI.ResponseBody> transport) {
 
         this.database = database;
         this.transport = transport;
@@ -44,14 +44,15 @@ public class GraphQLPublisher implements TransportPublisher<GraphQLWebsocketAPI.
     }
 
     @Override
-    public CompletableFuture<Optional<GraphQLWebsocketAPI.ResponseBody>> message(final Caller caller, final ObjectSchema schema, final String sub, final String channel, final SubscriptionInfo info, final Change change) {
+    public CompletableFuture<Optional<GraphQLWebsocketAPI.ResponseBody>> message(final Caller caller, final String sub, final String channel, final Change change,  final SubscriptionMetadata info) {
 
-        if(info instanceof GraphQLSubscriptionInfo) {
-            final GraphQLSubscriptionInfo gqlInfo = (GraphQLSubscriptionInfo)info;
+        if(info instanceof GraphQLSubscriptionMetadata) {
+            final GraphQLSubscriptionMetadata gqlInfo = (GraphQLSubscriptionMetadata)info;
 
             if(change.getAfter() != null) {
                 final String alias = gqlInfo.getAlias();
                 final Set<Name> names = gqlInfo.getNames();
+                final ObjectSchema schema = database.namespace().requireObjectSchema(change.getSchema());
                 final Set<Name> expand = schema.requiredExpand(names);
                 return database.expand(caller, change.getAfter(), expand)
                         .thenApply(after -> {

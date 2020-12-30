@@ -1,6 +1,6 @@
 package io.basestar.graphql.subscription;
 
-import io.basestar.stream.SubscriptionInfo;
+import io.basestar.stream.SubscriptionMetadata;
 import io.basestar.util.Name;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -11,7 +11,7 @@ import java.util.Set;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class GraphQLSubscriptionInfo implements SubscriptionInfo {
+public class GraphQLSubscriptionMetadata implements SubscriptionMetadata {
 
     private String alias;
 

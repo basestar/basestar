@@ -11,7 +11,7 @@ import io.basestar.api.API;
 import io.basestar.api.APIRequest;
 import io.basestar.api.APIResponse;
 import io.basestar.auth.Caller;
-import io.basestar.graphql.subscription.GraphQLSubscriptionInfo;
+import io.basestar.graphql.subscription.GraphQLSubscriptionMetadata;
 import io.basestar.graphql.subscription.SubscriberContext;
 import io.basestar.graphql.subscription.SubscriberIdSource;
 import io.basestar.stream.Hub;
@@ -168,9 +168,9 @@ public class GraphQLWebsocketAPI implements API {
 
             final String channel = this.getId();
             final SubscriberContext subscriberContext = (schema, expression, alias, names) -> {
-                final GraphQLSubscriptionInfo info = new GraphQLSubscriptionInfo(alias, names);
+                final GraphQLSubscriptionMetadata info = new GraphQLSubscriptionMetadata(alias, names);
                 final Set<Name> expand = schema.requiredExpand(names);
-                return hub.subscribe(caller, sub, channel, schema.getQualifiedName().toString(), expression, expand, info);
+                return hub.subscribe(caller, sub, channel, schema.getQualifiedName(), expression, expand, info);
             };
 
             return ExecutionInput.newExecutionInput()
