@@ -16,7 +16,7 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE})
 @Repeatable(Extension.Multi.class)
-@SchemaModifier(Index.Modifier.class)
+@SchemaModifier(Extension.Modifier.class)
 public @interface Extension {
 
     String name();
@@ -26,10 +26,22 @@ public @interface Extension {
     @Documented
     @Retention(RetentionPolicy.RUNTIME)
     @Target({ElementType.TYPE})
-    @SchemaModifier(Index.Multi.Modifier.class)
+    @SchemaModifier(Extension.Multi.Modifier.class)
     @interface Multi {
 
         Extension[] value();
+
+        @RequiredArgsConstructor
+        class Modifier implements SchemaModifier.Modifier<SchemaMapper<?, ?>> {
+
+            private final Multi annotation;
+
+            @Override
+            public SchemaMapper<?, ?> modify(final MappingContext context, final SchemaMapper<?, ?> mapper) {
+
+                return Extension.Modifier.modify(mapper, annotation.value());
+            }
+        }
     }
 
     @RequiredArgsConstructor
@@ -41,6 +53,11 @@ public @interface Extension {
 
         @Override
         public SchemaMapper<?, ?> modify(final MappingContext context, final SchemaMapper<?, ?> mapper) {
+
+            return modify(mapper, annotation);
+        }
+
+        private static SchemaMapper<?, ?> modify(final SchemaMapper<?, ?> mapper, final Extension ... annotations) {
 
             return mapper;
         }
