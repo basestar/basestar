@@ -57,11 +57,11 @@ public class Coercion {
             final String str = (String) value;
             return !(str.isEmpty() || str.equalsIgnoreCase("false"));
         } else if (value instanceof Collection) {
-            return ((Collection<?>) value).size() > 0;
+            return !((Collection<?>) value).isEmpty();
         } else if (value instanceof Map) {
-            return ((Map<?, ?>) value).size() > 0;
+            return !((Map<?, ?>) value).isEmpty();
         } else {
-            throw new IllegalStateException();
+            throw new TypeConversionException(Boolean.class, value);
         }
     }
 
@@ -150,7 +150,7 @@ public class Coercion {
         } else if (value instanceof byte[]) {
             return BaseEncoding.base64().encode((byte[]) value);
         } else {
-            throw new TypeConversionException(String.class, value);
+            return value.toString();
         }
     }
 
@@ -174,12 +174,12 @@ public class Coercion {
 
     public static <V> List<V> toList(final Object source, final Function<Object, V> value) {
 
-        return toCollection(source, ArrayList::new, value);
+        return toList(source, List.class, value);
     }
 
     public static <V> Set<V> toSet(final Object source, final Function<Object, V> value) {
 
-        return toCollection(source, HashSet::new, value);
+        return toSet(source, Set.class, value);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -193,7 +193,7 @@ public class Coercion {
                 try {
                     return type.newInstance();
                 } catch (final InstantiationException | IllegalAccessException e) {
-                    throw new IllegalStateException(e);
+                    throw new TypeConversionException(List.class, value);
                 }
             };
         }
@@ -215,7 +215,7 @@ public class Coercion {
                 try {
                     return type.newInstance();
                 } catch (final InstantiationException | IllegalAccessException e) {
-                    throw new IllegalStateException(e);
+                    throw new TypeConversionException(List.class, value);
                 }
             };
         }
@@ -229,7 +229,7 @@ public class Coercion {
         } else if (source instanceof Collection<?>) {
             return ((Collection<?>) source).stream().map(value).collect(Collectors.toCollection(supplier));
         } else {
-            throw new IllegalStateException();
+            throw new TypeConversionException(Collection.class, value);
         }
     }
 
@@ -253,7 +253,7 @@ public class Coercion {
                 try {
                     return type.newInstance();
                 } catch (final InstantiationException | IllegalAccessException e) {
-                    throw new IllegalStateException(e);
+                    throw new TypeConversionException(Map.class, value);
                 }
             };
         }
@@ -271,7 +271,7 @@ public class Coercion {
             });
             return result;
         } else {
-            throw new IllegalStateException();
+            throw new TypeConversionException(Map.class, value);
         }
     }
 

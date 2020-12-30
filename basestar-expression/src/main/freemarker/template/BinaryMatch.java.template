@@ -20,6 +20,7 @@ package io.basestar.expression.match;
  * #L%
  */
 
+import io.basestar.annotation.Generated;
 import io.basestar.expression.type.Coercion;
 import io.basestar.expression.exception.BadOperandsException;
 
@@ -27,6 +28,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.Map;
+
 
 /**
  * Order is:
@@ -43,6 +45,7 @@ import java.util.Map;
  * @param <T>
  */
 
+@Generated
 public interface BinaryMatch<T> {
 
     Void NULL = null;
