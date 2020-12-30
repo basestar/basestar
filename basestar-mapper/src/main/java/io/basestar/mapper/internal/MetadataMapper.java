@@ -131,7 +131,7 @@ public class MetadataMapper implements MemberMapper<ObjectSchema.Builder> {
             @Override
             public void unmarshall(final TypeMapper type, final Map<String, Object> target, final Object value) {
 
-                Instance.setVersion(target, Coercion.toLong(type.unmarshall(value)));
+                Instance.setVersion(target, Coercion.toInteger(type.unmarshall(value)));
             }
         };
 

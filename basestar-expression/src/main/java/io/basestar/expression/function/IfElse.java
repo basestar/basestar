@@ -27,7 +27,7 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.Renaming;
 import io.basestar.expression.constant.Constant;
-import io.basestar.expression.type.Values;
+import io.basestar.expression.type.Coercion;
 import io.basestar.util.Name;
 import lombok.Data;
 
@@ -75,7 +75,7 @@ public class IfElse implements Expression {
         final Expression predicate = this.predicate.bind(context, root);
         if(predicate instanceof Constant) {
             final Object value = predicate.evaluate(context);
-            if(Values.isTruthy(value)) {
+            if(Coercion.isTruthy(value)) {
                 return then.bind(context, root);
             } else {
                 return otherwise.bind(context, root);

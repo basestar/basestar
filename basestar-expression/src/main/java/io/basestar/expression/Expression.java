@@ -22,7 +22,7 @@ package io.basestar.expression;
 
 import com.google.common.hash.Hashing;
 import io.basestar.expression.parse.ExpressionCache;
-import io.basestar.expression.type.Values;
+import io.basestar.expression.type.Coercion;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 
@@ -47,7 +47,7 @@ public interface Expression extends Serializable {
 
     default boolean evaluatePredicate(final Context context) {
 
-        return Values.isTruthy(evaluate(context));
+        return Coercion.isTruthy(evaluate(context));
     }
 
     // FIXME: this should try to coerce to the target type

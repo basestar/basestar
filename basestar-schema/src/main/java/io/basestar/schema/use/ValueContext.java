@@ -1,8 +1,8 @@
 package io.basestar.schema.use;
 
 import io.basestar.exception.InvalidDateTimeException;
-import io.basestar.expression.type.Values;
-import io.basestar.expression.type.exception.TypeConversionException;
+import io.basestar.expression.exception.TypeConversionException;
+import io.basestar.expression.type.Coercion;
 import io.basestar.schema.*;
 import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.schema.exception.UnexpectedTypeException;
@@ -173,25 +173,25 @@ public interface ValueContext {
         @Override
         public Boolean createBoolean(final UseBoolean type, final Object value, final Set<Name> expand) {
 
-            return Values.toBoolean(value);
+            return Coercion.toBoolean(value);
         }
 
         @Override
         public String createString(final UseString type, final Object value, final Set<Name> expand) {
 
-            return Values.toString(value);
+            return Coercion.toString(value);
         }
 
         @Override
         public Double createNumber(final UseNumber type, final Object value, final Set<Name> expand) {
 
-            return Values.toFloat(value);
+            return Coercion.toFloat(value);
         }
 
         @Override
         public Long createInteger(final UseInteger type, final Object value, final Set<Name> expand) {
 
-            return Values.toInteger(value);
+            return Coercion.toInteger(value);
         }
 
         @Override
@@ -240,7 +240,7 @@ public interface ValueContext {
         @Override
         public byte[] createBinary(final UseBinary useBinary, final Object value, final Set<Name> expand) {
 
-            return Values.toBinary(value);
+            return Coercion.toBinary(value);
         }
 
         @Override

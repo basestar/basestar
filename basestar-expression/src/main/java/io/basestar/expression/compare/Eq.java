@@ -20,11 +20,12 @@ package io.basestar.expression.compare;
  * #L%
  */
 
-import io.basestar.expression.*;
+import io.basestar.expression.Binary;
+import io.basestar.expression.Context;
+import io.basestar.expression.Expression;
+import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.type.Values;
 import lombok.Data;
-
-import java.util.function.BiFunction;
 
 /**
  * Equals
@@ -88,20 +89,5 @@ public class Eq implements Binary {
     public String toString() {
 
         return Binary.super.toString(lhs, rhs);
-    }
-
-    public static <A, B, R> Matcher<R> match(final Matcher<A> lhs, final Matcher<B> rhs, final BiFunction<A, B, R> then) {
-
-        return root -> {
-            if(root instanceof Eq) {
-                final Eq eq = (Eq)root;
-                final A matchA = lhs.match(eq.getLhs());
-                final B matchB = rhs.match(eq.getRhs());
-                if (matchA != null && matchB != null) {
-                    return then.apply(matchA, matchB);
-                }
-            }
-            return null;
-        };
     }
 }

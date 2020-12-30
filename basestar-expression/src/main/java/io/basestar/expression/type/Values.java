@@ -21,11 +21,9 @@ package io.basestar.expression.type;
  */
 
 import com.google.common.base.Charsets;
-import com.google.common.io.BaseEncoding;
-import io.basestar.expression.type.exception.TypeConversionException;
-import io.basestar.expression.type.match.BinaryMatch;
-import io.basestar.expression.type.match.BinaryNumberMatch;
-import io.basestar.expression.type.match.UnaryMatch;
+import io.basestar.expression.match.BinaryMatch;
+import io.basestar.expression.match.BinaryNumberMatch;
+import io.basestar.expression.match.UnaryMatch;
 import io.basestar.util.ISO8601;
 import io.basestar.util.Pair;
 import io.leangen.geantyref.GenericTypeReflector;
@@ -33,153 +31,16 @@ import io.leangen.geantyref.GenericTypeReflector;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
-import java.time.temporal.TemporalAccessor;
 import java.util.*;
 import java.util.stream.Collectors;
 
 // FIXME: some of these methods should be superseded by methods in Coercion/Numbers
 
 public class Values {
-
-    public static boolean isTruthy(final Object value) {
-
-        if(value == null) {
-            return false;
-        } else if(value instanceof Boolean) {
-            return (Boolean)value;
-        } else if(value instanceof Number) {
-            final Number number = (Number)value;
-            if(isInteger(number)) {
-                return number.intValue() != 0;
-            } else {
-                return number.floatValue() != 0.0f;
-            }
-        } else if(value instanceof String) {
-            final String str = (String)value;
-            return !(str.isEmpty() || str.equalsIgnoreCase("false"));
-        } else if(value instanceof Collection) {
-            return ((Collection<?>)value).size() > 0;
-        } else if(value instanceof Map) {
-            return ((Map<?, ?>)value).size() > 0;
-        } else {
-            throw new IllegalStateException();
-        }
-    }
-
-    public static Boolean toBoolean(final Object value) {
-
-        if(value == null) {
-            return null;
-        } else if(value instanceof Boolean) {
-            return (Boolean)value;
-        } else if(value instanceof Number) {
-            return ((Number)value).intValue() != 0;
-        } else if(value instanceof String) {
-            final String str = (String)value;
-            return !(str.isEmpty() || str.equalsIgnoreCase("false"));
-        } else {
-            throw new TypeConversionException(Boolean.class, value);
-        }
-    }
-
-    public static Long toInteger(final Object value) {
-
-        if(value == null) {
-            return null;
-        } else if(value instanceof Boolean) {
-            return ((Boolean)value) ? 1L : 0L;
-        } else if(value instanceof Number) {
-            return ((Number)value).longValue();
-        } else if(value instanceof String) {
-            try {
-                return Long.parseLong((String) value);
-            } catch (final NumberFormatException e) {
-                throw new TypeConversionException(Long.class, value);
-            }
-        } else if(value instanceof LocalDate) {
-            return ISO8601.toMillis((LocalDate)value);
-        } else if(value instanceof Instant) {
-            return ISO8601.toMillis((Instant) value);
-        } else if(value instanceof Date) {
-            return ISO8601.toMillis((Date)value);
-        } else {
-            throw new TypeConversionException(Long.class, value);
-        }
-    }
-
-    public static Double toFloat(final Object value) {
-
-        if(value == null) {
-            return null;
-        } else if(value instanceof Boolean) {
-            return ((Boolean)value) ? 1.0 : 0.0;
-        } else if(value instanceof Number) {
-            return ((Number)value).doubleValue();
-        } else if(value instanceof String) {
-            try {
-                return Double.parseDouble((String)value);
-            } catch (final NumberFormatException e) {
-                throw new TypeConversionException(Double.class, value);
-            }
-        } else if(value instanceof LocalDate) {
-            return (double)ISO8601.toMillis((LocalDate)value);
-        } else if(value instanceof Instant) {
-            return (double)ISO8601.toMillis((Instant)value);
-        } else if(value instanceof Date) {
-            return (double)ISO8601.toMillis((Date)value);
-        } else {
-            throw new TypeConversionException(Double.class, value);
-        }
-    }
-
-    public static String toString(final Object value) {
-
-        if(value == null) {
-            return null;
-        } else if(value instanceof Boolean || value instanceof Number) {
-            return value.toString();
-        } else if(value instanceof TemporalAccessor) {
-            return ISO8601.toString((TemporalAccessor)value);
-        } else if(value instanceof Date) {
-            return ISO8601.toString((Date)value);
-        } else if(value instanceof String) {
-            return (String) value;
-        } else if(value instanceof byte[]) {
-            return BaseEncoding.base64().encode((byte[])value);
-        } else {
-            throw new TypeConversionException(String.class, value);
-        }
-    }
-
-    public static byte[] toBinary(final Object value) {
-
-        if(value == null) {
-            return null;
-        } else if(value instanceof byte[]) {
-            return (byte[])value;
-        } else if(value instanceof ByteBuffer) {
-            return ((ByteBuffer) value).array();
-        } else if(value instanceof String) {
-            return BaseEncoding.base64().decode((String)value);
-        } else {
-            throw new TypeConversionException(byte[].class, value);
-        }
-    }
-
-    public static boolean isInteger(final Number value) {
-
-        return !isFloat(value);
-    }
-
-    public static boolean isFloat(final Number value) {
-
-        return value instanceof Float || value instanceof Double || value instanceof BigDecimal;
-    }
 
     @SuppressWarnings("unchecked")
     public static int compare(final Object a, final Object b) {
@@ -363,11 +224,6 @@ public class Values {
             return Values.toExpressionString(value);
         }
     };
-
-    public static String className(final Object value) {
-
-        return value == null ? "null" : value.getClass().getName();
-    }
 
     public static Object defaultValue(final Type of) {
 

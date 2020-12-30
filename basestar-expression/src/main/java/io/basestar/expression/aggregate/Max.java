@@ -32,7 +32,6 @@ import io.basestar.util.Name;
 import lombok.Data;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -53,9 +52,9 @@ public class Max implements Aggregate {
     }
 
     @Override
-    public Object evaluate(final Context context, final Stream<? extends Map<String, Object>> values) {
+    public Object evaluate(final Stream<Context> contexts) {
 
-        return Ordering.from(Values::compare).max(values.map(v -> input.evaluate(context.with(v))).iterator());
+        return Ordering.from(Values::compare).max(contexts.map(input::evaluate).iterator());
     }
 
     @Override

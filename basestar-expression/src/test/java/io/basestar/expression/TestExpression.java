@@ -23,10 +23,12 @@ package io.basestar.expression;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.expression.call.LambdaCall;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.exception.BadExpressionException;
+import io.basestar.expression.exception.BadOperandsException;
 import io.basestar.expression.function.With;
 import io.basestar.expression.iterate.ForAll;
 import io.basestar.expression.iterate.ForAny;
@@ -42,10 +44,8 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -98,12 +98,56 @@ class TestExpression {
         final Object actualBound = bound.evaluate(context);
 
         assertEqualsPromoting(expected, actualBound);
+
+        final Expression copy = expression.visit(new ExpressionVisitor.Defaulting<Expression>() {
+            @Override
+            public Expression visitDefault(final Expression expression) {
+
+                return expression.copy(this::visit);
+            }
+        });
+        assertEquals(expression, copy);
+
+        final Set<Name> names = expression.names();
+        assertTrue(expression.isConstant(Name.branch(names).keySet()));
+    }
+
+    private void checkAggregate(final String expr, final Object expected, final Supplier<Stream<Context>> context) {
+
+        final Aggregate expression = (Aggregate)cache.parse(expr);
+        final Object actual = expression.evaluate(context.get());
+
+        assertEqualsPromoting(expected, actual);
+
+        final String string = expression.toString();
+
+        log.debug("Expression ({}) reparse as: ({})", expr, string);
+
+        final Aggregate reparsed = (Aggregate)cache.parse(string);
+        final Object actualReparsed = reparsed.evaluate(context.get());
+        assertEqualsPromoting(expected, actualReparsed);
+
+        final Expression copy = expression.visit(new ExpressionVisitor.Defaulting<Expression>() {
+            @Override
+            public Expression visitDefault(final Expression expression) {
+
+                return expression.copy(this::visit);
+            }
+        });
+        assertEquals(expression, copy);
     }
 
     private void assertEqualsPromoting(final Object a, final Object b) {
 
         final Pair<Object, Object> pair = Values.promote(a, b);
         assertEquals(pair.getFirst(), pair.getSecond());
+    }
+
+    private void checkBadOperands(final String expr) {
+
+        final Context context = Context.init();
+        final Expression expression = cache.parse(expr);
+        assertThrows(BadOperandsException.class, () -> expression.evaluate(context));
     }
 
     @Test
@@ -119,21 +163,70 @@ class TestExpression {
         check("2 + 3 * 6", 20);
         check("true || false ? 1 - 2 + \"test\" : false", "-1test");
         check("null ?? null ?? true", true);
-        //check("[v + v for v in [0, 1, 2, 3, 4] where v]", Arrays.asList(2, 4, 6, 8));
     }
 
     @Test
-    void testArithmetic() {
+    void testAdd() {
 
-        check("-1 - -2", 1);
         check("1 + 3", 4);
         check("1 + 3.2", 4.2);
         check("1.2 + 3", 4.2);
+        check("'x' + 1", "x1");
+        check("[1] + [2]", ImmutableList.of(1L, 2L));
+        check("{1} + {5}", ImmutableSet.of(1L, 5L));
+        check("{'x': 1} + {'y': 2}", ImmutableMap.of("x", 1L, "y", 2L));
+        checkBadOperands("1 + []");
+        checkBadOperands("{'x': 1} + []");
+    }
+
+    @Test
+    void testSub() {
+
+        check("-1 - -2", 1);
+        check("2.5 - 1", 1.5);
+        check("2.5 - 1.5", 1.0);
+        checkBadOperands("1 - []");
+    }
+
+    @Test
+    void testDiv() {
+
         check("10 / 2", 5);
+        check("15 / 2", 7);
+        check("15.0 / 2", 7.5);
+        checkBadOperands("1 / []");
+    }
+
+    @Test
+    void testMul() {
+
         check("5 * 100", 500);
+        check("4 * 0.1", 0.4);
+        checkBadOperands("1 * []");
+    }
+
+    @Test
+    void testMod() {
+
         check("7 % 3", 1);
+        checkBadOperands("1.5 % 2.5");
+        checkBadOperands("1 % []");
+    }
+
+    @Test
+    void testPow() {
+
         check("5 ** 2", 25);
         check("5.1 ** 4", 676.5200999999998);
+        checkBadOperands("1 ** []");
+    }
+
+    @Test
+    void testNegate() {
+
+        check("-5", -5);
+        check("-5.5", -5.5);
+        checkBadOperands("-'x'");
     }
 
     @Test
@@ -189,6 +282,9 @@ class TestExpression {
 
             final Context context = context(scope);
 
+            check("a <=> a", 0, context);
+            check("a <=> b", -1, context);
+            check("b <=> a", 1, context);
             check("a == a", true, context);
             check("a == b", false, context);
             check("a != a", false, context);
@@ -377,6 +473,16 @@ class TestExpression {
         check("15315 ^ 13535", 3852);
     }
 
+    @Test
+    void testLike() {
+
+        check("'abc' like 'a%'", true);
+        check("'abc' like 'A%'", false);
+        check("'abc' ilike 'A%'", true);
+        check("'abc' like 'A_C'", false);
+        check("'abc' ilike 'A_C'", true);
+    }
+
     // FIXME
     @Test
     @Disabled
@@ -416,7 +522,7 @@ class TestExpression {
 
         final Expression expression = Expression.parse("with(m = a) m");
         final Expression bound = expression.bind(Context.init(), Renaming.addPrefix(Name.of("this")));
-        assertEquals(Name.of("m"), ((NameConstant)((With)bound).getYield()).getName());
+        assertEquals(Name.of("m"), ((NameConstant) ((With) bound).getYield()).getName());
     }
 
     @Test
@@ -424,7 +530,7 @@ class TestExpression {
 
         final Expression expression = Expression.parse("m.id for any m of members");
         final Expression bound = expression.bind(Context.init(), Renaming.addPrefix(Name.of("this")));
-        assertEquals(Name.of("m", "id"), ((NameConstant)((ForAny)bound).getLhs()).getName());
+        assertEquals(Name.of("m", "id"), ((NameConstant) ((ForAny) bound).getLhs()).getName());
     }
 
     @Test
@@ -432,7 +538,7 @@ class TestExpression {
 
         final Expression expression = Expression.parse("m.id for all m of members");
         final Expression bound = expression.bind(Context.init(), Renaming.addPrefix(Name.of("this")));
-        assertEquals(Name.of("m", "id"), ((NameConstant)((ForAll)bound).getLhs()).getName());
+        assertEquals(Name.of("m", "id"), ((NameConstant) ((ForAll) bound).getLhs()).getName());
     }
 
     @Test
@@ -440,7 +546,7 @@ class TestExpression {
 
         final Expression expression = Expression.parse("m of members where m.id");
         final Expression bound = expression.bind(Context.init(), Renaming.addPrefix(Name.of("this")));
-        assertEquals(Name.of("m", "id"), ((NameConstant)((Where)bound).getRhs()).getName());
+        assertEquals(Name.of("m", "id"), ((NameConstant) ((Where) bound).getRhs()).getName());
     }
 
     @Test
@@ -473,13 +579,6 @@ class TestExpression {
         final Expression expression = Expression.parse("{k:k * 2 for k of [1, 2, 3]}");
         final Expression bound = expression.bind(Context.init());
         assertTrue(bound instanceof Constant);
-    }
-
-    @Test
-    void testLike() {
-
-        final Expression expression = Expression.parse("'abc' like 'a%'");
-        final Expression bound = expression.bind(Context.init());
     }
 
     @Test
@@ -530,5 +629,21 @@ class TestExpression {
         )));
 
         check("null.toDatetime()", null, context(ImmutableMap.of()));
+    }
+
+    @Test
+    void testAggregates() {
+
+        final List<Long> numbers = ImmutableList.of(1L, 4L, 9L, 6L, 7L, 8L, 2L, 3L);
+
+        final Supplier<Stream<Context>> stream = () -> numbers.stream().map(v -> Context.init(ImmutableMap.of("x", v)));
+
+        checkAggregate("max(x)", 9, stream);
+        checkAggregate("min(x)", 1, stream);
+        checkAggregate("count()", 8, stream);
+        checkAggregate("count(x > 5)", 4, stream);
+        checkAggregate("sum(x)", 40, stream);
+        checkAggregate("avg(x)", 5.0, stream);
+        checkAggregate("collectArray(x)", numbers, stream);
     }
 }

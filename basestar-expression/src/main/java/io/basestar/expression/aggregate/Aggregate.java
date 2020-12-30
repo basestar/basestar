@@ -41,8 +41,7 @@ public interface Aggregate extends Expression {
             .put(Sum.NAME.toLowerCase(), Sum::create)
             .build();
 
-    // Presently only used for tests
-    Object evaluate(Context context, Stream<? extends Map<String, Object>> values);
+    Object evaluate(Stream<Context> context);
 
     interface Factory {
 

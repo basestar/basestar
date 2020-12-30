@@ -123,7 +123,7 @@ public class LambdaCall implements Expression {
     @Override
     public boolean isConstant(final Closure closure) {
 
-        return false;
+        return this.with.isConstant(closure) && this.args.stream().allMatch(v -> v.isConstant(closure));
     }
 
     @Override

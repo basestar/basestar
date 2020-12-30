@@ -3,7 +3,7 @@ package io.basestar.schema;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import io.basestar.expression.type.exception.TypeConversionException;
+import io.basestar.expression.exception.TypeConversionException;
 import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.use.*;
 import io.basestar.secret.Secret;

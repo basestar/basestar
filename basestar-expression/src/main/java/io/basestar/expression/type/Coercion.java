@@ -21,131 +21,142 @@ package io.basestar.expression.type;
  */
 
 import com.google.common.io.BaseEncoding;
+import io.basestar.expression.exception.TypeConversionException;
 import io.basestar.util.ISO8601;
 
 import java.lang.reflect.Modifier;
+import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.TemporalAccessor;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-// FIXME: should be used in all Use<?> create methods
-
 public class Coercion {
 
-    public static Boolean toBoolean(final Object source) {
+    private Coercion() {
 
-        if(source == null) {
+    }
+
+    public static boolean isTruthy(final Object value) {
+
+        if (value == null) {
             return false;
-        } else if(source instanceof Boolean) {
-            return (Boolean) source;
-        } else if(source instanceof Number) {
-            if(source instanceof Float || source instanceof Double) {
-                return ((Number) source).doubleValue() != 0D;
+        } else if (value instanceof Boolean) {
+            return (Boolean) value;
+        } else if (value instanceof Number) {
+            final Number number = (Number) value;
+            if (Numbers.isInteger(number)) {
+                return number.intValue() != 0;
             } else {
-                return ((Number) source).longValue() != 0L;
+                return number.floatValue() != 0.0f;
             }
-        } else if(source instanceof String) {
-            return Boolean.valueOf((String)source);
+        } else if (value instanceof String) {
+            final String str = (String) value;
+            return !(str.isEmpty() || str.equalsIgnoreCase("false"));
+        } else if (value instanceof Collection) {
+            return ((Collection<?>) value).size() > 0;
+        } else if (value instanceof Map) {
+            return ((Map<?, ?>) value).size() > 0;
         } else {
             throw new IllegalStateException();
         }
     }
 
-    public static Byte toByte(final Object source) {
+    public static Boolean toBoolean(final Object value) {
 
-        if(source == null) {
+        if (value == null) {
             return null;
-        } else if(source instanceof Number) {
-            return ((Number) source).byteValue();
-        } else if(source instanceof String) {
-            return Byte.parseByte((String)source);
+        } else if (value instanceof Boolean) {
+            return (Boolean) value;
+        } else if (value instanceof Number) {
+            if (value instanceof Float || value instanceof Double) {
+                return ((Number) value).doubleValue() != 0D;
+            } else {
+                return ((Number) value).longValue() != 0L;
+            }
+        } else if (value instanceof String) {
+            final String str = (String) value;
+            return !(str.isEmpty() || str.equalsIgnoreCase("false"));
         } else {
-            throw new IllegalStateException();
+            throw new TypeConversionException(Boolean.class, value);
         }
     }
 
-    public static Short toShort(final Object source) {
+    public static Long toInteger(final Object value) {
 
-        if(source == null) {
+        if (value == null) {
             return null;
-        } else if(source instanceof Number) {
-            return ((Number) source).shortValue();
-        } else if(source instanceof String) {
-            return Short.parseShort((String)source);
+        } else if (value instanceof Boolean) {
+            return ((Boolean) value) ? 1L : 0L;
+        } else if (value instanceof Number) {
+            return ((Number) value).longValue();
+        } else if (value instanceof String) {
+            try {
+                return Long.parseLong((String) value);
+            } catch (final NumberFormatException e) {
+                throw new TypeConversionException(Long.class, value);
+            }
+        } else if (value instanceof LocalDate) {
+            return ISO8601.toMillis((LocalDate) value);
+        } else if (value instanceof Instant) {
+            return ISO8601.toMillis((Instant) value);
+        } else if (value instanceof Date) {
+            return ISO8601.toMillis((Date) value);
         } else {
-            throw new IllegalStateException();
+            throw new TypeConversionException(Long.class, value);
         }
     }
 
-    public static Integer toInteger(final Object source) {
+    public static Double toFloat(final Object value) {
 
-        if(source == null) {
+        if (value == null) {
             return null;
-        } else if(source instanceof Number) {
-            return ((Number) source).intValue();
-        } else if(source instanceof String) {
-            return Integer.parseInt((String)source);
+        } else if (value instanceof Boolean) {
+            return ((Boolean) value) ? 1.0 : 0.0;
+        } else if (value instanceof Number) {
+            return ((Number) value).doubleValue();
+        } else if (value instanceof String) {
+            try {
+                return Double.parseDouble((String) value);
+            } catch (final NumberFormatException e) {
+                throw new TypeConversionException(Double.class, value);
+            }
+        } else if (value instanceof LocalDate) {
+            return (double) ISO8601.toMillis((LocalDate) value);
+        } else if (value instanceof Instant) {
+            return (double) ISO8601.toMillis((Instant) value);
+        } else if (value instanceof Date) {
+            return (double) ISO8601.toMillis((Date) value);
         } else {
-            throw new IllegalStateException();
+            throw new TypeConversionException(Double.class, value);
         }
     }
 
-    public static Long toLong(final Object source) {
+    public static String toString(final Object value) {
 
-        if(source == null) {
+        if (value == null) {
             return null;
-        } else if(source instanceof Number) {
-            return ((Number) source).longValue();
-        } else if(source instanceof String) {
-            return Long.parseLong((String)source);
+        } else if (value instanceof Boolean || value instanceof Number) {
+            return value.toString();
+        } else if (value instanceof TemporalAccessor) {
+            return ISO8601.toString((TemporalAccessor) value);
+        } else if (value instanceof Date) {
+            return ISO8601.toString((Date) value);
+        } else if (value instanceof String) {
+            return (String) value;
+        } else if (value instanceof byte[]) {
+            return BaseEncoding.base64().encode((byte[]) value);
         } else {
-            throw new IllegalStateException();
-        }
-    }
-
-    public static Float toFloat(final Object source) {
-
-        if(source == null) {
-            return null;
-        } else if(source instanceof Number) {
-            return ((Number) source).floatValue();
-        } else if(source instanceof String) {
-            return Float.parseFloat((String)source);
-        } else {
-            throw new IllegalStateException();
-        }
-    }
-
-    public static Double toDouble(final Object source) {
-
-        if(source == null) {
-            return null;
-        } else if(source instanceof Number) {
-            return ((Number) source).doubleValue();
-        } else if(source instanceof String) {
-            return Double.parseDouble((String)source);
-        } else {
-            throw new IllegalStateException();
-        }
-    }
-
-    public static String toString(final Object source) {
-
-        if(source == null) {
-            return null;
-        } else if(source instanceof byte[]) {
-            return BaseEncoding.base64().encode((byte[])source);
-        } else {
-            return source.toString();
+            throw new TypeConversionException(String.class, value);
         }
     }
 
     public static LocalDate toDate(final Object source) {
 
-        if(source == null) {
+        if (source == null) {
             return null;
         } else {
             return ISO8601.toDate(source);
@@ -154,7 +165,7 @@ public class Coercion {
 
     public static Instant toDateTime(final Object source) {
 
-        if(source == null) {
+        if (source == null) {
             return null;
         } else {
             return ISO8601.toDateTime(source);
@@ -175,7 +186,7 @@ public class Coercion {
     public static <V> List<V> toList(final Object source, final Class<? extends List> type, final Function<Object, V> value) {
 
         final Supplier<List<V>> supplier;
-        if(Modifier.isAbstract(type.getModifiers())) {
+        if (Modifier.isAbstract(type.getModifiers())) {
             supplier = ArrayList::new;
         } else {
             supplier = () -> {
@@ -193,8 +204,8 @@ public class Coercion {
     public static <V> Set<V> toSet(final Object source, final Class<? extends Set> type, final Function<Object, V> value) {
 
         final Supplier<Set<V>> supplier;
-        if(Modifier.isAbstract(type.getModifiers())) {
-            if(SortedSet.class.isAssignableFrom(type)) {
+        if (Modifier.isAbstract(type.getModifiers())) {
+            if (SortedSet.class.isAssignableFrom(type)) {
                 supplier = TreeSet::new;
             } else {
                 supplier = HashSet::new;
@@ -213,9 +224,9 @@ public class Coercion {
 
     public static <C extends Collection<V>, V> C toCollection(final Object source, final Supplier<C> supplier, final Function<Object, V> value) {
 
-        if(source == null) {
+        if (source == null) {
             return null;
-        } else if(source instanceof Collection<?>) {
+        } else if (source instanceof Collection<?>) {
             return ((Collection<?>) source).stream().map(value).collect(Collectors.toCollection(supplier));
         } else {
             throw new IllegalStateException();
@@ -231,8 +242,8 @@ public class Coercion {
     public static <K, V> Map<K, V> toMap(final Object source, final Class<? extends Map> type, final Function<Object, K> key, final Function<Object, V> value) {
 
         final Supplier<Map<K, V>> supplier;
-        if(Modifier.isAbstract(type.getModifiers())) {
-            if(SortedMap.class.isAssignableFrom(type)) {
+        if (Modifier.isAbstract(type.getModifiers())) {
+            if (SortedMap.class.isAssignableFrom(type)) {
                 supplier = TreeMap::new;
             } else {
                 supplier = HashMap::new;
@@ -251,9 +262,9 @@ public class Coercion {
 
     public static <K, V> Map<K, V> toMap(final Object source, final Supplier<Map<K, V>> supplier, final Function<Object, K> key, final Function<Object, V> value) {
 
-        if(source == null) {
+        if (source == null) {
             return null;
-        } else if(source instanceof Map<?, ?>) {
+        } else if (source instanceof Map<?, ?>) {
             final Map<K, V> result = supplier.get();
             ((Map<?, ?>) source).forEach((k, v) -> {
                 result.put(key.apply(k), value.apply(v));
@@ -264,16 +275,28 @@ public class Coercion {
         }
     }
 
-    public static byte[] toBinary(final Object source) {
+    public static byte[] toBinary(final Object value) {
 
-        if(source == null) {
+        if (value == null) {
             return null;
-        } else if(source instanceof byte[]) {
-            return (byte[])source;
-        } else if(source instanceof String) {
-            return BaseEncoding.base64().decode((String)source);
+        } else if (value instanceof byte[]) {
+            return (byte[]) value;
+        } else if (value instanceof ByteBuffer) {
+            return ((ByteBuffer) value).array();
+        } else if (value instanceof String) {
+            return BaseEncoding.base64().decode((String) value);
         } else {
-            throw new IllegalStateException();
+            throw new TypeConversionException(byte[].class, value);
         }
+    }
+
+    public static String className(final Object value) {
+
+        return value == null ? "null" : className(value.getClass());
+    }
+
+    public static String className(final Class<?> cls) {
+
+        return cls.getName();
     }
 }

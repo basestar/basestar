@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Context;
-import io.basestar.expression.type.Values;
+import io.basestar.expression.type.Numbers;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseInteger;
 import io.basestar.type.AnnotationContext;
@@ -109,7 +109,7 @@ public class MinValidation implements Validation {
 
             if(value instanceof Number) {
                 final Number number = (Number)value;
-                final BigDecimal other = Values.isInteger(number) ? BigDecimal.valueOf(number.longValue()) : BigDecimal.valueOf(number.doubleValue());
+                final BigDecimal other = Numbers.isInteger(number) ? BigDecimal.valueOf(number.longValue()) : BigDecimal.valueOf(number.doubleValue());
                 final int cmp = this.value.compareTo(other);
                 return exclusive ? cmp > 0 : cmp >= 0;
             } else {

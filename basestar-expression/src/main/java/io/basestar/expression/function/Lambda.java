@@ -136,7 +136,7 @@ public class Lambda implements Expression {
     @Override
     public boolean isConstant(final Closure closure) {
 
-        return false;
+        return yield.isConstant(closure.with(Immutable.set(args)));
     }
 
     @Override

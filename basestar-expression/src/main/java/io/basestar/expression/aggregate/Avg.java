@@ -30,7 +30,6 @@ import io.basestar.util.Name;
 import lombok.Data;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -51,9 +50,9 @@ public class Avg implements Aggregate {
     }
 
     @Override
-    public Object evaluate(final Context context, final Stream<? extends Map<String, Object>> values) {
+    public Object evaluate(final Stream<Context> contexts) {
 
-        return values.map(v -> input.evaluate(context.with(v)))
+        return contexts.map(input::evaluate)
                 .map(Entry::from).reduce(Entry::sum).map(Entry::avg)
                 .orElse(null);
     }

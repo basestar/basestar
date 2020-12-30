@@ -1,7 +1,7 @@
 package io.basestar.graphql.wiring;
 
 import graphql.schema.Coercing;
-import io.basestar.expression.type.Values;
+import io.basestar.expression.type.Coercion;
 import io.basestar.graphql.GraphQLUtils;
 import io.basestar.schema.use.UseBinary;
 
@@ -25,7 +25,7 @@ public class BinaryCoercing implements Coercing<byte[], String> {
     @Override
     public byte[] parseValue(final Object o) {
 
-        return Values.toBinary(o);
+        return Coercion.toBinary(o);
     }
 
     @Override

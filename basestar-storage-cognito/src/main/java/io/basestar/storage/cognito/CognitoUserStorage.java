@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
-import io.basestar.expression.type.Values;
+import io.basestar.expression.type.Coercion;
 import io.basestar.jackson.BasestarModule;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
@@ -345,7 +345,7 @@ public class CognitoUserStorage implements DefaultLayerStorage {
             @Override
             public <T> Map<Name, String> visitScalar(final UseScalar<T> type) {
 
-                return value == null ? ImmutableMap.of() : ImmutableMap.of(path, Values.toString(value));
+                return value == null ? ImmutableMap.of() : ImmutableMap.of(path, Coercion.toString(value));
             }
 
             @Override

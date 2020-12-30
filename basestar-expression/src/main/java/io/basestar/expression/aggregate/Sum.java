@@ -31,7 +31,6 @@ import io.basestar.util.Name;
 import lombok.Data;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -52,9 +51,9 @@ public class Sum implements Aggregate {
     }
 
     @Override
-    public Object evaluate(final Context context, final Stream<? extends Map<String, Object>> values) {
+    public Object evaluate(final Stream<Context> contexts) {
 
-        return values.map(v -> input.evaluate(context.with(v))).reduce(Add::apply).orElse(null);
+        return contexts.map(input::evaluate).reduce(Add::apply).orElse(null);
     }
 
     @Override

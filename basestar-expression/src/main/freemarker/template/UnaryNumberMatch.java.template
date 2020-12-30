@@ -1,4 +1,4 @@
-package io.basestar.expression.type.match;
+package io.basestar.expression.match;
 
 /*-
  * #%L
@@ -20,8 +20,8 @@ package io.basestar.expression.type.match;
  * #L%
  */
 
-import io.basestar.expression.type.Values;
-import io.basestar.expression.type.exception.BadOperandsException;
+import io.basestar.expression.type.Numbers;
+import io.basestar.expression.exception.BadOperandsException;
 
 public interface UnaryNumberMatch<T> {
 
@@ -39,7 +39,7 @@ public interface UnaryNumberMatch<T> {
 </#list>
     default T apply(final Number value) {
 
-        if(Values.isInteger(value)) {
+        if(Numbers.isInteger(value)) {
             return apply(value.longValue());
         } else {
             return apply(value.doubleValue());

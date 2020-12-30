@@ -26,7 +26,7 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.compare.Eq;
 import io.basestar.expression.constant.NameConstant;
-import io.basestar.expression.type.Values;
+import io.basestar.expression.type.Coercion;
 import io.basestar.schema.*;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
@@ -81,7 +81,7 @@ public class UseRef implements UseLinkable {
 
         final boolean versioned;
         if(config instanceof Map) {
-            versioned = Values.isTruthy(((Map<?, ?>) config).get(VERSIONED_KEY));
+            versioned = Coercion.isTruthy(((Map<?, ?>) config).get(VERSIONED_KEY));
         } else {
             versioned = false;
         }

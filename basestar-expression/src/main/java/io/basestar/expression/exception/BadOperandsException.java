@@ -1,4 +1,4 @@
-package io.basestar.expression.type.exception;
+package io.basestar.expression.exception;
 
 /*-
  * #%L

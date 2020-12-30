@@ -38,7 +38,7 @@ import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
 import io.basestar.expression.text.Like;
-import io.basestar.expression.type.Values;
+import io.basestar.expression.type.Coercion;
 import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
 import org.jooq.Condition;
@@ -348,7 +348,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     public Field<?> visitCount(final Count aggregate) {
 
         if(aggregate.getPredicate() instanceof Constant) {
-            final boolean value = Values.isTruthy(((Constant) aggregate.getPredicate()).getValue());
+            final boolean value = Coercion.isTruthy(((Constant) aggregate.getPredicate()).getValue());
             if(value) {
                 return DSL.count();
             } else {

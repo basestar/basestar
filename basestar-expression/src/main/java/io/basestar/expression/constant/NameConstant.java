@@ -21,7 +21,10 @@ package io.basestar.expression.constant;
  */
 
 import com.google.common.collect.ImmutableSet;
-import io.basestar.expression.*;
+import io.basestar.expression.Context;
+import io.basestar.expression.Expression;
+import io.basestar.expression.ExpressionVisitor;
+import io.basestar.expression.Renaming;
 import io.basestar.expression.exception.UndefinedNameException;
 import io.basestar.util.Name;
 import lombok.AllArgsConstructor;
@@ -31,7 +34,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Function;
 
 @Data
 @AllArgsConstructor
@@ -134,19 +136,4 @@ public class NameConstant implements Expression {
         return name.toString();
     }
 
-    public static Matcher<NameConstant> match() {
-
-        return match(p -> p);
-    }
-
-    public static <R> Matcher<R> match(final Function<NameConstant, R> then) {
-
-        return e -> {
-            if(e instanceof NameConstant) {
-                return then.apply((NameConstant) e);
-            } else {
-                return null;
-            }
-        };
-    }
 }

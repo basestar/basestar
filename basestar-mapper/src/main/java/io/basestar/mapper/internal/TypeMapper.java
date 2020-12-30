@@ -168,7 +168,7 @@ public interface TypeMapper extends Serializable {
         @Override
         public Object marshall(final Object value) {
 
-            final Long v = Coercion.toLong(value);
+            final Long v = Coercion.toInteger(value);
             return Numbers.coerce(v, erasedType);
         }
 
@@ -205,7 +205,7 @@ public interface TypeMapper extends Serializable {
         @Override
         public Object marshall(final Object value) {
 
-            final Double v = Coercion.toDouble(value);
+            final Double v = Coercion.toFloat(value);
             return Numbers.coerce(v, erasedType);
         }
 

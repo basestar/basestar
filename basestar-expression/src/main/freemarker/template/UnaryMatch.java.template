@@ -1,4 +1,4 @@
-package io.basestar.expression.type.match;
+package io.basestar.expression.match;
 
 /*-
  * #%L
@@ -20,8 +20,8 @@ package io.basestar.expression.type.match;
  * #L%
  */
 
-import io.basestar.expression.type.Values;
-import io.basestar.expression.type.exception.BadOperandsException;
+import io.basestar.expression.type.Coercion;
+import io.basestar.expression.exception.BadOperandsException;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -34,7 +34,7 @@ public interface UnaryMatch<T> {
 
     default T defaultApply(final Object value) {
 
-        throw new BadOperandsException(this + " cannot be applied to " + Values.className(value));
+        throw new BadOperandsException(this + " cannot be applied to " + Coercion.className(value));
     }
 
 <#list types as t>

@@ -1,4 +1,4 @@
-package io.basestar.expression.type.match;
+package io.basestar.expression.match;
 
 /*-
  * #%L
@@ -20,8 +20,8 @@ package io.basestar.expression.type.match;
  * #L%
  */
 
-import io.basestar.expression.type.Values;
-import io.basestar.expression.type.exception.BadOperandsException;
+import io.basestar.expression.type.Coercion;
+import io.basestar.expression.exception.BadOperandsException;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -49,7 +49,7 @@ public interface BinaryMatch<T> {
 
     default T defaultApply(final Object lhs, final Object rhs) {
 
-        throw new BadOperandsException(this + " cannot be applied to " + Values.className(lhs) + " and " + Values.className(rhs));
+        throw new BadOperandsException(this + " cannot be applied to " + Coercion.className(lhs) + " and " + Coercion.className(rhs));
     }
 
     default <U> T defaultApplySame(final U lhs, final U rhs) {

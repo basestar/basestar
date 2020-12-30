@@ -22,7 +22,7 @@ package io.basestar.expression.iterate;
 
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.*;
-import io.basestar.expression.type.Values;
+import io.basestar.expression.type.Coercion;
 import io.basestar.util.Name;
 import io.basestar.util.Streams;
 import lombok.Data;
@@ -79,7 +79,7 @@ public class ForAny implements Binary {
                         @SuppressWarnings("unchecked")
                         final Map<String, Object> scope = (Map<String, Object>)v;
                         final Object value = this.lhs.evaluate(context.with(scope));
-                        return Values.isTruthy(value);
+                        return Coercion.isTruthy(value);
                     });
         } else {
             throw new IllegalStateException();

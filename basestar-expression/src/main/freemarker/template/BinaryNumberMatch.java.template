@@ -1,4 +1,4 @@
-package io.basestar.expression.type.match;
+package io.basestar.expression.match;
 
 /*-
  * #%L
@@ -20,8 +20,8 @@ package io.basestar.expression.type.match;
  * #L%
  */
 
-import io.basestar.expression.type.Values;
-import io.basestar.expression.type.exception.BadOperandsException;
+import io.basestar.expression.type.Numbers;
+import io.basestar.expression.exception.BadOperandsException;
 
 public interface BinaryNumberMatch<T> {
 
@@ -51,7 +51,7 @@ public interface BinaryNumberMatch<T> {
 <#list types as t1>
     default T apply(final ${t1} lhs, final Number rhs) {
 
-        if (Values.isInteger(rhs)) {
+        if (Numbers.isInteger(rhs)) {
             return apply(lhs, rhs.longValue());
         } else {
             return apply(lhs, rhs.doubleValue());
@@ -61,7 +61,7 @@ public interface BinaryNumberMatch<T> {
 </#list>
     default T apply(final Number lhs, final Number rhs) {
 
-        if (Values.isInteger(lhs)) {
+        if (Numbers.isInteger(lhs)) {
             return apply(lhs.longValue(), rhs);
         } else {
             return apply(lhs.doubleValue(), rhs);
