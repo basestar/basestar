@@ -15,7 +15,6 @@ import io.basestar.graphql.subscription.GraphQLSubscriptionMetadata;
 import io.basestar.graphql.subscription.SubscriberContext;
 import io.basestar.graphql.subscription.SubscriberIdSource;
 import io.basestar.stream.Hub;
-import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.swagger.v3.oas.models.OpenAPI;
 import lombok.Data;
@@ -23,7 +22,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -169,8 +167,7 @@ public class GraphQLWebsocketAPI implements API {
             final String channel = this.getId();
             final SubscriberContext subscriberContext = (schema, expression, alias, names) -> {
                 final GraphQLSubscriptionMetadata info = new GraphQLSubscriptionMetadata(alias, names);
-                final Set<Name> expand = schema.requiredExpand(names);
-                return hub.subscribe(caller, sub, channel, schema.getQualifiedName(), expression, expand, info);
+                return hub.subscribe(caller, sub, channel, schema.getQualifiedName(), expression, info);
             };
 
             return ExecutionInput.newExecutionInput()
