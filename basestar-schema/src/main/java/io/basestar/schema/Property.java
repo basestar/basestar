@@ -33,6 +33,7 @@ import io.basestar.schema.exception.MissingPropertyException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.expression.InferenceContext;
+import io.basestar.schema.expression.TypedExpression;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseInstance;
 import io.basestar.schema.use.UseScalar;
@@ -282,6 +283,11 @@ public class Property implements Member {
             return true;
         }
         return !widening.canWiden(type, target.typeOf());
+    }
+
+    public TypedExpression<?> getTypedExpression() {
+
+        return expression == null ? null : TypedExpression.from(expression, type);
     }
 
     @Override

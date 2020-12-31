@@ -1,10 +1,9 @@
 package io.basestar.storage.query;
 
 import io.basestar.expression.Expression;
-import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.LinkableSchema;
-import io.basestar.schema.use.Use;
+import io.basestar.schema.expression.TypedExpression;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
 
@@ -14,15 +13,15 @@ import java.util.Set;
 
 public interface QueryStageVisitor<T extends QueryStage> {
 
-    T aggregate(T input, List<String> group, Map<String, Aggregate> aggregates, Map<String, Use<?>> output);
-
     T empty(LinkableSchema schema, Set<Name> expand);
 
     T expand(T input, LinkableSchema schema, Set<Name> expand);
 
     T filter(T input, Expression condition);
 
-    T map(T input, Map<String, Expression> expressions, Map<String, Use<?>> output);
+    T agg(T input, List<String> group, Map<String, TypedExpression<?>> aggregates);
+
+    T map(T input, Map<String, TypedExpression<?>> expressions);
 
     T sort(T input, List<Sort> sort);
 
@@ -30,5 +29,5 @@ public interface QueryStageVisitor<T extends QueryStage> {
 
     T union(List<T> inputs);
 
-    T schema(T input, InstanceSchema schema);
+    T conform(T input, InstanceSchema schema);
 }

@@ -4,14 +4,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
-import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.expression.constant.Constant;
 import io.basestar.schema.*;
-import io.basestar.schema.use.Use;
+import io.basestar.schema.expression.TypedExpression;
+import io.basestar.schema.use.UseBoolean;
 import io.basestar.schema.use.UseInteger;
 import io.basestar.schema.use.UseOptional;
 import io.basestar.schema.use.UseString;
 import io.basestar.storage.TestStorage;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
 import lombok.Data;
@@ -25,44 +26,90 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TestQueryPlanner {
-    
+
     @Test
-    void testQueryPlanner() throws IOException {
-        
+    void testNonSplitAggregate() throws IOException {
+
         final Namespace namespace = Namespace.load(TestStorage.class.getResource("schema.yml"));
         final ViewSchema viewSchema = namespace.requireViewSchema("AddressStats");
-        
-        final QueryPlanner<QueryStage> planner = new QueryPlanner.Default<>();
-        
+
+        final QueryPlanner<QueryStage> planner = new QueryPlanner.AggregateSplitting<>();
+
         final QueryStage stage = planner.plan(new SimpleVisitor(), viewSchema, Expression.parse("count > 5"), ImmutableList.of(), ImmutableSet.of());
 
         final ObjectSchema sourceSchema = namespace.requireObjectSchema("Address");
 
-        final String aggDigest = "_" + Expression.parse("count()").digest();
+        final SourceStage sourceStage = new SourceStage(sourceSchema);
+        final SchemaStage sourceSchemaStage = new SchemaStage(sourceStage, sourceSchema);
+        final FilterStage sourceFilterStage = new FilterStage(sourceSchemaStage, Expression.parse("country == 'US'"));
+        final AggStage aggStage = new AggStage(sourceFilterStage, ImmutableList.of("state"), ImmutableMap.of(
+                "state", TypedExpression.from(Expression.parse("state"), UseOptional.from(UseString.DEFAULT)),
+                "count", TypedExpression.from(Expression.parse("count(true)"), UseInteger.DEFAULT)
+        ));
+        final SchemaStage schemaStage = new SchemaStage(aggStage, viewSchema);
+        final FilterStage filterStage = new FilterStage(schemaStage, Expression.parse("count > 5"));
+
+        assertEquals(filterStage, stage);
+    }
+
+    @Test
+    void testSplitAggregate() throws IOException {
+        
+        final Namespace namespace = Namespace.load(TestStorage.class.getResource("schema.yml"));
+        final ViewSchema viewSchema = namespace.requireViewSchema("AddressDisplayStats");
+        
+        final QueryPlanner<QueryStage> planner = new QueryPlanner.AggregateSplitting<>();
+        
+        final QueryStage stage = planner.plan(new SimpleVisitor(), viewSchema, Constant.TRUE, ImmutableList.of(), ImmutableSet.of());
+
+        final ObjectSchema sourceSchema = namespace.requireObjectSchema("Address");
+
+        final String zipDigest = "_" + Expression.parse("zip != null").digest();
+        final String aggDigest = "_" + Expression.parse("count(zip != null)").digest();
 
         final SourceStage sourceStage = new SourceStage(sourceSchema);
         final SchemaStage sourceSchemaStage = new SchemaStage(sourceStage, sourceSchema);
         final FilterStage sourceFilterStage = new FilterStage(sourceSchemaStage, Expression.parse("country == 'US'"));
+        final MapStage preAggStage = new MapStage(sourceFilterStage, ImmutableMap.of(
+                "state", TypedExpression.from(Expression.parse("state"), UseOptional.from(UseString.DEFAULT)),
+                zipDigest, TypedExpression.from(Expression.parse("zip != null"), UseBoolean.DEFAULT)
+        ));
+        final AggStage aggStage = new AggStage(preAggStage, ImmutableList.of("state"), ImmutableMap.of(
+                "state", TypedExpression.from(Expression.parse("state"), UseOptional.from(UseString.DEFAULT)),
+                aggDigest, TypedExpression.from(Expression.parse("count(" + zipDigest + ")"), UseInteger.DEFAULT)
+        ));
+        final MapStage postAggStage = new MapStage(aggStage, ImmutableMap.of(
+                "state", TypedExpression.from(Expression.parse("state"), UseOptional.from(UseString.DEFAULT)),
+                "result", TypedExpression.from(Expression.parse("state + " + aggDigest), UseOptional.from(UseString.DEFAULT))
+        ));
+        final SchemaStage schemaStage = new SchemaStage(postAggStage, viewSchema);
+
+        assertEquals(schemaStage, stage);
+    }
+
+    @Test
+    void testNonAggregate() throws IOException {
+
+        final Namespace namespace = Namespace.load(TestStorage.class.getResource("schema.yml"));
+        final ViewSchema viewSchema = namespace.requireViewSchema("GBAddresses");
+
+        final QueryPlanner<QueryStage> planner = new QueryPlanner.AggregateSplitting<>();
+        final QueryStage stage = planner.plan(new SimpleVisitor(), viewSchema, Expression.parse("state == 'Kent'"), ImmutableList.of(), ImmutableSet.of());
+
+        final ObjectSchema sourceSchema = namespace.requireObjectSchema("Address");
+
+        final SourceStage sourceStage = new SourceStage(sourceSchema);
+        final SchemaStage sourceSchemaStage = new SchemaStage(sourceStage, sourceSchema);
+        final FilterStage sourceFilterStage = new FilterStage(sourceSchemaStage, Expression.parse("country == 'GB'"));
         final MapStage sourceMapStage = new MapStage(sourceFilterStage, ImmutableMap.of(
-                "state", Expression.parse("state")
-        ), ImmutableMap.of(
-                "state", UseOptional.from(UseString.DEFAULT)
+                "country", TypedExpression.from(Expression.parse("country"), UseOptional.from(UseString.DEFAULT)),
+                "state", TypedExpression.from(Expression.parse("state"), UseOptional.from(UseString.DEFAULT)),
+                "city", TypedExpression.from(Expression.parse("city"), UseOptional.from(UseString.DEFAULT)),
+                "zip", TypedExpression.from(Expression.parse("zip"), UseOptional.from(UseString.DEFAULT)),
+                ViewSchema.ID, TypedExpression.from(Expression.parse(ReferableSchema.ID), UseString.DEFAULT)
         ));
-        final AggregateStage aggStage = new AggregateStage(sourceMapStage, ImmutableList.of("state"), ImmutableMap.of(
-                aggDigest, (Aggregate)Expression.parse("count(true)")
-        ), ImmutableMap.of(
-                "state", UseOptional.from(UseString.DEFAULT),
-                aggDigest, UseInteger.DEFAULT
-        ));
-        final MapStage mapStage = new MapStage(aggStage, ImmutableMap.of(
-                "state", Expression.parse("state"),
-                "count", Expression.parse(aggDigest)
-        ), ImmutableMap.of(
-                "count", UseOptional.from(UseInteger.DEFAULT),
-                "state", UseOptional.from(UseString.DEFAULT)
-        ));
-        final SchemaStage schemaStage = new SchemaStage(mapStage, viewSchema);
-        final FilterStage filterStage = new FilterStage(schemaStage, Expression.parse("count > 5"));
+        final SchemaStage schemaStage = new SchemaStage(sourceMapStage, viewSchema);
+        final FilterStage filterStage = new FilterStage(schemaStage, Expression.parse("state == 'Kent'"));
 
         assertEquals(filterStage, stage);
     }
@@ -106,20 +153,18 @@ class TestQueryPlanner {
     }
 
     @Data
-    static class AggregateStage implements QueryStage {
+    static class AggStage implements QueryStage {
 
         private final QueryStage input;
         
         private final List<String> group;
         
-        private final Map<String, Aggregate> aggregates;
-        
-        private final Map<String, Use<?>> output;
+        private final Map<String, TypedExpression<?>> expressions;
 
         @Override
         public Layout getLayout() {
 
-            return Layout.simple(output);
+            return Layout.simple(Immutable.transformValues(expressions, (k, v) -> v.getType()));
         }
 
         @Override
@@ -190,14 +235,12 @@ class TestQueryPlanner {
 
         private final QueryStage input;
 
-        private final Map<String, Expression> expressions;
-
-        private final Map<String, Use<?>> output;
+        private final Map<String, TypedExpression<?>> expressions;
 
         @Override
         public Layout getLayout() {
 
-            return Layout.simple(output);
+            return Layout.simple(Immutable.transformValues(expressions, (k, v) -> v.getType()));
         }
 
         @Override
@@ -274,9 +317,9 @@ class TestQueryPlanner {
     private static class SimpleVisitor implements QueryStageVisitor<QueryStage> {
     
         @Override
-        public QueryStage aggregate(final QueryStage input, final List<String> group, final Map<String, Aggregate> aggregates, final Map<String, Use<?>> output) {
+        public QueryStage agg(final QueryStage input, final List<String> group, final Map<String, TypedExpression<?>> expressions) {
             
-            return new AggregateStage(input, group, aggregates, output);
+            return new AggStage(input, group, expressions);
         }
 
         @Override
@@ -298,9 +341,9 @@ class TestQueryPlanner {
         }
 
         @Override
-        public QueryStage map(final QueryStage input, final Map<String, Expression> expressions, final Map<String, Use<?>> output) {
+        public QueryStage map(final QueryStage input, final Map<String, TypedExpression<?>> expressions) {
 
-            return new MapStage(input, expressions, output);
+            return new MapStage(input, expressions);
         }
 
         @Override
@@ -322,7 +365,7 @@ class TestQueryPlanner {
         }
 
         @Override
-        public QueryStage schema(final QueryStage input, final InstanceSchema schema) {
+        public QueryStage conform(final QueryStage input, final InstanceSchema schema) {
             
             return new SchemaStage(input, schema);
         }

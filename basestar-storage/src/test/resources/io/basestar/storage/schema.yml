@@ -224,3 +224,24 @@ AddressStats:
   from:
     schema: Address
   where: country == 'US'
+
+AddressDisplayStats:
+  type: view
+  group:
+    - state
+  properties:
+    result: state + count(zip != null)
+  from:
+    schema: Address
+  where: country == 'US'
+
+GBAddresses:
+  type: view
+  properties:
+    country: country
+    state: state
+    city: city
+    zip: zip
+  from:
+    schema: Address
+  where: country == 'GB'

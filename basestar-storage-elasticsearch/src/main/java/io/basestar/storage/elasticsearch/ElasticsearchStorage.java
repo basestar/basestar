@@ -24,6 +24,7 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
 import io.basestar.storage.*;
+import io.basestar.storage.elasticsearch.expression.ElasticsearchExpressionVisitor;
 import io.basestar.storage.elasticsearch.mapping.Mappings;
 import io.basestar.storage.elasticsearch.mapping.Settings;
 import io.basestar.storage.exception.ObjectExistsException;
@@ -191,6 +192,12 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
                         return new Page<>(results, newPaging, Page.Stats.fromTotal(total));
                     });
         });
+    }
+
+    @Override
+    public Pager<Map<String, Object>> queryView(final ViewSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        throw new UnsupportedOperationException();
     }
 
     private QueryBuilder pagingQueryBuilder(final ObjectSchema schema, final List<Sort> sort, final Page.Token token) {

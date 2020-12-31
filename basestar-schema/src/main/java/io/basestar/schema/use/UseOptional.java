@@ -81,9 +81,19 @@ public class UseOptional<T> implements UseContainer<T, T> {
     }
 
     @Override
+    public Object[] key(final T value) {
+
+        return type.key(value);
+    }
+
+    @Override
     public Use<?> typeOf(final Name name) {
 
-        return type.typeOf(name);
+        if(name.isEmpty()) {
+            return new UseOptional<>(type.typeOf(name));
+        } else {
+            return type.typeOf(name);
+        }
     }
 
     @Override

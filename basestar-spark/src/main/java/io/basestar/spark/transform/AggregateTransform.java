@@ -2,6 +2,7 @@ package io.basestar.spark.transform;
 
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Layout;
+import io.basestar.schema.Reserved;
 import io.basestar.spark.expression.SparkExpressionVisitor;
 import io.basestar.spark.util.SparkRowUtils;
 import io.basestar.spark.util.SparkSchemaUtils;
@@ -11,6 +12,7 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
+import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.StructType;
 
 import java.util.Arrays;
@@ -34,7 +36,18 @@ public class AggregateTransform implements Transform<Dataset<Row>, Dataset<Row>>
 
         final StructType outputStructType = SparkSchemaUtils.structType(outputLayout);
 
-        final SparkExpressionVisitor expressionVisitor = new SparkExpressionVisitor(k -> SparkRowUtils.resolveName(input, k));
+        final SparkExpressionVisitor expressionVisitor = new SparkExpressionVisitor(k -> {
+
+            if(k.first().equals(Reserved.THIS)) {
+                if(k.size() == 1) {
+                    return functions.struct(Arrays.stream(input.columns()).map(functions::col).toArray(Column[]::new));
+                } else {
+                    return SparkRowUtils.resolveName(input, k.withoutFirst());
+                }
+            } else {
+                return SparkRowUtils.resolveName(input, k);
+            }
+        });
 
         final Column[] aggs = aggregates.entrySet().stream()
                 .map(v -> expressionVisitor.visit(v.getValue()).as(v.getKey()))

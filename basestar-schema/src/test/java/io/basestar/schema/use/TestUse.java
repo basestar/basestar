@@ -122,6 +122,7 @@ class TestUse {
         assertEquals("null", use.toString(null));
         assertEquals("true", use.toString(true));
         assertEquals("false", use.toString(false));
+        assertEquals(use, use.typeOf(Name.empty()));
     }
 
     @Test
@@ -144,6 +145,7 @@ class TestUse {
         assertEquals(use, Use.fromJavaType(Integer.class));
         assertEquals("null", use.toString(null));
         assertEquals("2", use.toString(2L));
+        assertEquals(use, use.typeOf(Name.empty()));
     }
 
     @Test
@@ -164,6 +166,7 @@ class TestUse {
         assertEquals(use, Use.fromJavaType(Float.class));
         assertEquals("null", use.toString(null));
         assertEquals("2.0", use.toString(2.0));
+        assertEquals(use, use.typeOf(Name.empty()));
     }
 
     @Test
@@ -178,6 +181,7 @@ class TestUse {
         assertEquals(use, Use.fromJavaType(String.class));
         assertEquals("null", use.toString(null));
         assertEquals("test", use.toString("test"));
+        assertEquals(use, use.typeOf(Name.empty()));
     }
 
     @Test
@@ -192,6 +196,7 @@ class TestUse {
         assertEquals(use, Use.fromJavaType(LocalDate.class));
         assertEquals("null", use.toString(null));
         assertEquals("2020-01-01", use.toString(LocalDate.parse("2020-01-01")));
+        assertEquals(use, use.typeOf(Name.empty()));
     }
 
     @Test
@@ -206,6 +211,7 @@ class TestUse {
         assertEquals(use, Use.fromJavaType(Instant.class));
         assertEquals("null", use.toString(null));
         assertEquals("2020-01-01T00:00:00.000Z", use.toString(Instant.parse("2020-01-01T00:00:00Z")));
+        assertEquals(use, use.typeOf(Name.empty()));
     }
 
     @Test
@@ -220,6 +226,7 @@ class TestUse {
         assertEquals(use, Use.fromJavaType(byte[].class));
         assertEquals("null", use.toString(null));
         assertEquals("AQ==", use.toString(new byte[]{1}));
+        assertEquals(use, use.typeOf(Name.empty()));
     }
 
     @Test
@@ -236,6 +243,7 @@ class TestUse {
         assertEquals(use, Use.fromJavaType(Secret.Plaintext.class));
         assertEquals("null", use.toString(null));
         assertEquals("<redacted>", use.toString(Secret.encrypted("AQ==")));
+        assertEquals(use, use.typeOf(Name.empty()));
     }
 
     @Test
@@ -252,6 +260,7 @@ class TestUse {
         assertEquals(use, Use.fromJavaType(javaType));
         assertEquals("null", use.toString(null));
         assertEquals("[x, y]", use.toString(ImmutableList.of("x", "y")));
+        assertEquals(use, use.typeOf(Name.empty()));
     }
 
     @Test
@@ -267,6 +276,7 @@ class TestUse {
         assertEquals(String.class, GenericTypeReflector.getTypeParameter(javaType, Set.class.getTypeParameters()[0]));
         assertEquals(use, Use.fromJavaType(javaType));
         assertEquals("{x, y}", use.toString(ImmutableSet.of("x", "y")));
+        assertEquals(use, use.typeOf(Name.empty()));
     }
 
     @Test
@@ -282,6 +292,7 @@ class TestUse {
         assertEquals(String.class, GenericTypeReflector.getTypeParameter(javaType, Map.class.getTypeParameters()[1]));
         assertEquals(use, Use.fromJavaType(javaType));
         assertEquals("{x: y}", use.toString(ImmutableMap.of("x", "y")));
+        assertEquals(use, use.typeOf(Name.empty()));
     }
 
     @Test
@@ -307,6 +318,7 @@ class TestUse {
         assertEquals(Object.class, GenericTypeReflector.getTypeParameter(javaType, Map.class.getTypeParameters()[1]));
         assertEquals(String.class, use.javaType(Name.of("houseName")));
         assertEquals("{country: {created: null, hash: null, id: GB, name: null, schema: null, updated: null, version: null}, houseName: MyHouse, streetName: MyStreet, zip: 12345}", use.toString(init));
+        assertEquals(use, use.typeOf(Name.empty()));
     }
 
     @Test
@@ -334,6 +346,7 @@ class TestUse {
         assertEquals(String.class, use.javaType(Name.of(ReferableSchema.ID)));
         assertEquals(Page.class, GenericTypeReflector.erase(use.javaType(Name.of("orders"))));
         assertEquals(Long.class, use.javaType(Name.of("orders", "quantity")));
+        assertEquals(use, use.typeOf(Name.empty()));
     }
 
     @Test
@@ -354,6 +367,14 @@ class TestUse {
 
         testUse(use, null);
         testUse(use, init, expect);
+        assertEquals(use, use.typeOf(Name.empty()));
+    }
+
+    @Test
+    void tesUseOptional() throws Exception {
+
+        final UseOptional<String> use = new UseOptional<>(UseString.DEFAULT);
+        assertEquals(use, use.typeOf(Name.empty()));
     }
 
     private <T> void testUse(final Use<T> use, final T init) throws Exception {

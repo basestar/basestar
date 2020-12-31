@@ -56,7 +56,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Getter
 public class ViewSchema implements LinkableSchema {
@@ -408,18 +407,6 @@ public class ViewSchema implements LinkableSchema {
     public Map<String, Property> getProperties() {
 
         return declaredProperties;
-    }
-
-    public Map<String, Property> getSelectProperties() {
-
-        return declaredProperties.entrySet().stream().filter(e -> !group.contains(e.getKey()))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
-
-    public Map<String, Property> getGroupProperties() {
-
-        return declaredProperties.entrySet().stream().filter(e -> group.contains(e.getKey()))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
     
     @Override

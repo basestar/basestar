@@ -1,4 +1,4 @@
-package io.basestar.storage.elasticsearch;
+package io.basestar.storage.elasticsearch.expression;
 
 /*-
  * #%L

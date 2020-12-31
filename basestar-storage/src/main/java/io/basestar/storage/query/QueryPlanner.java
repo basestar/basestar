@@ -2,12 +2,11 @@ package io.basestar.storage.query;
 
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.expression.aggregate.AggregateExtractingVisitor;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.schema.*;
 import io.basestar.schema.expression.InferenceContext;
-import io.basestar.schema.expression.InferenceVisitor;
+import io.basestar.schema.expression.TypedExpression;
 import io.basestar.schema.use.Use;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
@@ -15,6 +14,7 @@ import io.basestar.util.Nullsafe;
 import io.basestar.util.Sort;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public interface QueryPlanner<T extends QueryStage> {
 
@@ -62,91 +62,154 @@ public interface QueryPlanner<T extends QueryStage> {
 
         protected T refStage(final QueryStageVisitor<T> visitor, final ReferableSchema schema) {
 
-            return visitor.schema(visitor.source(schema), schema);
+            return visitor.conform(visitor.source(schema), schema);
         }
 
         protected T viewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema) {
 
+            if (schema.isAggregating() || schema.isGrouping()) {
+                return visitor.conform(aggViewStage(visitor, schema), schema);
+            } else {
+                return visitor.conform(mapViewStage(visitor, schema), schema);
+            }
+        }
+
+        protected T viewFrom(final QueryStageVisitor<T> visitor, final ViewSchema schema) {
+
             final ViewSchema.From from = schema.getFrom();
             final LinkableSchema fromSchema = from.getSchema();
-            T stage = stage(visitor, fromSchema, schema.getWhere(), schema.getSort(), from.getExpand());
-            if (schema.isAggregating() || schema.isGrouping()) {
-                final Map<String, Use<?>> outputSchema = new HashMap<>();
-                final List<String> group = schema.getGroup();
+            return stage(visitor, fromSchema, schema.getWhere(), schema.getSort(), from.getExpand());
+        }
 
-                // Extract aggregates and create output map stage
-                final Map<String, Expression> output = new HashMap<>();
-                final AggregateExtractingVisitor extractAggregates = new AggregateExtractingVisitor();
-                for(final Map.Entry<String, Property> entry : schema.getProperties().entrySet()) {
-                    final String name = entry.getKey();
-                    final Expression expr = Nullsafe.require(entry.getValue().getExpression());
-                    if(expr.isAggregate()) {
-                        final Expression withoutAggregates = extractAggregates.visit(expr);
-                        output.put(name, withoutAggregates);
-                    } else if(group.contains(name)) {
-                        output.put(name, new NameConstant(name));
-                    } else {
-                        throw new IllegalStateException("Property " + name + " must be group or aggregate");
-                    }
-                    outputSchema.put(name, entry.getValue().getType());
+        protected Map<String, TypedExpression<?>> viewExpressions(final ViewSchema schema) {
+
+            final Map<String, TypedExpression<?>> output = new HashMap<>();
+            for(final Map.Entry<String, Property> entry : schema.getProperties().entrySet()) {
+                final String name = entry.getKey();
+                final Property property = entry.getValue();
+                final TypedExpression<?> expression = Nullsafe.require(property.getTypedExpression());
+                output.put(name, expression);
+            }
+            // Group names can be either properties in the view, or simple names of members / metadata in from
+            final LinkableSchema fromSchema = schema.getFrom().getSchema();
+            for(final String name : schema.getGroup()) {
+                if(!output.containsKey(name)) {
+                    final Use<?> typeOf = fromSchema.typeOf(Name.of(name));
+                    output.put(name, TypedExpression.from(new NameConstant(name), typeOf));
                 }
+            }
+            return output;
+        }
 
-                final Map<String, Expression> input = new HashMap<>();
-                final Map<String, Use<?>> inputSchema = new HashMap<>();
-                final Map<String, Use<?>> aggSchema = new HashMap<>();
-                for(final Map.Entry<String, Property> entry : schema.getGroupProperties().entrySet()) {
-                    final String name = entry.getKey();
-                    final Property property = entry.getValue();
-                    input.put(name, Nullsafe.require(property.getExpression()));
-                    inputSchema.put(name, property.typeOf());
-                    aggSchema.put(name, property.typeOf());
+        protected T aggViewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema) {
+
+            final T stage = viewFrom(visitor, schema);
+            return visitor.agg(stage, schema.getGroup(), viewExpressions(schema));
+        }
+
+        protected T mapViewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema) {
+
+            // Must copy id into the view __key field or it will be lost
+            final LinkableSchema fromSchema = schema.getFrom().getSchema();
+            final Map<String, TypedExpression<?>> expressions = new HashMap<>(viewExpressions(schema));
+            expressions.put(schema.id(), TypedExpression.from(new NameConstant(fromSchema.id()), fromSchema.typeOfId()));
+            final T stage = viewFrom(visitor, schema);
+            return visitor.map(stage, expressions);
+        }
+    }
+
+    class AggregateSplitting<T extends QueryStage> extends Default<T> {
+
+        @Override
+        protected T aggViewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema) {
+
+            final LinkableSchema fromSchema = schema.getFrom().getSchema();
+            final List<String> group = schema.getGroup();
+            final Map<String, TypedExpression<?>> expressions = viewExpressions(schema);
+
+            // Move complex expressions around aggregates into a post-map stage
+            final Map<String, TypedExpression<?>> postAgg = new HashMap<>();
+            boolean requiresPostAgg = false;
+            final AggregateExtractingVisitor extractAggregates = new AggregateExtractingVisitor();
+            for(final Map.Entry<String, TypedExpression<?>> entry : expressions.entrySet()) {
+                final String name = entry.getKey();
+                final TypedExpression<?> typedExpr = Nullsafe.require(entry.getValue());
+                final Expression expr = typedExpr.getExpression();
+                if(expr.hasAggregates()) {
+                    requiresPostAgg = requiresPostAgg || !expr.isAggregate();
+                    final Expression withoutAggregates = extractAggregates.visit(expr);
+                    postAgg.put(name, TypedExpression.from(withoutAggregates, typedExpr.getType()));
+                } else if(group.contains(name)) {
+                    postAgg.put(name, TypedExpression.from(new NameConstant(name), typedExpr.getType()));
+                } else {
+                    throw new IllegalStateException("Property " + name + " must be group or aggregate");
                 }
+            }
 
-                final InferenceContext context = InferenceContext.from(from.getSchema())
-                        .overlay(Reserved.THIS, InferenceContext.from(schema));
-                final InferenceVisitor inference = new InferenceVisitor(context);
+            final InferenceContext inference = InferenceContext.from(fromSchema)
+                    .overlay(Reserved.THIS, InferenceContext.from(schema));
 
-                // Replace non-constant aggregate args with lookups to the first map stage
-                final Map<String, Aggregate> aggregates = new HashMap<>();
-                for(final Map.Entry<String, Aggregate> entry : extractAggregates.getAggregates().entrySet()) {
-                    final String name = entry.getKey();
-                    final Aggregate aggregate = entry.getValue();
-                    final List<Expression> args = new ArrayList<>();
-                    for(final Expression expr : aggregate.expressions()) {
-                        if(expr.isConstant()) {
-                            args.add(expr);
-                        } else {
-                            final String id = "_" + expr.digest();
-                            args.add(new NameConstant(id));
-                            input.put(id, expr);
-                            inputSchema.put(id, inference.visit(expr));
-                        }
-                    }
-                    aggregates.put(name, aggregate.copy(args));
-                    aggSchema.put(name, inference.visit(aggregate));
-                }
-
-                stage = visitor.map(stage, input, inputSchema);
-                stage = visitor.aggregate(stage, group, aggregates, aggSchema);
-                stage = visitor.map(stage, output, outputSchema);
-                stage = visitor.schema(stage, schema);
-
+            final Map<String, ? extends Expression> extractedAgg;
+            if(requiresPostAgg) {
+                extractedAgg = extractAggregates.getAggregates();
             } else {
-                final Map<String, Expression> output = new HashMap<>();
-                final Map<String, Use<?>> outputSchema = new HashMap<>();
-                for(final Map.Entry<String, Property> entry : schema.getProperties().entrySet()) {
-                    final String name = entry.getKey();
-                    final Property property = entry.getValue();
-                    output.put(name, Nullsafe.require(property.getExpression()));
-                    outputSchema.put(name, property.typeOf());
-                }
-                output.put(schema.id(), new NameConstant(fromSchema.id()));
-                outputSchema.put(schema.id(), schema.typeOfId());
+                extractedAgg = expressions.entrySet().stream()
+                        .filter(e -> !group.contains(e.getKey()))
+                        .collect(Collectors.toMap(Map.Entry::getKey, v -> v.getValue().getExpression()));
+            }
 
-                stage = visitor.map(stage, output, outputSchema);
-                stage = visitor.schema(stage, schema);
+            // Replace non-constant aggregate args with lookups to a pre-map stage
+            boolean requiresPreAgg = false;
+            final Map<String, TypedExpression<?>> agg = new HashMap<>();
+            final Map<String, TypedExpression<?>> preAgg = new HashMap<>();
+            for(final String name : schema.getGroup()) {
+                final TypedExpression<?> expr = Nullsafe.require(expressions.get(name));
+                requiresPreAgg = requiresPreAgg || !isSimpleName(expr.getExpression());
+                preAgg.put(name, expr);
+                agg.put(name, expr);
+            }
+            for(final Map.Entry<String, ? extends Expression> entry : extractedAgg.entrySet()) {
+                final String name = entry.getKey();
+                final Expression original = entry.getValue();
+                final List<Expression> args = new ArrayList<>();
+                for(final Expression expr : original.expressions()) {
+                    if(expr.isConstant()) {
+                        args.add(expr);
+                    } else if(isSimpleName(expr)) {
+                        args.add(expr);
+                        preAgg.put(((NameConstant) expr).getName().first(), inference.typed(expr));
+                    } else {
+                        requiresPreAgg = true;
+                        final String id = "_" + expr.digest();
+                        args.add(new NameConstant(id));
+                        preAgg.put(id, inference.typed(expr));
+                    }
+                }
+                final Use<?> typeOf = inference.typeOf(original);
+                agg.put(name, TypedExpression.from(original.copy(args), typeOf));
+            }
+
+            T stage = viewFrom(visitor, schema);
+            if(requiresPreAgg) {
+                stage = visitor.map(stage, preAgg);
+            }
+            stage = visitor.agg(stage, group, agg);
+            if(requiresPostAgg) {
+                stage = visitor.map(stage, postAgg);
             }
             return stage;
+        }
+
+        protected boolean isSimpleName(final Expression expr) {
+
+            if(expr instanceof NameConstant) {
+                final Name name = ((NameConstant) expr).getName();
+                // Handling of this in aggregates (e.g. collectList(this)) is more
+                // intuitive if we allow a preAgg stage
+                return name.size() == 1 && !name.first().equals(Reserved.THIS);
+            } else {
+                return false;
+            }
         }
     }
 }

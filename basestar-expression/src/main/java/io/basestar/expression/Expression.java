@@ -58,7 +58,12 @@ public interface Expression extends Serializable {
 
     default boolean isAggregate() {
 
-        return expressions().stream().anyMatch(Expression::isAggregate);
+        return false;
+    }
+
+    default boolean hasAggregates() {
+
+        return isAggregate() || expressions().stream().anyMatch(Expression::hasAggregates);
     }
 
     Set<Name> names();
