@@ -3,6 +3,10 @@ package io.basestar.schema.use;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.basestar.schema.Instance;
+import io.basestar.schema.Namespace;
+import io.basestar.schema.ReferableSchema;
+import io.basestar.schema.StructSchema;
 import io.basestar.schema.util.Expander;
 import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.*;
@@ -123,6 +127,22 @@ class TestUse {
         testUse(UseBinary.DEFAULT, new byte[]{1, 2, 3});
         assertTrue(UseBinary.DEFAULT.openApi(ImmutableSet.of()) instanceof BinarySchema);
         assertArrayEquals(new byte[0], UseBinary.DEFAULT.defaultValue());
+    }
+
+    @Test
+    void testUseStruct() throws Exception {
+
+        final Namespace namespace = Namespace.load(TestUse.class.getResource("/schema/Petstore.yml"));
+        final StructSchema schema = namespace.requireStructSchema("Address");
+        final UseStruct use = UseStruct.from(schema, null);
+
+        testUse(use, null);
+        testUse(use, new Instance(ImmutableMap.of(
+                "houseName", "MyHouse",
+                "streetName", "MyStreet",
+                "country", ReferableSchema.ref("GB"),
+                "zip", "12345"
+        )));
     }
 
     private <T> void testUse(final Use<T> use, final T init) throws Exception {

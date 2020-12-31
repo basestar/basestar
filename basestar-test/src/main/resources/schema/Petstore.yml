@@ -134,6 +134,8 @@ User:
 Store:
   type: object
   properties:
+    address:
+      type: Address
     name:
       type: string
   indexes:
@@ -149,6 +151,24 @@ Store:
     orders:
       schema: Order
       expression: store.id == this.id
+
+Address:
+  type: struct
+  properties:
+    houseName:
+      type: string
+    streetName:
+      type: string
+    country:
+      type: Country
+    zip:
+      type: string
+
+Country:
+  type: object
+  properties:
+    name:
+      type: string
 
 PetStats:
   type: view

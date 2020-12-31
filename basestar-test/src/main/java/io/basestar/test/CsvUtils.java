@@ -1,5 +1,6 @@
 package io.basestar.test;
 
+import io.basestar.test.annotation.PretendGenerated;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
 
@@ -11,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@PretendGenerated
 public class CsvUtils {
 
     public static List<Map<String, String>> read(final Class<?> resourceClass, final String resource) throws IOException {

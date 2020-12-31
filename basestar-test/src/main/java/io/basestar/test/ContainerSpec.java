@@ -24,6 +24,7 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
+import io.basestar.test.annotation.PretendGenerated;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -32,6 +33,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 @Data
+@PretendGenerated
 public class ContainerSpec {
 
     private final String image;
