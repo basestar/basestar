@@ -20,11 +20,11 @@ package io.basestar.test;
  * #L%
  */
 
-import io.basestar.test.annotation.PretendGenerated;
+import io.basestar.annotation.Generated;
 
 import java.util.regex.Pattern;
 
-@PretendGenerated
+@Generated
 public class Localstack {
 
     private static final String ENDPOINT_PREFIX = "http://localhost:";

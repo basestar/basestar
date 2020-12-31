@@ -32,7 +32,7 @@ import com.github.dockerjava.core.DockerClientConfig;
 import com.github.dockerjava.okhttp.OkHttpDockerCmdExecFactory;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
-import io.basestar.test.annotation.PretendGenerated;
+import io.basestar.annotation.Generated;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.Closeable;
@@ -52,7 +52,7 @@ import java.util.stream.Collectors;
  */
 
 @Slf4j
-@PretendGenerated
+@Generated
 public class TestContainers {
 
     private static final String HASH_LABEL = "hash";
