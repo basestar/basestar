@@ -29,7 +29,7 @@ import io.basestar.expression.Context;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.use.UseEnum;
-import io.basestar.schema.use.ValueContext;
+import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -42,10 +42,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.lang.reflect.Type;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Enum Schema
@@ -198,6 +195,12 @@ public class EnumSchema implements Schema<String> {
     public UseEnum typeOf() {
 
         return new UseEnum(this);
+    }
+
+    @Override
+    public String toString(final String value) {
+
+        return Objects.toString(value);
     }
 
     @Override

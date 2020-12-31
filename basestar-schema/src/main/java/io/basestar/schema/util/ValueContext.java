@@ -1,4 +1,4 @@
-package io.basestar.schema.use;
+package io.basestar.schema.util;
 
 import io.basestar.exception.InvalidDateTimeException;
 import io.basestar.expression.exception.TypeConversionException;
@@ -6,6 +6,7 @@ import io.basestar.expression.type.Coercion;
 import io.basestar.schema.*;
 import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.schema.exception.UnexpectedTypeException;
+import io.basestar.schema.use.*;
 import io.basestar.secret.Secret;
 import io.basestar.util.ISO8601;
 import io.basestar.util.Name;

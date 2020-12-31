@@ -26,6 +26,7 @@ import io.basestar.schema.Constraint;
 import io.basestar.schema.EnumSchema;
 import io.basestar.schema.Schema;
 import io.basestar.schema.exception.TypeSyntaxException;
+import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Name;
 import lombok.Data;
 

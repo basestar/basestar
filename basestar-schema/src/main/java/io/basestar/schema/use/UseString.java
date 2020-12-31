@@ -21,6 +21,7 @@ package io.basestar.schema.use;
  */
 
 import com.google.common.base.Charsets;
+import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.StringSchema;
 import lombok.Data;

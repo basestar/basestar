@@ -1,5 +1,6 @@
 package io.basestar.schema.use;
 
+import io.basestar.schema.util.ValueContext;
 import io.basestar.secret.Secret;
 import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.Schema;
@@ -76,6 +77,7 @@ public class UseSecret implements UseScalar<Secret> {
 
         final int length = in.readInt();
         final byte[] encrypted = new byte[length];
+        in.readFully(encrypted);
         return Secret.encrypted(encrypted);
     }
 
@@ -100,6 +102,6 @@ public class UseSecret implements UseScalar<Secret> {
     @Override
     public String toString(final Secret value) {
 
-        return value.toString();
+        return Objects.toString(value);
     }
 }

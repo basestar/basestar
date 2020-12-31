@@ -28,9 +28,9 @@ import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseInstance;
 import io.basestar.schema.use.UseString;
-import io.basestar.schema.use.ValueContext;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
+import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Name;
 import io.leangen.geantyref.TypeFactory;
 
@@ -200,6 +200,22 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
                 return member.javaType(name.withoutFirst());
             }
         }
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    default String toString(final Instance value) {
+
+        if(value == null) {
+            return "null";
+        }
+        final Map<String, String> entries = new TreeMap<>();
+        metadataSchema().forEach((k, v) -> entries.put(k, ((Use<Object>)v).toString(value.get(k))));
+        getMembers().forEach((k, v) -> entries.put(k, v.toString(value.get(k))));
+
+        return "{" + entries.entrySet().stream()
+                .map(v -> v.getKey() + ": " + v.getValue())
+                .collect(Collectors.joining(", ")) + "}";
     }
 
     default Map<String, Object> readProperties(final Map<String, Object> object, final Set<Name> expand, final boolean suppress) {

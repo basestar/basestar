@@ -1,4 +1,6 @@
-package io.basestar.schema.use;
+package io.basestar.schema.util;
+
+import io.basestar.schema.use.Use;
 
 import java.util.Objects;
 

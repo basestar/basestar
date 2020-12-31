@@ -20,7 +20,9 @@ package io.basestar.schema.use;
  * #L%
  */
 
+import com.google.common.io.BaseEncoding;
 import io.basestar.expression.type.Values;
+import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.BinarySchema;
 import lombok.Data;
@@ -134,6 +136,12 @@ public class UseBinary implements UseScalar<byte[]> {
     public static byte[] concat(final byte[] ... arrays) {
 
         return Values.concat(arrays);
+    }
+
+    @Override
+    public String toString(final byte[] value) {
+
+        return value == null ? "null" : BaseEncoding.base64().encode(value);
     }
 
     @Override

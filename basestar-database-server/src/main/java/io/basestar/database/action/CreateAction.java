@@ -27,7 +27,7 @@ import io.basestar.event.Event;
 import io.basestar.expression.Context;
 import io.basestar.schema.*;
 import io.basestar.schema.exception.ConstraintViolationException;
-import io.basestar.schema.use.ValueContext;
+import io.basestar.schema.util.ValueContext;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;

@@ -121,4 +121,10 @@ public interface UseScalar<T> extends Use<T> {
 
         return Objects.toString(value);
     }
+
+    @Override
+    default Object[] key(final T value) {
+
+        return new Object[]{value};
+    }
 }

@@ -35,9 +35,9 @@ import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UsePage;
-import io.basestar.schema.use.ValueContext;
-import io.basestar.schema.use.Widening;
 import io.basestar.schema.util.Expander;
+import io.basestar.schema.util.ValueContext;
+import io.basestar.schema.util.Widening;
 import io.basestar.util.*;
 import io.leangen.geantyref.TypeFactory;
 import lombok.Data;
@@ -212,10 +212,10 @@ public class Link implements Member {
     @Override
     public Type javaType(final Name name) {
 
-        if(single) {
+        if(single || !name.isEmpty()) {
             return schema.javaType(name);
         } else {
-            return TypeFactory.parameterizedClass(List.class, schema.javaType(name));
+            return TypeFactory.parameterizedClass(Page.class, schema.javaType(Name.of()));
         }
     }
 

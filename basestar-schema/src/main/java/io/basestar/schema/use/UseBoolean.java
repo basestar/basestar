@@ -20,6 +20,7 @@ package io.basestar.schema.use;
  * #L%
  */
 
+import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.BooleanSchema;
 import lombok.Data;

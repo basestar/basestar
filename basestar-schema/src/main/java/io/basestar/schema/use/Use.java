@@ -27,9 +27,11 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.type.Numbers;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.Schema;
+import io.basestar.schema.exception.InvalidKeyException;
 import io.basestar.schema.exception.TypeSyntaxException;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
+import io.basestar.schema.util.ValueContext;
 import io.basestar.secret.Secret;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -159,6 +161,11 @@ public interface Use<T> extends Serializable {
 
     void collectDependencies(Set<Name> expand, Map<Name, Schema<?>> out);
 
+    default Object[] key(final T value) {
+
+        throw new InvalidKeyException(this);
+    }
+
     default boolean isOptional() {
 
         return false;
@@ -241,6 +248,8 @@ public interface Use<T> extends Serializable {
             return UseMap.from(arg);
         } else if(Secret.class.isAssignableFrom(erased)) {
             return UseSecret.DEFAULT;
+        } else if(byte[].class.isAssignableFrom(erased)) {
+            return UseBinary.DEFAULT;
         } else {
             return UseAny.DEFAULT;
         }

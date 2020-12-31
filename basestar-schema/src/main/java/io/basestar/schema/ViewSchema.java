@@ -39,7 +39,7 @@ import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseBinary;
 import io.basestar.schema.use.UseView;
-import io.basestar.schema.use.ValueContext;
+import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -366,7 +366,10 @@ public class ViewSchema implements LinkableSchema {
         if(isAggregating() || isGrouping()) {
             result.computeIfAbsent(ID, k -> {
                 final List<Object> values = new ArrayList<>();
-                group.forEach(name -> values.add(result.get(name)));
+                group.forEach(name -> {
+                    final Object[] keys = typeOf(Name.of(name)).key(result.get(name));
+                    values.addAll(Arrays.asList(keys));
+                });
                 return UseBinary.binaryKey(values);
             });
         }
@@ -383,12 +386,16 @@ public class ViewSchema implements LinkableSchema {
 
     public void serialize(final Map<String, Object> object, final DataOutput out) throws IOException {
 
+        UseBinary.DEFAULT.serialize((byte[])object.get(ID), out);
         serializeProperties(object, out);
     }
 
     public static Instance deserialize(final DataInput in) throws IOException {
 
-        return new Instance(InstanceSchema.deserializeProperties(in));
+        final byte[] id = Use.deserializeAny(in);
+        final Map<String, Object> data = new HashMap<>(InstanceSchema.deserializeProperties(in));
+        data.put(ID, id);
+        return new Instance(data);
     }
 
     @Override
@@ -434,6 +441,7 @@ public class ViewSchema implements LinkableSchema {
 
         return new UseView(this);
     }
+
 
     @Override
     public String id() {

@@ -22,7 +22,7 @@ package io.basestar.schema.use;
 
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Schema;
-import io.basestar.schema.exception.UnexpectedTypeException;
+import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Name;
 import io.leangen.geantyref.TypeFactory;
 import io.swagger.v3.oas.models.media.ArraySchema;
@@ -32,10 +32,12 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.DataInput;
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Array Type
@@ -110,21 +112,6 @@ public class UseArray<T> implements UseCollection<T, List<T>> {
     public List<T> create(final ValueContext context, final Object value, final Set<Name> expand) {
 
         return context.createArray(this, value, expand);
-    }
-
-    @Deprecated
-    public static <T> List<T> create(final Object value, final boolean suppress, final Function<Object, T> fn) {
-
-        if(value == null) {
-            return null;
-        } else if(value instanceof Collection) {
-            return ((Collection<?>) value).stream()
-                    .map(fn).collect(Collectors.toList());
-        } else if (suppress) {
-            return null;
-        } else {
-            throw new UnexpectedTypeException(NAME, value);
-        }
     }
 
     @Override

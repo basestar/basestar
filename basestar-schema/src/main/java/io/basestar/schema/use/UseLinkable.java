@@ -6,7 +6,7 @@ import io.basestar.schema.ViewSchema;
 
 public interface UseLinkable extends UseInstance {
 
-    static Use<?> from(final LinkableSchema schema, final Object config) {
+    static UseLinkable from(final LinkableSchema schema, final Object config) {
 
         if(schema instanceof ReferableSchema) {
             return UseRef.from((ReferableSchema)schema, config);

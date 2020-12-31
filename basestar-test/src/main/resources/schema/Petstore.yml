@@ -180,3 +180,16 @@ PetStats:
   from:
     schema: Pet
   where: status == 'available'
+
+OrderStats:
+  type: view
+  group:
+    - store
+    - status
+  properties:
+    store: store
+    status: status
+    count: count()
+    quantity: sum(quantity)
+  from:
+    schema: Order

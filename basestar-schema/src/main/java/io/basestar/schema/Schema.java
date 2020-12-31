@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.basestar.expression.Context;
 import io.basestar.schema.exception.MissingSchemaException;
 import io.basestar.schema.use.Use;
-import io.basestar.schema.use.ValueContext;
+import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Name;
 import io.basestar.util.Warnings;
 
@@ -165,6 +165,8 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
     Descriptor<? extends Schema<T>, ? extends T> descriptor();
 
     Use<T> typeOf();
+
+    String toString(T value);
 
     default Map<Name, Schema<?>> dependencies() {
 

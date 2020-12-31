@@ -6,6 +6,7 @@ import io.basestar.schema.Constraint;
 import io.basestar.schema.Schema;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
+import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Name;
 
 import java.io.DataInput;

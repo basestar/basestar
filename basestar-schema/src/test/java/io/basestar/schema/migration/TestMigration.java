@@ -3,7 +3,7 @@ package io.basestar.schema.migration;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.use.Widening;
+import io.basestar.schema.util.Widening;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
