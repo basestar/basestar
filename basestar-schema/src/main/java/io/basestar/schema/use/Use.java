@@ -89,6 +89,16 @@ public interface Use<T> extends Serializable {
         return as.cast(o);
     }
 
+    default boolean isNumeric() {
+
+        return false;
+    }
+
+    default boolean isStringLike() {
+
+        return true;
+    }
+
     Use<?> resolve(Schema.Resolver resolver);
 
     T create(ValueContext context, Object value, Set<Name> expand);

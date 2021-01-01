@@ -60,12 +60,6 @@ public class ElasticsearchStorageTraits implements StorageTraits {
     }
 
     @Override
-    public boolean supportsAggregation() {
-
-        return false;
-    }
-
-    @Override
     public Concurrency getObjectConcurrency() {
 
         return Concurrency.OPTIMISTIC;

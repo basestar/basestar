@@ -220,4 +220,10 @@ public class EnumSchema implements Schema<String> {
 
         return qualifiedNameHashCode();
     }
+
+    @Override
+    public String toString() {
+
+        return getQualifiedName().toString();
+    }
 }

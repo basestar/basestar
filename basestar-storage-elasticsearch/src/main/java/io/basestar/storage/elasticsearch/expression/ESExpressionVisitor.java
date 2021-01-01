@@ -44,7 +44,7 @@ import org.elasticsearch.index.query.QueryBuilders;
 import java.util.Arrays;
 import java.util.Objects;
 
-public class ElasticsearchExpressionVisitor implements ExpressionVisitor.Defaulting<QueryBuilder> {
+public class ESExpressionVisitor implements ExpressionVisitor.Defaulting<QueryBuilder> {
 
     @Override
     public QueryBuilder visitDefault(final Expression expression) {

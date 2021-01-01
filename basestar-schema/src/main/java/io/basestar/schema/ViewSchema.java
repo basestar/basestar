@@ -574,4 +574,10 @@ public class ViewSchema implements LinkableSchema {
         }
         return false;
     }
+
+    @Override
+    public String toString() {
+
+        return getQualifiedName().toString();
+    }
 }

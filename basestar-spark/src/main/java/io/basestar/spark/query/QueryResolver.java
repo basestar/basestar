@@ -14,7 +14,6 @@ import io.basestar.spark.combiner.Combiner;
 import io.basestar.spark.source.Source;
 import io.basestar.spark.transform.*;
 import io.basestar.storage.query.QueryPlanner;
-import io.basestar.storage.query.QueryStage;
 import io.basestar.storage.query.QueryStageVisitor;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
@@ -121,6 +120,12 @@ public interface QueryResolver {
         }
 
         @Override
+        protected boolean sortBeforeExpand(final LinkableSchema schema, final List<Sort> sort) {
+
+            return false;
+        }
+
+        @Override
         public Query<Row> resolve(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
             return plan(this, schema, query, sort, expand);
@@ -218,14 +223,11 @@ public interface QueryResolver {
         }
     }
 
-    interface Stage extends Query<Row>, QueryStage {
+    interface Stage extends Query<Row> {
+
+        Layout getLayout();
 
         static Stage from(final Query<Row> query, final Layout layout) {
-
-            return from(query, layout, Constant.TRUE, ImmutableList.of());
-        }
-
-        static Stage from(final Query<Row> query, final Layout layout, final Expression filter, final List<Sort> sort) {
 
             return new Stage() {
 
@@ -235,39 +237,16 @@ public interface QueryResolver {
                     return query.dataset();
                 }
 
-                @Override
                 public Layout getLayout() {
 
                     return layout;
-                }
-
-                @Override
-                public Expression getFilter() {
-
-                    return filter;
-                }
-
-                @Override
-                public List<Sort> getSort() {
-
-                    return sort;
                 }
             };
         }
 
         default Stage then(final Transform<Dataset<Row>, Dataset<Row>> transform, final Layout layout) {
 
-            return then(transform, layout, getFilter());
-        }
-
-        default Stage then(final Transform<Dataset<Row>, Dataset<Row>> transform, final Layout layout, final Expression filter) {
-
-            return then(transform, layout, filter, getSort());
-        }
-
-        default Stage then(final Transform<Dataset<Row>, Dataset<Row>> transform, final Layout layout, final Expression filter, final List<Sort> sort) {
-
-            return from(Query.super.then(transform), layout, filter, sort);
+            return from(Query.super.then(transform), layout);
         }
 
         static Stage source(final QueryResolver resolver, final LinkableSchema schema) {
@@ -319,7 +298,7 @@ public interface QueryResolver {
 
             return then(PredicateTransform.builder()
                             .inputLayout(inputLayout)
-                            .predicate(condition).build(), inputLayout, condition);
+                            .predicate(condition).build(), inputLayout);
         }
 
         default Stage map(final Map<String, TypedExpression<?>> expressions) {
@@ -339,7 +318,7 @@ public interface QueryResolver {
             final Layout inputLayout = getLayout();
 
             return then(SortTransform.<Row>builder()
-                            .sort(sort).build(), inputLayout, getFilter(), sort);
+                            .sort(sort).build(), inputLayout);
         }
 
         default Stage schema(final InstanceSchema schema) {

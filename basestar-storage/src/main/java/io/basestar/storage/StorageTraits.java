@@ -40,11 +40,6 @@ public interface StorageTraits {
         return true;
     }
 
-    default boolean supportsAggregation() {
-
-        return false;
-    }
-
     Concurrency getObjectConcurrency();
 
     default Consistency getIndexConsistency(final boolean multi) {

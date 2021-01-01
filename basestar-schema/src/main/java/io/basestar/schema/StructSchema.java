@@ -297,4 +297,10 @@ public class StructSchema implements InstanceSchema {
                     .setType(Use.fromConfig(config));
         }
     }
+
+    @Override
+    public String toString() {
+
+        return getQualifiedName().toString();
+    }
 }

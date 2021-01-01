@@ -8,7 +8,6 @@ import io.basestar.schema.*;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.expression.TypedExpression;
 import io.basestar.schema.use.Use;
-import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Sort;
@@ -16,11 +15,11 @@ import io.basestar.util.Sort;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public interface QueryPlanner<T extends QueryStage> {
+public interface QueryPlanner<T> {
 
     T plan(QueryStageVisitor<T> visitor, LinkableSchema schema, Expression expression, List<Sort> sort, Set<Name> expand);
 
-    class Default<T extends QueryStage> implements QueryPlanner<T> {
+    class Default<T> implements QueryPlanner<T> {
 
         @Override
         public T plan(final QueryStageVisitor<T> visitor, final LinkableSchema schema, final Expression expression, final List<Sort> sort, final Set<Name> expand) {
@@ -28,26 +27,76 @@ public interface QueryPlanner<T extends QueryStage> {
             return stage(visitor, schema, expression, sort, expand);
         }
 
-        protected T stage(final QueryStageVisitor<T> visitor, final LinkableSchema schema, final Expression expression, final List<Sort> sort, final Set<Name> expand) {
+        protected T stage(final QueryStageVisitor<T> visitor, final LinkableSchema schema, final Expression filter, final List<Sort> sort, final Set<Name> expand) {
 
-            final boolean constExpr = expression != null && expression.isConstant();
-            if(constExpr && !expression.evaluatePredicate(Context.init())) {
+            final boolean constFilter = filter != null && filter.isConstant();
+            if(constFilter && !filter.evaluatePredicate(Context.init())) {
+
                 return visitor.empty(schema, expand);
+
             } else {
+
+                final Expression remainingFilter = constFilter ? null : filter;
+                final Set<Name> remainingExpand = expand;//, stage.getLayout().getExpand());
+
                 T stage = stage(visitor, schema);
-                final Set<Name> remainingExpand = Immutable.removeAll(expand, stage.getLayout().getExpand());
-                if(!remainingExpand.isEmpty()) {
+
+                stage = preExpandFilter(visitor, stage, schema, remainingFilter);
+                stage = preExpandSort(visitor, stage, schema, sort);
+                if(remainingExpand != null && !remainingExpand.isEmpty()) {
                     stage = visitor.expand(stage, schema, remainingExpand);
                 }
-                // TODO check if expression is already covered in the stage
-                if (!constExpr && expression != null) {
-                    stage = visitor.filter(stage, expression);
-                }
-                // TODO check enclosing/equivalent rather than only equal
-                if(!sort.isEmpty() && !sort.equals(stage.getSort())) {
-                    stage = visitor.sort(stage, sort);
-                }
+                stage = postExpandFilter(visitor, stage, schema, remainingFilter);
+                stage = postExpandSort(visitor, stage, schema, sort);
+
                 return stage;
+            }
+        }
+
+        protected boolean filterBeforeExpand(final LinkableSchema schema, final Expression filter) {
+
+            return schema.requiredExpand(filter.names()).isEmpty();
+        }
+
+        protected T preExpandFilter(final QueryStageVisitor<T> visitor, final T stage, final LinkableSchema schema, final Expression filter) {
+
+            if(filter == null || !filterBeforeExpand(schema, filter)) {
+                return stage;
+            } else {
+                return visitor.filter(stage, filter);
+            }
+        }
+
+        protected T postExpandFilter(final QueryStageVisitor<T> visitor, final T stage, final LinkableSchema schema, final Expression filter) {
+
+            if(filter == null || filterBeforeExpand(schema, filter)) {
+                return stage;
+            } else {
+                return visitor.filter(stage, filter);
+            }
+        }
+
+        protected boolean sortBeforeExpand(final LinkableSchema schema, final List<Sort> sort) {
+
+            final Set<Name> names = sort.stream().map(Sort::getName).collect(Collectors.toSet());
+            return schema.requiredExpand(names).isEmpty();
+        }
+
+        protected T preExpandSort(final QueryStageVisitor<T> visitor, final T stage, final LinkableSchema schema, final List<Sort> sort) {
+
+            if(sort == null || sort.isEmpty() || !sortBeforeExpand(schema, sort)) {
+                return stage;
+            } else {
+                return visitor.sort(stage, sort);
+            }
+        }
+
+        protected T postExpandSort(final QueryStageVisitor<T> visitor, final T stage, final LinkableSchema schema, final List<Sort> sort) {
+
+            if(sort == null || sort.isEmpty() || sortBeforeExpand(schema, sort)) {
+                return stage;
+            } else {
+                return visitor.sort(stage, sort);
             }
         }
 
@@ -78,7 +127,12 @@ public interface QueryPlanner<T extends QueryStage> {
 
             final ViewSchema.From from = schema.getFrom();
             final LinkableSchema fromSchema = from.getSchema();
-            return stage(visitor, fromSchema, schema.getWhere(), schema.getSort(), from.getExpand());
+
+            // If the filter/sort only looks at unexpanded fields, it can be pushed down to the source stage
+
+            final Expression where = schema.getWhere();
+            final List<Sort> sort = schema.getSort();
+            return stage(visitor, fromSchema, where, sort, from.getExpand());
         }
 
         protected Map<String, TypedExpression<?>> viewExpressions(final ViewSchema schema) {
@@ -118,7 +172,7 @@ public interface QueryPlanner<T extends QueryStage> {
         }
     }
 
-    class AggregateSplitting<T extends QueryStage> extends Default<T> {
+    class AggregateSplitting<T> extends Default<T> {
 
         @Override
         protected T aggViewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema) {

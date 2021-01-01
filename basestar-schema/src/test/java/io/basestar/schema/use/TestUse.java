@@ -146,6 +146,7 @@ class TestUse {
         assertEquals("null", use.toString(null));
         assertEquals("2", use.toString(2L));
         assertEquals(use, use.typeOf(Name.empty()));
+        assertTrue(use.isNumeric());
     }
 
     @Test
@@ -167,6 +168,7 @@ class TestUse {
         assertEquals("null", use.toString(null));
         assertEquals("2.0", use.toString(2.0));
         assertEquals(use, use.typeOf(Name.empty()));
+        assertTrue(use.isNumeric());
     }
 
     @Test
@@ -182,6 +184,7 @@ class TestUse {
         assertEquals("null", use.toString(null));
         assertEquals("test", use.toString("test"));
         assertEquals(use, use.typeOf(Name.empty()));
+        assertTrue(use.isStringLike());
     }
 
     @Test
@@ -197,6 +200,7 @@ class TestUse {
         assertEquals("null", use.toString(null));
         assertEquals("2020-01-01", use.toString(LocalDate.parse("2020-01-01")));
         assertEquals(use, use.typeOf(Name.empty()));
+        assertTrue(use.isStringLike());
     }
 
     @Test
@@ -212,6 +216,7 @@ class TestUse {
         assertEquals("null", use.toString(null));
         assertEquals("2020-01-01T00:00:00.000Z", use.toString(Instant.parse("2020-01-01T00:00:00Z")));
         assertEquals(use, use.typeOf(Name.empty()));
+        assertTrue(use.isStringLike());
     }
 
     @Test
@@ -293,6 +298,15 @@ class TestUse {
         assertEquals(use, Use.fromJavaType(javaType));
         assertEquals("{x: y}", use.toString(ImmutableMap.of("x", "y")));
         assertEquals(use, use.typeOf(Name.empty()));
+    }
+
+    @Test
+    void testUseEnum() throws Exception {
+
+        final Namespace namespace = namespace();
+        final EnumSchema schema = namespace.requireEnumSchema("PetStatus");
+        final UseEnum use = UseEnum.from(schema, null);
+        assertTrue(use.isStringLike());
     }
 
     @Test

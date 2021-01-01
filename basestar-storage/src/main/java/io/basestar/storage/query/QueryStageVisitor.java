@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public interface QueryStageVisitor<T extends QueryStage> {
+public interface QueryStageVisitor<T> {
 
     T empty(LinkableSchema schema, Set<Name> expand);
 

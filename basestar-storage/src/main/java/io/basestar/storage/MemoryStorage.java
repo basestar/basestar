@@ -446,12 +446,6 @@ public class MemoryStorage implements DefaultIndexStorage {
         }
 
         @Override
-        public boolean supportsAggregation() {
-
-            return true;
-        }
-
-        @Override
         public boolean supportsMultiObject() {
 
             return true;

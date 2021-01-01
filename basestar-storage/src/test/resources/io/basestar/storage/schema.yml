@@ -217,13 +217,28 @@ ViewBase:
 AddressStats:
   type: view
   group:
+    - country
+    - state
+  properties:
+    country: country
+    state: state
+    count: count()
+    countZip: count(zip ILIKE '_____')
+    maxZip: max(zip)
+    minZip: min(zip)
+  from:
+    schema: Address
+
+USAddressStats:
+  type: view
+  group:
     - state
   properties:
     state: state
     count: count()
   from:
     schema: Address
-  where: country == 'US'
+  where: country == 'United States'
 
 AddressDisplayStats:
   type: view
@@ -244,4 +259,4 @@ GBAddresses:
     zip: zip
   from:
     schema: Address
-  where: country == 'GB'
+  where: country == 'United Kingdom'

@@ -31,17 +31,17 @@ class TestQueryPlanner {
     void testNonSplitAggregate() throws IOException {
 
         final Namespace namespace = Namespace.load(TestStorage.class.getResource("schema.yml"));
-        final ViewSchema viewSchema = namespace.requireViewSchema("AddressStats");
+        final ViewSchema viewSchema = namespace.requireViewSchema("USAddressStats");
 
-        final QueryPlanner<QueryStage> planner = new QueryPlanner.AggregateSplitting<>();
+        final QueryPlanner<SimpleStage> planner = new QueryPlanner.AggregateSplitting<>();
 
-        final QueryStage stage = planner.plan(new SimpleVisitor(), viewSchema, Expression.parse("count > 5"), ImmutableList.of(), ImmutableSet.of());
+        final SimpleStage stage = planner.plan(new SimpleVisitor(), viewSchema, Expression.parse("count > 5"), ImmutableList.of(), ImmutableSet.of());
 
         final ObjectSchema sourceSchema = namespace.requireObjectSchema("Address");
 
         final SourceStage sourceStage = new SourceStage(sourceSchema);
         final SchemaStage sourceSchemaStage = new SchemaStage(sourceStage, sourceSchema);
-        final FilterStage sourceFilterStage = new FilterStage(sourceSchemaStage, Expression.parse("country == 'US'"));
+        final FilterStage sourceFilterStage = new FilterStage(sourceSchemaStage, Expression.parse("country == 'United States'"));
         final AggStage aggStage = new AggStage(sourceFilterStage, ImmutableList.of("state"), ImmutableMap.of(
                 "state", TypedExpression.from(Expression.parse("state"), UseOptional.from(UseString.DEFAULT)),
                 "count", TypedExpression.from(Expression.parse("count(true)"), UseInteger.DEFAULT)
@@ -58,9 +58,9 @@ class TestQueryPlanner {
         final Namespace namespace = Namespace.load(TestStorage.class.getResource("schema.yml"));
         final ViewSchema viewSchema = namespace.requireViewSchema("AddressDisplayStats");
         
-        final QueryPlanner<QueryStage> planner = new QueryPlanner.AggregateSplitting<>();
+        final QueryPlanner<SimpleStage> planner = new QueryPlanner.AggregateSplitting<>();
         
-        final QueryStage stage = planner.plan(new SimpleVisitor(), viewSchema, Constant.TRUE, ImmutableList.of(), ImmutableSet.of());
+        final SimpleStage stage = planner.plan(new SimpleVisitor(), viewSchema, Constant.TRUE, ImmutableList.of(), ImmutableSet.of());
 
         final ObjectSchema sourceSchema = namespace.requireObjectSchema("Address");
 
@@ -93,8 +93,8 @@ class TestQueryPlanner {
         final Namespace namespace = Namespace.load(TestStorage.class.getResource("schema.yml"));
         final ViewSchema viewSchema = namespace.requireViewSchema("GBAddresses");
 
-        final QueryPlanner<QueryStage> planner = new QueryPlanner.AggregateSplitting<>();
-        final QueryStage stage = planner.plan(new SimpleVisitor(), viewSchema, Expression.parse("state == 'Kent'"), ImmutableList.of(), ImmutableSet.of());
+        final QueryPlanner<SimpleStage> planner = new QueryPlanner.AggregateSplitting<>();
+        final SimpleStage stage = planner.plan(new SimpleVisitor(), viewSchema, Expression.parse("state == 'Kent'"), ImmutableList.of(), ImmutableSet.of());
 
         final ObjectSchema sourceSchema = namespace.requireObjectSchema("Address");
 
@@ -114,48 +114,25 @@ class TestQueryPlanner {
         assertEquals(filterStage, stage);
     }
 
-    interface SimpleStage extends QueryStage {
+    interface SimpleStage {
 
-        QueryStage getInput();
+        SimpleStage getInput();
 
-        @Override
         default Layout getLayout() {
 
-            final QueryStage input = getInput();
+            final SimpleStage input = getInput();
             if(input != null) {
                 return input.getLayout();
             } else {
                 throw new IllegalStateException();
             }
         }
-
-        @Override
-        default List<Sort> getSort() {
-
-            final QueryStage input = getInput();
-            if(input != null) {
-                return input.getSort();
-            } else {
-                return ImmutableList.of();
-            }
-        }
-
-        @Override
-        default Expression getFilter() {
-
-            final QueryStage input = getInput();
-            if(input != null) {
-                return input.getFilter();
-            } else {
-                return Constant.TRUE;
-            }
-        }
     }
 
     @Data
-    static class AggStage implements QueryStage {
+    static class AggStage implements SimpleStage {
 
-        private final QueryStage input;
+        private final SimpleStage input;
         
         private final List<String> group;
         
@@ -165,18 +142,6 @@ class TestQueryPlanner {
         public Layout getLayout() {
 
             return Layout.simple(Immutable.transformValues(expressions, (k, v) -> v.getType()));
-        }
-
-        @Override
-        public List<Sort> getSort() {
-
-            return ImmutableList.of();
-        }
-
-        @Override
-        public Expression getFilter() {
-
-            return Constant.TRUE;
         }
     }
 
@@ -194,7 +159,7 @@ class TestQueryPlanner {
         }
 
         @Override
-        public QueryStage getInput() {
+        public SimpleStage getInput() {
 
             return null;
         }
@@ -203,7 +168,7 @@ class TestQueryPlanner {
     @Data
     static class ExpandStage implements SimpleStage {
 
-        private final QueryStage input;
+        private final SimpleStage input;
 
         private final LinkableSchema schema;
 
@@ -219,21 +184,15 @@ class TestQueryPlanner {
     @Data
     static class FilterStage implements SimpleStage {
 
-        private final QueryStage input;
+        private final SimpleStage input;
 
         private final Expression condition;
-
-        @Override
-        public Expression getFilter() {
-
-            return condition;
-        }
     }
 
     @Data
-    static class MapStage implements QueryStage {
+    static class MapStage implements SimpleStage {
 
-        private final QueryStage input;
+        private final SimpleStage input;
 
         private final Map<String, TypedExpression<?>> expressions;
 
@@ -242,32 +201,14 @@ class TestQueryPlanner {
 
             return Layout.simple(Immutable.transformValues(expressions, (k, v) -> v.getType()));
         }
-
-        @Override
-        public List<Sort> getSort() {
-
-            return ImmutableList.of();
-        }
-
-        @Override
-        public Expression getFilter() {
-
-            return Constant.TRUE;
-        }
     }
 
     @Data
     static class SortStage implements SimpleStage {
 
-        private final QueryStage input;
+        private final SimpleStage input;
 
         private final List<Sort> sort;
-
-        @Override
-        public List<Sort> getSort() {
-
-            return sort;
-        }
     }
 
     @Data
@@ -282,16 +223,16 @@ class TestQueryPlanner {
         }
 
         @Override
-        public QueryStage getInput() {
+        public SimpleStage getInput() {
 
             return null;
         }
     }
 
     @Data
-    static class SchemaStage implements QueryStage {
+    static class SchemaStage implements SimpleStage {
 
-        private final QueryStage input;
+        private final SimpleStage input;
 
         private final InstanceSchema schema;
 
@@ -300,72 +241,60 @@ class TestQueryPlanner {
 
             return schema;
         }
-
-        @Override
-        public List<Sort> getSort() {
-
-            return input.getSort();
-        }
-
-        @Override
-        public Expression getFilter() {
-
-            return input.getFilter();
-        }
     }
 
-    private static class SimpleVisitor implements QueryStageVisitor<QueryStage> {
+    private static class SimpleVisitor implements QueryStageVisitor<SimpleStage> {
     
         @Override
-        public QueryStage agg(final QueryStage input, final List<String> group, final Map<String, TypedExpression<?>> expressions) {
+        public SimpleStage agg(final SimpleStage input, final List<String> group, final Map<String, TypedExpression<?>> expressions) {
             
             return new AggStage(input, group, expressions);
         }
 
         @Override
-        public QueryStage empty(final LinkableSchema schema, final Set<Name> expand) {
+        public SimpleStage empty(final LinkableSchema schema, final Set<Name> expand) {
             
             return new EmptyStage(schema, expand);
         }
 
         @Override
-        public QueryStage expand(final QueryStage input, final LinkableSchema schema, final Set<Name> expand) {
+        public SimpleStage expand(final SimpleStage input, final LinkableSchema schema, final Set<Name> expand) {
 
             return new ExpandStage(input, schema, expand);
         }
 
         @Override
-        public QueryStage filter(final QueryStage input, final Expression condition) {
+        public SimpleStage filter(final SimpleStage input, final Expression condition) {
 
             return new FilterStage(input, condition);
         }
 
         @Override
-        public QueryStage map(final QueryStage input, final Map<String, TypedExpression<?>> expressions) {
+        public SimpleStage map(final SimpleStage input, final Map<String, TypedExpression<?>> expressions) {
 
             return new MapStage(input, expressions);
         }
 
         @Override
-        public QueryStage sort(final QueryStage input, final List<Sort> sort) {
+        public SimpleStage sort(final SimpleStage input, final List<Sort> sort) {
 
             return new SortStage(input, sort);
         }
 
         @Override
-        public QueryStage source(final LinkableSchema schema) {
+        public SimpleStage source(final LinkableSchema schema) {
 
             return new SourceStage(schema);
         }
 
         @Override
-        public QueryStage union(final List<QueryStage> inputs) {
+        public SimpleStage union(final List<SimpleStage> inputs) {
 
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public QueryStage conform(final QueryStage input, final InstanceSchema schema) {
+        public SimpleStage conform(final SimpleStage input, final InstanceSchema schema) {
             
             return new SchemaStage(input, schema);
         }

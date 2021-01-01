@@ -53,6 +53,8 @@ public abstract class TestStorage {
 
     private static final String ADDRESS = "Address";
 
+    private static final String ADDRESS_STATS = "AddressStats";
+
     private static final String SIMPLE = "Simple";
 
     private static final String POINTSET = "Pointset";
@@ -703,34 +705,31 @@ public abstract class TestStorage {
         return false;
     }
 
-//    @Test
-//    protected void testAggregation() throws IOException {
-//
-//        final Storage storage = storage(namespace);
-//
-//        final ObjectSchema schema = namespace.requireObjectSchema(ADDRESS);
-//
-//        assumeTrue(storage.storageTraits(schema).supportsAggregation(),
-//                "Aggregation must be enabled for this test");
-//
-//        final Multimap<String, Map<String, Object>> addresses = loadAddresses();
-//        bulkLoad(storage, addresses);
-//
-//        final List<Sort> sort = ImmutableList.of(Sort.asc(Name.of("country")), Sort.asc(Name.of(ObjectSchema.ID)));
-//        final List<Pager.Source<Map<String, Object>>> sources = storage.aggregate(schema, Expression.parse("true"),
-//                ImmutableMap.of("country", Expression.parse("country")),
-//                ImmutableMap.of("count", new Count()));
-//        final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
-//
-//        addresses.get(ADDRESS).forEach(object -> {
-//            final String country = (String)object.get("country");
-//
-//        });
-//
-//        final Page<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
-//        log.debug("Aggregation results: {}", results);
-//        assertEquals(31, results.size());
-//    }
+    protected boolean supportsAggregation() {
+
+        return false;
+    }
+
+    @Test
+    protected void testAggregation() throws IOException {
+
+        assumeTrue(supportsAggregation(),
+                "Aggregation must be enabled for this test");
+
+        final Storage storage = storage(namespace);
+
+        final ViewSchema schema = namespace.requireViewSchema(ADDRESS_STATS);
+
+        final Multimap<String, Map<String, Object>> addresses = loadAddresses();
+        bulkLoad(storage, addresses);
+
+        final List<Sort> sort = ImmutableList.of(Sort.desc(Name.of("country")), Sort.asc(Name.of("state")));
+        final Pager<Map<String, Object>> sources = storage.query(schema, Expression.parse("true"), sort, null);
+
+        final Page<Map<String, Object>> results = sources.page(100).join();
+        log.debug("Aggregation results: {}", results);
+        assertEquals(65, results.size());
+    }
 
     @Test
     protected void testRefIndex() {

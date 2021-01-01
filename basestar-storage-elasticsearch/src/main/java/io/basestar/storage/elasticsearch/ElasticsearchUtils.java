@@ -21,8 +21,13 @@ package io.basestar.storage.elasticsearch;
  */
 
 import com.google.common.collect.ImmutableMap;
+import io.basestar.schema.LinkableSchema;
 import io.basestar.storage.elasticsearch.mapping.Mappings;
 import io.basestar.storage.elasticsearch.mapping.Settings;
+import io.basestar.storage.util.KeysetPagingUtils;
+import io.basestar.util.Name;
+import io.basestar.util.Page;
+import io.basestar.util.Sort;
 import io.basestar.util.Throwables;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.ElasticsearchStatusException;
@@ -35,8 +40,15 @@ import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.client.indices.CreateIndexRequest;
 import org.elasticsearch.client.indices.CreateIndexResponse;
 import org.elasticsearch.client.indices.PutMappingRequest;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.sort.SortBuilder;
+import org.elasticsearch.search.sort.SortBuilders;
+import org.elasticsearch.search.sort.SortOrder;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -120,8 +132,49 @@ public class ElasticsearchUtils {
         return future;
     }
 
+    public static SortBuilder<?> sort(final Sort sort) {
+
+        return SortBuilders.fieldSort(sort.getName().toString())
+                .order(order(sort.getOrder()));
+    }
+
+    public static SortOrder order(final Sort.Order order) {
+
+        return order == Sort.Order.ASC ? SortOrder.ASC : SortOrder.DESC;
+    }
+
     public interface ListenerConsumer<T> {
 
         void accept(ActionListener<T> listener) throws IOException;
+    }
+
+    public static QueryBuilder pagingQueryBuilder(final LinkableSchema schema, final List<Sort> sort, final Page.Token token) {
+
+        final List<Object> values = KeysetPagingUtils.keysetValues(schema, sort, token);
+        final BoolQueryBuilder outer = QueryBuilders.boolQuery();
+        for(int i = 0; i < sort.size(); ++i) {
+            if(i == 0) {
+                outer.should(pagingRange(sort.get(i), values.get(i)));
+            } else {
+                final BoolQueryBuilder inner = QueryBuilders.boolQuery();
+                for (int j = 0; j < i; ++j) {
+                    final Name name = sort.get(j).getName();
+                    inner.must(QueryBuilders.termQuery(name.toString(), values.get(j)));
+                }
+                inner.must(pagingRange(sort.get(i), values.get(i)));
+                outer.should(inner);
+            }
+        }
+        return outer;
+    }
+
+    public static QueryBuilder pagingRange(final Sort sort, final Object value) {
+
+        final String name = sort.getName().toString();
+        if(sort.getOrder() == Sort.Order.ASC) {
+            return QueryBuilders.rangeQuery(name).gt(value);
+        } else {
+            return QueryBuilders.rangeQuery(name).lt(value);
+        }
     }
 }

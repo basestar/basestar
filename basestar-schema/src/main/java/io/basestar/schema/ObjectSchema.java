@@ -432,4 +432,10 @@ public class ObjectSchema implements ReferableSchema {
         }
         return false;
     }
+
+    @Override
+    public String toString() {
+
+        return getQualifiedName().toString();
+    }
 }

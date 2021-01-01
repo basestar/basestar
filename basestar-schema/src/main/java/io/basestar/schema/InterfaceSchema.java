@@ -388,4 +388,10 @@ public class InterfaceSchema implements ReferableSchema {
             return resolvedSchema.evaluateTransients(context, object, expand);
         }
     }
+
+    @Override
+    public String toString() {
+
+        return getQualifiedName().toString();
+    }
 }
