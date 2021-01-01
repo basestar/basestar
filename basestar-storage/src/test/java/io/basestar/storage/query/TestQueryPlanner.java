@@ -69,7 +69,7 @@ class TestQueryPlanner {
 
         final SourceStage sourceStage = new SourceStage(sourceSchema);
         final SchemaStage sourceSchemaStage = new SchemaStage(sourceStage, sourceSchema);
-        final FilterStage sourceFilterStage = new FilterStage(sourceSchemaStage, Expression.parse("country == 'US'"));
+        final FilterStage sourceFilterStage = new FilterStage(sourceSchemaStage, Expression.parse("country == 'United States'"));
         final MapStage preAggStage = new MapStage(sourceFilterStage, ImmutableMap.of(
                 "state", TypedExpression.from(Expression.parse("state"), UseOptional.from(UseString.DEFAULT)),
                 zipDigest, TypedExpression.from(Expression.parse("zip != null"), UseBoolean.DEFAULT)
@@ -100,7 +100,7 @@ class TestQueryPlanner {
 
         final SourceStage sourceStage = new SourceStage(sourceSchema);
         final SchemaStage sourceSchemaStage = new SchemaStage(sourceStage, sourceSchema);
-        final FilterStage sourceFilterStage = new FilterStage(sourceSchemaStage, Expression.parse("country == 'GB'"));
+        final FilterStage sourceFilterStage = new FilterStage(sourceSchemaStage, Expression.parse("country == 'United Kingdom'"));
         final MapStage sourceMapStage = new MapStage(sourceFilterStage, ImmutableMap.of(
                 "country", TypedExpression.from(Expression.parse("country"), UseOptional.from(UseString.DEFAULT)),
                 "state", TypedExpression.from(Expression.parse("state"), UseOptional.from(UseString.DEFAULT)),

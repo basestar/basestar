@@ -250,7 +250,7 @@ AddressDisplayStats:
     result: state + count(zip != null)
   from:
     schema: Address
-  where: country == 'US'
+  where: country == 'United States'
 
 GBAddresses:
   type: view
