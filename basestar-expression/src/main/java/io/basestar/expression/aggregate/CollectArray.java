@@ -63,13 +63,13 @@ public class CollectArray implements Aggregate {
     }
 
     @Override
-    public Object append(final Object value, final Context context) {
+    public Object append(final Object value, final Object context) {
 
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public Object remove(final Object value, final Context context) {
+    public Object remove(final Object value, final Object context) {
 
         throw new UnsupportedOperationException();
     }
