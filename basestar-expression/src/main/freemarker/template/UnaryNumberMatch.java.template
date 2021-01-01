@@ -20,9 +20,10 @@ package io.basestar.expression.match;
  * #L%
  */
 
-import io.basestar.annotation.Generated;
 import io.basestar.expression.type.Numbers;
 import io.basestar.expression.exception.BadOperandsException;
+
+import lombok.Generated;
 
 @Generated
 public interface UnaryNumberMatch<T> {

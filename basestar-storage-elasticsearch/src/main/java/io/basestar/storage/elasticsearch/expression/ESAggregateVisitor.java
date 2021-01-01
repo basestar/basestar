@@ -5,6 +5,7 @@ import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.aggregate.*;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
+import io.basestar.util.Immutable;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -14,6 +15,17 @@ public class ESAggregateVisitor implements ExpressionVisitor.Defaulting<ESAggreg
 
     @Override
     public ESAggregate visitDefault(final Expression expression) {
+
+        final AggregateExtractingVisitor visitor = new AggregateExtractingVisitor();
+        final Expression transformed = visitor.visit(expression);
+        return new ESAggregate.Transform(transformed, Immutable.transformValues(
+                visitor.getAggregates(),
+                (k, v) -> v.visit(this)
+        ));
+    }
+
+    @Override
+    public ESAggregate visitAggregate(final Aggregate expression) {
 
         throw new UnsupportedOperationException(expression + " is not (yet) a supported aggregate");
     }

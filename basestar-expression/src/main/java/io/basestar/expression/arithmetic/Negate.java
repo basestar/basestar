@@ -63,7 +63,12 @@ public class Negate implements Unary {
     @Override
     public Number evaluate(final Context context) {
 
-        return VISITOR.apply(operand.evaluate(context));
+        return apply(operand.evaluate(context));
+    }
+
+    public static Number apply(final Object value) {
+
+        return VISITOR.apply(value);
     }
 
     @Override

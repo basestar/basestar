@@ -1,5 +1,6 @@
 package io.basestar.storage.elasticsearch.expression;
 
+import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.util.Immutable;
@@ -18,6 +19,8 @@ import org.elasticsearch.search.aggregations.support.ValuesSourceAggregationBuil
 import org.elasticsearch.search.sort.SortOrder;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public interface ESAggregate {
 
@@ -274,6 +277,27 @@ public interface ESAggregate {
 
             final Aggregation agg = bucket.getAggregations().get(name());
             return null;
+        }
+    }
+
+    @Data
+    class Transform implements ESAggregate {
+
+        private final Expression transformed;
+
+        private final Map<String, ESAggregate> aggregates;
+
+        @Override
+        public List<AggregationBuilder> builders() {
+
+            return aggregates.values().stream().flatMap(v -> v.builders().stream()).collect(Collectors.toList());
+        }
+
+        @Override
+        public Object read(final Bucket bucket) {
+
+            final Map<String, Object> values = Immutable.transformValues(aggregates, (k, v) -> v.read(bucket));
+            return transformed.evaluate(Context.init(values));
         }
     }
 }

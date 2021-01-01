@@ -65,7 +65,12 @@ public class Sub implements Binary {
     @Override
     public Number evaluate(final Context context) {
 
-        return VISITOR.apply(lhs.evaluate(context), rhs.evaluate(context));
+        return apply(lhs.evaluate(context), rhs.evaluate(context));
+    }
+
+    public static Number apply(final Object lhs, final Object rhs) {
+
+        return VISITOR.apply(lhs, rhs);
     }
 
     @Override

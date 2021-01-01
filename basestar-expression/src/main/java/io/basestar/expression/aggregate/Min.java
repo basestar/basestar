@@ -58,6 +58,34 @@ public class Min implements Aggregate {
     }
 
     @Override
+    public Object append(final Object value, final Object add) {
+
+        if(Values.compare(value, add) < 0) {
+            return add;
+        } else {
+            return value;
+        }
+    }
+
+    @Override
+    public Object remove(final Object value, final Object sub) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isAppendable() {
+
+        return true;
+    }
+
+    @Override
+    public boolean isRemovable() {
+
+        return false;
+    }
+
+    @Override
     public Min bind(final Context context, final Renaming root) {
 
         final Expression boundInput = this.input.bind(context, root);

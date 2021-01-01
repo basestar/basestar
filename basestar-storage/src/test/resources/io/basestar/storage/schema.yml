@@ -216,6 +216,7 @@ ViewBase:
 
 AddressStats:
   type: view
+  materialized: false
   group:
     - country
     - state
@@ -224,13 +225,13 @@ AddressStats:
     state: state
     count: count()
     countZip: count(zip ILIKE '_____')
-    maxZip: max(zip)
-    minZip: min(zip)
+    maxMinZip: '"maxzip: " + max(zip) + ",minzip: " + min(zip)'
   from:
     schema: Address
 
 USAddressStats:
   type: view
+  materialized: false
   group:
     - state
   properties:
@@ -242,6 +243,7 @@ USAddressStats:
 
 AddressDisplayStats:
   type: view
+  materialized: false
   group:
     - state
   properties:
@@ -252,6 +254,7 @@ AddressDisplayStats:
 
 GBAddresses:
   type: view
+  materialized: false
   properties:
     country: country
     state: state

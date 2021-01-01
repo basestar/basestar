@@ -63,6 +63,30 @@ public class CollectArray implements Aggregate {
     }
 
     @Override
+    public Object append(final Object value, final Context context) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Object remove(final Object value, final Context context) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isAppendable() {
+
+        return false;
+    }
+
+    @Override
+    public boolean isRemovable() {
+
+        return false;
+    }
+
+    @Override
     public CollectArray bind(final Context context, final Renaming root) {
 
         final Expression boundInput = this.input.bind(context, root);

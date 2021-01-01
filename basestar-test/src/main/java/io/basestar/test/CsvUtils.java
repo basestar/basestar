@@ -1,6 +1,6 @@
 package io.basestar.test;
 
-import io.basestar.annotation.Generated;
+import lombok.Generated;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
 

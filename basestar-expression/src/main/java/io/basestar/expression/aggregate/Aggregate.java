@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.call.LambdaCall;
+import io.basestar.util.Immutable;
 
 import java.util.List;
 import java.util.Map;
@@ -35,7 +36,6 @@ public interface Aggregate extends Expression {
             .put(Avg.NAME.toLowerCase(), Avg::create)
             .put(CollectArray.NAME.toLowerCase(), CollectArray::create)
             .put(Count.NAME.toLowerCase(), Count::create)
-            // MORE COMPLICATED THAN OTHERS
             .put(Max.NAME.toLowerCase(), Max::create)
             .put(Min.NAME.toLowerCase(), Min::create)
             .put(Sum.NAME.toLowerCase(), Sum::create)
@@ -57,6 +57,25 @@ public interface Aggregate extends Expression {
     default boolean isAggregate() {
 
         return true;
+    }
+
+    Object append(Object value, Object add);
+
+    Object remove(Object value, Object sub);
+
+    boolean isAppendable();
+
+    boolean isRemovable();
+
+    default List<Aggregate> components() {
+
+        return Immutable.list(this);
+    }
+
+    default Object fromComponents(final Object ... values) {
+
+        assert values.length == 1;
+        return values[0];
     }
 
     @Override

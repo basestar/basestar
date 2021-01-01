@@ -66,6 +66,38 @@ public class Count implements Aggregate {
     }
 
     @Override
+    public Object append(final Object value, final Object add) {
+
+        if(value instanceof Number) {
+            return ((Number)value).longValue() + ((Number)add).longValue();
+        } else {
+            return ((Number)add).longValue();
+        }
+    }
+
+    @Override
+    public Object remove(final Object value, final Object sub) {
+
+        if(value instanceof Number) {
+            return ((Number)value).longValue() - ((Number)sub).longValue();
+        } else {
+            return -((Number)sub).longValue();
+        }
+    }
+
+    @Override
+    public boolean isAppendable() {
+
+        return true;
+    }
+
+    @Override
+    public boolean isRemovable() {
+
+        return true;
+    }
+
+    @Override
     public Count bind(final Context context, final Renaming root) {
 
         final Expression boundPredicate = this.predicate.bind(context, root);

@@ -20,7 +20,7 @@ package io.basestar.test;
  * #L%
  */
 
-import io.basestar.annotation.Generated;
+import lombok.Generated;
 
 import java.util.regex.Pattern;
 
