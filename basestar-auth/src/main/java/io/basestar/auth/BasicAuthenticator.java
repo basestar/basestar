@@ -21,12 +21,18 @@ package io.basestar.auth;
  */
 
 import com.google.common.base.Charsets;
-import com.google.common.io.BaseEncoding;
+import com.google.common.collect.ImmutableMap;
 import io.basestar.auth.exception.AuthenticationFailedException;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public abstract class BasicAuthenticator implements Authenticator {
+
+    public static final String TYPE = "Basic";
 
     @Override
     public boolean canAuthenticate(final Authorization auth) {
@@ -39,7 +45,7 @@ public abstract class BasicAuthenticator implements Authenticator {
 
         final String token = authorization.getCredentials();
 
-        final String decoded = new String(BaseEncoding.base64().decode(token), Charsets.UTF_8);
+        final String decoded = new String(Base64.getDecoder().decode(token), Charsets.UTF_8);
         final String[] creds = decoded.split("\\:");
         if (creds.length == 2) {
             final String username = creds[0];
@@ -52,10 +58,25 @@ public abstract class BasicAuthenticator implements Authenticator {
         }
     }
 
+    public static Authorization authorization(final String username, final String password) {
+
+        return Authorization.of(TYPE,
+                Base64.getEncoder().encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8)));
+    }
+
     protected CompletableFuture<Caller> throwFailure(final Authorization authorization) {
 
         throw new AuthenticationFailedException("Authorization header did not match declared format");
     }
 
     protected abstract CompletableFuture<Caller> verify(final String username, final String password);
+
+    @Override
+    public Map<String, SecurityScheme> openApi() {
+
+        return ImmutableMap.of("Basic", new SecurityScheme()
+                .type(SecurityScheme.Type.HTTP)
+                .in(SecurityScheme.In.HEADER)
+                .scheme("basic"));
+    }
 }

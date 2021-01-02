@@ -49,7 +49,7 @@ public interface Caller {
 
     static SimpleCaller.Builder builder() {
 
-        return new SimpleCaller.Builder();
+        return SimpleCaller.builder();
     }
 
     @Data

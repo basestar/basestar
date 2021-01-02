@@ -108,5 +108,8 @@ class TestTypeContext {
         assertNotNull(annot);
         assertEquals(1, annot.value().length);
         assertEquals("unchecked", annot.value()[0]);
+        final AnnotationContext<SuppressWarnings> otherContext = new AnnotationContext<>(annot);
+        assertArrayEquals(new String[]{"unchecked"}, otherContext.value());
+        assertArrayEquals(new String[]{"unchecked"}, (String[])otherContext.nonDefaultValues().get("value"));
     }
 }

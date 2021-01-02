@@ -48,6 +48,7 @@ public class ExplicitAuthenticator implements Authenticator {
     public CompletableFuture<Caller> authenticate(final Authorization auth) {
 
         final String id = auth.getCredentials();
+        final Caller caller;
         return CompletableFuture.completedFuture(new Caller() {
             @Override
             public boolean isAnon() {

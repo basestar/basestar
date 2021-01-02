@@ -17,7 +17,7 @@ public class Bytes implements Serializable, Comparable<Bytes> {
         this.bytes = new byte[0];
     }
 
-    public Bytes(final byte [] bytes) {
+    public Bytes(final byte[] bytes) {
 
         this.bytes = Arrays.copyOf(bytes, bytes.length);
     }
@@ -27,22 +27,22 @@ public class Bytes implements Serializable, Comparable<Bytes> {
         return EMPTY;
     }
 
-    public static Bytes valueOf(final int ... bytes) {
+    public static Bytes valueOf(final int... bytes) {
 
-        if(bytes.length == 0) {
+        if (bytes.length == 0) {
             return EMPTY;
         } else {
             final byte[] tmp = new byte[bytes.length];
-            for(int i = 0; i != bytes.length; ++i) {
-                tmp[i] = (byte)bytes[i];
+            for (int i = 0; i != bytes.length; ++i) {
+                tmp[i] = (byte) bytes[i];
             }
             return new Bytes(tmp);
         }
     }
 
-    public static Bytes valueOf(final byte [] bytes) {
+    public static Bytes valueOf(final byte[] bytes) {
 
-        if(bytes.length == 0) {
+        if (bytes.length == 0) {
             return EMPTY;
         } else {
             return new Bytes(bytes);
@@ -93,18 +93,22 @@ public class Bytes implements Serializable, Comparable<Bytes> {
     @Override
     public int compareTo(final Bytes o) {
 
-        final byte[] otherBytes = o.bytes;
-        for(int i = 0; i != Math.min(bytes.length, otherBytes.length); ++i) {
-            if(bytes[i] < otherBytes[i]) {
+        return compare(bytes, o.bytes);
+    }
+
+    public static int compare(final byte[] a, final byte[] b) {
+
+        for (int i = 0; i != Math.min(a.length, b.length); ++i) {
+            if (a[i] < b[i]) {
                 return -1;
-            } else if(bytes[i] > otherBytes[i]) {
+            } else if (a[i] > b[i]) {
                 return 1;
             }
         }
-        if(bytes.length < otherBytes.length) {
+        if (a.length < b.length) {
             return 1;
         } else {
-            return bytes.length > otherBytes.length ? 1 : 0;
+            return a.length > b.length ? 1 : 0;
         }
     }
 }
