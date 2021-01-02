@@ -28,8 +28,8 @@ import io.basestar.expression.compare.*;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.function.In;
+import io.basestar.expression.iterate.ContextIterator;
 import io.basestar.expression.iterate.ForAny;
-import io.basestar.expression.iterate.Of;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
@@ -239,19 +239,17 @@ public class ESExpressionVisitor implements ExpressionVisitor.Defaulting<QueryBu
     @Override
     public QueryBuilder visitForAny(final ForAny expression) {
 
-        final Expression lhs = expression.getLhs();
-        final Expression rhs = expression.getRhs();
-        if(rhs instanceof Of) {
-            final Of of = (Of)rhs;
+        final Expression lhs = expression.getYield();
+        final ContextIterator iterator = expression.getIterator();
+        // map keys not supported
+        if(iterator instanceof ContextIterator.OfValue) {
+            final ContextIterator.OfValue of = (ContextIterator.OfValue)iterator;
             if(of.getExpr() instanceof NameConstant) {
                 final Name name = ((NameConstant) of.getExpr()).getName();
-                // map keys not supported
-                if(of.getKey() == null) {
-                    final String value = of.getValue();
-                    final Expression bound = lhs.bind(Context.init(), Renaming.move(Name.of(value), name));
-                    final QueryBuilder lhsQuery = bound.visit(this);
-                    return QueryBuilders.nestedQuery(name.toString(), lhsQuery, ScoreMode.Avg);
-                }
+                final String value = of.getValue();
+                final Expression bound = lhs.bind(Context.init(), Renaming.move(Name.of(value), name));
+                final QueryBuilder lhsQuery = bound.visit(this);
+                return QueryBuilders.nestedQuery(name.toString(), lhsQuery, ScoreMode.Avg);
             }
         }
         return null;

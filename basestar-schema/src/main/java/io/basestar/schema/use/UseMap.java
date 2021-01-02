@@ -25,8 +25,8 @@ import com.google.common.collect.Sets;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
+import io.basestar.expression.iterate.ContextIterator;
 import io.basestar.expression.iterate.ForAny;
-import io.basestar.expression.iterate.Of;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.Schema;
 import io.basestar.schema.util.Expander;
@@ -173,7 +173,7 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
         final String v = "v" + hash;
         // FIXME: expand
         return getType().refQueries(otherSchemaName, expand, Name.of(v)).stream().map(
-                q -> new ForAny(q, new Of(k, v, new NameConstant(name)))
+                q -> new ForAny(q, new ContextIterator.OfKeyValue(k, v, new NameConstant(name)))
         ).collect(Collectors.toSet());
     }
 

@@ -27,7 +27,7 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.Renaming;
 import io.basestar.expression.call.Callable;
-import io.basestar.expression.iterate.Of;
+import io.basestar.expression.constant.Constant;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import lombok.Data;
@@ -49,7 +49,7 @@ public class Lambda implements Expression {
 
     public static final String TOKEN = "=>";
 
-    public static final int PRECEDENCE = Of.PRECEDENCE + 1;
+    public static final int PRECEDENCE = Constant.PRECEDENCE + 1;
 
     private final List<String> args;
 

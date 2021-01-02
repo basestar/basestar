@@ -151,9 +151,9 @@ class TestInference {
 
         test("x for all missing of missing", UseBoolean.DEFAULT);
         test("x for any missing of missing", UseBoolean.DEFAULT);
-        test("{'x': f for (k, v) of mapString}", UseMap.DEFAULT);
-        test("[x for x of setInteger]", UseArray.DEFAULT);
-        test("{x for x of arrayNumber}", UseSet.DEFAULT);
+        test("{'x': v for (k, v) of mapString}", UseMap.from(UseString.DEFAULT));
+        test("[x for x of setInteger]", UseArray.from(UseInteger.DEFAULT));
+        test("{x for x of arrayNumber}", UseSet.from(UseNumber.DEFAULT));
     }
 
     @Test

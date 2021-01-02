@@ -21,29 +21,26 @@ package io.basestar.expression.iterate;
  */
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
-import io.basestar.expression.Renaming;
-import io.basestar.expression.constant.Constant;
 import io.basestar.expression.function.IfElse;
-import io.basestar.util.Name;
-import io.basestar.util.Streams;
 import lombok.Data;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
 
 /**
  * Object Comprehension
  *
  * Create an object from an iterator
  *
- * @see io.basestar.expression.iterate.Of
  */
 
 @Data
-public class ForObject implements Expression {
+public class ForObject implements For {
 
     public static final String TOKEN = "for";
 
@@ -53,72 +50,51 @@ public class ForObject implements Expression {
 
     private final Expression yieldValue;
 
-    private final Expression iter;
+    private final ContextIterator iterator;
 
     /**
-     * {yieldKey:yieldValue for iter}
+     * {yieldKey:yieldValue for iterator}
      *
      * @param yieldKey expression Key-yielding expression
      * @param yieldValue expression Value-yielding expression
-     * @param iter iterator Iterator
+     * @param iterator iterator Iterator
      */
 
-    public ForObject(final Expression yieldKey, final Expression yieldValue, final Expression iter) {
+    public ForObject(final Expression yieldKey, final Expression yieldValue, final ContextIterator iterator) {
 
         this.yieldKey = yieldKey;
         this.yieldValue = yieldValue;
-        this.iter = iter;
+        this.iterator = iterator;
     }
 
     @Override
-    public Expression bind(final Context context, final Renaming root) {
+    public List<Expression> getYields() {
 
-        final Closure closure = Closure.from(iter.closure());
-        final Renaming closureTransform = Renaming.closure(closure, root);
-        final Expression yieldKey = this.yieldKey.bind(context, closureTransform);
-        final Expression yieldValue = this.yieldValue.bind(context, closureTransform);
-        final Expression iter = this.iter.bind(context, root);
-        if(iter instanceof Constant && yieldKey.isConstant(closure) && yieldValue.isConstant(closure)) {
-            return new Constant(evaluate(context, yieldKey, yieldValue, ((Constant) iter).getValue()));
-        } else if(yieldKey == this.yieldKey && yieldValue == this.yieldValue && iter == this.iter) {
-            return this;
-        } else {
-            return new ForObject(yieldKey, yieldValue, iter);
-        }
+        return ImmutableList.of(yieldKey, yieldValue);
+    }
+
+    @Override
+    public Expression create(final List<Expression> yields, final ContextIterator iterator) {
+
+        assert yields.size() == 2;
+        return new ForObject(yields.get(0), yields.get(1), iterator);
     }
 
     @Override
     public Map<String, ?> evaluate(final Context context) {
 
-        return evaluate(context, yieldKey, yieldValue, iter.evaluate(context));
+        return evaluate(iterator.evaluate(context));
     }
 
-    private Map<String, ?> evaluate(final Context context, final Expression yieldKey, final Expression yieldValue, final Object iter) {
+    private Map<String, ?> evaluate(final Stream<Context> iter) {
 
-        if(iter instanceof Iterator<?>) {
-            final Map<String, Object> result = new HashMap<>();
-            Streams.stream((Iterator<?>)iter)
-                    .forEach(v -> {
-                        @SuppressWarnings("unchecked")
-                        final Map<String, Object> scope = (Map<String, Object>)v;
-                        final Object key = yieldKey.evaluate(context.with(scope));
-                        final Object value = yieldValue.evaluate(context.with(scope));
-                        result.put(key.toString(), value);
-                    });
-            return result;
-        } else {
-            throw new IllegalStateException();
-        }
-    }
-
-    @Override
-    public Set<Name> names() {
-
-        return ImmutableSet.<Name>builder()
-                .addAll(yieldKey.names())
-                .addAll(yieldValue.names())
-                .addAll(iter.names())
-                .build();
+        final Map<String, Object> result = new HashMap<>();
+        iter.forEach(v -> {
+                    final Object key = yieldKey.evaluate(v);
+                    final Object value = yieldValue.evaluate(v);
+                    result.put(key.toString(), value);
+                });
+        return result;
     }
 
     @Override
@@ -134,38 +110,14 @@ public class ForObject implements Expression {
     }
 
     @Override
-    public boolean isConstant(final Closure closure) {
-
-        if(iter.isConstant(closure)) {
-            final Closure fullClosure = closure.with(iter.closure());
-            return yieldKey.isConstant(fullClosure) && yieldValue.isConstant(fullClosure);
-        } else {
-            return false;
-        }
-    }
-
-    @Override
     public <T> T visit(final ExpressionVisitor<T> visitor) {
 
         return visitor.visitForObject(this);
     }
 
     @Override
-    public List<Expression> expressions() {
-
-        return ImmutableList.of(yieldKey, yieldValue, iter);
-    }
-
-    @Override
-    public Expression copy(final List<Expression> expressions) {
-
-        assert expressions.size() == 3;
-        return new ForObject(expressions.get(0), expressions.get(1), expressions.get(2));
-    }
-
-    @Override
     public String toString() {
 
-        return "{" + yieldKey + ": " + yieldValue + " " + TOKEN + " " + iter + "}";
+        return "{" + yieldKey + ": " + yieldValue + " " + TOKEN + " " + iterator + "}";
     }
 }

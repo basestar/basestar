@@ -32,7 +32,6 @@ import io.basestar.expression.exception.BadOperandsException;
 import io.basestar.expression.function.With;
 import io.basestar.expression.iterate.ForAll;
 import io.basestar.expression.iterate.ForAny;
-import io.basestar.expression.iterate.Where;
 import io.basestar.expression.methods.Methods;
 import io.basestar.expression.parse.ExpressionCache;
 import io.basestar.expression.type.Values;
@@ -530,7 +529,7 @@ class TestExpression {
 
         final Expression expression = Expression.parse("m.id for any m of members");
         final Expression bound = expression.bind(Context.init(), Renaming.addPrefix(Name.of("this")));
-        assertEquals(Name.of("m", "id"), ((NameConstant) ((ForAny) bound).getLhs()).getName());
+        assertEquals(Name.of("m", "id"), ((NameConstant) ((ForAny) bound).getYield()).getName());
     }
 
     @Test
@@ -538,23 +537,7 @@ class TestExpression {
 
         final Expression expression = Expression.parse("m.id for all m of members");
         final Expression bound = expression.bind(Context.init(), Renaming.addPrefix(Name.of("this")));
-        assertEquals(Name.of("m", "id"), ((NameConstant) ((ForAll) bound).getLhs()).getName());
-    }
-
-    @Test
-    void testBindWhere() {
-
-        final Expression expression = Expression.parse("m of members where m.id");
-        final Expression bound = expression.bind(Context.init(), Renaming.addPrefix(Name.of("this")));
-        assertEquals(Name.of("m", "id"), ((NameConstant) ((Where) bound).getRhs()).getName());
-    }
-
-    @Test
-    void testBindOf() {
-
-        final Expression expression = Expression.parse("k of [1, 2, 3]");
-        final Expression bound = expression.bind(Context.init());
-        assertTrue(bound instanceof Constant);
+        assertEquals(Name.of("m", "id"), ((NameConstant) ((ForAll) bound).getYield()).getName());
     }
 
     @Test

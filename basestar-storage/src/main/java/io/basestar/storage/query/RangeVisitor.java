@@ -27,8 +27,8 @@ import io.basestar.expression.compare.*;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.function.In;
+import io.basestar.expression.iterate.ContextIterator;
 import io.basestar.expression.iterate.ForAny;
-import io.basestar.expression.iterate.Of;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.type.Values;
 import io.basestar.util.Name;
@@ -150,24 +150,22 @@ public class RangeVisitor implements ExpressionVisitor.Defaulting<Map<Name, Rang
     @Override
     public Map<Name, Range<Object>> visitForAny(final ForAny expression) {
 
-        final Expression lhs = expression.getLhs();
-        final Expression rhs = expression.getRhs();
-        if(rhs instanceof Of) {
-            final Of of = (Of)rhs;
+        final Expression lhs = expression.getYield();
+        final ContextIterator iterator = expression.getIterator();
+        // map keys not supported
+        if(iterator instanceof ContextIterator.OfValue) {
+            final ContextIterator.OfValue of = (ContextIterator.OfValue)iterator;
             if(of.getExpr() instanceof NameConstant) {
                 final Name name = ((NameConstant) of.getExpr()).getName();
-                // map keys not supported
-                if(of.getKey() == null) {
-                    final String value = of.getValue();
-                    final Map<Name, Range<Object>> lhsRange = lhs.visit(this);
-                    final Map<Name, Range<Object>> results = new HashMap<>();
-                    lhsRange.forEach((k, v) -> {
-                        if(k.first().equals(value)) {
-                            results.put(name.with(k.withoutFirst()), v);
-                        }
-                    });
-                    return results;
-                }
+                final String value = of.getValue();
+                final Map<Name, Range<Object>> lhsRange = lhs.visit(this);
+                final Map<Name, Range<Object>> results = new HashMap<>();
+                lhsRange.forEach((k, v) -> {
+                    if(k.first().equals(value)) {
+                        results.put(name.with(k.withoutFirst()), v);
+                    }
+                });
+                return results;
             }
         }
         return ImmutableMap.of();

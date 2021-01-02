@@ -548,8 +548,8 @@ public class SparkSchemaUtils {
         }
         final StructField[] fields = structType.fields();
         final Object[] values = new Object[fields.length];
-        values[structType.fieldIndex(PARTITION)] = key.getPartition();
-        values[structType.fieldIndex(SORT)] = key.getSort();
+        values[structType.fieldIndex(PARTITION)] = key.getPartition().getBytes();
+        values[structType.fieldIndex(SORT)] = key.getSort().getBytes();
         index.projectionSchema(schema).forEach((name, type) -> {
             final int i = structType.fieldIndex(name);
             values[i] = toSpark(type, null, fields[i].dataType(), object.get(name));

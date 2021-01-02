@@ -117,10 +117,6 @@ public interface ExpressionVisitor<T> {
 
     T visitForSet(ForSet expression);
 
-    T visitOf(Of expression);
-
-    T visitWhere(Where expression);
-
     T visitLiteralArray(LiteralArray expression);
 
     T visitLiteralObject(LiteralObject expression);
@@ -368,18 +364,6 @@ public interface ExpressionVisitor<T> {
 
         @Override
         default T visitForSet(final ForSet expression) {
-            
-            return visitDefault(expression);
-        }
-
-        @Override
-        default T visitOf(final Of expression) {
-            
-            return visitDefault(expression);
-        }
-
-        @Override
-        default T visitWhere(final Where expression) {
             
             return visitDefault(expression);
         }

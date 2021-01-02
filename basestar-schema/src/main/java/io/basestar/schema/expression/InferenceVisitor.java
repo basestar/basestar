@@ -1,5 +1,6 @@
 package io.basestar.schema.expression;
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.aggregate.*;
@@ -309,36 +310,66 @@ public class InferenceVisitor implements ExpressionVisitor<Use<?>> {
 
         return UseBoolean.DEFAULT;
     }
+    
+    private Map<String, Use<?>> iteratorTypes(final ContextIterator iterator) {
+        
+        if(iterator instanceof ContextIterator.OfKeyValue) {
+            final ContextIterator.OfKeyValue ofKeyValue = (ContextIterator.OfKeyValue)iterator;
+            final Use<?> containerType = visit(ofKeyValue.getExpr());
+            if(containerType instanceof UseCollection) {
+                return ImmutableMap.of(
+                        ofKeyValue.getKey(), UseInteger.DEFAULT,
+                        ofKeyValue.getValue(), ((UseCollection<?, ?>) containerType).getType()
+                );
+            } else if(containerType instanceof UseMap) {
+                return ImmutableMap.of(
+                        ofKeyValue.getKey(), UseString.DEFAULT,
+                        ofKeyValue.getValue(), ((UseMap<?>) containerType).getType()
+                );
+            }
+        } else if(iterator instanceof ContextIterator.OfValue) {
+            final ContextIterator.OfValue ofValue = (ContextIterator.OfValue)iterator;
+            final Use<?> containerType = visit(ofValue.getExpr());
+            if(containerType instanceof UseCollection) {
+                return ImmutableMap.of(
+                        ofValue.getValue(), ((UseCollection<?, ?>) containerType).getType()
+                );
+            } else if(containerType instanceof UseMap) {
+                return ImmutableMap.of(
+                        ofValue.getValue(), ((UseMap<?>) containerType).getType()
+                );
+            }
+        } else if(iterator instanceof ContextIterator.Where) {
+            return iteratorTypes(((ContextIterator.Where) iterator).getIterator());
+        }
+        return ImmutableMap.of();
+    }
 
     @Override
     public Use<?> visitForArray(final ForArray expression) {
 
-        return UseArray.DEFAULT;
+        final Expression yield = expression.getYield();
+        final InferenceContext newContext = context.with(iteratorTypes(expression.getIterator()));
+        final Use<?> valueType = new InferenceVisitor(newContext, methods).visit(yield);
+        return UseArray.from(valueType);
     }
 
     @Override
     public Use<?> visitForObject(final ForObject expression) {
 
-        return UseMap.DEFAULT;
+        final Expression yield = expression.getYieldValue();
+        final InferenceContext newContext = context.with(iteratorTypes(expression.getIterator()));
+        final Use<?> valueType = new InferenceVisitor(newContext, methods).visit(yield);
+        return UseMap.from(valueType);
     }
 
     @Override
     public Use<?> visitForSet(final ForSet expression) {
 
-        return UseSet.DEFAULT;
-    }
-
-    @Override
-    public Use<?> visitOf(final Of expression) {
-
-        // FIXME: this is probably wrong
-        return UseArray.from(visit(expression.getExpr()));
-    }
-
-    @Override
-    public Use<?> visitWhere(final Where expression) {
-
-        return visit(expression.getLhs());
+        final Expression yield = expression.getYield();
+        final InferenceContext newContext = context.with(iteratorTypes(expression.getIterator()));
+        final Use<?> valueType = new InferenceVisitor(newContext, methods).visit(yield);
+        return UseSet.from(valueType);
     }
 
     @Override

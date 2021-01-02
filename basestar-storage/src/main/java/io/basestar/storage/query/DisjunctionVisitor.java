@@ -26,6 +26,7 @@ import io.basestar.expression.compare.Eq;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.function.In;
+import io.basestar.expression.iterate.ContextIterator;
 import io.basestar.expression.iterate.ForAny;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Or;
@@ -83,8 +84,8 @@ public class DisjunctionVisitor implements ExpressionVisitor.Defaulting<Set<Expr
     @Override
     public Set<Expression> visitForAny(final ForAny expression) {
 
-        final Expression lhs = expression.getLhs();
-        final Expression rhs = expression.getRhs();
+        final Expression lhs = expression.getYield();
+        final ContextIterator rhs = expression.getIterator();
         final Set<Expression> terms = visit(lhs);
         return terms.stream()
                 .map(term -> new ForAny(term, rhs))
