@@ -22,10 +22,12 @@ package io.basestar.api;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import io.basestar.api.exception.UnsupportedContentException;
 import io.basestar.auth.Caller;
 import io.basestar.exception.ExceptionMetadata;
 import io.basestar.exception.HasExceptionMetadata;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Collection;
@@ -38,7 +40,39 @@ public interface APIResponse {
 
     Multimap<String, String> getHeaders();
 
+    default String getFirstHeader(final String key) {
+
+        final Collection<String> result = getHeaders().get(key.toLowerCase());
+        return result.isEmpty() ? null : result.iterator().next();
+    }
+
     void writeTo(OutputStream out) throws IOException;
+
+    default APIFormat getContentType() {
+
+        final String contentType = getFirstHeader("content-type");
+        if(contentType == null) {
+            return APIFormat.JSON;
+        } else {
+            final APIFormat match = APIFormat.bestMatch(contentType);
+            if (match == null) {
+                throw new UnsupportedContentException(contentType);
+            }
+            return match;
+        }
+    }
+
+    default <T> T readAs(final Class<T> cls) throws IOException {
+
+        try(final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            writeTo(baos);
+            if(baos.size() != 0) {
+                return getContentType().getMapper().readValue(baos.toByteArray(), cls);
+            } else {
+                return null;
+            }
+        }
+    }
 
     static APIResponse success(final APIRequest request) {
 

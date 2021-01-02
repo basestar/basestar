@@ -96,6 +96,15 @@ class TestUse {
     }
 
     @Test
+    void testViewResolve() throws Exception {
+
+        final Namespace namespace = namespace();
+
+        final Use<?> use = Use.fromConfig("AddressStats");
+        assertEquals(UseView.from(namespace.requireViewSchema("AddressStats"), null), use.resolve(namespace));
+    }
+
+    @Test
     void testVersionedRefResolve() throws Exception {
 
         final Namespace namespace = namespace();
@@ -270,6 +279,23 @@ class TestUse {
     }
 
     @Test
+    void testUsePage() throws Exception {
+
+        final UsePage<String> use = UsePage.from(UseString.DEFAULT);
+        testUse(use, null);
+        testUse(use, Page.from(ImmutableList.of("a", "b", "c")));
+        assertTrue(use.openApi(ImmutableSet.of()) instanceof ArraySchema);
+        assertEquals(Page.empty(), use.defaultValue());
+        final Type javaType = use.javaType();
+        assertEquals(Page.class, GenericTypeReflector.erase(javaType));
+        assertEquals(String.class, GenericTypeReflector.getTypeParameter(javaType, Page.class.getTypeParameters()[0]));
+        assertEquals(use, Use.fromJavaType(javaType));
+        assertEquals("null", use.toString(null));
+        assertEquals("[x, y]", use.toString(Page.from(ImmutableList.of("x", "y"))));
+        assertEquals(use, use.typeOf(Name.empty()));
+    }
+
+    @Test
     void testUseSet() throws Exception {
 
         final UseSet<String> use = UseSet.from(UseString.DEFAULT);
@@ -333,6 +359,7 @@ class TestUse {
         assertEquals(String.class, use.javaType(Name.of("home")));
         assertEquals("{home: 123, mobile: 456, work: 789}", use.toString(init));
         assertEquals(use, use.typeOf(Name.empty()));
+        assertEquals(schema.create(ImmutableMap.of()), use.defaultValue());
     }
 
     @Test
@@ -361,6 +388,7 @@ class TestUse {
         assertEquals(Page.class, GenericTypeReflector.erase(use.javaType(Name.of("orders"))));
         assertEquals(Long.class, use.javaType(Name.of("orders", "quantity")));
         assertEquals(use, use.typeOf(Name.empty()));
+        assertEquals(schema.create(ImmutableMap.of()), use.defaultValue());
     }
 
     @Test
@@ -382,10 +410,11 @@ class TestUse {
         testUse(use, null);
         testUse(use, init, expect);
         assertEquals(use, use.typeOf(Name.empty()));
+        assertEquals(schema.create(ImmutableMap.of()), use.defaultValue());
     }
 
     @Test
-    void tesUseOptional() throws Exception {
+    void tesUseOptional() {
 
         final UseOptional<String> use = new UseOptional<>(UseString.DEFAULT);
         assertEquals(use, use.typeOf(Name.empty()));

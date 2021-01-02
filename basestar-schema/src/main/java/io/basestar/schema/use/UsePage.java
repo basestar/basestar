@@ -32,6 +32,11 @@ public class UsePage<T> implements UseCollection<T, Page<T>> {
         return new UsePage<>(type);
     }
 
+    public static UsePage<?> from(final Object config) {
+
+        return Use.fromNestedConfig(config, (type, nestedConfig) -> new UsePage<>(type));
+    }
+
     @Override
     public Page<T> transformValues(final Page<T> value, final BiFunction<Use<T>, T, T> fn) {
 

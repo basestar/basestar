@@ -87,6 +87,8 @@ public interface UseNamed<T> extends Use<T> {
                 return UseStruct.from((StructSchema) schema, config);
             } else if(schema instanceof ReferableSchema) {
                 return UseRef.from((ReferableSchema) schema, config);
+            } else if(schema instanceof ViewSchema) {
+                return UseView.from((ViewSchema) schema, config);
             } else {
                 throw new MissingSchemaException(name);
             }

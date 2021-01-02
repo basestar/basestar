@@ -35,6 +35,7 @@ import io.basestar.schema.util.ValueContext;
 import io.basestar.secret.Secret;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
+import io.basestar.util.Page;
 import io.basestar.util.Warnings;
 import io.leangen.geantyref.GenericTypeReflector;
 
@@ -244,6 +245,10 @@ public interface Use<T> extends Serializable {
             return UseDate.DEFAULT;
         } else if(Instant.class.isAssignableFrom(erased)) {
             return UseDateTime.DEFAULT;
+        } else if(Page.class.isAssignableFrom(erased)) {
+            final TypeVariable<? extends Class<?>> var = Page.class.getTypeParameters()[0];
+            final Type arg = Nullsafe.orDefault(GenericTypeReflector.getTypeParameter(type, var), Object.class);
+            return UsePage.from(arg);
         } else if(List.class.isAssignableFrom(erased)) {
             final TypeVariable<? extends Class<?>> var = List.class.getTypeParameters()[0];
             final Type arg = Nullsafe.orDefault(GenericTypeReflector.getTypeParameter(type, var), Object.class);
