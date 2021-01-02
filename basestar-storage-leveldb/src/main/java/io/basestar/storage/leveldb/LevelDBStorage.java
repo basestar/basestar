@@ -23,7 +23,6 @@ package io.basestar.storage.leveldb;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.BaseEncoding;
 import io.basestar.schema.*;
-import io.basestar.schema.use.UseBinary;
 import io.basestar.storage.*;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
@@ -58,8 +57,8 @@ public class LevelDBStorage implements DefaultIndexStorage {
 
         return (stats, token, count) -> CompletableFuture.supplyAsync(() -> {
 
-            final byte[] partitionKey = UseBinary.binaryKey(satisfy.getPartition());
-            final byte[] sortKey = UseBinary.binaryKey(satisfy.getSort());
+            final byte[] partitionKey = BinaryKey.from(satisfy.getPartition()).getBytes();
+            final byte[] sortKey = BinaryKey.from(satisfy.getSort()).getBytes();
 
             final byte[] key = key(schema, index, partitionKey, sortKey);
 
@@ -317,22 +316,22 @@ public class LevelDBStorage implements DefaultIndexStorage {
 
     private static byte[] key(final ReferableSchema schema, final String id) {
 
-        return UseBinary.binaryKey(Arrays.asList(schema.getQualifiedName().toString(), null, id));
+        return BinaryKey.from(Arrays.asList(schema.getQualifiedName().toString(), null, id)).getBytes();
     }
 
     private static byte[] key(final ReferableSchema schema, final String id, final long version) {
 
-        return UseBinary.binaryKey(Arrays.asList(schema.getQualifiedName().toString(), Reserved.PREFIX + ObjectSchema.VERSION, id, invert(version)));
+        return BinaryKey.from(Arrays.asList(schema.getQualifiedName().toString(), Reserved.PREFIX + ObjectSchema.VERSION, id, invert(version))).getBytes();
     }
 
     private static byte[] key(final ReferableSchema schema, final Index index, final Index.Key.Binary key, final String id) {
 
-        final byte[] partition = key.getPartition();
+        final byte[] partition = key.getPartition().getBytes();
         final byte[] sort;
         if(index.isUnique()) {
-            sort = key.getSort();
+            sort = key.getSort().getBytes();
         } else {
-            sort = UseBinary.concat(key.getSort(), UseBinary.binaryKey(ImmutableList.of(id)));
+            sort = key.getSort().concat(BinaryKey.from(ImmutableList.of(id))).getBytes();
         }
         return key(schema, index, partition, sort);
     }
@@ -342,7 +341,7 @@ public class LevelDBStorage implements DefaultIndexStorage {
         final List<Object> prefix = new ArrayList<>();
         prefix.add(schema.getQualifiedName().toString());
         prefix.add(index.getName());
-        return UseBinary.concat(UseBinary.binaryKey(prefix), partition, sort);
+        return BinaryKey.concat(BinaryKey.from(prefix).getBytes(), partition, sort);
     }
 
     private static long invert(final long version) {

@@ -447,4 +447,22 @@ class TestUse {
         final T expanded = use.expand(Name.of(), created, Expander.noop(), ImmutableSet.of());
         assertSame(created, expanded);
     }
+
+    @Test
+    void testCommonBase() {
+
+        assertEquals(UseBoolean.DEFAULT, Use.commonBase(UseBoolean.DEFAULT, UseBoolean.DEFAULT));
+        assertEquals(UseInteger.DEFAULT, Use.commonBase(UseInteger.DEFAULT, UseInteger.DEFAULT));
+        assertEquals(UseNumber.DEFAULT, Use.commonBase(UseNumber.DEFAULT, UseInteger.DEFAULT));
+        assertEquals(UseNumber.DEFAULT, Use.commonBase(UseInteger.DEFAULT, UseNumber.DEFAULT));
+        assertEquals(UseString.DEFAULT, Use.commonBase(UseString.DEFAULT, UseString.DEFAULT));
+        assertEquals(UseDate.DEFAULT, Use.commonBase(UseDate.DEFAULT, UseDate.DEFAULT));
+        assertEquals(UseDateTime.DEFAULT, Use.commonBase(UseDateTime.DEFAULT, UseDateTime.DEFAULT));
+        assertEquals(UseDateTime.DEFAULT, Use.commonBase(UseDateTime.DEFAULT, UseDate.DEFAULT));
+        assertEquals(UseDateTime.DEFAULT, Use.commonBase(UseDate.DEFAULT, UseDateTime.DEFAULT));
+        assertEquals(UseBinary.DEFAULT, Use.commonBase(UseBinary.DEFAULT, UseBinary.DEFAULT));
+        assertEquals(UseArray.from(UseNumber.DEFAULT), Use.commonBase(UseArray.from(UseNumber.DEFAULT), UseArray.from(UseInteger.DEFAULT)));
+        assertEquals(UseSet.from(UseNumber.DEFAULT), Use.commonBase(UseSet.from(UseNumber.DEFAULT), UseSet.from(UseInteger.DEFAULT)));
+        assertEquals(UseMap.from(UseNumber.DEFAULT), Use.commonBase(UseMap.from(UseNumber.DEFAULT), UseMap.from(UseInteger.DEFAULT)));
+    }
 }

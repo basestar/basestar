@@ -2,10 +2,11 @@ package io.basestar.util;
 
 import com.google.common.io.BaseEncoding;
 
+import java.io.Serializable;
 import java.util.Arrays;
 
 @SuppressWarnings(Warnings.GUAVA)
-public class Bytes {
+public class Bytes implements Serializable, Comparable<Bytes> {
 
     private static final Bytes EMPTY = new Bytes();
 
@@ -78,7 +79,7 @@ public class Bytes {
     public boolean equals(final Object o) {
 
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (!(o instanceof Bytes)) return false;
         final Bytes bytes1 = (Bytes) o;
         return Arrays.equals(bytes, bytes1.bytes);
     }
@@ -87,5 +88,23 @@ public class Bytes {
     public int hashCode() {
 
         return Arrays.hashCode(bytes);
+    }
+
+    @Override
+    public int compareTo(final Bytes o) {
+
+        final byte[] otherBytes = o.bytes;
+        for(int i = 0; i != Math.min(bytes.length, otherBytes.length); ++i) {
+            if(bytes[i] < otherBytes[i]) {
+                return -1;
+            } else if(bytes[i] > otherBytes[i]) {
+                return 1;
+            }
+        }
+        if(bytes.length < otherBytes.length) {
+            return 1;
+        } else {
+            return bytes.length > otherBytes.length ? 1 : 0;
+        }
     }
 }

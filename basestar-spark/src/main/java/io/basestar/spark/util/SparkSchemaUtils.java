@@ -324,7 +324,7 @@ public class SparkSchemaUtils {
         }
         final byte[] partition = (byte[]) SparkRowUtils.get(row, PARTITION);
         final byte[] sort = (byte[]) SparkRowUtils.get(row, SORT);
-        final Index.Key.Binary key = Index.Key.Binary.of(partition, sort);
+        final Index.Key.Binary key = Index.Key.Binary.of(new BinaryKey(partition), new BinaryKey(sort));
         final Map<String, Set<Name>> branches = Name.branch(expand);
         final NamingConvention naming = NamingConvention.DEFAULT;
         final Map<String, Object> projection = new HashMap<>();

@@ -8,6 +8,7 @@ import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.use.*;
 import io.basestar.schema.util.ValueContext;
 import io.basestar.secret.Secret;
+import io.basestar.util.BinaryKey;
 import io.basestar.util.Bytes;
 import io.basestar.util.ISO8601;
 import io.basestar.util.Page;
@@ -283,7 +284,7 @@ class TestValueContext {
 
         final ValueContext standard = ValueContext.standard();
         final Map<String, Object> record = standard.createView(use, ImmutableMap.of("schema", "Cat", "count", 10), ImmutableSet.of());
-        assertEquals(Bytes.valueOf(UseBinary.binaryKey(ImmutableList.of("Cat"))), record.get("__key"));
+        assertEquals(BinaryKey.from(ImmutableList.of("Cat")), record.get("__key"));
         assertEquals("Cat", record.get("schema"));
         assertEquals(10L, record.get("count"));
 

@@ -36,13 +36,9 @@ import io.basestar.schema.exception.IndexValidationException;
 import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
-import io.basestar.schema.use.UseBinary;
 import io.basestar.schema.use.UseInteger;
 import io.basestar.schema.use.UseString;
-import io.basestar.util.Immutable;
-import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 import lombok.Data;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -462,7 +458,7 @@ public class Index implements Named, Described, Serializable, Extendable {
 
         public Binary binary() {
 
-            return new Binary(UseBinary.binaryKey(partition), UseBinary.binaryKey(sort));
+            return new Binary(BinaryKey.from(partition), BinaryKey.from(sort));
         }
 
         /**
@@ -472,31 +468,13 @@ public class Index implements Named, Described, Serializable, Extendable {
         @Data
         public static class Binary {
 
-            private final byte[] partition;
+            private final BinaryKey partition;
 
-            private final byte[] sort;
+            private final BinaryKey sort;
 
-            public static Binary of(final byte[] partition, final byte[] sort) {
+            public static Binary of(final BinaryKey partition, final BinaryKey sort) {
 
                 return new Binary(partition, sort);
-            }
-
-            @Override
-            public int hashCode() {
-
-                return 31 * Arrays.hashCode(partition) + Arrays.hashCode(sort);
-            }
-
-            @Override
-            public boolean equals(final Object o) {
-
-                if(o instanceof Binary) {
-                    final Binary other = (Binary)o;
-                    return Arrays.equals(partition, other.partition)
-                            && Arrays.equals(sort, other.sort);
-                } else {
-                    return false;
-                }
             }
         }
     }

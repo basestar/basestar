@@ -25,6 +25,8 @@ import com.google.common.collect.Lists;
 import io.basestar.expression.call.Callable;
 import io.basestar.expression.type.Coercion;
 import io.basestar.expression.type.Values;
+import io.basestar.util.BinaryKey;
+import io.basestar.util.Bytes;
 
 import java.io.Serializable;
 import java.util.Collection;
@@ -118,8 +120,8 @@ public abstract class CollectionMethods<T extends Collection<?>> implements Seri
         return copy;
     }
 
-    public byte[] binaryKey(final T target) {
+    public Bytes binaryKey(final T target) {
 
-        return Values.binaryKey(ImmutableList.copyOf(target));
+        return BinaryKey.from(ImmutableList.copyOf(target));
     }
 }

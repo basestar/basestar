@@ -366,7 +366,7 @@ public class ViewSchema implements LinkableSchema {
                     final Object[] keys = typeOf(Name.of(name)).key(result.get(name));
                     values.addAll(Arrays.asList(keys));
                 });
-                return Bytes.valueOf(UseBinary.binaryKey(values));
+                return BinaryKey.from(values);
             });
         }
         if(expand != null && !expand.isEmpty()) {

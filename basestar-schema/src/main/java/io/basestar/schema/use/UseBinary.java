@@ -20,7 +20,6 @@ package io.basestar.schema.use;
  * #L%
  */
 
-import io.basestar.expression.type.Values;
 import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Bytes;
 import io.basestar.util.Name;
@@ -32,7 +31,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -51,10 +49,6 @@ import java.util.Set;
 public class UseBinary implements UseScalar<Bytes> {
 
     public static final UseBinary DEFAULT = new UseBinary();
-
-    public static final byte[] LO_PREFIX = new byte[]{0};
-
-    public static final byte[] HI_PREFIX = new byte[]{127};
 
     public static final String NAME = "binary";
 
@@ -125,16 +119,6 @@ public class UseBinary implements UseScalar<Bytes> {
     public String toString() {
 
         return NAME;
-    }
-
-    public static byte[] binaryKey(final List<?> keys) {
-
-        return Values.binaryKey(keys);
-    }
-
-    public static byte[] concat(final byte[] ... arrays) {
-
-        return Values.concat(arrays);
     }
 
     @Override

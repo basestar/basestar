@@ -618,7 +618,7 @@ public interface Use<T> extends Serializable {
         } else if(a instanceof UseArray && b instanceof UseArray) {
             return UseArray.from(commonBase(((UseArray<?>) a).getType(), ((UseArray<?>) b).getType()));
         } else if(a instanceof UseSet && b instanceof UseSet) {
-            return UseArray.from(commonBase(((UseSet<?>) a).getType(), ((UseSet<?>) b).getType()));
+            return UseSet.from(commonBase(((UseSet<?>) a).getType(), ((UseSet<?>) b).getType()));
         } else if(a instanceof UseMap && b instanceof UseMap) {
             return UseMap.from(commonBase(((UseMap<?>) a).getType(), ((UseMap<?>) b).getType()));
         } else if(a instanceof UseEnum && b instanceof UseEnum) {
@@ -637,10 +637,12 @@ public interface Use<T> extends Serializable {
             if(((UseView) a).getName().equals(((UseView) b).getName())) {
                 return a;
             }
-        } else if(a instanceof UseDate && b instanceof UseDate) {
-            return UseDate.DEFAULT;
-        } else if(a instanceof UseDateTime && b instanceof UseDateTime) {
-            return UseDateTime.DEFAULT;
+        } else if((a instanceof UseDate || a instanceof UseDateTime) && (b instanceof UseDate || b instanceof UseDateTime)) {
+            if(a instanceof UseDateTime || b instanceof UseDateTime) {
+                return UseDateTime.DEFAULT;
+            } else {
+                return UseDate.DEFAULT;
+            }
         } else if(a instanceof UseBinary && b instanceof UseBinary) {
             return UseBinary.DEFAULT;
         } else if(a instanceof UseOptional<?> && b instanceof UseOptional<?>) {

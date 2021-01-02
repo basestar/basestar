@@ -22,15 +22,11 @@ package io.basestar.storage;
 
 import com.google.common.collect.Lists;
 import io.basestar.schema.*;
-import io.basestar.schema.use.UseBinary;
 import io.basestar.storage.annotation.ConfigurableStorage;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;
-import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
-import io.basestar.util.Pager;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 import lombok.Data;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -112,7 +108,7 @@ public class MemoryStorage implements DefaultIndexStorage {
 
         synchronized (lock) {
 
-            final byte[] partBinary = UseBinary.binaryKey(satisfy.getPartition());
+            final byte[] partBinary = BinaryKey.from(satisfy.getPartition()).getBytes();
             final IndexPartition partKey = new IndexPartition(schema.getQualifiedName(), index.getName(), partBinary);
 
             final NavigableMap<IndexSort, Map<String, Object>> partition = state.index.get(partKey);
@@ -122,8 +118,8 @@ public class MemoryStorage implements DefaultIndexStorage {
                 results = Collections.emptyList();
             } else {
                 if(!satisfy.getSort().isEmpty()) {
-                    final byte[] sortLo = UseBinary.binaryKey(satisfy.getSort());
-                    final byte[] sortHi = UseBinary.concat(UseBinary.binaryKey(satisfy.getSort()), new byte[]{0});
+                    final byte[] sortLo = BinaryKey.from(satisfy.getSort()).lo().getBytes();
+                    final byte[] sortHi = BinaryKey.from(satisfy.getSort()).hi().getBytes();
                     results = Lists.newArrayList(partition.tailMap(new IndexSort(sortLo, null), true)
                             .headMap(new IndexSort(sortHi, null)).values());
                 } else {
@@ -304,8 +300,8 @@ public class MemoryStorage implements DefaultIndexStorage {
                 items.add(state -> {
 
                     final Index.Key.Binary binaryKey = key.binary();
-                    final IndexPartition partKey = new IndexPartition(schema.getQualifiedName(), index.getName(), binaryKey.getPartition());
-                    final IndexSort sortKey = new IndexSort(binaryKey.getSort(), index.isUnique() ? null : id);
+                    final IndexPartition partKey = new IndexPartition(schema.getQualifiedName(), index.getName(), binaryKey.getPartition().getBytes());
+                    final IndexSort sortKey = new IndexSort(binaryKey.getSort().getBytes(), index.isUnique() ? null : id);
 
                     final Map<IndexSort, Map<String, Object>> partition = state.index
                             .computeIfAbsent(partKey, k -> new TreeMap<>());
