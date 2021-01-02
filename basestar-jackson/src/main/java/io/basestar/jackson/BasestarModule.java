@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.*;
 import io.basestar.secret.Secret;
+import io.basestar.util.Bytes;
 import io.basestar.util.Name;
 import io.basestar.util.Page;
 import io.basestar.util.Sort;
@@ -76,5 +77,9 @@ public class BasestarModule extends SimpleModule {
         addKeyDeserializer(Enum.class, new EnumKeyDeserializer());
 
         addDeserializer(Serializable.class, new SerializableDeserializer());
+
+        addSerializer(Bytes.class, new BytesSerializer());
+        addDeserializer(Bytes.class, new BytesDeserializer());
+
     }
 }

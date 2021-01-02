@@ -20,9 +20,9 @@ package io.basestar.schema.use;
  * #L%
  */
 
-import com.google.common.io.BaseEncoding;
 import io.basestar.expression.type.Values;
 import io.basestar.schema.util.ValueContext;
+import io.basestar.util.Bytes;
 import io.basestar.util.Name;
 import io.swagger.v3.oas.models.media.BinarySchema;
 import lombok.Data;
@@ -32,7 +32,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -49,7 +48,7 @@ import java.util.Set;
 
 @Data
 @Slf4j
-public class UseBinary implements UseScalar<byte[]> {
+public class UseBinary implements UseScalar<Bytes> {
 
     public static final UseBinary DEFAULT = new UseBinary();
 
@@ -77,7 +76,7 @@ public class UseBinary implements UseScalar<byte[]> {
     }
 
     @Override
-    public byte[] create(final ValueContext context, final Object value, final Set<Name> expand) {
+    public Bytes create(final ValueContext context, final Object value, final Set<Name> expand) {
 
         return context.createBinary(this, value, expand);
     }
@@ -91,13 +90,13 @@ public class UseBinary implements UseScalar<byte[]> {
     @Override
     public Type javaType(final Name name) {
 
-        return byte[].class;
+        return Bytes.class;
     }
 
     @Override
-    public byte[] defaultValue() {
+    public Bytes defaultValue() {
 
-        return new byte[0];
+        return new Bytes();
     }
 
     @Override
@@ -107,19 +106,19 @@ public class UseBinary implements UseScalar<byte[]> {
     }
 
     @Override
-    public void serializeValue(final byte[] value, final DataOutput out) throws IOException {
+    public void serializeValue(final Bytes value, final DataOutput out) throws IOException {
 
-        out.writeInt(value.length);
-        out.write(value);
+        out.writeInt(value.length());
+        out.write(value.getBytes());
     }
 
     @Override
-    public byte[] deserializeValue(final DataInput in) throws IOException {
+    public Bytes deserializeValue(final DataInput in) throws IOException {
 
         final int size = in.readInt();
         final byte[] buffer = new byte[size];
         in.readFully(buffer);
-        return buffer;
+        return new Bytes(buffer);
     }
 
     @Override
@@ -139,18 +138,18 @@ public class UseBinary implements UseScalar<byte[]> {
     }
 
     @Override
-    public String toString(final byte[] value) {
+    public String toString(final Bytes value) {
 
-        return value == null ? "null" : BaseEncoding.base64().encode(value);
+        return value == null ? "null" : value.toString();
     }
 
     @Override
-    public boolean areEqual(final byte[] a, final byte[] b) {
+    public boolean areEqual(final Bytes a, final Bytes b) {
 
         if(a == null || b == null) {
             return a == null && b == null;
         } else {
-            return Arrays.equals(a, b);
+            return a.equals(b);
         }
     }
 }

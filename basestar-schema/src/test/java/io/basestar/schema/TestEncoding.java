@@ -36,7 +36,7 @@ public class TestEncoding {
     void testFlatEncoding() {
 
         final FlatEncoding encoding = new FlatEncoding();
-        final Map<String, Object> encoded = encoding.encode(INPUT);
+        final Map<String, String> encoded = encoding.encode(INPUT);
         assertEquals(ImmutableMap.<String, Object>builder()
                 .put("map.key1", "value1")
                 .put("map.key2", "value2")

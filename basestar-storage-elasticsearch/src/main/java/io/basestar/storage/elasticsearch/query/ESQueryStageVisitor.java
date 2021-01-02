@@ -1,4 +1,4 @@
-package io.basestar.storage.elasticsearch.view;
+package io.basestar.storage.elasticsearch.query;
 
 import io.basestar.expression.Expression;
 import io.basestar.schema.InstanceSchema;

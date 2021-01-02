@@ -40,10 +40,7 @@ import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseBinary;
 import io.basestar.schema.use.UseView;
 import io.basestar.schema.util.ValueContext;
-import io.basestar.util.Immutable;
-import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 import lombok.Data;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -369,7 +366,7 @@ public class ViewSchema implements LinkableSchema {
                     final Object[] keys = typeOf(Name.of(name)).key(result.get(name));
                     values.addAll(Arrays.asList(keys));
                 });
-                return UseBinary.binaryKey(values);
+                return Bytes.valueOf(UseBinary.binaryKey(values));
             });
         }
         if(expand != null && !expand.isEmpty()) {
@@ -385,13 +382,13 @@ public class ViewSchema implements LinkableSchema {
 
     public void serialize(final Map<String, Object> object, final DataOutput out) throws IOException {
 
-        UseBinary.DEFAULT.serialize((byte[])object.get(ID), out);
+        UseBinary.DEFAULT.serialize((Bytes)object.get(ID), out);
         serializeProperties(object, out);
     }
 
     public static Instance deserialize(final DataInput in) throws IOException {
 
-        final byte[] id = Use.deserializeAny(in);
+        final Bytes id = Nullsafe.require(Use.deserializeAny(in));
         final Map<String, Object> data = new HashMap<>(InstanceSchema.deserializeProperties(in));
         data.put(ID, id);
         return new Instance(data);

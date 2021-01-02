@@ -8,12 +8,12 @@ import lombok.Data;
 import org.elasticsearch.common.document.DocumentField;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.search.SearchHit;
-import org.elasticsearch.search.aggregations.Aggregation;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.Aggregations;
 import org.elasticsearch.search.aggregations.bucket.SingleBucketAggregation;
 import org.elasticsearch.search.aggregations.bucket.composite.CompositeAggregation;
+import org.elasticsearch.search.aggregations.metrics.NumericMetricsAggregation;
 import org.elasticsearch.search.aggregations.metrics.TopHits;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregationBuilder;
 import org.elasticsearch.search.sort.SortOrder;
@@ -123,8 +123,8 @@ public interface ESAggregate {
         @Override
         public Object read(final Bucket bucket) {
 
-            final Aggregation agg = bucket.getAggregations().get(name());
-            return null;
+            final NumericMetricsAggregation.SingleValue agg = bucket.getAggregations().get(name());
+            return agg.value();
         }
     }
 
@@ -141,14 +141,14 @@ public interface ESAggregate {
         @Override
         public List<AggregationBuilder> builders() {
 
-            return Immutable.list(applyInput(AggregationBuilders.max(name()), input));
+            return Immutable.list(applyInput(AggregationBuilders.min(name()), input));
         }
 
         @Override
         public Object read(final Bucket bucket) {
 
-            final Aggregation agg = bucket.getAggregations().get(name());
-            return null;
+            final NumericMetricsAggregation.SingleValue agg = bucket.getAggregations().get(name());
+            return agg.value();
         }
     }
 
@@ -171,8 +171,8 @@ public interface ESAggregate {
         @Override
         public Object read(final Bucket bucket) {
 
-            final Aggregation agg = bucket.getAggregations().get(name());
-            return null;
+            final NumericMetricsAggregation.SingleValue agg = bucket.getAggregations().get(name());
+            return agg.value();
         }
     }
 
@@ -275,8 +275,8 @@ public interface ESAggregate {
         @Override
         public Object read(final Bucket bucket) {
 
-            final Aggregation agg = bucket.getAggregations().get(name());
-            return null;
+            final NumericMetricsAggregation.SingleValue agg = bucket.getAggregations().get(name());
+            return agg.value();
         }
     }
 

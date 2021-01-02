@@ -6,6 +6,7 @@ import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.*;
 import io.basestar.schema.util.Expander;
 import io.basestar.secret.Secret;
+import io.basestar.util.Bytes;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Page;
@@ -81,8 +82,8 @@ class TestUse {
 
         final Namespace namespace = namespace();
 
-        final Use<?> use = Use.fromConfig("Address");
-        assertEquals(UseStruct.from(namespace.requireStructSchema("Address"), null), use.resolve(namespace));
+        final Use<?> use = Use.fromConfig("Phone");
+        assertEquals(UseStruct.from(namespace.requireStructSchema("Phone"), null), use.resolve(namespace));
     }
 
     @Test
@@ -223,14 +224,14 @@ class TestUse {
     void testUseBinary() throws Exception {
 
         final UseBinary use = UseBinary.DEFAULT;
-        testUse(use, null);
-        testUse(use, new byte[]{1, 2, 3});
+        testUse(use,null);
+        testUse(use, new Bytes(new byte[]{1, 2, 3}));
         assertTrue(use.openApi(ImmutableSet.of()) instanceof BinarySchema);
-        assertArrayEquals(new byte[0], use.defaultValue());
-        assertEquals(byte[].class, use.javaType());
+        assertEquals(new Bytes(), use.defaultValue());
+        assertEquals(Bytes.class, use.javaType());
         assertEquals(use, Use.fromJavaType(byte[].class));
         assertEquals("null", use.toString(null));
-        assertEquals("AQ==", use.toString(new byte[]{1}));
+        assertEquals("AQ==", use.toString(Bytes.valueOf(1)));
         assertEquals(use, use.typeOf(Name.empty()));
     }
 
@@ -313,14 +314,13 @@ class TestUse {
     void testUseStruct() throws Exception {
 
         final Namespace namespace = namespace();
-        final StructSchema schema = namespace.requireStructSchema("Address");
+        final StructSchema schema = namespace.requireStructSchema("Phone");
         final UseInstance use = UseInstance.from(schema, null);
 
         final Instance init = new Instance(ImmutableMap.of(
-                "houseName", "MyHouse",
-                "streetName", "MyStreet",
-                "country", ReferableSchema.ref("GB"),
-                "zip", "12345"
+                "home", "123",
+                "mobile", "456",
+                "work", "789"
         ));
 
         testUse(use, null);
@@ -330,8 +330,8 @@ class TestUse {
         assertEquals(Map.class, GenericTypeReflector.erase(javaType));
         assertEquals(String.class, GenericTypeReflector.getTypeParameter(javaType, Map.class.getTypeParameters()[0]));
         assertEquals(Object.class, GenericTypeReflector.getTypeParameter(javaType, Map.class.getTypeParameters()[1]));
-        assertEquals(String.class, use.javaType(Name.of("houseName")));
-        assertEquals("{country: {created: null, hash: null, id: GB, name: null, schema: null, updated: null, version: null}, houseName: MyHouse, streetName: MyStreet, zip: 12345}", use.toString(init));
+        assertEquals(String.class, use.javaType(Name.of("home")));
+        assertEquals("{home: 123, mobile: 456, work: 789}", use.toString(init));
         assertEquals(use, use.typeOf(Name.empty()));
     }
 

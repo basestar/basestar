@@ -24,9 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
-import io.basestar.util.ISO8601;
-import io.basestar.util.Name;
-import io.basestar.util.Page;
+import io.basestar.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Encoder;
 import org.apache.spark.sql.Encoders;
@@ -732,7 +730,7 @@ public class SparkSchemaUtils {
             @Override
             public Object visitBinary(final UseBinary type) {
 
-                return type.create(value, expand, suppress);
+                return Nullsafe.map(type.create(value, expand, suppress), Bytes::getBytes);
             }
 
             @Override

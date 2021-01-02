@@ -35,6 +35,7 @@ import io.basestar.schema.use.UseArray;
 import io.basestar.schema.use.UseDate;
 import io.basestar.schema.use.UseDateTime;
 import io.basestar.secret.Secret;
+import io.basestar.util.Bytes;
 import lombok.RequiredArgsConstructor;
 
 import java.io.*;
@@ -391,18 +392,18 @@ public interface AttributeType<T> {
         }
     }
 
-    class BinaryType implements AttributeType<byte[]> {
+    class BinaryType implements AttributeType<Bytes> {
 
         @Override
-        public byte[] readValue(final PortableReader reader, final String name) throws IOException {
+        public Bytes readValue(final PortableReader reader, final String name) throws IOException {
 
-            return reader.readByteArray(name);
+            return new Bytes(reader.readByteArray(name));
         }
 
         @Override
-        public void writeValue(final PortableSchemaFactory factory, final PortableWriter writer, final String name, final byte[] value) throws IOException {
+        public void writeValue(final PortableSchemaFactory factory, final PortableWriter writer, final String name, final Bytes value) throws IOException {
 
-            writer.writeByteArray(name, value);
+            writer.writeByteArray(name, value.getBytes());
         }
 
         @Override

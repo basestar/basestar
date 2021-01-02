@@ -6,6 +6,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import io.basestar.expression.exception.TypeConversionException;
 import io.basestar.secret.Secret;
+import io.basestar.util.Bytes;
 import io.basestar.util.ISO8601;
 import org.junit.jupiter.api.Test;
 
@@ -154,9 +155,9 @@ class TestCoercion {
     void testToBinary() {
 
         assertNull(Coercion.toBinary(null));
-        assertArrayEquals(new byte[]{1}, Coercion.toBinary("AQ=="));
-        assertArrayEquals(new byte[]{1}, Coercion.toBinary(new byte[]{1}));
-        assertArrayEquals(new byte[]{1}, Coercion.toBinary(ByteBuffer.wrap(new byte[]{1})));
+        assertEquals(Bytes.valueOf(1), Coercion.toBinary("AQ=="));
+        assertEquals(Bytes.valueOf(1), Coercion.toBinary(new byte[]{1}));
+        assertEquals(Bytes.valueOf(1), Coercion.toBinary(ByteBuffer.wrap(new byte[]{1})));
         assertThrows(TypeConversionException.class, () -> Coercion.toBinary(ImmutableList.of()));
     }
 }

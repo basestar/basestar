@@ -8,6 +8,7 @@ import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.use.*;
 import io.basestar.schema.util.ValueContext;
 import io.basestar.secret.Secret;
+import io.basestar.util.Bytes;
 import io.basestar.util.ISO8601;
 import io.basestar.util.Page;
 import org.junit.jupiter.api.Test;
@@ -282,7 +283,7 @@ class TestValueContext {
 
         final ValueContext standard = ValueContext.standard();
         final Map<String, Object> record = standard.createView(use, ImmutableMap.of("schema", "Cat", "count", 10), ImmutableSet.of());
-        assertArrayEquals(UseBinary.binaryKey(ImmutableList.of("Cat")), (byte[])record.get("__key"));
+        assertEquals(Bytes.valueOf(UseBinary.binaryKey(ImmutableList.of("Cat"))), record.get("__key"));
         assertEquals("Cat", record.get("schema"));
         assertEquals(10L, record.get("count"));
 
@@ -299,8 +300,8 @@ class TestValueContext {
     void testCreateBinary() {
 
         final ValueContext standard = ValueContext.standard();
-        assertArrayEquals(new byte[]{1}, standard.createBinary(UseBinary.DEFAULT, "AQ", ImmutableSet.of()));
-        assertArrayEquals(new byte[]{1}, standard.createBinary(UseBinary.DEFAULT, new byte[]{1}, ImmutableSet.of()));
+        assertEquals(Bytes.valueOf(1), standard.createBinary(UseBinary.DEFAULT, "AQ", ImmutableSet.of()));
+        assertEquals(Bytes.valueOf(1), standard.createBinary(UseBinary.DEFAULT, new byte[]{1}, ImmutableSet.of()));
 
         assertThrows(TypeConversionException.class, () -> {
             standard.createBinary(UseBinary.DEFAULT, Secret.encrypted(new byte[0]), ImmutableSet.of());

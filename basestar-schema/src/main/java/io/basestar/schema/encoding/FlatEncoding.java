@@ -5,17 +5,17 @@ import io.basestar.util.Immutable;
 
 import java.util.*;
 
-public class FlatEncoding implements Encoding<Map<String, Object>, Map<String, Object>> {
+public class FlatEncoding implements Encoding<Map<String, Object>, Map<String, String>> {
 
     @Override
-    public Map<String, Object> encode(final Map<String, Object> input) {
+    public Map<String, String> encode(final Map<String, Object> input) {
 
-        final Map<String, Object> result = new HashMap<>();
+        final Map<String, String> result = new HashMap<>();
         input.forEach((key, value) -> encode(result, key, value));
         return Immutable.map(result);
     }
 
-    private static void encode(final Map<String, Object> output, final String key, final Object value) {
+    private static void encode(final Map<String, String> output, final String key, final Object value) {
 
         if (value instanceof Map<?, ?>) {
             for (final Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) {
@@ -28,12 +28,12 @@ public class FlatEncoding implements Encoding<Map<String, Object>, Map<String, O
                 ++offset;
             }
         } else {
-            output.put(key, value);
+            output.put(key, Objects.toString(value));
         }
     }
 
     @Override
-    public Map<String, Object> decode(final Map<String, Object> input) {
+    public Map<String, Object> decode(final Map<String, String> input) {
 
         final Map<String, Object> result = new HashMap<>();
         input.forEach((key, value) -> decode(result, key, value));

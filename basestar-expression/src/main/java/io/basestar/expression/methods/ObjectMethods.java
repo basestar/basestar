@@ -1,6 +1,7 @@
 package io.basestar.expression.methods;
 
 import io.basestar.expression.type.Coercion;
+import io.basestar.util.Bytes;
 
 import java.io.Serializable;
 import java.time.Instant;
@@ -29,7 +30,7 @@ public class ObjectMethods implements Serializable {
         return Coercion.toString(value);
     }
 
-    public byte[] toBinary(final Object value) {
+    public Bytes toBinary(final Object value) {
 
         return Coercion.toBinary(value);
     }

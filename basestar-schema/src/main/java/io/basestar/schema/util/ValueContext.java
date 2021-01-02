@@ -8,10 +8,7 @@ import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.use.*;
 import io.basestar.secret.Secret;
-import io.basestar.util.ISO8601;
-import io.basestar.util.Name;
-import io.basestar.util.Page;
-import io.basestar.util.Warnings;
+import io.basestar.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -53,7 +50,7 @@ public interface ValueContext {
 
     <T> Map<String, T> createMap(UseMap<T> type, Object value, Set<Name> expand);
 
-    byte[] createBinary(UseBinary useBinary, Object value, Set<Name> expand);
+    Bytes createBinary(UseBinary useBinary, Object value, Set<Name> expand);
 
     LocalDate createDate(UseDate type, Object value, Set<Name> expand);
 
@@ -239,7 +236,7 @@ public interface ValueContext {
         }
 
         @Override
-        public byte[] createBinary(final UseBinary useBinary, final Object value, final Set<Name> expand) {
+        public Bytes createBinary(final UseBinary useBinary, final Object value, final Set<Name> expand) {
 
             return Coercion.toBinary(value);
         }
@@ -392,7 +389,7 @@ public interface ValueContext {
 
         @Override
         @SuppressWarnings(Warnings.RETURN_NULL_ARRAY_OR_COLLECTION)
-        public byte[] createBinary(final UseBinary type, final Object value, final Set<Name> expand) {
+        public Bytes createBinary(final UseBinary type, final Object value, final Set<Name> expand) {
 
             if(value == null) {
                 return null;

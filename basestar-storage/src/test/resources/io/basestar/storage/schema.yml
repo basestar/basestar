@@ -1,5 +1,9 @@
 Address:
   properties:
+    name:
+      type: string?
+    company:
+      type: string?
     country:
       type: string?
     state:
@@ -8,6 +12,10 @@ Address:
       type: string?
     zip:
       type: string?
+    lat:
+      type: number
+    lon:
+      type: number
   indexes:
     Country:
       sparse: true
@@ -214,6 +222,7 @@ ViewBase:
     status:
       type: string
 
+
 AddressStats:
   type: view
   materialized: false
@@ -224,8 +233,10 @@ AddressStats:
     country: country
     state: state
     count: count()
-    countZip: count(zip ILIKE '_____')
-    maxMinZip: '"maxzip: " + max(zip) + ",minzip: " + min(zip)'
+    hasZip: count(zip != null)
+    lon: avg(lon)
+    lat: avg(lat)
+    bound: "[min(lat), min(lon), max(lat), max(lon)]"
   from:
     schema: Address
 

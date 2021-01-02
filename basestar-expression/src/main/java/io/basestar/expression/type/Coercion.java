@@ -22,6 +22,7 @@ package io.basestar.expression.type;
 
 import com.google.common.io.BaseEncoding;
 import io.basestar.expression.exception.TypeConversionException;
+import io.basestar.util.Bytes;
 import io.basestar.util.ISO8601;
 
 import java.lang.reflect.Modifier;
@@ -147,6 +148,8 @@ public class Coercion {
             return ISO8601.toString((Date) value);
         } else if (value instanceof String) {
             return (String) value;
+        } else if (value instanceof Bytes) {
+            return value.toString();
         } else if (value instanceof byte[]) {
             return BaseEncoding.base64().encode((byte[]) value);
         } else {
@@ -275,18 +278,20 @@ public class Coercion {
         }
     }
 
-    public static byte[] toBinary(final Object value) {
+    public static Bytes toBinary(final Object value) {
 
         if (value == null) {
             return null;
+        } else if (value instanceof Bytes) {
+            return (Bytes)value;
         } else if (value instanceof byte[]) {
-            return (byte[]) value;
+            return new Bytes((byte[]) value);
         } else if (value instanceof ByteBuffer) {
-            return ((ByteBuffer) value).array();
+            return new Bytes(((ByteBuffer) value).array());
         } else if (value instanceof String) {
-            return BaseEncoding.base64().decode((String) value);
+            return Bytes.fromBase64((String) value);
         } else {
-            throw new TypeConversionException(byte[].class, value);
+            throw new TypeConversionException(Bytes.class, value);
         }
     }
 

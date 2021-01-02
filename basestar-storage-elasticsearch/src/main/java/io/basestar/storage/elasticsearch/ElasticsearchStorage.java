@@ -25,8 +25,8 @@ import io.basestar.schema.*;
 import io.basestar.storage.*;
 import io.basestar.storage.elasticsearch.mapping.Mappings;
 import io.basestar.storage.elasticsearch.mapping.Settings;
-import io.basestar.storage.elasticsearch.view.ESQueryStage;
-import io.basestar.storage.elasticsearch.view.ESQueryStageVisitor;
+import io.basestar.storage.elasticsearch.query.ESQueryStage;
+import io.basestar.storage.elasticsearch.query.ESQueryStageVisitor;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.QueryPlanner;
@@ -124,7 +124,8 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
                     return ElasticsearchUtils.<SearchResponse>future(listener -> client.searchAsync(request, OPTIONS, listener))
                             .thenApply(response -> {
                                 log.debug("Search response is {}", response);
-                                return stage.page(stats, token, count, response);
+                                return stage.page(stats, token, count, response)
+                                        .map(v -> (Map<String, Object>)schema.create(v, expand, true));
                             });
 
                 }).orElse(CompletableFuture.completedFuture(Page.empty()));
