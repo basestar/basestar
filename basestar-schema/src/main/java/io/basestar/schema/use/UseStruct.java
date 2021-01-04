@@ -30,6 +30,7 @@ import io.basestar.schema.StructSchema;
 import io.basestar.schema.exception.TypeSyntaxException;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
+import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Name;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;

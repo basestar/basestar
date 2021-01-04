@@ -67,6 +67,8 @@ Order:
       type: Pet
     quantity:
       type: integer
+    total:
+      type: integer
     createDate:
       type: datetime
     shipDate:
@@ -102,12 +104,26 @@ UserStatus:
   type: enum
   values:
     - registered
+    - confirmed
+    - unconfirmed
+
+Phone:
+  type: struct
+  properties:
+    home:
+      type: string
+    mobile:
+      type: string
+    work:
+      type: string
 
 User:
   type: object
   properties:
     username:
       type: string
+    store:
+      type: Store
     firstName:
       type: string
     lastName:
@@ -117,11 +133,18 @@ User:
     password:
       type: string
     phone:
+      type: Phone
+    ipAddress:
       type: string
-    userStatus:
+    avatarUrl:
+      type: string
+    status:
       type: UserStatus
-    store:
-      type: Store
+    deleted:
+      type: boolean
+    addresses:
+      type:
+        array: Address
   indexes:
     store:
       partition: store.id
@@ -131,9 +154,24 @@ User:
       schema: Order
       expression: user.id == this.id
 
+UserStats:
+  type: view
+  group:
+    - store
+    - status
+  properties:
+    count: count()
+    registered: count(status == 'registered')
+    confirmed: count(status == 'confirmed')
+    unconfirmed: count(status == 'unconfirmed')
+  from:
+    schema: User
+
 Store:
   type: object
   properties:
+    address:
+      type: Address
     name:
       type: string
   indexes:
@@ -150,6 +188,66 @@ Store:
       schema: Order
       expression: store.id == this.id
 
+Address:
+  type: object
+  properties:
+    name:
+      type: string
+    company:
+      type: string
+    address:
+      type: string
+    city:
+      type: string
+    state:
+      type: string
+    country:
+      type: string
+    zip:
+      type: string
+    lat:
+      type: number
+    lon:
+      type: number
+  indexes:
+    Country:
+      sparse: true
+      partition:
+        - country
+      sort:
+        - city
+        - zip
+    State:
+      sparse: true
+      partition:
+        - state
+      sort:
+        - city
+        - zip
+
+AddressStats:
+  type: view
+  materialized: false
+  group:
+    - country
+    - state
+  properties:
+    country: country
+    state: state
+    count: count()
+    hasZip: count(zip != null)
+    lon: avg(lon)
+    lat: avg(lat)
+    bound: "[min(lat), min(lon), max(lat), max(lon)]"
+  from:
+    schema: Address
+
+Country:
+  type: object
+  properties:
+    name:
+      type: string
+
 PetStats:
   type: view
   group:
@@ -159,4 +257,19 @@ PetStats:
     count: count()
   from:
     schema: Pet
-  where: status == available
+  where: status == 'available'
+
+OrderStats:
+  type: view
+  group:
+    - store
+  properties:
+    store: store
+    count: count()
+    total: avg(total)
+    max: max(total)
+    min: min(total)
+  from:
+    schema: Order
+  where: status == 'delivered'
+

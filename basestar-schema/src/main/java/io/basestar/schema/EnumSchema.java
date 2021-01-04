@@ -29,7 +29,7 @@ import io.basestar.expression.Context;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.use.UseEnum;
-import io.basestar.schema.use.ValueContext;
+import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -42,10 +42,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.lang.reflect.Type;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Enum Schema
@@ -150,8 +147,8 @@ public class EnumSchema implements Schema<String> {
         this.slot = slot;
         this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
         this.description = descriptor.getDescription();
-        this.values = Immutable.copy(descriptor.getValues());
-        this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
+        this.values = Immutable.list(descriptor.getValues());
+        this.extensions = Immutable.sortedMap(descriptor.getExtensions());
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
@@ -201,6 +198,12 @@ public class EnumSchema implements Schema<String> {
     }
 
     @Override
+    public String toString(final String value) {
+
+        return Objects.toString(value);
+    }
+
+    @Override
     public Descriptor descriptor() {
 
         return (Descriptor.Self) () -> EnumSchema.this;
@@ -216,5 +219,11 @@ public class EnumSchema implements Schema<String> {
     public int hashCode() {
 
         return qualifiedNameHashCode();
+    }
+
+    @Override
+    public String toString() {
+
+        return getQualifiedName().toString();
     }
 }

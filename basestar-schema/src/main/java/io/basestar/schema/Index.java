@@ -36,13 +36,9 @@ import io.basestar.schema.exception.IndexValidationException;
 import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
-import io.basestar.schema.use.UseBinary;
 import io.basestar.schema.use.UseInteger;
 import io.basestar.schema.use.UseString;
-import io.basestar.util.Immutable;
-import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 import lombok.Data;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -98,30 +94,27 @@ public class Index implements Named, Described, Serializable, Extendable {
 
     private final int max;
 
-    public boolean canModify(final Index target) {
+    public boolean requiresMigration(final Index target) {
 
         if(unique != target.isUnique()) {
-            return false;
+            return true;
         }
         if(sparse != target.isSparse()) {
-            return false;
+            return true;
         }
         if(!Objects.equals(partition, target.getPartition())) {
-            return false;
+            return true;
         }
         if(!Objects.equals(sort, target.getSort())) {
-            return false;
+            return true;
         }
         if(!Objects.equals(consistency, target.getConsistency())) {
-            return false;
+            return true;
         }
         if(!Objects.equals(projection, target.getProjection())) {
-            return false;
+            return true;
         }
-        if(!Objects.equals(over, target.getOver())) {
-            return false;
-        }
-        return true;
+        return !Objects.equals(over, target.getOver());
     }
 
     @JsonDeserialize(as = Builder.class)
@@ -208,15 +201,15 @@ public class Index implements Named, Described, Serializable, Extendable {
         this.qualifiedName = qualifiedName;
         this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
         this.description = descriptor.getDescription();
-        this.partition = Immutable.copy(descriptor.getPartition());
-        this.sort = Immutable.copy(descriptor.getSort());
-        this.projection = Immutable.sortedCopy(descriptor.getProjection());
-        this.over = Immutable.sortedCopy(descriptor.getOver());
+        this.partition = Immutable.list(descriptor.getPartition());
+        this.sort = Immutable.list(descriptor.getSort());
+        this.projection = Immutable.sortedSet(descriptor.getProjection());
+        this.over = Immutable.sortedMap(descriptor.getOver());
         this.unique = Nullsafe.orDefault(descriptor.getUnique(), false);
         this.sparse = Nullsafe.orDefault(descriptor.getSparse(), false);
         this.consistency = descriptor.getConsistency();
         this.max = Nullsafe.orDefault(descriptor.getMax(), DEFAULT_MAX);
-        this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
+        this.extensions = Immutable.sortedMap(descriptor.getExtensions());
         if (Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
@@ -441,7 +434,7 @@ public class Index implements Named, Described, Serializable, Extendable {
 
     public static SortedMap<String, Index> extend(final Collection<? extends Resolver> base, final Map<String, Index> ext) {
 
-        return Immutable.sortedCopy(Stream.concat(
+        return Immutable.sortedMap(Stream.concat(
                 base.stream().map(Resolver::getIndexes),
                 Stream.of(ext)
         ).reduce(Index::extend).orElse(Collections.emptyMap()));
@@ -460,12 +453,12 @@ public class Index implements Named, Described, Serializable, Extendable {
 
         public static Key of(final List<?> partition, final List<?> sort) {
 
-            return new Key(Immutable.copy(partition), Immutable.copy(sort));
+            return new Key(Immutable.list(partition), Immutable.list(sort));
         }
 
         public Binary binary() {
 
-            return new Binary(UseBinary.binaryKey(partition), UseBinary.binaryKey(sort));
+            return new Binary(BinaryKey.from(partition), BinaryKey.from(sort));
         }
 
         /**
@@ -475,31 +468,13 @@ public class Index implements Named, Described, Serializable, Extendable {
         @Data
         public static class Binary {
 
-            private final byte[] partition;
+            private final BinaryKey partition;
 
-            private final byte[] sort;
+            private final BinaryKey sort;
 
-            public static Binary of(final byte[] partition, final byte[] sort) {
+            public static Binary of(final BinaryKey partition, final BinaryKey sort) {
 
                 return new Binary(partition, sort);
-            }
-
-            @Override
-            public int hashCode() {
-
-                return 31 * Arrays.hashCode(partition) + Arrays.hashCode(sort);
-            }
-
-            @Override
-            public boolean equals(final Object o) {
-
-                if(o instanceof Binary) {
-                    final Binary other = (Binary)o;
-                    return Arrays.equals(partition, other.partition)
-                            && Arrays.equals(sort, other.sort);
-                } else {
-                    return false;
-                }
             }
         }
     }
@@ -516,7 +491,7 @@ public class Index implements Named, Described, Serializable, Extendable {
 
             default B setIndex(final String name, final Index.Descriptor v) {
 
-                return setIndexes(Immutable.copyPut(getIndexes(), name, v));
+                return setIndexes(Immutable.put(getIndexes(), name, v));
             }
 
             B setIndexes(Map<String, Index.Descriptor> vs);

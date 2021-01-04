@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.*;
 import io.basestar.secret.Secret;
+import io.basestar.util.Bytes;
 import io.basestar.util.Name;
 import io.basestar.util.Page;
 import io.basestar.util.Sort;
@@ -33,6 +34,7 @@ import io.basestar.util.Sort;
 import java.io.Serializable;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.TemporalAccessor;
 
 public class BasestarModule extends SimpleModule {
 
@@ -44,16 +46,17 @@ public class BasestarModule extends SimpleModule {
 
         final ToStringSerializer toString = new ToStringSerializer();
 
-        addSerializer(Instant.class, new DateTimeSerializer());
-        addDeserializer(Instant.class, new DateTimeDeserializer());
+        addSerializer(TemporalAccessor.class, new TemporalAccessorSerializer());
+        addKeySerializer(TemporalAccessor.class, new TemporalAccessorKeySerializer());
 
-        addSerializer(LocalDate.class, new DateSerializer());
-        addDeserializer(LocalDate.class, new DateDeserializer());
+        addDeserializer(Instant.class, new InstantDeserializer());
+        addKeyDeserializer(Instant.class, new InstantKeyDeserializer());
+
+        addDeserializer(LocalDate.class, new LocalDateDeserializer());
+        addKeyDeserializer(LocalDate.class, new LocalDateKeyDeserializer());
 
         addSerializer(Name.class, toString);
         addDeserializer(Name.class, new NameDeserializer());
-
-        addKeySerializer(Name.class, toString);
         addKeyDeserializer(Name.class, new NameKeyDeserializer());
 
         addSerializer(Sort.class, toString);
@@ -70,7 +73,13 @@ public class BasestarModule extends SimpleModule {
 
         addSerializer(Enum.class, new EnumSerializer());
         addDeserializer(Enum.class, new EnumDeserializer());
+        addKeySerializer(Enum.class, new EnumKeySerializer());
+        addKeyDeserializer(Enum.class, new EnumKeyDeserializer());
 
         addDeserializer(Serializable.class, new SerializableDeserializer());
+
+        addSerializer(Bytes.class, new BytesSerializer());
+        addDeserializer(Bytes.class, new BytesDeserializer());
+
     }
 }

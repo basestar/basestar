@@ -28,7 +28,6 @@ import io.basestar.auth.Caller;
 import io.basestar.auth.exception.AuthenticationFailedException;
 import io.basestar.util.Name;
 import io.basestar.util.Throwables;
-import io.swagger.v3.oas.models.security.SecurityScheme;
 import net.minidev.json.parser.JSONParser;
 import net.minidev.json.parser.ParseException;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
@@ -137,14 +136,5 @@ public class CognitoBasicAuthenticator extends BasicAuthenticator {
         } catch (final ParseException e) {
             throw new AuthenticationFailedException("Authentication failed (reason: bad claims section)");
         }
-    }
-
-    @Override
-    public Map<String, SecurityScheme> openApi() {
-
-        return ImmutableMap.of("Basic", new SecurityScheme()
-                .type(SecurityScheme.Type.HTTP)
-                .in(SecurityScheme.In.HEADER)
-                .scheme("basic"));
     }
 }

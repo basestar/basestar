@@ -35,8 +35,13 @@ import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.expression.InferenceContext;
-import io.basestar.schema.use.*;
+import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseCollection;
+import io.basestar.schema.use.UseMap;
+import io.basestar.schema.use.UseRef;
 import io.basestar.schema.util.Expander;
+import io.basestar.schema.util.ValueContext;
+import io.basestar.schema.util.Widening;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -167,14 +172,14 @@ public class Transient implements Member {
         this.description = descriptor.getDescription();
         this.expression =  Nullsafe.require(descriptor.getExpression());
         this.visibility = descriptor.getVisibility();
-        this.expand = Immutable.sortedCopy(descriptor.getExpand());
+        this.expand = Immutable.sortedSet(descriptor.getExpand());
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
         if(type != null) {
             type.visit(new TypeValidator(qualifiedName));
         }
-        this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
+        this.extensions = Immutable.sortedMap(descriptor.getExtensions());
     }
 
     @Override
@@ -190,15 +195,9 @@ public class Transient implements Member {
     }
 
     @Override
-    public boolean canModify(final Member member, final Widening widening) {
+    public boolean requiresMigration(final Member member, final Widening widening) {
 
-        return true;
-    }
-
-    @Override
-    public boolean canCreate() {
-
-        return true;
+        return false;
     }
 
     @Override
@@ -297,7 +296,7 @@ public class Transient implements Member {
 
     public static SortedMap<String, Transient> extend(final Collection<? extends Resolver> base, final Map<String, Transient> ext) {
 
-        return Immutable.sortedCopy(Stream.concat(
+        return Immutable.sortedMap(Stream.concat(
                 base.stream().map(Resolver::getTransients),
                 Stream.of(ext)
         ).reduce(Transient::extend).orElse(Collections.emptyMap()));
@@ -315,7 +314,7 @@ public class Transient implements Member {
 
             default B setTransient(String name, Transient.Descriptor v) {
 
-                return setTransients(Immutable.copyPut(getTransients(), name, v));
+                return setTransients(Immutable.put(getTransients(), name, v));
             }
 
             B setTransients(Map<String, Transient.Descriptor> vs);

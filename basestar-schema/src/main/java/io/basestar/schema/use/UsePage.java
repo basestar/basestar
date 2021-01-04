@@ -2,6 +2,7 @@ package io.basestar.schema.use;
 
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Schema;
+import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Name;
 import io.basestar.util.Page;
 import io.leangen.geantyref.TypeFactory;
@@ -29,6 +30,11 @@ public class UsePage<T> implements UseCollection<T, Page<T>> {
     public static <T> UsePage<T> from(final Use<T> type) {
 
         return new UsePage<>(type);
+    }
+
+    public static UsePage<?> from(final Object config) {
+
+        return Use.fromNestedConfig(config, (type, nestedConfig) -> new UsePage<>(type));
     }
 
     @Override

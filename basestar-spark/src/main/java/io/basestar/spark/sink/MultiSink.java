@@ -17,7 +17,7 @@ public class MultiSink<T> implements Sink<T> {
 
     public MultiSink(final List<Sink<T>> sinks) {
 
-        this.sinks = Immutable.copy(sinks);
+        this.sinks = Immutable.list(sinks);
     }
 
     @Override

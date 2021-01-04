@@ -7,6 +7,7 @@ import com.google.common.collect.ImmutableSortedMap;
 import io.basestar.expression.Context;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.schema.use.*;
+import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 
@@ -179,7 +180,24 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
         }
     }
 
-    static Map<String, Object> deserialize(final DataInput in) throws IOException {
+    default void serialize(final Map<String, Object> object, final DataOutput out) throws IOException {
+
+        final Name schema = Instance.getSchema(object);
+        final String id = Instance.getId(object);
+        final Long version = Instance.getVersion(object);
+        final Instant created = Instance.getCreated(object);
+        final Instant updated = Instance.getUpdated(object);
+        final String hash = Instance.getHash(object);
+        UseString.DEFAULT.serialize(schema == null ? null : schema.toString(), out);
+        UseString.DEFAULT.serialize(id, out);
+        UseInteger.DEFAULT.serialize(version, out);
+        UseDateTime.DEFAULT.serialize(created, out);
+        UseDateTime.DEFAULT.serialize(updated, out);
+        UseString.DEFAULT.serialize(hash, out);
+        serializeProperties(object, out);
+    }
+
+    static Instance deserialize(final DataInput in) throws IOException {
 
         final String schema = Use.deserializeAny(in);
         final String id = Use.deserializeAny(in);
@@ -195,7 +213,7 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
         Instance.setCreated(data, created);
         Instance.setUpdated(data, updated);
         Instance.setHash(data, hash);
-        return data;
+        return new Instance(data);
     }
 
     static Instance ref(final String key) {
@@ -359,23 +377,6 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
                 .collect(Collectors.toSet()));
 
         return violations;
-    }
-
-    default void serialize(final Map<String, Object> object, final DataOutput out) throws IOException {
-
-        final Name schema = Instance.getSchema(object);
-        final String id = Instance.getId(object);
-        final Long version = Instance.getVersion(object);
-        final Instant created = Instance.getCreated(object);
-        final Instant updated = Instance.getUpdated(object);
-        final String hash = Instance.getHash(object);
-        UseString.DEFAULT.serialize(schema == null ? null : schema.toString(), out);
-        UseString.DEFAULT.serialize(id, out);
-        UseInteger.DEFAULT.serialize(version, out);
-        UseDateTime.DEFAULT.serialize(created, out);
-        UseDateTime.DEFAULT.serialize(updated, out);
-        UseString.DEFAULT.serialize(hash, out);
-        serializeProperties(object, out);
     }
 
     @Override

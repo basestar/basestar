@@ -1,0 +1,15 @@
+{
+  "templateName": "UnaryMatch.java.template",
+  "dataModel": {
+    "types": [
+      "Void",
+      "Boolean",
+      "Number",
+      "String",
+      "LocalDate",
+      "Instant",
+      "Collection<?>",
+      "Map<?, ?>"
+    ]
+  }
+}

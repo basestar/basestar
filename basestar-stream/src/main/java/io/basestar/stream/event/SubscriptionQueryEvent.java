@@ -20,25 +20,23 @@ package io.basestar.stream.event;
  * #L%
  */
 
-import io.basestar.database.event.ObjectEvent;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.common.collect.ImmutableMap;
 import io.basestar.event.Event;
+import io.basestar.schema.ObjectSchema;
 import io.basestar.stream.Change;
-import io.basestar.stream.Subscription;
 import io.basestar.util.Name;
 import io.basestar.util.Page;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
 import java.util.Map;
-import java.util.Set;
 
 @Data
 @Accessors(chain = true)
-public class SubscriptionQueryEvent implements ObjectEvent {
+public class SubscriptionQueryEvent implements Event {
 
     private Name schema;
-
-    private String id;
 
     private Change.Event event;
 
@@ -46,28 +44,35 @@ public class SubscriptionQueryEvent implements ObjectEvent {
 
     private Map<String, Object> after;
 
-    private Set<Subscription.Key> keys;
-
     private Page.Token paging;
 
-    public static SubscriptionQueryEvent of(final Name schema, final String id, final Change.Event event, final Map<String, Object> before, final Map<String, Object> after, final Set<Subscription.Key> keys) {
+    public static SubscriptionQueryEvent of(final Name schema, final Change.Event event, final Map<String, Object> before, final Map<String, Object> after) {
 
-        return of(schema, id, event, before, after, keys, null);
+        return of(schema, event, before, after, null);
     }
 
-    public static SubscriptionQueryEvent of(final Name schema, final String id, final Change.Event event, final Map<String, Object> before, final Map<String, Object> after, final Set<Subscription.Key> keys, final Page.Token paging) {
+    public static SubscriptionQueryEvent of(final Name schema, final Change.Event event, final Map<String, Object> before, final Map<String, Object> after, final Page.Token paging) {
 
-        return new SubscriptionQueryEvent().setSchema(schema).setId(id).setEvent(event).setBefore(before).setAfter(after).setKeys(keys).setPaging(paging);
+        return new SubscriptionQueryEvent().setSchema(schema).setEvent(event).setBefore(before).setAfter(after).setPaging(paging);
     }
 
     public SubscriptionQueryEvent withPaging(final Page.Token paging) {
 
-        return of(schema, id, event, before, after, keys, paging);
+        return of(schema, event, before, after, paging);
     }
 
     @Override
     public Event abbreviate() {
 
         return this;
+    }
+
+    @Override
+    @JsonIgnore
+    public Map<String, String> eventMetadata() {
+
+        return ImmutableMap.of(
+                ObjectSchema.SCHEMA, getSchema().toString()
+        );
     }
 }

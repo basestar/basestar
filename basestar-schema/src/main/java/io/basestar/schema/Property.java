@@ -33,9 +33,14 @@ import io.basestar.schema.exception.MissingPropertyException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.expression.InferenceContext;
-import io.basestar.schema.use.*;
+import io.basestar.schema.expression.TypedExpression;
+import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseInstance;
+import io.basestar.schema.use.UseScalar;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
+import io.basestar.schema.util.ValueContext;
+import io.basestar.schema.util.Widening;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -220,9 +225,9 @@ public class Property implements Member {
         this.defaultValue = (Serializable)Nullsafe.map(builder.getDefault(), type::create);
         this.immutable = Nullsafe.orDefault(builder.getImmutable());
         this.expression = builder.getExpression();
-        this.constraints = Immutable.copy(builder.getConstraints());
+        this.constraints = Immutable.list(builder.getConstraints());
         this.visibility = builder.getVisibility();
-        this.extensions = Immutable.sortedCopy(builder.getExtensions());
+        this.extensions = Immutable.sortedMap(builder.getExtensions());
     }
 
     private static Use<?> legacyFix(final Name qualifiedName, final Use<?> type, final Boolean required, final Version version) {
@@ -268,25 +273,21 @@ public class Property implements Member {
     }
 
     @Override
-    public boolean canModify(final Member member, final Widening widening) {
+    public boolean requiresMigration(final Member member, final Widening widening) {
 
         if(!(member instanceof Property)) {
-            return canCreate();
+            return expression == null;
         }
         final Property target = (Property)member;
         if(!Objects.equals(expression, target.getExpression())) {
-            return false;
+            return true;
         }
-        if(!widening.canWiden(type, target.typeOf())) {
-            return false;
-        }
-        return true;
+        return !widening.canWiden(type, target.typeOf());
     }
 
-    @Override
-    public boolean canCreate() {
+    public TypedExpression<?> getTypedExpression() {
 
-        return expression == null;
+        return expression == null ? null : TypedExpression.from(expression, type);
     }
 
     @Override
@@ -437,7 +438,7 @@ public class Property implements Member {
 
     public static SortedMap<String, Property> extend(final Collection<? extends Resolver> base, final Map<String, Property> ext) {
 
-        return Immutable.sortedCopy(Stream.concat(
+        return Immutable.sortedMap(Stream.concat(
                 base.stream().map(Resolver::getProperties),
                 Stream.of(ext)
         ).reduce(Property::extend).orElse(Collections.emptyMap()));
@@ -455,7 +456,7 @@ public class Property implements Member {
 
             default B setProperty(final String name, final Property.Descriptor v) {
 
-                return setProperties(Immutable.copyPut(getProperties(), name, v));
+                return setProperties(Immutable.put(getProperties(), name, v));
             }
 
             B setProperties(Map<String, Property.Descriptor> vs);

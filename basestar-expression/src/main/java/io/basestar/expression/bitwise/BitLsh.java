@@ -25,8 +25,8 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.arithmetic.Add;
-import io.basestar.expression.type.match.BinaryMatch;
-import io.basestar.expression.type.match.BinaryNumberMatch;
+import io.basestar.expression.match.BinaryMatch;
+import io.basestar.expression.match.BinaryNumberMatch;
 import lombok.Data;
 
 /**

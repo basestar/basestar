@@ -22,7 +22,8 @@ package io.basestar.expression;
 
 import com.google.common.hash.Hashing;
 import io.basestar.expression.parse.ExpressionCache;
-import io.basestar.expression.type.Values;
+import io.basestar.expression.type.Coercion;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 
 import java.io.Serializable;
@@ -46,7 +47,7 @@ public interface Expression extends Serializable {
 
     default boolean evaluatePredicate(final Context context) {
 
-        return Values.isTruthy(evaluate(context));
+        return Coercion.isTruthy(evaluate(context));
     }
 
     // FIXME: this should try to coerce to the target type
@@ -57,7 +58,12 @@ public interface Expression extends Serializable {
 
     default boolean isAggregate() {
 
-        return expressions().stream().anyMatch(Expression::isAggregate);
+        return false;
+    }
+
+    default boolean hasAggregates() {
+
+        return isAggregate() || expressions().stream().anyMatch(Expression::hasAggregates);
     }
 
     Set<Name> names();
@@ -66,8 +72,6 @@ public interface Expression extends Serializable {
 
     int precedence();
 
-    boolean isConstant(Set<String> closure);
-
     <T> T visit(ExpressionVisitor<T> visitor);
 
     default Set<String> closure() {
@@ -75,9 +79,16 @@ public interface Expression extends Serializable {
         return Collections.emptySet();
     }
 
+    boolean isConstant(Closure closure);
+
+    default boolean isConstant(final Set<String> closure) {
+
+        return isConstant(Closure.from(closure));
+    }
+
     default boolean isConstant() {
 
-        return isConstant(Collections.emptySet());
+        return isConstant(Closure.none());
     }
 
     static Expression parse(final String expr) {
@@ -104,5 +115,27 @@ public interface Expression extends Serializable {
     default String digest() {
 
         return Hashing.murmur3_32().hashString(toString(), StandardCharsets.UTF_8).toString();
+    }
+
+    interface Closure extends Serializable {
+
+        boolean has(String name);
+
+        static Closure none() {
+
+            return name -> false;
+        }
+
+        static Closure from(final Set<String> closure) {
+
+            final Set<String> copy = Immutable.set(closure);
+            return copy::contains;
+        }
+
+        default Closure with(final Set<String> closure) {
+
+            final Set<String> copy = Immutable.set(closure);
+            return name -> copy.contains(name) || Closure.this.has(name);
+        }
     }
 }

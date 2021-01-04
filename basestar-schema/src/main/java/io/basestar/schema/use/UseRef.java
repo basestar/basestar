@@ -26,10 +26,11 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.compare.Eq;
 import io.basestar.expression.constant.NameConstant;
-import io.basestar.expression.type.Values;
+import io.basestar.expression.type.Coercion;
 import io.basestar.schema.*;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
+import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Name;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -37,7 +38,10 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Object Type
@@ -81,7 +85,7 @@ public class UseRef implements UseLinkable {
 
         final boolean versioned;
         if(config instanceof Map) {
-            versioned = Values.isTruthy(((Map<?, ?>) config).get(VERSIONED_KEY));
+            versioned = Coercion.isTruthy(((Map<?, ?>) config).get(VERSIONED_KEY));
         } else {
             versioned = false;
         }
@@ -133,14 +137,7 @@ public class UseRef implements UseLinkable {
     @Override
     public void serializeValue(final Instance value, final DataOutput out) throws IOException {
 
-        final String id = Instance.getId(value);
-        UseString.DEFAULT.serializeValue(id, out);
-        if(versioned) {
-            final Long version = Instance.getVersion(value);
-            UseInteger.DEFAULT.serializeValue(version, out);
-        } else {
-            UseInteger.DEFAULT.serializeValue(0L, out);
-        }
+        schema.serialize(value, out);
     }
 
     @Override
@@ -151,14 +148,7 @@ public class UseRef implements UseLinkable {
 
     public static Instance deserializeAnyValue(final DataInput in) throws IOException {
 
-        final String id = UseString.DEFAULT.deserializeValue(in);
-        final long version = UseInteger.DEFAULT.deserializeValue(in);
-        final Map<String, Object> ref = new HashMap<>();
-        Instance.setId(ref, id);
-        if(version > 0) {
-            Instance.setVersion(ref, version);
-        }
-        return new Instance(ref);
+        return ReferableSchema.deserialize(in);
     }
 
     @Override
@@ -277,6 +267,22 @@ public class UseRef implements UseLinkable {
             } else {
                 return Collections.singletonMap(Ref.of(schema.getQualifiedName(), id), version);
             }
+        }
+    }
+
+    @Override
+    public Object[] key(final Instance value) {
+
+        if(value != null) {
+            final String id = Instance.getId(value);
+            if(isVersioned()) {
+                final Long version = Instance.getVersion(value);
+                return new Object[]{id, version};
+            } else {
+                return new Object[]{id};
+            }
+        } else {
+            return new Object[]{null};
         }
     }
 }

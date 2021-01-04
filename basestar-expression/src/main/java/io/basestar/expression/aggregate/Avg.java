@@ -30,8 +30,8 @@ import io.basestar.util.Name;
 import lombok.Data;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Data
@@ -51,11 +51,47 @@ public class Avg implements Aggregate {
     }
 
     @Override
-    public Object evaluate(final Context context, final Stream<? extends Map<String, Object>> values) {
+    public Object evaluate(final Stream<Context> contexts) {
 
-        return values.map(v -> input.evaluate(context.with(v)))
-                .map(Entry::from).reduce(Entry::sum).map(Entry::avg)
-                .orElse(null);
+        return contexts.map(input::evaluate)
+                .collect(Collectors.averagingDouble(value -> ((Number)value).doubleValue()));
+    }
+
+    @Override
+    public Object append(final Object value, final Object add) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Object remove(final Object value, final Object sub) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isAppendable() {
+
+        return false;
+    }
+
+    @Override
+    public boolean isRemovable() {
+
+        return false;
+    }
+
+    @Override
+    public List<Aggregate> components() {
+
+        return ImmutableList.of(new Sum(input), new Count());
+    }
+
+    @Override
+    public Object fromComponents(final Object... values) {
+
+        assert values.length == 2;
+        return ((Number)values[0]).doubleValue() / ((Number)values[1]).longValue();
     }
 
     @Override
@@ -91,29 +127,6 @@ public class Avg implements Aggregate {
     public Aggregate copy(final List<Expression> expressions) {
 
         return new Avg(expressions.get(0));
-    }
-
-    @Data
-    private static class Entry {
-
-        private final double value;
-
-        private final int count;
-
-        public static Entry from(final Object value) {
-
-            return new Entry(((Number)value).doubleValue(), 1);
-        }
-
-        public static Entry sum(final Entry a, final Entry b) {
-
-            return new Entry(a.value + b.value, a.count + b.count);
-        }
-
-        public double avg() {
-
-            return value / count;
-        }
     }
 
     @Override

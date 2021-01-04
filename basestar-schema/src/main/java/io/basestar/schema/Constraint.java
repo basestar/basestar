@@ -82,7 +82,7 @@ public class Constraint implements Serializable {
 
         this.validator = validator;
         this.message = message;
-        this.when = Immutable.copy(when);
+        this.when = Immutable.list(when);
     }
 
     public List<Violation> violations(final Use<?> type, final Context context, final Name name, final Object value) {

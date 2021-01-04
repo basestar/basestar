@@ -25,6 +25,7 @@ import io.basestar.codegen.Codebehind;
 import io.basestar.codegen.CodegenContext;
 import io.basestar.schema.*;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -82,5 +83,13 @@ public abstract class InstanceSchemaModel extends SchemaModel {
         } else {
             return null;
         }
+    }
+
+    @Override
+    public List<AnnotationModel<?>> getAnnotations() {
+
+        final List<AnnotationModel<?>> annotations = new ArrayList<>(super.getAnnotations());
+        annotations.add(new AnnotationModel<>(getContext(), VALID));
+        return annotations;
     }
 }

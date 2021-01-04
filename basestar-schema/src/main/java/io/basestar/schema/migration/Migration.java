@@ -23,22 +23,60 @@ package io.basestar.schema.migration;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.LinkableSchema;
-import io.basestar.schema.Reserved;
+import io.basestar.schema.Loadable;
 import io.basestar.schema.use.Use;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import lombok.Data;
 
-import java.io.Serializable;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
 @Data
-public class Migration implements Serializable {
+public class Migration implements Loadable {
 
-    private Map<String, Expression> properties;
+    private final Map<String, Expression> properties;
 
-    private Expression operation;
+    private final Expression operation;
+
+    @Data
+    public static class Builder implements Loadable.Descriptor {
+
+        private Map<String, Expression> properties;
+
+        private Expression operation;
+
+        @Override
+        public Object jsonValue() {
+
+            return this;
+        }
+
+        public Migration build() {
+
+            return new Migration(properties, operation);
+        }
+
+        public static Builder load(final URL url) throws IOException {
+
+            return YAML_MAPPER.readValue(url, Builder.class);
+        }
+
+        public static Builder load(final InputStream is) throws IOException {
+
+            return YAML_MAPPER.readValue(is, Builder.class);
+        }
+    }
+
+    public Migration(final Map<String, Expression> properties, final Expression operation) {
+
+        this.properties = Immutable.map(properties);
+        this.operation = operation;
+    }
 
     public Map<String, Object> migrate(final LinkableSchema schema, final Map<String, Object> source) {
 
@@ -50,19 +88,15 @@ public class Migration implements Serializable {
         schema.getProperties().forEach((k, v) -> {
             result.put(k, property(k, v.typeOf(), branches.get(k), source));
         });
-        final String operation = operation(source);
-        if("delete".equalsIgnoreCase(operation)) {
-            result.put(Reserved.DELETED, true);
-        }
         return result;
     }
 
-    private String operation(final Map<String, Object> source) {
+    public Operation operation(final Map<String, Object> source) {
 
         if(operation == null) {
-            return "upsert";
+            return Operation.UPSERT;
         } else {
-            return operation.evaluateAs(String.class, Context.init(source));
+            return Operation.parse(operation.evaluateAs(String.class, Context.init(source)));
         }
     }
 
@@ -77,5 +111,15 @@ public class Migration implements Serializable {
             value = source.get(key);
         }
         return type.create(value, expand,true);
+    }
+
+    public static Migration load(final URL url) throws IOException {
+
+        return Builder.load(url).build();
+    }
+
+    public static Migration load(final InputStream is) throws IOException {
+
+        return Builder.load(is).build();
     }
 }

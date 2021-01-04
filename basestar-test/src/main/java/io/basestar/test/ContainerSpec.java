@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import lombok.Data;
+import lombok.Generated;
 import lombok.experimental.Accessors;
 
 import java.util.ArrayList;
@@ -32,6 +33,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 @Data
+@Generated
 public class ContainerSpec {
 
     private final String image;

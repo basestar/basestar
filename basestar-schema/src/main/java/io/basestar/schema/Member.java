@@ -29,9 +29,9 @@ import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.expression.InferenceVisitor;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseAny;
-import io.basestar.schema.use.ValueContext;
-import io.basestar.schema.use.Widening;
 import io.basestar.schema.util.Expander;
+import io.basestar.schema.util.ValueContext;
+import io.basestar.schema.util.Widening;
 import io.basestar.util.Name;
 import io.basestar.util.Warnings;
 
@@ -47,9 +47,7 @@ public interface Member extends Named, Described, Serializable, Extendable {
 
     boolean supportsTrivialJoin(Set<Name> expand);
 
-    boolean canModify(Member member, Widening widening);
-
-    boolean canCreate();
+    boolean requiresMigration(Member member, Widening widening);
 
     interface Descriptor extends Described, Extendable {
 
@@ -120,6 +118,12 @@ public interface Member extends Named, Described, Serializable, Extendable {
     Set<Name> requiredExpand(Set<Name> names);
 
     <T> Use<T> typeOf(Name name);
+
+    @SuppressWarnings("unchecked")
+    default String toString(Object value) {
+
+        return ((Use<Object>)typeOf()).toString(value);
+    }
 
     Type javaType(Name name);
 

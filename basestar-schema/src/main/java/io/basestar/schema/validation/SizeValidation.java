@@ -9,8 +9,10 @@ import io.basestar.type.AnnotationContext;
 import io.basestar.util.Nullsafe;
 import lombok.Data;
 
+import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.Size;
 import java.lang.annotation.Annotation;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -35,7 +37,9 @@ public class SizeValidation implements Validation {
     public Optional<Validation.Validator> fromJsr380(final Use<?> type, final Annotation annotation) {
 
         final Class<? extends Annotation> annotationType = annotation.annotationType();
-        if(Size.class.isAssignableFrom(annotationType)) {
+        if(NotEmpty.class.isAssignableFrom(annotationType)) {
+            return Optional.of(new Validator(1, null));
+        } else if(Size.class.isAssignableFrom(annotationType)) {
             return Optional.of(fromJsr380((Size)annotation));
         } else {
             return Optional.empty();
@@ -99,7 +103,17 @@ public class SizeValidation implements Validation {
         @Override
         public boolean validate(final Use<?> type, final Context context, final Object value) {
 
-            return true;
+            final int size;
+            if(value instanceof String) {
+                size = ((String) value).length();
+            } else if(value instanceof Collection) {
+                size = ((Collection<?>) value).size();
+            } else if(value instanceof Map) {
+                size = ((Map<?, ?>) value).size();
+            } else {
+                return false;
+            }
+            return size >= min && size <= max;
         }
 
         @Override

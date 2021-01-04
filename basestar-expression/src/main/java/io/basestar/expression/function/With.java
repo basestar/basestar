@@ -20,7 +20,6 @@ package io.basestar.expression.function;
  * #L%
  */
 
-import com.google.common.collect.Sets;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
@@ -112,9 +111,9 @@ public class With implements Expression {
     }
 
     @Override
-    public boolean isConstant(final Set<String> closure) {
+    public boolean isConstant(final Closure closure) {
 
-        return yield.isConstant(Sets.union(closure, with.keySet()));
+        return yield.isConstant(closure.with(with.keySet()));
     }
 
     @Override

@@ -32,7 +32,6 @@ import io.basestar.util.Name;
 import lombok.Data;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -53,9 +52,37 @@ public class Min implements Aggregate {
     }
 
     @Override
-    public Object evaluate(final Context context, final Stream<? extends Map<String, Object>> values) {
+    public Object evaluate(final Stream<Context> contexts) {
 
-        return Ordering.from(Values::compare).min(values.map(v -> input.evaluate(context.with(v))).iterator());
+        return Ordering.from(Values::compare).min(contexts.map(input::evaluate).iterator());
+    }
+
+    @Override
+    public Object append(final Object value, final Object add) {
+
+        if(Values.compare(value, add) < 0) {
+            return add;
+        } else {
+            return value;
+        }
+    }
+
+    @Override
+    public Object remove(final Object value, final Object sub) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isAppendable() {
+
+        return true;
+    }
+
+    @Override
+    public boolean isRemovable() {
+
+        return false;
     }
 
     @Override

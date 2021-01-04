@@ -38,6 +38,16 @@ public class Numbers {
 
     private static final Double DOUBLE_ZERO = 0D;
 
+    public static boolean isInteger(final Number value) {
+
+        return !isFloat(value);
+    }
+
+    public static boolean isFloat(final Number value) {
+
+        return value instanceof Float || value instanceof Double || value instanceof BigDecimal;
+    }
+
     public static boolean isBooleanType(final Class<?> cls) {
 
         return Boolean.class.isAssignableFrom(cls) || boolean.class.isAssignableFrom(cls);

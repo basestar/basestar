@@ -9,4 +9,10 @@ public interface UseStringLike<T> extends UseScalar<T> {
 
         return Objects.equals(a, b);
     }
+
+    @Override
+    default boolean isStringLike() {
+
+        return true;
+    }
 }

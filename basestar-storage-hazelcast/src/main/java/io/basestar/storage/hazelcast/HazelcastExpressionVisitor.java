@@ -30,7 +30,7 @@ import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
-import io.basestar.expression.type.Values;
+import io.basestar.expression.type.Coercion;
 
 // FIXME more predicates can be implemented
 public class HazelcastExpressionVisitor<K, V> implements ExpressionVisitor.Defaulting<Predicate<K, V>> {
@@ -132,7 +132,7 @@ public class HazelcastExpressionVisitor<K, V> implements ExpressionVisitor.Defau
     @SuppressWarnings("unchecked")
     public Predicate<K, V> visitConstant(final Constant expression) {
 
-        return Values.isTruthy(expression.getValue()) ? TruePredicate.INSTANCE : FalsePredicate.INSTANCE;
+        return Coercion.isTruthy(expression.getValue()) ? TruePredicate.INSTANCE : FalsePredicate.INSTANCE;
     }
 
 

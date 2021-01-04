@@ -10,7 +10,7 @@ import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.expression.InferenceContext;
-import io.basestar.schema.use.ValueContext;
+import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -258,13 +258,13 @@ public class InterfaceSchema implements ReferableSchema {
         this.links = Link.extend(extend, declaredLinks);
         this.declaredIndexes = Immutable.transformValuesSorted(descriptor.getIndexes(), (k, v) -> v.build(this, qualifiedName.with(k)));
         this.indexes = Index.extend(extend, declaredIndexes);
-        this.constraints = Immutable.copy(descriptor.getConstraints());
+        this.constraints = Immutable.list(descriptor.getConstraints());
         this.declaredPermissions = Immutable.transformValuesSorted(descriptor.getPermissions(), (k, v) -> v.build(k));
         this.permissions = Permission.extend(extend, declaredPermissions);
-        this.declaredExpand = Immutable.sortedCopy(descriptor.getExpand());
+        this.declaredExpand = Immutable.sortedSet(descriptor.getExpand());
         this.expand = LinkableSchema.extendExpand(extend, declaredExpand);
-        this.declaredBucketing = Immutable.copy(descriptor.getBucket());
-        this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
+        this.declaredBucketing = Immutable.list(descriptor.getBucket());
+        this.extensions = Immutable.sortedMap(descriptor.getExtensions());
         if (Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
@@ -387,5 +387,11 @@ public class InterfaceSchema implements ReferableSchema {
         } else {
             return resolvedSchema.evaluateTransients(context, object, expand);
         }
+    }
+
+    @Override
+    public String toString() {
+
+        return getQualifiedName().toString();
     }
 }

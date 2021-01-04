@@ -26,12 +26,18 @@ import io.basestar.event.Handler;
 import io.basestar.expression.Expression;
 import io.basestar.util.Name;
 
+import java.util.EnumSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 public interface Hub extends Handler<Event> {
 
-    CompletableFuture<?> subscribe(Caller caller, String sub, String channel, String schema, Expression expression, Set<Name> expand, SubscriptionInfo info);
+    default CompletableFuture<?> subscribe(final Caller caller, final String sub, final String channel, final Name schema, final Expression expression, final SubscriptionMetadata info) {
+
+        return subscribe(caller, sub, channel, schema, EnumSet.allOf(Change.Event.class), expression, info);
+    }
+
+    CompletableFuture<?> subscribe(Caller caller, String sub, String channel, Name schema, Set<Change.Event> events, Expression expression, SubscriptionMetadata info);
 
     CompletableFuture<?> unsubscribe(Caller caller, String sub, String channel);
 

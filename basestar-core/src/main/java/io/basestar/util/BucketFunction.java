@@ -30,10 +30,9 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-@SuppressWarnings("UnstableApiUsage")
+@SuppressWarnings("all")
 public enum BucketFunction implements Serializable {
 
-    @SuppressWarnings("all")
     MD5(Hashing.md5()),
     MURMER3_32(Hashing.murmur3_32()),
     ADLER_32(Hashing.adler32());

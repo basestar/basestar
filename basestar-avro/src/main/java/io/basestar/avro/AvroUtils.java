@@ -298,7 +298,7 @@ public class AvroUtils {
             @Override
             public Object visitBinary(final UseBinary type) {
 
-                return ByteBuffer.wrap(type.create(value));
+                return Nullsafe.map(type.create(value), v -> ByteBuffer.wrap(v.getBytes()));
             }
         });
     }
@@ -391,11 +391,7 @@ public class AvroUtils {
             @Override
             public Object visitBinary(final UseBinary type) {
 
-                if(value instanceof ByteBuffer) {
-                    return ((ByteBuffer) value).array();
-                } else {
-                    return type.create(value);
-                }
+                return type.create(value);
             }
         });
     }

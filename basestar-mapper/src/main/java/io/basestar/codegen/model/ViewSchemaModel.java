@@ -22,17 +22,15 @@ package io.basestar.codegen.model;
 
 import com.google.common.collect.ImmutableList;
 import io.basestar.codegen.CodegenContext;
-import io.basestar.mapper.annotation.Description;
 import io.basestar.mapper.annotation.Group;
 import io.basestar.mapper.annotation.Where;
 import io.basestar.schema.ViewSchema;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @SuppressWarnings("unused")
-public class ViewSchemaModel extends InstanceSchemaModel {
+public class ViewSchemaModel extends LinkableSchemaModel {
 
     private final ViewSchema schema;
 
@@ -52,7 +50,7 @@ public class ViewSchemaModel extends InstanceSchemaModel {
     public List<AnnotationModel<?>> getAnnotations() {
 
         final ImmutableList.Builder<AnnotationModel<?>> annotations = ImmutableList.builder();
-        annotations.add(new AnnotationModel<>(getContext(), VALID));
+        annotations.addAll(super.getAnnotations());
         annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.ViewSchema.Declaration.annotation(schema)));
         annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.From.Modifier.annotation(schema.getFrom())));
         if(!schema.getGroup().isEmpty()) {
@@ -61,9 +59,6 @@ public class ViewSchemaModel extends InstanceSchemaModel {
         if(schema.getWhere() != null) {
             annotations.add(new AnnotationModel<>(getContext(), Where.Modifier.annotation(schema.getWhere())));
         }
-        if(schema.getDescription() != null) {
-            annotations.add(new AnnotationModel<>(getContext(), Description.Modifier.annotation(schema.getDescription())));
-        }
         return annotations.build();
     }
 
@@ -71,12 +66,5 @@ public class ViewSchemaModel extends InstanceSchemaModel {
     public List<InstanceSchemaModel> getExtend() {
 
         return Collections.emptyList();
-    }
-
-    @Override
-    public List<MemberModel> getAdditionalMembers() {
-
-        return schema.getDeclaredLinks().values().stream()
-                .map(v -> new LinkModel(getContext(), v)).collect(Collectors.toList());
     }
 }

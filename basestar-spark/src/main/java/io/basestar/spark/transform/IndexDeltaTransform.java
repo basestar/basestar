@@ -53,7 +53,7 @@ public class IndexDeltaTransform implements Transform<Dataset<Tuple2<Row, Row>>,
             final Stream<Row> upsert = Stream.of(diff.getCreate(), diff.getUpdate())
                     .flatMap(source -> source.entrySet().stream())
                     .map(entry -> {
-                        final Map<String, Object> data = Immutable.copyPut(entry.getValue(), Reserved.DELETED, false);
+                        final Map<String, Object> data = Immutable.put(entry.getValue(), Reserved.DELETED, false);
                         return SparkSchemaUtils.toSpark(schema, index, extraMetadata, structType, entry.getKey().binary(), data);
                     });
 

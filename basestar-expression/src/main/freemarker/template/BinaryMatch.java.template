@@ -1,0 +1,165 @@
+package io.basestar.expression.match;
+
+/*-
+ * #%L
+ * basestar-expression
+ * %%
+ * Copyright (C) 2019 - 2020 Basestar.IO
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+
+import io.basestar.expression.type.Coercion;
+import io.basestar.expression.exception.BadOperandsException;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.Collection;
+import java.util.Map;
+
+import lombok.Generated;
+
+
+/**
+ * Order is:
+ *
+ * void (null)
+ * boolean
+ * number
+ * string
+ * localdate
+ * instant
+ * collection
+ * map
+ *
+ * @param <T>
+ */
+
+@Generated
+public interface BinaryMatch<T> {
+
+    Void NULL = null;
+
+    default T defaultApply(final Object lhs, final Object rhs) {
+
+        throw new BadOperandsException(this + " cannot be applied to " + Coercion.className(lhs) + " and " + Coercion.className(rhs));
+    }
+
+    default <U> T defaultApplySame(final U lhs, final U rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
+<#list types as t1>
+<#list types as t2>
+    default T apply(final ${t1} lhs, final ${t2} rhs) {
+
+<#if t1==t2>
+        return defaultApplySame(lhs, rhs);
+<#else>
+        return defaultApply(lhs, rhs);
+</#if>
+    }
+
+</#list>
+</#list>
+<#list types as t1>
+    default T apply(final ${t1} lhs, final Object rhs) {
+
+        if (rhs == null) {
+            return apply(lhs, NULL);
+<#list types as t2>
+<#if t2 != "Void">
+        } else if (rhs instanceof ${t2}) {
+            return apply(lhs, (${t2}) rhs);
+</#if>
+</#list>
+        } else {
+            return defaultApply(lhs, rhs);
+        }
+    }
+
+</#list>
+    default T apply(final Object lhs, final Object rhs) {
+
+        if (lhs == null) {
+            return apply(NULL, rhs);
+<#list types as t1>
+<#if t1 != "Void">
+        } else if (lhs instanceof ${t1}) {
+            return apply((${t1})lhs, rhs);
+</#if>
+</#list>
+        } else {
+            return defaultApply(lhs, rhs);
+        }
+    }
+
+    interface Promoting<T> extends BinaryMatch<T> {
+
+        default Number toNumber(final Boolean v) {
+
+            return Boolean.TRUE.equals(v) ? 1 : 0;
+        }
+
+        @Override
+        default T apply(final Boolean lhs, final Number rhs) {
+
+            return apply(toNumber(lhs), rhs);
+        }
+
+        @Override
+        default T apply(final Number lhs, final Boolean rhs) {
+
+            return apply(lhs, toNumber(rhs));
+        }
+    }
+
+    interface Coercing<T> extends Promoting<T> {
+
+        default String toString(final Boolean v) {
+
+            return v.toString();
+        }
+
+        default String toString(final Number v) {
+
+            return v.toString();
+        }
+
+        @Override
+        default T apply(final Boolean lhs, final String rhs) {
+
+            return apply(toString(lhs), rhs);
+        }
+
+        @Override
+        default T apply(final String lhs, final Boolean rhs) {
+
+            return apply(lhs, toString(rhs));
+        }
+
+        @Override
+        default T apply(final String lhs, final Number rhs) {
+
+            return apply(lhs, toString(rhs));
+        }
+
+        @Override
+        default T apply(final Number lhs, final String rhs) {
+
+            return apply(toString(lhs), rhs);
+        }
+    }
+}

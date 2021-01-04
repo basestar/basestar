@@ -1,0 +1,6 @@
+properties:
+  '@merge':
+    - './properties'
+    - 'z.yml'
+  d:
+    type: integer

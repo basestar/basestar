@@ -49,8 +49,6 @@ import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.function.In;
 import io.basestar.expression.function.With;
 import io.basestar.expression.function.*;
-import io.basestar.expression.iterate.Of;
-import io.basestar.expression.iterate.Where;
 import io.basestar.expression.iterate.*;
 import io.basestar.expression.literal.LiteralArray;
 import io.basestar.expression.literal.LiteralObject;
@@ -62,6 +60,7 @@ import io.basestar.expression.parse.ExpressionParser.*;
 import io.basestar.expression.text.ILike;
 import io.basestar.expression.text.SLike;
 import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
 import io.basestar.util.Text;
 import lombok.RequiredArgsConstructor;
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -120,6 +119,18 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
 
     @Override
     public Expression visitName(final NameContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitWhere(final WhereContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitOf(final OfContext ctx) {
 
         throw new UnsupportedOperationException();
     }
@@ -189,24 +200,24 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
         return visit(ctx.expr());
     }
 
-    @Override
-    public Expression visitExprOf(final ExprOfContext ctx) {
+    protected ContextIterator iterator(final OfContext ctx) {
 
         final List<String> as = ctx.name().stream().map(RuleContext::getText).collect(Collectors.toList());
         final Expression with = visit(ctx.expr());
+        final Expression where = Nullsafe.map(ctx.where(), w -> visit(w.expr()));
+        final ContextIterator iter;
         if(as.size() == 1) {
-            return new Of(as.get(0), with);
+            iter = new ContextIterator.OfValue(as.get(0), with);
         } else if(as.size() == 2) {
-            return new Of(as.get(0), as.get(1), with);
+            iter = new ContextIterator.OfKeyValue(as.get(0), as.get(1), with);
         } else {
             throw new UnsupportedOperationException();
         }
-    }
-
-    @Override
-    public Expression visitExprWhere(final ExprWhereContext ctx) {
-
-        return new Where(visit(ctx.expr(0)), visit(ctx.expr(1)));
+        if(where != null) {
+            return  new ContextIterator.Where(iter, where);
+        } else {
+            return iter;
+        }
     }
 
     @Override
@@ -214,41 +225,41 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
 
         final Expression yieldKey = visit(ctx.expr(0));
         final Expression yieldValue = visit(ctx.expr(1));
-        final Expression with = visit(ctx.expr(2));
-        return new ForObject(yieldKey, yieldValue, with);
+        final ContextIterator of = iterator(ctx.of());
+        return new ForObject(yieldKey, yieldValue, of);
     }
 
     @Override
     public Expression visitExprForArray(final ExprForArrayContext ctx) {
 
-        final Expression yield = visit(ctx.expr(0));
-        final Expression with = visit(ctx.expr(1));
-        return new ForArray(yield, with);
+        final Expression yield = visit(ctx.expr());
+        final ContextIterator of = iterator(ctx.of());
+        return new ForArray(yield, of);
     }
 
     @Override
     public Expression visitExprForSet(final ExprForSetContext ctx) {
 
-        final Expression yield = visit(ctx.expr(0));
-        final Expression with = visit(ctx.expr(1));
-        return new ForSet(yield, with);
+        final Expression yield = visit(ctx.expr());
+        final ContextIterator of = iterator(ctx.of());
+        return new ForSet(yield, of);
     }
 
 
     @Override
     public Expression visitExprForAll(final ExprForAllContext ctx) {
 
-        final Expression yield = visit(ctx.expr(0));
-        final Expression with = visit(ctx.expr(1));
-        return new ForAll(yield, with);
+        final Expression yield = visit(ctx.expr());
+        final ContextIterator of = iterator(ctx.of());
+        return new ForAll(yield, of);
     }
 
     @Override
     public Expression visitExprForAny(final ExprForAnyContext ctx) {
 
-        final Expression yield = visit(ctx.expr(0));
-        final Expression with = visit(ctx.expr(1));
-        return new ForAny(yield, with);
+        final Expression yield = visit(ctx.expr());
+        final ContextIterator of = iterator(ctx.of());
+        return new ForAny(yield, of);
     }
 
     @Override

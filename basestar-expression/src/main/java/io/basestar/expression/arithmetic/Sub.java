@@ -24,8 +24,8 @@ import io.basestar.expression.Binary;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
-import io.basestar.expression.type.match.BinaryMatch;
-import io.basestar.expression.type.match.BinaryNumberMatch;
+import io.basestar.expression.match.BinaryMatch;
+import io.basestar.expression.match.BinaryNumberMatch;
 import lombok.Data;
 
 /**
@@ -65,7 +65,12 @@ public class Sub implements Binary {
     @Override
     public Number evaluate(final Context context) {
 
-        return VISITOR.apply(lhs.evaluate(context), rhs.evaluate(context));
+        return apply(lhs.evaluate(context), rhs.evaluate(context));
+    }
+
+    public static Number apply(final Object lhs, final Object rhs) {
+
+        return VISITOR.apply(lhs, rhs);
     }
 
     @Override

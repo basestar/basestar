@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.secret.Secret;
+import io.basestar.util.Bytes;
 import io.basestar.util.CompletableFutures;
 import io.basestar.util.ISO8601;
 import lombok.extern.slf4j.Slf4j;
@@ -76,8 +77,8 @@ public class DynamoDBUtils {
             } else {
                 return s(str);
             }
-        } else if(value instanceof byte[]) {
-            final byte[] bytes = (byte[])value;
+        } else if(value instanceof Bytes) {
+            final byte[] bytes = ((Bytes)value).getBytes();
             if(bytes.length == 0) {
                 return EMPTY_BINARY_ATTRIBUTE_VALUE;
             } else {

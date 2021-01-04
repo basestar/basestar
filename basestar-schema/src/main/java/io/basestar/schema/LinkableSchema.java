@@ -62,7 +62,7 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver, Permissio
 
     static SortedSet<Name> extendExpand(final List<? extends InstanceSchema> base, final Set<Name> extend) {
 
-        return Immutable.sortedCopy(Stream.concat(
+        return Immutable.sortedSet(Stream.concat(
                 base.stream().flatMap(schema -> schema.getExpand().stream()),
                 Nullsafe.orDefault(extend).stream()
         ).collect(Collectors.toSet()));

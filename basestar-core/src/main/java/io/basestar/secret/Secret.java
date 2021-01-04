@@ -2,12 +2,14 @@ package io.basestar.secret;
 
 
 import com.google.common.io.BaseEncoding;
+import io.basestar.util.Bytes;
 import io.basestar.util.Warnings;
 
+import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
-public interface Secret {
+public interface Secret extends Serializable {
 
     static Secret.Encrypted encrypted(final byte[] encrypted) {
 
@@ -21,7 +23,7 @@ public interface Secret {
 
     static Secret.Plaintext plaintext(final String plaintext) {
 
-        return new Secret.Plaintext(plaintext.getBytes(StandardCharsets.UTF_8));
+        return plaintext(plaintext.getBytes(StandardCharsets.UTF_8));
     }
 
     static Secret.Plaintext plaintext(final byte[] plaintext) {
@@ -36,7 +38,7 @@ public interface Secret {
         return BaseEncoding.base64().encode(encrypted());
     }
 
-    class Encrypted implements Secret {
+    class Encrypted implements Secret, Comparable<Encrypted> {
 
         @SuppressWarnings(Warnings.FIELD_NAMED_AS_CLASS)
         private final byte[] encrypted;
@@ -54,7 +56,7 @@ public interface Secret {
         @Override
         public int hashCode() {
 
-            return super.hashCode();
+            return Arrays.hashCode(encrypted);
         }
 
         @Override
@@ -69,9 +71,15 @@ public interface Secret {
 
             return "<redacted>";
         }
+
+        @Override
+        public int compareTo(final Encrypted o) {
+
+            return Bytes.compare(encrypted, o.encrypted);
+        }
     }
 
-    class Plaintext implements Secret {
+    class Plaintext implements Secret, Comparable<Plaintext> {
 
         @SuppressWarnings(Warnings.FIELD_NAMED_AS_CLASS)
         private final byte[] plaintext;
@@ -89,7 +97,7 @@ public interface Secret {
         @Override
         public int hashCode() {
 
-            return super.hashCode();
+            return Arrays.hashCode(plaintext);
         }
 
         @Override
@@ -114,6 +122,12 @@ public interface Secret {
         public String plaintextString() {
 
             return new String(plaintext, StandardCharsets.UTF_8);
+        }
+
+        @Override
+        public int compareTo(final Plaintext o) {
+
+            return Bytes.compare(plaintext, o.plaintext);
         }
     }
 }

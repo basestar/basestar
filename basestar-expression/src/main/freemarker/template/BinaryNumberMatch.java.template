@@ -1,0 +1,88 @@
+package io.basestar.expression.match;
+
+/*-
+ * #%L
+ * basestar-expression
+ * %%
+ * Copyright (C) 2019 - 2020 Basestar.IO
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+
+import io.basestar.expression.type.Numbers;
+import io.basestar.expression.exception.BadOperandsException;
+
+import lombok.Generated;
+
+@Generated
+public interface BinaryNumberMatch<T> {
+
+    default T defaultApply(final Number lhs, final Number rhs) {
+
+        throw new BadOperandsException(this + " cannot be applied to " + lhs.getClass() + " and " + rhs.getClass());
+    }
+
+    default <U extends Number> T defaultApplySame(final U lhs, final U rhs) {
+
+        return defaultApply(lhs, rhs);
+    }
+
+<#list types as t1>
+<#list types as t2>
+    default T apply(final ${t1} lhs, final ${t2} rhs) {
+
+<#if t1==t2>
+        return defaultApplySame(lhs, rhs);
+<#else>
+        return defaultApply(lhs, rhs);
+</#if>
+    }
+
+</#list>
+</#list>
+<#list types as t1>
+    default T apply(final ${t1} lhs, final Number rhs) {
+
+        if (Numbers.isInteger(rhs)) {
+            return apply(lhs, rhs.longValue());
+        } else {
+            return apply(lhs, rhs.doubleValue());
+        }
+    }
+
+</#list>
+    default T apply(final Number lhs, final Number rhs) {
+
+        if (Numbers.isInteger(lhs)) {
+            return apply(lhs.longValue(), rhs);
+        } else {
+            return apply(lhs.doubleValue(), rhs);
+        }
+    }
+
+    interface Promoting<T> extends BinaryNumberMatch<T> {
+
+        @Override
+        default T apply(final Long lhs, final Double rhs) {
+
+            return apply(lhs.doubleValue(), rhs);
+        }
+
+        @Override
+        default T apply(final Double lhs, final Long rhs) {
+
+            return apply(lhs, rhs.doubleValue());
+        }
+    }
+}

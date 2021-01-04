@@ -32,7 +32,7 @@ import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
-import io.basestar.schema.use.Widening;
+import io.basestar.schema.util.Widening;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -340,14 +340,14 @@ public class ObjectSchema implements ReferableSchema {
         this.links = Link.extend(extend, declaredLinks);
         this.declaredIndexes = Immutable.transformValuesSorted(descriptor.getIndexes(), (k, v) -> v.build(this, qualifiedName.with(k)));
         this.indexes = Index.extend(extend, declaredIndexes);
-        this.constraints = Immutable.copy(descriptor.getConstraints());
+        this.constraints = Immutable.list(descriptor.getConstraints());
         this.declaredPermissions = Immutable.transformValuesSorted(descriptor.getPermissions(), (k, v) -> v.build(k));
         this.permissions = Permission.extend(extend, declaredPermissions);
-        this.declaredExpand = Immutable.sortedCopy(descriptor.getExpand());
+        this.declaredExpand = Immutable.sortedSet(descriptor.getExpand());
         this.expand = LinkableSchema.extendExpand(extend, declaredExpand);
-        this.declaredBucketing = Immutable.copy(descriptor.getBucket());
+        this.declaredBucketing = Immutable.list(descriptor.getBucket());
         this.readonly = Nullsafe.orDefault(descriptor.getReadonly());
-        this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
+        this.extensions = Immutable.sortedMap(descriptor.getExtensions());
         if (Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
@@ -400,40 +400,42 @@ public class ObjectSchema implements ReferableSchema {
         return qualifiedNameHashCode();
     }
 
-    public boolean canModify(final Schema<?> schema, final Widening widening) {
+    public boolean requiresMigration(final Schema<?> schema, final Widening widening) {
 
         if(!(schema instanceof ObjectSchema)) {
-            return false;
+            return true;
         }
         final ObjectSchema target = (ObjectSchema)schema;
         if(!Objects.equals(getId(), target.getId())) {
-            return false;
+            return true;
         }
         if(!Sets.difference(target.getExpand(), getExpand()).isEmpty()) {
-            return false;
+            return true;
         }
         for(final Map.Entry<String, ? extends Member> entry : target.getMembers().entrySet()) {
             final Member targetMember = entry.getValue();
             final Member sourceMember = getProperty(entry.getKey(), true);
-            if(sourceMember != null) {
-                if(!sourceMember.canModify(targetMember, widening)) {
-                    return false;
-                }
-            } else if(!targetMember.canCreate()) {
-                return false;
+            if(sourceMember.requiresMigration(targetMember, widening)) {
+                return true;
             }
         }
         for(final Map.Entry<String, Index> entry : target.getIndexes().entrySet()) {
             final Index targetIndex = entry.getValue();
             final Index sourceIndex = getIndex(entry.getKey(), true);
             if(sourceIndex != null) {
-                if(!sourceIndex.canModify(targetIndex)) {
-                    return false;
+                if(sourceIndex.requiresMigration(targetIndex)) {
+                    return true;
                 }
             } else {
-                return false;
+                return true;
             }
         }
-        return true;
+        return false;
+    }
+
+    @Override
+    public String toString() {
+
+        return getQualifiedName().toString();
     }
 }

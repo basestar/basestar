@@ -9,4 +9,10 @@ public interface UseNumeric<T extends Number> extends UseScalar<T> {
 
         return Objects.equals(a, b);
     }
+
+    @Override
+    default boolean isNumeric() {
+
+        return true;
+    }
 }

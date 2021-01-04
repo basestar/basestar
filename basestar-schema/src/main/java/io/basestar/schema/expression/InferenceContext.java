@@ -17,7 +17,7 @@ public interface InferenceContext {
     Use<?> typeOf(Name name);
 
     @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
-    default Use<?> typeOf(Expression expression) {
+    default Use<?> typeOf(final Expression expression) {
 
         return new InferenceVisitor(this).visit(expression);
     }
@@ -59,6 +59,12 @@ public interface InferenceContext {
                 return InferenceContext.this.typeOf(name);
             }
         };
+    }
+
+    @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
+    default TypedExpression<?> typed(final Expression expr) {
+
+        return TypedExpression.from(expr, typeOf(expr));
     }
 
     class FromLayout implements InferenceContext {

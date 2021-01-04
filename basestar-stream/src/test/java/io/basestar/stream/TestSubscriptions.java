@@ -1,17 +1,18 @@
 package io.basestar.stream;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableMap;
 import io.basestar.auth.Caller;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.schema.LinkableSchema;
+import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.Reserved;
-import io.basestar.schema.use.UseBinary;
-import io.basestar.util.Name;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -22,35 +23,40 @@ abstract class TestSubscriptions {
     protected abstract Subscriptions subscriber();
 
     @Test
-    void testSubscriber() {
+    void testSubscriber() throws IOException {
+
+        final Namespace namespace = Namespace.load(TestSubscriptions.class.getResource("/schema/Petstore.yml"));
+
+        final ObjectSchema schema = namespace.requireObjectSchema("Cat");
 
         final Subscriptions subscriptions = subscriber();
 
-        final Set<Subscription.Key> keys = ImmutableSet.of(new Subscription.Key(Name.of("Test"), Reserved.PREFIX + ObjectSchema.ID, UseBinary.binaryKey(ImmutableList.of("id"))));
-        final SubscriptionInfo info = new TestSubscriptionInfo();
+        final SubscriptionMetadata info = new TestSubscriptionMetadata();
 
         final Expression expression = Expression.parseAndBind(Context.init(), "id == 'x'");
 
         final Caller caller1 = Caller.builder().setSuper(true).build();
         final Caller caller2 = Caller.builder().setSuper(true).build();
 
-        subscriptions.subscribe(caller1, "sub", "channel1", keys, expression, info).join();
-        subscriptions.subscribe(caller2, "sub", "channel2", keys, expression, info).join();
+        final Set<Change.Event> changes = EnumSet.allOf(Change.Event.class);
 
-        final List<Subscription> results = query(subscriptions, keys);
+        subscriptions.subscribe(caller1, "sub", "channel1", schema, changes, expression, info).join();
+        subscriptions.subscribe(caller2, "sub", "channel2", schema, changes, expression, info).join();
+
+        final List<Subscription> results = query(subscriptions, schema, Change.Event.CREATE, null, ImmutableMap.of("id", "x"));
         assertEquals(2, results.size());
-        assertTrue(results.contains(new Subscription("sub", "channel1", caller1, expression, info)));
-        assertTrue(results.contains(new Subscription("sub", "channel2", caller2, expression, info)));
+        assertTrue(results.contains(new Subscription("sub", "channel1", caller1, schema.getQualifiedName(), changes, expression, info)));
+        assertTrue(results.contains(new Subscription("sub", "channel2", caller2, schema.getQualifiedName(), changes, expression, info)));
 
         subscriptions.unsubscribe("sub", "channel1").join();
-        assertEquals(1, query(subscriptions, keys).size());
+        assertEquals(1, query(subscriptions, schema, Change.Event.CREATE, null, ImmutableMap.of("id", "x")).size());
 
         subscriptions.unsubscribeAll("sub").join();
-        assertEquals(0, query(subscriptions, keys).size());
+        assertEquals(0, query(subscriptions, schema, Change.Event.CREATE, null, ImmutableMap.of("id", "x")).size());
     }
 
-    private List<Subscription> query(final Subscriptions subscriptions, final Set<Subscription.Key> keys) {
+    private List<Subscription> query(final Subscriptions subscriptions, final LinkableSchema schema, final Change.Event event, final Map<String, Object> before, final Map<String, Object> after) {
 
-        return subscriptions.query(keys).page(10).join();
+        return subscriptions.query(schema, event, before, after).page(10).join();
     }
 }

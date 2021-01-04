@@ -9,13 +9,13 @@ import io.basestar.expression.constant.Constant;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Layout;
 import io.basestar.schema.LinkableSchema;
-import io.basestar.schema.use.Use;
+import io.basestar.schema.expression.TypedExpression;
 import io.basestar.spark.combiner.Combiner;
 import io.basestar.spark.source.Source;
 import io.basestar.spark.transform.*;
-import io.basestar.storage.view.QueryPlanner;
-import io.basestar.storage.view.QueryStage;
-import io.basestar.storage.view.QueryStageVisitor;
+import io.basestar.storage.query.QueryPlanner;
+import io.basestar.storage.query.QueryStageVisitor;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Sort;
@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public interface QueryResolver {
 
@@ -109,7 +110,7 @@ public interface QueryResolver {
         }
     }
 
-    class Automatic extends QueryPlanner.Default<Stage> implements QueryResolver, QueryStageVisitor<Stage> {
+    class Automatic extends QueryPlanner.AggregateSplitting<Stage> implements QueryResolver, QueryStageVisitor<Stage> {
 
         private final QueryResolver resolver;
 
@@ -119,15 +120,21 @@ public interface QueryResolver {
         }
 
         @Override
+        protected boolean sortBeforeExpand(final LinkableSchema schema, final List<Sort> sort) {
+
+            return false;
+        }
+
+        @Override
         public Query<Row> resolve(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
             return plan(this, schema, query, sort, expand);
         }
 
         @Override
-        public Stage aggregate(final Stage input, final List<String> group, final Map<String, Aggregate> aggregates, final Map<String, Use<?>> output) {
+        public Stage agg(final Stage input, final List<String> group, final Map<String, TypedExpression<?>> expressions) {
 
-            return input.aggregate(group, aggregates, output);
+            return input.aggregate(group, expressions);
         }
 
         @Override
@@ -149,9 +156,9 @@ public interface QueryResolver {
         }
 
         @Override
-        public Stage map(final Stage input, final Map<String, Expression> expressions, final Map<String, Use<?>> output) {
+        public Stage map(final Stage input, final Map<String, TypedExpression<?>> expressions) {
 
-            return input.map(expressions, output);
+            return input.map(expressions);
         }
 
         @Override
@@ -173,7 +180,7 @@ public interface QueryResolver {
         }
 
         @Override
-        public Stage schema(final Stage input, final InstanceSchema schema) {
+        public Stage conform(final Stage input, final InstanceSchema schema) {
 
             return input.schema(schema);
         }
@@ -216,14 +223,11 @@ public interface QueryResolver {
         }
     }
 
-    interface Stage extends Query<Row>, QueryStage {
+    interface Stage extends Query<Row> {
+
+        Layout getLayout();
 
         static Stage from(final Query<Row> query, final Layout layout) {
-
-            return from(query, layout, Constant.TRUE, ImmutableList.of());
-        }
-
-        static Stage from(final Query<Row> query, final Layout layout, final Expression filter, final List<Sort> sort) {
 
             return new Stage() {
 
@@ -233,39 +237,16 @@ public interface QueryResolver {
                     return query.dataset();
                 }
 
-                @Override
                 public Layout getLayout() {
 
                     return layout;
-                }
-
-                @Override
-                public Expression getFilter() {
-
-                    return filter;
-                }
-
-                @Override
-                public List<Sort> getSort() {
-
-                    return sort;
                 }
             };
         }
 
         default Stage then(final Transform<Dataset<Row>, Dataset<Row>> transform, final Layout layout) {
 
-            return then(transform, layout, getFilter());
-        }
-
-        default Stage then(final Transform<Dataset<Row>, Dataset<Row>> transform, final Layout layout, final Expression filter) {
-
-            return then(transform, layout, filter, getSort());
-        }
-
-        default Stage then(final Transform<Dataset<Row>, Dataset<Row>> transform, final Layout layout, final Expression filter, final List<Sort> sort) {
-
-            return from(Query.super.then(transform), layout, filter, sort);
+            return from(Query.super.then(transform), layout);
         }
 
         static Stage source(final QueryResolver resolver, final LinkableSchema schema) {
@@ -279,10 +260,20 @@ public interface QueryResolver {
             return from(resolver.resolve(schema, Constant.FALSE, ImmutableList.of(), expand), output);
         }
 
-        default Stage aggregate(final List<String> group, final Map<String, Aggregate> aggregates, final Map<String, Use<?>> output) {
+        default Stage aggregate(final List<String> group, final Map<String, TypedExpression<?>> expressions) {
 
             final Layout inputLayout = getLayout();
-            final Layout outputLayout = Layout.simple(output);
+            final Layout outputLayout = Layout.simple(Immutable.transformValues(expressions, (k, v) -> v.getType()));
+
+            final Map<String, Aggregate> aggregates = expressions.entrySet().stream()
+                    .filter(e -> {
+                        if(e.getValue().getExpression().isAggregate()) {
+                            return true;
+                        } else {
+                            assert group.contains(e.getKey());
+                            return false;
+                        }
+                    }).collect(Collectors.toMap(Map.Entry::getKey, e -> (Aggregate)e.getValue().getExpression()));
 
             return then(AggregateTransform.builder()
                             .group(group)
@@ -307,18 +298,19 @@ public interface QueryResolver {
 
             return then(PredicateTransform.builder()
                             .inputLayout(inputLayout)
-                            .predicate(condition).build(), inputLayout, condition);
+                            .predicate(condition).build(), inputLayout);
         }
 
-        default Stage map(final Map<String, Expression> expressions, final Map<String, Use<?>> output) {
+        default Stage map(final Map<String, TypedExpression<?>> expressions) {
 
             final Layout inputLayout = getLayout();
-            final Layout outputLayout = Layout.simple(output);
+            final Layout outputLayout = Layout.simple(Immutable.transformValues(expressions, (k, v) -> v.getType()));
 
             return then(ExpressionTransform.builder()
                             .inputLayout(inputLayout)
                             .outputLayout(outputLayout)
-                            .expressions(expressions).build(), outputLayout);
+                            .expressions(Immutable.transformValues(expressions, (k, v) -> v.getExpression())).build(),
+                    outputLayout);
         }
 
         default Stage sort(final List<Sort> sort) {
@@ -326,7 +318,7 @@ public interface QueryResolver {
             final Layout inputLayout = getLayout();
 
             return then(SortTransform.<Row>builder()
-                            .sort(sort).build(), inputLayout, getFilter(), sort);
+                            .sort(sort).build(), inputLayout);
         }
 
         default Stage schema(final InstanceSchema schema) {

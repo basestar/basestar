@@ -1,5 +1,9 @@
 Address:
   properties:
+    name:
+      type: string?
+    company:
+      type: string?
     country:
       type: string?
     state:
@@ -8,6 +12,10 @@ Address:
       type: string?
     zip:
       type: string?
+    lat:
+      type: number
+    lon:
+      type: number
   indexes:
     Country:
       sparse: true
@@ -204,3 +212,65 @@ Secret:
   properties:
     secret:
       type: secret
+
+
+ViewBase:
+  type: object
+  properties:
+    name:
+      type: string
+    status:
+      type: string
+
+
+AddressStats:
+  type: view
+  materialized: false
+  group:
+    - country
+    - state
+  properties:
+    country: country
+    state: state
+    count: count()
+    hasZip: count(zip != null)
+    lon: avg(lon)
+    lat: avg(lat)
+    bound: "[min(lat), min(lon), max(lat), max(lon)]"
+  from:
+    schema: Address
+
+USAddressStats:
+  type: view
+  materialized: false
+  group:
+    - state
+  properties:
+    state: state
+    count: count()
+  from:
+    schema: Address
+  where: country == 'United States'
+
+AddressDisplayStats:
+  type: view
+  materialized: false
+  group:
+    - state
+  properties:
+    result: state + count(zip != null)
+  from:
+    schema: Address
+  where: country == 'United States'
+
+GBAddresses:
+  type: view
+  materialized: false
+  properties:
+    country: country
+    state: state
+    city: city
+    zip: zip
+  from:
+    schema: Address
+  where: country == 'United Kingdom'

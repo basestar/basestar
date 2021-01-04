@@ -25,8 +25,8 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.Unary;
 import io.basestar.expression.function.Index;
-import io.basestar.expression.type.match.UnaryMatch;
-import io.basestar.expression.type.match.UnaryNumberMatch;
+import io.basestar.expression.match.UnaryMatch;
+import io.basestar.expression.match.UnaryNumberMatch;
 import lombok.Data;
 
 /**
@@ -63,7 +63,12 @@ public class Negate implements Unary {
     @Override
     public Number evaluate(final Context context) {
 
-        return VISITOR.apply(operand.evaluate(context));
+        return apply(operand.evaluate(context));
+    }
+
+    public static Number apply(final Object value) {
+
+        return VISITOR.apply(value);
     }
 
     @Override

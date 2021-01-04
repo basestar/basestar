@@ -168,7 +168,7 @@ public interface TypeMapper extends Serializable {
         @Override
         public Object marshall(final Object value) {
 
-            final Long v = Coercion.toLong(value);
+            final Long v = Coercion.toInteger(value);
             return Numbers.coerce(v, erasedType);
         }
 
@@ -205,7 +205,7 @@ public interface TypeMapper extends Serializable {
         @Override
         public Object marshall(final Object value) {
 
-            final Double v = Coercion.toDouble(value);
+            final Double v = Coercion.toFloat(value);
             return Numbers.coerce(v, erasedType);
         }
 
@@ -273,7 +273,7 @@ public interface TypeMapper extends Serializable {
         @Override
         public Object unmarshall(final Object value) {
 
-            return UseArray.create(value, false, this.value::unmarshall);
+            return Coercion.toList(value, this.value::unmarshall);
         }
 
         @Override
@@ -312,7 +312,7 @@ public interface TypeMapper extends Serializable {
         @Override
         public Object unmarshall(final Object value) {
 
-            return UseSet.create(value, false, this.value::unmarshall);
+            return Coercion.toSet(value, this.value::unmarshall);
         }
 
         @Override
@@ -351,7 +351,7 @@ public interface TypeMapper extends Serializable {
         @Override
         public Object unmarshall(final Object value) {
 
-            return UseMap.create(value,false, (k, v) -> this.value.unmarshall(v));
+            return Coercion.toMap(value, Object::toString, this.value::unmarshall);
         }
 
         @Override

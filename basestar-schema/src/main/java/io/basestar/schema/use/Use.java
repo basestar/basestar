@@ -27,12 +27,15 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.type.Numbers;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.Schema;
+import io.basestar.schema.exception.InvalidKeyException;
 import io.basestar.schema.exception.TypeSyntaxException;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
+import io.basestar.schema.util.ValueContext;
 import io.basestar.secret.Secret;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
+import io.basestar.util.Page;
 import io.basestar.util.Warnings;
 import io.leangen.geantyref.GenericTypeReflector;
 
@@ -85,6 +88,16 @@ public interface Use<T> extends Serializable {
     default T cast(final Object o, final Class<T> as) {
 
         return as.cast(o);
+    }
+
+    default boolean isNumeric() {
+
+        return false;
+    }
+
+    default boolean isStringLike() {
+
+        return true;
     }
 
     Use<?> resolve(Schema.Resolver resolver);
@@ -159,6 +172,11 @@ public interface Use<T> extends Serializable {
 
     void collectDependencies(Set<Name> expand, Map<Name, Schema<?>> out);
 
+    default Object[] key(final T value) {
+
+        throw new InvalidKeyException(this);
+    }
+
     default boolean isOptional() {
 
         return false;
@@ -227,6 +245,10 @@ public interface Use<T> extends Serializable {
             return UseDate.DEFAULT;
         } else if(Instant.class.isAssignableFrom(erased)) {
             return UseDateTime.DEFAULT;
+        } else if(Page.class.isAssignableFrom(erased)) {
+            final TypeVariable<? extends Class<?>> var = Page.class.getTypeParameters()[0];
+            final Type arg = Nullsafe.orDefault(GenericTypeReflector.getTypeParameter(type, var), Object.class);
+            return UsePage.from(arg);
         } else if(List.class.isAssignableFrom(erased)) {
             final TypeVariable<? extends Class<?>> var = List.class.getTypeParameters()[0];
             final Type arg = Nullsafe.orDefault(GenericTypeReflector.getTypeParameter(type, var), Object.class);
@@ -241,6 +263,8 @@ public interface Use<T> extends Serializable {
             return UseMap.from(arg);
         } else if(Secret.class.isAssignableFrom(erased)) {
             return UseSecret.DEFAULT;
+        } else if(byte[].class.isAssignableFrom(erased)) {
+            return UseBinary.DEFAULT;
         } else {
             return UseAny.DEFAULT;
         }
@@ -594,7 +618,7 @@ public interface Use<T> extends Serializable {
         } else if(a instanceof UseArray && b instanceof UseArray) {
             return UseArray.from(commonBase(((UseArray<?>) a).getType(), ((UseArray<?>) b).getType()));
         } else if(a instanceof UseSet && b instanceof UseSet) {
-            return UseArray.from(commonBase(((UseSet<?>) a).getType(), ((UseSet<?>) b).getType()));
+            return UseSet.from(commonBase(((UseSet<?>) a).getType(), ((UseSet<?>) b).getType()));
         } else if(a instanceof UseMap && b instanceof UseMap) {
             return UseMap.from(commonBase(((UseMap<?>) a).getType(), ((UseMap<?>) b).getType()));
         } else if(a instanceof UseEnum && b instanceof UseEnum) {
@@ -613,10 +637,12 @@ public interface Use<T> extends Serializable {
             if(((UseView) a).getName().equals(((UseView) b).getName())) {
                 return a;
             }
-        } else if(a instanceof UseDate && b instanceof UseDate) {
-            return UseDate.DEFAULT;
-        } else if(a instanceof UseDateTime && b instanceof UseDateTime) {
-            return UseDateTime.DEFAULT;
+        } else if((a instanceof UseDate || a instanceof UseDateTime) && (b instanceof UseDate || b instanceof UseDateTime)) {
+            if(a instanceof UseDateTime || b instanceof UseDateTime) {
+                return UseDateTime.DEFAULT;
+            } else {
+                return UseDate.DEFAULT;
+            }
         } else if(a instanceof UseBinary && b instanceof UseBinary) {
             return UseBinary.DEFAULT;
         } else if(a instanceof UseOptional<?> && b instanceof UseOptional<?>) {

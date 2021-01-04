@@ -39,11 +39,8 @@ import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseBinary;
 import io.basestar.schema.use.UseView;
-import io.basestar.schema.use.ValueContext;
-import io.basestar.util.Immutable;
-import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
-import io.basestar.util.Sort;
+import io.basestar.schema.util.ValueContext;
+import io.basestar.util.*;
 import lombok.Data;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -56,7 +53,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Getter
 public class ViewSchema implements LinkableSchema {
@@ -256,7 +252,7 @@ public class ViewSchema implements LinkableSchema {
 
         public ViewSchema.Builder addGroup(final String name) {
 
-            group = Immutable.copyAdd(group, name);
+            group = Immutable.add(group, name);
             return this;
         }
     }
@@ -328,18 +324,18 @@ public class ViewSchema implements LinkableSchema {
             throw new SchemaValidationException(qualifiedName, "View must specify from.schema");
         }
         this.from = new From(resolver.requireLinkableSchema(from.getSchema()), Nullsafe.orDefault(from.getExpand()));
-        this.sort = Immutable.copy(descriptor.getSort());
+        this.sort = Immutable.list(descriptor.getSort());
         this.description = descriptor.getDescription();
-        this.group = Immutable.copy(descriptor.getGroup());
+        this.group = Immutable.list(descriptor.getGroup());
         this.where = descriptor.getWhere();
         final InferenceContext context = InferenceContext.from(this.from.getSchema());
         this.declaredProperties = Immutable.transformValuesSorted(descriptor.getProperties(),
                 (k, v) -> v.build(resolver, context, version, qualifiedName.with(k)));
         this.declaredLinks = Immutable.transformValuesSorted(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
         this.declaredPermissions = Immutable.transformValuesSorted(descriptor.getPermissions(), (k, v) -> v.build(k));
-        this.declaredBucketing = Immutable.copy(descriptor.getBucket());
-        this.declaredExpand = Immutable.sortedCopy(descriptor.getExpand());
-        this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
+        this.declaredBucketing = Immutable.list(descriptor.getBucket());
+        this.declaredExpand = Immutable.sortedSet(descriptor.getExpand());
+        this.extensions = Immutable.sortedMap(descriptor.getExtensions());
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName.toString());
         }
@@ -366,8 +362,11 @@ public class ViewSchema implements LinkableSchema {
         if(isAggregating() || isGrouping()) {
             result.computeIfAbsent(ID, k -> {
                 final List<Object> values = new ArrayList<>();
-                group.forEach(name -> values.add(result.get(name)));
-                return UseBinary.binaryKey(values);
+                group.forEach(name -> {
+                    final Object[] keys = typeOf(Name.of(name)).key(result.get(name));
+                    values.addAll(Arrays.asList(keys));
+                });
+                return BinaryKey.from(values);
             });
         }
         if(expand != null && !expand.isEmpty()) {
@@ -383,12 +382,16 @@ public class ViewSchema implements LinkableSchema {
 
     public void serialize(final Map<String, Object> object, final DataOutput out) throws IOException {
 
+        UseBinary.DEFAULT.serialize((Bytes)object.get(ID), out);
         serializeProperties(object, out);
     }
 
     public static Instance deserialize(final DataInput in) throws IOException {
 
-        return new Instance(InstanceSchema.deserializeProperties(in));
+        final Bytes id = Nullsafe.require(Use.deserializeAny(in));
+        final Map<String, Object> data = new HashMap<>(InstanceSchema.deserializeProperties(in));
+        data.put(ID, id);
+        return new Instance(data);
     }
 
     @Override
@@ -401,18 +404,6 @@ public class ViewSchema implements LinkableSchema {
     public Map<String, Property> getProperties() {
 
         return declaredProperties;
-    }
-
-    public Map<String, Property> getSelectProperties() {
-
-        return declaredProperties.entrySet().stream().filter(e -> !group.contains(e.getKey()))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
-
-    public Map<String, Property> getGroupProperties() {
-
-        return declaredProperties.entrySet().stream().filter(e -> group.contains(e.getKey()))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
     
     @Override
@@ -434,6 +425,7 @@ public class ViewSchema implements LinkableSchema {
 
         return new UseView(this);
     }
+
 
     @Override
     public String id() {
@@ -497,7 +489,7 @@ public class ViewSchema implements LinkableSchema {
 
         if(!out.containsKey(qualifiedName)) {
             out.put(qualifiedName, this);
-            from.getSchema().collectDependencies(expand, out);
+            from.getSchema().collectDependencies(from.getExpand(), out);
             declaredProperties.forEach((k, v) -> v.collectDependencies(expand, out));
             declaredLinks.forEach((k, v) -> v.collectDependencies(expand, out));
         }
@@ -578,5 +570,11 @@ public class ViewSchema implements LinkableSchema {
             }
         }
         return false;
+    }
+
+    @Override
+    public String toString() {
+
+        return getQualifiedName().toString();
     }
 }

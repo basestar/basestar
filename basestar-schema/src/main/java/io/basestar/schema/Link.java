@@ -35,9 +35,9 @@ import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UsePage;
-import io.basestar.schema.use.ValueContext;
-import io.basestar.schema.use.Widening;
 import io.basestar.schema.util.Expander;
+import io.basestar.schema.util.ValueContext;
+import io.basestar.schema.util.Widening;
 import io.basestar.util.*;
 import io.leangen.geantyref.TypeFactory;
 import lombok.Data;
@@ -179,9 +179,9 @@ public class Link implements Member {
         this.schema = resolver.requireLinkableSchema(descriptor.getSchema());
         this.expression = Nullsafe.require(descriptor.getExpression());
         this.single = Nullsafe.orDefault(descriptor.getSingle());
-        this.sort = Immutable.copy(descriptor.getSort());
+        this.sort = Immutable.list(descriptor.getSort());
         this.visibility = descriptor.getVisibility();
-        this.extensions = Immutable.sortedCopy(descriptor.getExtensions());
+        this.extensions = Immutable.sortedMap(descriptor.getExtensions());
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
@@ -194,15 +194,9 @@ public class Link implements Member {
     }
 
     @Override
-    public boolean canModify(final Member member, final Widening widening) {
+    public boolean requiresMigration(final Member member, final Widening widening) {
 
-        return true;
-    }
-
-    @Override
-    public boolean canCreate() {
-
-        return true;
+        return false;
     }
 
     @Override
@@ -218,10 +212,10 @@ public class Link implements Member {
     @Override
     public Type javaType(final Name name) {
 
-        if(single) {
+        if(single || !name.isEmpty()) {
             return schema.javaType(name);
         } else {
-            return TypeFactory.parameterizedClass(List.class, schema.javaType(name));
+            return TypeFactory.parameterizedClass(Page.class, schema.javaType(Name.of()));
         }
     }
 
@@ -397,7 +391,7 @@ public class Link implements Member {
 
     public static SortedMap<String, Link> extend(final Collection<? extends Resolver> base, final Map<String, Link> ext) {
 
-        return Immutable.sortedCopy(Stream.concat(
+        return Immutable.sortedMap(Stream.concat(
                 base.stream().map(Resolver::getLinks),
                 Stream.of(ext)
         ).reduce(Link::extend).orElse(Collections.emptyMap()));
@@ -415,7 +409,7 @@ public class Link implements Member {
 
             default B setLink(final String name, final Link.Descriptor v) {
 
-                return setLinks(Immutable.copyPut(getLinks(), name, v));
+                return setLinks(Immutable.put(getLinks(), name, v));
             }
 
             B setLinks(Map<String, Link.Descriptor> vs);

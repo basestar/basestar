@@ -21,14 +21,11 @@ package io.basestar.schema.use;
  */
 
 import io.basestar.expression.Context;
-import io.basestar.schema.Instance;
-import io.basestar.schema.InstanceSchema;
-import io.basestar.schema.Schema;
+import io.basestar.schema.*;
 import io.basestar.util.Name;
 
 import java.lang.reflect.Type;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 
 public interface UseInstance extends UseNamed<Instance> {
@@ -38,6 +35,17 @@ public interface UseInstance extends UseNamed<Instance> {
     default Name getName() {
 
         return getSchema().getQualifiedName();
+    }
+
+    static UseInstance from(final InstanceSchema schema, final Object config) {
+
+        if(schema instanceof LinkableSchema) {
+            return UseLinkable.from((LinkableSchema)schema, config);
+        } else if(schema instanceof StructSchema) {
+            return UseStruct.from((StructSchema)schema, config);
+        } else {
+            throw new UnsupportedOperationException();
+        }
     }
 
     @Override
@@ -53,11 +61,7 @@ public interface UseInstance extends UseNamed<Instance> {
     @Override
     default Type javaType(final Name name) {
 
-        if(name.isEmpty()) {
-            return Object.class;
-        } else {
-            return getSchema().javaType(name);
-        }
+        return getSchema().javaType(name);
     }
 
     @Override
@@ -90,7 +94,6 @@ public interface UseInstance extends UseNamed<Instance> {
     default void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
         final Schema<?> schema = getSchema();
-        // FIXME:?
         if(expand == null || expand.isEmpty()) {
             out.put(schema.getQualifiedName(), schema);
         } else {
@@ -101,7 +104,7 @@ public interface UseInstance extends UseNamed<Instance> {
     @Override
     default String toString(final Instance value) {
 
-        return Objects.toString(value);
+        return getSchema().toString(value);
     }
 
     @Override

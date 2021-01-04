@@ -20,15 +20,16 @@ package io.basestar.storage.elasticsearch;
  * #L%
  */
 
-import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
 import io.basestar.storage.*;
 import io.basestar.storage.elasticsearch.mapping.Mappings;
 import io.basestar.storage.elasticsearch.mapping.Settings;
+import io.basestar.storage.elasticsearch.query.ESQueryStage;
+import io.basestar.storage.elasticsearch.query.ESQueryStageVisitor;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
-import io.basestar.storage.util.KeysetPagingUtils;
+import io.basestar.storage.query.QueryPlanner;
 import io.basestar.util.*;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -43,19 +44,13 @@ import org.elasticsearch.action.get.MultiGetItemResponse;
 import org.elasticsearch.action.get.MultiGetRequest;
 import org.elasticsearch.action.get.MultiGetResponse;
 import org.elasticsearch.action.index.IndexRequest;
-import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.support.WriteRequest;
 import org.elasticsearch.client.HttpAsyncResponseConsumerFactory;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.search.SearchHit;
-import org.elasticsearch.search.builder.SearchSourceBuilder;
-import org.elasticsearch.search.sort.SortOrder;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -117,118 +112,35 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
         }
     }
 
-//    @Override
-//    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
-//
-//        final String index = strategy.objectIndex(schema);
-//        return getIndex(index, schema).thenCompose(ignored -> {
-//            final GetRequest request = new GetRequest(index, id);
-//            return ElasticsearchUtils.<GetResponse>future(listener -> client.getAsync(request, OPTIONS, listener))
-//                    .thenApply(v -> fromResponse(schema, v));
-//        });
-//    }
-//
-//    @Override
-//    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
-//
-//        if (!strategy.historyEnabled(schema)) {
-//            throw new UnsupportedOperationException("History not enabled");
-//        }
-//        final String index = strategy.historyIndex(schema);
-//        return getIndex(index, schema).thenCompose(ignored -> {
-//            final String key = historyKey(id, version);
-//            final GetRequest request = new GetRequest(index, key);
-//            return ElasticsearchUtils.<GetResponse>future(listener -> client.getAsync(request, OPTIONS, listener))
-//                    .thenApply(v -> fromResponse(schema, v));
-//        });
-//    }
+    @Override
+    public Pager<Map<String, Object>> query(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        final QueryPlanner<ESQueryStage> planner = new QueryPlanner.Default<>();
+        final ESQueryStage stage = planner.plan(new ESQueryStageVisitor(strategy), schema, query, sort, expand);
+
+        return (stats, token, count) -> stage.request(stats, token, count)
+                .map(request -> {
+                    log.debug("Search request is {}", request);
+                    return ElasticsearchUtils.<SearchResponse>future(listener -> client.searchAsync(request, OPTIONS, listener))
+                            .thenApply(response -> {
+                                log.debug("Search response is {}", response);
+                                return stage.page(stats, token, count, response)
+                                        .map(v -> (Map<String, Object>)schema.create(v, expand, true));
+                            });
+
+                }).orElse(CompletableFuture.completedFuture(Page.empty()));
+    }
 
     @Override
     public Pager<Map<String, Object>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        final Expression bound = query.bind(Context.init());
-        final String index = strategy.objectIndex(schema);
-
-        final List<Sort> normalizedSort = KeysetPagingUtils.normalizeSort(schema, sort);
-
-        return (stats, token, count) -> getIndex(index, schema).thenCompose(ignored -> {
-
-            final QueryBuilder queryBuilder = bound.visit(new ElasticsearchExpressionVisitor());
-
-            final QueryBuilder pagedQueryBuilder;
-            if (token == null) {
-                pagedQueryBuilder = queryBuilder;
-            } else if (queryBuilder == null) {
-                pagedQueryBuilder = pagingQueryBuilder(schema, normalizedSort, token);
-            } else {
-                pagedQueryBuilder = QueryBuilders.boolQuery()
-                        .must(queryBuilder)
-                        .must(pagingQueryBuilder(schema, normalizedSort, token));
-            }
-
-            final SearchRequest request = new SearchRequest(index)
-                    .source(applySort(new SearchSourceBuilder()
-                            .query(pagedQueryBuilder), normalizedSort)
-                            .size(count)
-                            .trackTotalHits(true));
-
-            return ElasticsearchUtils.<SearchResponse>future(listener -> client.searchAsync(request, OPTIONS, listener))
-                    .thenApply(searchResponse -> {
-
-                        final List<Map<String, Object>> results = new ArrayList<>();
-                        Map<String, Object> last = null;
-                        for (final SearchHit hit : searchResponse.getHits()) {
-                            last = fromHit(schema, hit);
-                            results.add(last);
-                        }
-                        final long total = searchResponse.getHits().getTotalHits().value;
-                        final Page.Token newPaging;
-                        if (total > results.size() && last != null) {
-                            newPaging = KeysetPagingUtils.keysetPagingToken(schema, normalizedSort, last);
-                        } else {
-                            newPaging = null;
-                        }
-                        return new Page<>(results, newPaging, Page.Stats.fromTotal(total));
-                    });
-        });
+        return query(schema, query, sort, expand);
     }
 
-    private QueryBuilder pagingQueryBuilder(final ObjectSchema schema, final List<Sort> sort, final Page.Token token) {
+    @Override
+    public Pager<Map<String, Object>> queryView(final ViewSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        final List<Object> values = KeysetPagingUtils.keysetValues(schema, sort, token);
-        final BoolQueryBuilder outer = QueryBuilders.boolQuery();
-        for(int i = 0; i < sort.size(); ++i) {
-            if(i == 0) {
-                outer.should(pagingRange(sort.get(i), values.get(i)));
-            } else {
-                final BoolQueryBuilder inner = QueryBuilders.boolQuery();
-                for (int j = 0; j < i; ++j) {
-                    final Name name = sort.get(j).getName();
-                    inner.must(QueryBuilders.termQuery(name.toString(), values.get(j)));
-                }
-                inner.must(pagingRange(sort.get(i), values.get(i)));
-                outer.should(inner);
-            }
-        }
-        return outer;
-    }
-
-    private QueryBuilder pagingRange(final Sort sort, final Object value) {
-
-        final String name = sort.getName().toString();
-        if(sort.getOrder() == Sort.Order.ASC) {
-            return QueryBuilders.rangeQuery(name).gt(value);
-        } else {
-            return QueryBuilders.rangeQuery(name).lt(value);
-        }
-    }
-
-    private SearchSourceBuilder applySort(final SearchSourceBuilder builder, final List<Sort> sort) {
-
-        for (final Sort s : sort) {
-            builder.sort(s.getName().toString(), s.getOrder() == Sort.Order.ASC ? SortOrder.ASC : SortOrder.DESC);
-        }
-        return builder;
+        return query(schema, query, sort, expand);
     }
 
     @Override
@@ -301,6 +213,7 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
     private CompletableFuture<?> getIndex(final String name, final ObjectSchema schema) {
 
         if (!createdIndices.contains(name)) {
+            createdIndices.add(name);
             return syncIndex(name, schema);
         } else {
             return CompletableFuture.completedFuture(null);
@@ -312,6 +225,7 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
         final List<CompletableFuture<?>> createIndexFutures = new ArrayList<>();
         for (final Map.Entry<String, ReferableSchema> entry : indices.entrySet()) {
             if (!createdIndices.contains(entry.getKey())) {
+                createdIndices.add(entry.getKey());
                 createIndexFutures.add(ElasticsearchStorage.this.syncIndex(entry.getKey(), entry.getValue()));
             }
         }

@@ -24,7 +24,7 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
         this.schema = schema;
         this.resolver = resolver;
-        this.expand = Immutable.copy(expand);
+        this.expand = Immutable.set(expand);
     }
 
     @Override

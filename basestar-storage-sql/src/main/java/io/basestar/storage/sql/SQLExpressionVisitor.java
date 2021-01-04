@@ -32,13 +32,13 @@ import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.function.Coalesce;
 import io.basestar.expression.function.IfElse;
 import io.basestar.expression.function.In;
+import io.basestar.expression.iterate.ContextIterator;
 import io.basestar.expression.iterate.ForAny;
-import io.basestar.expression.iterate.Of;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
 import io.basestar.expression.text.Like;
-import io.basestar.expression.type.Values;
+import io.basestar.expression.type.Coercion;
 import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
 import org.jooq.Condition;
@@ -264,24 +264,22 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     @Override
     public QueryPart visitForAny(final ForAny expression) {
 
-        final Expression lhs = expression.getLhs();
-        final Expression rhs = expression.getRhs();
-        if(rhs instanceof Of) {
-            final Of of = (Of)rhs;
+        final Expression lhs = expression.getYield();
+        final ContextIterator iterator = expression.getIterator();
+        // map keys not supported
+        if(iterator instanceof ContextIterator.OfValue) {
+            final ContextIterator.OfValue of = (ContextIterator.OfValue)iterator;
             if(of.getExpr() instanceof NameConstant) {
                 final Name rhsName = ((NameConstant) of.getExpr()).getName();
-                // map keys not supported
-                if(of.getKey() == null) {
-                    final String first = of.getValue();
-                    final Expression bound = lhs.bind(Context.init(), path -> {
-                        if(first.equals(path.first())) {
-                            return rhsName.with(path.withoutFirst());
-                        } else {
-                            return path;
-                        }
-                    });
-                    return visit(bound);
-                }
+                final String first = of.getValue();
+                final Expression bound = lhs.bind(Context.init(), path -> {
+                    if(first.equals(path.first())) {
+                        return rhsName.with(path.withoutFirst());
+                    } else {
+                        return path;
+                    }
+                });
+                return visit(bound);
             }
         }
         return null;
@@ -348,7 +346,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     public Field<?> visitCount(final Count aggregate) {
 
         if(aggregate.getPredicate() instanceof Constant) {
-            final boolean value = Values.isTruthy(((Constant) aggregate.getPredicate()).getValue());
+            final boolean value = Coercion.isTruthy(((Constant) aggregate.getPredicate()).getValue());
             if(value) {
                 return DSL.count();
             } else {

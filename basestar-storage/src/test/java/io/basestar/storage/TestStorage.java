@@ -26,9 +26,11 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.type.Values;
 import io.basestar.schema.*;
+import io.basestar.schema.encoding.FlatEncoding;
 import io.basestar.secret.Secret;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
+import io.basestar.test.CsvUtils;
 import io.basestar.util.Streams;
 import io.basestar.util.*;
 import lombok.extern.slf4j.Slf4j;
@@ -46,11 +48,14 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @Slf4j
+@SuppressWarnings(Warnings.JUNIT_VISIBILITY)
 public abstract class TestStorage {
 
     private static final int RECORD_COUNT = 100;
 
     private static final String ADDRESS = "Address";
+
+    private static final String ADDRESS_STATS = "AddressStats";
 
     private static final String SIMPLE = "Simple";
 
@@ -139,16 +144,13 @@ public abstract class TestStorage {
         final Instant now = Instant.now();
         final Multimap<String, Map<String, Object>> results = ArrayListMultimap.create();
 
-        try(final InputStream is = TestStorage.class.getResourceAsStream("addresses.csv")) {
+        try(final InputStream is = TestStorage.class.getResourceAsStream("/data/Petstore/Address.csv")) {
             final CSVParser parser = CSVParser.parse(is, Charsets.UTF_8, CSVFormat.DEFAULT.withFirstRecordAsHeader());
             final List<String> headers = parser.getHeaderNames();
-            Streams.stream(parser).limit(RECORD_COUNT).forEach(record -> {
-
-                final String id = UUID.randomUUID().toString();
+            Streams.stream(parser).forEach(record -> {
 
                 final Map<String, Object> data = new HashMap<>();
                 headers.forEach(h -> data.put(h, record.get(h)));
-                Instance.setId(data, id);
                 Instance.setVersion(data, 1L);
                 Instance.setCreated(data, now);
                 Instance.setUpdated(data, now);
@@ -176,11 +178,14 @@ public abstract class TestStorage {
                 Sort.asc(Name.of("zip"))
         );
 
-        final Expression expr = Expression.parse("country == 'United Kingdom' || state == 'Victoria'");
-        final Page<Map<String, Object>> results = storage.query(schema, expr, Collections.emptyList(), Collections.emptySet()).page(EnumSet.of(Page.Stat.TOTAL), null, 100).join();
-//        final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
-//        final Page<Map<String, Object>> results = new Pager<>(comparator, sources, EnumSet.of(Page.Stat.TOTAL), null).page(100).join();
-        assertEquals(8, results.size());
+        final Expression expr = Expression.parse("country == 'US' || state == 'England'");
+        final Page<Map<String, Object>> results = storage.query(schema, expr, sort, Collections.emptySet()).page(EnumSet.of(Page.Stat.TOTAL), null, 10).join();
+
+        final List<String> ids = Arrays.asList("123", "189", "26", "67", "129", "159", "151", "116", "142", "179");
+        assertEquals(ids, results.map(Instance::getId).getPage());
+        if(results.getStats() != null && results.getStats().getTotal() != null) {
+            assertEquals(16, results.getStats().getTotal());
+        }
     }
 
     // FIXME: needs to cover non-trivial case(s)
@@ -303,7 +308,7 @@ public abstract class TestStorage {
                 .put("integer", 1L)
                 .put("number", 2.5)
                 .put("string", "test")
-                .put("binary", new byte[]{1, 2, 3, 4})
+                .put("binary", Bytes.valueOf(1, 2, 3, 4))
                 .put("date", ISO8601.parseDate("2030-01-01"))
                 .put("datetime", ISO8601.parseDateTime("2030-01-01T01:02:03Z"))
                 .put("struct", new Instance(ImmutableMap.of("x", 1L, "y", 5L)))
@@ -312,7 +317,7 @@ public abstract class TestStorage {
                 .put("arrayInteger", Collections.singletonList(1L))
                 .put("arrayNumber", Collections.singletonList(2.5))
                 .put("arrayString", Collections.singletonList("test"))
-                .put("arrayBinary", Collections.singletonList(new byte[]{1, 2, 3, 4}))
+                .put("arrayBinary", Collections.singletonList(Bytes.valueOf(1, 2, 3, 4)))
                 .put("arrayStruct", Collections.singletonList(new Instance(ImmutableMap.of("x", 10L, "y", 5L))))
                 .put("arrayObject", Collections.singletonList(new Instance(ImmutableMap.of("id", "test"))))
                 .put("arrayDate", Collections.singletonList(ISO8601.parseDate("2030-01-01")))
@@ -321,7 +326,7 @@ public abstract class TestStorage {
                 .put("mapInteger", Collections.singletonMap("a", 1L))
                 .put("mapNumber", Collections.singletonMap("a", 2.5))
                 .put("mapString", Collections.singletonMap("a", "test"))
-                .put("mapBinary", Collections.singletonMap("a", new byte[]{1, 2, 3, 4}))
+                .put("mapBinary", Collections.singletonMap("a", Bytes.valueOf(1, 2, 3, 4)))
                 .put("mapStruct", Collections.singletonMap("a",new Instance(ImmutableMap.of("x", 10L, "y", 5L))))
                 .put("mapObject", Collections.singletonMap("a", new Instance(ImmutableMap.of("id", "test"))))
                 .put("mapDate", Collections.singletonMap("a", ISO8601.parseDate("2030-01-01")))
@@ -702,34 +707,47 @@ public abstract class TestStorage {
         return false;
     }
 
-//    @Test
-//    protected void testAggregation() throws IOException {
+    protected boolean supportsAggregation() {
+
+        return false;
+    }
+
+    @Test
+    protected void testAggregation() throws IOException {
+
+        assumeTrue(supportsAggregation(),
+                "Aggregation must be enabled for this test");
+
+        final Storage storage = storage(namespace);
+
+        final ViewSchema schema = namespace.requireViewSchema(ADDRESS_STATS);
+
+        final Multimap<String, Map<String, Object>> addresses = loadAddresses();
+        bulkLoad(storage, addresses);
+
+        final List<Sort> sort = ImmutableList.of(Sort.desc(Name.of("country")), Sort.asc(Name.of("state")));
+        final Pager<Map<String, Object>> sources = storage.query(schema, Expression.parse("true"), sort, null);
+
+        final Page<Map<String, Object>> results = sources.page(300).join();
+        log.debug("Aggregation results: {}", results);
+
+        final FlatEncoding encoding = new FlatEncoding();
+
+        final List<Map<String, Object>> expected = Immutable.transform(
+                CsvUtils.read(TestStorage.class, "/data/Petstore/AddressStats.csv"),
+                v -> schema.create(encoding.decode(v))
+        );
+
+        assertEquals(expected, results.getPage());
+//        assertEquals(100, results.size());
+//        final FlatEncoding encoding = new FlatEncoding();
 //
-//        final Storage storage = storage(namespace);
 //
-//        final ObjectSchema schema = namespace.requireObjectSchema(ADDRESS);
-//
-//        assumeTrue(storage.storageTraits(schema).supportsAggregation(),
-//                "Aggregation must be enabled for this test");
-//
-//        final Multimap<String, Map<String, Object>> addresses = loadAddresses();
-//        bulkLoad(storage, addresses);
-//
-//        final List<Sort> sort = ImmutableList.of(Sort.asc(Name.of("country")), Sort.asc(Name.of(ObjectSchema.ID)));
-//        final List<Pager.Source<Map<String, Object>>> sources = storage.aggregate(schema, Expression.parse("true"),
-//                ImmutableMap.of("country", Expression.parse("country")),
-//                ImmutableMap.of("count", new Count()));
-//        final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
-//
-//        addresses.get(ADDRESS).forEach(object -> {
-//            final String country = (String)object.get("country");
-//
-//        });
-//
-//        final Page<Map<String, Object>> results = new Pager<>(comparator, sources, null).page(100).join();
-//        log.debug("Aggregation results: {}", results);
-//        assertEquals(31, results.size());
-//    }
+//        final List<Map<String, Object>> flat = results.map(encoding::encode).getPage();
+//        try(final Writer writer = new FileWriter("aggregates.csv")) {
+//            CsvUtils.write(writer, flat);
+//        }
+    }
 
     @Test
     protected void testRefIndex() {
@@ -998,7 +1016,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    void testPolymorphicCreate() {
+    protected void testPolymorphicCreate() {
 
         assumeTrue(supportsPolymorphism());
 
@@ -1033,7 +1051,7 @@ public abstract class TestStorage {
     }
 
     @Test
-    void testPolymorphicDelete() {
+    protected void testPolymorphicDelete() {
 
         assumeTrue(supportsPolymorphism());
         assumeTrue(supportsDelete());

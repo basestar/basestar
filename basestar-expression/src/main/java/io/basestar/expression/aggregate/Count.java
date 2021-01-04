@@ -32,7 +32,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -61,9 +60,41 @@ public class Count implements Aggregate {
     }
 
     @Override
-    public Object evaluate(final Context context, final Stream<? extends Map<String, Object>> values) {
+    public Object evaluate(final Stream<Context> contexts) {
 
-        return values.count();
+        return contexts.filter(predicate::evaluatePredicate).count();
+    }
+
+    @Override
+    public Object append(final Object value, final Object add) {
+
+        if(value instanceof Number) {
+            return ((Number)value).longValue() + ((Number)add).longValue();
+        } else {
+            return ((Number)add).longValue();
+        }
+    }
+
+    @Override
+    public Object remove(final Object value, final Object sub) {
+
+        if(value instanceof Number) {
+            return ((Number)value).longValue() - ((Number)sub).longValue();
+        } else {
+            return -((Number)sub).longValue();
+        }
+    }
+
+    @Override
+    public boolean isAppendable() {
+
+        return true;
+    }
+
+    @Override
+    public boolean isRemovable() {
+
+        return true;
     }
 
     @Override

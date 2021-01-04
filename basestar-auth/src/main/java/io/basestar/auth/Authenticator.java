@@ -34,16 +34,6 @@ public interface Authenticator {
 
     Map<String, SecurityScheme> openApi();
 
-    default Caller anon() {
-
-        return Caller.ANON;
-    }
-
-    default Caller superuser() {
-
-        return Caller.SUPER;
-    }
-
     @Data
     class Delegating implements Authenticator {
 
@@ -65,18 +55,6 @@ public interface Authenticator {
         public Map<String, SecurityScheme> openApi() {
 
             return delegate.openApi();
-        }
-
-        @Override
-        public Caller anon() {
-
-            return delegate.anon();
-        }
-
-        @Override
-        public Caller superuser() {
-
-            return delegate.superuser();
         }
     }
 }

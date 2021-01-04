@@ -23,15 +23,8 @@ package io.basestar.schema;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 import com.google.common.collect.ImmutableSortedMap;
 import io.basestar.expression.Renaming;
-import io.basestar.jackson.BasestarFactory;
-import io.basestar.jackson.BasestarModule;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
@@ -67,13 +60,14 @@ import java.util.stream.Collectors;
 
 @Getter
 @EqualsAndHashCode
-public class Namespace implements Serializable, Schema.Resolver {
+public class Namespace implements Loadable, Schema.Resolver {
 
-    public interface Descriptor {
+    public interface Descriptor extends Loadable.Descriptor {
 
         Map<Name, Schema.Descriptor<?, ?>> getSchemas();
 
         @JsonValue
+        @Override
         default Map<String, Schema.Descriptor<?, ?>> jsonValue() {
 
             return getSchemas().entrySet().stream().collect(Collectors.toMap(
@@ -81,43 +75,7 @@ public class Namespace implements Serializable, Schema.Resolver {
                     Map.Entry::getValue
             ));
         }
-
-        default void yaml(final OutputStream os) throws IOException {
-
-            YAML_MAPPER.writeValue(os, jsonValue());
-        }
-
-        default void yaml(final Writer os) throws IOException {
-
-            YAML_MAPPER.writeValue(os, jsonValue());
-        }
-
-        default void json(final OutputStream os) throws IOException {
-
-            JSON_MAPPER.writeValue(os, jsonValue());
-        }
-
-        default void json(final Writer os) throws IOException {
-
-            JSON_MAPPER.writeValue(os, jsonValue());
-        }
     }
-
-    private static final ObjectMapper JSON_MAPPER = new ObjectMapper(new BasestarFactory())
-            .registerModule(BasestarModule.INSTANCE)
-            // Do not use, Spark compatibility issue
-            //.setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)
-            .configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
-
-    private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new BasestarFactory(new YAMLFactory()
-            .configure(YAMLGenerator.Feature.USE_NATIVE_TYPE_ID, false)
-            .configure(YAMLGenerator.Feature.WRITE_DOC_START_MARKER, false)
-            .configure(YAMLGenerator.Feature.SPLIT_LINES, false)))
-            .registerModule(BasestarModule.INSTANCE)
-            .configure(JsonParser.Feature.ALLOW_COMMENTS, true)
-            // Do not use, Spark compatibility issue
-            //.setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)
-            .configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
 
     private final Version version;
 
@@ -134,7 +92,7 @@ public class Namespace implements Serializable, Schema.Resolver {
 
         public Builder setSchema(final Name name, final Schema.Descriptor<?, ?> schema) {
 
-            schemas = Immutable.copyPut(schemas, name, schema);
+            schemas = Immutable.put(schemas, name, schema);
             return this;
         }
 
@@ -287,19 +245,6 @@ public class Namespace implements Serializable, Schema.Resolver {
     public static Namespace from(final Map<Name, Schema<?>> schemas, final Version version) {
 
         return new Namespace(schemas, version);
-    }
-
-    public Namespace relative(final Name root) {
-
-        return rename(Renaming.removeOptionalPrefix(root));
-    }
-
-    public Namespace rename(final Renaming renaming) {
-
-        return new Namespace(getSchemas().entrySet().stream().collect(Collectors.toMap(
-                Map.Entry::getKey,
-                e -> e.getValue().descriptor()
-        )), version, Schema.Resolver.NOOP, renaming);
     }
 
     public static Namespace load(final Schema.Resolver resolver, final URL... urls) throws IOException {

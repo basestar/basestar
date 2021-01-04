@@ -26,12 +26,13 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.Renaming;
 import io.basestar.expression.arithmetic.Add;
+import io.basestar.expression.arithmetic.Negate;
+import io.basestar.expression.arithmetic.Sub;
 import io.basestar.expression.exception.InvalidAggregateException;
 import io.basestar.util.Name;
 import lombok.Data;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -52,9 +53,41 @@ public class Sum implements Aggregate {
     }
 
     @Override
-    public Object evaluate(final Context context, final Stream<? extends Map<String, Object>> values) {
+    public Object evaluate(final Stream<Context> contexts) {
 
-        return values.map(v -> input.evaluate(context.with(v))).reduce(Add::apply).orElse(null);
+        return contexts.map(input::evaluate).reduce(Add::apply).orElse(null);
+    }
+
+    @Override
+    public Object append(final Object value, final Object add) {
+
+        if(add == null) {
+            return value;
+        }
+        assert(add instanceof Number);
+        return value == null ? add : Add.apply(value, add);
+    }
+
+    @Override
+    public Object remove(final Object value, final Object sub) {
+
+        if(sub == null) {
+            return value;
+        }
+        assert(sub instanceof Number);
+        return value == null ? Negate.apply(sub) : Sub.apply(value, sub);
+    }
+
+    @Override
+    public boolean isAppendable() {
+
+        return true;
+    }
+
+    @Override
+    public boolean isRemovable() {
+
+        return true;
     }
 
     @Override

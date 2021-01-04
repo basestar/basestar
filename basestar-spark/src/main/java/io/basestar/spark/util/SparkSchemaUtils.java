@@ -22,18 +22,15 @@ package io.basestar.spark.util;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import io.basestar.expression.call.Callable;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
-import io.basestar.util.ISO8601;
-import io.basestar.util.Name;
-import io.basestar.util.Page;
+import io.basestar.util.*;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.sql.*;
-import org.apache.spark.sql.api.java.UDF1;
+import org.apache.spark.sql.Encoder;
+import org.apache.spark.sql.Encoders;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
-import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.types.*;
 import scala.collection.Seq;
 
@@ -41,7 +38,6 @@ import java.lang.reflect.Type;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Slf4j
@@ -98,62 +94,6 @@ public class SparkSchemaUtils {
         extraMetadata.forEach((name, type) -> fields.add(field(name, type, null)));
         fields.sort(Comparator.comparing(StructField::name));
         return DataTypes.createStructType(fields).asNullable();
-    }
-
-    public static Set<Name> names(final InstanceSchema schema, final StructType structType) {
-
-        // FIXME: remove
-        final SortedMap<String, Use<?>> tmp = new TreeMap<>();
-        schema.metadataSchema().forEach(tmp::put);
-        schema.getMembers().forEach((name, member) -> tmp.put(name, member.typeOf()));
-
-        final Set<Name> names = new HashSet<>();
-        tmp.forEach((name, type) -> SparkRowUtils.findField(structType, name)
-                .ifPresent(field -> names(type, field.dataType())
-                        .forEach(rest -> names.add(Name.of(name).with(rest)))));
-        return names;
-    }
-
-    public static Set<Name> names(final Use<?> type, final DataType dataType) {
-
-        return type.visit(new Use.Visitor.Defaulting<Set<Name>>() {
-
-            @Override
-            public <T> Set<Name> visitDefault(final Use<T> type) {
-
-                return ImmutableSet.of(Name.of());
-            }
-
-            @Override
-            public <V, T extends Collection<V>> Set<Name> visitCollection(final UseCollection<V, T> type) {
-
-                if(dataType instanceof ArrayType) {
-                    return names(type.getType(), ((ArrayType) dataType).elementType());
-                } else {
-                    return ImmutableSet.of();
-                }
-            }
-
-            @Override
-            public <T> Set<Name> visitMap(final UseMap<T> type) {
-
-                if(dataType instanceof MapType) {
-                    return names(type.getType(), ((MapType) dataType).valueType());
-                } else {
-                    return ImmutableSet.of();
-                }
-            }
-
-            @Override
-            public Set<Name> visitInstance(final UseInstance type) {
-
-                if(dataType instanceof StructType) {
-                    return names(type.getSchema(), (StructType)dataType);
-                } else {
-                    return ImmutableSet.of();
-                }
-            }
-        });
     }
 
     public static StructType refType(final ReferableSchema schema, final Set<Name> expand) {
@@ -384,7 +324,7 @@ public class SparkSchemaUtils {
         }
         final byte[] partition = (byte[]) SparkRowUtils.get(row, PARTITION);
         final byte[] sort = (byte[]) SparkRowUtils.get(row, SORT);
-        final Index.Key.Binary key = Index.Key.Binary.of(partition, sort);
+        final Index.Key.Binary key = Index.Key.Binary.of(new BinaryKey(partition), new BinaryKey(sort));
         final Map<String, Set<Name>> branches = Name.branch(expand);
         final NamingConvention naming = NamingConvention.DEFAULT;
         final Map<String, Object> projection = new HashMap<>();
@@ -608,8 +548,8 @@ public class SparkSchemaUtils {
         }
         final StructField[] fields = structType.fields();
         final Object[] values = new Object[fields.length];
-        values[structType.fieldIndex(PARTITION)] = key.getPartition();
-        values[structType.fieldIndex(SORT)] = key.getSort();
+        values[structType.fieldIndex(PARTITION)] = key.getPartition().getBytes();
+        values[structType.fieldIndex(SORT)] = key.getSort().getBytes();
         index.projectionSchema(schema).forEach((name, type) -> {
             final int i = structType.fieldIndex(name);
             values[i] = toSpark(type, null, fields[i].dataType(), object.get(name));
@@ -790,7 +730,7 @@ public class SparkSchemaUtils {
             @Override
             public Object visitBinary(final UseBinary type) {
 
-                return type.create(value, expand, suppress);
+                return Nullsafe.map(type.create(value, expand, suppress), Bytes::getBytes);
             }
 
             @Override
@@ -842,49 +782,6 @@ public class SparkSchemaUtils {
                 return type.create(value, expand, suppress);
             }
         });
-    }
-
-    public static StructSchema structSchema(final DataType dataType) {
-
-        return StructSchema.builder()
-                .setProperties(Arrays.stream(((StructType) dataType).fields()).collect(Collectors.toMap(
-                        StructField::name, f -> Property.builder().setType(type(f.dataType()))
-                )))
-                .build();
-    }
-
-    public static Use<?> type(final DataType dataType) {
-
-        if(dataType instanceof BooleanType) {
-            return UseBoolean.DEFAULT;
-        } else if(dataType instanceof ByteType
-                | dataType instanceof ShortType
-                | dataType instanceof IntegerType
-                | dataType instanceof LongType) {
-            return UseInteger.DEFAULT;
-        } else if(dataType instanceof FloatType
-                | dataType instanceof DoubleType
-                | dataType instanceof DecimalType) {
-            return UseNumber.DEFAULT;
-        } else if(dataType instanceof StringType) {
-            return UseString.DEFAULT;
-        } else if(dataType instanceof BinaryType) {
-            return UseBinary.DEFAULT;
-        } else if(dataType instanceof ArrayType) {
-            return new UseArray<>(type(((ArrayType) dataType).elementType()));
-        } else if(dataType instanceof MapType) {
-            return new UseMap<>(type(((MapType) dataType).valueType()));
-        } else if(dataType instanceof StructType) {
-            return new UseStruct(structSchema(dataType));
-        } else if(dataType instanceof ObjectType) {
-            return new UseStruct(structSchema(dataType));
-        } else if(dataType instanceof DateType) {
-            return new UseDate();
-        } else if(dataType instanceof TimestampType) {
-            return new UseDateTime();
-        } else {
-            throw new UnsupportedOperationException("Cannot understand " + dataType);
-        }
     }
 
     public static Encoder<?> encoder(final Use<?> type) {
@@ -1024,63 +921,5 @@ public class SparkSchemaUtils {
     public static String getHash(final Row row) {
 
         return (String) SparkRowUtils.get(row, ObjectSchema.HASH);
-    }
-
-    public static Column cast(final Column column, final Use<?> fromType, final Use<?> toType, final Set<Name> expand) {
-
-        final DataType toDataType = type(toType, expand);
-        if(fromType.equals(toType)) {
-            return column.cast(toDataType);
-        } else {
-            final UserDefinedFunction udf = functions.udf((UDF1<Object, Object>) sparkValue -> {
-
-                final Object value = fromSpark(fromType, NamingConvention.DEFAULT, expand, sparkValue);
-                return toSpark(toType, expand, toDataType, value);
-
-            }, toDataType);
-            return udf.apply(column);
-        }
-    }
-
-    public static UserDefinedFunction udf(final Callable callable) {
-
-        final DataType returnType = type(callable.type());
-        switch (callable.args().length) {
-            case 0:
-                return functions.udf(() -> SparkRowUtils.toSpark(callable.call()), returnType);
-            case 1:
-                return functions.udf(v1 -> SparkRowUtils.toSpark(callable.call(SparkRowUtils.fromSpark(v1))), returnType);
-            case 2:
-                return functions.udf((v1, v2) -> SparkRowUtils.toSpark(callable.call(SparkRowUtils.fromSpark(v1), SparkRowUtils.fromSpark(v2))), returnType);
-            case 3:
-                return functions.udf((v1, v2, v3) -> SparkRowUtils.toSpark(callable.call(SparkRowUtils.fromSpark(v1), SparkRowUtils.fromSpark(v2),
-                        SparkRowUtils.fromSpark(v3))), returnType);
-            case 4:
-                return functions.udf((v1, v2, v3, v4) -> SparkRowUtils.toSpark(callable.call(SparkRowUtils.fromSpark(v1), SparkRowUtils.fromSpark(v2),
-                        SparkRowUtils.fromSpark(v3), SparkRowUtils.fromSpark(v4))), returnType);
-            case 5:
-                return functions.udf((v1, v2, v3, v4, v5) -> SparkRowUtils.toSpark(callable.call(SparkRowUtils.fromSpark(v1), SparkRowUtils.fromSpark(v2),
-                        SparkRowUtils.fromSpark(v3), SparkRowUtils.fromSpark(v4), SparkRowUtils.fromSpark(v5))), returnType);
-            case 6:
-                return functions.udf((v1, v2, v3, v4, v5, v6) -> SparkRowUtils.toSpark(callable.call(SparkRowUtils.fromSpark(v1), SparkRowUtils.fromSpark(v2),
-                        SparkRowUtils.fromSpark(v3), SparkRowUtils.fromSpark(v4), SparkRowUtils.fromSpark(v5), SparkRowUtils.fromSpark(v6))), returnType);
-            case 7:
-                return functions.udf((v1, v2, v3, v4, v5, v6, v7) -> SparkRowUtils.toSpark(callable.call(SparkRowUtils.fromSpark(v1), SparkRowUtils.fromSpark(v2),
-                        SparkRowUtils.fromSpark(v3), SparkRowUtils.fromSpark(v4), SparkRowUtils.fromSpark(v5), SparkRowUtils.fromSpark(v6), SparkRowUtils.fromSpark(v7))), returnType);
-            case 8:
-                return functions.udf((v1, v2, v3, v4, v5, v6, v7, v8) -> SparkRowUtils.toSpark(callable.call(SparkRowUtils.fromSpark(v1),
-                        SparkRowUtils.fromSpark(v2), SparkRowUtils.fromSpark(v3), SparkRowUtils.fromSpark(v4), SparkRowUtils.fromSpark(v5), SparkRowUtils.fromSpark(v6), SparkRowUtils.fromSpark(v7),
-                        SparkRowUtils.fromSpark(v8))), returnType);
-            case 9:
-                return functions.udf((v1, v2, v3, v4, v5, v6, v7, v8, v9) -> SparkRowUtils.toSpark(callable.call(SparkRowUtils.fromSpark(v1),
-                        SparkRowUtils.fromSpark(v2), SparkRowUtils.fromSpark(v3), SparkRowUtils.fromSpark(v4), SparkRowUtils.fromSpark(v5), SparkRowUtils.fromSpark(v6), SparkRowUtils.fromSpark(v7),
-                        SparkRowUtils.fromSpark(v8), SparkRowUtils.fromSpark(v9))), returnType);
-            case 10:
-                return functions.udf((v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) -> SparkRowUtils.toSpark(callable.call(SparkRowUtils.fromSpark(v1),
-                        SparkRowUtils.fromSpark(v2), SparkRowUtils.fromSpark(v3), SparkRowUtils.fromSpark(v4), SparkRowUtils.fromSpark(v5), SparkRowUtils.fromSpark(v6), SparkRowUtils.fromSpark(v7),
-                        SparkRowUtils.fromSpark(v8), SparkRowUtils.fromSpark(v9), SparkRowUtils.fromSpark(v10))), returnType);
-            default:
-                throw new IllegalStateException("Too many UDF parameters");
-        }
     }
 }

@@ -47,7 +47,11 @@ public class ISO8601 {
 
     public static Instant toDateTime(final TemporalAccessor value) {
 
-        return Instant.from(value);
+        if(value instanceof LocalDate) {
+            return ((LocalDate) value).atStartOfDay().toInstant(ZoneOffset.UTC);
+        } else {
+            return Instant.from(value);
+        }
     }
 
     public static Instant toDateTime(final Object value) {
@@ -58,6 +62,8 @@ public class ISO8601 {
             return toDateTime((TemporalAccessor) value);
         } else if(value instanceof java.sql.Timestamp) {
             return ((java.sql.Timestamp) value).toInstant();
+        } else if(value instanceof java.sql.Date) {
+            return toDateTime(((java.sql.Date) value).toLocalDate());
         } else if(value instanceof Date) {
             return ((Date) value).toInstant();
         } else if(value instanceof String) {
@@ -89,6 +95,13 @@ public class ISO8601 {
         for(final DateTimeFormatter formatter: LOCAL_DATE_TIME_INPUT_FORMATS) {
             try {
                 return formatter.parse(value, LocalDateTime::from).toInstant(ZoneOffset.UTC);
+            } catch (final DateTimeParseException e) {
+                // suppress
+            }
+        }
+        for(final DateTimeFormatter formatter: DATE_INPUT_FORMATS) {
+            try {
+                return toDateTime(formatter.parse(value, LocalDate::from));
             } catch (final DateTimeParseException e) {
                 // suppress
             }

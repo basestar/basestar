@@ -20,14 +20,21 @@ package io.basestar.api;
  * #L%
  */
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 import io.basestar.api.exception.UnsupportedContentException;
 import io.basestar.auth.Caller;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
+import java.util.Map;
+import java.util.UUID;
 
 public interface APIRequest {
 
@@ -95,6 +102,78 @@ public interface APIRequest {
                 throw new UnsupportedContentException(accept);
             }
             return match;
+        }
+    }
+
+    static Simple get(final Caller caller, final String path) {
+
+        return request(caller, Method.GET, path, APIFormat.JSON);
+    }
+
+    static Simple post(final Caller caller, final String path, final Object body) throws IOException {
+
+        return request(caller, Method.POST, path, APIFormat.JSON, body);
+    }
+
+    static Simple put(final Caller caller, final String path, final Object body) throws IOException {
+
+        return request(caller, Method.PUT, path, APIFormat.JSON, body);
+    }
+
+    static Simple request(final Caller caller, final Method method, final String path, final APIFormat format) {
+
+        return request(caller, method, path, ImmutableMap.of(), ImmutableMap.of(), format, new byte[0]);
+    }
+
+    static Simple request(final Caller caller, final Method method, final String path, final APIFormat format, final Object body) throws IOException {
+
+        return request(caller, method, path, ImmutableMap.of(), ImmutableMap.of(), format, body);
+    }
+
+    static Simple request(final Caller caller, final Method method, final String path, final Map<String, String> query, final Map<String, String> headers, final APIFormat format, final Object body) throws IOException {
+
+        try(final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            if(body != null) {
+                format.getMapper().writeValue(baos, body);
+            }
+            return request(caller, method, path, query, headers, format, baos.toByteArray());
+        }
+    }
+
+    static Simple request(final Caller caller, final Method method, final String path, final Map<String, String> query, final Map<String, String> headers, final APIFormat format, final byte[] body) {
+
+        final Multimap<String, String> allQuery = HashMultimap.create();
+        query.forEach(allQuery::put);
+        final Multimap<String, String> allHeaders = HashMultimap.create();
+        headers.forEach(allHeaders::put);
+        allHeaders.put("Accept", format.getContentType());
+        if(body != null) {
+            allHeaders.put("Content-Type", format.getContentType());
+        }
+        return new Simple(caller, method, path, allQuery, allHeaders, body, UUID.randomUUID().toString());
+    }
+
+    @Data
+    class Simple implements APIRequest {
+
+        private final Caller caller;
+
+        private final Method method;
+
+        private final String path;
+
+        private final Multimap<String, String> query;
+
+        private final Multimap<String, String> headers;
+
+        private final byte[] body;
+
+        private final String requestId;
+
+        @Override
+        public InputStream readBody() {
+
+            return new ByteArrayInputStream(body);
         }
     }
 

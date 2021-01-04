@@ -20,8 +20,6 @@ package io.basestar.stream;
  * #L%
  */
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
 import io.basestar.auth.Caller;
 import io.basestar.database.event.ObjectCreatedEvent;
 import io.basestar.database.event.ObjectDeletedEvent;
@@ -32,20 +30,18 @@ import io.basestar.event.Event;
 import io.basestar.event.Handlers;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.schema.*;
-import io.basestar.schema.use.UseBinary;
-import io.basestar.storage.DefaultIndexStorage;
-import io.basestar.storage.exception.UnsupportedQueryException;
-import io.basestar.storage.query.DisjunctionVisitor;
-import io.basestar.storage.query.Range;
-import io.basestar.storage.query.RangeVisitor;
+import io.basestar.schema.LinkableSchema;
+import io.basestar.schema.Namespace;
 import io.basestar.stream.event.SubscriptionPublishEvent;
 import io.basestar.stream.event.SubscriptionQueryEvent;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Pager;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 public class DefaultHub implements Hub {
@@ -58,23 +54,18 @@ public class DefaultHub implements Hub {
             .on(ObjectDeletedEvent.class, DefaultHub::onObjectDeleted)
             .on(ObjectRefreshedEvent.class, DefaultHub::onObjectRefreshed)
             .on(SubscriptionQueryEvent.class, DefaultHub::onSubscriptionQuery)
-            .on(SubscriptionPublishEvent.class, DefaultHub::onSubscriptionPublish)
             .build();
 
     private final Subscriptions subscriptions;
-
-    private final Publisher publisher;
 
     private final Namespace namespace;
 
     private final Emitter emitter;
 
     @lombok.Builder(builderClassName = "Builder")
-    DefaultHub(final Subscriptions subscriptions, final Publisher publisher,
-               final Namespace namespace, final Emitter emitter) {
+    DefaultHub(final Subscriptions subscriptions, final Namespace namespace, final Emitter emitter) {
 
         this.subscriptions = Nullsafe.require(subscriptions);
-        this.publisher = Nullsafe.require(publisher);
         this.namespace = Nullsafe.require(namespace);
         this.emitter = Nullsafe.require(emitter);
     }
@@ -86,13 +77,12 @@ public class DefaultHub implements Hub {
     }
 
     @Override
-    public CompletableFuture<?> subscribe(final Caller caller, final String sub, final String channel, final String schemaName, final Expression expression, final Set<Name> expand, final SubscriptionInfo info) {
+    public CompletableFuture<?> subscribe(final Caller caller, final String sub, final String channel, final Name schemaName, final Set<Change.Event> events, final Expression expression, final SubscriptionMetadata info) {
 
-        final ObjectSchema schema = namespace.requireObjectSchema(schemaName);
+        final LinkableSchema schema = namespace.requireLinkableSchema(schemaName);
 
         final Expression bound = expression.bind(Context.init());
-        final Set<Subscription.Key> keys = keys(schema, expression, expand);
-        return subscriptions.subscribe(caller, sub, channel, keys, bound, info);
+        return subscriptions.subscribe(caller, sub, channel, schema, events, bound, info);
     }
 
     @Override
@@ -109,49 +99,49 @@ public class DefaultHub implements Hub {
 
     private CompletableFuture<?> onObjectCreated(final ObjectCreatedEvent event) {
 
-        final ObjectSchema schema = namespace.requireObjectSchema(event.getSchema());
+        final LinkableSchema schema = namespace.requireLinkableSchema(event.getSchema());
         final Map<String, Object> after = event.getAfter();
-        final Set<Subscription.Key> keys = keys(schema, after);
-        return emitter.emit(SubscriptionQueryEvent.of(schema.getQualifiedName(), event.getId(), Change.Event.CREATE, null, after, keys));
+        return emitter.emit(SubscriptionQueryEvent.of(schema.getQualifiedName(), Change.Event.CREATE, null, after));
     }
 
     private CompletableFuture<?> onObjectUpdated(final ObjectUpdatedEvent event) {
 
-        final ObjectSchema schema = namespace.requireObjectSchema(event.getSchema());
+        final LinkableSchema schema = namespace.requireLinkableSchema(event.getSchema());
         final Map<String, Object> before = event.getBefore();
         final Map<String, Object> after = event.getAfter();
-        final Set<Subscription.Key> keys = Sets.union(keys(schema, after), keys(schema, before));
-        return emitter.emit(SubscriptionQueryEvent.of(schema.getQualifiedName(), event.getId(), Change.Event.UPDATE, before, after, keys));
+        return emitter.emit(SubscriptionQueryEvent.of(schema.getQualifiedName(), Change.Event.UPDATE, before, after));
     }
 
     private CompletableFuture<?> onObjectDeleted(final ObjectDeletedEvent event) {
 
-        final ObjectSchema schema = namespace.requireObjectSchema(event.getSchema());
+        final LinkableSchema schema = namespace.requireLinkableSchema(event.getSchema());
         final Map<String, Object> before = event.getBefore();
-        final Set<Subscription.Key> keys = keys(schema, before);
-        return emitter.emit(SubscriptionQueryEvent.of(schema.getQualifiedName(), event.getId(), Change.Event.DELETE, before, null, keys));
+        return emitter.emit(SubscriptionQueryEvent.of(schema.getQualifiedName(), Change.Event.DELETE, before, null));
     }
 
     private CompletableFuture<?> onObjectRefreshed(final ObjectRefreshedEvent event) {
 
-        final ObjectSchema schema = namespace.requireObjectSchema(event.getSchema());
+        final LinkableSchema schema = namespace.requireLinkableSchema(event.getSchema());
         final Map<String, Object> before = event.getBefore();
         final Map<String, Object> after = event.getAfter();
-        final Set<Subscription.Key> keys = Sets.union(keys(schema, after), keys(schema, before));
-        return emitter.emit(SubscriptionQueryEvent.of(schema.getQualifiedName(), event.getId(), Change.Event.REFRESH, before, null, keys));
+        return emitter.emit(SubscriptionQueryEvent.of(schema.getQualifiedName(), Change.Event.REFRESH, before, after));
     }
 
     private CompletableFuture<?> onSubscriptionQuery(final SubscriptionQueryEvent event) {
 
-        final ObjectSchema schema = namespace.requireObjectSchema(event.getSchema());
-        final Set<Subscription.Key> keys = event.getKeys();
-        final Comparator<Subscription> comparator = Subscription.COMPARATOR;
-        final Pager<Subscription> pager = subscriptions.query(keys);
+        final LinkableSchema schema = namespace.requireLinkableSchema(event.getSchema());
+        final Pager<Subscription> pager = subscriptions.query(schema, event.getEvent(), event.getBefore(), event.getAfter());
         return pager.page(event.getPaging(), SUBSCRIPTION_PAGE_SIZE).thenCompose(results -> {
             final List<Event> events = new ArrayList<>();
 
             results.forEach(result -> {
-                events.add(SubscriptionPublishEvent.of(schema.getQualifiedName(), event.getId(), event.getEvent(), event.getBefore(), event.getAfter(), result));
+                final Caller caller = result.getCaller();
+                final Map<String, Object> before = event.getBefore();
+                final Map<String, Object> after = event.getAfter();
+                final SubscriptionMetadata metadata = result.getMetadata();
+                if(match(before, result.getExpression()) || match(after, result.getExpression())) {
+                    events.add(SubscriptionPublishEvent.of(caller, result.getSub(), result.getChannel(), Change.of(event.getEvent(), schema.getQualifiedName(),  before, after), metadata));
+                }
             });
 
             if(results.hasMore()) {
@@ -161,24 +151,6 @@ public class DefaultHub implements Hub {
         });
     }
 
-    private CompletableFuture<?> onSubscriptionPublish(final SubscriptionPublishEvent event) {
-
-        final ObjectSchema schema = namespace.requireObjectSchema(event.getSchema());
-        final String id = event.getId();
-        final Subscription subscription = event.getSubscription();
-        //FIXME:
-        final Caller caller = subscription.getCaller();
-        final Expression expression = subscription.getExpression();
-        final Instance before = event.getBefore() == null ? null : schema.create(event.getBefore());
-        final Instance after = event.getAfter() == null ? null : schema.create(event.getAfter());
-        if(match(before, expression) || match(after, expression)) {
-            final Change change = Change.of(event.getEvent(), schema.getQualifiedName(), id, before, after);
-            return publisher.publish(caller, schema, subscription.getSub(), subscription.getChannel(), subscription.getInfo(), change);
-        } else {
-            return CompletableFuture.completedFuture(null);
-        }
-    }
-
     private boolean match(final Map<String, Object> object, final Expression expression) {
 
         if(object != null) {
@@ -186,46 +158,5 @@ public class DefaultHub implements Hub {
         } else {
             return false;
         }
-    }
-
-    private static Subscription.Key idKey(final ObjectSchema schema, final String id) {
-
-        return new Subscription.Key(schema.getQualifiedName(), Reserved.PREFIX + ObjectSchema.ID, UseBinary.binaryKey(ImmutableList.of(id)));
-    }
-
-    private static Set<Subscription.Key> keys(final ObjectSchema schema, final Expression expression, final Set<Name> expand) {
-
-        final Set<Expression> disjunction = expression.visit(new DisjunctionVisitor());
-
-        final Set<Subscription.Key> keys = new HashSet<>();
-        for (final Expression conjunction : disjunction) {
-            final Map<Name, Range<Object>> query = conjunction.visit(new RangeVisitor());
-            final Optional<String> optId = DefaultIndexStorage.constantId(query);
-            if(optId.isPresent()) {
-                keys.add(idKey(schema, optId.get()));
-            } else {
-                final Optional<DefaultIndexStorage.SatisfyResult> optSatisfy = DefaultIndexStorage.satisfy(schema.getIndexes().values(), query, Collections.emptyList());
-                if (optSatisfy.isPresent()) {
-                    final DefaultIndexStorage.SatisfyResult satisfy = optSatisfy.get();
-                    final Index index = satisfy.getIndex();
-                    keys.add(new Subscription.Key(schema.getQualifiedName(), index.getName(), UseBinary.binaryKey(satisfy.getPartition())));
-                } else {
-                    throw new UnsupportedQueryException(schema.getQualifiedName(), expression, "no index");
-                }
-            }
-        }
-        return keys;
-    }
-
-    private static Set<Subscription.Key> keys(final ObjectSchema schema, final Map<String, Object> object) {
-
-        final Set<Subscription.Key> keys = new HashSet<>();
-        keys.add(idKey(schema, Instance.getId(object)));
-        for(final Index index : schema.getIndexes().values()) {
-            index.readValues(object).forEach((k, projection) -> {
-                keys.add(new Subscription.Key(schema.getQualifiedName(), index.getName(), k.binary().getPartition()));
-            });
-        }
-        return keys;
     }
 }

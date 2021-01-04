@@ -25,7 +25,6 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.basestar.schema.*;
-import io.basestar.schema.use.UseBinary;
 import io.basestar.storage.*;
 import io.basestar.storage.exception.CorruptedIndexException;
 import io.basestar.storage.exception.ObjectExistsException;
@@ -232,7 +231,7 @@ public class DynamoDBStorage implements DefaultIndexStorage {
             mergePartitions.add(strategy.indexPartitionPrefix(schema, index));
             mergePartitions.addAll(satisfy.getPartition());
 
-            final SdkBytes partitionValue = SdkBytes.fromByteArray(UseBinary.binaryKey(mergePartitions));
+            final SdkBytes partitionValue = SdkBytes.fromByteArray(BinaryKey.from(mergePartitions).getBytes());
 
             final Map<String, String> names = new HashMap<>();
             final Map<String, AttributeValue> values = new HashMap<>();
@@ -245,8 +244,10 @@ public class DynamoDBStorage implements DefaultIndexStorage {
 
             if (!satisfy.getSort().isEmpty()) {
 
-                final SdkBytes sortValueLo = SdkBytes.fromByteArray(UseBinary.concat(UseBinary.binaryKey(satisfy.getSort()), UseBinary.LO_PREFIX));
-                final SdkBytes sortValueHi = SdkBytes.fromByteArray(UseBinary.concat(UseBinary.binaryKey(satisfy.getSort()), UseBinary.HI_PREFIX));
+                final BinaryKey sortKey = BinaryKey.from(satisfy.getSort());
+
+                final SdkBytes sortValueLo = SdkBytes.fromByteArray(sortKey.lo().getBytes());
+                final SdkBytes sortValueHi = SdkBytes.fromByteArray(sortKey.hi().getBytes());
 
                 keyTerms.add("#__sort BETWEEN :__sortLo AND :__sortHi");
                 names.put("#__sort", strategy.indexSortName(schema, index));
@@ -391,37 +392,31 @@ public class DynamoDBStorage implements DefaultIndexStorage {
         );
     }
 
-    public static byte[] indexPartitionPrefix(final DynamoDBStrategy strategy, final ReferableSchema schema, final Index index, final byte[] suffix) {
-
-        final String prefix = strategy.indexPartitionPrefix(schema, index);
-        return UseBinary.concat(UseBinary.binaryKey(Collections.singletonList(prefix)), suffix);
-    }
-
     public static Map<String, AttributeValue> indexKey(final DynamoDBStrategy strategy, final ReferableSchema schema, final Index index, final String id, final Index.Key.Binary key) {
 
         return ImmutableMap.of(
-                strategy.indexPartitionName(schema, index), DynamoDBUtils.b(partition(strategy, schema, index, id, key.getPartition())),
-                strategy.indexSortName(schema, index), DynamoDBUtils.b(sort(schema, index, id, key.getSort()))
+                strategy.indexPartitionName(schema, index), DynamoDBUtils.b(partition(strategy, schema, index, id, key.getPartition()).getBytes()),
+                strategy.indexSortName(schema, index), DynamoDBUtils.b(sort(schema, index, id, key.getSort()).getBytes())
         );
     }
 
     @SuppressWarnings("unused")
-    public static byte[] partition(final DynamoDBStrategy strategy, final ReferableSchema schema, final Index index, final String id, final byte[] partition) {
+    public static BinaryKey partition(final DynamoDBStrategy strategy, final ReferableSchema schema, final Index index, final String id, final BinaryKey partition) {
 
         final String prefix = strategy.indexPartitionPrefix(schema, index);
         final List<Object> partitionPrefix = new ArrayList<>();
         if(prefix != null) {
             partitionPrefix.add(prefix);
         }
-        return UseBinary.concat(UseBinary.binaryKey(partitionPrefix), partition);
+        return BinaryKey.from(partitionPrefix).concat(partition);
     }
 
     @SuppressWarnings("unused")
-    public static byte[] sort(final ReferableSchema schema, final Index index, final String id, final byte[] sort) {
+    public static BinaryKey sort(final ReferableSchema schema, final Index index, final String id, final BinaryKey sort) {
 
         final List<Object> sortSuffix = new ArrayList<>();
         if(index.isUnique()) {
-            if(sort.length == 0) {
+            if(sort.length() == 0) {
                 // Must add something to the sort key to save
                 sortSuffix.add(null);
             }
@@ -429,7 +424,7 @@ public class DynamoDBStorage implements DefaultIndexStorage {
             // Ensure non-unique indexes have a unique id
             sortSuffix.add(id);
         }
-        return UseBinary.concat(sort, UseBinary.binaryKey(sortSuffix));
+        return sort.concat(BinaryKey.from(sortSuffix));
     }
 
     public static Map<String, AttributeValue> indexItem(final DynamoDBStrategy strategy, final ReferableSchema schema, final Index index, final String id, final Index.Key.Binary key, final Map<String, Object> data) {

@@ -24,8 +24,8 @@ import io.basestar.expression.Binary;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
-import io.basestar.expression.type.match.BinaryMatch;
-import io.basestar.expression.type.match.BinaryNumberMatch;
+import io.basestar.expression.match.BinaryMatch;
+import io.basestar.expression.match.BinaryNumberMatch;
 import lombok.Data;
 
 import java.util.*;
@@ -73,7 +73,7 @@ public class Add implements Binary {
     @Override
     public Object evaluate(final Context context) {
 
-        return VISITOR.apply(lhs.evaluate(context), rhs.evaluate(context));
+        return apply(lhs.evaluate(context), rhs.evaluate(context));
     }
 
     @Override
@@ -149,10 +149,19 @@ public class Add implements Binary {
         @Override
         public Object apply(final Collection<?> lhs, final Collection<?> rhs) {
 
-            final List<Object> sum = new ArrayList<>();
-            sum.addAll(lhs);
-            sum.addAll(rhs);
-            return sum;
+            if(lhs instanceof Set && rhs instanceof Set) {
+                final Set<Object> sum = new HashSet<>();
+                sum.addAll(lhs);
+                sum.addAll(rhs);
+                return sum;
+            } else if(lhs instanceof List && rhs instanceof List) {
+                final List<Object> sum = new ArrayList<>();
+                sum.addAll(lhs);
+                sum.addAll(rhs);
+                return sum;
+            } else {
+                return defaultApply(lhs, rhs);
+            }
         }
 
         @Override

@@ -48,7 +48,7 @@ public class BatchResponse {
     
     public BatchResponse(final Map<RefKey, Map<String, Object>> refs) {
 
-        this.refs = Immutable.navigableCopy(refs.entrySet().stream().filter(v -> v.getValue() != null).collect(Collectors.toMap(
+        this.refs = Immutable.navigableMap(refs.entrySet().stream().filter(v -> v.getValue() != null).collect(Collectors.toMap(
                 Map.Entry::getKey,
                 Map.Entry::getValue
         )));
@@ -91,7 +91,7 @@ public class BatchResponse {
     public BatchResponse with(final Name schema, final Map<String, Object> ref) {
 
         return new BatchResponse(
-                Immutable.copyPutAll(refs, ImmutableMap.of(RefKey.from(schema, ref), ref))
+                Immutable.putAll(refs, ImmutableMap.of(RefKey.from(schema, ref), ref))
         );
     }
 

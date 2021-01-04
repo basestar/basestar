@@ -31,7 +31,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -58,9 +57,33 @@ public class CollectArray implements Aggregate {
     }
 
     @Override
-    public Object evaluate(final Context context, final Stream<? extends Map<String, Object>> values) {
+    public Object evaluate(final Stream<Context> contexts) {
 
-        return values.map(v -> input.evaluate(context.with(v))).collect(Collectors.toList());
+        return contexts.map(input::evaluate).collect(Collectors.toList());
+    }
+
+    @Override
+    public Object append(final Object value, final Object context) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Object remove(final Object value, final Object context) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isAppendable() {
+
+        return false;
+    }
+
+    @Override
+    public boolean isRemovable() {
+
+        return false;
     }
 
     @Override

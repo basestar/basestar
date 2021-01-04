@@ -23,6 +23,7 @@ import software.amazon.awssdk.services.sfn.model.CreateStateMachineResponse;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 public class TestStepFunctionStorage extends TestStorage {
@@ -60,9 +61,11 @@ public class TestStepFunctionStorage extends TestStorage {
     protected Storage storage(final Namespace namespace) {
 
         final Map<Name, String> stateMachineArns = new HashMap<>();
+        final String prefix = "tmp_" + UUID.randomUUID().toString().replaceAll("-", "_") + "_";
         namespace.forEachObjectSchema((name, schema) -> {
+
             final CreateStateMachineResponse create = sfn.createStateMachine(CreateStateMachineRequest.builder()
-                    .name(schema.getQualifiedName().toString("_"))
+                    .name(prefix + schema.getQualifiedName().toString("_"))
                     .definition("{\"StartAt\": \"Wait\", \"States\": {\"Wait\": {\"Type\": \"Wait\", \"Seconds\": 10, \"End\": true}}}")
                     .build()).join();
             stateMachineArns.put(name, create.stateMachineArn());

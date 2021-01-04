@@ -25,13 +25,13 @@ import com.google.common.collect.Sets;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
+import io.basestar.expression.iterate.ContextIterator;
 import io.basestar.expression.iterate.ForAny;
-import io.basestar.expression.iterate.Of;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.Schema;
-import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
+import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Name;
 import io.leangen.geantyref.TypeFactory;
 import io.swagger.v3.oas.models.media.MapSchema;
@@ -124,25 +124,6 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
         return context.createMap(this, value, expand);
     }
 
-    @Deprecated
-    public static <T> Map<String, T> create(final Object value, final boolean suppress, final BiFunction<String, Object, T> fn) {
-
-        if(value == null) {
-            return null;
-        } else if(value instanceof Map) {
-            final Map<String, T> result = new HashMap<>();
-            ((Map<?, ?>) value).forEach((k, v) -> {
-                final String key = k.toString();
-                result.put(key, fn.apply(key, v));
-            });
-            return result;
-        } else if(suppress) {
-            return null;
-        } else {
-            throw new UnexpectedTypeException(NAME, value);
-        }
-    }
-
     @Override
     public Code code() {
 
@@ -192,7 +173,7 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
         final String v = "v" + hash;
         // FIXME: expand
         return getType().refQueries(otherSchemaName, expand, Name.of(v)).stream().map(
-                q -> new ForAny(q, new Of(k, v, new NameConstant(name)))
+                q -> new ForAny(q, new ContextIterator.OfKeyValue(k, v, new NameConstant(name)))
         ).collect(Collectors.toSet());
     }
 
@@ -228,7 +209,7 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     public Type javaType(final Name name) {
 
         if(name.isEmpty()) {
-            return TypeFactory.parameterizedClass(Map.class, type.javaType());
+            return TypeFactory.parameterizedClass(Map.class, String.class, type.javaType());
         } else {
             return type.javaType(name.withoutFirst());
         }
@@ -386,7 +367,7 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
             return "null";
         } else {
             final Use<T> type = getType();
-            return "{" + value.entrySet().stream()
+            return "{" + value.entrySet().stream().sorted(Map.Entry.comparingByKey())
                     .map(v -> v.getKey() + ": " + type.toString(v.getValue()))
                     .collect(Collectors.joining(", ")) + "}";
         }

@@ -2,9 +2,8 @@ package io.basestar.spark.transform;
 
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Layout;
-import io.basestar.schema.expression.InferenceContext;
+import io.basestar.schema.Reserved;
 import io.basestar.spark.expression.SparkExpressionVisitor;
-import io.basestar.spark.resolver.ColumnResolver;
 import io.basestar.spark.util.SparkRowUtils;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.spark.util.SparkUtils;
@@ -13,6 +12,7 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
+import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.StructType;
 
 import java.util.Arrays;
@@ -36,10 +36,18 @@ public class AggregateTransform implements Transform<Dataset<Row>, Dataset<Row>>
 
         final StructType outputStructType = SparkSchemaUtils.structType(outputLayout);
 
-        final ColumnResolver<Row> columnResolver = ColumnResolver.lowercase(ColumnResolver::nested);
+        final SparkExpressionVisitor expressionVisitor = new SparkExpressionVisitor(k -> {
 
-        final InferenceContext inferenceContext = InferenceContext.from(inputLayout.getSchema());
-        final SparkExpressionVisitor expressionVisitor = new SparkExpressionVisitor(k -> columnResolver.resolve(input, k), inferenceContext);
+            if(k.first().equals(Reserved.THIS)) {
+                if(k.size() == 1) {
+                    return functions.struct(Arrays.stream(input.columns()).map(functions::col).toArray(Column[]::new));
+                } else {
+                    return SparkRowUtils.resolveName(input, k.withoutFirst());
+                }
+            } else {
+                return SparkRowUtils.resolveName(input, k);
+            }
+        });
 
         final Column[] aggs = aggregates.entrySet().stream()
                 .map(v -> expressionVisitor.visit(v.getValue()).as(v.getKey()))

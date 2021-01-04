@@ -93,7 +93,7 @@ public interface Binary extends Expression {
     }
 
     @Override
-    default boolean isConstant(final Set<String> closure) {
+    default boolean isConstant(final Closure closure) {
 
         return getLhs().isConstant(closure) && getRhs().isConstant(closure);
     }

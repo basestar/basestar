@@ -34,15 +34,13 @@ public class Change {
 
     private Name schema;
 
-    private String id;
-
     private Map<String, Object> before;
 
     private Map<String, Object> after;
 
-    public static Change of(final Event event, final Name schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
+    public static Change of(final Event event, final Name schema, final Map<String, Object> before, final Map<String, Object> after) {
 
-        return new Change().setEvent(event).setSchema(schema).setId(id).setBefore(before).setAfter(after);
+        return new Change().setEvent(event).setSchema(schema).setBefore(before).setAfter(after);
     }
 
     public enum Event {

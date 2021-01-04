@@ -242,7 +242,7 @@ public interface ColumnStrategy {
                                 throw new IllegalStateException(rest + " not found in " + head);
                             }
                             final String outer = rest.first();
-                            final String inner = rest.get(1);
+                            final String inner = rest.at(1);
                             if(inner.equals(ObjectSchema.ID) && rest.size() == 2) {
                                 return qualifiedName(table, head.with(rest.withoutLast()));
                             }

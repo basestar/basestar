@@ -59,7 +59,7 @@ public class BatchCapture {
             if(a == null) {
                 return new RefArgs(expand);
             } else {
-                return new RefArgs(Immutable.copyAddAll(a.getExpand(), expand));
+                return new RefArgs(Immutable.addAll(a.getExpand(), expand));
             }
         }
     }

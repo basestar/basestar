@@ -47,9 +47,9 @@ import io.basestar.expression.constant.Constant;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Or;
 import io.basestar.schema.*;
-import io.basestar.schema.use.ValueContext;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
+import io.basestar.schema.util.ValueContext;
 import io.basestar.storage.ConstantStorage;
 import io.basestar.storage.Storage;
 import io.basestar.storage.Versioning;
@@ -577,7 +577,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final String id = event.getId();
         final Map<String, Object> after = event.getAfter();
         return storage.afterCreate(schema, id, after)
-                .thenCompose(events -> emitter.emit(Immutable.copyAddAll(events, refQueryEvents(schema, id))));
+                .thenCompose(events -> emitter.emit(Immutable.addAll(events, refQueryEvents(schema, id))));
     }
 
     protected CompletableFuture<?> onObjectUpdated(final ObjectUpdatedEvent event) {
@@ -588,7 +588,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final Map<String, Object> before = event.getBefore();
         final Map<String, Object> after = event.getAfter();
         return storage.afterUpdate(schema, id, version, before, after)
-                .thenCompose(events -> emitter.emit(Immutable.copyAddAll(events, refQueryEvents(schema, id))));
+                .thenCompose(events -> emitter.emit(Immutable.addAll(events, refQueryEvents(schema, id))));
     }
 
     protected CompletableFuture<?> onObjectDeleted(final ObjectDeletedEvent event) {
@@ -598,7 +598,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final long version = event.getVersion();
         final Map<String, Object> before = event.getBefore();
         return storage.afterDelete(schema, id, version, before)
-                .thenCompose(events -> emitter.emit(Immutable.copyAddAll(events, refQueryEvents(schema, id))));
+                .thenCompose(events -> emitter.emit(Immutable.addAll(events, refQueryEvents(schema, id))));
     }
 
     protected CompletableFuture<?> onObjectRefreshed(final ObjectRefreshedEvent event) {

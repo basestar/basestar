@@ -20,8 +20,11 @@ package io.basestar.test;
  * #L%
  */
 
+import lombok.Generated;
+
 import java.util.regex.Pattern;
 
+@Generated
 public class Localstack {
 
     private static final String ENDPOINT_PREFIX = "http://localhost:";

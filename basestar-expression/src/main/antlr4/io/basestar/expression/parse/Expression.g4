@@ -23,6 +23,14 @@ name
  : (Identifier | With | For | In | Where | Any | All | Of | Like | ILike)
  ;
 
+where
+ : Where expr
+ ;
+
+of
+ : (name | (LParen name (Comma name)* RParen)) Of expr where?
+ ;
+
 expr
  : expr (Dot Identifier)? LParen exprs ? RParen #exprCall
 // | expr Dot Mul Dot Identifier #exprStarMember
@@ -45,11 +53,11 @@ expr
  | expr Or expr #exprOr
  | <assoc=right> expr QQMark expr #exprCoalesce
  | expr QMark expr Colon expr #exprIfElse
- | LBrace expr Colon expr For expr RBrace #exprForObject
- | LBrace expr For expr RBrace #exprForSet
- | LSquare expr For expr RSquare #exprForArray
- | expr For Any expr #exprForAny
- | expr For All expr #exprForAll
+ | LBrace expr Colon expr For of RBrace #exprForObject
+ | LBrace expr For of RBrace #exprForSet
+ | LSquare expr For of RSquare #exprForArray
+ | expr For Any of #exprForAny
+ | expr For All of #exprForAll
  | With LParen as (Comma as)* RParen expr #exprWith
  | Number #exprNumber
  | Bool #exprBool
@@ -60,8 +68,6 @@ expr
  | Identifier (Dot Identifier)*? #exprNameConstant
  | String #exprString
  | LParen expr RParen #exprExpr
- | (name | (LParen name (Comma name)* RParen)) Of expr #exprOf
- | expr Where expr #exprWhere
  | (name | (LParen name (Comma name)* RParen)) Arrow expr #exprLambda
  ;
 

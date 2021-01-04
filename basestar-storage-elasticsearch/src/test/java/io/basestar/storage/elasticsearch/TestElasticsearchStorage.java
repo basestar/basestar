@@ -75,6 +75,12 @@ class TestElasticsearchStorage extends TestStorage {
     }
 
     @Override
+    protected boolean supportsAggregation() {
+
+        return true;
+    }
+
+    @Override
     protected boolean supportsLike() {
 
         return true;

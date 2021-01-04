@@ -20,85 +20,62 @@ package io.basestar.expression.iterate;
  * #L%
  */
 
-import com.google.common.collect.ImmutableSet;
-import io.basestar.expression.*;
-import io.basestar.expression.type.Values;
-import io.basestar.util.Name;
-import io.basestar.util.Streams;
+import com.google.common.collect.ImmutableList;
+import io.basestar.expression.Context;
+import io.basestar.expression.Expression;
+import io.basestar.expression.ExpressionVisitor;
 import lombok.Data;
 
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
+import java.util.List;
 
 /**
  * For Any
  *
  * Existential Quantification: Returns true if the provided predicate is true for any iterator result
  *
- * @see io.basestar.expression.iterate.Of
  */
 
 @Data
-public class ForAny implements Binary {
+public class ForAny implements For {
 
     public static final String TOKEN = "for any";
 
     public static final int PRECEDENCE = ForArray.PRECEDENCE + 1;
 
-    private final Expression lhs;
+    private final Expression yield;
 
-    private final Expression rhs;
+    private final ContextIterator iterator;
 
     /**
-     * lhs for any rhs
+     * lhs for any iterator
      *
-     * @param lhs expression Predicate
-     * @param rhs iterator Iterator
+     * @param yield expression Predicate
+     * @param iterator iterator Iterator
      */
 
-    public ForAny(final Expression lhs, final Expression rhs) {
+    public ForAny(final Expression yield, final ContextIterator iterator) {
 
-        this.lhs = lhs;
-        this.rhs = rhs;
+        this.yield = yield;
+        this.iterator = iterator;
     }
 
     @Override
-    public Expression create(final Expression lhs, final Expression rhs) {
+    public List<Expression> getYields() {
 
-        return new ForAny(lhs, rhs);
+        return ImmutableList.of(yield);
+    }
+
+    @Override
+    public Expression create(final List<Expression> yields, final ContextIterator iterator) {
+
+        assert yields.size() == 1;
+        return new ForAny(yields.get(0), iterator);
     }
 
     @Override
     public Boolean evaluate(final Context context) {
 
-        final Object with = this.rhs.evaluate(context);
-        if(with instanceof Iterator<?>) {
-            return Streams.stream((Iterator<?>)with)
-                    .anyMatch(v -> {
-                        @SuppressWarnings("unchecked")
-                        final Map<String, Object> scope = (Map<String, Object>)v;
-                        final Object value = this.lhs.evaluate(context.with(scope));
-                        return Values.isTruthy(value);
-                    });
-        } else {
-            throw new IllegalStateException();
-        }
-    }
-
-    @Override
-    public Expression bindLhs(final Context context, final Renaming root) {
-
-        return getLhs().bind(context, Renaming.closure(getRhs().closure(), root));
-    }
-
-    @Override
-    public Set<Name> names() {
-
-        return ImmutableSet.<Name>builder()
-                .addAll(lhs.names())
-                .addAll(rhs.names())
-                .build();
+        return iterator.evaluate(context).anyMatch(yield::evaluatePredicate);
     }
 
     @Override
@@ -122,6 +99,6 @@ public class ForAny implements Binary {
     @Override
     public String toString() {
 
-        return lhs + " " + TOKEN + " " + rhs;
+        return yield + " " + TOKEN + " " + iterator;
     }
 }

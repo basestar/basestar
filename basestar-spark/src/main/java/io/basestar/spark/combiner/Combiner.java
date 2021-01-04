@@ -157,7 +157,7 @@ public interface Combiner extends Serializable {
             } else if(after == null) {
                 return Optional.of(schema.deleted(Instance.getId(before)));
             } else {
-                return Optional.of(Immutable.copyPut(after, Reserved.DELETED, false));
+                return Optional.of(Immutable.put(after, Reserved.DELETED, false));
             }
         }
     }

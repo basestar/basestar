@@ -20,7 +20,7 @@ public class QueryDelegatingStorage implements DelegatingStorage {
 
     public QueryDelegatingStorage(final List<Storage> storage) {
 
-        this.storage = Immutable.copy(storage);
+        this.storage = Immutable.list(storage);
         if(storage.isEmpty()) {
             throw new IllegalStateException("Query fallback storage must have at least one storage engine");
         }

@@ -22,6 +22,7 @@ package io.basestar.util;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
 import lombok.EqualsAndHashCode;
 
 import java.io.File;
@@ -30,10 +31,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -178,7 +176,7 @@ public class Path extends AbstractPath<Path> implements Comparable<Path> {
             final StringBuilder pattern = new StringBuilder();
             final int size = size();
             for(int i = 0; i != size; ++i) {
-                final String part = get(i);
+                final String part = at(i);
                 if (part.equals("**")) {
                     pattern.append(".*");
                 } else {
@@ -201,5 +199,54 @@ public class Path extends AbstractPath<Path> implements Comparable<Path> {
 
         final Pattern regex = pattern.toPattern();
         return regex.matcher(toString()).matches();
+    }
+
+    public Path relative(final Path other) {
+
+        final int thisSize = size();
+        final int otherSize = other.size();
+        int i = 0;
+        while(i < thisSize && i < otherSize) {
+            final String part = at(i);
+            if(part.equals(other.at(i))) {
+                ++i;
+            } else {
+                break;
+            }
+        }
+        final List<String> parts = new ArrayList<>();
+        for(int j = i; j != thisSize; ++j) {
+            parts.add("..");
+        }
+        for(int j = i; j != otherSize; ++j) {
+            parts.add(other.at(j));
+        }
+        return create(parts);
+    }
+
+    public Path canonical() {
+
+        final LinkedList<String> parts = new LinkedList<>();
+        for(final String part : this) {
+            if(part.equals(UP)) {
+                if(parts.isEmpty()) {
+                    parts.add(UP);
+                } else {
+                    parts.pop();
+                }
+            } else if(!part.equals(S)) {
+                parts.add(part);
+            }
+        }
+        return create(parts);
+    }
+
+    public Path up(final int count) {
+
+        final List<String> parts = Lists.newArrayList(this);
+        for(int i = 0; i != count; ++i) {
+            parts.add(UP);
+        }
+        return create(parts);
     }
 }

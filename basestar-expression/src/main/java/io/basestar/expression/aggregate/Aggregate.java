@@ -24,10 +24,10 @@ import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.call.LambdaCall;
+import io.basestar.util.Immutable;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Stream;
 
 public interface Aggregate extends Expression {
@@ -36,14 +36,12 @@ public interface Aggregate extends Expression {
             .put(Avg.NAME.toLowerCase(), Avg::create)
             .put(CollectArray.NAME.toLowerCase(), CollectArray::create)
             .put(Count.NAME.toLowerCase(), Count::create)
-            // MORE COMPLICATED THAN OTHERS
             .put(Max.NAME.toLowerCase(), Max::create)
             .put(Min.NAME.toLowerCase(), Min::create)
             .put(Sum.NAME.toLowerCase(), Sum::create)
             .build();
 
-    // Presently only used for tests
-    Object evaluate(Context context, Stream<? extends Map<String, Object>> values);
+    Object evaluate(Stream<Context> context);
 
     interface Factory {
 
@@ -61,6 +59,25 @@ public interface Aggregate extends Expression {
         return true;
     }
 
+    Object append(Object value, Object add);
+
+    Object remove(Object value, Object sub);
+
+    boolean isAppendable();
+
+    boolean isRemovable();
+
+    default List<Aggregate> components() {
+
+        return Immutable.list(this);
+    }
+
+    default Object fromComponents(final Object ... values) {
+
+        assert values.length == 1;
+        return values[0];
+    }
+
     @Override
     default Object evaluate(final Context context) {
 
@@ -68,7 +85,7 @@ public interface Aggregate extends Expression {
     }
 
     @Override
-    default boolean isConstant(final Set<String> closure) {
+    default boolean isConstant(final Closure closure) {
 
         return false;
     }

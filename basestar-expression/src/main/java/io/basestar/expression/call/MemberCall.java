@@ -67,7 +67,7 @@ public class MemberCall implements Expression {
 
         this.with = with;
         this.member = member;
-        this.args = Immutable.copy(args);
+        this.args = Immutable.list(args);
     }
 
     @Override
@@ -121,9 +121,9 @@ public class MemberCall implements Expression {
     }
 
     @Override
-    public boolean isConstant(final Set<String> closure) {
+    public boolean isConstant(final Closure closure) {
 
-        return false;
+        return this.with.isConstant(closure) && this.args.stream().allMatch(v -> v.isConstant(closure));
     }
 
     @Override

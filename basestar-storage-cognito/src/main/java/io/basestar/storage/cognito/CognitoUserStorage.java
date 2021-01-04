@@ -21,11 +21,10 @@ package io.basestar.storage.cognito;
  */
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
-import io.basestar.expression.type.Values;
+import io.basestar.expression.type.Coercion;
 import io.basestar.jackson.BasestarModule;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
@@ -45,6 +44,7 @@ import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityPr
 import software.amazon.awssdk.services.cognitoidentityprovider.model.*;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -136,12 +136,12 @@ public class CognitoUserStorage implements DefaultLayerStorage {
 
     private String decodePaging(final Page.Token token) {
 
-        return Nullsafe.map(token, v -> new String(v.getValue(), Charsets.UTF_8));
+        return Nullsafe.map(token, v -> new String(v.getValue(), StandardCharsets.UTF_8));
     }
 
     private Page.Token encodePaging(final String token) {
 
-        return Nullsafe.map(token, v -> new Page.Token(token.getBytes(Charsets.UTF_8)));
+        return Nullsafe.map(token, v -> new Page.Token(token.getBytes(StandardCharsets.UTF_8)));
     }
 
     @Override
@@ -345,7 +345,7 @@ public class CognitoUserStorage implements DefaultLayerStorage {
             @Override
             public <T> Map<Name, String> visitScalar(final UseScalar<T> type) {
 
-                return value == null ? ImmutableMap.of() : ImmutableMap.of(path, Values.toString(value));
+                return value == null ? ImmutableMap.of() : ImmutableMap.of(path, Coercion.toString(value));
             }
 
             @Override

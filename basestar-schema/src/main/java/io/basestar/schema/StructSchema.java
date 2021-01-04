@@ -32,7 +32,7 @@ import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseStruct;
-import io.basestar.schema.use.ValueContext;
+import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -296,5 +296,11 @@ public class StructSchema implements InstanceSchema {
             return Property.builder()
                     .setType(Use.fromConfig(config));
         }
+    }
+
+    @Override
+    public String toString() {
+
+        return getQualifiedName().toString();
     }
 }

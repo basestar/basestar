@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.BaseEncoding;
 import io.basestar.secret.Secret;
+import io.basestar.util.Bytes;
 import io.basestar.util.Warnings;
 import lombok.Data;
 import lombok.Getter;
@@ -93,8 +94,8 @@ public interface FieldType {
 
             if(value == null) {
                 return null;
-            } else if(value instanceof byte[]) {
-                return BaseEncoding.base64().encode((byte[])value);
+            } else if(value instanceof Bytes) {
+                return ((Bytes)value).toBase64();
             } else {
                 throw new IllegalStateException();
             }

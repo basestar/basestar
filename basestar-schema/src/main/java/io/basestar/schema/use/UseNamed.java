@@ -27,6 +27,7 @@ import io.basestar.schema.*;
 import io.basestar.schema.exception.MissingSchemaException;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
+import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Name;
 import lombok.Data;
 
@@ -86,6 +87,8 @@ public interface UseNamed<T> extends Use<T> {
                 return UseStruct.from((StructSchema) schema, config);
             } else if(schema instanceof ReferableSchema) {
                 return UseRef.from((ReferableSchema) schema, config);
+            } else if(schema instanceof ViewSchema) {
+                return UseView.from((ViewSchema) schema, config);
             } else {
                 throw new MissingSchemaException(name);
             }

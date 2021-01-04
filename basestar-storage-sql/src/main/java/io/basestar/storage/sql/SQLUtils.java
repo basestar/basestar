@@ -29,8 +29,7 @@ import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.schema.use.*;
 import io.basestar.util.Name;
-import io.basestar.util.Sort;
-import io.basestar.util.Warnings;
+import io.basestar.util.*;
 import org.apache.commons.text.StringEscapeUtils;
 import org.jooq.*;
 import org.jooq.impl.DSL;
@@ -261,9 +260,9 @@ public class SQLUtils {
             }
 
             @Override
-            public byte[] visitBinary(final UseBinary type) {
+            public Object visitBinary(final UseBinary type) {
 
-                return type.create(value);
+                return Nullsafe.map(type.create(value), v -> v.getBytes());
             }
 
             @Override
@@ -416,7 +415,7 @@ public class SQLUtils {
             }
 
             @Override
-            public byte[] visitBinary(final UseBinary type) {
+            public Bytes visitBinary(final UseBinary type) {
 
                 return type.create(value);
             }

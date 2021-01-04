@@ -38,8 +38,8 @@ public interface Layout extends Serializable {
 
         public Simple(final Map<String, Use<?>> schema, final Set<Name> expand) {
 
-            this.schema = Immutable.copy(schema);
-            this.expand = Immutable.copy(expand);
+            this.schema = Immutable.map(schema);
+            this.expand = Immutable.set(expand);
         }
 
         @Override

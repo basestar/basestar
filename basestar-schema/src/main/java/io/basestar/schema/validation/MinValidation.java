@@ -5,7 +5,9 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Context;
+import io.basestar.expression.type.Numbers;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseInteger;
 import io.basestar.type.AnnotationContext;
 import io.basestar.util.Nullsafe;
 import lombok.Data;
@@ -105,16 +107,30 @@ public class MinValidation implements Validation {
         @Override
         public boolean validate(final Use<?> type, final Context context, final Object value) {
 
-            return true;
+            if(value instanceof Number) {
+                final Number number = (Number)value;
+                final BigDecimal other = Numbers.isInteger(number) ? BigDecimal.valueOf(number.longValue()) : BigDecimal.valueOf(number.doubleValue());
+                final int cmp = this.value.compareTo(other);
+                return exclusive ? cmp > 0 : cmp >= 0;
+            } else {
+                return false;
+            }
         }
 
         @Override
-        public DecimalMin toJsr380(final Use<?> type, final Map<String, Object> values) {
+        public Annotation toJsr380(final Use<?> type, final Map<String, Object> values) {
 
-            return new AnnotationContext<>(DecimalMin.class, ImmutableMap.<String, Object>builder().putAll(values)
-                    .put("value", value.toString())
-                    .put("inclusive", !exclusive)
-                    .build()).annotation();
+            if(type instanceof UseInteger) {
+                return new AnnotationContext<>(Min.class, ImmutableMap.<String, Object>builder().putAll(values)
+                        .put("value", value.longValue())
+                        .put("inclusive", !exclusive)
+                        .build()).annotation();
+            } else {
+                return new AnnotationContext<>(DecimalMin.class, ImmutableMap.<String, Object>builder().putAll(values)
+                        .put("value", value.toString())
+                        .put("inclusive", !exclusive)
+                        .build()).annotation();
+            }
         }
 
         @Override

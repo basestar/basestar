@@ -48,7 +48,7 @@ public class StructSchemaModel extends InstanceSchemaModel {
     public List<AnnotationModel<?>> getAnnotations() {
 
         final ImmutableList.Builder<AnnotationModel<?>> annotations = ImmutableList.builder();
-        annotations.add(new AnnotationModel<>(getContext(), VALID));
+        annotations.addAll(super.getAnnotations());
         annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.StructSchema.Declaration.annotation(schema)));
         if(schema.getDescription() != null) {
             annotations.add(new AnnotationModel<>(getContext(), Description.Modifier.annotation(schema.getDescription())));

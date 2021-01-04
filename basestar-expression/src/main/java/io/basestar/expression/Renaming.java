@@ -22,7 +22,7 @@ package io.basestar.expression;
 
 import io.basestar.util.Name;
 
-import java.util.Collection;
+import java.util.Set;
 
 public interface Renaming {
 
@@ -71,12 +71,17 @@ public interface Renaming {
         };
     }
 
-    static Renaming closure(final Collection<String> closed, final Renaming transform) {
+    static Renaming closure(final Set<String> closed, final Renaming transform) {
+
+        return closure(Expression.Closure.from(closed), transform);
+    }
+
+    static Renaming closure(final Expression.Closure closed, final Renaming transform) {
 
         return path -> {
 
             final String first = path.first();
-            if(closed.contains(first)) {
+            if(closed.has(first)) {
                 return path;
             } else {
                 return transform.apply(path);

@@ -20,23 +20,28 @@ package io.basestar.storage.cognito;
  * #L%
  */
 
-import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Consistency;
+import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.ReferableSchema;
 import io.basestar.storage.*;
+import io.basestar.storage.exception.ObjectExistsException;
+import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.util.*;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderAsyncClient;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.*;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+@Slf4j
 public class CognitoGroupStorage implements DefaultLayerStorage {
 
     private static final String DESCRIPTION_KEY = "description";
@@ -92,12 +97,12 @@ public class CognitoGroupStorage implements DefaultLayerStorage {
 
     private String decodePaging(final Page.Token token) {
 
-        return null;
+        return Nullsafe.map(token, v -> new String(v.getValue(), StandardCharsets.UTF_8));
     }
 
-    private Page.Token encodePaging(final String s) {
+    private Page.Token encodePaging(final String token) {
 
-        return null;
+        return Nullsafe.map(token, v -> new Page.Token(token.getBytes(StandardCharsets.UTF_8)));
     }
 
     @Override
@@ -131,7 +136,18 @@ public class CognitoGroupStorage implements DefaultLayerStorage {
                             .userPoolId(userPoolId)
                             .groupName(key.getId())
                             .build())
-                            .thenApply(response -> key.matchOrNull(fromGroup(response.group()))));
+                            .thenApply(response -> key.matchOrNull(fromGroup(response.group())))
+                            .exceptionally(e -> {
+                                final Throwable cause = e.getCause();
+                                if(cause instanceof ResourceNotFoundException) {
+                                    log.warn("Group {} not found", key.getId());
+                                    return null;
+                                } else if(cause instanceof RuntimeException) {
+                                    throw (RuntimeException)e.getCause();
+                                } else {
+                                    throw new IllegalStateException(cause);
+                                }
+                            }));
                 });
                 return CompletableFutures.allOf(futures).thenApply(BatchResponse::new);
             }
@@ -162,6 +178,16 @@ public class CognitoGroupStorage implements DefaultLayerStorage {
                             .groupName(id)
                             .description(description)
                             .build())
+                            .exceptionally(e -> {
+                                final Throwable cause = e.getCause();
+                                if(cause instanceof GroupExistsException) {
+                                    throw new ObjectExistsException(schema.getQualifiedName(), id);
+                                } else if(cause instanceof RuntimeException) {
+                                    throw (RuntimeException)e.getCause();
+                                } else {
+                                    throw new IllegalStateException(cause);
+                                }
+                            })
                             .thenApply(ignored -> BatchResponse.fromRef(schema.getQualifiedName(), after));
                 });
             }
@@ -177,6 +203,17 @@ public class CognitoGroupStorage implements DefaultLayerStorage {
                             .groupName(id)
                             .description(description)
                             .build())
+                            .exceptionally(e -> {
+                                final Throwable cause = e.getCause();
+                                if(cause instanceof ResourceNotFoundException) {
+                                    log.warn("User {} not found", id);
+                                    throw new VersionMismatchException(schema.getQualifiedName(), id, Instance.getVersion(before));
+                                } else if(cause instanceof RuntimeException) {
+                                    throw (RuntimeException)e.getCause();
+                                } else {
+                                    throw new IllegalStateException(cause);
+                                }
+                            })
                             .thenApply(ignored -> BatchResponse.fromRef(schema.getQualifiedName(), after));
                 });
             }
@@ -190,6 +227,17 @@ public class CognitoGroupStorage implements DefaultLayerStorage {
                             .userPoolId(userPoolId)
                             .groupName(id)
                             .build())
+                            .exceptionally(e -> {
+                                final Throwable cause = e.getCause();
+                                if(cause instanceof ResourceNotFoundException) {
+                                    log.warn("Group {} not found", id);
+                                    throw new VersionMismatchException(schema.getQualifiedName(), id, Instance.getVersion(before));
+                                } else if(cause instanceof RuntimeException) {
+                                    throw (RuntimeException)e.getCause();
+                                } else {
+                                    throw new IllegalStateException(cause);
+                                }
+                            })
                             .thenApply(ignored -> BatchResponse.empty());
                 });
             }
@@ -197,7 +245,7 @@ public class CognitoGroupStorage implements DefaultLayerStorage {
             @Override
             public void writeHistoryLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
 
-                throw new UnsupportedOperationException("cannot write history");
+//                throw new UnsupportedOperationException("cannot write history");
             }
 
             @Override
@@ -227,9 +275,10 @@ public class CognitoGroupStorage implements DefaultLayerStorage {
 
     private Map<String, Object> fromGroup(final GroupType group) {
 
-        return ImmutableMap.of(
-                ObjectSchema.ID, group.groupName(),
-                DESCRIPTION_KEY, group.description()
-        );
+        final Map<String, Object> result = new HashMap<>();
+        result.put(ReferableSchema.ID, group.groupName());
+        result.put(ReferableSchema.VERSION, 1L);
+        result.put(DESCRIPTION_KEY, group.description());
+        return result;
     }
 }

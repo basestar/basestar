@@ -220,7 +220,7 @@ public class SparkCatalogUtils {
                         assert key.equals(name);
                         final String value = entry.getSecond();
                         if(strategy.include(spec, key, value)) {
-                            final Map<String, String> newValues = Immutable.copyPut(spec, name, value);
+                            final Map<String, String> newValues = Immutable.put(spec, name, value);
                             partitions.addAll(findPartitions(fs, newPath, names.subList(1, names.size()), newValues, strategy));
                         }
                     }
@@ -275,5 +275,21 @@ public class SparkCatalogUtils {
 
         return URI.create(location.toString() + "/" + spec.stream().map(v -> toPartitionPathTerm(v.getFirst(), v.getSecond()))
                 .collect(Collectors.joining("/")));
+    }
+
+    public static String escapeName(final String ... names) {
+
+        return Arrays.stream(names).map(SparkCatalogUtils::escapeName)
+                .collect(Collectors.joining("."));
+    }
+
+    private static String escapeName(final String name) {
+
+        // Escapes common characters in names like hyphen, dot, etc,
+        // not sure how to escape backticks but not likely to appear anyway
+        if(name.contains("`")) {
+            throw new IllegalStateException("Invalid name");
+        }
+        return "`" + name + "`";
     }
 }

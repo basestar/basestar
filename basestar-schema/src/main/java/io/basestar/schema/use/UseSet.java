@@ -22,7 +22,7 @@ package io.basestar.schema.use;
 
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Schema;
-import io.basestar.schema.exception.UnexpectedTypeException;
+import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Name;
 import io.leangen.geantyref.TypeFactory;
 import io.swagger.v3.oas.models.media.ArraySchema;
@@ -32,7 +32,6 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.DataInput;
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -112,21 +111,6 @@ public class UseSet<T> implements UseCollection<T, Set<T>> {
     public Set<T> create(final ValueContext context, final Object value, final Set<Name> expand) {
 
         return context.createSet(this, value, expand);
-    }
-
-    @Deprecated
-    public static <T> Set<T> create(final Object value, final boolean suppress, final Function<Object, T> fn) {
-
-        if(value == null) {
-            return null;
-        } else if(value instanceof Collection) {
-            return ((Collection<?>) value).stream()
-                    .map(fn).collect(Collectors.toSet());
-        } else if (suppress) {
-            return null;
-        } else {
-            throw new UnexpectedTypeException(NAME, value);
-        }
     }
 
     @Override
@@ -210,6 +194,17 @@ public class UseSet<T> implements UseCollection<T, Set<T>> {
             return true;
         } else {
             return false;
+        }
+    }
+
+    @Override
+    public String toString(final Set<T> value) {
+
+        if(value == null) {
+            return "null";
+        } else {
+            final Use<T> type = getType();
+            return "{" + value.stream().map(type::toString).sorted().collect(Collectors.joining(", ")) + "}";
         }
     }
 }

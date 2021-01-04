@@ -26,8 +26,8 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.compare.Eq;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.NameConstant;
+import io.basestar.expression.iterate.ContextIterator;
 import io.basestar.expression.iterate.ForAny;
-import io.basestar.expression.iterate.Of;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Or;
 import io.basestar.util.Name;
@@ -102,10 +102,10 @@ class TestDisjunctionVisitor {
         assertEquals(ImmutableSet.of(
                 new ForAny(
                         new NameConstant(Name.of("x", "a")),
-                        new Of("x", new NameConstant(Name.of("y")))),
+                        new ContextIterator.OfValue("x", new NameConstant(Name.of("y")))),
                 new ForAny(
                         new NameConstant(Name.of("x", "b")),
-                        new Of("x", new NameConstant(Name.of("y"))))
+                        new ContextIterator.OfValue("x", new NameConstant(Name.of("y"))))
         ), result);
 
         // x.a || x.b for any x of y
@@ -125,13 +125,13 @@ class TestDisjunctionVisitor {
                                 new NameConstant(Name.of("x", "a")),
                                 new Constant(1L)
                         ),
-                        new Of("x", new NameConstant(Name.of("y")))),
+                        new ContextIterator.OfValue("x", new NameConstant(Name.of("y")))),
                 new ForAny(
                         new Eq(
                                 new NameConstant(Name.of("x", "a")),
                                 new Constant(2L)
                         ),
-                        new Of("x", new NameConstant(Name.of("y"))))
+                        new ContextIterator.OfValue("x", new NameConstant(Name.of("y"))))
         ), result);
 
         // x.a || x.b for any x of y
