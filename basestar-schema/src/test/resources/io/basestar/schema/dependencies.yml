@@ -1,0 +1,62 @@
+
+NotExpanded:
+  type: view
+  from:
+    schema: Object2
+
+Linked:
+  type: view
+  from:
+    schema: Object2
+  links:
+    notExpanded:
+      schema: NotExpanded
+      expression: true
+
+Ref1:
+  type: object
+
+Ref2:
+  type: object
+
+Ref3:
+  type: object
+
+Ref4:
+  type: object
+
+Object1:
+  type: object
+  properties:
+    arrayRef1:
+      type:
+        array: Ref1
+    mapRef2:
+      type:
+        map: Ref2
+    ref3:
+      type: Ref3
+    ref4:
+      type: Ref4
+  links:
+    linked:
+      schema: Linked
+      expression: true
+
+Object2:
+  type: object
+
+BaseView:
+  type: view
+  from:
+    schema: Object1
+    expand:
+      - linked
+      - arrayRef1
+      - mapRef2
+      - ref3
+
+DerivedView:
+  type: view
+  from:
+    schema: BaseView

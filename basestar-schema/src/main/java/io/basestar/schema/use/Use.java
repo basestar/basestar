@@ -26,6 +26,7 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.type.Numbers;
 import io.basestar.schema.Constraint;
+import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
 import io.basestar.schema.exception.InvalidKeyException;
 import io.basestar.schema.exception.TypeSyntaxException;
@@ -171,6 +172,8 @@ public interface Use<T> extends Serializable {
     Map<Ref, Long> refVersions(T value);
 
     void collectDependencies(Set<Name> expand, Map<Name, Schema<?>> out);
+
+    void collectMaterializationDependencies(Set<Name> expand, Map<Name, LinkableSchema> out);
 
     default Object[] key(final T value) {
 

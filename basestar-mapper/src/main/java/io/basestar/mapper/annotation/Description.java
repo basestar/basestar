@@ -21,14 +21,14 @@ public @interface Description {
     String value();
 
     @RequiredArgsConstructor
-    class Modifier implements SchemaModifier.Modifier<SchemaMapper<?, ?>>, MemberModifier.Modifier<MemberMapper<?>> {
+    class Modifier implements SchemaModifier.Modifier<SchemaMapper.Builder<?, ?>>, MemberModifier.Modifier<MemberMapper<?>> {
 
         private final Description annotation;
 
         @Override
-        public SchemaMapper<?, ?> modify(final MappingContext context, final SchemaMapper<?, ?> mapper) {
+        public void modify(final MappingContext context, final SchemaMapper.Builder<?, ?> mapper) {
 
-            return mapper.withDescription(annotation.value());
+            mapper.setDescription(annotation.value());
         }
 
         @Override

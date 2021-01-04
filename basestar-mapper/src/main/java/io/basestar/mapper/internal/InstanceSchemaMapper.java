@@ -56,7 +56,11 @@ public abstract class InstanceSchemaMapper<B extends InstanceSchema.Builder<B, ?
     protected final List<MemberMapper<B>> members;
 
     @SuppressWarnings("unchecked")
-    protected InstanceSchemaMapper(final Class<B> builderType, final MappingContext context, final Name name, final TypeContext type) {
+    protected InstanceSchemaMapper(final Class<B> builderType, final Builder<B, T> builder) {
+
+        final MappingContext context = builder.getContext();
+        final Name name = builder.getName();
+        final TypeContext type = builder.getType();
 
         final List<TypeContext> extendTypes = context.strategy().extend(type);
 
@@ -68,7 +72,7 @@ public abstract class InstanceSchemaMapper<B extends InstanceSchema.Builder<B, ?
                 .collect(Collectors.toList());
         this.concrete = context.strategy().concrete(type);
         this.erasedType = type.erasedType();
-        this.description = null;
+        this.description = builder.getDescription();
         this.packageName = type.packageName();
 
         // Filter out properties that appear in base types
@@ -89,7 +93,7 @@ public abstract class InstanceSchemaMapper<B extends InstanceSchema.Builder<B, ?
 
                     if (propAnnotations.size() == 0) {
                         // FIXME
-                        members.add((MemberMapper<B>) new PropertyMapper(context, prop.name(), prop));
+                        members.add(new PropertyMapper<>(context, prop.name(), prop));
                     } else if (propAnnotations.size() == 1) {
                         final AnnotationContext<?> annotation = propAnnotations.get(0);
                         final MemberDeclaration memberDeclaration = annotation.type().annotation(MemberDeclaration.class).annotation();
@@ -117,17 +121,6 @@ public abstract class InstanceSchemaMapper<B extends InstanceSchema.Builder<B, ?
         });
 
         this.members = members;
-    }
-
-    protected InstanceSchemaMapper(final InstanceSchemaMapper<B, T> copy, final String description) {
-
-        this.name = copy.name;
-        this.concrete = copy.concrete;
-        this.extend = copy.extend;
-        this.erasedType = copy.erasedType;
-        this.members = copy.members;
-        this.description = description;
-        this.packageName = copy.packageName;
     }
 
     private MemberMapper<B> applyModifiers(final MappingContext context, final PropertyContext prop, final MemberMapper<B> input) throws IllegalAccessException, InstantiationException, InvocationTargetException {
@@ -183,7 +176,7 @@ public abstract class InstanceSchemaMapper<B extends InstanceSchema.Builder<B, ?
         if(builder instanceof Transient.Resolver.Builder) {
             ((Transient.Resolver.Builder<?>)builder).setTransient(name, trans);
         } else {
-            throw new IllegalStateException("Cannot add link to " + builder.getType());
+            throw new IllegalStateException("Cannot add transient to " + builder.getType());
         }
     }
 
@@ -263,5 +256,10 @@ public abstract class InstanceSchemaMapper<B extends InstanceSchema.Builder<B, ?
         } catch (final IllegalAccessException | InstantiationException | InvocationTargetException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    interface Builder<B extends InstanceSchema.Builder<B, ?>, T> extends SchemaMapper.Builder<T, Map<String, Object>> {
+
+        InstanceSchemaMapper<B, T> build();
     }
 }

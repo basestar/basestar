@@ -761,6 +761,9 @@ public class DynamoDBStorage implements DefaultIndexStorage {
         public Map<String, Object> next() {
 
             prepare();
+            if(items.isEmpty()) {
+                throw new NoSuchElementException();
+            }
             final Map<String, Object> result = DynamoDBUtils.fromItem(items.getFirst());
             items.pop();
             return result;

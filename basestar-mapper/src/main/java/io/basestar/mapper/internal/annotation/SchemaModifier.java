@@ -12,8 +12,8 @@ public @interface SchemaModifier {
 
     Class<? extends Modifier<?>> value();
 
-    interface Modifier<M extends SchemaMapper<?, ?>> {
+    interface Modifier<M extends SchemaMapper.Builder<?, ?>> {
 
-        M modify(MappingContext context, M mapper);
+        void modify(MappingContext context, M mapper);
     }
 }

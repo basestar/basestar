@@ -32,34 +32,33 @@ public @interface Extension {
         Extension[] value();
 
         @RequiredArgsConstructor
-        class Modifier implements SchemaModifier.Modifier<SchemaMapper<?, ?>> {
+        class Modifier implements SchemaModifier.Modifier<SchemaMapper.Builder<?, ?>> {
 
             private final Multi annotation;
 
             @Override
-            public SchemaMapper<?, ?> modify(final MappingContext context, final SchemaMapper<?, ?> mapper) {
+            public void modify(final MappingContext context, final SchemaMapper.Builder<?, ?> mapper) {
 
-                return Extension.Modifier.modify(mapper, annotation.value());
+                Extension.Modifier.modify(mapper, annotation.value());
             }
         }
     }
 
     @RequiredArgsConstructor
-    class Modifier implements SchemaModifier.Modifier<SchemaMapper<?, ?>> {
+    class Modifier implements SchemaModifier.Modifier<SchemaMapper.Builder<?, ?>> {
 
         private static final ObjectMapper objectMapper = new ObjectMapper().registerModule(BasestarModule.INSTANCE);
 
         private final Extension annotation;
 
         @Override
-        public SchemaMapper<?, ?> modify(final MappingContext context, final SchemaMapper<?, ?> mapper) {
+        public void modify(final MappingContext context, final SchemaMapper.Builder<?, ?> mapper) {
 
-            return modify(mapper, annotation);
+            modify(mapper, annotation);
         }
 
-        private static SchemaMapper<?, ?> modify(final SchemaMapper<?, ?> mapper, final Extension ... annotations) {
+        private static void modify(final SchemaMapper.Builder<?, ?> mapper, final Extension ... annotations) {
 
-            return mapper;
         }
 
         public static Extension annotation(final String name, final Object value) {

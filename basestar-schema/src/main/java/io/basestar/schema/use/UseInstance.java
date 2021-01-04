@@ -102,6 +102,13 @@ public interface UseInstance extends UseNamed<Instance> {
     }
 
     @Override
+    default void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, LinkableSchema> out) {
+
+        final Schema<?> schema = getSchema();
+        schema.collectMaterializationDependencies(expand, out);
+    }
+
+    @Override
     default String toString(final Instance value) {
 
         return getSchema().toString(value);

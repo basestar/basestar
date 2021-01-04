@@ -26,12 +26,12 @@ public @interface From {
     String[] expand() default {};
 
     @RequiredArgsConstructor
-    class Modifier implements SchemaModifier.Modifier<ViewSchemaMapper<?>> {
+    class Modifier implements SchemaModifier.Modifier<ViewSchemaMapper.Builder<?>> {
 
         private final From annotation;
 
         @Override
-        public ViewSchemaMapper<?> modify(final MappingContext context, final ViewSchemaMapper<?> mapper) {
+        public void modify(final MappingContext context, final ViewSchemaMapper.Builder<?> mapper) {
 
             final Name fromSchema;
             if(!annotation.schema().isEmpty()) {
@@ -41,7 +41,8 @@ public @interface From {
                 fromSchema = tmp.getQualifiedName();
             }
             final Set<Name> fromExpand = Name.parseSet(annotation.expand());
-            return mapper.withFrom(fromSchema, fromExpand);
+            mapper.setFromSchema(fromSchema);
+            mapper.setFromExpand(fromExpand);
         }
 
         public static From annotation(final io.basestar.schema.ViewSchema.From from) {

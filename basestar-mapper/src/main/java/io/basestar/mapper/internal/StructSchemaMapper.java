@@ -21,23 +21,22 @@ package io.basestar.mapper.internal;
  */
 
 import io.basestar.mapper.MappingContext;
-import io.basestar.mapper.SchemaMapper;
 import io.basestar.schema.StructSchema;
 import io.basestar.type.TypeContext;
 import io.basestar.util.Name;
-
-import java.util.Map;
+import lombok.Data;
+import lombok.experimental.Accessors;
 
 public class StructSchemaMapper<T> extends InstanceSchemaMapper<StructSchema.Builder, T> {
 
-    public StructSchemaMapper(final MappingContext context, final Name name, final TypeContext type) {
+    public StructSchemaMapper(final Builder<T> builder) {
 
-        super(StructSchema.Builder.class, context, name, type);
+        super(StructSchema.Builder.class, builder);
     }
 
-    public StructSchemaMapper(final StructSchemaMapper<T> copy, final String description) {
+    public static <T> Builder<T> builder(final MappingContext context, final Name name, final TypeContext type) {
 
-        super(copy, description);
+        return new Builder<>(context, name, type);
     }
 
     @Override
@@ -48,9 +47,22 @@ public class StructSchemaMapper<T> extends InstanceSchemaMapper<StructSchema.Bui
                 .setExtend(extend));
     }
 
-    @Override
-    public SchemaMapper<T, Map<String, Object>> withDescription(final String description) {
+    @Data
+    @Accessors(chain = true)
+    public static class Builder<T> implements InstanceSchemaMapper.Builder<StructSchema.Builder, T> {
 
-        return new StructSchemaMapper<>(this, description);
+        private final MappingContext context;
+
+        private final Name name;
+
+        private final TypeContext type;
+
+        private String description;
+
+        @Override
+        public StructSchemaMapper<T> build() {
+
+            return new StructSchemaMapper<>(this);
+        }
     }
 }

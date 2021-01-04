@@ -458,4 +458,15 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         }
         return true;
     }
+
+    @Override
+    default void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, LinkableSchema> out) {
+
+        final Map<String, Set<Name>> branches = Name.branch(expand);
+        getDeclaredMembers().forEach((k, v) -> {
+            if(branches.containsKey(k)) {
+                v.collectMaterializationDependencies(branches.get(k), out);
+            }
+        });
+    }
 }

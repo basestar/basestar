@@ -53,9 +53,9 @@ public @interface EnumSchema {
         }
 
         @Override
-        public SchemaMapper<?, ?> mapper(final MappingContext context, final TypeContext type) {
+        public SchemaMapper.Builder<?, ?> mapper(final MappingContext context, final TypeContext type) {
 
-            return new EnumSchemaMapper<>(context, getQualifiedName(context, type), type);
+            return EnumSchemaMapper.builder(context, getQualifiedName(context, type), type);
         }
 
         public static EnumSchema annotation(final io.basestar.schema.EnumSchema schema) {

@@ -53,9 +53,9 @@ public @interface ObjectSchema {
         }
 
         @Override
-        public SchemaMapper<?, ?> mapper(final MappingContext context, final TypeContext type) {
+        public SchemaMapper.Builder<?, ?> mapper(final MappingContext context, final TypeContext type) {
 
-            return new ObjectSchemaMapper<>(context, getQualifiedName(context, type), type);
+            return ObjectSchemaMapper.builder(context, getQualifiedName(context, type), type);
         }
 
         public static ObjectSchema annotation(final io.basestar.schema.ReferableSchema schema) {

@@ -21,6 +21,7 @@ package io.basestar.mapper;
  */
 
 import io.basestar.schema.Schema;
+import io.basestar.type.TypeContext;
 import io.basestar.util.Name;
 
 import java.io.Serializable;
@@ -60,5 +61,18 @@ public interface SchemaMapper<T, O> extends Serializable {
 
     Set<Class<?>> dependencies();
 
-    SchemaMapper<T, O> withDescription(String description);
+    interface Builder<T, O> {
+
+        MappingContext getContext();
+
+        Name getName();
+
+        TypeContext getType();
+
+        Builder<T, O> setDescription(String description);
+
+        String getDescription();
+
+        SchemaMapper<T, O> build();
+    }
 }

@@ -192,6 +192,11 @@ public class EnumSchema implements Schema<String> {
     }
 
     @Override
+    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, LinkableSchema> out) {
+
+    }
+
+    @Override
     public UseEnum typeOf() {
 
         return new UseEnum(this);
