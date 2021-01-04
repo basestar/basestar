@@ -2,15 +2,18 @@ package io.basestar.mapper.annotation;
 
 import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.MappingContext;
-import io.basestar.mapper.SchemaMapper;
+import io.basestar.mapper.internal.LinkableSchemaMapper;
 import io.basestar.mapper.internal.annotation.SchemaModifier;
 import io.basestar.type.AnnotationContext;
 import io.basestar.util.AbstractPath;
 import io.basestar.util.BucketFunction;
+import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.annotation.*;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
@@ -30,7 +33,7 @@ public @interface Bucketing {
     }
 
     @RequiredArgsConstructor
-    class Modifier implements SchemaModifier.Modifier<SchemaMapper<?, ?>> {
+    class Modifier implements SchemaModifier.Modifier<LinkableSchemaMapper.Builder<?, ?>> {
 
         private final Bucketing annotation;
 
@@ -54,9 +57,14 @@ public @interface Bucketing {
         }
 
         @Override
-        public SchemaMapper<?, ?> modify(final MappingContext context, final SchemaMapper<?, ?> mapper) {
+        public void modify(final MappingContext context, final LinkableSchemaMapper.Builder<?, ?> mapper) {
 
-            return mapper;
+            mapper.setBucketing(Arrays.stream(annotation.value()).map(v -> {
+
+                final List<Name> using = Arrays.stream(v.using()).map(Name::parse).collect(Collectors.toList());
+                return new io.basestar.schema.Bucketing(using, v.count(), v.function());
+
+            }).collect(Collectors.toList()));
         }
     }
 }

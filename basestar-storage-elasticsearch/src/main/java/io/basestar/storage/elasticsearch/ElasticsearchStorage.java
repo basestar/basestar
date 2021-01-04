@@ -529,6 +529,9 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
         public Map<String, Object> next() {
 
             prepare();
+            if(hits.isEmpty()) {
+                throw new NoSuchElementException();
+            }
             final Map<String, Object> result = fromSource(schema, hits.getFirst().getSourceAsMap());
             hits.pop();
             return result;

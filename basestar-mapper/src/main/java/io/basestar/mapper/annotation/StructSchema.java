@@ -53,9 +53,9 @@ public @interface StructSchema {
         }
 
         @Override
-        public SchemaMapper<?, ?> mapper(final MappingContext context, final TypeContext type) {
+        public SchemaMapper.Builder<?, ?> mapper(final MappingContext context, final TypeContext type) {
 
-            return new StructSchemaMapper<>(context, getQualifiedName(context, type), type);
+            return StructSchemaMapper.builder(context, getQualifiedName(context, type), type);
         }
 
         public static StructSchema annotation(final io.basestar.schema.StructSchema schema) {

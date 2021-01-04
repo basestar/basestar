@@ -68,14 +68,14 @@ public @interface Index {
         Index[] value();
 
         @RequiredArgsConstructor
-        class Modifier implements SchemaModifier.Modifier<ObjectSchemaMapper<?>> {
+        class Modifier implements SchemaModifier.Modifier<ObjectSchemaMapper.Builder<?>> {
 
             private final Multi annotation;
 
             @Override
-            public ObjectSchemaMapper<?> modify(final MappingContext context, final ObjectSchemaMapper<?> mapper) {
+            public void modify(final MappingContext context, final ObjectSchemaMapper.Builder<?> mapper) {
 
-                return Index.Modifier.modify(mapper, annotation.value());
+                Index.Modifier.modify(mapper, annotation.value());
             }
         }
     }
@@ -90,17 +90,17 @@ public @interface Index {
     }
 
     @RequiredArgsConstructor
-    class Modifier implements SchemaModifier.Modifier<ObjectSchemaMapper<?>> {
+    class Modifier implements SchemaModifier.Modifier<ObjectSchemaMapper.Builder<?>> {
 
         private final Index annotation;
 
         @Override
-        public ObjectSchemaMapper<?> modify(final MappingContext context, final ObjectSchemaMapper<?> mapper) {
+        public void modify(final MappingContext context, final ObjectSchemaMapper.Builder<?> mapper) {
 
-           return modify(mapper, annotation);
+            modify(mapper, annotation);
         }
 
-        private static ObjectSchemaMapper<?> modify(final ObjectSchemaMapper<?> mapper, final Index ... annotations) {
+        private static void modify(final ObjectSchemaMapper.Builder<?> mapper, final Index ... annotations) {
 
             final Map<String, io.basestar.schema.Index.Descriptor> indexes = new HashMap<>();
             Arrays.stream(annotations).forEach(annotation -> indexes.put(annotation.name(), new io.basestar.schema.Index.Builder()
@@ -110,7 +110,7 @@ public @interface Index {
                     .setUnique(annotation.unique())
                     .setConsistency(consistency(annotation.consistency()))
                     .setOver(over(annotation.over()))));
-            return mapper.withIndexes(indexes);
+            mapper.setIndexes(indexes);
         }
 
         private static Consistency consistency(final Consistency consistency) {

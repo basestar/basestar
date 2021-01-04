@@ -577,4 +577,15 @@ public class ViewSchema implements LinkableSchema {
 
         return getQualifiedName().toString();
     }
+
+    @Override
+    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, LinkableSchema> out) {
+
+        LinkableSchema.super.collectMaterializationDependencies(expand, out);
+        final LinkableSchema fromSchema = from.getSchema();
+        if(!out.containsKey(fromSchema.getQualifiedName())) {
+            out.put(fromSchema.getQualifiedName(), fromSchema);
+            fromSchema.collectMaterializationDependencies(from.getExpand(), out);
+        }
+    }
 }

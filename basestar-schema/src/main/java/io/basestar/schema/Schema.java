@@ -182,6 +182,15 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
 
     void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out);
 
+    default Map<Name, LinkableSchema> materializationDependencies(final Set<Name> expand) {
+
+        final Map<Name, LinkableSchema> dependencies = new HashMap<>();
+        collectMaterializationDependencies(expand, dependencies);
+        return dependencies;
+    }
+
+    void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, LinkableSchema> out);
+
     interface Resolver {
 
         interface Constructing extends Resolver {

@@ -25,6 +25,8 @@ import io.basestar.mapper.SchemaMapper;
 import io.basestar.schema.Schema;
 import io.basestar.type.TypeContext;
 import io.basestar.util.Name;
+import lombok.Data;
+import lombok.experimental.Accessors;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -42,26 +44,17 @@ public class EnumSchemaMapper<T extends Enum<?>> implements SchemaMapper<T, Stri
 
     private final String description;
 
-    public EnumSchemaMapper(final MappingContext context, final Name name, final TypeContext type) {
+    private EnumSchemaMapper(final Builder<T> builder) {
 
-        this.name = name;
-        this.erasedType = type.erasedType();
-        this.constants = type.enumConstants();
-        this.description = null;
+        this.name = builder.name;
+        this.erasedType = builder.type.erasedType();
+        this.constants = builder.type.enumConstants();
+        this.description = builder.description;
     }
 
-    private EnumSchemaMapper(final EnumSchemaMapper<T> copy, final String description) {
+    public static <T extends Enum<?>> Builder<T> builder(final MappingContext context, final Name name, final TypeContext type) {
 
-        this.name = copy.name;
-        this.erasedType = copy.erasedType;
-        this.constants = copy.constants;
-        this.description = description;
-    }
-
-    @Override
-    public SchemaMapper<T, String> withDescription(final String description) {
-
-        return new EnumSchemaMapper<>(this, description);
+        return new Builder<>(context, name, type);
     }
 
     @Override
@@ -116,5 +109,24 @@ public class EnumSchemaMapper<T extends Enum<?>> implements SchemaMapper<T, Stri
     public Set<Class<?>> dependencies() {
 
         return Collections.emptySet();
+    }
+
+    @Data
+    @Accessors(chain = true)
+    public static class Builder<T extends Enum<?>> implements SchemaMapper.Builder<T, String> {
+
+        private final MappingContext context;
+
+        private final Name name;
+
+        private final TypeContext type;
+
+        private String description;
+
+        @Override
+        public EnumSchemaMapper<T> build() {
+
+            return new EnumSchemaMapper<>(this);
+        }
     }
 }

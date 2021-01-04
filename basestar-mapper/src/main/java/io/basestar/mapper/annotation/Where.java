@@ -19,15 +19,15 @@ public @interface Where {
     String value();
 
     @RequiredArgsConstructor
-    class Modifier implements SchemaModifier.Modifier<ViewSchemaMapper<?>> {
+    class Modifier implements SchemaModifier.Modifier<ViewSchemaMapper.Builder<?>> {
 
         private final Where annotation;
 
         @Override
-        public ViewSchemaMapper<?> modify(final MappingContext context, final ViewSchemaMapper<?> mapper) {
+        public void modify(final MappingContext context, final ViewSchemaMapper.Builder<?> mapper) {
 
             final Expression where = Expression.parse(annotation.value());
-            return mapper.withWhere(where);
+            mapper.setWhere(where);
         }
 
         public static Where annotation(final io.basestar.expression.Expression expression) {

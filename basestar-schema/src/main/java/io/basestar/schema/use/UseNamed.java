@@ -222,6 +222,12 @@ public interface UseNamed<T> extends Use<T> {
         }
 
         @Override
+        public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, LinkableSchema> out) {
+
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public boolean areEqual(final Object a, final Object b) {
 
             throw new UnsupportedOperationException();

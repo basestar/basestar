@@ -55,10 +55,10 @@ public @interface ViewSchema {
         }
 
         @Override
-        public SchemaMapper<?, ?> mapper(final MappingContext context, final TypeContext type) {
+        public SchemaMapper.Builder<?, ?> mapper(final MappingContext context, final TypeContext type) {
 
-            final boolean materialized = annotation.materialized();
-            return new ViewSchemaMapper<>(context, getQualifiedName(context, type), type, materialized);
+            return ViewSchemaMapper.builder(context, getQualifiedName(context, type), type)
+                    .setMaterialized(annotation.materialized());
         }
 
         public static ViewSchema annotation(final io.basestar.schema.ViewSchema schema) {

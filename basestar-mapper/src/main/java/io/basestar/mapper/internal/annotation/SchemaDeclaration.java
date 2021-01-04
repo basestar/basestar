@@ -40,7 +40,7 @@ public @interface SchemaDeclaration {
 
         Name getQualifiedName(MappingContext context, TypeContext type);
 
-        SchemaMapper<?, ?> mapper(MappingContext context, TypeContext type);
+        SchemaMapper.Builder<?, ?> mapper(MappingContext context, TypeContext type);
 
         class Basic implements Declaration {
 
@@ -53,13 +53,13 @@ public @interface SchemaDeclaration {
             }
 
             @Override
-            public SchemaMapper<?, ?> mapper(final MappingContext context, final TypeContext type) {
+            public SchemaMapper.Builder<?, ?> mapper(final MappingContext context, final TypeContext type) {
 
                 final Name name = getQualifiedName(context, type);
                 if (type.isEnum()) {
-                    return new EnumSchemaMapper<>(context, name, type);
+                    return EnumSchemaMapper.builder(context, name, type);
                 } else {
-                    return new StructSchemaMapper<>(context, name, type);
+                    return StructSchemaMapper.builder(context, name, type);
                 }
             }
         }

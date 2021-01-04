@@ -141,7 +141,9 @@ public class MappingContext implements Serializable {
 
         final TypeContext type = TypeContext.from(cls);
         final SchemaDeclaration.Declaration decl = declaration(type);
-        return applyModifiers(type, (SchemaMapper<T, O>) decl.mapper(this, type));
+        final SchemaMapper.Builder<T, O> builder = (SchemaMapper.Builder<T, O>)decl.mapper(this, type);
+        applyModifiers(type, builder);
+        return builder.build();
     }
 
     private List<AnnotationContext<?>> declarationAnnotations(final TypeContext type) {
@@ -174,31 +176,27 @@ public class MappingContext implements Serializable {
         }
     }
 
-    private <T, O> SchemaMapper<T, O> applyModifiers(final TypeContext type, final SchemaMapper<T, O> input) {
+    private <T, O> void applyModifiers(final TypeContext type, final SchemaMapper.Builder<T, O> input) {
 
         final List<AnnotationContext<?>> modAnnotations = type.annotations().stream()
                 .filter(a -> a.type().annotations().stream()
                         .anyMatch(HasType.match(SchemaModifier.class)))
                 .collect(Collectors.toList());
 
-        SchemaMapper<T, O> output = input;
-
         for(final AnnotationContext<?> annotation : modAnnotations) {
             try {
                 final SchemaModifier schemaModifier = annotation.type().annotation(SchemaModifier.class).annotation();
                 final TypeContext modType = TypeContext.from(schemaModifier.value());
                 final Class<?> modMapperType = modType.find(SchemaModifier.Modifier.class).typeParameters().get(0).type().erasedType();
-                if(modMapperType.isAssignableFrom(output.getClass())) {
-                    final SchemaModifier.Modifier<SchemaMapper<T, O>> mod = modType.declaredConstructors().get(0).newInstance(annotation.annotation());
-                    output = mod.modify(this, output);
+                if(modMapperType.isAssignableFrom(input.getClass())) {
+                    final SchemaModifier.Modifier<SchemaMapper.Builder<T, O>> mod = modType.declaredConstructors().get(0).newInstance(annotation.annotation());
+                    mod.modify(this, input);
                 } else {
-                    throw new IllegalStateException("Modifier " + modType.erasedType() + " not supported on " + output.getClass());
+                    throw new IllegalStateException("Modifier " + modType.erasedType() + " not supported on " + input.getClass());
                 }
             } catch (final IllegalAccessException | InstantiationException | InvocationTargetException e) {
                 throw new IllegalStateException(e);
             }
         }
-
-        return output;
     }
 }

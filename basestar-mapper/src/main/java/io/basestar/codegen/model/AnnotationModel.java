@@ -26,6 +26,7 @@ import io.basestar.type.AnnotationContext;
 import io.basestar.util.Name;
 
 import java.lang.annotation.Annotation;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -63,14 +64,26 @@ public class AnnotationModel<A extends Annotation> extends Model {
         return values.entrySet().stream().filter(e -> e.getValue() != null)
                 .collect(Collectors.toMap(Map.Entry::getKey, entry -> {
                     final Object value = entry.getValue();
-                    if(value instanceof Annotation) {
-                        return new AnnotationModel<>(getContext(), (Annotation)value);
-                    } else if(value instanceof Class<?>) {
-                        return wrapClassName((Class<?>)value);
-                    } else {
-                        return value;
-                    }
+                    return toValue(value);
                 }));
+    }
+
+    private Object toValue(final Object value) {
+
+        if(value instanceof Annotation) {
+            return new AnnotationModel<>(getContext(), (Annotation)value);
+        } else if(value instanceof Class<?>) {
+            return wrapClassName((Class<?>) value);
+        } else if(value.getClass().isArray()) {
+            if(value.getClass().getComponentType().isPrimitive()) {
+                return value;
+            } else {
+                return Arrays.stream((Object[])value)
+                        .map(this::toValue).toArray(Object[]::new);
+            }
+        } else {
+            return value;
+        }
     }
 
     // Convert classes to objects with a toString method for freemarker

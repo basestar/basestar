@@ -20,12 +20,15 @@ package io.basestar.mapper.internal;
  * #L%
  */
 
-import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.MappingContext;
 import io.basestar.schema.*;
 import io.basestar.type.TypeContext;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
+import lombok.Data;
+import lombok.experimental.Accessors;
 
+import java.util.List;
 import java.util.Map;
 
 public class ObjectSchemaMapper<T> extends InstanceSchemaMapper<ObjectSchema.Builder, T> {
@@ -34,34 +37,16 @@ public class ObjectSchemaMapper<T> extends InstanceSchemaMapper<ObjectSchema.Bui
 
     private final Map<String, Permission.Descriptor> permissions;
 
-    public ObjectSchemaMapper(final MappingContext context, final Name name, final TypeContext type) {
+    public ObjectSchemaMapper(final Builder<T> builder) {
 
-        super(ObjectSchema.Builder.class, context, name, type);
-        this.indexes = ImmutableMap.of();
-        this.permissions = ImmutableMap.of();
+        super(ObjectSchema.Builder.class, builder);
+        this.indexes = Immutable.map(builder.indexes);
+        this.permissions = Immutable.map(builder.permissions);
     }
 
-    private ObjectSchemaMapper(final ObjectSchemaMapper<T> copy, final String description, final Map<String, Index.Descriptor> indexes, final Map<String, Permission.Descriptor> permissions) {
+    public static <T> Builder<T> builder(final MappingContext context, final Name name, final TypeContext type) {
 
-        super(copy, description);
-        this.indexes = indexes;
-        this.permissions = permissions;
-    }
-
-    public ObjectSchemaMapper<T> withIndexes(final Map<String, Index.Descriptor> indexes) {
-
-        return new ObjectSchemaMapper<>(this, description, ImmutableMap.<String, Index.Descriptor>builder().putAll(this.indexes).putAll(indexes).build(), permissions);
-    }
-
-    public ObjectSchemaMapper<T> withPermissions(final Map<String, Permission.Descriptor> permissions) {
-
-        return new ObjectSchemaMapper<>(this, description, indexes, ImmutableMap.<String, Permission.Descriptor>builder().putAll(this.permissions).putAll(permissions).build());
-    }
-
-    @Override
-    public ObjectSchemaMapper<T> withDescription(final String description) {
-
-        return new ObjectSchemaMapper<>(this, description, indexes, permissions);
+        return new Builder<>(context, name, type);
     }
 
     @Override
@@ -83,5 +68,30 @@ public class ObjectSchemaMapper<T> extends InstanceSchemaMapper<ObjectSchema.Bui
     public void addTransient(final ObjectSchema.Builder builder, final String name, final Transient.Builder trans) {
 
         builder.setTransient(name, trans);
+    }
+
+    @Data
+    @Accessors(chain = true)
+    public static class Builder<T> implements InstanceSchemaMapper.Builder<ObjectSchema.Builder, T> {
+
+        private final MappingContext context;
+
+        private final Name name;
+
+        private final TypeContext type;
+
+        private String description;
+
+        private List<Bucketing> bucketing;
+
+        private Map<String, Index.Descriptor> indexes;
+
+        private Map<String, Permission.Descriptor> permissions;
+
+        @Override
+        public ObjectSchemaMapper<T> build() {
+
+            return new ObjectSchemaMapper<>(this);
+        }
     }
 }

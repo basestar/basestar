@@ -21,15 +21,15 @@ public @interface Group {
     String[] value();
 
     @RequiredArgsConstructor
-    class Modifier implements SchemaModifier.Modifier<ViewSchemaMapper<?>> {
+    class Modifier implements SchemaModifier.Modifier<ViewSchemaMapper.Builder<?>> {
 
         private final Group annotation;
 
         @Override
-        public ViewSchemaMapper<?> modify(final MappingContext context, final ViewSchemaMapper<?> mapper) {
+        public void modify(final MappingContext context, final ViewSchemaMapper.Builder<?> mapper) {
 
             final List<String> group = Arrays.asList(annotation.value());
-            return mapper.withGroup(group);
+            mapper.setGroup(group);
         }
 
         public static Group annotation(final List<String> group) {
