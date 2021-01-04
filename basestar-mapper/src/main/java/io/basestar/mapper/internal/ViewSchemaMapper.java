@@ -70,7 +70,7 @@ public class ViewSchemaMapper<T> extends InstanceSchemaMapper<ViewSchema.Builder
                 .setExpand(fromExpand.isEmpty() ? null : fromExpand);
 
         return addMembers(ViewSchema.builder()
-                .setMaterialized(materialized)
+                .setMaterialized(materialized ? true : null)
                 .setFrom(from)
                 .setGroup(group)
                 .setWhere(where));
