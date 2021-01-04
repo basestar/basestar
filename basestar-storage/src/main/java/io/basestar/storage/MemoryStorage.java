@@ -21,6 +21,7 @@ package io.basestar.storage;
  */
 
 import com.google.common.collect.Lists;
+import io.basestar.expression.Expression;
 import io.basestar.schema.*;
 import io.basestar.storage.annotation.ConfigurableStorage;
 import io.basestar.storage.exception.ObjectExistsException;
@@ -65,44 +66,6 @@ public class MemoryStorage implements DefaultIndexStorage {
         }
     }
 
-//    @Override
-//    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
-//
-//        // FIXME: only implemented for testing, this is equivalent to an all-objects-scan
-//        synchronized (lock) {
-//
-//            final Multimap<Map<String, Object>, Map<String, Object>> groups = HashMultimap.create();
-//
-//            state.objects.forEach((typeId, object) -> {
-//                if(typeId.getSchema().equals(schema.getQualifiedName())) {
-//                    final Map<String, Object> g = group.entrySet().stream().collect(Collectors.toMap(
-//                            Map.Entry::getKey,
-//                            e -> e.getValue().evaluate(Context.init(object))
-//                    ));
-//                    groups.put(g, object);
-//                }
-//            });
-//
-//            final List<Map<String, Object>> page = new ArrayList<>();
-//            groups.asMap().forEach((key, values) -> {
-//                final Map<String, Object> row = new HashMap<>();
-//                key.forEach(row::put);
-//                aggregates.forEach((name, agg) -> {
-//                    values.forEach(value -> {
-//                        final Object col = agg.evaluate(Context.init(), values.stream());
-//                        row.put(name, col);
-//                    });
-//                });
-//                page.add(row);
-//            });
-//
-//            return ImmutableList.of(
-//                    (count, token, stats) -> CompletableFuture.completedFuture(new Page<>(page, null))
-//            );
-//        }
-//    }
-//
-
     @Override
     public Pager<Map<String, Object>> queryIndex(final ObjectSchema schema, final Index index, final SatisfyResult satisfy, final Map<Name, Range<Object>> query, final List<Sort> sort, final Set<Name> expand) {
 
@@ -129,6 +92,33 @@ public class MemoryStorage implements DefaultIndexStorage {
 
             return Pager.simple(results);
         }
+    }
+
+    @Override
+    public Scan scan(final ReferableSchema schema, final Expression query, final int segments) {
+
+        return new Scan() {
+            @Override
+            public int getSegments() {
+
+                return 1;
+            }
+
+            @Override
+            public Segment segment(final int segment) {
+
+                assert segment == 0;
+                final List<Map<String, Object>> objects = new ArrayList<>();
+                synchronized (lock) {
+                    state.objects.forEach((k, v) -> {
+                        if(k.getSchema().equals(schema.getQualifiedName())) {
+                            objects.add(v);
+                        }
+                    });
+                }
+                return Segment.fromIterator(objects.iterator());
+            }
+        };
     }
 
     @Override

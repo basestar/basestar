@@ -1,10 +1,12 @@
 package io.basestar.codegen.model;
 
 import io.basestar.codegen.CodegenContext;
+import io.basestar.schema.Bucketing;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -17,6 +19,17 @@ public abstract class LinkableSchemaModel extends InstanceSchemaModel {
 
         super(context, schema);
         this.schema = schema;
+    }
+
+    @Override
+    public List<AnnotationModel<?>> getAnnotations() {
+
+        final List<AnnotationModel<?>> annotations = new ArrayList<>(super.getAnnotations());
+        final List<Bucketing> bucketing = schema.getDeclaredBucketing();
+        if(!bucketing.isEmpty()) {
+            annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.Bucketing.Modifier.annotation(bucketing)));
+        }
+        return annotations;
     }
 
     @Override

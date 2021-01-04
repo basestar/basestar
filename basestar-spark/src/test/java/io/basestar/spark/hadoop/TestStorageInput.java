@@ -48,6 +48,7 @@ class TestStorageInput extends AbstractSparkTest {
         final Configuration config = new Configuration();
 
         config.set(StorageProvider.PROVIDER, ExampleStorageProvider.class.getName());
+        config.set(StorageProvider.SCHEMA, "A");
 
         session.sparkContext().newAPIHadoopRDD(config, StorageInputFormat.class, Ref.class, Instance.class)
                 .collect();

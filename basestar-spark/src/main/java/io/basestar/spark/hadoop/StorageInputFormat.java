@@ -1,8 +1,14 @@
 package io.basestar.spark.hadoop;
 
+import io.basestar.expression.Context;
+import io.basestar.expression.Expression;
 import io.basestar.schema.Instance;
+import io.basestar.schema.Namespace;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.util.Ref;
+import io.basestar.storage.Scan;
 import io.basestar.storage.Storage;
+import io.basestar.util.Name;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,7 +27,11 @@ public class StorageInputFormat extends InputFormat<Ref, Instance> {
     @Getter
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class Split extends InputSplit implements Writable {
+    public static class StorageSplit extends InputSplit implements Writable {
+
+        private Name schema;
+
+        private Expression expression;
 
         private int split;
 
@@ -30,6 +40,8 @@ public class StorageInputFormat extends InputFormat<Ref, Instance> {
         @Override
         public void write(final DataOutput dataOutput) throws IOException {
 
+            dataOutput.writeUTF(schema.toString());
+            dataOutput.writeUTF(expression.toString());
             dataOutput.writeInt(split);
             dataOutput.writeInt(splits);
         }
@@ -37,6 +49,8 @@ public class StorageInputFormat extends InputFormat<Ref, Instance> {
         @Override
         public void readFields(final DataInput dataInput) throws IOException {
 
+            schema = Name.parse(dataInput.readUTF());
+            expression = Expression.parse(dataInput.readUTF());
             split = dataInput.readInt();
             splits = dataInput.readInt();
         }
@@ -44,13 +58,13 @@ public class StorageInputFormat extends InputFormat<Ref, Instance> {
         @Override
         public long getLength() {
 
-            return 1;
+            return 0;
         }
 
         @Override
         public String[] getLocations() {
 
-            return new String[] { split + ":" + splits };
+            return new String[] { schema.toString() + ":" + split + ":" + splits };
         }
     }
 
@@ -59,10 +73,16 @@ public class StorageInputFormat extends InputFormat<Ref, Instance> {
 
         final Configuration configuration = job.getConfiguration();
         final StorageProvider provider = StorageProvider.provider(configuration);
-        final int splits = provider.inputSplits(configuration);
+        final Namespace namespace = provider.namespace(configuration);
+        final ReferableSchema schema = namespace.requireReferableSchema(provider.schema(configuration));
+        final Expression expression = provider.inputQuery(configuration);
+        final int attemptSplits = provider.inputSplits(configuration);
+        final Storage storage = provider.storage(configuration);
+        final Scan scan = storage.scan(schema, expression, attemptSplits);
+        final int splits = scan.getSegments();
         final List<InputSplit> result = new ArrayList<>();
         for(int split = 0; split != splits; ++split) {
-            result.add(new Split(split, splits));
+            result.add(new StorageSplit(schema.getQualifiedName(), expression, split, splits));
         }
         return result;
     }
@@ -71,29 +91,45 @@ public class StorageInputFormat extends InputFormat<Ref, Instance> {
     public RecordReader<Ref, Instance> createRecordReader(final InputSplit inputSplit, final TaskAttemptContext attempt) throws IOException {
 
         final Configuration configuration = attempt.getConfiguration();
-        final Storage storage = StorageProvider.provider(configuration).storage(configuration);
+        final StorageProvider provider = StorageProvider.provider(configuration);
+        final Storage storage = provider.storage(configuration);
+        final Namespace namespace = provider.namespace(configuration);
+        final StorageSplit storageSplit = (StorageSplit)inputSplit;
+        final ReferableSchema schema = namespace.requireReferableSchema(storageSplit.getSchema());
+        final Expression expression = storageSplit.getExpression();
+        final Scan.Segment segment = storage.scan(schema, expression, storageSplit.getSplits()).segment(storageSplit.getSplit());
         return new RecordReader<Ref, Instance>() {
+
+            private Instance next;
+
             @Override
             public void initialize(final InputSplit inputSplit, final TaskAttemptContext taskAttemptContext) {
 
+                // no implementation required
             }
 
             @Override
             public boolean nextKeyValue() {
 
+                while (segment.hasNext()) {
+                    next = new Instance(segment.next());
+                    if(expression.evaluatePredicate(Context.init(next))) {
+                        return true;
+                    }
+                }
                 return false;
             }
 
             @Override
             public Ref getCurrentKey() {
 
-                return null;
+                return Ref.of(schema.getQualifiedName(), next.getId());
             }
 
             @Override
             public Instance getCurrentValue() {
 
-                return null;
+                return next;
             }
 
             @Override
@@ -103,8 +139,9 @@ public class StorageInputFormat extends InputFormat<Ref, Instance> {
             }
 
             @Override
-            public void close() {
+            public void close() throws IOException {
 
+                segment.close();
             }
         };
     }

@@ -87,6 +87,11 @@ public interface Storage {
 
     CompletableFuture<Set<Event>> afterDelete(ObjectSchema schema, String id, long version, Map<String, Object> before);
 
+    default Scan scan(final ReferableSchema schema, final Expression query, final int segments) {
+
+        throw new UnsupportedOperationException();
+    }
+
     interface ReadTransaction {
 
         ReadTransaction get(ReferableSchema schema, String id, Set<Name> expand);
@@ -150,10 +155,5 @@ public interface Storage {
                 return this;
             }
         }
-    }
-
-    interface Scan {
-
-
     }
 }
