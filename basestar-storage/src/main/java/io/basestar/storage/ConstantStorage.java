@@ -20,6 +20,7 @@ package io.basestar.storage;
  * #L%
  */
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
@@ -73,6 +74,26 @@ public class ConstantStorage implements DefaultLayerStorage {
         all.sort(comparator);
 
         return Pager.simple(all);
+    }
+
+    @Override
+    public Scan scan(final ReferableSchema schema, final Expression query, final int segments) {
+
+        return new Scan() {
+            @Override
+            public int getSegments() {
+
+                return 1;
+            }
+
+            @Override
+            public Segment segment(final int segment) {
+
+                assert segment == 0;
+                final Collection<Map<String, Object>> objects = data.getOrDefault(schema.getQualifiedName(), ImmutableMap.of()).values();
+                return Segment.fromIterator(objects.iterator());
+            }
+        };
     }
 
     @Override

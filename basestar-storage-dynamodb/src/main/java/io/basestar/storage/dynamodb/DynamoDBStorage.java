@@ -20,10 +20,10 @@ package io.basestar.storage.dynamodb;
  * #L%
  */
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.basestar.expression.Expression;
 import io.basestar.schema.*;
 import io.basestar.storage.*;
 import io.basestar.storage.exception.CorruptedIndexException;
@@ -103,44 +103,6 @@ public class DynamoDBStorage implements DefaultIndexStorage {
             throw new IllegalStateException("Oversize object without oversize stash");
         }
     }
-
-//    @Override
-//    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
-//
-//        final GetItemRequest request = GetItemRequest.builder()
-//                .tableName(strategy.objectTableName(schema))
-//                .key(objectKey(strategy, schema, id))
-//                .build();
-//
-//        return client.getItem(request)
-//                .thenCompose(result -> {
-//
-//                    if(result.item().isEmpty()) {
-//                        return CompletableFuture.completedFuture(null);
-//                    } else {
-//                        return fromItem(result.item());
-//                    }
-//                });
-//    }
-//
-//    @Override
-//    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
-//
-//        final GetItemRequest request = GetItemRequest.builder()
-//                .tableName(strategy.historyTableName(schema))
-//                .key(historyKey(strategy, schema, id, version))
-//                .build();
-//
-//        return client.getItem(request)
-//                .thenCompose(result -> {
-//
-//                    if(result.item() == null) {
-//                        return CompletableFuture.completedFuture(null);
-//                    } else {
-//                        return fromItem(result.item());
-//                    }
-//                });
-//    }
 
     private String oversizeStashKey(final ReferableSchema schema, final String id, final long version) {
 
@@ -748,227 +710,80 @@ public class DynamoDBStorage implements DefaultIndexStorage {
         return DynamoDBStorageTraits.INSTANCE;
     }
 
-//    @Override
-//    public List<Pager<RepairInfo>> repair(final ObjectSchema schema) {
-//
-//        return Stream.concat(
-//                Stream.of(fixObjects(schema, schema.getIndexes().values())),
-//                schema.getIndexes().values().stream().map(index -> cleanIndex(schema, index))
-//        ).collect(Collectors.toList());
-//    }
-//
-//    @Override
-//    public List<Pager.Source<RepairInfo>> repairIndex(final ObjectSchema schema, final Index index) {
-//
-//        return ImmutableList.of(
-//                fixObjects(schema, Collections.singleton(index)),
-//                cleanIndex(schema, index)
-//        );
-//    }
-//
-//    private Map<Map<String, AttributeValue>, Map<String, AttributeValue>> indexRecords(final ObjectSchema schema, final Index index, final List<Map<String, AttributeValue>> items) {
-//
-//        final Map<Map<String, AttributeValue>, Map<String, AttributeValue>> indexRecords = new HashMap<>();
-//        items.forEach(item -> {
-//            final Map<String, Object> instance = schema.create(DynamoDBUtils.fromItem(item), schema.getExpand(), true);
-//            final String id = Instance.getId(instance);
-//            index.readValues(instance).forEach((key, record) -> {
-//                final Map<String, AttributeValue> indexKey = indexKey(strategy, schema, index, id, key.binary());
-//                final Map<String, AttributeValue> indexValues = indexItem(strategy, schema, index, id, key.binary(), record);
-//                indexRecords.put(indexKey, indexValues);
-//            });
-//        });
-//        return indexRecords;
-//    }
-//
-//    // Scan objects, create or update missing/incorrect records
-//    protected Pager<RepairInfo> fixObjects(final ObjectSchema schema, final Collection<Index> indexes) {
-//
-//        return (count, paging, stats) -> {
-//
-//            final ScanRequest req = ScanRequest.builder()
-//                    .tableName(strategy.objectTableName(schema))
-//                    .limit(count).filterExpression("#schema = :schema")
-//                    .expressionAttributeNames(Collections.singletonMap("#schema", ObjectSchema.SCHEMA))
-//                    .expressionAttributeValues(Collections.singletonMap(":schema", DynamoDBUtils.s(schema.getQualifiedName().toString())))
-//                    .exclusiveStartKey(paging == null ? null : decodeScanPaging(schema, paging))
-//                    .build();
-//
-//            return client.scan(req).thenCompose(objects -> {
-//
-//                final Map<String, Map<Map<String, AttributeValue>, Map<String, AttributeValue>>> indexRecords = new HashMap<>();
-//                indexes.forEach(index -> indexRecords.put(strategy.indexTableName(schema, index), indexRecords(schema, index, objects.items())));
-//
-//                final List<CompletableFuture<RepairInfo>> futures = new ArrayList<>();
-//                indexRecords.forEach((indexTableName, afterRecords) -> {
-//                    futures.add(DynamoDBUtils.batchRead(client, indexTableName, afterRecords.keySet()).thenCompose(reads -> {
-//
-//                        // Match reads back to their keys
-//                        final Map<Map<String, AttributeValue>, Map<String, AttributeValue>> beforeRecords = new HashMap<>();
-//                        afterRecords.keySet().forEach(key -> reads.forEach(read -> {
-//                            if(key.entrySet().stream().allMatch(entry -> Objects.equals(entry.getValue(), read.get(entry.getKey())))) {
-//                                assert(!beforeRecords.containsKey(key));
-//                                beforeRecords.put(key, read);
-//                            }
-//                        }));
-//
-//                        final List<WriteRequest> writes = new ArrayList<>();
-//                        final RepairInfo sum = afterRecords.entrySet().stream().map(entry -> {
-//                            final Map<String, AttributeValue> key = entry.getKey();
-//                            final Map<String, AttributeValue> afterRecord = entry.getValue();
-//                            final Map<String, AttributeValue> beforeRecord = beforeRecords.get(key);
-//                            if(!Objects.equals(afterRecord, beforeRecord)) {
-//                                writes.add(WriteRequest.builder()
-//                                        .putRequest(PutRequest.builder()
-//                                                .item(afterRecord)
-//                                                .build())
-//                                        .build());
-//                                if(beforeRecord == null) {
-//                                    log.debug("Creating missing index value: {} {}", indexTableName, key);
-//                                    return RepairInfo.ZERO.withCreatedIndexRecords(1);
-//                                } else {
-//                                    log.debug("Overwriting corrupted index value: {} {}", indexTableName, key);
-//                                    return RepairInfo.ZERO.withUpdatedIndexRecords(1);
-//                                }
-//                            } else {
-//                                return RepairInfo.ZERO;
-//                            }
-//                        }).reduce(RepairInfo.ZERO, RepairInfo::sum);
-//
-//                        return DynamoDBUtils.batchWrite(client, indexTableName, writes)
-//                                .thenApply(ignored -> sum);
-//                    }));
-//                });
-//
-//                return CompletableFutures.allOf(RepairInfo.ZERO.withScannedObjects(objects.scannedCount()), RepairInfo::sum, futures).thenApply(sum -> {
-//
-//                    final Page.Token nextPaging;
-//                    if (objects.hasLastEvaluatedKey()) {
-//                        nextPaging = encodeScanPaging(schema, objects.lastEvaluatedKey());
-//                    } else {
-//                        nextPaging = null;
-//                    }
-//                    return new Page<>(Collections.singletonList(sum), nextPaging);
-//                });
-//            });
-//        };
-//    }
-//
-//    // Scan index, delete redundant records
-//    protected Pager.Source<RepairInfo> cleanIndex(final ObjectSchema schema, final Index index) {
-//
-//        if(strategy.indexType(schema, index) == DynamoDBStrategy.IndexType.EXT) {
-//
-//            final String objectTableName = strategy.objectTableName(schema);
-//            final String indexTableName = strategy.indexTableName(schema, index);
-//            final String indexPartitionName = strategy.indexPartitionName(schema, index);
-//            final String indexSortName = strategy.indexSortName(schema, index);
-//
-//            return (count, paging, stats) -> {
-//
-//                final ScanRequest req = ScanRequest.builder()
-//                        .tableName(indexTableName)
-//                        .limit(count).filterExpression("#schema = :schema AND #partition BETWEEN :lo and :hi")
-//                        .expressionAttributeNames(ImmutableMap.of(
-//                                "#schema", ObjectSchema.SCHEMA,
-//                                "#partition", indexPartitionName
-//                        ))
-//                        .expressionAttributeValues(ImmutableMap.of(
-//                                ":schema", DynamoDBUtils.s(schema.getQualifiedName().toString()),
-//                                ":lo", DynamoDBUtils.b(indexPartitionPrefix(strategy, schema, index, UseBinary.LO_PREFIX)),
-//                                ":hi", DynamoDBUtils.b(indexPartitionPrefix(strategy, schema, index, UseBinary.HI_PREFIX))
-//                        ))
-//                        .exclusiveStartKey(paging == null ? null : decodeIndexPaging(schema, index, paging))
-//                        .build();
-//
-//                return client.scan(req).thenCompose(results -> {
-//
-//                    final Set<Map<String, AttributeValue>> objectKeys = new HashSet<>();
-//
-//                    results.items().forEach(item -> {
-//                        final String id = DynamoDBUtils.id(item);
-//                        objectKeys.add(objectKey(strategy, schema, id));
-//                    });
-//
-//                    return DynamoDBUtils.batchRead(client, objectTableName, objectKeys).thenCompose(objects -> {
-//
-//                        final Map<String, Set<Map<String, AttributeValue>>> expected = new HashMap<>();
-//                        objects.forEach(item -> {
-//                            final Map<String, Object> data = DynamoDBUtils.fromItem(item);
-//                            final Map<String, Object> object = schema.create(data, schema.getExpand(), true);
-//                            final String id = Instance.getId(object);
-//                            final Set<Map<String, AttributeValue>> keys = new HashSet<>();
-//                            index.readValues(object).forEach((key, record) -> keys.add(indexKey(strategy, schema, index, id, key.binary())));
-//                            expected.put(id, keys);
-//                        });
-//
-//                        final Set<Map<String, AttributeValue>> deletes = new HashSet<>();
-//
-//                        results.items().forEach(item -> {
-//                            final String id = DynamoDBUtils.id(item);
-//                            final Set<Map<String, AttributeValue>> keys = expected.get(id);
-//                            final Map<String, AttributeValue> indexKey = ImmutableMap.of(
-//                                    indexPartitionName, item.get(indexPartitionName),
-//                                    indexSortName, item.get(indexSortName)
-//                            );
-//                            if(keys == null || !keys.contains(indexKey)) {
-//                                log.debug("Deleting corrupted index value: {} {}", indexTableName, indexKey);
-//                                deletes.add(indexKey);
-//                            }
-//                        });
-//
-//                        final List<WriteRequest> writes = deletes.stream().map(key -> WriteRequest.builder()
-//                                .deleteRequest(DeleteRequest.builder().key(key).build())
-//                                .build()).collect(Collectors.toList());
-//
-//                        return DynamoDBUtils.batchWrite(client, indexTableName, writes)
-//                                .thenApply(ignored -> RepairInfo.ZERO.withDeletedIndexRecords(writes.size()));
-//
-//                    }).thenApply(deletes -> {
-//
-//                        final RepairInfo sum = RepairInfo.sum(deletes, RepairInfo.ZERO.withScannedIndexRecords(results.scannedCount()));
-//
-//                        final Page.Token nextPaging;
-//                        if (results.hasLastEvaluatedKey()) {
-//                            nextPaging = encodeIndexPaging(schema, index, results.lastEvaluatedKey());
-//                        } else {
-//                            nextPaging = null;
-//                        }
-//                        return new Page<>(Collections.singletonList(sum), nextPaging);
-//
-//                    });
-//                });
-//            };
-//
-//        } else {
-//            return Pager.Source.empty();
-//        }
-//    }
+    private class ScanSegment implements Scan.Segment {
 
-    private Map<String, AttributeValue> decodeScanPaging(final ObjectSchema schema, final Page.Token paging) {
+        private final ReferableSchema schema;
 
-        try(final ByteArrayInputStream bais = new ByteArrayInputStream(paging.getValue());
-            final DataInputStream dis = new DataInputStream(bais)) {
-            final byte[] partition = readWithLength(dis);
-            return ImmutableMap.of(
-                    strategy.objectPartitionName(schema), DynamoDBUtils.s(new String(partition, Charsets.UTF_8))
-            );
-        } catch (final IOException e) {
-            throw new IllegalStateException(e);
+        private final int segments;
+
+        private final int segment;
+
+        private LinkedList<Map<String, AttributeValue>> items;
+
+        private Map<String, AttributeValue> lastEvaluatedKey;
+
+        public ScanSegment(final ReferableSchema schema, final int segments, final int segment) {
+
+            this.schema = schema;
+            this.segments = segments;
+            this.segment = segment;
+        }
+
+        @Override
+        public void close() {
+
+            // not required
+        }
+
+        private void prepare() {
+
+            if(items == null || lastEvaluatedKey != null) {
+                final ScanRequest request = ScanRequest.builder()
+                        .tableName(strategy.objectTableName(schema))
+                        .totalSegments(segments)
+                        .exclusiveStartKey(lastEvaluatedKey)
+                        .build();
+
+                final ScanResponse response = client.scan(request).join();
+                items = new LinkedList<>(response.items());
+                lastEvaluatedKey = response.lastEvaluatedKey();
+            }
+        }
+
+        @Override
+        public boolean hasNext() {
+
+            prepare();
+            return !items.isEmpty() && lastEvaluatedKey == null;
+        }
+
+        @Override
+        public Map<String, Object> next() {
+
+            prepare();
+            final Map<String, Object> result = DynamoDBUtils.fromItem(items.getFirst());
+            items.pop();
+            return result;
         }
     }
 
-    private Page.Token encodeScanPaging(final ObjectSchema schema, final Map<String, AttributeValue> key) {
+    @Override
+    public Scan scan(final ReferableSchema schema, final Expression expression, final int segments) {
 
-        final byte[] partition = key.get(strategy.objectPartitionName(schema)).s().getBytes(Charsets.UTF_8);
+        return new Scan() {
 
-        try(final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            final DataOutputStream dos = new DataOutputStream(baos)) {
-            writeWithLength(dos, partition);
-            return new Page.Token(baos.toByteArray());
-        } catch (final IOException e) {
-            throw new IllegalStateException(e);
-        }
+            @Override
+            public int getSegments() {
+
+                return segments;
+            }
+
+            @Override
+            public Segment segment(final int segment) {
+
+                return new ScanSegment(schema, segments, segment);
+            }
+        };
     }
 
     private static void writeWithLength(final DataOutputStream dos, final byte[] bytes) throws IOException {

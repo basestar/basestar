@@ -23,6 +23,7 @@ package io.basestar.storage.elasticsearch;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
 import io.basestar.storage.*;
+import io.basestar.storage.elasticsearch.expression.ESExpressionVisitor;
 import io.basestar.storage.elasticsearch.mapping.Mappings;
 import io.basestar.storage.elasticsearch.mapping.Settings;
 import io.basestar.storage.elasticsearch.query.ESQueryStage;
@@ -44,14 +45,19 @@ import org.elasticsearch.action.get.MultiGetItemResponse;
 import org.elasticsearch.action.get.MultiGetRequest;
 import org.elasticsearch.action.get.MultiGetResponse;
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.search.SearchScrollRequest;
 import org.elasticsearch.action.support.WriteRequest;
 import org.elasticsearch.client.HttpAsyncResponseConsumerFactory;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -63,6 +69,10 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
     private static final String PRIMARY_TERM_KEY = "@primaryTerm";
 
     private static final String SEQ_NO_KEY = "@seqNo";
+
+    private static final int SCROLL_SIZE = 100;
+
+    private static final long SCROLL_KEEPALIVE_MINUTES = 5;
 
     private final RestHighLevelClient client;
 
@@ -430,5 +440,98 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
     private static String historyKey(final String id, final long version) {
 
         return id + Reserved.DELIMITER + version;
+    }
+
+    @Override
+    public Scan scan(final ReferableSchema schema, final Expression query, final int segments) {
+
+
+        return new Scan() {
+            @Override
+            public int getSegments() {
+
+                return segments;
+            }
+
+            @Override
+            public Segment segment(final int segment) {
+
+                return null;
+            }
+        };
+    }
+
+    private class ScanSegment implements Scan.Segment {
+
+
+        private final ReferableSchema schema;
+
+        private final Expression filter;
+
+        private final int segments;
+
+        private final int segment;
+
+        private LinkedList<SearchHit> hits;
+
+        private String scrollId;
+
+        public ScanSegment(final ReferableSchema schema, final Expression filter, final int segments, final int segment) {
+
+            this.schema = schema;
+            this.filter = filter;
+            this.segments = segments;
+            this.segment = segment;
+        }
+
+        @Override
+        public void close() {
+
+            // not required
+        }
+
+        private void prepare() {
+
+            try {
+                if(hits == null || scrollId != null) {
+                    final SearchResponse response;
+                    if (scrollId == null) {
+                        final SearchSourceBuilder src = new SearchSourceBuilder();
+                        src.query(new ESExpressionVisitor().visit(filter));
+                        src.size(SCROLL_SIZE);
+
+                        final SearchRequest request = new SearchRequest(strategy.objectIndex(schema));
+                        request.scroll(TimeValue.timeValueMinutes(SCROLL_KEEPALIVE_MINUTES));
+                        request.source(src);
+                        response = client.search(request, OPTIONS);
+                    } else {
+                        final SearchScrollRequest request = new SearchScrollRequest(scrollId);
+                        request.scroll(TimeValue.timeValueMinutes(SCROLL_KEEPALIVE_MINUTES));
+                        response = client.scroll(request, OPTIONS);
+                    }
+                    final SearchHit[] hits = response.getHits().getHits();
+                    this.hits = new LinkedList<>(Arrays.asList(hits));
+                    this.scrollId = hits.length == 0 ? null : response.getScrollId();
+                }
+            } catch (final IOException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+
+        @Override
+        public boolean hasNext() {
+
+            prepare();
+            return !hits.isEmpty();
+        }
+
+        @Override
+        public Map<String, Object> next() {
+
+            prepare();
+            final Map<String, Object> result = fromSource(schema, hits.getFirst().getSourceAsMap());
+            hits.pop();
+            return result;
+        }
     }
 }

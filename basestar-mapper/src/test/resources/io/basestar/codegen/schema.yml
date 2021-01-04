@@ -14,8 +14,11 @@ MyObject:
   type: object
   extend: MyBase
   description: "Simple test object"
-  extensions:
-    "io.basestar.bucket": ["x"]
+  bucket:
+    - using: test1
+      count: 5
+      function: adler-32
+    - using: test2, test3
   id:
     expression: test1 + "_" + test2
   properties:
