@@ -39,7 +39,7 @@ public abstract class LinkableSchemaMapper<B extends LinkableSchema.Builder<B, ?
 
     protected B addMembers(final B builder) {
 
-        members.forEach(m -> m.addToSchema(this, builder));
+        super.addMembers(builder);
         builder.setBucket(bucketing);
         return builder;
     }
