@@ -54,6 +54,7 @@ public class TestMappingContext {
 
     @Data
     @ObjectSchema
+    @Bucketing({@Bucketing.Bucket(using={"created"})})
     @JsonDeserialize(using = MarshallingDeserializer.class)
     @JsonSerialize(using = UnmarshallingSerializer.class)
     public static class Post {
@@ -154,6 +155,7 @@ public class TestMappingContext {
         final Namespace.Builder ns = mappingContext.namespace(Post.class);
 
         System.err.println(ns);
+        assertEquals(1, ns.build().requireLinkableSchema("Post").getDeclaredBucketing().size());
     }
 
     @Test

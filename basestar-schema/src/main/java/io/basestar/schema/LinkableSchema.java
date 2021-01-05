@@ -58,6 +58,9 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver, Permissio
 
     interface Builder<B extends Builder<B, S>, S extends LinkableSchema> extends InstanceSchema.Builder<B, S>, Descriptor<S>, Link.Resolver.Builder<B>, Permission.Resolver.Builder<B> {
 
+        B setExpand(Set<Name> expand);
+
+        B setBucket(List<Bucketing> bucket);
     }
 
     static SortedSet<Name> extendExpand(final List<? extends InstanceSchema> base, final Set<Name> extend) {
