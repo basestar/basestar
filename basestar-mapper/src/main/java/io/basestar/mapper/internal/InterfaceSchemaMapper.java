@@ -31,7 +31,7 @@ import lombok.experimental.Accessors;
 import java.util.List;
 import java.util.Map;
 
-public class InterfaceSchemaMapper<T> extends InstanceSchemaMapper<InterfaceSchema.Builder, T> {
+public class InterfaceSchemaMapper<T> extends LinkableSchemaMapper<InterfaceSchema.Builder, T> {
 
     private final Map<String, Index.Descriptor> indexes;
 
@@ -70,7 +70,7 @@ public class InterfaceSchemaMapper<T> extends InstanceSchemaMapper<InterfaceSche
 
     @Data
     @Accessors(chain = true)
-    public static class Builder<T> implements InstanceSchemaMapper.Builder<InterfaceSchema.Builder, T> {
+    public static class Builder<T> implements LinkableSchemaMapper.Builder<InterfaceSchema.Builder, T> {
 
         private final MappingContext context;
 

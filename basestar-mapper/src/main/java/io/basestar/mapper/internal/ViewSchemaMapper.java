@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class ViewSchemaMapper<T> extends InstanceSchemaMapper<ViewSchema.Builder, T> {
+public class ViewSchemaMapper<T> extends LinkableSchemaMapper<ViewSchema.Builder, T> {
 
     private final boolean materialized;
 
@@ -78,7 +78,7 @@ public class ViewSchemaMapper<T> extends InstanceSchemaMapper<ViewSchema.Builder
 
     @Data
     @Accessors(chain = true)
-    public static class Builder<T> implements InstanceSchemaMapper.Builder<ViewSchema.Builder, T> {
+    public static class Builder<T> implements LinkableSchemaMapper.Builder<ViewSchema.Builder, T> {
 
         private final MappingContext context;
 
