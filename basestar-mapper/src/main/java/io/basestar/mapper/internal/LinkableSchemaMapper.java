@@ -37,6 +37,13 @@ public abstract class LinkableSchemaMapper<B extends LinkableSchema.Builder<B, ?
         this.bucketing = Immutable.list(builder.getBucketing());
     }
 
+    protected B addMembers(final B builder) {
+
+        members.forEach(m -> m.addToSchema(this, builder));
+        builder.setBucket(bucketing);
+        return builder;
+    }
+
     public interface Builder<B extends LinkableSchema.Builder<B, ?>, T> extends InstanceSchemaMapper.Builder<B, T> {
 
         List<Bucketing> getBucketing();

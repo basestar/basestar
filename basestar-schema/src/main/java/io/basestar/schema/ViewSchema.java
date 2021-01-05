@@ -518,7 +518,7 @@ public class ViewSchema implements LinkableSchema {
         return qualifiedNameHashCode();
     }
 
-    public boolean isCompatibleBucketing() {
+    public boolean isCoBucketed() {
 
         final List<Bucketing> viewBucketing = getEffectingBucketing();
         final List<Bucketing> fromBucketing = from.getSchema().getEffectingBucketing();
@@ -526,14 +526,14 @@ public class ViewSchema implements LinkableSchema {
             return false;
         }
         for(int i = 0; i != viewBucketing.size(); ++i) {
-            if(!isCompatibleBucketing(viewBucketing.get(i), fromBucketing.get(i))) {
+            if(!isCoBucketed(viewBucketing.get(i), fromBucketing.get(i))) {
                 return false;
             }
         }
         return true;
     }
 
-    private boolean isCompatibleBucketing(final Bucketing viewBucketing, final Bucketing fromBucketing) {
+    private boolean isCoBucketed(final Bucketing viewBucketing, final Bucketing fromBucketing) {
 
         if(viewBucketing.getCount() != fromBucketing.getCount()) {
             return false;

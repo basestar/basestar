@@ -12,11 +12,11 @@ class TestBucketing {
 
         final Namespace namespace = Namespace.load(TestObjectSchema.class.getResource("bucketing.yml"));
 
-        assertTrue(namespace.requireViewSchema("SimpleView").isCompatibleBucketing());
-        assertFalse(namespace.requireViewSchema("DifferentOrderPointView").isCompatibleBucketing());
-        assertFalse(namespace.requireViewSchema("DifferentCountPointView").isCompatibleBucketing());
-        assertFalse(namespace.requireViewSchema("DifferentFunctionPointView").isCompatibleBucketing());
-        assertTrue(namespace.requireViewSchema("CompatiblePointView").isCompatibleBucketing());
-        assertTrue(namespace.requireViewSchema("NestedCompatiblePointView").isCompatibleBucketing());
+        assertTrue(namespace.requireViewSchema("SimpleView").isCoBucketed());
+        assertFalse(namespace.requireViewSchema("DifferentOrderPointView").isCoBucketed());
+        assertFalse(namespace.requireViewSchema("DifferentCountPointView").isCoBucketed());
+        assertFalse(namespace.requireViewSchema("DifferentFunctionPointView").isCoBucketed());
+        assertTrue(namespace.requireViewSchema("CompatiblePointView").isCoBucketed());
+        assertTrue(namespace.requireViewSchema("NestedCompatiblePointView").isCoBucketed());
     }
 }

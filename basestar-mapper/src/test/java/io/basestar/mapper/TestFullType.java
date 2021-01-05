@@ -20,7 +20,6 @@ package io.basestar.mapper;
  * #L%
  */
 
-import io.basestar.mapper.annotation.Extension;
 import io.basestar.type.PropertyContext;
 import io.basestar.type.TypeContext;
 import io.basestar.type.has.HasType;
@@ -46,7 +45,6 @@ class TestFullType {
         }
     }
 
-    @Extension(name = "io.basestar.bucket", jsonValue = "[]")
     static class A implements B<Integer> {
 
         Integer b;
