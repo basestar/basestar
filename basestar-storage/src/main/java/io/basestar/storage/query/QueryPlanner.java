@@ -128,10 +128,8 @@ public interface QueryPlanner<T> {
             final ViewSchema.From from = schema.getFrom();
             final LinkableSchema fromSchema = from.getSchema();
 
-            // If the filter/sort only looks at unexpanded fields, it can be pushed down to the source stage
-
             final Expression where = schema.getWhere();
-            final List<Sort> sort = schema.getSort();
+            final List<Sort> sort = from.getSort();
             return stage(visitor, fromSchema, where, sort, from.getExpand());
         }
 

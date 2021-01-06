@@ -36,6 +36,11 @@ public class Bucketing implements Serializable {
         this(ImmutableList.of(using));
     }
 
+    public Bucketing(final Name using, final int count) {
+
+        this(ImmutableList.of(using), count);
+    }
+
     public Bucketing(final List<Name> using) {
 
         this(using, DEFAULT_COUNT);
