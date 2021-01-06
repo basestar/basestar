@@ -2,6 +2,7 @@ package io.basestar.spark.expand;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterators;
 import io.basestar.expression.constant.Constant;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
@@ -87,6 +88,30 @@ public class ExpandRefsStep extends AbstractExpandStep {
         return SparkRowUtils.findField(schema, KEY).isPresent();
     }
 
+    private boolean canElideGroup() {
+
+        if(names.size() == 1) {
+            final Name name = names.iterator().next();
+            final String first = name.first();
+            return root.requireMember(first, true).typeOf().visit(new Use.Visitor.Defaulting<Boolean>() {
+
+                @Override
+                public <T> Boolean visitDefault(final Use<T> type) {
+
+                    return true;
+                }
+
+                @Override
+                public <V, T> Boolean visitContainer(final UseContainer<V, T> type) {
+
+                    return false;
+                }
+            });
+        } else {
+            return false;
+        }
+    }
+
     protected <T> Dataset<Row> applyImpl(final QueryResolver resolver, final Dataset<Row> input, final Use<T> typeOfId) {
 
         final Dataset<Row> joinTo = resolver.resolve(target, Constant.TRUE, ImmutableList.of(), ImmutableSet.of()).dataset();
@@ -96,34 +121,66 @@ public class ExpandRefsStep extends AbstractExpandStep {
         final Column condition = input.col(KEY).equalTo(joinTo.col(ReferableSchema.ID));
 
         final Dataset<Tuple2<Row, Row>> joined = input.joinWith(joinTo, condition, "left_outer");
-        final KeyValueGroupedDataset<T, Tuple2<Row, Row>> grouped = groupResults(joined);
-
         final StructType outputType = expandedType(root, names, SparkRowUtils.remove(input.schema(), KEY), joinToType);
 
-        if (next != null) {
+        if(canElideGroup()) {
 
-            // Fuse the initial flat map part of the next step
+            if (next != null) {
 
-            final StructType projectedType = next.projectKeysType(outputType);
-            return next.apply(resolver, grouped.flatMapGroups(SparkUtils.flatMapGroups((ignored, tuples) -> {
+                // Fuse the initial flat map part of the next step
 
-                final Row resolved = applyRefs(root, names, joinToType, tuples);
-                // Remove the old key field
-                final Row clean = SparkRowUtils.remove(resolved, KEY);
-                return next.projectKeys(projectedType, clean);
+                final StructType projectedType = next.projectKeysType(outputType);
+                return next.apply(resolver, joined.flatMap(SparkUtils.flatMap(tuple -> {
 
-            }), RowEncoder.apply(projectedType)));
+                    final Row resolved = applyRefs(root, names, joinToType, Iterators.singletonIterator(tuple));
+                    // Remove the old key field
+                    final Row clean = SparkRowUtils.remove(resolved, KEY);
+                    return next.projectKeys(projectedType, clean);
+
+                }), RowEncoder.apply(projectedType)));
+
+            } else {
+
+                return joined.map(
+                        SparkUtils.map(tuple -> {
+
+                            final Row resolved = applyRefs(root, names, joinToType, Iterators.singletonIterator(tuple));
+                            return SparkRowUtils.remove(resolved, KEY);
+                        }),
+                        RowEncoder.apply(outputType)
+                );
+
+            }
 
         } else {
 
-            return grouped.mapGroups(
-                    SparkUtils.mapGroups((ignored, tuples) -> {
+            final KeyValueGroupedDataset<T, Tuple2<Row, Row>> grouped = groupResults(joined);
 
-                        final Row resolved = applyRefs(root, names, joinToType, tuples);
-                        return SparkRowUtils.remove(resolved, KEY);
-                    }),
-                    RowEncoder.apply(outputType)
-            );
+            if (next != null) {
+
+                // Fuse the initial flat map part of the next step
+
+                final StructType projectedType = next.projectKeysType(outputType);
+                return next.apply(resolver, grouped.flatMapGroups(SparkUtils.flatMapGroups((ignored, tuples) -> {
+
+                    final Row resolved = applyRefs(root, names, joinToType, tuples);
+                    // Remove the old key field
+                    final Row clean = SparkRowUtils.remove(resolved, KEY);
+                    return next.projectKeys(projectedType, clean);
+
+                }), RowEncoder.apply(projectedType)));
+
+            } else {
+
+                return grouped.mapGroups(
+                        SparkUtils.mapGroups((ignored, tuples) -> {
+
+                            final Row resolved = applyRefs(root, names, joinToType, tuples);
+                            return SparkRowUtils.remove(resolved, KEY);
+                        }),
+                        RowEncoder.apply(outputType)
+                );
+            }
         }
     }
 
