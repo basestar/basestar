@@ -1,10 +1,7 @@
 package io.basestar.spark.util;
 
 import org.apache.spark.SparkContext;
-import org.apache.spark.api.java.function.FilterFunction;
-import org.apache.spark.api.java.function.FlatMapGroupsFunction;
-import org.apache.spark.api.java.function.MapFunction;
-import org.apache.spark.api.java.function.MapGroupsFunction;
+import org.apache.spark.api.java.function.*;
 
 import java.util.concurrent.Callable;
 
@@ -13,6 +10,13 @@ public class SparkUtils {
     // No-op, but this prevents wrong overload selection
 
     public static <A, B> MapFunction<A, B> map(final MapFunction<A, B> fn) {
+
+        return fn;
+    }
+
+    // No-op, but this prevents wrong overload selection
+
+    public static <A, B> FlatMapFunction<A, B> flatMap(final FlatMapFunction<A, B> fn) {
 
         return fn;
     }
