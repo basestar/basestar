@@ -12,7 +12,6 @@ import io.basestar.util.Pair;
 import io.basestar.util.Warnings;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -31,7 +30,6 @@ import scala.Tuple2;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -458,31 +456,30 @@ public class UpsertTable {
 
         // Create empty files for partitions that were not output
         final Configuration configuration = session.sparkContext().hadoopConfiguration();
-        sequences.forEach((values, sequence) -> {
-            final List<String> outputValues = Immutable.add(values, sequence);
-            final List<Pair<String, String>> spec = Pair.zip(outputPartition.stream(), outputValues.stream())
-                    .collect(Collectors.toList());
-            final URI uri = SparkCatalogUtils.partitionLocation(baseLocation(), spec);
-            final Path path = new Path(uri);
-            try {
-                final FileSystem fileSystem = path.getFileSystem(configuration);
-                if(!fileSystem.exists(path)) {
-                    log.warn("Emitting empty marker for partition {}", path);
-                    try(final FSDataOutputStream os = fileSystem.create(path)) {
-                        os.write("EMPTY".getBytes(StandardCharsets.UTF_8));
-                        os.hsync();
-                    }
-                }
-            } catch (final IOException e) {
-                throw new IllegalStateException(e);
-            }
-        });
+//        sequences.forEach((values, sequence) -> {
+//            final List<String> outputValues = Immutable.add(values, sequence);
+//            final List<Pair<String, String>> spec = Pair.zip(outputPartition.stream(), outputValues.stream())
+//                    .collect(Collectors.toList());
+//            final URI uri = SparkCatalogUtils.partitionLocation(baseLocation(), spec);
+//            final Path path = new Path(uri);
+//            try {
+//                final FileSystem fileSystem = path.getFileSystem(configuration);
+//                if(!fileSystem.exists(path)) {
+//                    log.warn("Emitting empty marker for partition {}", path);
+//                    try(final FSDataOutputStream os = fileSystem.create(path)) {
+//                        os.write("EMPTY".getBytes(StandardCharsets.UTF_8));
+//                        os.hsync();
+//                    }
+//                }
+//            } catch (final IOException e) {
+//                throw new IllegalStateException(e);
+//            }
+//        });
 
         final ExternalCatalog catalog = session.sharedState().externalCatalog();
         final String baseTable = baseTableName();
 
         repairBase(catalog, configuration);
-        session.sql("REFRESH TABLE " + SparkCatalogUtils.escapeName(database, baseTable));
         session.sqlContext().sql("ANALYZE TABLE " + SparkCatalogUtils.escapeName(database, baseTable) + " COMPUTE STATISTICS");
     }
 
@@ -562,6 +559,7 @@ public class UpsertTable {
                         if (status.isDirectory()) {
                             latest = next;
                         } else {
+                            latest = null;
                             log.debug("Found empty partition " + next);
                         }
                         latestValue = nextValue;

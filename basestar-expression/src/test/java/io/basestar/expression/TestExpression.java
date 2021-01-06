@@ -382,6 +382,7 @@ class TestExpression {
     @Test
     void testIn() {
 
+        check("3 In [1, 2, 3, 4]", true);
         check("3 in [1, 2, 3, 4]", true);
         check("5 in [1, 2, 3, 4]", false);
     }
