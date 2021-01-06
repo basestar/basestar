@@ -36,7 +36,7 @@ class TestUpsertTable extends AbstractSparkTest {
         final SparkSession session = session();
 
         final BucketTransform bucket = BucketTransform.builder()
-                .bucketing(new Bucketing(Name.of(ReferableSchema.ID), 2))
+                .bucketing(new Bucketing(ImmutableList.of(Name.of(ReferableSchema.ID)), 2))
                 .build();
 
         final String database = "tmp_" + UUID.randomUUID().toString().replaceAll("-", "_");
