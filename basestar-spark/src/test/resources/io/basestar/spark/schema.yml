@@ -94,11 +94,11 @@ AggView:
       expression: collectArray({'id':id})
   from:
     schema: B
+    sort:
+      - value
     expand:
       - key
   group: key
-  sort:
-    - value
   expand:
     - agg
     - key
