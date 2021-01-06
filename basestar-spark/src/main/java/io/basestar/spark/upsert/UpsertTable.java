@@ -44,6 +44,8 @@ public class UpsertTable {
 
     protected static final String OPERATION = Reserved.PREFIX + "operation";
 
+    protected static final String DELETED = Reserved.PREFIX + "deleted";
+
     protected static final String EMPTY_PARTITION = "";
 
     private static final Format FORMAT = Format.PARQUET;
@@ -244,10 +246,16 @@ public class UpsertTable {
 
         final UpsertReducer reducer = new UpsertReducer(deltaType, versionColumn);
         return input.select(deltaColumns())
-                .groupBy(functions.col(idColumn))
+                .groupBy(groupColumns())
                 .agg(reducer.apply(deltaColumns()).as("_2"))
                 .select(functions.col("_2.*"))
                 .select(deltaColumns());
+    }
+
+    private Column[] groupColumns() {
+
+        return Stream.concat(basePartition.stream(), Stream.of(idColumn))
+                .map(functions::col).toArray(Column[]::new);
     }
 
     @SuppressWarnings(Warnings.SHADOW_VARIABLES)
@@ -440,12 +448,16 @@ public class UpsertTable {
 
         final List<String> basePartition = this.basePartition;
 
+        final SetAccumulator<List<String>> accumulator = new SetAccumulator<>();
+        accumulator.register(session.sparkContext(), Option.empty(), false);
+
         output.select(baseColumns())
                 .map(SparkUtils.map(row -> {
 
                     final List<String> partition = new ArrayList<>();
                     basePartition.forEach(p -> partition.add(Nullsafe.mapOrDefault(SparkRowUtils.get(row, p), Object::toString, EMPTY_PARTITION)));
                     final String sequence = sequences.get(partition);
+                    accumulator.inc(partition);
                     return SparkRowUtils.append(row, sequenceField, sequence);
 
                 }), RowEncoder.apply(outputType))
@@ -454,8 +466,20 @@ public class UpsertTable {
                 .partitionBy(outputPartition.toArray(new String[0]))
                 .save(baseLocation().toString());
 
+        final List<CatalogTablePartition> syncPartitions = new ArrayList<>();
+        for(final List<String> partition : accumulator.value()) {
+            final String sequence = sequences.get(partition);
+            final List<String> outputValues = Immutable.add(partition, sequence);
+            final List<Pair<String, String>> outputSpec = Pair.zip(outputPartition.stream(), outputValues.stream())
+                    .collect(Collectors.toList());
+            final URI uri = SparkCatalogUtils.partitionLocation(baseLocation(), outputSpec);
+            final Map<String, String> spec = outputSpec.stream().collect(Collectors.toMap(Pair::getFirst, Pair::getSecond));
+            spec.remove(SEQUENCE);
+            syncPartitions.add(SparkCatalogUtils.partition(spec, FORMAT, uri));
+        }
+
         // Create empty files for partitions that were not output
-        final Configuration configuration = session.sparkContext().hadoopConfiguration();
+//        final Configuration configuration = session.sparkContext().hadoopConfiguration();
 //        sequences.forEach((values, sequence) -> {
 //            final List<String> outputValues = Immutable.add(values, sequence);
 //            final List<Pair<String, String>> spec = Pair.zip(outputPartition.stream(), outputValues.stream())
@@ -479,7 +503,7 @@ public class UpsertTable {
         final ExternalCatalog catalog = session.sharedState().externalCatalog();
         final String baseTable = baseTableName();
 
-        repairBase(catalog, configuration);
+        SparkCatalogUtils.syncTablePartitions(catalog, database, baseTable, syncPartitions, SparkCatalogUtils.MissingPartitions.SKIP);
         session.sqlContext().sql("ANALYZE TABLE " + SparkCatalogUtils.escapeName(database, baseTable) + " COMPUTE STATISTICS");
     }
 
@@ -537,7 +561,7 @@ public class UpsertTable {
         SparkCatalogUtils.ensureTable(catalog, database, tableName, baseType, basePartition, FORMAT, baseLocation, TABLE_PROPERTIES);
         final List<CatalogTablePartition> partitions = SparkCatalogUtils.findPartitions(catalog, configuration,
                 database, tableName, baseLocation, new BasePartitionStrategy());
-        SparkCatalogUtils.syncTablePartitions(catalog, database, tableName, partitions, true);
+        SparkCatalogUtils.syncTablePartitions(catalog, database, tableName, partitions, SparkCatalogUtils.MissingPartitions.DROP_AND_RETAIN);
     }
 
     private static class BasePartitionStrategy extends SparkCatalogUtils.FindPartitionsStrategy.Default {

@@ -43,7 +43,6 @@ import io.basestar.schema.util.ValueContext;
 import io.basestar.util.*;
 import lombok.Data;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
 
 import javax.annotation.Nonnull;
@@ -60,14 +59,23 @@ public class ViewSchema implements LinkableSchema {
     public static final String ID = Reserved.PREFIX + "key";
 
     @Getter
-    @RequiredArgsConstructor
     public static class From implements Serializable {
 
         @Nonnull
         private final LinkableSchema schema;
 
         @Nonnull
+        private final List<Sort> sort;
+
+        @Nonnull
         private final Set<Name> expand;
+
+        public From(final Resolver.Constructing resolver, final Descriptor.From from) {
+
+            this.schema = resolver.requireLinkableSchema(from.getSchema());
+            this.sort = Nullsafe.orDefault(from.getSort());
+            this.expand = Nullsafe.orDefault(from.getExpand());
+        }
 
         public Descriptor.From descriptor() {
 
@@ -76,6 +84,12 @@ public class ViewSchema implements LinkableSchema {
                 public Name getSchema() {
 
                     return schema.getQualifiedName();
+                }
+
+                @Override
+                public List<Sort> getSort() {
+
+                    return sort;
                 }
 
                 @Override
@@ -94,6 +108,11 @@ public class ViewSchema implements LinkableSchema {
 
             @Nullable
             private Name schema;
+
+            @Nullable
+            @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
+            @JsonDeserialize(using = AbbrevListDeserializer.class)
+            private List<Sort> sort;
 
             @Nullable
             @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
@@ -129,6 +148,9 @@ public class ViewSchema implements LinkableSchema {
         interface From {
 
             Name getSchema();
+
+            @JsonInclude(JsonInclude.Include.NON_EMPTY)
+            List<Sort> getSort();
 
             @JsonInclude(JsonInclude.Include.NON_EMPTY)
             Set<Name> getExpand();
@@ -323,7 +345,7 @@ public class ViewSchema implements LinkableSchema {
         if(from.getSchema() == null) {
             throw new SchemaValidationException(qualifiedName, "View must specify from.schema");
         }
-        this.from = new From(resolver.requireLinkableSchema(from.getSchema()), Nullsafe.orDefault(from.getExpand()));
+        this.from = new From(resolver, from);
         this.sort = Immutable.list(descriptor.getSort());
         this.description = descriptor.getDescription();
         this.group = Immutable.list(descriptor.getGroup());

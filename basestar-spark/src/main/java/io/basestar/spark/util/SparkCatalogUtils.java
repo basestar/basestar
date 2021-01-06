@@ -62,7 +62,14 @@ public class SparkCatalogUtils {
         return CatalogTablePartition.apply(ScalaUtils.asScalaMap(spec), storageFormat(format, location), ScalaUtils.emptyScalaMap(), now, now, Option.empty());
     }
 
-    public static void syncTablePartitions(final ExternalCatalog catalog, final String databaseName, final String tableName, final List<CatalogTablePartition> partitions, final boolean retainData) {
+    public enum MissingPartitions {
+
+        SKIP,
+        DROP_AND_RETAIN,
+        DROP_AND_DELETE
+    }
+
+    public static void syncTablePartitions(final ExternalCatalog catalog, final String databaseName, final String tableName, final List<CatalogTablePartition> partitions, final MissingPartitions missing) {
 
         final Map<scala.collection.immutable.Map<String, String>, CatalogTablePartition> target = ScalaUtils.asJavaStream(catalog.listPartitions(databaseName, tableName, Option.empty()))
                 .collect(Collectors.toMap(CatalogTablePartition::spec, v -> v));
@@ -95,8 +102,8 @@ public class SparkCatalogUtils {
         if(!alter.isEmpty()) {
             catalog.alterPartitions(databaseName, tableName, ScalaUtils.asScalaSeq(alter));
         }
-        if(!drop.isEmpty()) {
-            catalog.dropPartitions(databaseName, tableName, ScalaUtils.asScalaSeq(drop), false, true, retainData);
+        if(missing != MissingPartitions.SKIP && !drop.isEmpty()) {
+            catalog.dropPartitions(databaseName, tableName, ScalaUtils.asScalaSeq(drop), false, true, missing != MissingPartitions.DROP_AND_DELETE);
         }
     }
 
