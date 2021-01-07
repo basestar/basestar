@@ -52,6 +52,10 @@ public class UpsertTable {
 
     private static final String BASE_PATH_OPTION = "basePath";
 
+    private static final String MIN_SEQUENCE = sequence(Instant.parse("1970-01-01T00:00:00.000Z"), new UUID(0,0).toString());
+
+    private static final String MAX_SEQUENCE = sequence(Instant.parse("9999-01-01T00:00:00.000Z"), new UUID(-1,-1).toString());
+
     protected final String database;
 
     protected final String name;
@@ -99,6 +103,16 @@ public class UpsertTable {
         fields.add(SparkRowUtils.field(OPERATION, DataTypes.StringType));
         fields.addAll(Arrays.asList(structType.fields()));
         return DataTypes.createStructType(fields);
+    }
+
+    public static String minSequence() {
+
+        return MIN_SEQUENCE;
+    }
+
+    public static String maxSequence() {
+
+        return MAX_SEQUENCE;
     }
 
     protected String baseTableName() {
@@ -378,7 +392,8 @@ public class UpsertTable {
                         .format(FORMAT.getSparkFormat())
                         .option(BASE_PATH_OPTION, deltaLocation().toString())
                         .schema(deltaType)
-                        .load(appendLocations));
+                        .load(appendLocations))
+                        .filter(functions.col(OPERATION).notEqual(UpsertOp.DELETE.name()));
 
                 // Set sequence to the existing partitions to append into the same locations
                 // if no existing partition we can use the initial EMPTY_PARTITION value
@@ -602,6 +617,34 @@ public class UpsertTable {
         SparkCatalogUtils.ensureTable(catalog, database, tableName, deltaType, deltaPartition, FORMAT, deltaLocation(), TABLE_PROPERTIES);
     }
 
+    public void replayDeltas(final SparkSession session, final String afterSequence, final String beforeSequence) {
+
+        autoProvision(session);
+        final ExternalCatalog catalog = session.sharedState().externalCatalog();
+        final Configuration configuration = session.sparkContext().hadoopConfiguration();
+
+        final String tableName = deltaTableName();
+        final URI location = deltaLocation();
+        final List<CatalogTablePartition> partitions = SparkCatalogUtils.findPartitions(catalog, configuration, database, tableName, location, new SparkCatalogUtils.FindPartitionsStrategy() {
+            @Override
+            public boolean include(final Map<String, String> spec, final String key, final String value) {
+
+                if(key.equals(SEQUENCE)) {
+                    return value.compareTo(afterSequence) > 0 && value.compareTo(beforeSequence) < 0;
+                } else {
+                    return true;
+                }
+            }
+
+            @Override
+            public Optional<URI> location(final FileSystem fileSystem, final Path path) {
+
+                return Optional.of(path.toUri());
+            }
+        });
+        SparkCatalogUtils.syncTablePartitions(catalog, database, tableName, partitions, SparkCatalogUtils.MissingPartitions.SKIP);
+    }
+
     public Source<Dataset<Row>> source(final SparkSession session) {
 
         return sink -> sink.accept(select(session));
@@ -620,6 +663,32 @@ public class UpsertTable {
     public Query<Row> queryBase(final SparkSession session) {
 
         return () -> selectBase(session);
+    }
+
+    public void dropBase(final SparkSession session, final boolean purge) {
+
+        drop(session, database, baseTableName(), baseLocation(), purge);
+    }
+
+    public void dropDeltas(final SparkSession session, final boolean purge) {
+
+        drop(session, database, deltaTableName(), deltaLocation(), purge);
+    }
+
+    private static void drop(final SparkSession session, final String database, final String tableName, final URI location, final boolean purge) {
+
+        final ExternalCatalog catalog = session.sharedState().externalCatalog();
+        final Configuration configuration = session.sparkContext().hadoopConfiguration();
+        catalog.dropTable(database, tableName, true, purge);
+        if(purge) {
+            try {
+                final Path path = new Path(location);
+                final FileSystem fs = path.getFileSystem(configuration);
+                fs.delete(path, true);
+            } catch (final IOException e) {
+                log.error("Failed to purge " + location, e);
+            }
+        }
     }
 
     private void autoProvision(final SparkSession session) {

@@ -45,6 +45,7 @@
         <lombok.version>1.18.12</lombok.version>
         <junit.version>5.4.0</junit.version>
         <skipDocs>false</skipDocs>
+        <skipCoverage>false</skipCoverage>
         <sonar.projectKey>basestar</sonar.projectKey>
         <sonar.moduleKey>
             ${project.groupId}:${project.artifactId}
@@ -218,6 +219,9 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.0.0-M4</version>
+                <configuration>
+                    <parallel>all</parallel>
+                </configuration>
                 <dependencies>
                     <dependency>
                         <groupId>org.junit.jupiter</groupId>
@@ -255,6 +259,9 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.2</version>
+                <configuration>
+                    <skip>${skipCoverage}</skip>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>

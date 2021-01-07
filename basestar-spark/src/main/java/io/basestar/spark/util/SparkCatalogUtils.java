@@ -66,7 +66,7 @@ public class SparkCatalogUtils {
 
         SKIP,
         DROP_AND_RETAIN,
-        DROP_AND_DELETE
+        DROP_AND_PURGE
     }
 
     public static void syncTablePartitions(final ExternalCatalog catalog, final String databaseName, final String tableName, final List<CatalogTablePartition> partitions, final MissingPartitions missing) {
@@ -103,7 +103,8 @@ public class SparkCatalogUtils {
             catalog.alterPartitions(databaseName, tableName, ScalaUtils.asScalaSeq(alter));
         }
         if(missing != MissingPartitions.SKIP && !drop.isEmpty()) {
-            catalog.dropPartitions(databaseName, tableName, ScalaUtils.asScalaSeq(drop), false, true, missing != MissingPartitions.DROP_AND_DELETE);
+            final boolean purge = missing != MissingPartitions.DROP_AND_PURGE;
+            catalog.dropPartitions(databaseName, tableName, ScalaUtils.asScalaSeq(drop), false, purge, !purge);
         }
     }
 
