@@ -93,6 +93,17 @@ class TestUpsertTable extends AbstractSparkTest {
 
         table.squashDeltas(session);
         assertState("After delete + flatten", session, table, deleteMerged, ImmutableList.of(), deleteMerged);
+
+        table.dropBase(session, true);
+        table.dropDeltas(session, false);
+        table.repair(session);
+
+        assertState("After purge", session, table, ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
+
+        table.replayDeltas(session, UpsertTable.minSequence(), UpsertTable.maxSequence());
+        table.squashDeltas(session);
+
+        assertState("After replay", session, table, deleteMerged, ImmutableList.of(), deleteMerged);
     }
 
     private void assertState(final String step, final SparkSession session, final UpsertTable table,
