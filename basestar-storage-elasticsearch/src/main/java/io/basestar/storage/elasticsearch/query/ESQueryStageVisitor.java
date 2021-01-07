@@ -73,7 +73,7 @@ public class ESQueryStageVisitor implements QueryStageVisitor<ESQueryStage> {
     }
 
     @Override
-    public ESQueryStage conform(final ESQueryStage input, final InstanceSchema schema) {
+    public ESQueryStage conform(final ESQueryStage input, final InstanceSchema schema, final Set<Name> expand) {
 
         return input;
     }
