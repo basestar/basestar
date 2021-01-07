@@ -111,15 +111,15 @@ public interface QueryPlanner<T> {
 
         protected T refStage(final QueryStageVisitor<T> visitor, final ReferableSchema schema) {
 
-            return visitor.conform(visitor.source(schema), schema);
+            return visitor.conform(visitor.source(schema), schema, schema.getExpand());
         }
 
         protected T viewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema) {
 
             if (schema.isAggregating() || schema.isGrouping()) {
-                return visitor.conform(aggViewStage(visitor, schema), schema);
+                return visitor.conform(aggViewStage(visitor, schema), schema, schema.getExpand());
             } else {
-                return visitor.conform(mapViewStage(visitor, schema), schema);
+                return visitor.conform(mapViewStage(visitor, schema), schema, schema.getExpand());
             }
         }
 

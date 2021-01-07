@@ -104,6 +104,20 @@ class TestUpsertTable extends AbstractSparkTest {
         table.squashDeltas(session);
 
         assertState("After replay", session, table, deleteMerged, ImmutableList.of(), deleteMerged);
+
+        // Check that merging works correctly (i.e. appending to existing partitions)
+
+        final List<D> merge = ImmutableList.of(new D("d:5", 5L), new D("d:6", 4L));
+        final List<Delta> mergeDeltas = ImmutableList.of(Delta.create(merge.get(0)), Delta.create(merge.get(1)));
+        final Dataset<Row> mergeSource = bucket.accept(session.createDataset(merge, Encoders.bean(D.class)).toDF());
+
+        final List<D> result = ImmutableList.<D>builder().addAll(deleteMerged).addAll(merge).build();
+
+        table.applyChanges(mergeSource, UpsertTable.sequence(Instant.now()), r -> UpsertOp.CREATE, r -> r);
+        assertState("After merge", session, table, deleteMerged, mergeDeltas, result);
+
+        table.squashDeltas(session);
+        assertState("After merge + flatten", session, table, result, ImmutableList.of(), result);
     }
 
     private void assertState(final String step, final SparkSession session, final UpsertTable table,

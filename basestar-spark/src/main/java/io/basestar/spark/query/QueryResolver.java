@@ -180,9 +180,9 @@ public interface QueryResolver {
         }
 
         @Override
-        public Stage conform(final Stage input, final InstanceSchema schema) {
+        public Stage conform(final Stage input, final InstanceSchema schema, final Set<Name> expand) {
 
-            return input.schema(schema);
+            return input.conform(schema, expand);
         }
     }
 
@@ -321,10 +321,10 @@ public interface QueryResolver {
                             .sort(sort).build(), inputLayout);
         }
 
-        default Stage schema(final InstanceSchema schema) {
+        default Stage conform(final InstanceSchema schema, final Set<Name> expand) {
 
             return then(SchemaTransform.builder()
-                            .schema(schema).build(), Layout.simple(schema.getSchema(), ImmutableSet.of()));
+                            .schema(schema).expand(expand).build(), Layout.simple(schema.getSchema(), expand));
         }
     }
 }
