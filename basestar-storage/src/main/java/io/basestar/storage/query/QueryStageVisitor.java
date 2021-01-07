@@ -29,5 +29,5 @@ public interface QueryStageVisitor<T> {
 
     T union(List<T> inputs);
 
-    T conform(T input, InstanceSchema schema);
+    T conform(T input, InstanceSchema schema, Set<Name> expand);
 }

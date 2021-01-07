@@ -40,14 +40,14 @@ class TestQueryPlanner {
         final ObjectSchema sourceSchema = namespace.requireObjectSchema("Address");
 
         final SourceStage sourceStage = new SourceStage(sourceSchema);
-        final SchemaStage sourceSchemaStage = new SchemaStage(sourceStage, sourceSchema);
-        final FilterStage sourceFilterStage = new FilterStage(sourceSchemaStage, Expression.parse("country == 'United States'"));
+        final ConformStage sourceConformStage = new ConformStage(sourceStage, sourceSchema);
+        final FilterStage sourceFilterStage = new FilterStage(sourceConformStage, Expression.parse("country == 'United States'"));
         final AggStage aggStage = new AggStage(sourceFilterStage, ImmutableList.of("state"), ImmutableMap.of(
                 "state", TypedExpression.from(Expression.parse("state"), UseOptional.from(UseString.DEFAULT)),
                 "count", TypedExpression.from(Expression.parse("count(true)"), UseInteger.DEFAULT)
         ));
-        final SchemaStage schemaStage = new SchemaStage(aggStage, viewSchema);
-        final FilterStage filterStage = new FilterStage(schemaStage, Expression.parse("count > 5"));
+        final ConformStage conformStage = new ConformStage(aggStage, viewSchema);
+        final FilterStage filterStage = new FilterStage(conformStage, Expression.parse("count > 5"));
 
         assertEquals(filterStage, stage);
     }
@@ -68,8 +68,8 @@ class TestQueryPlanner {
         final String aggDigest = "_" + Expression.parse("count(zip != null)").digest();
 
         final SourceStage sourceStage = new SourceStage(sourceSchema);
-        final SchemaStage sourceSchemaStage = new SchemaStage(sourceStage, sourceSchema);
-        final FilterStage sourceFilterStage = new FilterStage(sourceSchemaStage, Expression.parse("country == 'United States'"));
+        final ConformStage sourceConformStage = new ConformStage(sourceStage, sourceSchema);
+        final FilterStage sourceFilterStage = new FilterStage(sourceConformStage, Expression.parse("country == 'United States'"));
         final MapStage preAggStage = new MapStage(sourceFilterStage, ImmutableMap.of(
                 "state", TypedExpression.from(Expression.parse("state"), UseOptional.from(UseString.DEFAULT)),
                 zipDigest, TypedExpression.from(Expression.parse("zip != null"), UseBoolean.DEFAULT)
@@ -82,9 +82,9 @@ class TestQueryPlanner {
                 "state", TypedExpression.from(Expression.parse("state"), UseOptional.from(UseString.DEFAULT)),
                 "result", TypedExpression.from(Expression.parse("state + " + aggDigest), UseOptional.from(UseString.DEFAULT))
         ));
-        final SchemaStage schemaStage = new SchemaStage(postAggStage, viewSchema);
+        final ConformStage conformStage = new ConformStage(postAggStage, viewSchema);
 
-        assertEquals(schemaStage, stage);
+        assertEquals(conformStage, stage);
     }
 
     @Test
@@ -99,8 +99,8 @@ class TestQueryPlanner {
         final ObjectSchema sourceSchema = namespace.requireObjectSchema("Address");
 
         final SourceStage sourceStage = new SourceStage(sourceSchema);
-        final SchemaStage sourceSchemaStage = new SchemaStage(sourceStage, sourceSchema);
-        final FilterStage sourceFilterStage = new FilterStage(sourceSchemaStage, Expression.parse("country == 'United Kingdom'"));
+        final ConformStage sourceConformStage = new ConformStage(sourceStage, sourceSchema);
+        final FilterStage sourceFilterStage = new FilterStage(sourceConformStage, Expression.parse("country == 'United Kingdom'"));
         final MapStage sourceMapStage = new MapStage(sourceFilterStage, ImmutableMap.of(
                 "country", TypedExpression.from(Expression.parse("country"), UseOptional.from(UseString.DEFAULT)),
                 "state", TypedExpression.from(Expression.parse("state"), UseOptional.from(UseString.DEFAULT)),
@@ -108,8 +108,8 @@ class TestQueryPlanner {
                 "zip", TypedExpression.from(Expression.parse("zip"), UseOptional.from(UseString.DEFAULT)),
                 ViewSchema.ID, TypedExpression.from(Expression.parse(ReferableSchema.ID), UseString.DEFAULT)
         ));
-        final SchemaStage schemaStage = new SchemaStage(sourceMapStage, viewSchema);
-        final FilterStage filterStage = new FilterStage(schemaStage, Expression.parse("state == 'Kent'"));
+        final ConformStage conformStage = new ConformStage(sourceMapStage, viewSchema);
+        final FilterStage filterStage = new FilterStage(conformStage, Expression.parse("state == 'Kent'"));
 
         assertEquals(filterStage, stage);
     }
@@ -230,7 +230,7 @@ class TestQueryPlanner {
     }
 
     @Data
-    static class SchemaStage implements SimpleStage {
+    static class ConformStage implements SimpleStage {
 
         private final SimpleStage input;
 
@@ -294,9 +294,9 @@ class TestQueryPlanner {
         }
 
         @Override
-        public SimpleStage conform(final SimpleStage input, final InstanceSchema schema) {
+        public SimpleStage conform(final SimpleStage input, final InstanceSchema schema, final Set<Name> expand) {
             
-            return new SchemaStage(input, schema);
+            return new ConformStage(input, schema);
         }
     }
 }

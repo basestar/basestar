@@ -1,7 +1,9 @@
 package io.basestar.spark.upsert;
 
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import io.basestar.schema.Reserved;
 import io.basestar.spark.query.Query;
 import io.basestar.spark.source.Source;
@@ -395,13 +397,17 @@ public class UpsertTable {
                         .load(appendLocations))
                         .filter(functions.col(OPERATION).notEqual(UpsertOp.DELETE.name()));
 
-                // Set sequence to the existing partitions to append into the same locations
+                // Set sequence to the existing partition to append into the same locations
                 // if no existing partition we can use the initial EMPTY_PARTITION value
                 final Map<List<String>, String> sequences = new HashMap<>();
                 append.keySet().forEach(spec -> {
                     final CatalogTablePartition partition = current.get(spec);
                     if (partition != null) {
-                        sequences.put(spec, partition.spec().get(SEQUENCE).get());
+                        final URI location = partition.storage().locationUri().get();
+                        final String term = Iterables.getLast(Splitter.on("/").omitEmptyStrings().split(location.toString()));
+                        final Pair<String, String> sequence = SparkCatalogUtils.fromPartitionPathTerm(term);
+                        assert SEQUENCE.equals(sequence.getFirst());
+                        sequences.put(spec, sequence.getSecond());
                     } else {
                         sequences.put(spec, EMPTY_PARTITION);
                     }
