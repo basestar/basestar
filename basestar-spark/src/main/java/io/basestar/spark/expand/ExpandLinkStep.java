@@ -213,7 +213,7 @@ public class ExpandLinkStep extends AbstractExpandStep {
             final StructType projectedType = next.projectKeysType(outputType);
             return next.apply(resolver, grouped.flatMapGroups(SparkUtils.flatMapGroups((ignored, tuples) -> {
 
-                final Row resolved = applyLink(root, name, cleanKeys(tuples));
+                final Row resolved = applyLink(root, name, cleanKeys(SparkRowUtils.nulled(tuples)));
                 return next.projectKeys(projectedType, resolved);
 
             }), RowEncoder.apply(projectedType)));
@@ -221,7 +221,7 @@ public class ExpandLinkStep extends AbstractExpandStep {
         } else {
 
             return grouped.mapGroups(
-                    SparkUtils.mapGroups((ignored, tuples) -> applyLink(root, name, cleanKeys(tuples))),
+                    SparkUtils.mapGroups((ignored, tuples) -> applyLink(root, name, cleanKeys(SparkRowUtils.nulled(tuples)))),
                     RowEncoder.apply(outputType)
             );
         }

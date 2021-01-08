@@ -161,7 +161,8 @@ public class SparkCatalogUtils {
                 Option.empty(),
                 ScalaUtils.emptyScalaSeq(),
                 true, true,
-                ScalaUtils.emptyScalaMap()
+                ScalaUtils.emptyScalaMap(),
+                Option.empty()
         );
 
         if(exists) {
