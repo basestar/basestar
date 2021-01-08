@@ -132,7 +132,7 @@ public class ExpandRefsStep extends AbstractExpandStep {
                 final StructType projectedType = next.projectKeysType(outputType);
                 return next.apply(resolver, joined.flatMap(SparkUtils.flatMap(tuple -> {
 
-                    final Row resolved = applyRefs(root, names, joinToType, Iterators.singletonIterator(tuple));
+                    final Row resolved = applyRefs(root, names, joinToType, Iterators.singletonIterator(SparkRowUtils.nulled(tuple)));
                     // Remove the old key field
                     final Row clean = SparkRowUtils.remove(resolved, KEY);
                     return next.projectKeys(projectedType, clean);
@@ -144,7 +144,7 @@ public class ExpandRefsStep extends AbstractExpandStep {
                 return joined.map(
                         SparkUtils.map(tuple -> {
 
-                            final Row resolved = applyRefs(root, names, joinToType, Iterators.singletonIterator(tuple));
+                            final Row resolved = applyRefs(root, names, joinToType, Iterators.singletonIterator(SparkRowUtils.nulled(tuple)));
                             return SparkRowUtils.remove(resolved, KEY);
                         }),
                         RowEncoder.apply(outputType)
@@ -163,7 +163,7 @@ public class ExpandRefsStep extends AbstractExpandStep {
                 final StructType projectedType = next.projectKeysType(outputType);
                 return next.apply(resolver, grouped.flatMapGroups(SparkUtils.flatMapGroups((ignored, tuples) -> {
 
-                    final Row resolved = applyRefs(root, names, joinToType, tuples);
+                    final Row resolved = applyRefs(root, names, joinToType, SparkRowUtils.nulled(tuples));
                     // Remove the old key field
                     final Row clean = SparkRowUtils.remove(resolved, KEY);
                     return next.projectKeys(projectedType, clean);
@@ -175,7 +175,7 @@ public class ExpandRefsStep extends AbstractExpandStep {
                 return grouped.mapGroups(
                         SparkUtils.mapGroups((ignored, tuples) -> {
 
-                            final Row resolved = applyRefs(root, names, joinToType, tuples);
+                            final Row resolved = applyRefs(root, names, joinToType, SparkRowUtils.nulled(tuples));
                             return SparkRowUtils.remove(resolved, KEY);
                         }),
                         RowEncoder.apply(outputType)

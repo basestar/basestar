@@ -1,5 +1,6 @@
 package io.basestar.spark.util;
 
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
@@ -8,12 +9,10 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.*;
+import scala.Tuple2;
 import scala.collection.Seq;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
@@ -238,5 +237,36 @@ public class SparkRowUtils {
     public static StructField field(final String name, final DataType type) {
 
         return StructField.apply(name, type, true, Metadata.empty());
+    }
+
+    /**
+     * For ease of migration between Spark 2.x -> 3.x, in 2.x missing join tuples have null entries,
+     * in 3.x missing join tuples are non-null but have all null entries.
+     *
+     * @param row Input row
+     * @return Null if either the row is null or all values are null, or the row
+     */
+
+    public static Row nulled(final Row row) {
+
+        if(row == null) {
+            return null;
+        } else {
+            if(ScalaUtils.asJavaStream(row.toSeq()).allMatch(Objects::isNull)) {
+                return null;
+            } else {
+                return row;
+            }
+        }
+    }
+
+    public static Tuple2<Row, Row> nulled(final Tuple2<Row, Row> tuple) {
+
+        return Tuple2.apply(nulled(tuple._1()), nulled(tuple._2()));
+    }
+
+    public static Iterator<Tuple2<Row, Row>> nulled(final Iterator<Tuple2<Row, Row>> tuples) {
+
+        return Iterators.transform(tuples, SparkRowUtils::nulled);
     }
 }

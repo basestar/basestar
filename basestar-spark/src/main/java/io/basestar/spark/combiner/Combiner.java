@@ -9,11 +9,12 @@ import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseBoolean;
+import io.basestar.spark.util.SparkRowUtils;
 import io.basestar.spark.util.SparkSchemaUtils;
+import io.basestar.spark.util.SparkUtils;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -59,10 +60,10 @@ public interface Combiner extends Serializable {
         );
 
         final StructType structType = SparkSchemaUtils.structType(schema, expand, extraMetadata);
-        return joined.flatMap((FlatMapFunction<Tuple2<Row, Row>, Row>)(pair -> {
+        return joined.flatMap(SparkUtils.flatMap(pair -> {
 
-            final Map<String, Object> before = SparkSchemaUtils.fromSpark(schema, expand, pair._1());
-            final Map<String, Object> after = SparkSchemaUtils.fromSpark(schema, expand, pair._2());
+            final Map<String, Object> before = SparkSchemaUtils.fromSpark(schema, expand, SparkRowUtils.nulled(pair._1()));
+            final Map<String, Object> after = SparkSchemaUtils.fromSpark(schema, expand, SparkRowUtils.nulled(pair._2()));
 
             final Optional<Map<String, Object>> result = apply(schema, before, after);
             if(result.isPresent()) {
