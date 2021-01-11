@@ -459,18 +459,16 @@ public class UpsertTable {
     @SuppressWarnings(Warnings.SHADOW_VARIABLES)
     private void squash(final Dataset<Row> output, final Map<List<String>, String> sequences) {
 
+        final SparkSession session = output.sparkSession();
+        final ExternalCatalog catalog = session.sharedState().externalCatalog();
+
         final List<String> outputPartition = new ArrayList<>(basePartition);
         outputPartition.add(SEQUENCE);
-
-        final SparkSession session = output.sparkSession();
 
         final StructField sequenceField = SparkRowUtils.field(SEQUENCE, DataTypes.StringType);
         final StructType outputType = SparkRowUtils.append(baseType, sequenceField);
 
         final List<String> basePartition = this.basePartition;
-
-        final SetAccumulator<List<String>> accumulator = new SetAccumulator<>();
-        accumulator.register(session.sparkContext(), Option.empty(), false);
 
         output.select(baseColumns())
                 .map(SparkUtils.map(row -> {
@@ -478,7 +476,6 @@ public class UpsertTable {
                     final List<String> partition = new ArrayList<>();
                     basePartition.forEach(p -> partition.add(Nullsafe.mapOrDefault(SparkRowUtils.get(row, p), Object::toString, EMPTY_PARTITION)));
                     final String sequence = sequences.get(partition);
-                    accumulator.inc(partition);
                     return SparkRowUtils.append(row, sequenceField, sequence);
 
                 }), RowEncoder.apply(outputType))
@@ -488,7 +485,7 @@ public class UpsertTable {
                 .save(baseLocation().toString());
 
         final List<CatalogTablePartition> syncPartitions = new ArrayList<>();
-        for(final List<String> partition : accumulator.value()) {
+        for(final List<String> partition : sequences.keySet()) {
             final String sequence = sequences.get(partition);
             final List<String> outputValues = Immutable.add(partition, sequence);
             final List<Pair<String, String>> outputSpec = Pair.zip(outputPartition.stream(), outputValues.stream())
@@ -521,7 +518,6 @@ public class UpsertTable {
 //            }
 //        });
 
-        final ExternalCatalog catalog = session.sharedState().externalCatalog();
         final String baseTable = baseTableName();
 
         SparkCatalogUtils.syncTablePartitions(catalog, database, baseTable, syncPartitions, SparkCatalogUtils.MissingPartitions.SKIP);
