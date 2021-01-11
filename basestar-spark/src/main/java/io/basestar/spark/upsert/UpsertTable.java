@@ -62,6 +62,8 @@ public class UpsertTable {
 
     protected final String name;
 
+    protected final StructType inputType;
+
     protected final StructType baseType;
 
     protected final String idColumn;
@@ -88,7 +90,8 @@ public class UpsertTable {
         this.idColumn = Nullsafe.require(idColumn);
         this.versionColumn = versionColumn;
         this.basePartition = Immutable.list(partition);
-        this.baseType = Nullsafe.require(structType);
+        this.inputType = structType;
+        this.baseType = createBaseType(structType);
         this.deltaType = createDeltaType(structType);
         this.deltaPartition = Immutable.addAll(ImmutableList.of(SEQUENCE, OPERATION), basePartition);
         if(Nullsafe.require(location).endsWith("/")) {
@@ -96,6 +99,13 @@ public class UpsertTable {
         } else {
             this.location = location + "/";
         }
+    }
+
+    private static StructType createBaseType(final StructType structType) {
+
+        final List<StructField> fields = new ArrayList<>(Arrays.asList(structType.fields()));
+        fields.add(SparkRowUtils.field(DELETED, DataTypes.BooleanType));
+        return DataTypes.createStructType(fields);
     }
 
     private static StructType createDeltaType(final StructType structType) {
@@ -137,12 +147,17 @@ public class UpsertTable {
         return URI.create(location + "delta");
     }
 
-    public Dataset<Row> select(final SparkSession session) {
+    public Dataset<Row> select(final SparkSession session, final boolean includeDeleted) {
 
         if(hasDeltas(session)) {
-            return baseWithDeltas(selectBase(session), selectLatestDelta(session));
+            final Dataset<Row> result = baseWithDeltas(selectBase(session, true), selectLatestDelta(session));
+            if(includeDeleted) {
+                return result;
+            } else {
+                return result.filter(SparkUtils.filter(row -> !isDeleted(row))).select(inputColumns());
+            }
         } else {
-            return selectBase(session);
+            return selectBase(session, includeDeleted);
         }
     }
 
@@ -226,26 +241,30 @@ public class UpsertTable {
         if(!partitions.isEmpty()) {
             catalog.createPartitions(database, deltaTable, ScalaUtils.asScalaSeq(partitions), false);
         }
+        session.sql("REFRESH TABLE " + SparkCatalogUtils.escapeName(database, deltaTable));
     }
 
-    protected Dataset<Row> selectBase(final SparkSession session) {
+    protected Dataset<Row> selectBase(final SparkSession session, final boolean includeDeleted) {
 
         autoProvision(session);
         final String tableName = baseTableName();
-        final Dataset<Row> ds = session.sqlContext().read()
+        final Dataset<Row> result = session.sqlContext().read()
                 .table(SparkCatalogUtils.escapeName(database, tableName))
                 .select(baseColumns());
-        return SparkDatasetUtils.addPartitionSpec(ds, partitionSpecs(session, database, tableName));
+        if(includeDeleted) {
+            return result;
+        } else {
+            return result.filter(SparkUtils.filter(row -> !isDeleted(row))).select(inputColumns());
+        }
     }
 
     protected Dataset<Row> selectDelta(final SparkSession session) {
 
         autoProvision(session);
         final String tableName = deltaTableName();
-        final Dataset<Row> ds = session.sqlContext().read()
+        return session.sqlContext().read()
                 .table(SparkCatalogUtils.escapeName(database, tableName))
                 .select(deltaColumns());
-        return SparkDatasetUtils.addPartitionSpec(ds, partitionSpecs(session, database, tableName));
     }
 
     protected Dataset<Row> selectDeltaAfter(final SparkSession session, final String sequence) {
@@ -277,23 +296,41 @@ public class UpsertTable {
     @SuppressWarnings(Warnings.SHADOW_VARIABLES)
     protected Dataset<Row> baseWithDeltas(final Dataset<Row> base, final Dataset<Row> deltas) {
 
+
         final StructType deltaType = this.deltaType;
         // Treat the base as a delta so we can use a single groupBy stage
         return reduceDeltas(base
                 .map(
-                        SparkUtils.map(row -> createDelta(deltaType, EMPTY_PARTITION, null, row)),
+                        SparkUtils.map(row -> createDelta(deltaType, EMPTY_PARTITION, isDeleted(row) ? UpsertOp.DELETE : null, row)),
                         RowEncoder.apply(deltaType)
                 ).union(deltas))
-                .filter(functions.col(OPERATION).notEqual(UpsertOp.DELETE.name()))
-                .select(baseColumns());
+                .select(inputColumnsWithDeleted());
+    }
+
+    private static boolean isDeleted(final Row row) {
+
+        return Nullsafe.orDefault((Boolean)SparkRowUtils.get(row, DELETED));
+    }
+
+    private Column[] inputColumns() {
+
+        final List<Column> cols = new ArrayList<>();
+        Arrays.stream(inputType.fieldNames()).forEach(n -> cols.add(functions.col(n)));
+        return cols.toArray(new Column[0]);
+    }
+
+    private Column[] inputColumnsWithDeleted() {
+
+        final List<Column> cols = new ArrayList<>();
+        Arrays.stream(inputType.fieldNames()).forEach(n -> cols.add(functions.col(n)));
+        cols.add(functions.col(OPERATION).equalTo(UpsertOp.DELETE.name()).as(DELETED));
+        return cols.toArray(new Column[0]);
     }
 
     private Column[] deltaColumns() {
 
         final List<Column> cols = new ArrayList<>();
-        cols.add(functions.col(SEQUENCE));
-        cols.add(functions.col(OPERATION));
-        cols.addAll(Arrays.asList(baseColumns()));
+        Arrays.stream(deltaType.fieldNames()).forEach(n -> cols.add(functions.col(n)));
         return cols.toArray(new Column[0]);
     }
 
@@ -374,9 +411,11 @@ public class UpsertTable {
         squashAppend(session, current, append);
         squashMerge(session, current,  merge);
 
+        final String deltaTable = deltaTableName();
         final Set<scala.collection.immutable.Map<String, String>> drop = new HashSet<>();
         delta.values().forEach(parts -> parts.forEach(part -> drop.add(part.spec())));
-        catalog.dropPartitions(database, deltaTableName(), ScalaUtils.asScalaSeq(drop), false, true, true);
+        catalog.dropPartitions(database, deltaTable, ScalaUtils.asScalaSeq(drop), false, true, true);
+        session.sql("REFRESH TABLE " + SparkCatalogUtils.escapeName(database, deltaTable));
     }
 
     private void squashAppend(final SparkSession session,
@@ -395,7 +434,7 @@ public class UpsertTable {
                         .option(BASE_PATH_OPTION, deltaLocation().toString())
                         .schema(deltaType)
                         .load(appendLocations))
-                        .filter(functions.col(OPERATION).notEqual(UpsertOp.DELETE.name()));
+                        .select(inputColumnsWithDeleted());
 
                 // Set sequence to the existing partition to append into the same locations
                 // if no existing partition we can use the initial EMPTY_PARTITION value
@@ -521,7 +560,8 @@ public class UpsertTable {
         final String baseTable = baseTableName();
 
         SparkCatalogUtils.syncTablePartitions(catalog, database, baseTable, syncPartitions, SparkCatalogUtils.MissingPartitions.SKIP);
-        session.sqlContext().sql("ANALYZE TABLE " + SparkCatalogUtils.escapeName(database, baseTable) + " COMPUTE STATISTICS");
+        session.sql("REFRESH TABLE " + SparkCatalogUtils.escapeName(database, baseTable));
+        session.sql("ANALYZE TABLE " + SparkCatalogUtils.escapeName(database, baseTable) + " COMPUTE STATISTICS");
     }
 
     private static String[] partitionLocations(final Stream<CatalogTablePartition> partitions) {
@@ -545,40 +585,39 @@ public class UpsertTable {
 
         final ExternalCatalog catalog = session.sharedState().externalCatalog();
         final Configuration configuration = session.sparkContext().hadoopConfiguration();
-        provision(catalog, configuration);
+        if (!catalog.tableExists(database, baseTableName())) {
+            repairBase(session);
+        }
+        if (!catalog.tableExists(database, deltaTableName())) {
+            repairDelta(session);
+        }
     }
 
     public void repair(final SparkSession session) {
 
+        repairBase(session);
+        repairDelta(session);
+    }
+
+    public void repairBase(final SparkSession session) {
+
         final ExternalCatalog catalog = session.sharedState().externalCatalog();
         final Configuration configuration = session.sparkContext().hadoopConfiguration();
-        repair(catalog, configuration);
-    }
-
-    public void provision(final ExternalCatalog catalog, final Configuration configuration) {
-
-        if (!catalog.tableExists(database, baseTableName())) {
-            repairBase(catalog, configuration);
-        }
-        if (!catalog.tableExists(database, deltaTableName())) {
-            repairDelta(catalog);
-        }
-    }
-
-    public void repair(final ExternalCatalog catalog, final Configuration configuration) {
-
-        repairBase(catalog, configuration);
-        repairDelta(catalog);
-    }
-
-    public void repairBase(final ExternalCatalog catalog, final Configuration configuration) {
-
         final String tableName = baseTableName();
         final URI baseLocation = baseLocation();
         SparkCatalogUtils.ensureTable(catalog, database, tableName, baseType, basePartition, FORMAT, baseLocation, TABLE_PROPERTIES);
         final List<CatalogTablePartition> partitions = SparkCatalogUtils.findPartitions(catalog, configuration,
                 database, tableName, baseLocation, new BasePartitionStrategy());
         SparkCatalogUtils.syncTablePartitions(catalog, database, tableName, partitions, SparkCatalogUtils.MissingPartitions.DROP_AND_RETAIN);
+        session.sql("REFRESH TABLE " + SparkCatalogUtils.escapeName(database, tableName));
+    }
+
+    public void repairDelta(final SparkSession session) {
+
+        final ExternalCatalog catalog = session.sharedState().externalCatalog();
+        final String tableName = deltaTableName();
+        SparkCatalogUtils.ensureTable(catalog, database, tableName, deltaType, deltaPartition, FORMAT, deltaLocation(), TABLE_PROPERTIES);
+        session.sql("REFRESH TABLE " + SparkCatalogUtils.escapeName(database, tableName));
     }
 
     private static class BasePartitionStrategy extends SparkCatalogUtils.FindPartitionsStrategy.Default {
@@ -613,12 +652,6 @@ public class UpsertTable {
         }
     }
 
-    public void repairDelta(final ExternalCatalog catalog) {
-
-        final String tableName = deltaTableName();
-        SparkCatalogUtils.ensureTable(catalog, database, tableName, deltaType, deltaPartition, FORMAT, deltaLocation(), TABLE_PROPERTIES);
-    }
-
     public void replayDeltas(final SparkSession session, final String afterSequence, final String beforeSequence) {
 
         autoProvision(session);
@@ -649,12 +682,12 @@ public class UpsertTable {
 
     public Source<Dataset<Row>> source(final SparkSession session) {
 
-        return sink -> sink.accept(select(session));
+        return sink -> sink.accept(select(session, false));
     }
 
     public Query<Row> query(final SparkSession session) {
 
-        return () -> select(session);
+        return () -> select(session, false);
     }
 
     public Query<Row> queryDelta(final SparkSession session) {
@@ -664,7 +697,7 @@ public class UpsertTable {
 
     public Query<Row> queryBase(final SparkSession session) {
 
-        return () -> selectBase(session);
+        return () -> selectBase(session, false);
     }
 
     public void dropBase(final SparkSession session, final boolean purge) {
