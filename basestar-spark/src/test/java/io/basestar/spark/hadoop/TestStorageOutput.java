@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import scala.Tuple2;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -37,7 +38,7 @@ class TestStorageOutput extends AbstractSparkTest {
         try {
             namespace = Namespace.load(AbstractSparkTest.class.getResourceAsStream("schema.yml"));
         } catch (final IOException e) {
-            throw new IllegalStateException(e);
+            throw new UncheckedIOException(e);
         }
     }
 

@@ -50,14 +50,14 @@ class TestInterfaceSchema {
                 schema.serialize(instance, dos);
                 serialized = baos.toByteArray();
             } catch (final IOException e) {
-                throw new IllegalStateException(e);
+                throw new UncheckedIOException(e);
             }
             final Map<String, Object> deserialized;
             try(final ByteArrayInputStream bais = new ByteArrayInputStream(serialized);
                 final DataInputStream dis = new DataInputStream(bais)) {
                 deserialized = ReferableSchema.deserialize(dis);
             } catch (final IOException e) {
-                throw new IllegalStateException(e);
+                throw new UncheckedIOException(e);
             }
             assertEquals(instance, schema.create(deserialized));
         });

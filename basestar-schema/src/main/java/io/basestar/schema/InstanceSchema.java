@@ -273,7 +273,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
                 return BaseEncoding.base64().encode(bytes);
             }
         } catch (final IOException e) {
-            throw new IllegalStateException(e);
+            throw new UncheckedIOException(e);
         }
     }
 

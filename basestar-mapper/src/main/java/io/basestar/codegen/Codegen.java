@@ -68,7 +68,7 @@ public class Codegen {
         try {
             this.languageConfig = objectMapper.readValue(getClass().getResource("language/" + language + "/config.yml"), LanguageConfig.class);
         } catch (final IOException e) {
-            throw new IllegalStateException(e);
+            throw new UncheckedIOException(e);
         }
         this.settings = settings;
     }

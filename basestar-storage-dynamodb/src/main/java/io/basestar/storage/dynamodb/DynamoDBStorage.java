@@ -823,7 +823,7 @@ public class DynamoDBStorage implements DefaultIndexStorage {
             writeWithLength(dos, indexSort);
             return new Page.Token(baos.toByteArray());
         } catch (final IOException e) {
-            throw new IllegalStateException(e);
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -835,7 +835,7 @@ public class DynamoDBStorage implements DefaultIndexStorage {
             final byte[] indexSort = readWithLength(dis);
             return decodeIndexPaging(schema, index, indexPartition, indexSort);
         } catch (final IOException e) {
-            throw new IllegalStateException(e);
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -848,7 +848,7 @@ public class DynamoDBStorage implements DefaultIndexStorage {
             writeWithLength(dos, indexSort);
             return new Page.Token(baos.toByteArray());
         } catch (final IOException e) {
-            throw new IllegalStateException(e);
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -859,7 +859,7 @@ public class DynamoDBStorage implements DefaultIndexStorage {
             final byte[] indexSort = readWithLength(dis);
             return decodeIndexPaging(schema, index, indexPartition, indexSort);
         } catch (final IOException e) {
-            throw new IllegalStateException(e);
+            throw new UncheckedIOException(e);
         }
     }
 }

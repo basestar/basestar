@@ -10,6 +10,7 @@ import io.basestar.type.AnnotationContext;
 import lombok.RequiredArgsConstructor;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.lang.annotation.*;
 
 @Documented
@@ -69,7 +70,7 @@ public @interface Extension {
                         .put("jsonValue", objectMapper.writeValueAsString(value))
                         .build()).annotation();
             } catch (final IOException e) {
-                throw new IllegalStateException(e);
+                throw new UncheckedIOException(e);
             }
         }
     }

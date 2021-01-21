@@ -373,7 +373,7 @@ public interface Pager<T> {
                     }
 
                 } catch (final IOException e) {
-                    throw new IllegalStateException(e);
+                    throw new UncheckedIOException(e);
                 }
             }
 
@@ -403,7 +403,7 @@ public interface Pager<T> {
                 return new Page.Token(baos.toByteArray());
 
             } catch (final IOException e) {
-                throw new IllegalStateException(e);
+                throw new UncheckedIOException(e);
             }
         }
     }

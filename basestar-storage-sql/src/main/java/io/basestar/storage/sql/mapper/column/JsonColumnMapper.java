@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.jooq.DataType;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.function.Function;
 
 @RequiredArgsConstructor
@@ -33,7 +34,7 @@ class JsonColumnMapper<T> implements SingleColumnMapper<T, String> {
         try {
             return value == null ? null : marshaller.apply(objectMapper.readValue(value, Object.class));
         } catch (final IOException e) {
-            throw new IllegalStateException(e);
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -43,7 +44,7 @@ class JsonColumnMapper<T> implements SingleColumnMapper<T, String> {
         try {
             return objectMapper.writeValueAsString(value == null ? null : unmarshaller.apply(value));
         } catch (final IOException e) {
-            throw new IllegalStateException(e);
+            throw new UncheckedIOException(e);
         }
     }
 }

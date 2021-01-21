@@ -51,6 +51,7 @@ import io.swagger.v3.oas.models.responses.ApiResponses;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -410,7 +411,7 @@ public class DatabaseAPI implements API {
                         try {
                             return e.getKey() + "=" + URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8.toString());
                         } catch (final IOException x) {
-                            throw new IllegalStateException(x);
+                            throw new UncheckedIOException(x);
                         }
                     }).collect(Collectors.joining("&"));
             headers.put("Link", "<" + url + ">; rel=\"next\"");

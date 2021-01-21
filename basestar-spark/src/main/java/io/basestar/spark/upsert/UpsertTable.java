@@ -31,6 +31,7 @@ import scala.Option;
 import scala.Tuple2;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.time.Instant;
 import java.util.*;
@@ -646,7 +647,7 @@ public class UpsertTable {
                     }
                 }
             } catch (final IOException e) {
-                throw new IllegalStateException(e);
+                throw new UncheckedIOException(e);
             }
             return Optional.ofNullable(latest).map(Path::toUri);
         }

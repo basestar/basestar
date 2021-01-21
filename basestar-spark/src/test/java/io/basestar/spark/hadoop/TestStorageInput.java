@@ -11,6 +11,7 @@ import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 class TestStorageInput extends AbstractSparkTest {
 
@@ -21,7 +22,7 @@ class TestStorageInput extends AbstractSparkTest {
         try {
             namespace = Namespace.load(AbstractSparkTest.class.getResourceAsStream("schema.yml"));
         } catch (final IOException e) {
-            throw new IllegalStateException(e);
+            throw new UncheckedIOException(e);
         }
     }
 
