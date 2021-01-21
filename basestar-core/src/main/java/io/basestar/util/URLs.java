@@ -1,6 +1,7 @@
 package io.basestar.util;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
@@ -33,7 +34,7 @@ public class URLs {
                     final Path path = Path.parse(url.getPath());
                     return path.resolve().map(v -> toURLUnchecked(v.toFileUri()));
                 } catch (final IOException e) {
-                    throw new IllegalStateException("Failed to read url " + url, e);
+                    throw new UncheckedIOException("Failed to read url " + url, e);
                 }
             }
             return Stream.of(url);

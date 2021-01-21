@@ -4,6 +4,7 @@ import com.google.common.base.Charsets;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -55,9 +56,8 @@ public class BinaryKey extends Bytes {
 
     private static byte[] bytes(final List<?> keys) {
 
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try(final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
-        try {
             for (final Object v : keys) {
                 if (v == null) {
                     baos.write(T_NULL);
@@ -92,26 +92,26 @@ public class BinaryKey extends Bytes {
                 }
             }
 
-        } catch (final IOException e) {
-            throw new IllegalStateException(e);
-        }
+            return baos.toByteArray();
 
-        return baos.toByteArray();
+        } catch (final IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     public static byte[] concat(final byte[]... arrays) {
 
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try(final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
-        try {
             for (final byte[] array : arrays) {
                 baos.write(array);
             }
-        } catch (final IOException e) {
-            throw new IllegalStateException(e);
-        }
 
-        return baos.toByteArray();
+            return baos.toByteArray();
+
+        } catch (final IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     private static byte[] dateBytes(final LocalDate v) {

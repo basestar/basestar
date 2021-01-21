@@ -58,6 +58,7 @@ import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -514,7 +515,7 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
                     this.scrollId = hits.length == 0 ? null : response.getScrollId();
                 }
             } catch (final IOException e) {
-                throw new IllegalStateException(e);
+                throw new UncheckedIOException(e);
             }
         }
 

@@ -359,7 +359,7 @@ public class LevelDBStorage implements DefaultIndexStorage {
                 dis.readLong();
                 return ReferableSchema.deserialize(dis);
             } catch (final IOException e) {
-                throw new IllegalStateException(e);
+                throw new UncheckedIOException(e);
             }
         }
     }
@@ -376,7 +376,7 @@ public class LevelDBStorage implements DefaultIndexStorage {
                 dos.flush();
                 return baos.toByteArray();
             } catch (final IOException e) {
-                throw new IllegalStateException(e);
+                throw new UncheckedIOException(e);
             }
         }
     }
@@ -390,7 +390,7 @@ public class LevelDBStorage implements DefaultIndexStorage {
                 final DataInputStream dis = new DataInputStream(bais)) {
                 return dis.readLong();
             } catch (final IOException e) {
-                throw new IllegalStateException(e);
+                throw new UncheckedIOException(e);
             }
         }
     }

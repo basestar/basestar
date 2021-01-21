@@ -41,6 +41,7 @@ import org.junit.jupiter.api.function.Executable;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.util.*;
 
@@ -86,7 +87,7 @@ public abstract class TestStorage {
         try {
             this.namespace = Namespace.load(TestStorage.class.getResource("schema.yml"));
         } catch (final IOException e) {
-            throw new IllegalStateException(e);
+            throw new UncheckedIOException(e);
         }
     }
 

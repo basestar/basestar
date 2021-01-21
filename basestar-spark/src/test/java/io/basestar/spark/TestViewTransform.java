@@ -22,6 +22,7 @@ package io.basestar.spark;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.Namespace;
 import io.basestar.spark.database.SparkDatabase;
 import io.basestar.spark.query.QueryResolver;
@@ -36,6 +37,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -69,7 +71,7 @@ class TestViewTransform extends AbstractSparkTest {
                 Name.of("D"), datasetD
         );
 
-        final List<AggView> rows = view("AggView", AggView.class, datasets);
+        final List<AggView> rows = view("AggView", AggView.class, datasets, ImmutableSet.of(Name.of("agg"), Name.of("key"), Name.of("collect")));
         assertEquals(2, rows.size());
         assertTrue(rows.contains(new AggView("a", 8.0, ImmutableList.of(b3.withoutKeys(), b2.withoutKeys(), b1.withoutKeys()))));
         assertTrue(rows.contains(new AggView("b", 14.0, ImmutableList.of(b4.withoutKeys(), b5.withoutKeys(), b6.withoutKeys()))));
@@ -133,7 +135,7 @@ class TestViewTransform extends AbstractSparkTest {
                 Name.of("G"), datasetG
         );
 
-        final List<LinkingView> rows = view("LinkingView", LinkingView.class, datasets);
+        final List<LinkingView> rows = view("LinkingView", LinkingView.class, datasets, ImmutableSet.of(Name.of("record"), Name.of("key"), Name.of("key2")));
         assertEquals(3, rows.size());
         rows.forEach(row -> {
             assertNotNull(row.getId());
@@ -159,7 +161,7 @@ class TestViewTransform extends AbstractSparkTest {
                 Name.of("FileRow"), session.createDataset(ImmutableList.of(r1), Encoders.bean(FileRow.class)).toDF()
         );
 
-        final List<LinkingViewToView> rows = view("LinkingViewToView", LinkingViewToView.class, datasets);
+        final List<LinkingViewToView> rows = view("LinkingViewToView", LinkingViewToView.class, datasets, ImmutableSet.of(Name.of("headerRows", "rows")));
         assertEquals(1, rows.size());
         assertNotNull(rows.get(0).getHeaderRows().getRows().get(0).getRowIndex());
     }
@@ -178,7 +180,7 @@ class TestViewTransform extends AbstractSparkTest {
                 Name.of("FileRow"), session.createDataset(ImmutableList.of(r1), Encoders.bean(FileRow.class)).toDF()
         );
 
-        final List<HeaderRows> rows = view("HeaderRows", HeaderRows.class, datasets);
+        final List<HeaderRows> rows = view("HeaderRows", HeaderRows.class, datasets, ImmutableSet.of(Name.of("rows")));
         assertEquals(1, rows.size());
         assertNotNull(rows.get(0).getRows().get(0).getRowIndex());
     }
@@ -205,6 +207,11 @@ class TestViewTransform extends AbstractSparkTest {
 
     private <T> List<T> view(final String view, final Class<T> as,  final Map<Name, Dataset<Row>> datasets) throws IOException {
 
+        return view(view, as, datasets, ImmutableSet.of());
+    }
+
+    private <T> List<T> view(final String view, final Class<T> as,  final Map<Name, Dataset<Row>> datasets, final Set<Name> expand) throws IOException {
+
         final Namespace namespace = Namespace.load(TestViewTransform.class.getResourceAsStream("schema.yml"));
 
         final QueryResolver resolver = new QueryResolver.Automatic(QueryResolver.ofSources(schema -> datasets.get(schema.getQualifiedName())));
@@ -213,7 +220,7 @@ class TestViewTransform extends AbstractSparkTest {
                 .resolver(resolver).namespace(namespace)
                 .build();
 
-        final Dataset<T> dataset = database.from(view).defaultExpand().as(as).query();
+        final Dataset<T> dataset = database.from(view).expand(expand).as(as).query();
         return dataset.collectAsList();
     }
 }

@@ -29,6 +29,7 @@ import org.junit.jupiter.api.BeforeAll;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.UUID;
 
 import static org.fusesource.leveldbjni.JniDBFactory.factory;
@@ -55,7 +56,7 @@ class TestLevelDBStorage extends TestStorage {
                     .db(db)
                     .build();
         } catch (final IOException e) {
-            throw new IllegalStateException(e);
+            throw new UncheckedIOException(e);
         }
     }
 }

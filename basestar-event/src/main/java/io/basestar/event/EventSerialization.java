@@ -27,6 +27,7 @@ import io.basestar.jackson.BasestarModule;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -56,7 +57,7 @@ public interface EventSerialization {
                 objectMapper.writeValue(gzos, event);
                 return baos.toByteArray();
             } catch(final IOException e) {
-                throw new IllegalStateException(e);
+                throw new UncheckedIOException(e);
             }
         }
 
@@ -67,7 +68,7 @@ public interface EventSerialization {
                 final GZIPInputStream gzis = new GZIPInputStream(bais)) {
                 return objectMapper.readValue(gzis, event);
             } catch(final IOException e) {
-                throw new IllegalStateException(e);
+                throw new UncheckedIOException(e);
             }
         }
     }

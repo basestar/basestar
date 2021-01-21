@@ -235,7 +235,7 @@ public class DynamoDBUtils {
             final DataInputStream dis = new DataInputStream(bais)) {
             return ReferableSchema.deserialize(dis);
         } catch (final IOException e) {
-            throw new IllegalStateException(e);
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -246,7 +246,7 @@ public class DynamoDBUtils {
             schema.serialize(object, dos);
             return baos.toByteArray();
         } catch (final IOException e) {
-            throw new IllegalStateException(e);
+            throw new UncheckedIOException(e);
         }
     }
 

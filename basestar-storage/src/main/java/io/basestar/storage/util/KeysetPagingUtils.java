@@ -72,7 +72,7 @@ public class KeysetPagingUtils {
             }
         } catch (final IOException e) {
             // Shouldn't be possible, not doing real IO
-            throw new IllegalStateException(e);
+            throw new UncheckedIOException(e);
         }
         assert values.size() == sort.size();
         return values;
@@ -92,7 +92,7 @@ public class KeysetPagingUtils {
             return new Page.Token(baos.toByteArray());
         } catch (final IOException e) {
             // Shouldn't be possible, not doing real IO
-            throw new IllegalStateException(e);
+            throw new UncheckedIOException(e);
         }
     }
 }

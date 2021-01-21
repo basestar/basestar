@@ -36,6 +36,7 @@ import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -219,7 +220,7 @@ public class SQLUtils {
                 try {
                     return objectMapper.writeValueAsString(value);
                 } catch (final IOException e) {
-                    throw new IllegalStateException(e);
+                    throw new UncheckedIOException(e);
                 }
             }
 
@@ -371,7 +372,7 @@ public class SQLUtils {
                     }
                     return objectMapper.readValue(str, ref);
                 } catch (final IOException e) {
-                    throw new IllegalStateException(e);
+                    throw new UncheckedIOException(e);
                 }
             }
 

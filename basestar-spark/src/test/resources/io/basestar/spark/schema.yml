@@ -99,10 +99,10 @@ AggView:
     expand:
       - key
   group: key
-  expand:
-    - agg
-    - key
-    - collect
+#  expand:
+#    - agg
+#    - key
+#    - collect
   where: key.x == 1
 
 AliasView:
@@ -129,10 +129,10 @@ LinkingView:
     expand:
       - key
       - key2
-  expand:
-    - record
-    - key
-    - key2
+#  expand:
+#    - record
+#    - key
+#    - key2
   links:
     record:
       schema: AliasView
@@ -169,8 +169,8 @@ HeaderRows:
       type:
         array: FileRow
       expression: "collectArray(this)"
-  expand:
-    - rows
+#  expand:
+#    - rows
 
 LinkingViewToView:
   type: view
@@ -182,8 +182,8 @@ LinkingViewToView:
       single: true
       expression: "this.id == id"
   from: File
-  expand:
-    - headerRows.rows
+#  expand:
+#    - headerRows.rows
 
 Expressions:
   type: view

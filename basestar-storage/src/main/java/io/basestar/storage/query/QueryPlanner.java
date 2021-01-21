@@ -1,5 +1,6 @@
 package io.basestar.storage.query;
 
+import com.google.common.collect.Sets;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.AggregateExtractingVisitor;
@@ -37,7 +38,7 @@ public interface QueryPlanner<T> {
             } else {
 
                 final Expression remainingFilter = constFilter ? null : filter;
-                final Set<Name> remainingExpand = expand;//, stage.getLayout().getExpand());
+                final Set<Name> remainingExpand = expand == null ? null : Sets.difference(expand, schema.getExpand());
 
                 T stage = stage(visitor, schema);
 

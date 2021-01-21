@@ -35,6 +35,7 @@ import scala.Option;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.time.Instant;
 import java.util.*;
@@ -202,7 +203,7 @@ public class SparkCatalogUtils {
             final FileSystem fs = path.getFileSystem(configuration);
             return findPartitions(fs, path, names, ImmutableMap.of(), strategy);
         } catch (final IOException e) {
-            throw new IllegalStateException(e);
+            throw new UncheckedIOException(e);
         }
     }
 
