@@ -859,6 +859,29 @@ public abstract class TestStorage {
     }
 
 //    @Test
+//    protected void testExpand() throws IOException {
+//
+//        final Storage storage = storage(namespace);
+//
+//        final ObjectSchema target = namespace.requireObjectSchema(REF_TARGET);
+//        final ObjectSchema expanded = namespace.requireObjectSchema(EXPANDED);
+//
+//        assumeConcurrentObjectWrite(storage, target);
+//        assumeConcurrentObjectWrite(storage, expanded);
+//
+//        final String targetId = createComplete(storage, target, ImmutableMap.of(
+//                "hello", "world"
+//        ));
+//        createComplete(storage, expanded, ImmutableMap.of(
+//                "target", ReferableSchema.ref(targetId)
+//        ));
+//
+//        final List<Sort> sort = Sort.parseList("id");
+//        final Page<Map<String, Object>> page = page(storage, expanded, Expression.parse("target.hello == 'world'"), sort, 10);
+//        assertEquals(1, page.size());
+//    }
+
+//    @Test
 //    protected void testRepair() throws IOException {
 //
 //        assumeTrue(supportsRepair());
