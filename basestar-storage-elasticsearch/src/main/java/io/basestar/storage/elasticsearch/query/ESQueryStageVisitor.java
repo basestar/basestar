@@ -29,7 +29,7 @@ public class ESQueryStageVisitor implements QueryStageVisitor<ESQueryStage> {
     @Override
     public ESQueryStage expand(final ESQueryStage input, final LinkableSchema schema, final Set<Name> expand) {
 
-        throw new UnsupportedOperationException();
+        return input;
     }
 
     @Override
