@@ -122,6 +122,8 @@ public class DatabaseAPI implements API {
                             return head(request);
                         case GET:
                             return health(request);
+                        case POST:
+                            return batch(caller, request);
                         default:
                             throw new UnsupportedMethodException(ImmutableSet.of(APIRequest.Method.GET));
                     }
@@ -192,14 +194,26 @@ public class DatabaseAPI implements API {
         return CompletableFuture.completedFuture(APIResponse.success(request,null));
     }
 
+    private CompletableFuture<APIResponse> batch(final Caller caller, final APIRequest request) {
+
+        try(final InputStream is = request.readBody()) {
+
+            final Options options = request.getContentType().getMapper().readValue(is, Options.class);
+            return respond(request, options.apply(caller, database), ignored -> 200);
+
+        } catch (final IOException e) {
+            throw new InvalidBodyException(e.getMessage());
+        }
+    }
+
     private CompletableFuture<APIResponse> create(final Caller caller, final Name schema, final APIRequest request) {
 
         final Map<String, Object> data = parseData(request);
         final String id = Instance.getId(data);
 
         final CreateOptions options = CreateOptions.builder()
-                .schema(schema).id(id).data(data)
-                .expand(parseExpand(request))
+                .setSchema(schema).setId(id).setData(data)
+                .setExpand(parseExpand(request))
                 .build();
 
         return respond(request, database.create(caller, options), ignored -> 201);
@@ -208,9 +222,9 @@ public class DatabaseAPI implements API {
     private CompletableFuture<APIResponse> read(final Caller caller, final Name schema, final String id, final APIRequest request) {
 
         final ReadOptions options = ReadOptions.builder()
-                .schema(schema).id(id)
-                .expand(parseExpand(request))
-                .version(parseVersion(request))
+                .setSchema(schema).setId(id)
+                .setExpand(parseExpand(request))
+                .setVersion(parseVersion(request))
                 .build();
 
         return respond(request, database.read(caller, options).thenApply(result -> {
@@ -227,10 +241,10 @@ public class DatabaseAPI implements API {
         final Map<String, Object> data = parseData(request);
 
         final UpdateOptions options = UpdateOptions.builder()
-                .schema(schema).id(id).data(data)
-                .expand(parseExpand(request))
-                .mode(Nullsafe.orDefault(parseUpdateMode(request), mode))
-                .version(parseVersion(request))
+                .setSchema(schema).setId(id).setData(data)
+                .setExpand(parseExpand(request))
+                .setMode(Nullsafe.orDefault(parseUpdateMode(request), mode))
+                .setVersion(parseVersion(request))
                 .build();
 
         return respond(request, database.update(caller, options), v -> Long.valueOf(1).equals(Instance.getVersion(v)) ? 201 : 200);
@@ -239,8 +253,8 @@ public class DatabaseAPI implements API {
     private CompletableFuture<APIResponse> delete(final Caller caller, final Name schema, final String id, final APIRequest request) {
 
         final DeleteOptions options = DeleteOptions.builder()
-                .schema(schema).id(id)
-                .version(parseVersion(request))
+                .setSchema(schema).setId(id)
+                .setVersion(parseVersion(request))
                 .build();
 
         return respond(request, database.delete(caller, options), ignored -> 204);
@@ -251,11 +265,11 @@ public class DatabaseAPI implements API {
         final Expression query = parseQuery(request);
 
         final QueryOptions options = QueryOptions.builder()
-                .schema(schema).expression(query)
-                .count(parseCount(request))
-                .expand(parseExpand(request))
-                .sort(parseSort(request))
-                .paging(parsePaging(request))
+                .setSchema(schema).setExpression(query)
+                .setCount(parseCount(request))
+                .setExpand(parseExpand(request))
+                .setSort(parseSort(request))
+                .setPaging(parsePaging(request))
                 .build();
 
         return respondPaged(request, database.query(caller, options));
@@ -264,10 +278,10 @@ public class DatabaseAPI implements API {
     private CompletableFuture<APIResponse> queryLink(final Caller caller, final Name schema, final String id, final String link, final APIRequest request) {
 
         final QueryLinkOptions options = QueryLinkOptions.builder()
-                .schema(schema).id(id).link(link)
-                .count(parseCount(request))
-                .expand(parseExpand(request))
-                .paging(parsePaging(request))
+                .setSchema(schema).setId(id).setLink(link)
+                .setCount(parseCount(request))
+                .setExpand(parseExpand(request))
+                .setPaging(parsePaging(request))
                 .build();
 
         return respondPaged(request, database.queryLink(caller, options));

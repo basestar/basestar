@@ -65,9 +65,9 @@ class GraphQLTest {
         final DatabaseServer databaseServer = DatabaseServer.builder().namespace(namespace).storage(storage).build();
 
         databaseServer.create(Caller.SUPER, CreateOptions.builder()
-                .schema(Name.of("Test4"))
-                .id("test4")
-                .data(ImmutableMap.of(
+                .setSchema(Name.of("Test4"))
+                .setId("test4")
+                .setData(ImmutableMap.of(
                         "test", ImmutableMap.of(
                                 "id","test1"
                         ),
@@ -78,9 +78,9 @@ class GraphQLTest {
                 .build()).get();
 
         databaseServer.create(Caller.SUPER, CreateOptions.builder()
-                .schema(Name.of("Test1"))
-                .id("test1")
-                .data(ImmutableMap.of(
+                .setSchema(Name.of("Test1"))
+                .setId("test1")
+                .setData(ImmutableMap.of(
                         "x", "test1",
                         "z", ImmutableMap.of(
                                 "test", ImmutableMap.of(
@@ -91,9 +91,9 @@ class GraphQLTest {
                 .build()).get();
 
         databaseServer.create(Caller.SUPER, CreateOptions.builder()
-                .schema(Name.of("Test5"))
-                .id("test5")
-                .data(ImmutableMap.of(
+                .setSchema(Name.of("Test5"))
+                .setId("test5")
+                .setData(ImmutableMap.of(
                         "abstractRef", ImmutableMap.of(
                                 "id", "test4"
                         )
@@ -101,9 +101,9 @@ class GraphQLTest {
                 .build()).get();
 
         databaseServer.create(Caller.SUPER, CreateOptions.builder()
-                .schema(Name.of("Test5"))
-                .id("testMissing")
-                .data(ImmutableMap.of(
+                .setSchema(Name.of("Test5"))
+                .setId("testMissing")
+                .setData(ImmutableMap.of(
                         "abstractRef", ImmutableMap.of(
                                 "id", "missing"
                         )
@@ -111,15 +111,15 @@ class GraphQLTest {
                 .build()).get();
 
         databaseServer.create(Caller.SUPER, CreateOptions.builder()
-                .schema(Name.of("Test7"))
-                .id("test7")
-                .data(ImmutableMap.of())
+                .setSchema(Name.of("Test7"))
+                .setId("test7")
+                .setData(ImmutableMap.of())
                 .build()).get();
 
         databaseServer.create(Caller.SUPER, CreateOptions.builder()
-                .schema(Name.of("TestAny"))
-                .id("testAny")
-                .data(ImmutableMap.of(
+                .setSchema(Name.of("TestAny"))
+                .setId("testAny")
+                .setData(ImmutableMap.of(
                         "any", ImmutableMap.of(
                                 "z", ImmutableList.of(1, 2, 3)
                         )
@@ -127,9 +127,9 @@ class GraphQLTest {
                 .build()).get();
 
         databaseServer.create(Caller.SUPER, CreateOptions.builder()
-                .schema(Name.of("Point"))
-                .id("point1")
-                .data(ImmutableMap.of(
+                .setSchema(Name.of("Point"))
+                .setId("point1")
+                .setData(ImmutableMap.of(
                         "x", 3,
                         "y", 4
                 ))

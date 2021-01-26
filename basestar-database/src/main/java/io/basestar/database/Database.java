@@ -45,7 +45,7 @@ public interface Database {
 
     default CompletableFuture<Instance> read(final Caller caller, final Name schema, final String id, final Long version) {
 
-        return read(caller, ReadOptions.builder().schema(schema).id(id).version(version).build());
+        return read(caller, ReadOptions.builder().setSchema(schema).setId(id).setVersion(version).build());
     }
 
     CompletableFuture<Instance> create(Caller caller, CreateOptions options);
@@ -57,7 +57,7 @@ public interface Database {
 
     default CompletableFuture<Instance> create(final Caller caller, final Name schema, final String id, final Map<String, Object> data) {
 
-        return create(caller, CreateOptions.builder().schema(schema).id(id).data(data).build());
+        return create(caller, CreateOptions.builder().setSchema(schema).setId(id).setData(data).build());
     }
 
     CompletableFuture<Instance> update(Caller caller, UpdateOptions options);
@@ -69,7 +69,7 @@ public interface Database {
 
     default CompletableFuture<Instance> update(final Caller caller, final Name schema, final String id, final Long version, final Map<String, Object> data) {
 
-        return update(caller, UpdateOptions.builder().schema(schema).id(id).version(version).data(data).build());
+        return update(caller, UpdateOptions.builder().setSchema(schema).setId(id).setVersion(version).setData(data).build());
     }
 
     CompletableFuture<Instance> delete(Caller caller, DeleteOptions options);
@@ -81,21 +81,21 @@ public interface Database {
 
     default CompletableFuture<Instance> delete(final Caller caller, final Name schema, final String id, final Long version) {
 
-        return delete(caller, DeleteOptions.builder().schema(schema).id(id).version(version).build());
+        return delete(caller, DeleteOptions.builder().setSchema(schema).setId(id).setVersion(version).build());
     }
 
     CompletableFuture<Page<Instance>> query(Caller caller, QueryOptions options);
 
     default CompletableFuture<Page<Instance>> query(final Caller caller, final Name schema, final Expression expression) {
 
-        return query(caller, QueryOptions.builder().schema(schema).expression(expression).build());
+        return query(caller, QueryOptions.builder().setSchema(schema).setExpression(expression).build());
     }
 
     CompletableFuture<Page<Instance>> queryLink(Caller caller, QueryLinkOptions options);
 
     default CompletableFuture<Page<Instance>> queryLink(final Caller caller, final Name schema, final String id, final String link) {
 
-        return queryLink(caller, QueryLinkOptions.builder().schema(schema).id(id).link(link).build());
+        return queryLink(caller, QueryLinkOptions.builder().setSchema(schema).setId(id).setLink(link).build());
     }
 
     CompletableFuture<Map<String, Instance>> batch(Caller caller, BatchOptions options);
@@ -104,10 +104,10 @@ public interface Database {
 
         // FIXME: should not read the root object (will break in versioning scenario anyway)
         return read(caller, ReadOptions.builder()
-                .id(Instance.getId(instance))
-                .schema(Instance.getSchema(instance))
-                .version(Instance.getVersion(instance))
-                .expand(expand)
+                .setId(Instance.getId(instance))
+                .setSchema(Instance.getSchema(instance))
+                .setVersion(Instance.getVersion(instance))
+                .setExpand(expand)
                 .build());
     }
 }

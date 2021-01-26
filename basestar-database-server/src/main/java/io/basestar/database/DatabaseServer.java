@@ -467,7 +467,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final Link link = ownerSchema.requireLink(options.getLink(), true);
         final String ownerId = options.getId();
 
-        return read(caller, ReadOptions.builder().schema(ownerSchema.getQualifiedName()).id(ownerId).build())
+        return read(caller, ReadOptions.builder().setSchema(ownerSchema.getQualifiedName()).setId(ownerId).build())
                 .thenCompose(owner -> {
 
                     if (owner == null) {

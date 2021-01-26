@@ -20,13 +20,20 @@ package io.basestar.database.options;
  * #L%
  */
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
+import io.basestar.auth.Caller;
+import io.basestar.database.Database;
 import io.basestar.schema.Consistency;
 import io.basestar.util.Name;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.concurrent.CompletableFuture;
+
 @Data
-@Builder(toBuilder = true, builderClassName = "Builder")
+@Builder(toBuilder = true, builderClassName = "Builder", setterPrefix = "set")
+@JsonDeserialize(builder = DeleteOptions.Builder.class)
 public class DeleteOptions implements ActionOptions {
 
     public static final String TYPE = "delete";
@@ -38,4 +45,15 @@ public class DeleteOptions implements ActionOptions {
     private final Long version;
 
     private final Consistency consistency;
+
+    @Override
+    public CompletableFuture<?> apply(final Caller caller, final Database database) {
+
+        return database.delete(caller, this);
+    }
+
+    @JsonPOJOBuilder(withPrefix = "set")
+    public static class Builder {
+
+    }
 }

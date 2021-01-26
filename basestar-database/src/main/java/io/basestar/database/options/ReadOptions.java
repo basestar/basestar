@@ -20,14 +20,20 @@ package io.basestar.database.options;
  * #L%
  */
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
+import io.basestar.auth.Caller;
+import io.basestar.database.Database;
 import io.basestar.util.Name;
 import lombok.Builder;
 import lombok.Data;
 
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 @Data
-@Builder(toBuilder = true, builderClassName = "Builder")
+@Builder(toBuilder = true, builderClassName = "Builder", setterPrefix = "set")
+@JsonDeserialize(builder = ReadOptions.Builder.class)
 public class ReadOptions implements Options {
 
     public static final String TYPE = "read";
@@ -41,4 +47,15 @@ public class ReadOptions implements Options {
     private final Set<Name> projection;
 
     private final Long version;
+
+    @Override
+    public CompletableFuture<?> apply(final Caller caller, final Database database) {
+
+        return database.read(caller, this);
+    }
+
+    @JsonPOJOBuilder(withPrefix = "set")
+    public static class Builder {
+
+    }
 }

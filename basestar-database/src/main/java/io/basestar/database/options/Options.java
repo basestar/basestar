@@ -22,6 +22,11 @@ package io.basestar.database.options;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.basestar.auth.Caller;
+import io.basestar.database.Database;
+import io.basestar.util.Warnings;
+
+import java.util.concurrent.CompletableFuture;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.WRAPPER_OBJECT)
 @JsonSubTypes({
@@ -34,4 +39,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 })
 public interface Options {
 
+    @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
+    CompletableFuture<?> apply(Caller caller, Database database);
 }

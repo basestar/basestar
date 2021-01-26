@@ -331,9 +331,13 @@ public class SchemaAdaptor {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
         builder.name(strategy.subscribeQueryMethodName(schema));
-        builder.type(new TypeName(strategy.typeName(schema)));
+        builder.type(new TypeName(strategy.pageTypeName(schema)));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(strategy.queryArgumentName()).type(new TypeName(GraphQLUtils.STRING_TYPE)).build());
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name(strategy.sortArgumentName()).type(new ListType(new TypeName(GraphQLUtils.STRING_TYPE))).build());
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name(strategy.countArgumentName()).type(new TypeName(GraphQLUtils.INT_TYPE)).build());
         return builder.build();
     }
 

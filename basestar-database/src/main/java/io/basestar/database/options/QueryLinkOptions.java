@@ -20,6 +20,8 @@ package io.basestar.database.options;
  * #L%
  */
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import io.basestar.expression.Expression;
 import io.basestar.util.Name;
 import io.basestar.util.Page;
@@ -31,7 +33,8 @@ import java.util.List;
 import java.util.Set;
 
 @Data
-@Builder(toBuilder = true, builderClassName = "Builder")
+@Builder(toBuilder = true, builderClassName = "Builder", setterPrefix = "set")
+@JsonDeserialize(builder = QueryLinkOptions.Builder.class)
 public class QueryLinkOptions {
 
     public static final String TYPE = "queryLink";
@@ -59,4 +62,9 @@ public class QueryLinkOptions {
     private final Set<Page.Stat> stats;
 
     private final Page.Token paging;
+
+    @JsonPOJOBuilder(withPrefix = "set")
+    public static class Builder {
+
+    }
 }

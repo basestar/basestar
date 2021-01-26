@@ -20,6 +20,10 @@ package io.basestar.database.options;
  * #L%
  */
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
+import io.basestar.auth.Caller;
+import io.basestar.database.Database;
 import io.basestar.expression.Expression;
 import io.basestar.util.Name;
 import io.basestar.util.Page;
@@ -29,9 +33,11 @@ import lombok.Data;
 
 import java.util.List;
 import java.util.Set;
- 
+import java.util.concurrent.CompletableFuture;
+
 @Data
-@Builder(toBuilder = true, builderClassName = "Builder")
+@Builder(toBuilder = true, builderClassName = "Builder", setterPrefix = "set")
+@JsonDeserialize(builder = QueryOptions.Builder.class)
 public class QueryOptions implements Options {
 
     public static final String TYPE = "query";
@@ -55,4 +61,15 @@ public class QueryOptions implements Options {
     private final Set<Page.Stat> stats;
 
     private final Page.Token paging;
+
+    @Override
+    public CompletableFuture<?> apply(final Caller caller, final Database database) {
+
+        return database.query(caller, this);
+    }
+
+    @JsonPOJOBuilder(withPrefix = "set")
+    public static class Builder {
+
+    }
 }
