@@ -175,7 +175,7 @@ public class UseEnum implements UseStringLike<String>, UseNamed<String> {
                     Use.name(NAME, optional), schema.getValues()
             );
         } else {
-            return UseNamed.super.toConfig();
+            return UseNamed.super.toConfig(optional);
         }
     }
 

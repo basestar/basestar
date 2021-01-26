@@ -171,8 +171,8 @@ public class GraphQLAdaptor {
     private CompletableFuture<?> read(final Caller caller, final ReferableSchema schema, final String id, final Long version, final Set<Name> expand) {
 
         final ReadOptions options = ReadOptions.builder()
-                .schema(schema.getQualifiedName()).id(id)
-                .version(version).expand(expand)
+                .setSchema(schema.getQualifiedName())
+                .setId(id).setVersion(version).setExpand(expand)
                 .build();
         return database.read(caller, options)
                 .thenApply(object -> responseTransform.toResponse(schema, object));
@@ -190,13 +190,13 @@ public class GraphQLAdaptor {
             final List<Sort> sort = sort(env);
             final Set<Page.Stat> stats = stats(env);
             final QueryOptions options = QueryOptions.builder()
-                    .schema(schema.getQualifiedName())
-                    .expression(expression)
-                    .paging(paging)
-                    .count(count)
-                    .stats(stats)
-                    .sort(sort)
-                    .expand(expand)
+                    .setSchema(schema.getQualifiedName())
+                    .setExpression(expression)
+                    .setPaging(paging)
+                    .setCount(count)
+                    .setStats(stats)
+                    .setSort(sort)
+                    .setExpand(expand)
                     .build();
             return database.query(caller, options)
                     .thenApply(result -> responseTransform.toResponsePage(schema, result));
@@ -216,14 +216,14 @@ public class GraphQLAdaptor {
             final List<Sort> sort = sort(env);
             final Set<Page.Stat> stats = stats(env);
             final QueryLinkOptions options = QueryLinkOptions.builder()
-                    .schema(schema.getQualifiedName())
-                    .link(link.getName())
-                    .id(id)
-                    .expand(expand)
-                    .paging(paging)
-                    .count(count)
-                    .stats(stats)
-                    .sort(sort)
+                    .setSchema(schema.getQualifiedName())
+                    .setLink(link.getName())
+                    .setId(id)
+                    .setExpand(expand)
+                    .setPaging(paging)
+                    .setCount(count)
+                    .setStats(stats)
+                    .setSort(sort)
                     .build();
             return database.queryLink(caller, options)
                     .thenApply(result -> responseTransform.toResponsePage(linkSchema, result));
@@ -270,9 +270,9 @@ public class GraphQLAdaptor {
             final Consistency consistency = consistency(env);
             final Map<String, Expression> expressions = parseExpressions(env.getArgument(strategy.expressionsArgumentName()));
             final CreateOptions options = CreateOptions.builder()
-                    .schema(schema.getQualifiedName()).id(id)
-                    .data(data).consistency(consistency).expand(expand)
-                    .expressions(expressions)
+                    .setSchema(schema.getQualifiedName()).setId(id)
+                    .setData(data).setConsistency(consistency).setExpand(expand)
+                    .setExpressions(expressions)
                     .build();
             return database.create(caller, options)
                     .thenApply(object -> responseTransform.toResponse(schema, object));
@@ -291,11 +291,11 @@ public class GraphQLAdaptor {
             final Map<String, Expression> expressions = parseExpressions(env.getArgument(strategy.expressionsArgumentName()));
 
             final UpdateOptions options = UpdateOptions.builder()
-                    .schema(schema.getQualifiedName()).id(id)
-                    .mode(mode).consistency(consistency)
-                    .data(data).version(version)
-                    .expressions(expressions)
-                    .expand(expand)
+                    .setSchema(schema.getQualifiedName()).setId(id)
+                    .setMode(mode).setConsistency(consistency)
+                    .setData(data).setVersion(version)
+                    .setExpressions(expressions)
+                    .setExpand(expand)
                     .build();
             return database.update(caller, options)
                     .thenApply(object -> responseTransform.toResponse(schema, object));
@@ -320,8 +320,8 @@ public class GraphQLAdaptor {
             final Long version = version(env);
             final Consistency consistency = consistency(env);
             final DeleteOptions options = DeleteOptions.builder()
-                    .schema(schema.getQualifiedName()).id(id)
-                    .version(version).consistency(consistency)
+                    .setSchema(schema.getQualifiedName()).setId(id)
+                    .setVersion(version).setConsistency(consistency)
                     .build();
             return database.delete(caller, options)
                     .thenApply(object -> responseTransform.toResponse(schema, object));
@@ -357,9 +357,9 @@ public class GraphQLAdaptor {
             final Map<String, Object> data = requestTransform.fromRequest(schema, argument(field, strategy.dataArgumentName()));
             final Map<String, Expression> expressions = parseExpressions(argument(field, strategy.expressionsArgumentName()));
             return CreateOptions.builder()
-                    .schema(schema.getQualifiedName()).id(id)
-                    .data(data).expand(expand)
-                    .expressions(expressions)
+                    .setSchema(schema.getQualifiedName()).setId(id)
+                    .setData(data).setExpand(expand)
+                    .setExpressions(expressions)
                     .build();
         };
     }
@@ -375,11 +375,11 @@ public class GraphQLAdaptor {
             final Map<String, Object> data = requestTransform.fromRequest(schema, argument(field, strategy.dataArgumentName()));
             final Map<String, Expression> expressions = parseExpressions(argument(field, strategy.expressionsArgumentName()));
             return UpdateOptions.builder()
-                    .schema(schema.getQualifiedName()).id(id)
-                    .mode(mode)
-                    .data(data).version(version)
-                    .expressions(expressions)
-                    .expand(expand)
+                    .setSchema(schema.getQualifiedName()).setId(id)
+                    .setMode(mode)
+                    .setData(data).setVersion(version)
+                    .setExpressions(expressions)
+                    .setExpand(expand)
                     .build();
         };
     }
@@ -400,8 +400,8 @@ public class GraphQLAdaptor {
             final String id = argument(field, strategy.idArgumentName());
             final Long version = version(field);
             return DeleteOptions.builder()
-                    .schema(schema.getQualifiedName()).id(id)
-                    .version(version)
+                    .setSchema(schema.getQualifiedName())
+                    .setId(id).setVersion(version)
                     .build();
         };
     }
@@ -424,13 +424,13 @@ public class GraphQLAdaptor {
             final Consistency consistency = consistencyStr == null ? Consistency.EVENTUAL : Consistency.valueOf(consistencyStr);
 
             final BatchOptions.Builder builder = BatchOptions.builder()
-                    .consistency(consistency);
+                    .setConsistency(consistency);
 
             env.getMergedField().getSingleField().getSelectionSet().getSelections().forEach(selection -> {
                 if(selection instanceof Field) {
                     final Field field = (Field)selection;
                     final BatchHandler handler = handlers.get(field.getName());
-                    builder.action(field.getName(), handler.actionOptions(env, field));
+                    builder.putAction(field.getName(), handler.actionOptions(env, field));
                 }
             });
 
@@ -474,13 +474,25 @@ public class GraphQLAdaptor {
     private DataFetcher<CompletableFuture<?>> subscribeQueryFetcher(final ObjectSchema schema) {
 
         return (env) -> {
+            final Caller caller = GraphQLUtils.caller(env.getContext());
             final SubscriberContext subscriberContext = GraphQLUtils.subscriber(env.getContext());
+            final Set<Name> expand = expand(schema, env, strategy.pageItemsFieldName());
             final Set<Name> names = paths(env);
             final String alias = Nullsafe.orDefault(env.getField().getAlias(), () -> strategy.subscribeMethodName(schema));
             final String query = env.getArgument(strategy.queryArgumentName());
             final Expression expression = Expression.parse(query);
+            final Integer count = count(env);
+            final List<Sort> sort = sort(env);
+            final QueryOptions options = QueryOptions.builder()
+                    .setSchema(schema.getQualifiedName())
+                    .setExpression(expression)
+                    .setCount(count)
+                    .setSort(sort)
+                    .setExpand(expand)
+                    .build();
             return subscriberContext.subscribe(schema, expression, alias, names)
-                    .thenApply(ignored -> Collections.emptyList());
+                    .thenCompose(ignored -> database.query(caller, options)
+                        .thenApply(result -> responseTransform.toResponsePage(schema, result)));
         };
     }
 

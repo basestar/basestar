@@ -42,7 +42,7 @@ class TestDatabaseAPI {
         final DatabaseAPI api = new DatabaseAPI(db);
         api.handle(request(APIRequest.Method.GET, "Test1", ImmutableMap.of("query", "field1=='somevalue'", "sort", "x,y"))).join();
         Mockito.verify(db).query(Caller.ANON, QueryOptions.builder()
-                .schema(Name.of("Test1")).expression(Expression.parse("field1 == 'somevalue'")).sort(Sort.parseList("x,y")).build());
+                .setSchema(Name.of("Test1")).setExpression(Expression.parse("field1 == 'somevalue'")).setSort(Sort.parseList("x,y")).build());
     }
 
     @Test
@@ -52,7 +52,7 @@ class TestDatabaseAPI {
         final DatabaseAPI api = new DatabaseAPI(db);
         api.handle(request(APIRequest.Method.GET, "Test1/1/link", ImmutableMap.of("count", "10"))).join();
         Mockito.verify(db).queryLink(Caller.ANON, QueryLinkOptions.builder()
-                .schema(Name.of("Test1")).id("1").link("link").count(10).build());
+                .setSchema(Name.of("Test1")).setId("1").setLink("link").setCount(10).build());
     }
 
     @Test
@@ -62,7 +62,7 @@ class TestDatabaseAPI {
         final DatabaseAPI api = new DatabaseAPI(db);
         api.handle(request(APIRequest.Method.GET, "Test1/1", ImmutableMap.of("expand", "a,b", "version", "2"))).join();
         Mockito.verify(db).read(Caller.ANON, ReadOptions.builder()
-                .schema(Name.of("Test1")).id("1").expand(Name.parseSet("a,b")).version(2L).build());
+                .setSchema(Name.of("Test1")).setId("1").setExpand(Name.parseSet("a,b")).setVersion(2L).build());
     }
 
     @Test
@@ -83,7 +83,7 @@ class TestDatabaseAPI {
         final DatabaseAPI api = new DatabaseAPI(db);
         api.handle(request(APIRequest.Method.DELETE, "Test1/1")).join();
         Mockito.verify(db).delete(Caller.ANON, DeleteOptions.builder()
-                .schema(Name.of("Test1")).id("1").build());
+                .setSchema(Name.of("Test1")).setId("1").build());
     }
 
     @Test
@@ -93,7 +93,7 @@ class TestDatabaseAPI {
         final DatabaseAPI api = new DatabaseAPI(db);
         api.handle(request(APIRequest.Method.POST, "Test1", ImmutableMap.of(), new Properties("a", "b"))).join();
         Mockito.verify(db).create(Caller.ANON, CreateOptions.builder()
-                .schema(Name.of("Test1")).data(ImmutableMap.of("f1", "a", "f2", "b")).build());
+                .setSchema(Name.of("Test1")).setData(ImmutableMap.of("f1", "a", "f2", "b")).build());
     }
 
     @Test
@@ -103,7 +103,7 @@ class TestDatabaseAPI {
         final DatabaseAPI api = new DatabaseAPI(db);
         api.handle(request(APIRequest.Method.PUT, "Test1/1", ImmutableMap.of(), new Properties("a", "b"))).join();
         Mockito.verify(db).update(Caller.ANON, UpdateOptions.builder()
-                .schema(Name.of("Test1")).id("1").data(ImmutableMap.of("f1", "a", "f2", "b")).mode(UpdateOptions.Mode.CREATE).build());
+                .setSchema(Name.of("Test1")).setId("1").setData(ImmutableMap.of("f1", "a", "f2", "b")).setMode(UpdateOptions.Mode.CREATE).build());
     }
 
     @Test
@@ -113,7 +113,7 @@ class TestDatabaseAPI {
         final DatabaseAPI api = new DatabaseAPI(db);
         api.handle(request(APIRequest.Method.PATCH, "Test1/1", ImmutableMap.of(), new Properties("a", "b"))).join();
         Mockito.verify(db).update(Caller.ANON, UpdateOptions.builder()
-                .schema(Name.of("Test1")).id("1").data(ImmutableMap.of("f1", "a", "f2", "b")).mode(UpdateOptions.Mode.MERGE_DEEP).build());
+                .setSchema(Name.of("Test1")).setId("1").setData(ImmutableMap.of("f1", "a", "f2", "b")).setMode(UpdateOptions.Mode.MERGE_DEEP).build());
     }
 
     @Test
@@ -130,7 +130,6 @@ class TestDatabaseAPI {
 
         final Database db = Mockito.mock(Database.class);
         final DatabaseAPI api = new DatabaseAPI(db);
-        assertEquals(405, api.handle(request(APIRequest.Method.POST, "/")).join().getStatusCode());
         assertEquals(405, api.handle(request(APIRequest.Method.PUT, "/Test1")).join().getStatusCode());
         assertEquals(405, api.handle(request(APIRequest.Method.POST, "/Test1/1")).join().getStatusCode());
         assertEquals(405, api.handle(request(APIRequest.Method.POST, "/Test1/1/link")).join().getStatusCode());

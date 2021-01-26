@@ -20,6 +20,10 @@ package io.basestar.database.options;
  * #L%
  */
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
+import io.basestar.auth.Caller;
+import io.basestar.database.Database;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Consistency;
 import io.basestar.util.Name;
@@ -28,9 +32,11 @@ import lombok.Data;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 @Data
-@Builder(toBuilder = true, builderClassName = "Builder")
+@Builder(toBuilder = true, builderClassName = "Builder", setterPrefix = "set")
+@JsonDeserialize(builder = CreateOptions.Builder.class)
 public class CreateOptions implements ActionOptions {
 
     public static final String TYPE = "create";
@@ -48,4 +54,15 @@ public class CreateOptions implements ActionOptions {
     private final Set<Name> expand;
 
     private final Set<Name> projection;
+
+    @Override
+    public CompletableFuture<?> apply(final Caller caller, final Database database) {
+
+        return database.create(caller, this);
+    }
+
+    @JsonPOJOBuilder(withPrefix = "set")
+    public static class Builder {
+
+    }
 }
