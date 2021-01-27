@@ -60,6 +60,7 @@ class TestUpsertTable extends AbstractSparkTest {
                 .location(location + "/D")
                 .partition(ImmutableList.of(bucket.getOutputColumn()))
                 .idColumn(ReferableSchema.ID)
+                .deletedColumn(true)
                 .build();
 
         table.provision(session);
