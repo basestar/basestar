@@ -79,12 +79,14 @@ public class UpsertTable {
 
     protected final String location;
 
+    private final boolean deletedColumn;
+
     private volatile boolean autoProvisioned = false;
 
     @lombok.Builder(builderClassName = "Builder")
     protected UpsertTable(final String database, final String name, final StructType structType,
                           final String idColumn, final String versionColumn, final String location,
-                          final List<String> partition) {
+                          final List<String> partition, final boolean deletedColumn) {
 
         this.database = Nullsafe.require(database);
         this.name = Nullsafe.require(name);
@@ -92,7 +94,7 @@ public class UpsertTable {
         this.versionColumn = versionColumn;
         this.basePartition = Immutable.list(partition);
         this.inputType = structType;
-        this.baseType = createBaseType(structType);
+        this.baseType = createBaseType(structType, deletedColumn);
         this.deltaType = createDeltaType(structType);
         this.deltaPartition = Immutable.addAll(ImmutableList.of(SEQUENCE, OPERATION), basePartition);
         if(Nullsafe.require(location).endsWith("/")) {
@@ -100,12 +102,15 @@ public class UpsertTable {
         } else {
             this.location = location + "/";
         }
+        this.deletedColumn = deletedColumn;
     }
 
-    private static StructType createBaseType(final StructType structType) {
+    private static StructType createBaseType(final StructType structType, final boolean deletedColumn) {
 
         final List<StructField> fields = new ArrayList<>(Arrays.asList(structType.fields()));
-        fields.add(SparkRowUtils.field(DELETED, DataTypes.BooleanType));
+        if(deletedColumn) {
+            fields.add(SparkRowUtils.field(DELETED, DataTypes.BooleanType));
+        }
         return DataTypes.createStructType(fields);
     }
 
@@ -150,12 +155,13 @@ public class UpsertTable {
 
     public Dataset<Row> select(final SparkSession session, final boolean includeDeleted) {
 
+        final boolean deletedColumn = this.deletedColumn;
         if(hasDeltas(session)) {
             final Dataset<Row> result = baseWithDeltas(selectBase(session, true), selectLatestDelta(session));
             if(includeDeleted) {
                 return result;
             } else {
-                return result.filter(SparkUtils.filter(row -> !isDeleted(row))).select(inputColumns());
+                return result.filter(SparkUtils.filter(row -> !isDeleted(row, deletedColumn))).select(inputColumns());
             }
         } else {
             return selectBase(session, includeDeleted);
@@ -248,6 +254,7 @@ public class UpsertTable {
     protected Dataset<Row> selectBase(final SparkSession session, final boolean includeDeleted) {
 
         autoProvision(session);
+        final boolean deletedColumn = this.deletedColumn;
         final String tableName = baseTableName();
         final Dataset<Row> result = session.sqlContext().read()
                 .table(SparkCatalogUtils.escapeName(database, tableName))
@@ -255,7 +262,7 @@ public class UpsertTable {
         if(includeDeleted) {
             return result;
         } else {
-            return result.filter(SparkUtils.filter(row -> !isDeleted(row))).select(inputColumns());
+            return result.filter(SparkUtils.filter(row -> !isDeleted(row, deletedColumn))).select(inputColumns());
         }
     }
 
@@ -298,19 +305,24 @@ public class UpsertTable {
     protected Dataset<Row> baseWithDeltas(final Dataset<Row> base, final Dataset<Row> deltas) {
 
 
+        final boolean deletedColumn = this.deletedColumn;
         final StructType deltaType = this.deltaType;
         // Treat the base as a delta so we can use a single groupBy stage
         return reduceDeltas(base
                 .map(
-                        SparkUtils.map(row -> createDelta(deltaType, EMPTY_PARTITION, isDeleted(row) ? UpsertOp.DELETE : null, row)),
+                        SparkUtils.map(row -> createDelta(deltaType, EMPTY_PARTITION, isDeleted(row, deletedColumn) ? UpsertOp.DELETE : null, row)),
                         RowEncoder.apply(deltaType)
                 ).union(deltas))
                 .select(inputColumnsWithDeleted());
     }
 
-    private static boolean isDeleted(final Row row) {
+    private static boolean isDeleted(final Row row, final boolean deletedColumn) {
 
-        return Nullsafe.orDefault((Boolean)SparkRowUtils.get(row, DELETED));
+        if(deletedColumn) {
+            return Nullsafe.orDefault((Boolean) SparkRowUtils.get(row, DELETED));
+        } else {
+            return false;
+        }
     }
 
     private Column[] inputColumns() {
@@ -324,7 +336,9 @@ public class UpsertTable {
 
         final List<Column> cols = new ArrayList<>();
         Arrays.stream(inputType.fieldNames()).forEach(n -> cols.add(functions.col(n)));
-        cols.add(functions.col(OPERATION).equalTo(UpsertOp.DELETE.name()).as(DELETED));
+        if(deletedColumn) {
+            cols.add(functions.col(OPERATION).equalTo(UpsertOp.DELETE.name()).as(DELETED));
+        }
         return cols.toArray(new Column[0]);
     }
 
