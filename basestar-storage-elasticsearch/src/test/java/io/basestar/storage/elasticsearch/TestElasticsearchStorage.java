@@ -20,17 +20,27 @@ package io.basestar.storage.elasticsearch;
  * #L%
  */
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import io.basestar.expression.Expression;
 import io.basestar.schema.Namespace;
 import io.basestar.storage.Storage;
 import io.basestar.storage.TestStorage;
 import io.basestar.storage.elasticsearch.mapping.Mappings;
 import io.basestar.storage.elasticsearch.mapping.Settings;
+import io.basestar.storage.elasticsearch.query.ESQueryStage;
+import io.basestar.storage.elasticsearch.query.ESQueryStageVisitor;
+import io.basestar.storage.query.QueryPlanner;
 import io.basestar.test.ContainerSpec;
 import io.basestar.test.TestContainers;
+import io.basestar.util.Name;
+import io.basestar.util.Sort;
 import org.apache.http.HttpHost;
+import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -72,6 +82,17 @@ class TestElasticsearchStorage extends TestStorage {
                 .setClient(client)
                 .setStrategy(strategy)
                 .build();
+    }
+
+    @Test
+    public void testSort() {
+
+        final ESQueryStageVisitor visitor = new ESQueryStageVisitor(ElasticsearchStrategy.Simple.builder().build());
+        final QueryPlanner<ESQueryStage> planner = new QueryPlanner.Default<>();
+        final ESQueryStage stage = planner.plan(visitor, namespace.requireLinkableSchema(Name.of("Simple")),
+                Expression.parse("struct.x > 0"), ImmutableList.of(Sort.asc("created")), ImmutableSet.of());
+        final SearchRequest request = stage.request(ImmutableSet.of(), null, 10).get();
+        System.err.println(request);
     }
 
     @Override

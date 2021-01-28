@@ -9,6 +9,7 @@ import io.basestar.schema.use.*;
 import io.basestar.util.Name;
 import io.basestar.util.Page;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -21,6 +22,7 @@ public interface GraphQLResponseTransform {
 
     Map<String, Object> toResponse(InstanceSchema schema, Map<String, Object> input);
 
+    @Slf4j
     @RequiredArgsConstructor
     class Default implements GraphQLResponseTransform {
 
@@ -29,6 +31,7 @@ public interface GraphQLResponseTransform {
         @Override
         public Map<String, Object> toResponsePage(final InstanceSchema schema, final Page<? extends Map<String, Object>> input) {
 
+            log.debug("Transforming GQL response page {}", input);
             final Map<String, Object> result = new HashMap<>();
             result.put(strategy.pageItemsFieldName(), input.map(v -> toResponse(schema, v)).getPage());
             if (input.hasMore()) {

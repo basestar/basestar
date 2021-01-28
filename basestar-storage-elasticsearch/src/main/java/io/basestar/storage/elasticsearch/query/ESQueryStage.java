@@ -80,7 +80,7 @@ public interface ESQueryStage {
             } else {
                 newFilter = filter;
             }
-            return new Source(strategy, schema, newFilter, Immutable.list());
+            return new Source(strategy, schema, newFilter, sort);
         }
 
         @Override

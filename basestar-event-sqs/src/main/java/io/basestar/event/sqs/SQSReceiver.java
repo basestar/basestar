@@ -169,6 +169,7 @@ public class SQSReceiver implements Receiver {
 
     private CompletableFuture<?> handle(final Message message, final Event event, final Map<String, String> meta, final Handler<Event> handler) {
 
+        log.debug("Handling event {}", message);
         return handler.handle(event, meta)
                 .thenCompose(ignored -> client.deleteMessage(DeleteMessageRequest.builder()
                             .queueUrl(queueUrl)
