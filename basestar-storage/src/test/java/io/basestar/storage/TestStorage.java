@@ -80,7 +80,7 @@ public abstract class TestStorage {
 
     private static final String SECRET = "Secret";
 
-    private final Namespace namespace;
+    protected final Namespace namespace;
 
     protected TestStorage() {
 
