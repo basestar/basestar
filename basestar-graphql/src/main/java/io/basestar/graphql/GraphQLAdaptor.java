@@ -478,7 +478,7 @@ public class GraphQLAdaptor {
             final SubscriberContext subscriberContext = GraphQLUtils.subscriber(env.getContext());
             final Set<Name> expand = expand(schema, env, strategy.pageItemsFieldName());
             final Set<Name> names = paths(env);
-            final String alias = Nullsafe.orDefault(env.getField().getAlias(), () -> strategy.subscribeMethodName(schema));
+            final String alias = Nullsafe.orDefault(env.getField().getAlias(), () -> strategy.subscribeQueryMethodName(schema));
             final String query = env.getArgument(strategy.queryArgumentName());
             final Expression expression = Expression.parse(query);
             final Integer count = count(env);
