@@ -20,6 +20,7 @@ package io.basestar.storage.elasticsearch;
  * #L%
  */
 
+import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.storage.elasticsearch.mapping.Mappings;
@@ -33,7 +34,7 @@ public interface ElasticsearchStrategy {
 
     String historyIndex(ReferableSchema schema);
 
-    Mappings mappings(ReferableSchema schema);
+    Mappings mappings(LinkableSchema schema);
 
     Settings settings(ReferableSchema schema);
 
@@ -74,7 +75,7 @@ public interface ElasticsearchStrategy {
         }
 
         @Override
-        public Mappings mappings(final ReferableSchema schema) {
+        public Mappings mappings(final LinkableSchema schema) {
 
             return mappingsFactory.mappings(schema);
         }

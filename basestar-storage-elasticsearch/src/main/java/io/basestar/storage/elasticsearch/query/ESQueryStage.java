@@ -12,6 +12,7 @@ import io.basestar.storage.elasticsearch.ElasticsearchUtils;
 import io.basestar.storage.elasticsearch.expression.ESAggregate;
 import io.basestar.storage.elasticsearch.expression.ESAggregateVisitor;
 import io.basestar.storage.elasticsearch.expression.ESExpressionVisitor;
+import io.basestar.storage.elasticsearch.mapping.Mappings;
 import io.basestar.storage.util.KeysetPagingUtils;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
@@ -51,7 +52,7 @@ public interface ESQueryStage {
 
     Optional<SearchRequest> request(Set<Page.Stat> stats, Page.Token token, int count);
 
-    Page<Map<String, Object>> page(Set<Page.Stat> stats, Page.Token token, int count, SearchResponse response);
+    Page<Map<String, Object>> page(Mappings mappings, Set<Page.Stat> stats, Page.Token token, int count, SearchResponse response);
 
     @Data
     @Slf4j
@@ -142,7 +143,7 @@ public interface ESQueryStage {
         }
 
         @Override
-        public Page<Map<String, Object>> page(final Set<Page.Stat> stats, final Page.Token token, final int count, final SearchResponse response) {
+        public Page<Map<String, Object>> page(final Mappings mappings, final Set<Page.Stat> stats, final Page.Token token, final int count, final SearchResponse response) {
 
             final List<Sort> normalizedSort = KeysetPagingUtils.normalizeSort(schema, sort);
             final SearchHits hits = response.getHits();
@@ -150,7 +151,7 @@ public interface ESQueryStage {
             final List<Map<String, Object>> results = new ArrayList<>();
             Map<String, Object> last = null;
             for (final SearchHit hit : hits) {
-                last = hit.getSourceAsMap();
+                last = mappings.fromSource(hit.getSourceAsMap());
                 results.add(last);
             }
             final long total = hits.getTotalHits().value;
@@ -283,7 +284,7 @@ public interface ESQueryStage {
         }
 
         @Override
-        public Page<Map<String, Object>> page(final Set<Page.Stat> stats, final Page.Token token, final int count, final SearchResponse response) {
+        public Page<Map<String, Object>> page(final Mappings mappings, final Set<Page.Stat> stats, final Page.Token token, final int count, final SearchResponse response) {
 
             if(!group.isEmpty()) {
                 final List<Map<String, Object>> results = new ArrayList<>();
@@ -292,7 +293,7 @@ public interface ESQueryStage {
                 for(final CompositeAggregation.Bucket bucket : group.getBuckets()) {
                     final Map<String, Object> result = new HashMap<>(bucket.getKey());
                     aggs.forEach((key, agg) -> result.put(key, agg.read(bucket)));
-                    results.add(result);
+                    results.add(mappings.fromSource(result));
                 }
                 return Page.from(results);
             } else {
@@ -343,7 +344,7 @@ public interface ESQueryStage {
         }
 
         @Override
-        public Page<Map<String, Object>> page(final Set<Page.Stat> stats, final Page.Token token, final int count, final SearchResponse response) {
+        public Page<Map<String, Object>> page(final Mappings mappings, final Set<Page.Stat> stats, final Page.Token token, final int count, final SearchResponse response) {
 
             return Page.empty();
         }

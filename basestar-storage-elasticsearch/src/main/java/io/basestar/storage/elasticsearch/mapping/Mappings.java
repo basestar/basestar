@@ -22,6 +22,7 @@ package io.basestar.storage.elasticsearch.mapping;
 
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.InstanceSchema;
+import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.use.*;
@@ -44,14 +45,34 @@ public class Mappings {
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().source())));
     }
 
+    public Map<String, Object> fromSource(final Map<String, Object> source) {
+
+        final Map<String, Object> data = new HashMap<>();
+        getProperties().forEach((name, type) -> {
+            final Object value = source.get(name);
+            data.put(name, type.fromSource(value));
+        });
+        return data;
+    }
+
+    public Map<String, Object> toSource(final Map<String, Object> data) {
+
+        final Map<String, Object> source = new HashMap<>();
+        getProperties().forEach((name, type) -> {
+            final Object value = data.get(name);
+            source.put(name, type.toSource(value));
+        });
+        return source;
+    }
+
     public interface Factory {
 
-        Mappings mappings(ReferableSchema schema);
+        Mappings mappings(LinkableSchema schema);
 
         class Default implements Factory {
 
             @Override
-            public Mappings mappings(final ReferableSchema schema) {
+            public Mappings mappings(final LinkableSchema schema) {
 
                 return new Mappings(properties(schema, schema.getExpand()));
             }
