@@ -129,13 +129,15 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
         final QueryPlanner<ESQueryStage> planner = new QueryPlanner.Default<>();
         final ESQueryStage stage = planner.plan(new ESQueryStageVisitor(strategy), schema, query, sort, expand);
 
+        final Mappings mappings = strategy.mappings(schema);
+
         return (stats, token, count) -> stage.request(stats, token, count)
                 .map(request -> {
                     log.debug("Search request is {}", request);
                     return ElasticsearchUtils.<SearchResponse>future(listener -> client.searchAsync(request, OPTIONS, listener))
                             .thenApply(response -> {
                                 log.debug("Search response is {}", response);
-                                return stage.page(stats, token, count, response)
+                                return stage.page(mappings, stats, token, count, response)
                                         .map(v -> (Map<String, Object>)schema.create(v, expand, true));
                             });
 
@@ -406,24 +408,14 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
 
     private Map<String, Object> toSource(final ReferableSchema schema, final Map<String, Object> data) {
 
-        final Map<String, Object> source = new HashMap<>();
         final Mappings mappings = strategy.mappings(schema);
-        mappings.getProperties().forEach((name, type) -> {
-            final Object value = data.get(name);
-            source.put(name, type.toSource(value));
-        });
-        return source;
+        return mappings.toSource(data);
     }
 
     private Map<String, Object> fromSource(final ReferableSchema schema, final Map<String, Object> source) {
 
-        final Map<String, Object> data = new HashMap<>();
         final Mappings mappings = strategy.mappings(schema);
-        mappings.getProperties().forEach((name, type) -> {
-            final Object value = source.get(name);
-            data.put(name, type.fromSource(value));
-        });
-        return data;
+        return mappings.fromSource(source);
     }
 
     @Override

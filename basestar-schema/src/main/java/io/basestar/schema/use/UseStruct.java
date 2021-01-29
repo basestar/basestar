@@ -212,7 +212,7 @@ public class UseStruct implements UseInstance {
                     ))
             );
         } else {
-            return UseInstance.super.toConfig();
+            return UseInstance.super.toConfig(optional);
         }
     }
 }
