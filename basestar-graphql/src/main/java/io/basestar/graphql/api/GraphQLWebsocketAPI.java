@@ -120,7 +120,13 @@ public class GraphQLWebsocketAPI implements API {
 
     private Caller caller(final String sub, final APIRequest request) {
 
-        return callerCache.computeIfAbsent(sub, ignored -> request.getCaller());
+        return callerCache.compute(sub, (k, v) -> {
+            if(v == null) {
+                return request.getCaller();
+            } else {
+                return v;
+            }
+        });
     }
 
     private CompletableFuture<APIResponse> query(final APIRequest request, final String id, final ExecutionInput input) {
