@@ -169,8 +169,8 @@ public class GraphQLWebsocketAPI implements API {
         public ExecutionInput toInput(final Hub hub, final Caller caller, final String sub) {
 
             final String channel = this.getId();
-            final SubscriberContext subscriberContext = (schema, expression, alias, names) -> {
-                final GraphQLSubscriptionMetadata info = new GraphQLSubscriptionMetadata(alias, names);
+            final SubscriberContext subscriberContext = (schema, expression, alias, names, query) -> {
+                final GraphQLSubscriptionMetadata info = new GraphQLSubscriptionMetadata(alias, names, query);
                 return hub.subscribe(caller, sub, channel, schema.getQualifiedName(), expression, info);
             };
 

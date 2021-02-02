@@ -22,12 +22,14 @@ package io.basestar.auth;
 
 import com.google.common.collect.ImmutableList;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+@Slf4j
 public class MultiAuthenticator implements Authenticator {
 
     private final List<Authenticator> authenticators;
@@ -49,6 +51,7 @@ public class MultiAuthenticator implements Authenticator {
 
         for(final Authenticator authenticator : authenticators) {
             if(authenticator.canAuthenticate(auth)) {
+                log.debug("Using authenticator {}", auth.getClass().getName());
                 return authenticator.authenticate(auth);
             }
         }

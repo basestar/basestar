@@ -1,5 +1,7 @@
 package io.basestar.graphql.subscription;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import io.basestar.auth.Caller;
 import io.basestar.database.Database;
 import io.basestar.event.Handler;
@@ -24,14 +26,16 @@ public class GraphQLSubscriptionPublisher implements Handler<SubscriptionPublish
 
     private final Database database;
 
-    public interface Transport {
-
-        CompletableFuture<?> send(String sub, String channel, GraphQLWebsocketAPI.ResponseBody message);
-    }
+    private final GraphQLStrategy strategy;
 
     private final Transport transport;
 
     private final GraphQLResponseTransform responseTransform;
+
+    public interface Transport {
+
+        CompletableFuture<?> send(String sub, String channel, GraphQLWebsocketAPI.ResponseBody message);
+    }
 
     @lombok.Builder(builderClassName = "Builder")
     public GraphQLSubscriptionPublisher(final Database database,
@@ -40,6 +44,7 @@ public class GraphQLSubscriptionPublisher implements Handler<SubscriptionPublish
 
         this.database = database;
         this.transport = transport;
+        this.strategy = strategy;
         this.responseTransform = Nullsafe.orDefault(strategy, GraphQLStrategy.DEFAULT).responseTransform();
     }
 
@@ -74,7 +79,14 @@ public class GraphQLSubscriptionPublisher implements Handler<SubscriptionPublish
                 return database.expand(caller, change.getAfter(), expand)
                         .thenApply(after -> {
                             final Map<String, Object> data = new HashMap<>();
-                            data.put(alias, responseTransform.toResponse(schema, after));
+                            final Object item = responseTransform.toResponse(schema, after);
+                            if(gqlInfo.isQuery()) {
+                                data.put(alias, ImmutableMap.of(
+                                        strategy.pageItemsFieldName(), ImmutableList.of(item)
+                                ));
+                            } else {
+                                data.put(alias, item);
+                            }
                             final GraphQLAPI.ResponseBody payload = new GraphQLAPI.ResponseBody(data, null, null);
                             final GraphQLWebsocketAPI.ResponseBody response = new GraphQLWebsocketAPI.ResponseBody();
                             response.setId(channel);

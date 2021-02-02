@@ -466,7 +466,7 @@ public class GraphQLAdaptor {
             final Set<Name> expand = expand(schema, env);
             final String alias = Nullsafe.orDefault(env.getField().getAlias(), () -> strategy.subscribeMethodName(schema));
             final String id = env.getArgument(strategy.idArgumentName());
-            return subscriberContext.subscribe(schema, id, alias, names)
+            return subscriberContext.subscribe(schema, id, alias, names, false)
                     .thenCompose(ignored -> read(caller, schema, id, null, expand));
         };
     }
@@ -490,7 +490,7 @@ public class GraphQLAdaptor {
                     .setSort(sort)
                     .setExpand(expand)
                     .build();
-            return subscriberContext.subscribe(schema, expression, alias, names)
+            return subscriberContext.subscribe(schema, expression, alias, names, true)
                     .thenCompose(ignored -> database.query(caller, options)
                         .thenApply(result -> responseTransform.toResponsePage(schema, result)));
         };
