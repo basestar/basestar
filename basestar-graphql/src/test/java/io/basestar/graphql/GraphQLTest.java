@@ -290,7 +290,7 @@ class GraphQLTest {
         final GraphQL graphQL = graphQL(namespace);
 
         final SubscriberContext subscriberContext = mock(SubscriberContext.class);
-        when(subscriberContext.subscribe(any(), anyString(), any(), any())).thenReturn(CompletableFuture.completedFuture(null));
+        when(subscriberContext.subscribe(any(), anyString(), any(), any(), any())).thenReturn(CompletableFuture.completedFuture(null));
 
         graphQL.execute(ExecutionInput.newExecutionInput()
                 .context(GraphQLContext.newContext().of("subscriber", subscriberContext).build())
@@ -301,7 +301,7 @@ class GraphQLTest {
                         "}")
                 .build()).getData();
 
-        verify(subscriberContext).subscribe(namespace.requireObjectSchema("Test1"), "x", "a", ImmutableSet.of(Name.of("id")));
+        verify(subscriberContext).subscribe(namespace.requireObjectSchema("Test1"), "x", "a", ImmutableSet.of(Name.of("id")), false);
     }
 
     @Test
@@ -311,7 +311,7 @@ class GraphQLTest {
         final GraphQL graphQL = graphQL(namespace);
 
         final SubscriberContext subscriberContext = mock(SubscriberContext.class);
-        when(subscriberContext.subscribe(any(), anyString(), any(), any())).thenReturn(CompletableFuture.completedFuture(null));
+        when(subscriberContext.subscribe(any(), anyString(), any(), any(), any())).thenReturn(CompletableFuture.completedFuture(null));
 
         graphQL.execute(ExecutionInput.newExecutionInput()
                 .context(GraphQLContext.newContext().of("subscriber", subscriberContext).build())
@@ -322,7 +322,7 @@ class GraphQLTest {
                         "}")
                 .build()).getData();
 
-        verify(subscriberContext).subscribe(namespace.requireObjectSchema("Test1"), "x", "subscribeTest1", ImmutableSet.of(Name.of("id")));
+        verify(subscriberContext).subscribe(namespace.requireObjectSchema("Test1"), "x", "subscribeTest1", ImmutableSet.of(Name.of("id")), false);
     }
 
     @Test

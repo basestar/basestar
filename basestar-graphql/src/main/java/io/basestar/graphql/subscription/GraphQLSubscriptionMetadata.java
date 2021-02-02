@@ -16,4 +16,6 @@ public class GraphQLSubscriptionMetadata implements SubscriptionMetadata {
     private String alias;
 
     private Set<Name> names;
+
+    private boolean query;
 }

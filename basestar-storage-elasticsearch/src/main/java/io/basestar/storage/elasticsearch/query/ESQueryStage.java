@@ -23,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
@@ -139,6 +140,7 @@ public interface ESQueryStage {
             sourceBuilder.size(count);
             sourceBuilder.trackTotalHits(true);
             request.source(sourceBuilder);
+            request.indicesOptions(IndicesOptions.lenientExpandOpen());
             return Optional.of(request);
         }
 

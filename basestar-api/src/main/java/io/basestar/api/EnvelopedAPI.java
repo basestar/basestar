@@ -82,6 +82,7 @@ public class EnvelopedAPI implements API {
                         }
                     });
                 }
+                log.debug("Enveloped API request transformed to {}", result);
                 return result;
             }
 

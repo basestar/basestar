@@ -189,6 +189,27 @@ public abstract class TestStorage {
         }
     }
 
+    @Test
+    protected void testEmptyStorageQuery() {
+
+        // Storage should not throw an error when it has not received writes (relevant to on-demand provisioned storage)
+
+        assumeTrue(supportsIndexes());
+
+        final Storage storage = storage(namespace);
+        final ObjectSchema schema = namespace.requireObjectSchema(ADDRESS);
+
+        final List<Sort> sort = ImmutableList.of(
+                Sort.asc(Name.of("city")),
+                Sort.asc(Name.of("zip"))
+        );
+
+        final Expression expr = Expression.parse("country == 'US' || state == 'England'");
+        final Page<Map<String, Object>> results = storage.query(schema, expr, sort, Collections.emptySet()).page(EnumSet.of(Page.Stat.TOTAL), null, 10).join();
+
+        assertEquals(ImmutableList.of(), results.getPage());
+    }
+
     // FIXME: needs to cover non-trivial case(s)
 
     @Test
