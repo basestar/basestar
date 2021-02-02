@@ -50,6 +50,7 @@ import java.util.concurrent.CompletableFuture;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.*;
 
 class GraphQLTest {
@@ -290,7 +291,7 @@ class GraphQLTest {
         final GraphQL graphQL = graphQL(namespace);
 
         final SubscriberContext subscriberContext = mock(SubscriberContext.class);
-        when(subscriberContext.subscribe(any(), anyString(), any(), any(), any())).thenReturn(CompletableFuture.completedFuture(null));
+        when(subscriberContext.subscribe(any(), anyString(), any(), any(), anyBoolean())).thenReturn(CompletableFuture.completedFuture(null));
 
         graphQL.execute(ExecutionInput.newExecutionInput()
                 .context(GraphQLContext.newContext().of("subscriber", subscriberContext).build())
@@ -311,7 +312,7 @@ class GraphQLTest {
         final GraphQL graphQL = graphQL(namespace);
 
         final SubscriberContext subscriberContext = mock(SubscriberContext.class);
-        when(subscriberContext.subscribe(any(), anyString(), any(), any(), any())).thenReturn(CompletableFuture.completedFuture(null));
+        when(subscriberContext.subscribe(any(), anyString(), any(), any(), anyBoolean())).thenReturn(CompletableFuture.completedFuture(null));
 
         graphQL.execute(ExecutionInput.newExecutionInput()
                 .context(GraphQLContext.newContext().of("subscriber", subscriberContext).build())
