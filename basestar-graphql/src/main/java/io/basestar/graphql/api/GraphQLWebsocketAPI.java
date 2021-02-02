@@ -3,6 +3,7 @@ package io.basestar.graphql.api;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
 import graphql.ExecutionInput;
 import graphql.GraphQL;
@@ -21,6 +22,7 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -82,7 +84,7 @@ public class GraphQLWebsocketAPI implements API {
                         Nullsafe.require(sub);
                         caller(sub, request);
                         return CompletableFuture.completedFuture(response(request, "connection_ack"));
-                    });
+                    }).exceptionally(e -> error(request, requestBody.getId(), e));
                 }
                 case "connection_terminate": {
                     return subscriberIdSource.subscriberId(request).thenCompose(sub -> {
@@ -90,7 +92,7 @@ public class GraphQLWebsocketAPI implements API {
                         final Caller caller = caller(sub, request);
                         return hub.unsubscribeAll(caller, sub)
                                 .thenApply(ignored -> response(request, "complete"));
-                    });
+                    }).exceptionally(e -> error(request, requestBody.getId(), e));
                 }
                 case "start": {
                     return subscriberIdSource.subscriberId(request).thenCompose(sub -> {
@@ -98,7 +100,7 @@ public class GraphQLWebsocketAPI implements API {
                         final Caller caller = caller(sub, request);
                         final ExecutionInput input = requestBody.toInput(hub, caller, sub);
                         return query(request, requestBody.getId(), input);
-                    });
+                    }).exceptionally(e -> error(request, requestBody.getId(), e));
                 }
                 case "stop": {
                     return subscriberIdSource.subscriberId(request).thenCompose(sub -> {
@@ -106,7 +108,7 @@ public class GraphQLWebsocketAPI implements API {
                         final Caller caller = caller(sub, request);
                         return hub.unsubscribe(caller, sub, requestBody.getId())
                                 .thenApply(ignored -> response(request, "complete"));
-                    });
+                    }).exceptionally(e -> error(request, requestBody.getId(), e));
                 }
                 default:
                     log.info("Received unknown message of type: {}", requestBody.getType());
@@ -114,7 +116,7 @@ public class GraphQLWebsocketAPI implements API {
             }
         } catch (final Exception e) {
             log.error("Uncaught: {}", e.getMessage(), e);
-            return CompletableFuture.completedFuture(response(request, "connection_error", requestBody.getId(), null));
+            return CompletableFuture.completedFuture(error(request, requestBody.getId(), e));
         }
     }
 
@@ -137,6 +139,15 @@ public class GraphQLWebsocketAPI implements API {
                     log.debug("GraphQL response {}", response);
                     return response(request, "data", id, GraphQLAPI.ResponseBody.from(response));
                 });
+    }
+
+    private APIResponse error(final APIRequest request, final String id, final Throwable e) {
+
+        final List<GraphQLAPI.ResponseError> errors = ImmutableList.of(
+                new GraphQLAPI.ResponseError(e.getMessage(), null)
+        );
+        final GraphQLAPI.ResponseBody body = new GraphQLAPI.ResponseBody(null, errors, null);
+        return response(request, "connection_error", id, null);
     }
 
     private APIResponse response(final APIRequest request, final String type) {

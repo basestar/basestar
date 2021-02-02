@@ -136,7 +136,7 @@ public class GraphQLAPI implements API {
     }
 
     @Data
-    private static class ResponseError {
+    public static class ResponseError {
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private final String message;
