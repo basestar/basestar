@@ -73,13 +73,19 @@ public class GraphQLSubscriptionPublisher implements Handler<SubscriptionPublish
 
             if(change.getAfter() != null) {
                 final String alias = gqlInfo.getAlias();
-                final Set<Name> names = gqlInfo.getNames();
+                final Set<Name> names;
+                if(gqlInfo.isQuery()) {
+                    names = Name.children(gqlInfo.getNames(), Name.of(strategy.pageItemsFieldName()));
+                } else {
+                    names = gqlInfo.getNames();
+                }
                 final ObjectSchema schema = database.namespace().requireObjectSchema(change.getSchema());
                 final Set<Name> expand = schema.requiredExpand(names);
                 return database.expand(caller, change.getAfter(), expand)
                         .thenApply(after -> {
                             final Map<String, Object> data = new HashMap<>();
                             final Object item = responseTransform.toResponse(schema, after);
+
                             if(gqlInfo.isQuery()) {
                                 data.put(alias, ImmutableMap.of(
                                         strategy.pageItemsFieldName(), ImmutableList.of(item)
