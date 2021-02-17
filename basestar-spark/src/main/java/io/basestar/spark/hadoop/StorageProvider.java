@@ -12,7 +12,7 @@ import org.apache.hadoop.conf.Configuration;
 
 import java.io.IOException;
 
-public interface StorageProvider {
+public interface StorageProvider extends AutoCloseable {
 
     String PROVIDER = "io.basestar.storage.provider";
 
@@ -29,6 +29,9 @@ public interface StorageProvider {
     Namespace namespace(Configuration configuration);
 
     Storage storage(Configuration configuration);
+
+    @Override
+    void close();
 
     default Name schema(final Configuration configuration) {
 

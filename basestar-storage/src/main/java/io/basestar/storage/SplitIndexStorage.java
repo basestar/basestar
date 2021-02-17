@@ -111,6 +111,13 @@ public class SplitIndexStorage implements IndexStorage {
             }
 
             @Override
+            public Storage.WriteTransaction writeHistory(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+
+                objectTransaction.writeHistory(schema, id, after);
+                return this;
+            }
+
+            @Override
             public CompletableFuture<BatchResponse> write() {
 
                 return BatchResponse.mergeFutures(Stream.of(objectTransaction.write(), indexTransaction.write()));

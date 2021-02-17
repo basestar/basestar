@@ -227,6 +227,7 @@ public interface DefaultLayerStorage extends LayeredStorage, ValidatingStorage {
             return this;
         }
 
+        @Override
         default Storage.WriteTransaction writeHistory(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
             writeHistoryLayer(schema, id, after);

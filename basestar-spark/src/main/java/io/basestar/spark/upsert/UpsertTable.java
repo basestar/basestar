@@ -4,6 +4,7 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import io.basestar.schema.Reserved;
 import io.basestar.spark.query.Query;
 import io.basestar.spark.source.Source;
@@ -97,12 +98,17 @@ public class UpsertTable {
         this.baseType = createBaseType(structType, deletedColumn);
         this.deltaType = createDeltaType(structType);
         this.deltaPartition = Immutable.addAll(ImmutableList.of(SEQUENCE, OPERATION), basePartition);
-        if(Nullsafe.require(location).endsWith("/")) {
-            this.location = location;
-        } else {
-            this.location = location + "/";
-        }
+        this.location = Nullsafe.require(location);
         this.deletedColumn = deletedColumn;
+    }
+
+    private static String location(final String location) {
+
+        if(location.endsWith("/")) {
+            return location;
+        } else {
+            return location + "/";
+        }
     }
 
     private static StructType createBaseType(final StructType structType, final boolean deletedColumn) {
@@ -138,9 +144,14 @@ public class UpsertTable {
         return name + "_base";
     }
 
+    protected static URI baseLocation(final String location) {
+
+        return URI.create(location(location) + "base");
+    }
+
     protected URI baseLocation() {
 
-        return URI.create(location + "base");
+        return baseLocation(location);
     }
 
     protected String deltaTableName() {
@@ -148,9 +159,14 @@ public class UpsertTable {
         return name + "_delta";
     }
 
+    protected static URI deltaLocation(final String location) {
+
+        return URI.create(location(location) + "delta");
+    }
+
     protected URI deltaLocation() {
 
-        return URI.create(location + "delta");
+        return deltaLocation(location);
     }
 
     public Dataset<Row> select(final SparkSession session, final boolean includeDeleted) {
@@ -249,6 +265,49 @@ public class UpsertTable {
             catalog.createPartitions(database, deltaTable, ScalaUtils.asScalaSeq(partitions), false);
         }
         session.sql("REFRESH TABLE " + SparkCatalogUtils.escapeName(database, deltaTable));
+    }
+
+    public UpsertTable copy(final SparkSession session, final String database, final String name, final String location) {
+
+        return copy(session, database, name, location, (String)null);
+    }
+
+    public UpsertTable copy(final SparkSession session, final String database, final String name, final String location, final Instant beforeTimestamp) {
+
+        return copy(session, database, name, location, beforeTimestamp == null ? null : sequence(beforeTimestamp));
+    }
+
+    public UpsertTable copy(final SparkSession session, final String database, final String name, final String location, final String beforeSequence) {
+
+        Dataset<Row> deltas = session.sqlContext().read()
+                .schema(deltaType)
+                .parquet(deltaLocation().toString());
+        if(beforeSequence != null) {
+            deltas = deltas.filter(functions.col(SEQUENCE).lt(beforeSequence));
+        }
+        deltas.select(deltaColumns())
+                .write()
+                .partitionBy(deltaPartition.toArray(new String[0]))
+                .parquet(deltaLocation(location).toString());
+
+        final boolean deletedColumn = this.deletedColumn;
+
+        final List<Column> outputCols = Lists.newArrayList(inputColumnsWithDeleted());
+        outputCols.add(functions.lit("").as(SEQUENCE));
+
+        final List<String> outputPartition = new ArrayList<>(basePartition);
+        outputPartition.add(SEQUENCE);
+
+        final Dataset<Row> base = reduceDeltas(deltas).select(outputCols.toArray(new Column[0]))
+                .filter(SparkUtils.filter(row -> !isDeleted(row, deletedColumn)));
+
+        base.write()
+                .partitionBy(outputPartition.toArray(new String[0]))
+                .parquet(baseLocation(location).toString());
+
+        final UpsertTable copy = new UpsertTable(database, name, inputType, idColumn, versionColumn, location, basePartition, deletedColumn);
+        copy.repair(session);
+        return copy;
     }
 
     protected Dataset<Row> selectBase(final SparkSession session, final boolean includeDeleted) {

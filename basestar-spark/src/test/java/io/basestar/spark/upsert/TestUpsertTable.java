@@ -119,6 +119,14 @@ class TestUpsertTable extends AbstractSparkTest {
 
         table.squashDeltas(session);
         assertState("After merge + flatten", session, table, result, ImmutableList.of(), result);
+
+        final String database2 = database + "_copy";
+        final String location2 = testDataPath("spark/" + database2);
+
+        SparkCatalogUtils.ensureDatabase(catalog, database2, location2 + "/D");
+
+        final UpsertTable table2 = table.copy(session, database2, "D", location2 + "/D");
+        assertState("After copy", session, table2, result, ImmutableList.of(), result);
     }
 
     private void assertState(final String step, final SparkSession session, final UpsertTable table,

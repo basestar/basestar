@@ -170,6 +170,13 @@ public interface DelegatingStorage extends Storage {
             }
 
             @Override
+            public WriteTransaction writeHistory(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+
+                delegate(schema).writeHistory(schema, id, after);
+                return this;
+            }
+
+            @Override
             public CompletableFuture<BatchResponse> write() {
 
                 if(consistency != Consistency.NONE && transactions.size() > 1) {

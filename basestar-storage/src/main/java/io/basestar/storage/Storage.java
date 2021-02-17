@@ -128,6 +128,8 @@ public interface Storage {
 
         WriteTransaction deleteObject(ObjectSchema schema, String id, Map<String, Object> before);
 
+        WriteTransaction writeHistory(ObjectSchema schema, String id, Map<String, Object> after);
+
         CompletableFuture<BatchResponse> write();
 
         interface Delegating extends WriteTransaction {
@@ -152,6 +154,13 @@ public interface Storage {
             default WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
 
                 delegate(schema).deleteObject(schema, id, before);
+                return this;
+            }
+
+            @Override
+            default WriteTransaction writeHistory(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+
+                delegate(schema).writeHistory(schema, id, after);
                 return this;
             }
         }
