@@ -39,6 +39,11 @@ class TestStorageInput extends AbstractSparkTest {
 
             return storage;
         }
+
+        @Override
+        public void close() {
+
+        }
     }
 
     @Test

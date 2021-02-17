@@ -38,6 +38,7 @@ public class StorageOutputFormat extends OutputFormat<Ref, WriteAction> {
             public void close(final TaskAttemptContext context) {
 
                 transaction.write().join();
+                provider.close();
             }
         };
     }

@@ -248,6 +248,14 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
                 }
 
                 @Override
+                public WriteTransaction writeHistory(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+
+                    primaryTransaction(schema).writeHistory(schema, id, ReplicaMetadata.unwrapPrimary(after));
+                    // replica will write history automatically
+                    return this;
+                }
+
+                @Override
                 public CompletableFuture<BatchResponse> write() {
 
                     if(consistency != Consistency.NONE && primaryTransactions.size() > 1) {
@@ -295,6 +303,14 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
 
                     primaryTransaction(schema).deleteObject(schema, id, ReplicaMetadata.unwrapPrimary(before));
                     events.add(ReplicaSyncEvent.delete(schema.getQualifiedName(), id, before, consistency, versioning));
+                    return this;
+                }
+
+                @Override
+                public WriteTransaction writeHistory(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+
+                    primaryTransaction(schema).writeHistory(schema, id, ReplicaMetadata.unwrapPrimary(after));
+                    // replica will write history automatically
                     return this;
                 }
 

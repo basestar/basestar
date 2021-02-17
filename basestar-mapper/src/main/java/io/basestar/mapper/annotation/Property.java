@@ -50,7 +50,7 @@ public @interface Property {
         public MemberMapper<?> mapper(final MappingContext context, final PropertyContext prop) {
 
             final String name = INFER_NAME.equals(annotation.name()) ? prop.simpleName() : annotation.name();
-            return new PropertyMapper(context, name, prop);
+            return new PropertyMapper<>(context, name, prop);
         }
 
         public static Property annotation(final io.basestar.schema.Property property) {

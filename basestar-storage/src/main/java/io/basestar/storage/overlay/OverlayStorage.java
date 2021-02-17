@@ -196,7 +196,14 @@ public class OverlayStorage implements Storage {
                 overlayWrite.updateObject(schema, id, OverlayMetadata.unwrapOverlay(before), tombstone);
                 return this;
             }
-            
+
+            @Override
+            public WriteTransaction writeHistory(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+
+                overlayWrite.writeHistory(schema, id, OverlayMetadata.unwrapOverlay(after));
+                return this;
+            }
+
             private Map<String, Object> tombstone(final ObjectSchema schema, final String id, final Map<String, Object> before) {
 
                 final Map<String, Object> tombstone = new HashMap<>();
