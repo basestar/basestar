@@ -10,10 +10,11 @@ import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Stream;
 
-public interface ContextIterator {
+public interface ContextIterator extends Serializable {
 
     String TOKEN = "of";
 
