@@ -298,5 +298,11 @@ class TestQueryPlanner {
             
             return new ConformStage(input, schema);
         }
+
+        @Override
+        public SimpleStage sql(final String sql, final InstanceSchema schema, final Map<String, SimpleStage> with) {
+
+            throw new UnsupportedOperationException();
+        }
     }
 }

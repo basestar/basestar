@@ -10,7 +10,6 @@
     <artifactId>basestar-storage-sql</artifactId>
 
     <properties>
-        <jooq.version>3.13.1</jooq.version>
         <h2.version>1.4.200</h2.version>
     </properties>
 
@@ -40,7 +39,6 @@
         <dependency>
             <groupId>org.jooq</groupId>
             <artifactId>jooq</artifactId>
-            <version>${jooq.version}</version>
         </dependency>
         <!-- FIXME -->
         <dependency>

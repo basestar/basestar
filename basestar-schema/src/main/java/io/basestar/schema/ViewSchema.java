@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.expression.constant.NameConstant;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.jackson.serde.AbbrevSetDeserializer;
 import io.basestar.jackson.serde.ExpressionDeserializer;
@@ -58,56 +57,223 @@ public class ViewSchema implements LinkableSchema {
 
     public static final String ID = Reserved.PREFIX + "key";
 
-    @Getter
-    public static class From implements Serializable {
+    public interface From extends Serializable {
 
-        @Nonnull
-        private final LinkableSchema schema;
+        Descriptor.From descriptor();
 
-        @Nonnull
-        private final List<Sort> sort;
+        InferenceContext inferenceContext();
 
-        @Nonnull
-        private final Set<Name> expand;
+        void collectMaterializationDependencies(Map<Name, LinkableSchema> out);
 
-        public From(final Resolver.Constructing resolver, final Descriptor.From from) {
+        void collectDependencies(Map<Name, Schema<?>> out);
 
-            this.schema = resolver.requireLinkableSchema(from.getSchema());
-            this.sort = Nullsafe.orDefault(from.getSort());
-            this.expand = Nullsafe.orDefault(from.getExpand());
+        Use<?> typeOfId();
+
+        void validateProperty(Property property);
+        
+        @Getter
+        class FromSql implements From {
+
+            private final String sql;
+
+            private final List<String> primaryKey;
+
+            private final Map<String, From> using;
+
+            public FromSql(final Resolver.Constructing resolver, final Descriptor.From from) {
+
+                this.sql = Nullsafe.require(from.getSql());
+                this.primaryKey = Nullsafe.require(from.getPrimaryKey());
+                this.using = Immutable.transformValuesSorted(from.getUsing(), (k, v) -> v.build(resolver));
+            }
+
+            @Override
+            public Descriptor.From descriptor() {
+
+                return new Descriptor.From() {
+                    @Override
+                    public Name getSchema() {
+
+                        return null;
+                    }
+
+                    @Override
+                    public List<Sort> getSort() {
+
+                        return null;
+                    }
+
+                    @Override
+                    public Set<Name> getExpand() {
+
+                        return null;
+                    }
+
+                    @Override
+                    public String getSql() {
+
+                        return sql;
+                    }
+
+                    @Override
+                    public Map<String, Descriptor.From> getUsing() {
+
+                        return Immutable.transformValuesSorted(using, (k, v) -> v.descriptor());
+                    }
+
+                    @Override
+                    public List<String> getPrimaryKey() {
+
+                        return primaryKey;
+                    }
+                };
+            }
+
+            @Override
+            public InferenceContext inferenceContext() {
+
+                return InferenceContext.empty();
+            }
+
+            @Override
+            public void collectMaterializationDependencies(final Map<Name, LinkableSchema> out) {
+
+                using.forEach((k, v) -> v.collectMaterializationDependencies(out));
+            }
+
+            @Override
+            public void collectDependencies(final Map<Name, Schema<?>> out) {
+
+                using.forEach((k, v) -> v.collectDependencies(out));
+            }
+
+            @Override
+            public Use<?> typeOfId() {
+
+                return UseBinary.DEFAULT;
+            }
+
+            @Override
+            public void validateProperty(final Property property) {
+
+                if(property.getExpression() != null) {
+                    throw new SchemaValidationException(property.getQualifiedName(), "SQL view properties should not have expressions");
+                }
+            }
         }
 
-        public Descriptor.From descriptor() {
+        @Getter
+        class FromSchema implements From {
 
-            return new Descriptor.From() {
-                @Override
-                public Name getSchema() {
+            @Nonnull
+            private final LinkableSchema schema;
 
-                    return schema.getQualifiedName();
+            @Nonnull
+            private final List<Sort> sort;
+
+            @Nonnull
+            private final Set<Name> expand;
+
+            public FromSchema(final Resolver.Constructing resolver, final Descriptor.From from) {
+
+                this.schema = resolver.requireLinkableSchema(from.getSchema());
+                this.sort = Nullsafe.orDefault(from.getSort());
+                this.expand = Nullsafe.orDefault(from.getExpand());
+            }
+
+            @Override
+            public Descriptor.From descriptor() {
+
+                return new Descriptor.From() {
+                    @Override
+                    public Name getSchema() {
+
+                        return schema.getQualifiedName();
+                    }
+
+                    @Override
+                    public List<Sort> getSort() {
+
+                        return sort;
+                    }
+
+                    @Override
+                    public Set<Name> getExpand() {
+
+                        return expand;
+                    }
+
+                    @Override
+                    public String getSql() {
+
+                        return null;
+                    }
+
+                    @Override
+                    public Map<String, Descriptor.From> getUsing() {
+
+                        return null;
+                    }
+
+                    @Override
+                    public List<String> getPrimaryKey() {
+
+                        return null;
+                    }
+                };
+            }
+
+            @Override
+            public InferenceContext inferenceContext() {
+
+                return InferenceContext.from(getSchema());
+            }
+
+            @Override
+            public void collectMaterializationDependencies(final Map<Name, LinkableSchema> out) {
+
+                final LinkableSchema fromSchema = getSchema();
+                if(!out.containsKey(fromSchema.getQualifiedName())) {
+                    out.put(fromSchema.getQualifiedName(), fromSchema);
+                    fromSchema.collectMaterializationDependencies(getExpand(), out);
                 }
+            }
 
-                @Override
-                public List<Sort> getSort() {
+            @Override
+            public void collectDependencies(final Map<Name, Schema<?>> out) {
 
-                    return sort;
+                getSchema().collectDependencies(getExpand(), out);
+            }
+
+            @Override
+            public Use<?> typeOfId() {
+
+                return getSchema().typeOfId();
+            }
+
+            @Override
+            public void validateProperty(final Property property) {
+
+                if(property.getExpression() == null) {
+                    throw new SchemaValidationException(property.getQualifiedName(), "Every view property must have an expression");
                 }
-
-                @Override
-                public Set<Name> getExpand() {
-
-                    return expand;
-                }
-            };
+            }
         }
 
         @Data
         @Accessors(chain = true)
         @JsonInclude(JsonInclude.Include.NON_NULL)
-        @JsonPropertyOrder({"schema", "expand"})
-        public static class Builder implements Descriptor.From {
+        @JsonPropertyOrder({"schema", "expand", "sort"})
+        class Builder implements Descriptor.From {
 
             @Nullable
             private Name schema;
+
+            @Nullable
+            @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
+            @JsonSerialize(contentUsing = ToStringSerializer.class)
+            @JsonDeserialize(using = AbbrevSetDeserializer.class)
+            private Set<Name> expand;
 
             @Nullable
             @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
@@ -115,10 +281,14 @@ public class ViewSchema implements LinkableSchema {
             private List<Sort> sort;
 
             @Nullable
-            @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
-            @JsonSerialize(contentUsing = ToStringSerializer.class)
-            @JsonDeserialize(using = AbbrevSetDeserializer.class)
-            private Set<Name> expand;
+            private String sql;
+
+            @Nullable
+            private Map<String, Descriptor.From> using;
+
+            @Nullable
+            @JsonDeserialize(using = AbbrevListDeserializer.class)
+            private List<String> primaryKey;
 
             @JsonCreator
             @SuppressWarnings("unused")
@@ -133,7 +303,7 @@ public class ViewSchema implements LinkableSchema {
             }
         }
 
-        public static Builder builder() {
+        static Builder builder() {
 
             return new Builder();
         }
@@ -147,6 +317,7 @@ public class ViewSchema implements LinkableSchema {
         @JsonDeserialize(as = ViewSchema.From.Builder.class)
         interface From {
 
+            @JsonInclude(JsonInclude.Include.NON_NULL)
             Name getSchema();
 
             @JsonInclude(JsonInclude.Include.NON_EMPTY)
@@ -154,6 +325,24 @@ public class ViewSchema implements LinkableSchema {
 
             @JsonInclude(JsonInclude.Include.NON_EMPTY)
             Set<Name> getExpand();
+
+            @JsonInclude(JsonInclude.Include.NON_NULL)
+            String getSql();
+
+            @JsonInclude(JsonInclude.Include.NON_EMPTY)
+            Map<String, From> getUsing();
+
+            @JsonInclude(JsonInclude.Include.NON_EMPTY)
+            List<String> getPrimaryKey();
+
+            default ViewSchema.From build(final Resolver.Constructing resolver) {
+
+                if(getSql() != null) {
+                    return new ViewSchema.From.FromSql(resolver, this);
+                } else {
+                    return new ViewSchema.From.FromSchema(resolver, this);
+                }
+            }
         }
 
         @Override
@@ -271,7 +460,35 @@ public class ViewSchema implements LinkableSchema {
         @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private Map<String, Serializable> extensions;
+        
+        public ViewSchema.Builder setSql(final String sql) {
+            
+            if(this.from == null) {
+                this.from = new ViewSchema.From.Builder();
+            }
+            ((ViewSchema.From.Builder)this.from).setSql(sql);
+            return this;
+        }
 
+        @JsonDeserialize(using = AbbrevListDeserializer.class)
+        public ViewSchema.Builder setPrimaryKey(final List<String> primaryKey) {
+
+            if(this.from == null) {
+                this.from = new ViewSchema.From.Builder();
+            }
+            ((ViewSchema.From.Builder)this.from).setPrimaryKey(primaryKey);
+            return this;
+        }
+
+        public ViewSchema.Builder setUsing(final Map<String, From> using) {
+
+            if(this.from == null) {
+                this.from = new ViewSchema.From.Builder();
+            }
+            ((ViewSchema.From.Builder)this.from).setUsing(using);
+            return this;
+        }
+        
         public ViewSchema.Builder addGroup(final String name) {
 
             group = Immutable.add(group, name);
@@ -342,15 +559,12 @@ public class ViewSchema implements LinkableSchema {
         this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
         this.materialized = Nullsafe.orDefault(descriptor.getMaterialized());
         final Descriptor.From from = Nullsafe.require(descriptor.getFrom());
-        if(from.getSchema() == null) {
-            throw new SchemaValidationException(qualifiedName, "View must specify from.schema");
-        }
-        this.from = new From(resolver, from);
+        this.from = from.build(resolver);
         this.sort = Immutable.list(descriptor.getSort());
         this.description = descriptor.getDescription();
         this.group = Immutable.list(descriptor.getGroup());
         this.where = descriptor.getWhere();
-        final InferenceContext context = InferenceContext.from(this.from.getSchema());
+        final InferenceContext context = this.from.inferenceContext();
         this.declaredProperties = Immutable.transformValuesSorted(descriptor.getProperties(),
                 (k, v) -> v.build(resolver, context, version, qualifiedName.with(k)));
         this.declaredLinks = Immutable.transformValuesSorted(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
@@ -361,16 +575,9 @@ public class ViewSchema implements LinkableSchema {
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName.toString());
         }
-        this.declaredProperties.values().forEach(ViewSchema::validateProperty);
+        this.declaredProperties.values().forEach(p -> this.from.validateProperty(p));
         this.isAggregating = getProperties().values().stream().map(Property::getExpression)
                 .filter(Objects::nonNull).anyMatch(Expression::isAggregate);
-    }
-
-    private static void validateProperty(final Property property) {
-
-        if(property.getExpression() == null) {
-            throw new SchemaValidationException(property.getQualifiedName(), "Every view property must have an expression)");
-        }
     }
 
     @Override
@@ -458,7 +665,7 @@ public class ViewSchema implements LinkableSchema {
     @Override
     public Use<?> typeOfId() {
 
-        return isGrouping() || isAggregating() ? UseBinary.DEFAULT : from.getSchema().typeOfId();
+        return isGrouping() || isAggregating() ? UseBinary.DEFAULT : from.typeOfId();
     }
 
     @Override
@@ -511,7 +718,7 @@ public class ViewSchema implements LinkableSchema {
 
         if(!out.containsKey(qualifiedName)) {
             out.put(qualifiedName, this);
-            from.getSchema().collectDependencies(from.getExpand(), out);
+            from.collectDependencies(out);
             declaredProperties.forEach((k, v) -> v.collectDependencies(expand, out));
             declaredLinks.forEach((k, v) -> v.collectDependencies(expand, out));
         }
@@ -540,59 +747,59 @@ public class ViewSchema implements LinkableSchema {
         return qualifiedNameHashCode();
     }
 
-    public boolean isCoBucketed() {
-
-        final List<Bucketing> viewBucketing = getEffectingBucketing();
-        final List<Bucketing> fromBucketing = from.getSchema().getEffectingBucketing();
-        if(viewBucketing.size() != fromBucketing.size()) {
-            return false;
-        }
-        for(int i = 0; i != viewBucketing.size(); ++i) {
-            if(!isCoBucketed(viewBucketing.get(i), fromBucketing.get(i))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean isCoBucketed(final Bucketing viewBucketing, final Bucketing fromBucketing) {
-
-        if(viewBucketing.getCount() != fromBucketing.getCount()) {
-            return false;
-        }
-        if(viewBucketing.getFunction() != fromBucketing.getFunction()) {
-            return false;
-        }
-        final List<Name> viewNames = viewBucketing.getUsing();
-        final List<Name> fromNames = fromBucketing.getUsing();
-        if(viewNames.size() != fromNames.size()) {
-            return false;
-        }
-        for(int i = 0; i != viewNames.size(); ++i) {
-            if(!isSameName(viewNames.get(i), fromNames.get(i))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean isSameName(final Name viewName, final Name fromName) {
-
-        final LinkableSchema fromSchema = from.getSchema();
-        final Name fromId = Name.of(fromSchema.id());
-        final Name viewId = Name.of(id());
-        if(fromName.equals(fromId) && viewName.equals(viewId)) {
-            return true;
-        }
-        if(viewName.size() == 1) {
-            final Property viewProp = getProperty(viewName.first(), true);
-            if (viewProp != null) {
-                final Expression viewExpr = viewProp.getExpression();
-                return viewExpr != null && viewExpr.equals(new NameConstant(fromName));
-            }
-        }
-        return false;
-    }
+//    public boolean isCoBucketed() {
+//
+//        final List<Bucketing> viewBucketing = getEffectingBucketing();
+//        final List<Bucketing> fromBucketing = from.getSchema().getEffectingBucketing();
+//        if(viewBucketing.size() != fromBucketing.size()) {
+//            return false;
+//        }
+//        for(int i = 0; i != viewBucketing.size(); ++i) {
+//            if(!isCoBucketed(viewBucketing.get(i), fromBucketing.get(i))) {
+//                return false;
+//            }
+//        }
+//        return true;
+//    }
+//
+//    private boolean isCoBucketed(final Bucketing viewBucketing, final Bucketing fromBucketing) {
+//
+//        if(viewBucketing.getCount() != fromBucketing.getCount()) {
+//            return false;
+//        }
+//        if(viewBucketing.getFunction() != fromBucketing.getFunction()) {
+//            return false;
+//        }
+//        final List<Name> viewNames = viewBucketing.getUsing();
+//        final List<Name> fromNames = fromBucketing.getUsing();
+//        if(viewNames.size() != fromNames.size()) {
+//            return false;
+//        }
+//        for(int i = 0; i != viewNames.size(); ++i) {
+//            if(!isSameName(viewNames.get(i), fromNames.get(i))) {
+//                return false;
+//            }
+//        }
+//        return true;
+//    }
+//
+//    private boolean isSameName(final Name viewName, final Name fromName) {
+//
+//        final LinkableSchema fromSchema = from.getSchema();
+//        final Name fromId = Name.of(fromSchema.id());
+//        final Name viewId = Name.of(id());
+//        if(fromName.equals(fromId) && viewName.equals(viewId)) {
+//            return true;
+//        }
+//        if(viewName.size() == 1) {
+//            final Property viewProp = getProperty(viewName.first(), true);
+//            if (viewProp != null) {
+//                final Expression viewExpr = viewProp.getExpression();
+//                return viewExpr != null && viewExpr.equals(new NameConstant(fromName));
+//            }
+//        }
+//        return false;
+//    }
 
     @Override
     public String toString() {
@@ -604,10 +811,6 @@ public class ViewSchema implements LinkableSchema {
     public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, LinkableSchema> out) {
 
         LinkableSchema.super.collectMaterializationDependencies(expand, out);
-        final LinkableSchema fromSchema = from.getSchema();
-        if(!out.containsKey(fromSchema.getQualifiedName())) {
-            out.put(fromSchema.getQualifiedName(), fromSchema);
-            fromSchema.collectMaterializationDependencies(from.getExpand(), out);
-        }
+        this.from.collectMaterializationDependencies(out);
     }
 }
