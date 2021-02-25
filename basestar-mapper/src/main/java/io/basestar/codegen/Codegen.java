@@ -39,6 +39,7 @@ import java.io.*;
 import java.util.Collections;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @Slf4j
 public class Codegen {
@@ -151,7 +152,7 @@ public class Codegen {
                 .build();
         String result = pattern;
         for(final Map.Entry<String, String> entry : replacements.entrySet()) {
-            result = result.replaceAll("\\{" + entry.getKey() + "}", entry.getValue());
+            result = result.replaceAll("\\{" + Pattern.quote(entry.getKey()) + "}", entry.getValue());
         }
         return result;
     }
