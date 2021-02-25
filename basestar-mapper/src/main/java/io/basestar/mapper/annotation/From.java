@@ -6,6 +6,7 @@ import io.basestar.mapper.internal.AnnotationUtils;
 import io.basestar.mapper.internal.TypeMapper;
 import io.basestar.mapper.internal.ViewSchemaMapper;
 import io.basestar.mapper.internal.annotation.SchemaModifier;
+import io.basestar.schema.ViewSchema;
 import io.basestar.type.AnnotationContext;
 import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
@@ -45,7 +46,7 @@ public @interface From {
             mapper.setFromExpand(fromExpand);
         }
 
-        public static From annotation(final io.basestar.schema.ViewSchema.From from) {
+        public static From annotation(final ViewSchema.From.FromSchema from) {
 
             return new AnnotationContext<>(From.class, ImmutableMap.<String, Object>builder()
                     .put("value", Object.class)

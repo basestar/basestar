@@ -24,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SQLContext;
+import org.apache.spark.sql.SparkSession;
 
 import java.util.HashMap;
 import java.util.List;
@@ -45,6 +46,24 @@ public interface QueryResolver {
     }
 
     Query<Row> resolve(LinkableSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
+
+    default Stage sql(final String sql, final InstanceSchema schema, final Map<String, Stage> with) {
+
+        SparkSession session = null;
+        for(final Map.Entry<String, Stage> entry : with.entrySet()) {
+            final String as = entry.getKey();
+            final Stage query = entry.getValue();
+            final Dataset<Row> ds = query.dataset();
+            ds.registerTempTable(as);
+            session = ds.sparkSession();
+        }
+        if(session != null) {
+            final SparkSession tmp = session;
+            return Stage.from(() -> tmp.sql(sql), schema);
+        } else {
+            throw new IllegalStateException("SQL query must define at least one source");
+        }
+    }
 
     default Source<Dataset<Row>> ofSource(final LinkableSchema schema) {
 
@@ -183,6 +202,12 @@ public interface QueryResolver {
         public Stage conform(final Stage input, final InstanceSchema schema, final Set<Name> expand) {
 
             return input.conform(schema, expand);
+        }
+
+        @Override
+        public Stage sql(final String sql, final InstanceSchema schema, final Map<String, Stage> with) {
+
+            return resolver.sql(sql, schema, with);
         }
     }
 

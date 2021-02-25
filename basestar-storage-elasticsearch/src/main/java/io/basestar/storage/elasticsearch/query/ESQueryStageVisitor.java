@@ -77,4 +77,10 @@ public class ESQueryStageVisitor implements QueryStageVisitor<ESQueryStage> {
 
         return input;
     }
+
+    @Override
+    public ESQueryStage sql(final String sql, final InstanceSchema schema, final Map<String, ESQueryStage> with) {
+
+        throw new UnsupportedOperationException();
+    }
 }

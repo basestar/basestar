@@ -51,13 +51,17 @@ public class ViewSchemaModel extends LinkableSchemaModel {
 
         final ImmutableList.Builder<AnnotationModel<?>> annotations = ImmutableList.builder();
         annotations.addAll(super.getAnnotations());
-        annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.ViewSchema.Declaration.annotation(schema)));
-        annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.From.Modifier.annotation(schema.getFrom())));
-        if(!schema.getGroup().isEmpty()) {
-            annotations.add(new AnnotationModel<>(getContext(), Group.Modifier.annotation(schema.getGroup())));
-        }
-        if(schema.getWhere() != null) {
-            annotations.add(new AnnotationModel<>(getContext(), Where.Modifier.annotation(schema.getWhere())));
+        if(schema.getFrom() instanceof ViewSchema.From.FromSchema) {
+            annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.ViewSchema.Declaration.annotation(schema)));
+            annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.From.Modifier.annotation((ViewSchema.From.FromSchema) schema.getFrom())));
+            if (!schema.getGroup().isEmpty()) {
+                annotations.add(new AnnotationModel<>(getContext(), Group.Modifier.annotation(schema.getGroup())));
+            }
+            if (schema.getWhere() != null) {
+                annotations.add(new AnnotationModel<>(getContext(), Where.Modifier.annotation(schema.getWhere())));
+            }
+        } else {
+            annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.SqlViewSchema.Declaration.annotation(schema)));
         }
         return annotations.build();
     }

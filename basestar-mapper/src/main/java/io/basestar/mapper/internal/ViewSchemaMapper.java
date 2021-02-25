@@ -47,6 +47,12 @@ public class ViewSchemaMapper<T> extends LinkableSchemaMapper<ViewSchema.Builder
 
     private final Expression where;
 
+    private final String sql;
+
+    private final List<String> primaryKey;
+
+    private final Map<String, ViewSchema.Descriptor.From> using;
+
     public ViewSchemaMapper(final Builder<T> builder) {
 
         super(ViewSchema.Builder.class, builder);
@@ -55,6 +61,10 @@ public class ViewSchemaMapper<T> extends LinkableSchemaMapper<ViewSchema.Builder
         this.fromExpand = Immutable.set(builder.fromExpand);
         this.group = Immutable.list(builder.group);
         this.where = builder.where;
+        this.sql = builder.sql;
+        this.primaryKey = Immutable.list(builder.primaryKey);
+        this.using = Immutable.map(builder.using);
+
     }
 
     public static <T> Builder<T> builder(final MappingContext context, final Name name, final TypeContext type) {
@@ -65,10 +75,17 @@ public class ViewSchemaMapper<T> extends LinkableSchemaMapper<ViewSchema.Builder
     @Override
     public ViewSchema.Builder schemaBuilder() {
 
-        final ViewSchema.From.Builder from = ViewSchema.From.builder()
-                .setSchema(fromSchema)
-                .setExpand(fromExpand.isEmpty() ? null : fromExpand);
-
+        final ViewSchema.From.Builder from;
+        if(sql == null) {
+            from = ViewSchema.From.builder()
+                    .setSchema(fromSchema)
+                    .setExpand(fromExpand.isEmpty() ? null : fromExpand);
+        } else {
+            from = ViewSchema.From.builder()
+                    .setSql(sql)
+                    .setUsing(using)
+                    .setPrimaryKey(primaryKey);
+        }
         return addMembers(ViewSchema.builder()
                 .setMaterialized(materialized ? true : null)
                 .setFrom(from)
@@ -101,6 +118,12 @@ public class ViewSchemaMapper<T> extends LinkableSchemaMapper<ViewSchema.Builder
         private Expression where;
 
         private Map<String, Permission.Descriptor> permissions;
+
+        private String sql;
+
+        private List<String> primaryKey;
+
+        private Map<String, ViewSchema.Descriptor.From> using;
 
         @Override
         public ViewSchemaMapper<T> build() {
