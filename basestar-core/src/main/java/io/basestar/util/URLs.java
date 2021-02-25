@@ -31,7 +31,7 @@ public class URLs {
         return urls.flatMap(url -> {
             if(isLocalFile(url)) {
                 try {
-                    final Path path = Path.parse(url.getPath());
+                    final Path path = toPath(url);
                     return path.resolve().map(v -> toURLUnchecked(v.toFileUri()));
                 } catch (final IOException e) {
                     throw new UncheckedIOException("Failed to read url " + url, e);
@@ -39,6 +39,20 @@ public class URLs {
             }
             return Stream.of(url);
         });
+    }
+
+    private static Path toPath(final URL url) {
+
+        final Path path = Path.parse(url.getPath());
+        for(int i = 0; i != path.size(); ++i) {
+            final String v = path.at(i);
+            if(!v.isEmpty()) {
+                if(v.contains(":")) {
+                    return path.range(i);
+                }
+            }
+        }
+        return path;
     }
 
     public static URL toURLUnchecked(final URI uri) {
