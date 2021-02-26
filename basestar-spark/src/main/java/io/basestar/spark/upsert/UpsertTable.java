@@ -310,7 +310,7 @@ public class UpsertTable {
         return copy;
     }
 
-    protected Dataset<Row> selectBase(final SparkSession session, final boolean includeDeleted) {
+    public Dataset<Row> selectBase(final SparkSession session, final boolean includeDeleted) {
 
         autoProvision(session);
         final boolean deletedColumn = this.deletedColumn;
@@ -325,7 +325,7 @@ public class UpsertTable {
         }
     }
 
-    protected Dataset<Row> selectDelta(final SparkSession session) {
+    public Dataset<Row> selectDelta(final SparkSession session) {
 
         autoProvision(session);
         final String tableName = deltaTableName();
@@ -334,12 +334,12 @@ public class UpsertTable {
                 .select(deltaColumns());
     }
 
-    protected Dataset<Row> selectDeltaAfter(final SparkSession session, final String sequence) {
+    public Dataset<Row> selectDeltaAfter(final SparkSession session, final String sequence) {
 
         return selectDelta(session).filter(functions.col(SEQUENCE).gt(sequence));
     }
 
-    protected Dataset<Row> selectLatestDelta(final SparkSession session) {
+    public Dataset<Row> selectLatestDelta(final SparkSession session) {
 
         return reduceDeltas(selectDelta(session));
     }
