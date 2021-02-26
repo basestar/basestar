@@ -30,8 +30,7 @@ public class StorageOutputFormat extends OutputFormat<Ref, WriteAction> {
             public void write(final Ref ref, final WriteAction action) {
 
                 final ObjectSchema schema = namespace.requireObjectSchema(ref.getSchema());
-                final String id = ref.getId();
-                transaction = action.apply(transaction, schema, id);
+                transaction = action.apply(transaction, schema);
             }
 
             @Override
