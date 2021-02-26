@@ -288,6 +288,12 @@ public class CognitoUserStorage implements DefaultLayerStorage {
             }
 
             @Override
+            public Storage.WriteTransaction writeView(final ViewSchema schema, final Map<String, Object> before, final Map<String, Object> after) {
+
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
             public CompletableFuture<BatchResponse> write() {
 
                 return BatchResponse.mergeFutures(requests.stream().map(Supplier::get));

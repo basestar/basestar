@@ -33,7 +33,7 @@ class TestQueryPlanner {
         final Namespace namespace = Namespace.load(TestStorage.class.getResource("schema.yml"));
         final ViewSchema viewSchema = namespace.requireViewSchema("USAddressStats");
 
-        final QueryPlanner<SimpleStage> planner = new QueryPlanner.AggregateSplitting<>();
+        final QueryPlanner<SimpleStage> planner = new QueryPlanner.AggregateSplitting<>(true);
 
         final SimpleStage stage = planner.plan(new SimpleVisitor(), viewSchema, Expression.parse("count > 5"), ImmutableList.of(), ImmutableSet.of());
 
@@ -58,7 +58,7 @@ class TestQueryPlanner {
         final Namespace namespace = Namespace.load(TestStorage.class.getResource("schema.yml"));
         final ViewSchema viewSchema = namespace.requireViewSchema("AddressDisplayStats");
         
-        final QueryPlanner<SimpleStage> planner = new QueryPlanner.AggregateSplitting<>();
+        final QueryPlanner<SimpleStage> planner = new QueryPlanner.AggregateSplitting<>(true);
         
         final SimpleStage stage = planner.plan(new SimpleVisitor(), viewSchema, Constant.TRUE, ImmutableList.of(), ImmutableSet.of());
 
@@ -93,7 +93,7 @@ class TestQueryPlanner {
         final Namespace namespace = Namespace.load(TestStorage.class.getResource("schema.yml"));
         final ViewSchema viewSchema = namespace.requireViewSchema("GBAddresses");
 
-        final QueryPlanner<SimpleStage> planner = new QueryPlanner.AggregateSplitting<>();
+        final QueryPlanner<SimpleStage> planner = new QueryPlanner.AggregateSplitting<>(true);
         final SimpleStage stage = planner.plan(new SimpleVisitor(), viewSchema, Expression.parse("state == 'Kent'"), ImmutableList.of(), ImmutableSet.of());
 
         final ObjectSchema sourceSchema = namespace.requireObjectSchema("Address");

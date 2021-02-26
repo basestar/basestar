@@ -69,6 +69,13 @@ public class SplitIndexStorage implements IndexStorage {
         return new WriteTransaction() {
 
             @Override
+            public WriteTransaction writeView(final ViewSchema schema, final Map<String, Object> before, final Map<String, Object> after) {
+
+                objectTransaction.writeView(schema, before, after);
+                return this;
+            }
+
+            @Override
             public WriteTransaction createIndexes(final ReferableSchema schema, final List<Index> indexes, final String id, final Map<String, Object> after) {
 
                 indexTransaction.createIndexes(schema, indexes, id, after);

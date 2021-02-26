@@ -57,6 +57,11 @@ public class ViewSchema implements LinkableSchema {
 
     public static final String ID = Reserved.PREFIX + "key";
 
+    public String id(final Map<String, Object> record) {
+
+        return null;
+    }
+
     public interface From extends Serializable {
 
         Descriptor.From descriptor();

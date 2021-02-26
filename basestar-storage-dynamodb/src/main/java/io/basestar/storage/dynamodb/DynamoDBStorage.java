@@ -618,6 +618,13 @@ public class DynamoDBStorage implements DefaultIndexStorage {
         }
 
         @Override
+        public WriteTransaction writeView(final ViewSchema schema, final Map<String, Object> before, final Map<String, Object> after) {
+
+            return this;
+//            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public CompletableFuture<BatchResponse> write() {
 
             if(!oversize.isEmpty()) {

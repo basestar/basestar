@@ -5,7 +5,10 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.AggregateExtractingVisitor;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.NameConstant;
-import io.basestar.schema.*;
+import io.basestar.schema.LinkableSchema;
+import io.basestar.schema.Property;
+import io.basestar.schema.Reserved;
+import io.basestar.schema.ViewSchema;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.expression.TypedExpression;
 import io.basestar.schema.use.Use;
@@ -22,6 +25,13 @@ public interface QueryPlanner<T> {
     T plan(QueryStageVisitor<T> visitor, LinkableSchema schema, Expression expression, List<Sort> sort, Set<Name> expand);
 
     class Default<T> implements QueryPlanner<T> {
+
+        private final boolean ignoreMaterialization;
+
+        public Default(final boolean ignoreMaterialization) {
+
+            this.ignoreMaterialization = ignoreMaterialization;
+        }
 
         @Override
         public T plan(final QueryStageVisitor<T> visitor, final LinkableSchema schema, final Expression expression, final List<Sort> sort, final Set<Name> expand) {
@@ -113,18 +123,20 @@ public interface QueryPlanner<T> {
             if (schema instanceof ViewSchema) {
                 return viewStage(visitor, (ViewSchema)schema);
             } else {
-                return refStage(visitor, (ReferableSchema)schema);
+                return refStage(visitor, schema);
             }
         }
 
-        protected T refStage(final QueryStageVisitor<T> visitor, final ReferableSchema schema) {
+        protected T refStage(final QueryStageVisitor<T> visitor, final LinkableSchema schema) {
 
             return visitor.conform(visitor.source(schema), schema, schema.getExpand());
         }
 
         protected T viewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema) {
 
-            if(schema.getFrom() instanceof ViewSchema.From.FromSchema) {
+            if(schema.isMaterialized() && !ignoreMaterialization) {
+                return refStage(visitor, schema);
+            } else if(schema.getFrom() instanceof ViewSchema.From.FromSchema) {
                 if (schema.isAggregating() || schema.isGrouping()) {
                     return visitor.conform(aggViewStage(visitor, schema), schema, schema.getExpand());
                 } else {
@@ -195,6 +207,11 @@ public interface QueryPlanner<T> {
     }
 
     class AggregateSplitting<T> extends Default<T> {
+
+        public AggregateSplitting(final boolean ignoreMaterialization) {
+
+            super(ignoreMaterialization);
+        }
 
         @Override
         protected T aggViewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema) {

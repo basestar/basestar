@@ -135,6 +135,7 @@ public interface QueryResolver {
 
         public Automatic(final QueryResolver resolver) {
 
+            super(true);
             this.resolver = resolver;
         }
 

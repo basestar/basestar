@@ -27,10 +27,7 @@ import io.basestar.schema.*;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseRef;
 import io.basestar.schema.use.UseStruct;
-import io.basestar.storage.BatchResponse;
-import io.basestar.storage.DefaultLayerStorage;
-import io.basestar.storage.StorageTraits;
-import io.basestar.storage.Versioning;
+import io.basestar.storage.*;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.DisjunctionVisitor;
@@ -617,6 +614,12 @@ public class SQLStorage implements DefaultLayerStorage {
                     }
                 }
             });
+        }
+
+        @Override
+        public Storage.WriteTransaction writeView(final ViewSchema schema, final Map<String, Object> before, final Map<String, Object> after) {
+
+            throw new UnsupportedOperationException();
         }
 
         @Override
