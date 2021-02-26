@@ -23,6 +23,7 @@ package io.basestar.storage.elasticsearch;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.Reserved;
+import io.basestar.schema.ViewSchema;
 import io.basestar.storage.elasticsearch.mapping.Mappings;
 import io.basestar.storage.elasticsearch.mapping.Settings;
 import io.basestar.util.Nullsafe;
@@ -39,6 +40,8 @@ public interface ElasticsearchStrategy {
     Settings settings(ReferableSchema schema);
 
     boolean historyEnabled(ReferableSchema schema);
+
+    String viewIndex(ViewSchema schema);
 
     @Builder
     class Simple implements ElasticsearchStrategy {
@@ -57,7 +60,7 @@ public interface ElasticsearchStrategy {
 
         private final boolean historyEnabled;
 
-        private String name(final ReferableSchema schema) {
+        private String name(final LinkableSchema schema) {
 
             return schema.getQualifiedName().toString(Reserved.PREFIX).toLowerCase();
         }
@@ -90,6 +93,12 @@ public interface ElasticsearchStrategy {
         public boolean historyEnabled(final ReferableSchema schema) {
 
             return historyEnabled;
+        }
+
+        @Override
+        public String viewIndex(final ViewSchema schema) {
+
+            return Nullsafe.orDefault(objectPrefix) + name(schema) +  Nullsafe.orDefault(objectSuffix);
         }
     }
 }

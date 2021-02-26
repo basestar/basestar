@@ -22,10 +22,7 @@ package io.basestar.storage;
 
 import io.basestar.event.Event;
 import io.basestar.expression.Expression;
-import io.basestar.schema.Consistency;
-import io.basestar.schema.LinkableSchema;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.ReferableSchema;
+import io.basestar.schema.*;
 import io.basestar.util.Name;
 import io.basestar.util.Pager;
 import io.basestar.util.Sort;
@@ -122,6 +119,8 @@ public interface Storage {
 
     interface WriteTransaction {
 
+        WriteTransaction writeView(ViewSchema schema, Map<String, Object> before, Map<String, Object> after);
+
         WriteTransaction createObject(ObjectSchema schema, String id, Map<String, Object> after);
 
         WriteTransaction updateObject(ObjectSchema schema, String id, Map<String, Object> before, Map<String, Object> after);
@@ -134,7 +133,14 @@ public interface Storage {
 
         interface Delegating extends WriteTransaction {
 
-            WriteTransaction delegate(final ObjectSchema schema);
+            WriteTransaction delegate(final LinkableSchema schema);
+
+            @Override
+            default WriteTransaction writeView(final ViewSchema schema, final Map<String, Object> before, final Map<String, Object> after) {
+
+                delegate(schema).writeView(schema, before, after);
+                return this;
+            }
 
             @Override
             default WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {

@@ -173,6 +173,14 @@ public class OverlayStorage implements Storage {
 
         final WriteTransaction overlayWrite = overlay.write(consistency, versioning);
         return new WriteTransaction() {
+
+            @Override
+            public WriteTransaction writeView(final ViewSchema schema, final Map<String, Object> before, final Map<String, Object> after) {
+
+                overlayWrite.writeView(schema, OverlayMetadata.unwrapOverlay(before), OverlayMetadata.unwrapOverlay(after));
+                return this;
+            }
+
             @Override
             public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 

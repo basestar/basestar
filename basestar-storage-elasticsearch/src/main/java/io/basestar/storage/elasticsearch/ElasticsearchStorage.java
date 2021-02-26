@@ -126,7 +126,7 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
     @Override
     public Pager<Map<String, Object>> query(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        final QueryPlanner<ESQueryStage> planner = new QueryPlanner.Default<>();
+        final QueryPlanner<ESQueryStage> planner = new QueryPlanner.Default<>(false);
         final ESQueryStage stage = planner.plan(new ESQueryStageVisitor(strategy), schema, query, sort, expand);
 
         final Mappings mappings = strategy.mappings(schema);
@@ -389,6 +389,27 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
         }
 
         @Override
+        public WriteTransaction writeView(final ViewSchema schema, final Map<String, Object> before, final Map<String, Object> after) {
+
+            if(schema.isMaterialized()) {
+                final String index = strategy.viewIndex(schema);
+                if (after != null) {
+                    final String id = schema.id(after);
+                    request.add(new IndexRequest()
+                            .index(index).source(toSource(schema, after)).id(id)
+                            .opType(DocWriteRequest.OpType.CREATE));
+                    responders.add(response -> BatchResponse.empty());
+                } else if (before != null) {
+                    final String id = schema.id(before);
+                    request.add(new DeleteRequest()
+                            .index(index).id(id));
+                    responders.add(response -> BatchResponse.empty());
+                }
+            }
+            return this;
+        }
+
+        @Override
         public CompletableFuture<BatchResponse> write() {
 
             return getIndices(indices)
@@ -406,13 +427,13 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
         }
     }
 
-    private Map<String, Object> toSource(final ReferableSchema schema, final Map<String, Object> data) {
+    private Map<String, Object> toSource(final LinkableSchema schema, final Map<String, Object> data) {
 
         final Mappings mappings = strategy.mappings(schema);
         return mappings.toSource(data);
     }
 
-    private Map<String, Object> fromSource(final ReferableSchema schema, final Map<String, Object> source) {
+    private Map<String, Object> fromSource(final LinkableSchema schema, final Map<String, Object> source) {
 
         final Mappings mappings = strategy.mappings(schema);
         return mappings.fromSource(source);

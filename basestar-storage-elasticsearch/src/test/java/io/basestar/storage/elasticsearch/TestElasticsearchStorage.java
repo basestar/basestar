@@ -88,7 +88,7 @@ class TestElasticsearchStorage extends TestStorage {
     public void testSort() {
 
         final ESQueryStageVisitor visitor = new ESQueryStageVisitor(ElasticsearchStrategy.Simple.builder().build());
-        final QueryPlanner<ESQueryStage> planner = new QueryPlanner.Default<>();
+        final QueryPlanner<ESQueryStage> planner = new QueryPlanner.Default<>(true);
         final ESQueryStage stage = planner.plan(visitor, namespace.requireLinkableSchema(Name.of("Simple")),
                 Expression.parse("struct.x > 0"), ImmutableList.of(Sort.asc("created")), ImmutableSet.of());
         final SearchRequest request = stage.request(ImmutableSet.of(), null, 10).get();

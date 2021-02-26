@@ -21,10 +21,7 @@ package io.basestar.storage.cognito;
  */
 
 import io.basestar.expression.Expression;
-import io.basestar.schema.Consistency;
-import io.basestar.schema.Instance;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.ReferableSchema;
+import io.basestar.schema.*;
 import io.basestar.storage.*;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
@@ -246,6 +243,12 @@ public class CognitoGroupStorage implements DefaultLayerStorage {
             public void writeHistoryLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
 
 //                throw new UnsupportedOperationException("cannot write history");
+            }
+
+            @Override
+            public Storage.WriteTransaction writeView(final ViewSchema schema, final Map<String, Object> before, final Map<String, Object> after) {
+
+                throw new UnsupportedOperationException();
             }
 
             @Override

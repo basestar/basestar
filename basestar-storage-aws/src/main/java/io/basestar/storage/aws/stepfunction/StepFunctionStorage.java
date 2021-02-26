@@ -9,6 +9,7 @@ import io.basestar.jackson.BasestarModule;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.ReferableSchema;
+import io.basestar.schema.ViewSchema;
 import io.basestar.storage.*;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.util.*;
@@ -278,6 +279,12 @@ public class StepFunctionStorage implements DefaultLayerStorage {
             public void writeHistoryLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
 
 //                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public Storage.WriteTransaction writeView(final ViewSchema schema, final Map<String, Object> before, final Map<String, Object> after) {
+
+                throw new UnsupportedOperationException();
             }
 
             @Override

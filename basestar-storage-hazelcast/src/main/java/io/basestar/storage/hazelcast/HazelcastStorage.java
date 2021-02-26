@@ -352,6 +352,12 @@ public class HazelcastStorage implements DefaultLayerStorage {
                 return new BatchResponse(results);
             });
         }
+
+        @Override
+        public WriteTransaction writeView(final ViewSchema schema, final Map<String, Object> before, final Map<String, Object> after) {
+
+            throw new UnsupportedOperationException();
+        }
     }
 
     @Override
