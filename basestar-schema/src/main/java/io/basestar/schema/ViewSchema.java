@@ -59,7 +59,16 @@ public class ViewSchema implements LinkableSchema {
 
     public String id(final Map<String, Object> record) {
 
-        return null;
+        final Object key = record.get(ID);
+        if(key instanceof String) {
+            return (String)key;
+        } else if(key instanceof byte[]) {
+            return Bytes.valueOf((byte[])key).toBase64();
+        } else if(key instanceof Bytes) {
+            return ((Bytes)key).toBase64();
+        } else {
+            throw new IllegalStateException("Missing or invalid " + ID + " (" + key + ")");
+        }
     }
 
     public interface From extends Serializable {
