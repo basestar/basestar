@@ -190,19 +190,23 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
             @Override
             public CompletableFuture<BatchResponse> read() {
 
-                return getIndices(indexToSchema).thenCompose(ignored -> ElasticsearchUtils.<MultiGetResponse>future(listener -> client.mgetAsync(request, OPTIONS, listener))
-                        .thenApply(response -> {
-                            final SortedMap<BatchResponse.RefKey, Map<String, Object>> results = new TreeMap<>();
-                            for (final MultiGetItemResponse item : response) {
-                                final String index = item.getIndex();
-                                final ReferableSchema schema = indexToSchema.get(index);
-                                final Map<String, Object> result = fromResponse(schema, item.getResponse());
-                                if (result != null) {
-                                    results.put(BatchResponse.RefKey.from(schema.getQualifiedName(), result), result);
+                if(request.getItems().size() == 0) {
+                    return CompletableFuture.completedFuture(BatchResponse.empty());
+                } else {
+                    return getIndices(indexToSchema).thenCompose(ignored -> ElasticsearchUtils.<MultiGetResponse>future(listener -> client.mgetAsync(request, OPTIONS, listener))
+                            .thenApply(response -> {
+                                final SortedMap<BatchResponse.RefKey, Map<String, Object>> results = new TreeMap<>();
+                                for (final MultiGetItemResponse item : response) {
+                                    final String index = item.getIndex();
+                                    final ReferableSchema schema = indexToSchema.get(index);
+                                    final Map<String, Object> result = fromResponse(schema, item.getResponse());
+                                    if (result != null) {
+                                        results.put(BatchResponse.RefKey.from(schema.getQualifiedName(), result), result);
+                                    }
                                 }
-                            }
-                            return BatchResponse.fromRefs(results);
-                        }));
+                                return BatchResponse.fromRefs(results);
+                            }));
+                }
             }
         };
     }

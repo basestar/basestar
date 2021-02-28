@@ -1146,6 +1146,22 @@ public abstract class TestStorage {
                 .write().join();
     }
 
+    @Test
+    void testEmptyRead() {
+
+        final Storage storage = storage(namespace);
+        final BatchResponse response = storage.read(Consistency.ATOMIC).read().join();
+        assertEquals(0, response.getRefs().size());
+    }
+
+    @Test
+    void testEmptyWrite() {
+
+        final Storage storage = storage(namespace);
+        final BatchResponse response = storage.write(Consistency.ATOMIC, Versioning.UNCHECKED).write().join();
+        assertEquals(0, response.getRefs().size());
+    }
+
     private static void assumeConcurrentObjectWrite(final Storage storage, final ObjectSchema schema) {
 
         assumeTrue(storage.storageTraits(schema).getObjectConcurrency().isEnabled(),
