@@ -1,15 +1,24 @@
 package io.basestar.schema.validation;
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Context;
 import io.basestar.schema.use.Use;
 
 import java.io.Serializable;
 import java.lang.annotation.Annotation;
-import java.util.*;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 public interface Validation {
 
-    ServiceLoader<Validation> LOADER = ServiceLoader.load(Validation.class);
+    Map<String, Validation> TYPES = ImmutableMap.<String, Validation>builder()
+            .put(AssertValidation.TYPE, new AssertValidation())
+            .put(MaxValidation.TYPE, new MaxValidation())
+            .put(MinValidation.TYPE, new MinValidation())
+            .put(PatternValidation.TYPE, new PatternValidation())
+            .put(SizeValidation.TYPE, new SizeValidation())
+            .build();
 
     String type();
 
@@ -19,24 +28,21 @@ public interface Validation {
 
     static Set<String> types() {
 
-        final Set<String> types = new HashSet<>();
-        LOADER.forEach(factory -> types.add(factory.type()));
-        return types;
+        return TYPES.keySet();
     }
 
     static Validation forType(final String name) {
 
-        for (final Validation factory : LOADER) {
-            if(name.equals(factory.type())) {
-                return factory;
-            }
+        final Validation validation = TYPES.get(name);
+        if(validation == null) {
+            throw new IllegalStateException("Validator " + name + " is not available");
         }
-        throw new IllegalStateException("Validator " + name + " is not available");
+        return validation;
     }
 
     static Optional<Validator> createJsr380Validator(final Use<?> type, final Annotation annotation) {
 
-        for (final Validation factory : LOADER) {
+        for (final Validation factory : TYPES.values()) {
             final Optional<Validator> validator = factory.fromJsr380(type, annotation);
             if(validator.isPresent()) {
                 return validator;
