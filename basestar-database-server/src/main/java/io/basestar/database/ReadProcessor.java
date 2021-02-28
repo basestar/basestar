@@ -64,6 +64,11 @@ public class ReadProcessor {
         return namespace.requireReferableSchema(schema);
     }
 
+    protected LinkableSchema linkableSchema(final Name schema) {
+
+        return namespace.requireLinkableSchema(schema);
+    }
+
     protected CompletableFuture<Instance> readImpl(final ReferableSchema objectSchema, final String id, final Long version, final Set<Name> expand) {
 
         return readRaw(objectSchema, id, version, expand).thenApply(raw -> create(raw, expand));
@@ -178,7 +183,7 @@ public class ReadProcessor {
                 .thenApply(results -> {
                     final Map<ExpandKey<RefKey>, Instance> evaluated = new HashMap<>();
                     results.forEach((k, v) -> {
-                        final ReferableSchema schema = referableSchema(Instance.getSchema(v));
+                        final LinkableSchema schema = linkableSchema(Instance.getSchema(v));
                         evaluated.put(k, schema.evaluateTransients(context, v, k.getExpand()));
                     });
                     return evaluated;
@@ -197,7 +202,7 @@ public class ReadProcessor {
             if(!ref.getExpand().isEmpty()) {
                 final Name baseSchemaName = ref.getKey().getSchema();
                 final Name instanceSchemaName = Instance.getSchema(object);
-                final ReferableSchema resolvedSchema = referableSchema(Nullsafe.orDefault(instanceSchemaName, baseSchemaName));
+                final LinkableSchema resolvedSchema = linkableSchema(Nullsafe.orDefault(instanceSchemaName, baseSchemaName));
                 resolvedSchema.expand(object, new Expander() {
                     @Override
                     public Instance expandRef(final Name name, final ReferableSchema schema, final Instance ref, final Set<Name> expand) {

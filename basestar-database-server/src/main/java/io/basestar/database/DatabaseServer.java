@@ -132,7 +132,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                 .thenApply(v -> v.get(SINGLE_BATCH_ROOT));
     }
 
-    private Set<Name> permissionExpand(final ReferableSchema schema, final Permission permission) {
+    private Set<Name> permissionExpand(final LinkableSchema schema, final Permission permission) {
 
         return permission == null ? Collections.emptySet() : Nullsafe.orDefault(permission.getExpand());
     }
@@ -389,7 +389,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
     // FIXME need to apply nested permissions
     private Instance restrict(final Caller caller, final Instance instance, final Set<Name> expand) {
 
-        final ReferableSchema schema = referableSchema(Instance.getSchema(instance));
+        final LinkableSchema schema = linkableSchema(Instance.getSchema(instance));
         final Permission read = schema.getPermission(Permission.READ);
         checkPermission(caller, schema, read, ImmutableMap.of(VAR_THIS, instance));
         final Instance visible = schema.applyVisibility(context(caller), instance);
@@ -403,7 +403,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             return CompletableFuture.completedFuture(null);
         }
 
-        final ReferableSchema schema = referableSchema(Instance.getSchema(instance));
+        final LinkableSchema schema = linkableSchema(Instance.getSchema(instance));
         final Permission read = schema.getPermission(Permission.READ);
         final Set<Name> permissionExpand = permissionExpand(schema, read);
         final Set<Name> callerExpand = Name.children(permissionExpand, Name.of(VAR_CALLER));
@@ -421,7 +421,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final Set<Name> callerExpand = new HashSet<>();
         final Set<Name> transientExpand = new HashSet<>();
         for(final Instance instance : instances) {
-            final ReferableSchema schema = referableSchema(Instance.getSchema(instance));
+            final LinkableSchema schema = linkableSchema(Instance.getSchema(instance));
             final Permission read = schema.getPermission(Permission.READ);
             final Set<Name> permissionExpand = permissionExpand(schema, read);
             callerExpand.addAll(Name.children(permissionExpand, Name.of(VAR_CALLER)));
@@ -527,7 +527,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                 .thenCompose(results -> expandAndRestrict(caller, results, options.getExpand()));
     }
 
-    protected void checkPermission(final Caller caller, final ReferableSchema schema, final Permission permission, final Map<String, Object> scope) {
+    protected void checkPermission(final Caller caller, final LinkableSchema schema, final Permission permission, final Map<String, Object> scope) {
 
         if(caller.isAnon()) {
             if(permission == null || !permission.isAnonymous()) {
