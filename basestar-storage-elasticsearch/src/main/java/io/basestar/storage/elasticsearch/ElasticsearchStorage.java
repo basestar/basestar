@@ -190,19 +190,23 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
             @Override
             public CompletableFuture<BatchResponse> read() {
 
-                return getIndices(indexToSchema).thenCompose(ignored -> ElasticsearchUtils.<MultiGetResponse>future(listener -> client.mgetAsync(request, OPTIONS, listener))
-                        .thenApply(response -> {
-                            final SortedMap<BatchResponse.RefKey, Map<String, Object>> results = new TreeMap<>();
-                            for (final MultiGetItemResponse item : response) {
-                                final String index = item.getIndex();
-                                final ReferableSchema schema = indexToSchema.get(index);
-                                final Map<String, Object> result = fromResponse(schema, item.getResponse());
-                                if (result != null) {
-                                    results.put(BatchResponse.RefKey.from(schema.getQualifiedName(), result), result);
+                if(request.getItems().size() == 0) {
+                    return CompletableFuture.completedFuture(BatchResponse.empty());
+                } else {
+                    return getIndices(indexToSchema).thenCompose(ignored -> ElasticsearchUtils.<MultiGetResponse>future(listener -> client.mgetAsync(request, OPTIONS, listener))
+                            .thenApply(response -> {
+                                final SortedMap<BatchResponse.RefKey, Map<String, Object>> results = new TreeMap<>();
+                                for (final MultiGetItemResponse item : response) {
+                                    final String index = item.getIndex();
+                                    final ReferableSchema schema = indexToSchema.get(index);
+                                    final Map<String, Object> result = fromResponse(schema, item.getResponse());
+                                    if (result != null) {
+                                        results.put(BatchResponse.RefKey.from(schema.getQualifiedName(), result), result);
+                                    }
                                 }
-                            }
-                            return BatchResponse.fromRefs(results);
-                        }));
+                                return BatchResponse.fromRefs(results);
+                            }));
+                }
             }
         };
     }
@@ -403,18 +407,22 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
         @Override
         public CompletableFuture<BatchResponse> write() {
 
-            return getIndices(indices)
-                    .thenCompose(ignored -> ElasticsearchUtils
-                            .<BulkResponse>future(listener -> client.bulkAsync(request, OPTIONS, listener))
-                            .thenApply(response -> {
-                                final SortedMap<BatchResponse.RefKey, Map<String, Object>> results = new TreeMap<>();
-                                final BulkItemResponse[] items = response.getItems();
-                                assert (items.length == responders.size());
-                                for (int i = 0; i != items.length; ++i) {
-                                    results.putAll(responders.get(i).apply(items[i]).getRefs());
-                                }
-                                return BatchResponse.fromRefs(results);
-                            }));
+            if(request.numberOfActions() == 0) {
+                return CompletableFuture.completedFuture(BatchResponse.empty());
+            } else {
+                return getIndices(indices)
+                        .thenCompose(ignored -> ElasticsearchUtils
+                                .<BulkResponse>future(listener -> client.bulkAsync(request, OPTIONS, listener))
+                                .thenApply(response -> {
+                                    final SortedMap<BatchResponse.RefKey, Map<String, Object>> results = new TreeMap<>();
+                                    final BulkItemResponse[] items = response.getItems();
+                                    assert (items.length == responders.size());
+                                    for (int i = 0; i != items.length; ++i) {
+                                        results.putAll(responders.get(i).apply(items[i]).getRefs());
+                                    }
+                                    return BatchResponse.fromRefs(results);
+                                }));
+            }
         }
     }
 
