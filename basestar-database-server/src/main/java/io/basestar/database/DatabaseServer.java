@@ -490,7 +490,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         log.debug("Query: options={}", options);
 
-        final InstanceSchema schema = namespace.requireInstanceSchema(options.getSchema());
+        final LinkableSchema schema = namespace.requireLinkableSchema(options.getSchema());
 
         final int count = Nullsafe.orDefault(options.getCount(), QueryOptions.DEFAULT_COUNT);
         if (count > QueryOptions.MAX_COUNT) {
@@ -498,44 +498,33 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         }
         final Page.Token paging = options.getPaging();
 
-        if(schema instanceof ViewSchema) {
+        final Expression expression = options.getExpression();
 
-            throw new UnsupportedOperationException();
+        final Permission permission = schema.getPermission(Permission.READ);
 
-        } else if(schema instanceof ReferableSchema) {
+        final Context context = context(caller, ImmutableMap.of());
 
-            final ReferableSchema objectSchema = (ReferableSchema)schema;
-            final Expression expression = options.getExpression();
-
-            final Permission permission = objectSchema.getPermission(Permission.READ);
-
-            final Context context = context(caller, ImmutableMap.of());
-
-            final Expression rooted;
-            if (expression != null) {
-                rooted = expression.bind(Context.init(), Renaming.addPrefix(Name.of(Reserved.THIS)));
-            } else {
-                rooted = new Constant(true);
-            }
-
-            final Expression merged;
-            if (permission != null && !caller.isSuper()) {
-                merged = new And(permission.getExpression(), rooted);
-            } else {
-                merged = rooted;
-            }
-
-            final Expression bound = merged.bind(context);
-
-            final List<Sort> sort = Nullsafe.orDefault(options.getSort(), Collections.emptyList());
-            final Expression unrooted = bound.bind(Context.init(), Renaming.removeExpectedPrefix(Name.of(Reserved.THIS)));
-
-            return queryImpl(context, objectSchema, unrooted, sort, options.getExpand(), count, paging)
-                    .thenCompose(results -> expandAndRestrict(caller, results, options.getExpand()));
-
+        final Expression rooted;
+        if (expression != null) {
+            rooted = expression.bind(Context.init(), Renaming.addPrefix(Name.of(Reserved.THIS)));
         } else {
-            throw new IllegalStateException(options.getSchema() + " is not an object or view schema");
+            rooted = new Constant(true);
         }
+
+        final Expression merged;
+        if (permission != null && !caller.isSuper()) {
+            merged = new And(permission.getExpression(), rooted);
+        } else {
+            merged = rooted;
+        }
+
+        final Expression bound = merged.bind(context);
+
+        final List<Sort> sort = Nullsafe.orDefault(options.getSort(), Collections.emptyList());
+        final Expression unrooted = bound.bind(Context.init(), Renaming.removeExpectedPrefix(Name.of(Reserved.THIS)));
+
+        return queryImpl(context, schema, unrooted, sort, options.getExpand(), count, paging)
+                .thenCompose(results -> expandAndRestrict(caller, results, options.getExpand()));
     }
 
     protected void checkPermission(final Caller caller, final ReferableSchema schema, final Permission permission, final Map<String, Object> scope) {
