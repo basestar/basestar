@@ -237,10 +237,10 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
         }
     }
 
-    private CompletableFuture<?> getIndices(final Map<String, ReferableSchema> indices) {
+    private CompletableFuture<?> getIndices(final Map<String, ? extends LinkableSchema> indices) {
 
         final List<CompletableFuture<?>> createIndexFutures = new ArrayList<>();
-        for (final Map.Entry<String, ReferableSchema> entry : indices.entrySet()) {
+        for (final Map.Entry<String, ? extends LinkableSchema> entry : indices.entrySet()) {
             if (!createdIndices.contains(entry.getKey())) {
                 createdIndices.add(entry.getKey());
                 createIndexFutures.add(ElasticsearchStorage.this.syncIndex(entry.getKey(), entry.getValue()));
@@ -249,7 +249,7 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
         return CompletableFuture.allOf(createIndexFutures.toArray(new CompletableFuture<?>[0]));
     }
 
-    private CompletableFuture<?> syncIndex(final String name, final ReferableSchema schema) {
+    private CompletableFuture<?> syncIndex(final String name, final LinkableSchema schema) {
 
         final Mappings mappings = strategy.mappings(schema);
         final Settings settings = strategy.settings(schema);
@@ -276,7 +276,7 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
 
         private final List<Function<BulkItemResponse, BatchResponse>> responders = new ArrayList<>();
 
-        private final Map<String, ReferableSchema> indices = new HashMap<>();
+        private final Map<String, LinkableSchema> indices = new HashMap<>();
 
         public WriteTransaction(final Consistency consistency, final Versioning versioning) {
 
@@ -397,9 +397,10 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
 
             final String index = strategy.index(schema);
             final String id = schema.id(after);
+            indices.put(index, schema);
             request.add(new IndexRequest()
                     .index(index).source(toSource(schema, after)).id(id)
-                    .opType(DocWriteRequest.OpType.CREATE));
+                    .opType(DocWriteRequest.OpType.INDEX));
             responders.add(response -> BatchResponse.empty());
             return this;
         }
