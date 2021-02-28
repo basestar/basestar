@@ -28,7 +28,7 @@ public class ReplicaSyncEvent implements Event {
 //        INDEX_CREATE,
 //        INDEX_UPDATE,
 //        INDEX_DELETE,
-        VIEW_WRITE
+        WRITE
     }
 
     private Action action;
@@ -60,9 +60,9 @@ public class ReplicaSyncEvent implements Event {
         return new ReplicaSyncEvent(Action.DELETE, schema, id, before, null, consistency, versioning);
     }
 
-    public static ReplicaSyncEvent view(final Name schema, final Map<String, Object> before, final Map<String, Object> after, final Consistency consistency, final Versioning versioning) {
+    public static ReplicaSyncEvent write(final Name schema, final Map<String, Object> after, final Consistency consistency, final Versioning versioning) {
 
-        return new ReplicaSyncEvent(Action.VIEW_WRITE, schema, null, before, after, consistency, versioning);
+        return new ReplicaSyncEvent(Action.WRITE, schema, null, null, after, consistency, versioning);
     }
 
     @Override

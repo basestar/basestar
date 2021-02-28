@@ -3,7 +3,6 @@ package io.basestar.spark.hadoop;
 import io.basestar.schema.Instance;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.ViewSchema;
 import io.basestar.storage.Storage;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -67,7 +66,7 @@ public interface WriteAction {
 
     @Data
     @Slf4j
-    class View implements WriteAction {
+    class Write implements WriteAction {
 
         private final Map<String, Object> before;
 
@@ -76,7 +75,7 @@ public interface WriteAction {
         @Override
         public Storage.WriteTransaction apply(final Storage.WriteTransaction transaction, final LinkableSchema schema) {
 
-            return transaction.writeView((ViewSchema)schema, before, after);
+            return transaction.write(schema, after);
         }
     }
 }

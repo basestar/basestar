@@ -246,7 +246,7 @@ public class CognitoGroupStorage implements DefaultLayerStorage {
             }
 
             @Override
-            public Storage.WriteTransaction writeView(final ViewSchema schema, final Map<String, Object> before, final Map<String, Object> after) {
+            public Storage.WriteTransaction write(final LinkableSchema schema,  final Map<String, Object> after) {
 
                 throw new UnsupportedOperationException();
             }

@@ -1,7 +1,10 @@
 package io.basestar.storage;
 
 import io.basestar.expression.Expression;
-import io.basestar.schema.*;
+import io.basestar.schema.Consistency;
+import io.basestar.schema.LinkableSchema;
+import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.util.Name;
 import io.basestar.util.Pager;
 import io.basestar.util.Sort;
@@ -73,9 +76,9 @@ public class SplitLayerStorage implements DefaultLayerStorage {
             }
 
             @Override
-            public WriteTransaction writeView(final ViewSchema schema, final Map<String, Object> before, final Map<String, Object> after) {
+            public WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
 
-                objectTransaction.writeView(schema, before, after);
+                objectTransaction.write(schema, after);
                 return this;
             }
 

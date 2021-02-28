@@ -221,10 +221,10 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
                 }
 
                 @Override
-                public WriteTransaction writeView(final ViewSchema schema, final Map<String, Object> before, final Map<String, Object> after) {
+                public WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
 
-                    primaryTransaction(schema).writeView(schema, ReplicaMetadata.unwrapPrimary(before), ReplicaMetadata.unwrapPrimary(after));
-                    replicaTransaction(schema).ifPresent(t -> t.writeView(schema, ReplicaMetadata.unwrapReplica(before), ReplicaMetadata.unwrapReplica(after)));
+                    primaryTransaction(schema).write(schema, ReplicaMetadata.unwrapPrimary(after));
+                    replicaTransaction(schema).ifPresent(t -> t.write(schema, ReplicaMetadata.unwrapReplica(after)));
 
                     return this;
                 }
@@ -292,10 +292,10 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
                 }
 
                 @Override
-                public WriteTransaction writeView(final ViewSchema schema, final Map<String, Object> before, final Map<String, Object> after) {
+                public WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
 
-                    primaryTransaction(schema).writeView(schema, ReplicaMetadata.unwrapPrimary(before), ReplicaMetadata.unwrapPrimary(after));
-                    events.add(ReplicaSyncEvent.view(schema.getQualifiedName(), before, after, consistency, versioning));
+                    primaryTransaction(schema).write(schema, ReplicaMetadata.unwrapPrimary(after));
+                    events.add(ReplicaSyncEvent.write(schema.getQualifiedName(), after, consistency, versioning));
                     return this;
                 }
 
@@ -373,10 +373,9 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
                     write.deleteObject((ObjectSchema)schema, event.getId(), before);
                     break;
                 }
-                case VIEW_WRITE: {
-                    final Map<String, Object> before = ReplicaMetadata.unwrapReplica(event.getBefore());
+                case WRITE: {
                     final Map<String, Object> after = ReplicaMetadata.unwrapReplica(event.getAfter());
-                    write.writeView((ViewSchema) schema, before, after);
+                    write.write(schema, after);
                     break;
                 }
             }
