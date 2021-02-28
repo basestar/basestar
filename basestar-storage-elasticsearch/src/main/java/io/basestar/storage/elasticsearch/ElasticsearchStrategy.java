@@ -23,7 +23,6 @@ package io.basestar.storage.elasticsearch;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.Reserved;
-import io.basestar.schema.ViewSchema;
 import io.basestar.storage.elasticsearch.mapping.Mappings;
 import io.basestar.storage.elasticsearch.mapping.Settings;
 import io.basestar.util.Nullsafe;
@@ -31,7 +30,7 @@ import lombok.Builder;
 
 public interface ElasticsearchStrategy {
 
-    String objectIndex(ReferableSchema schema);
+    String index(LinkableSchema schema);
 
     String historyIndex(ReferableSchema schema);
 
@@ -40,8 +39,6 @@ public interface ElasticsearchStrategy {
     Settings settings(ReferableSchema schema);
 
     boolean historyEnabled(ReferableSchema schema);
-
-    String viewIndex(ViewSchema schema);
 
     @Builder
     class Simple implements ElasticsearchStrategy {
@@ -66,7 +63,7 @@ public interface ElasticsearchStrategy {
         }
 
         @Override
-        public String objectIndex(final ReferableSchema schema) {
+        public String index(final LinkableSchema schema) {
 
             return Nullsafe.orDefault(objectPrefix) + name(schema) +  Nullsafe.orDefault(objectSuffix);
         }
@@ -93,12 +90,6 @@ public interface ElasticsearchStrategy {
         public boolean historyEnabled(final ReferableSchema schema) {
 
             return historyEnabled;
-        }
-
-        @Override
-        public String viewIndex(final ViewSchema schema) {
-
-            return Nullsafe.orDefault(objectPrefix) + name(schema) +  Nullsafe.orDefault(objectSuffix);
         }
     }
 }

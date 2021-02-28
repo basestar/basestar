@@ -255,6 +255,12 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
     }
 
     @Override
+    default String id(final Map<String, Object> data) {
+
+        return Instance.getId(data);
+    }
+
+    @Override
     default Use<?> typeOfId() {
 
         return UseString.DEFAULT;

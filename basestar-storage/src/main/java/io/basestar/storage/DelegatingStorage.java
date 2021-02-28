@@ -22,7 +22,10 @@ package io.basestar.storage;
 
 import io.basestar.event.Event;
 import io.basestar.expression.Expression;
-import io.basestar.schema.*;
+import io.basestar.schema.Consistency;
+import io.basestar.schema.LinkableSchema;
+import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.util.CompletableFutures;
 import io.basestar.util.Name;
 import io.basestar.util.Pager;
@@ -146,9 +149,9 @@ public interface DelegatingStorage extends Storage {
             }
 
             @Override
-            public WriteTransaction writeView(final ViewSchema schema, final Map<String, Object> before, final Map<String, Object> after) {
+            public WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
 
-                delegate(schema).writeView(schema, before, after);
+                delegate(schema).write(schema, after);
                 return this;
             }
 

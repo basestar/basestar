@@ -168,7 +168,7 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
             @Override
             public ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
-                final String index = strategy.objectIndex(schema);
+                final String index = strategy.index(schema);
                 indexToSchema.put(index, schema);
                 request.add(index, id);
                 return this;
@@ -295,7 +295,7 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
         @Override
         public void createObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
 
-            final String index = strategy.objectIndex(schema);
+            final String index = strategy.index(schema);
             indices.put(index, schema);
             request.add(new IndexRequest()
                     .index(index).source(toSource(schema, after)).id(id)
@@ -333,7 +333,7 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
         @Override
         public void updateObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
-            final String index = strategy.objectIndex(schema);
+            final String index = strategy.index(schema);
             indices.put(index, schema);
 
             final IndexRequest req = new IndexRequest().id(id)
@@ -355,7 +355,7 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
         @Override
         public void deleteObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> before) {
 
-            final String index = strategy.objectIndex(schema);
+            final String index = strategy.index(schema);
             indices.put(index, schema);
 
             final DeleteRequest req = new DeleteRequest().id(id)
@@ -389,23 +389,14 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
         }
 
         @Override
-        public WriteTransaction writeView(final ViewSchema schema, final Map<String, Object> before, final Map<String, Object> after) {
+        public WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
 
-            if(schema.isMaterialized()) {
-                final String index = strategy.viewIndex(schema);
-                if (after != null) {
-                    final String id = schema.id(after);
-                    request.add(new IndexRequest()
-                            .index(index).source(toSource(schema, after)).id(id)
-                            .opType(DocWriteRequest.OpType.CREATE));
-                    responders.add(response -> BatchResponse.empty());
-                } else if (before != null) {
-                    final String id = schema.id(before);
-                    request.add(new DeleteRequest()
-                            .index(index).id(id));
-                    responders.add(response -> BatchResponse.empty());
-                }
-            }
+            final String index = strategy.index(schema);
+            final String id = schema.id(after);
+            request.add(new IndexRequest()
+                    .index(index).source(toSource(schema, after)).id(id)
+                    .opType(DocWriteRequest.OpType.CREATE));
+            responders.add(response -> BatchResponse.empty());
             return this;
         }
 
@@ -514,7 +505,7 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
                         src.query(new ESExpressionVisitor().visit(filter));
                         src.size(SCROLL_SIZE);
 
-                        final SearchRequest request = new SearchRequest(strategy.objectIndex(schema));
+                        final SearchRequest request = new SearchRequest(strategy.index(schema));
                         request.scroll(TimeValue.timeValueMinutes(SCROLL_KEEPALIVE_MINUTES));
                         request.source(src);
                         response = client.search(request, OPTIONS);

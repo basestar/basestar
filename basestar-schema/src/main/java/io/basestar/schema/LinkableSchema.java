@@ -92,6 +92,8 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver, Permissio
 
     String id();
 
+    String id(Map<String, Object> data);
+
     @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
     Use<?> typeOfId();
 

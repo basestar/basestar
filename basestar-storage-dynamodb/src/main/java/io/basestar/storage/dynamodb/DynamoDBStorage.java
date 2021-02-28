@@ -618,7 +618,7 @@ public class DynamoDBStorage implements DefaultIndexStorage {
         }
 
         @Override
-        public WriteTransaction writeView(final ViewSchema schema, final Map<String, Object> before, final Map<String, Object> after) {
+        public WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
 
             return this;
 //            throw new UnsupportedOperationException();

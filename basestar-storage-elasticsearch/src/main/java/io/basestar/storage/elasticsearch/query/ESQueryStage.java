@@ -112,7 +112,7 @@ public interface ESQueryStage {
         @Override
         public Optional<SearchRequest> request(final Set<Page.Stat> stats, final Page.Token token, final int count) {
 
-            final SearchRequest request = new SearchRequest(strategy.objectIndex(schema));
+            final SearchRequest request = new SearchRequest(strategy.index(schema));
             final SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
             final QueryBuilder basicQuery;
             if(filter != null) {
