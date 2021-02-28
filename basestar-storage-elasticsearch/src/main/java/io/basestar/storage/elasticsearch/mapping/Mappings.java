@@ -23,7 +23,6 @@ package io.basestar.storage.elasticsearch.mapping;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.LinkableSchema;
-import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.use.*;
 import io.basestar.util.Name;
@@ -88,13 +87,13 @@ public class Mappings {
 
             protected FieldType fieldType(final InstanceSchema schema, final String name, final Use<?> use, final Set<Name> expand) {
 
-                if(schema instanceof ObjectSchema) {
+                if(schema instanceof ReferableSchema) {
                     switch (name) {
-                        case ObjectSchema.ID:
-                        case ObjectSchema.SCHEMA:
+                        case ReferableSchema.ID:
+                        case ReferableSchema.SCHEMA:
                             return FieldType.KEYWORD;
-                        case ObjectSchema.CREATED:
-                        case ObjectSchema.UPDATED:
+                        case ReferableSchema.CREATED:
+                        case ReferableSchema.UPDATED:
                             return FieldType.DATETIME;
                         default:
                             return fieldType(use, expand);

@@ -4,7 +4,7 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.logical.And;
 import io.basestar.schema.Layout;
-import io.basestar.schema.ReferableSchema;
+import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.expression.TypedExpression;
 import io.basestar.storage.elasticsearch.ElasticsearchStrategy;
@@ -62,13 +62,13 @@ public interface ESQueryStage {
 
         private final ElasticsearchStrategy strategy;
 
-        private final ReferableSchema schema;
+        private final LinkableSchema schema;
 
         private final Expression filter;
 
         private final List<Sort> sort;
 
-        public Source(final ElasticsearchStrategy strategy, final ReferableSchema schema) {
+        public Source(final ElasticsearchStrategy strategy, final LinkableSchema schema) {
 
             this(strategy, schema, null, Immutable.list());
         }

@@ -36,7 +36,7 @@ public interface ElasticsearchStrategy {
 
     Mappings mappings(LinkableSchema schema);
 
-    Settings settings(ReferableSchema schema);
+    Settings settings(LinkableSchema schema);
 
     boolean historyEnabled(ReferableSchema schema);
 
@@ -81,7 +81,7 @@ public interface ElasticsearchStrategy {
         }
 
         @Override
-        public Settings settings(final ReferableSchema schema) {
+        public Settings settings(final LinkableSchema schema) {
 
             return settings;
         }

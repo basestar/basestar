@@ -115,17 +115,17 @@ public class ReadProcessor {
         return queryImpl(context, linkSchema, expression, link.getSort(), expand, count, paging);
     }
 
-    protected CompletableFuture<Page<Instance>> queryImpl(final Context context, final LinkableSchema objectSchema, final Expression expression,
+    protected CompletableFuture<Page<Instance>> queryImpl(final Context context, final LinkableSchema schema, final Expression expression,
                                                           final List<Sort> sort, final Set<Name> expand, final int count, final Page.Token paging) {
 
         final List<Sort> pageSort = ImmutableList.<Sort>builder()
                 .addAll(sort)
-                .add(Sort.asc(Name.of(ObjectSchema.ID)))
+                .add(Sort.asc(Name.of(schema.id())))
                 .build();
 
-        final Set<Name> queryExpand = Sets.union(Nullsafe.orDefault(expand), Nullsafe.orDefault(objectSchema.getExpand()));
+        final Set<Name> queryExpand = Sets.union(Nullsafe.orDefault(expand), Nullsafe.orDefault(schema.getExpand()));
 
-        final Pager<Instance> pager = storage.query(objectSchema, expression, pageSort, queryExpand)
+        final Pager<Instance> pager = storage.query(schema, expression, pageSort, queryExpand)
                 .map(v -> create(v, expand));
 
         return pager.page(paging, count)
@@ -355,7 +355,7 @@ public class ReadProcessor {
         if(data == null) {
             return null;
         }
-        final ReferableSchema schema = referableSchema(Instance.getSchema(data));
+        final LinkableSchema schema = linkableSchema(Instance.getSchema(data));
         return schema.create(data, schema.getExpand(), true);
     }
 
@@ -364,7 +364,7 @@ public class ReadProcessor {
         if(data == null) {
             return null;
         }
-        final ReferableSchema schema = referableSchema(Instance.getSchema(data));
+        final LinkableSchema schema = linkableSchema(Instance.getSchema(data));
         return schema.create(data, Immutable.addAll(schema.getExpand(), expand), true);
     }
 
