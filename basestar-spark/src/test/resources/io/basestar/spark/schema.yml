@@ -194,6 +194,11 @@ Expressions:
     substr2:
       expression: id.substr(5)
       type: string
+      constraints:
+        - assert:
+           expression: false
+          groups:
+            - warning
     mapValue:
       expression: "tags['a']"
       type: string

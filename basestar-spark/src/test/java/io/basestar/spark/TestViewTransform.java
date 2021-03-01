@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.Namespace;
 import io.basestar.spark.database.SparkDatabase;
 import io.basestar.spark.query.QueryResolver;
+import io.basestar.spark.transform.ValidateTransform;
 import io.basestar.spark.util.CompatibilityUDFs;
 import io.basestar.util.Name;
 import org.apache.spark.sql.Dataset;
@@ -230,6 +231,33 @@ class TestViewTransform extends AbstractSparkTest {
         assertEquals("ipsum", row.getSubstr2());
         assertEquals("b", row.getMapValue());
         assertEquals("x", row.getLookupValue());
+    }
+
+    @Test
+    void testConstraints() throws IOException {
+
+        final SparkSession session = session();
+
+        final File f1 = new File("loremipsum", ImmutableMap.of("a", "b"));
+
+        final Map<Name, Dataset<Row>> datasets = ImmutableMap.of(
+                Name.of("File"), session.createDataset(ImmutableList.of(f1), Encoders.bean(File.class)).toDF()
+        );
+
+        final Namespace namespace = Namespace.load(TestViewTransform.class.getResourceAsStream("schema.yml"));
+
+        final QueryResolver resolver = new QueryResolver.Automatic(QueryResolver.ofSources(schema -> datasets.get(schema.getQualifiedName())));
+
+        final SparkDatabase database = SparkDatabase.builder()
+                .resolver(resolver).namespace(namespace)
+                .build();
+
+        final Dataset<Row> dataset = database.from("Expressions").query();
+        final ValidateTransform validate = ValidateTransform.builder()
+                .schema(namespace.requireLinkableSchema("Expressions"))
+                .build();
+
+        System.err.println(validate.accept(dataset).collectAsList());
     }
 
     private <T> List<T> view(final String view, final Class<T> as,  final Map<Name, Dataset<Row>> datasets) throws IOException {

@@ -34,6 +34,7 @@ import io.basestar.schema.Instance;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.Schema;
 import io.basestar.schema.jsr380.Assert;
+import io.basestar.schema.jsr380.groups.Warning;
 import io.basestar.type.TypeContext;
 import io.basestar.util.Name;
 import lombok.Data;
@@ -80,7 +81,7 @@ public class TestMappingContext {
         private String hash;
 
         @Nullable
-        @Size(min = 10, max = 100)
+        @Size(min = 10, max = 100, groups = {Warning.class})
         private double value;
 
         @Version
