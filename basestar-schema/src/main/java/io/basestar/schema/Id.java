@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.ExpressionDeserializer;
@@ -118,7 +119,7 @@ public class Id implements Serializable {
         final Set<Constraint.Violation> violations = new HashSet<>();
         final Name qualifiedName = path.with(ObjectSchema.ID);
         if(after == null) {
-            violations.add(new Constraint.Violation(qualifiedName, Constraint.REQUIRED, null));
+            violations.add(new Constraint.Violation(qualifiedName, Constraint.REQUIRED, null, ImmutableSet.of()));
         } else if(!constraints.isEmpty()) {
             final Context newContext = context.with(VAR_VALUE, after);
             for (final Constraint constraint : constraints) {

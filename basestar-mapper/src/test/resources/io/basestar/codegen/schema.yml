@@ -25,6 +25,12 @@ MyObject:
     test1:
       type: string
       immutable: true
+      constraints:
+        - size:
+            max: 10
+          message: test
+          groups:
+            - fatal
     test2:
       type:
         array: MyEnum

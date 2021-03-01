@@ -37,4 +37,7 @@ Constrained:
         - assert: "value != 2"
           message: "short assert"
         - pattern: "[^\\s]+"
+          message: "with groups"
+          groups:
+            - fatal
 

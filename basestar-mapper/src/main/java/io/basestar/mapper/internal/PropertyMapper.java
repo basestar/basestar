@@ -142,7 +142,8 @@ public class PropertyMapper<B extends InstanceSchema.Builder<B, ?>> implements M
         final List<Constraint> constraints = new ArrayList<>();
         constraintAnnotations.forEach(annot -> {
             final String message = annot.<String>nonDefaultValue("message").orElse(null);
-            Constraint.fromJsr380(null, annot.annotation(), message).ifPresent(constraints::add);
+            final Class<?>[] groups = annot.<Class<?>[]>nonDefaultValue("groups").orElse(new Class<?>[0]);
+            Constraint.fromJsr380(null, annot.annotation(), message, groups).ifPresent(constraints::add);
         });
         return constraints;
     }

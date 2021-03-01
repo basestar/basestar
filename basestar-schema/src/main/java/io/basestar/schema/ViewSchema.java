@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
-import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.jackson.serde.AbbrevSetDeserializer;
@@ -635,12 +634,6 @@ public class ViewSchema implements LinkableSchema {
         final Map<String, Object> data = new HashMap<>(InstanceSchema.deserializeProperties(in));
         data.put(ID, id);
         return new Instance(data);
-    }
-
-    @Override
-    public Set<Constraint.Violation> validate(final Context context, final Name name, final Instance after) {
-
-        return Collections.emptySet();
     }
 
     @Override

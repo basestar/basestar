@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.schema.jsr380.groups.Fatal;
 import io.basestar.schema.use.*;
 import io.basestar.schema.validation.*;
 import org.junit.jupiter.api.Test;
@@ -42,7 +43,7 @@ class TestConstraints {
         assertTrue(constraints.contains(Constraint.of(new MaxValidation.Validator(BigDecimal.valueOf(100), false), "short max")));
         assertTrue(constraints.contains(Constraint.of(new PatternValidation.Validator("[\\w\\d]+", ImmutableSet.of(Pattern.Flag.CASE_INSENSITIVE)), "full pattern")));
         assertTrue(constraints.contains(Constraint.of(new PatternValidation.Validator("[\\w\\d]*"), "short pattern")));
-        assertTrue(constraints.contains(Constraint.of(new PatternValidation.Validator("[\\w\\d]*"), "short pattern")));
+        assertTrue(constraints.contains(Constraint.of(new PatternValidation.Validator("[^\\s]+"), "with groups", ImmutableList.of(), ImmutableSet.of(Fatal.NAME))));
     }
 
     @SuppressWarnings("unsued")
