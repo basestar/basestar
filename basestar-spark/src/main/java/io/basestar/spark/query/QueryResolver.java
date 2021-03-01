@@ -9,27 +9,28 @@ import io.basestar.expression.constant.Constant;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Layout;
 import io.basestar.schema.LinkableSchema;
+import io.basestar.schema.ViewSchema;
 import io.basestar.schema.expression.TypedExpression;
 import io.basestar.spark.combiner.Combiner;
 import io.basestar.spark.source.Source;
 import io.basestar.spark.transform.*;
+import io.basestar.spark.util.SparkRowUtils;
+import io.basestar.spark.util.SparkUtils;
 import io.basestar.storage.query.QueryPlanner;
 import io.basestar.storage.query.QueryStageVisitor;
-import io.basestar.util.Immutable;
-import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SQLContext;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.catalyst.encoders.RowEncoder;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -58,8 +59,24 @@ public interface QueryResolver {
             session = ds.sparkSession();
         }
         if(session != null) {
-            final SparkSession tmp = session;
-            return Stage.from(() -> tmp.sql(sql), schema);
+            Dataset<Row> result = session.sql(sql);
+            if(schema instanceof ViewSchema) {
+                final ViewSchema view = (ViewSchema)schema;
+                final ViewSchema.From.FromSql from = (ViewSchema.From.FromSql)view.getFrom();
+                final StructField idField = SparkRowUtils.field(view.id(), DataTypes.BinaryType);
+                final StructType sourceType = result.schema();
+                final StructType targetType = SparkRowUtils.append(sourceType, idField);
+                result = result.map(SparkUtils.map(row -> {
+                    final List<Object> keys = new ArrayList<>();
+                    for(final String name : from.getPrimaryKey()) {
+                        keys.add(SparkRowUtils.get(row, name));
+                    }
+                    final byte[] id = BinaryKey.from(keys).getBytes();
+                    return SparkRowUtils.append(row, idField, id);
+                }), RowEncoder.apply(targetType));
+            }
+            final Dataset<Row> tmp = result;
+            return Stage.from(() -> tmp, schema);
         } else {
             throw new IllegalStateException("SQL query must define at least one source");
         }
