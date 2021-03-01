@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.BaseEncoding;
 import io.basestar.secret.Secret;
 import io.basestar.util.Bytes;
+import io.basestar.util.Immutable;
 import io.basestar.util.Warnings;
 import lombok.Data;
 import lombok.Getter;
@@ -362,10 +363,14 @@ public interface FieldType {
                 return null;
             } else if(value instanceof Map) {
                 final List<Object> result = new ArrayList<>();
-                ((Map<?, ?>)value).forEach((k, v) -> result.add(ImmutableMap.of(
-                        KEY, k,
-                        VALUE, valueType.toSource(v)
-                )));
+                ((Map<?, ?>)value).forEach((k, v) -> {
+                    if(k != null) {
+                        result.add(Immutable.map(
+                                KEY, k,
+                                VALUE, valueType.toSource(v)
+                        ));
+                    }
+                });
                 return result;
             } else {
                 throw new IllegalStateException();
