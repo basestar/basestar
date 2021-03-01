@@ -42,6 +42,14 @@ public class Immutable {
         return Collections.singletonMap(key, value);
     }
 
+    public static <K, V> Map<K, V> map(final K k1, final V v1, final K k2, final V v2) {
+
+        final Map<K, V> map = new HashMap<>();
+        map.put(k1, v1);
+        map.put(k2, v2);
+        return Collections.unmodifiableMap(map);
+    }
+
     @Nonnull
     public static <K, V> Map<K, V> put(@Nullable final Map<K, V> m, final K k, final V v) {
 
