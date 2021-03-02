@@ -20,8 +20,10 @@ import java.util.*;
 
 public class ValidateTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
+    public static final String VIOLATIONS_KEY = Reserved.PREFIX + "violations";
+
     public static final Map<String, Use<?>> VIOLATIONS_METADATA = ImmutableMap.of(
-            Reserved.PREFIX + "violations", new UseMap<>(new UseArray<>(UseStruct.from(ImmutableMap.of(
+            VIOLATIONS_KEY, new UseMap<>(new UseArray<>(UseStruct.from(ImmutableMap.of(
                     "name", UseString.DEFAULT,
                     "type", UseString.DEFAULT,
                     "message", UseString.DEFAULT
@@ -59,6 +61,7 @@ public class ValidateTransform implements Transform<Dataset<Row>, Dataset<Row>> 
                         "message", Nullsafe.orDefault(v.getMessage())
                 ));
             }));
+            result.put(VIOLATIONS_KEY, output);
             return SparkSchemaUtils.toSpark(schema, schema.getExpand(), metadata, structType, result);
 
         }), RowEncoder.apply(structType));
