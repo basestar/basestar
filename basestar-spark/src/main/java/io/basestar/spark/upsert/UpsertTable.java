@@ -657,14 +657,8 @@ public class UpsertTable {
 
     public void provision(final SparkSession session) {
 
-        final ExternalCatalog catalog = session.sharedState().externalCatalog();
-        final Configuration configuration = session.sparkContext().hadoopConfiguration();
-        if (!catalog.tableExists(database, baseTableName())) {
-            repairBase(session);
-        }
-        if (!catalog.tableExists(database, deltaTableName())) {
-            repairDelta(session);
-        }
+        provisionBase(session);
+        provisionDelta(session);
     }
 
     public void repair(final SparkSession session) {
@@ -673,24 +667,39 @@ public class UpsertTable {
         repairDelta(session);
     }
 
+    public void provisionBase(final SparkSession session) {
+
+        final ExternalCatalog catalog = session.sharedState().externalCatalog();
+        final String tableName = baseTableName();
+        final URI baseLocation = baseLocation();
+        SparkCatalogUtils.ensureTable(catalog, database, tableName, baseType, basePartition, FORMAT, baseLocation, TABLE_PROPERTIES);
+    }
+
     public void repairBase(final SparkSession session) {
 
         final ExternalCatalog catalog = session.sharedState().externalCatalog();
         final Configuration configuration = session.sparkContext().hadoopConfiguration();
         final String tableName = baseTableName();
         final URI baseLocation = baseLocation();
-        SparkCatalogUtils.ensureTable(catalog, database, tableName, baseType, basePartition, FORMAT, baseLocation, TABLE_PROPERTIES);
+        provisionBase(session);
         final List<CatalogTablePartition> partitions = SparkCatalogUtils.findPartitions(catalog, configuration,
                 database, tableName, baseLocation, new BasePartitionStrategy());
         SparkCatalogUtils.syncTablePartitions(catalog, database, tableName, partitions, SparkCatalogUtils.MissingPartitions.DROP_AND_RETAIN);
         session.sql("REFRESH TABLE " + SparkCatalogUtils.escapeName(database, tableName));
     }
 
-    public void repairDelta(final SparkSession session) {
+    public void provisionDelta(final SparkSession session) {
 
         final ExternalCatalog catalog = session.sharedState().externalCatalog();
         final String tableName = deltaTableName();
         SparkCatalogUtils.ensureTable(catalog, database, tableName, deltaType, deltaPartition, FORMAT, deltaLocation(), TABLE_PROPERTIES);
+    }
+
+    public void repairDelta(final SparkSession session) {
+
+        final ExternalCatalog catalog = session.sharedState().externalCatalog();
+        final String tableName = deltaTableName();
+        provisionDelta(session);
         session.sql("REFRESH TABLE " + SparkCatalogUtils.escapeName(database, tableName));
     }
 

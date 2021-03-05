@@ -144,11 +144,12 @@ public interface QueryPlanner<T> {
                 }
             } else {
                 final ViewSchema.From.FromSql from = (ViewSchema.From.FromSql)schema.getFrom();
-                return visitor.conform(visitor.sql(from.getSql(), schema, Immutable.transformValues(from.getUsing(),
+                final T result = visitor.sql(from.getSql(), schema, Immutable.transformValues(from.getUsing(),
                         (k, v) -> {
                             final ViewSchema.From.FromSchema from2 = (ViewSchema.From.FromSchema)v;
                             return stage(visitor, from2.getSchema(), Constant.TRUE, from2.getSort(), from2.getExpand());
-                        })), schema, schema.getExpand());
+                        }));
+                return visitor.conform(result, schema, schema.getExpand());
             }
         }
 
