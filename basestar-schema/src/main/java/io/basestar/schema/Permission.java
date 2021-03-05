@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.basestar.expression.Expression;
+import io.basestar.expression.constant.Constant;
 import io.basestar.expression.logical.And;
 import io.basestar.jackson.serde.ExpressionDeserializer;
 import io.basestar.jackson.serde.NameDeserializer;
@@ -147,7 +148,7 @@ public class Permission implements Serializable {
         this.name = name;
         this.description = descriptor.getDescription();
         this.anonymous = Nullsafe.orDefault(descriptor.getAnonymous(), false);
-        this.expression = Nullsafe.require(descriptor.getExpression());
+        this.expression = Nullsafe.orDefault(descriptor.getExpression(), Constant.TRUE);
         this.expand = Immutable.sortedSet(descriptor.getExpand());
         this.inherit = Immutable.sortedSet(descriptor.getInherit());
         if(Reserved.isReserved(name)) {
