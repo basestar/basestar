@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.catalyst.TableIdentifier;
 import org.apache.spark.sql.catalyst.catalog.*;
+import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import scala.Option;
 
@@ -136,11 +137,13 @@ public class SparkCatalogUtils {
         final long created;
         final boolean exists = catalog.tableExists(databaseName, tableName);
         final Option<CatalogStatistics> stats;
+        final CatalogTable existing;
         if(exists) {
-            final CatalogTable table = catalog.getTable(databaseName, tableName);
-            created = table.createTime();
-            stats = table.stats();
+            existing = catalog.getTable(databaseName, tableName);
+            created = existing.createTime();
+            stats = existing.stats();
         } else {
+            existing = null;
             created = now;
             stats = Option.empty();
         }
@@ -169,6 +172,18 @@ public class SparkCatalogUtils {
         if(exists) {
 
             catalog.alterTable(table);
+            boolean changed = false;
+            StructType dataType = existing.dataSchema();
+            for(final StructField field : structType.fields()) {
+                if(!partitionColumns.contains(field.name()) &&
+                        !SparkRowUtils.findField(dataType, field.name()).isPresent()) {
+                    dataType = SparkRowUtils.append(dataType, field);
+                    changed = true;
+                }
+            }
+            if(changed) {
+                catalog.alterTableDataSchema(databaseName, tableName, dataType);
+            }
 
         } else {
 
