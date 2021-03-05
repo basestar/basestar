@@ -7,6 +7,7 @@ import io.basestar.schema.ReferableSchema;
 import io.basestar.spark.AbstractSparkTest;
 import io.basestar.spark.transform.BucketTransform;
 import io.basestar.spark.util.SparkCatalogUtils;
+import io.basestar.spark.util.SparkRowUtils;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
 import lombok.AllArgsConstructor;
@@ -18,6 +19,7 @@ import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.catalog.ExternalCatalog;
+import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Test;
 
@@ -174,5 +176,50 @@ class TestUpsertTable extends AbstractSparkTest {
 
             return new Delta(UpsertOp.DELETE.name(), before.getId(), before.getX());
         }
+    }
+
+    @Test
+    void testAlterSchema() {
+
+        final SparkSession session = session();
+
+        final String database = "tmp_" + UUID.randomUUID().toString().replaceAll("-", "_");
+        final String location = testDataPath("spark/" + database);
+
+        final ExternalCatalog catalog = session.sharedState().externalCatalog();
+        SparkCatalogUtils.ensureDatabase(catalog, database, location);
+
+        final List<D> create = ImmutableList.of(new D("d:1", 5L), new D("d:2", 4L), new D("d:3", 3L), new D("d:4", 2L));
+
+        final BucketTransform bucket = BucketTransform.builder()
+                .bucketing(new Bucketing(ImmutableList.of(Name.of(ReferableSchema.ID)), 2))
+                .build();
+
+        final Dataset<Row> createSource = bucket.accept(session.createDataset(create, Encoders.bean(D.class)).toDF());
+        final StructType initial = createSource.schema();
+
+        final UpsertTable table = UpsertTable.builder()
+                .database(database)
+                .name("D")
+                .structType(initial)
+                .location(location + "/D")
+                .partition(ImmutableList.of("__bucket"))
+                .idColumn(ReferableSchema.ID)
+                .deletedColumn(true)
+                .build();
+        table.provision(session);
+
+        final StructType appended = SparkRowUtils.append(initial, SparkRowUtils.field("test", DataTypes.BinaryType));
+
+        final UpsertTable table2 = UpsertTable.builder()
+                .database(database)
+                .name("D")
+                .structType(appended)
+                .location(location + "/D")
+                .partition(ImmutableList.of("__bucket"))
+                .idColumn(ReferableSchema.ID)
+                .deletedColumn(true)
+                .build();
+        table2.provision(session);
     }
 }
