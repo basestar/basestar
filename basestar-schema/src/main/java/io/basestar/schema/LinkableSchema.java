@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.basestar.expression.Context;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.schema.use.Use;
 import io.basestar.util.Immutable;
@@ -92,6 +93,8 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver, Permissio
 
     String id();
 
+    String id(Map<String, Object> data);
+
     @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
     Use<?> typeOfId();
 
@@ -101,5 +104,23 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver, Permissio
                 id(), id,
                 Reserved.DELETED, true
         ));
+    }
+
+    @Override
+    default Set<Constraint.Violation> validate(final Context context, final Name name, final Instance after) {
+
+        return validate(context, name, after, after);
+    }
+
+    default Set<Constraint.Violation> validate(final Context context, final Instance before, final Instance after) {
+
+        return validate(context, Name.empty(), before, after);
+    }
+
+    default Set<Constraint.Violation> validate(final Context context, final Name name, final Instance before, final Instance after) {
+
+        return this.getProperties().values().stream()
+                .flatMap(v -> v.validate(context, name, before.get(v.getName()), after.get(v.getName())).stream())
+                .collect(Collectors.toSet());
     }
 }

@@ -1,5 +1,0 @@
-io.basestar.schema.validation.AssertValidation
-io.basestar.schema.validation.MaxValidation
-io.basestar.schema.validation.MinValidation
-io.basestar.schema.validation.PatternValidation
-io.basestar.schema.validation.SizeValidation

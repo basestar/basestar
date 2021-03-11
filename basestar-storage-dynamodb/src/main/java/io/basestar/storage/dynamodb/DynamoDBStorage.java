@@ -618,9 +618,18 @@ public class DynamoDBStorage implements DefaultIndexStorage {
         }
 
         @Override
+        public WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
+
+            return this;
+//            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public CompletableFuture<BatchResponse> write() {
 
-            if(!oversize.isEmpty()) {
+            if(items.isEmpty()) {
+                return CompletableFuture.completedFuture(BatchResponse.empty());
+            } else if(!oversize.isEmpty()) {
                 final Stash oversizeStash = requireOversizeStash();
                 final List<CompletableFuture<?>> futures = new ArrayList<>();
                 oversize.forEach((k, v) -> futures.add(oversizeStash.write(k, v)));

@@ -204,12 +204,12 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
 
             return new WriteTransaction() {
 
-                private WriteTransaction primaryTransaction(final ReferableSchema schema) {
+                private WriteTransaction primaryTransaction(final LinkableSchema schema) {
 
                     return primaryTransactions.computeIfAbsent(storage(schema), v -> v.write(consistency, versioning));
                 }
 
-                private Optional<WriteTransaction> replicaTransaction(final ReferableSchema schema) {
+                private Optional<WriteTransaction> replicaTransaction(final LinkableSchema schema) {
 
                     return replica.apply(schema).map(storage -> {
 
@@ -218,6 +218,15 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
 
                         return replicaTransactions.computeIfAbsent(storage, v -> v.write(resolvedConsistency, resolvedVersioning));
                     });
+                }
+
+                @Override
+                public WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
+
+                    primaryTransaction(schema).write(schema, ReplicaMetadata.unwrapPrimary(after));
+                    replicaTransaction(schema).ifPresent(t -> t.write(schema, ReplicaMetadata.unwrapReplica(after)));
+
+                    return this;
                 }
 
                 @Override
@@ -248,6 +257,14 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
                 }
 
                 @Override
+                public WriteTransaction writeHistory(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+
+                    primaryTransaction(schema).writeHistory(schema, id, ReplicaMetadata.unwrapPrimary(after));
+                    // replica will write history automatically
+                    return this;
+                }
+
+                @Override
                 public CompletableFuture<BatchResponse> write() {
 
                     if(consistency != Consistency.NONE && primaryTransactions.size() > 1) {
@@ -269,9 +286,17 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
 
             return new WriteTransaction() {
 
-                private WriteTransaction primaryTransaction(final ReferableSchema schema) {
+                private WriteTransaction primaryTransaction(final LinkableSchema schema) {
 
                     return primaryTransactions.computeIfAbsent(storage(schema), v -> v.write(consistency, versioning));
+                }
+
+                @Override
+                public WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
+
+                    primaryTransaction(schema).write(schema, ReplicaMetadata.unwrapPrimary(after));
+                    events.add(ReplicaSyncEvent.write(schema.getQualifiedName(), after, consistency, versioning));
+                    return this;
                 }
 
                 @Override
@@ -299,6 +324,14 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
                 }
 
                 @Override
+                public WriteTransaction writeHistory(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+
+                    primaryTransaction(schema).writeHistory(schema, id, ReplicaMetadata.unwrapPrimary(after));
+                    // replica will write history automatically
+                    return this;
+                }
+
+                @Override
                 public CompletableFuture<BatchResponse> write() {
 
                     if(consistency != Consistency.NONE && primaryTransactions.size() > 1) {
@@ -315,7 +348,7 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
     private CompletableFuture<?> onSync(final ReplicaSyncEvent event, final Map<String, String> meta) {
 
         assert namespace != null;
-        final ObjectSchema schema = namespace.requireObjectSchema(event.getSchema());
+        final LinkableSchema schema = namespace.requireLinkableSchema(event.getSchema());
         return this.replica.apply(schema).map(replica -> {
 
             final Consistency resolvedConsistency = replicaConsistency.apply(schema, event.getConsistency());
@@ -326,18 +359,23 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
             switch (event.getAction()) {
                 case CREATE: {
                     final Map<String, Object> after = ReplicaMetadata.unwrapReplica(event.getAfter());
-                    write.createObject(schema, event.getId(), after);
+                    write.createObject((ObjectSchema)schema, event.getId(), after);
                     break;
                 }
                 case UPDATE: {
                     final Map<String, Object> before = ReplicaMetadata.unwrapReplica(event.getBefore());
                     final Map<String, Object> after = ReplicaMetadata.unwrapReplica(event.getAfter());
-                    write.updateObject(schema, event.getId(), before, after);
+                    write.updateObject((ObjectSchema)schema, event.getId(), before, after);
                     break;
                 }
                 case DELETE: {
                     final Map<String, Object> before = ReplicaMetadata.unwrapReplica(event.getBefore());
-                    write.deleteObject(schema, event.getId(), before);
+                    write.deleteObject((ObjectSchema)schema, event.getId(), before);
+                    break;
+                }
+                case WRITE: {
+                    final Map<String, Object> after = ReplicaMetadata.unwrapReplica(event.getAfter());
+                    write.write(schema, after);
                     break;
                 }
             }

@@ -76,6 +76,13 @@ public class SplitLayerStorage implements DefaultLayerStorage {
             }
 
             @Override
+            public WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
+
+                objectTransaction.write(schema, after);
+                return this;
+            }
+
+            @Override
             public void createObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
 
                 if(schema instanceof ObjectSchema) {

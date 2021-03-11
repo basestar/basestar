@@ -122,17 +122,28 @@ public interface Storage {
 
     interface WriteTransaction {
 
+        WriteTransaction write(LinkableSchema schema, Map<String, Object> after);
+
         WriteTransaction createObject(ObjectSchema schema, String id, Map<String, Object> after);
 
         WriteTransaction updateObject(ObjectSchema schema, String id, Map<String, Object> before, Map<String, Object> after);
 
         WriteTransaction deleteObject(ObjectSchema schema, String id, Map<String, Object> before);
 
+        WriteTransaction writeHistory(ObjectSchema schema, String id, Map<String, Object> after);
+
         CompletableFuture<BatchResponse> write();
 
         interface Delegating extends WriteTransaction {
 
-            WriteTransaction delegate(final ObjectSchema schema);
+            WriteTransaction delegate(final LinkableSchema schema);
+
+            @Override
+            default WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
+
+                delegate(schema).write(schema, after);
+                return this;
+            }
 
             @Override
             default WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
@@ -152,6 +163,13 @@ public interface Storage {
             default WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
 
                 delegate(schema).deleteObject(schema, id, before);
+                return this;
+            }
+
+            @Override
+            default WriteTransaction writeHistory(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+
+                delegate(schema).writeHistory(schema, id, after);
                 return this;
             }
         }

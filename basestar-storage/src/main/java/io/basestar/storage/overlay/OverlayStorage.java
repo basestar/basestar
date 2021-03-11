@@ -173,6 +173,14 @@ public class OverlayStorage implements Storage {
 
         final WriteTransaction overlayWrite = overlay.write(consistency, versioning);
         return new WriteTransaction() {
+
+            @Override
+            public WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
+
+                overlayWrite.write(schema, OverlayMetadata.unwrapOverlay(after));
+                return this;
+            }
+
             @Override
             public WriteTransaction createObject(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
@@ -196,7 +204,14 @@ public class OverlayStorage implements Storage {
                 overlayWrite.updateObject(schema, id, OverlayMetadata.unwrapOverlay(before), tombstone);
                 return this;
             }
-            
+
+            @Override
+            public WriteTransaction writeHistory(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+
+                overlayWrite.writeHistory(schema, id, OverlayMetadata.unwrapOverlay(after));
+                return this;
+            }
+
             private Map<String, Object> tombstone(final ObjectSchema schema, final String id, final Map<String, Object> before) {
 
                 final Map<String, Object> tombstone = new HashMap<>();

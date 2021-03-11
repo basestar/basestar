@@ -376,7 +376,7 @@ public class Property implements Member {
             return type.create(context, value, expand);
         } catch (final UnexpectedTypeException e) {
             throw new ConstraintViolationException(ImmutableSet.of(
-                    new Constraint.Violation(getQualifiedName(), "type", e.getMessage())
+                    new Constraint.Violation(getQualifiedName(), "type", e.getMessage(), ImmutableSet.of())
             ));
         }
     }
@@ -413,7 +413,7 @@ public class Property implements Member {
         final Set<Constraint.Violation> violations = new HashSet<>();
         final Name qualifiedName = path.with(getName());
         if(immutable && !Objects.equals(before, after)) {
-            violations.add(new Constraint.Violation(qualifiedName, Constraint.IMMUTABLE, null));
+            violations.add(new Constraint.Violation(qualifiedName, Constraint.IMMUTABLE, null, ImmutableSet.of()));
         } else {
             violations.addAll(((Use<Object>)type).validate(context, qualifiedName, after));
             if (!constraints.isEmpty()) {

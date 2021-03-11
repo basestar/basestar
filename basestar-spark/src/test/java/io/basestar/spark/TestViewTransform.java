@@ -26,6 +26,8 @@ import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.Namespace;
 import io.basestar.spark.database.SparkDatabase;
 import io.basestar.spark.query.QueryResolver;
+import io.basestar.spark.transform.ValidateTransform;
+import io.basestar.spark.util.CompatibilityUDFs;
 import io.basestar.util.Name;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
@@ -74,6 +76,32 @@ class TestViewTransform extends AbstractSparkTest {
         assertEquals(2, rows.size());
         assertTrue(rows.contains(new AggView("a", 8.0, ImmutableList.of(b3.withoutKeys(), b2.withoutKeys(), b1.withoutKeys()))));
         assertTrue(rows.contains(new AggView("b", 14.0, ImmutableList.of(b4.withoutKeys(), b5.withoutKeys(), b6.withoutKeys()))));
+    }
+
+    @Test
+    void testSqlViewTransform() throws IOException {
+
+        final SparkSession session = session();
+        CompatibilityUDFs.register(session);
+
+        final Dataset<Row> datasetA = session.createDataset(ImmutableList.of(
+                new A("a:1", new B("b:1")),
+                new A("a:2", new B("b:1")),
+                new A("a:3", new B("b:2")),
+                new A("a:4", new B("b:3")),
+                new A("a:5", new B("b:3")),
+                new A("a:6", new B("b:3"))
+        ), Encoders.bean(A.class)).toDF();
+
+        final Map<Name, Dataset<Row>> datasets = ImmutableMap.of(
+                Name.of("A"), datasetA
+        );
+
+        final List<StatsA> rows = view("SqlView", StatsA.class, datasets, ImmutableSet.of());
+        assertEquals(3, rows.size());
+        assertTrue(rows.contains(new StatsA("b:1", 2L)));
+        assertTrue(rows.contains(new StatsA("b:2", 1L)));
+        assertTrue(rows.contains(new StatsA("b:3", 3L)));
     }
 
     @Test
@@ -200,6 +228,33 @@ class TestViewTransform extends AbstractSparkTest {
         assertEquals("ipsum", row.getSubstr2());
         assertEquals("b", row.getMapValue());
         assertEquals("x", row.getLookupValue());
+    }
+
+    @Test
+    void testConstraints() throws IOException {
+
+        final SparkSession session = session();
+
+        final File f1 = new File("loremipsum", ImmutableMap.of("a", "b"));
+
+        final Map<Name, Dataset<Row>> datasets = ImmutableMap.of(
+                Name.of("File"), session.createDataset(ImmutableList.of(f1), Encoders.bean(File.class)).toDF()
+        );
+
+        final Namespace namespace = Namespace.load(TestViewTransform.class.getResourceAsStream("schema.yml"));
+
+        final QueryResolver resolver = new QueryResolver.Automatic(QueryResolver.ofSources(schema -> datasets.get(schema.getQualifiedName())));
+
+        final SparkDatabase database = SparkDatabase.builder()
+                .resolver(resolver).namespace(namespace)
+                .build();
+
+        final Dataset<Row> dataset = database.from("Expressions").query();
+        final ValidateTransform validate = ValidateTransform.builder()
+                .schema(namespace.requireLinkableSchema("Expressions"))
+                .build();
+
+        System.err.println(validate.accept(dataset).collectAsList());
     }
 
     private <T> List<T> view(final String view, final Class<T> as,  final Map<Name, Dataset<Row>> datasets) throws IOException {

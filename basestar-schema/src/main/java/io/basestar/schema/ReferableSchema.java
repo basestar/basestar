@@ -255,6 +255,12 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
     }
 
     @Override
+    default String id(final Map<String, Object> data) {
+
+        return Instance.getId(data);
+    }
+
+    @Override
     default Use<?> typeOfId() {
 
         return UseString.DEFAULT;
@@ -354,16 +360,6 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
     }
 
     @Override
-    default Set<Constraint.Violation> validate(final Context context, final Name name, final Instance after) {
-
-        return validate(context, name, after, after);
-    }
-
-    default Set<Constraint.Violation> validate(final Context context, final Instance before, final Instance after) {
-
-        return validate(context, Name.empty(), before, after);
-    }
-
     default Set<Constraint.Violation> validate(final Context context, final Name name, final Instance before, final Instance after) {
 
         final Set<Constraint.Violation> violations = new HashSet<>();
@@ -372,9 +368,7 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
                 .flatMap(v -> v.violations(new UseRef(this), context, name, after).stream())
                 .collect(Collectors.toSet()));
 
-        violations.addAll(this.getProperties().values().stream()
-                .flatMap(v -> v.validate(context, name, before.get(v.getName()), after.get(v.getName())).stream())
-                .collect(Collectors.toSet()));
+        violations.addAll(LinkableSchema.super.validate(context, name, before, after));
 
         return violations;
     }

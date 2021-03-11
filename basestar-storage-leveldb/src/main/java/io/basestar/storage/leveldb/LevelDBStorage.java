@@ -278,6 +278,12 @@ public class LevelDBStorage implements DefaultIndexStorage {
         }
 
         @Override
+        public WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
+
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public CompletableFuture<BatchResponse> write() {
 
             return CompletableFuture.supplyAsync(() -> {

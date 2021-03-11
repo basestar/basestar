@@ -30,13 +30,13 @@ import lombok.Builder;
 
 public interface ElasticsearchStrategy {
 
-    String objectIndex(ReferableSchema schema);
+    String index(LinkableSchema schema);
 
     String historyIndex(ReferableSchema schema);
 
     Mappings mappings(LinkableSchema schema);
 
-    Settings settings(ReferableSchema schema);
+    Settings settings(LinkableSchema schema);
 
     boolean historyEnabled(ReferableSchema schema);
 
@@ -57,13 +57,13 @@ public interface ElasticsearchStrategy {
 
         private final boolean historyEnabled;
 
-        private String name(final ReferableSchema schema) {
+        private String name(final LinkableSchema schema) {
 
             return schema.getQualifiedName().toString(Reserved.PREFIX).toLowerCase();
         }
 
         @Override
-        public String objectIndex(final ReferableSchema schema) {
+        public String index(final LinkableSchema schema) {
 
             return Nullsafe.orDefault(objectPrefix) + name(schema) +  Nullsafe.orDefault(objectSuffix);
         }
@@ -81,7 +81,7 @@ public interface ElasticsearchStrategy {
         }
 
         @Override
-        public Settings settings(final ReferableSchema schema) {
+        public Settings settings(final LinkableSchema schema) {
 
             return settings;
         }

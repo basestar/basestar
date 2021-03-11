@@ -102,7 +102,7 @@ public class AssertValidation implements Validation {
         @Override
         public boolean validate(final Use<?> type, final Context context, final Object value) {
 
-            return !expression.evaluatePredicate(context.with("value", value));
+            return expression.evaluatePredicate(context.with("value", value));
         }
 
         @Override

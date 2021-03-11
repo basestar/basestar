@@ -4,7 +4,6 @@ import io.basestar.expression.Expression;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Layout;
 import io.basestar.schema.LinkableSchema;
-import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.expression.TypedExpression;
 import io.basestar.schema.util.Bucket;
 import io.basestar.storage.elasticsearch.ElasticsearchStrategy;
@@ -60,11 +59,7 @@ public class ESQueryStageVisitor implements QueryStageVisitor<ESQueryStage> {
     @Override
     public ESQueryStage source(final LinkableSchema schema, final Set<Bucket> buckets) {
 
-        if(schema instanceof ReferableSchema) {
-            return new ESQueryStage.Source(strategy, (ReferableSchema)schema);
-        } else {
-            throw new IllegalStateException("Query plan sourced from non-referable schema " + schema);
-        }
+        return new ESQueryStage.Source(strategy, schema);
     }
 
     @Override
@@ -77,5 +72,11 @@ public class ESQueryStageVisitor implements QueryStageVisitor<ESQueryStage> {
     public ESQueryStage conform(final ESQueryStage input, final InstanceSchema schema, final Set<Name> expand) {
 
         return input;
+    }
+
+    @Override
+    public ESQueryStage sql(final String sql, final InstanceSchema schema, final Map<String, ESQueryStage> with) {
+
+        throw new UnsupportedOperationException();
     }
 }

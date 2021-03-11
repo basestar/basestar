@@ -21,10 +21,7 @@ package io.basestar.storage;
  */
 
 import io.basestar.expression.Expression;
-import io.basestar.schema.Concurrency;
-import io.basestar.schema.Consistency;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.ReferableSchema;
+import io.basestar.schema.*;
 import io.basestar.util.Name;
 import io.basestar.util.Pager;
 import io.basestar.util.Sort;
@@ -83,6 +80,12 @@ public class NullStorage implements DefaultLayerStorage {
             public StorageTraits storageTraits(final ReferableSchema schema) {
 
                 return NullStorage.this.storageTraits(schema);
+            }
+
+            @Override
+            public Storage.WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
+
+                return this;
             }
 
             @Override

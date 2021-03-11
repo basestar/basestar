@@ -143,9 +143,16 @@ public interface DelegatingStorage extends Storage {
         final IdentityHashMap<Storage, WriteTransaction> transactions = new IdentityHashMap<>();
         return new WriteTransaction() {
 
-            public WriteTransaction delegate(final ObjectSchema schema) {
+            public WriteTransaction delegate(final LinkableSchema schema) {
 
                 return transactions.computeIfAbsent(storage(schema), v -> v.write(consistency, versioning));
+            }
+
+            @Override
+            public WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
+
+                delegate(schema).write(schema, after);
+                return this;
             }
 
             @Override
@@ -166,6 +173,13 @@ public interface DelegatingStorage extends Storage {
             public WriteTransaction deleteObject(final ObjectSchema schema, final String id, final Map<String, Object> before) {
 
                 delegate(schema).deleteObject(schema, id, before);
+                return this;
+            }
+
+            @Override
+            public WriteTransaction writeHistory(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+
+                delegate(schema).writeHistory(schema, id, after);
                 return this;
             }
 

@@ -126,7 +126,7 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
     @Override
     public Pager<Map<String, Object>> query(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        final QueryPlanner<ESQueryStage> planner = new QueryPlanner.Default<>();
+        final QueryPlanner<ESQueryStage> planner = new QueryPlanner.Default<>(false);
         final ESQueryStage stage = planner.plan(new ESQueryStageVisitor(strategy), schema, query, sort, expand);
 
         final Mappings mappings = strategy.mappings(schema);
@@ -168,7 +168,7 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
             @Override
             public ReadTransaction getObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
 
-                final String index = strategy.objectIndex(schema);
+                final String index = strategy.index(schema);
                 indexToSchema.put(index, schema);
                 request.add(index, id);
                 return this;
@@ -190,19 +190,23 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
             @Override
             public CompletableFuture<BatchResponse> read() {
 
-                return getIndices(indexToSchema).thenCompose(ignored -> ElasticsearchUtils.<MultiGetResponse>future(listener -> client.mgetAsync(request, OPTIONS, listener))
-                        .thenApply(response -> {
-                            final SortedMap<BatchResponse.RefKey, Map<String, Object>> results = new TreeMap<>();
-                            for (final MultiGetItemResponse item : response) {
-                                final String index = item.getIndex();
-                                final ReferableSchema schema = indexToSchema.get(index);
-                                final Map<String, Object> result = fromResponse(schema, item.getResponse());
-                                if (result != null) {
-                                    results.put(BatchResponse.RefKey.from(schema.getQualifiedName(), result), result);
+                if(request.getItems().size() == 0) {
+                    return CompletableFuture.completedFuture(BatchResponse.empty());
+                } else {
+                    return getIndices(indexToSchema).thenCompose(ignored -> ElasticsearchUtils.<MultiGetResponse>future(listener -> client.mgetAsync(request, OPTIONS, listener))
+                            .thenApply(response -> {
+                                final SortedMap<BatchResponse.RefKey, Map<String, Object>> results = new TreeMap<>();
+                                for (final MultiGetItemResponse item : response) {
+                                    final String index = item.getIndex();
+                                    final ReferableSchema schema = indexToSchema.get(index);
+                                    final Map<String, Object> result = fromResponse(schema, item.getResponse());
+                                    if (result != null) {
+                                        results.put(BatchResponse.RefKey.from(schema.getQualifiedName(), result), result);
+                                    }
                                 }
-                            }
-                            return BatchResponse.fromRefs(results);
-                        }));
+                                return BatchResponse.fromRefs(results);
+                            }));
+                }
             }
         };
     }
@@ -233,10 +237,10 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
         }
     }
 
-    private CompletableFuture<?> getIndices(final Map<String, ReferableSchema> indices) {
+    private CompletableFuture<?> getIndices(final Map<String, ? extends LinkableSchema> indices) {
 
         final List<CompletableFuture<?>> createIndexFutures = new ArrayList<>();
-        for (final Map.Entry<String, ReferableSchema> entry : indices.entrySet()) {
+        for (final Map.Entry<String, ? extends LinkableSchema> entry : indices.entrySet()) {
             if (!createdIndices.contains(entry.getKey())) {
                 createdIndices.add(entry.getKey());
                 createIndexFutures.add(ElasticsearchStorage.this.syncIndex(entry.getKey(), entry.getValue()));
@@ -245,7 +249,7 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
         return CompletableFuture.allOf(createIndexFutures.toArray(new CompletableFuture<?>[0]));
     }
 
-    private CompletableFuture<?> syncIndex(final String name, final ReferableSchema schema) {
+    private CompletableFuture<?> syncIndex(final String name, final LinkableSchema schema) {
 
         final Mappings mappings = strategy.mappings(schema);
         final Settings settings = strategy.settings(schema);
@@ -272,7 +276,7 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
 
         private final List<Function<BulkItemResponse, BatchResponse>> responders = new ArrayList<>();
 
-        private final Map<String, ReferableSchema> indices = new HashMap<>();
+        private final Map<String, LinkableSchema> indices = new HashMap<>();
 
         public WriteTransaction(final Consistency consistency, final Versioning versioning) {
 
@@ -295,7 +299,7 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
         @Override
         public void createObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
 
-            final String index = strategy.objectIndex(schema);
+            final String index = strategy.index(schema);
             indices.put(index, schema);
             request.add(new IndexRequest()
                     .index(index).source(toSource(schema, after)).id(id)
@@ -333,7 +337,7 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
         @Override
         public void updateObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
-            final String index = strategy.objectIndex(schema);
+            final String index = strategy.index(schema);
             indices.put(index, schema);
 
             final IndexRequest req = new IndexRequest().id(id)
@@ -355,7 +359,7 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
         @Override
         public void deleteObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> before) {
 
-            final String index = strategy.objectIndex(schema);
+            final String index = strategy.index(schema);
             indices.put(index, schema);
 
             final DeleteRequest req = new DeleteRequest().id(id)
@@ -389,30 +393,47 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
         }
 
         @Override
+        public WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
+
+            final String index = strategy.index(schema);
+            final String id = schema.id(after);
+            indices.put(index, schema);
+            request.add(new IndexRequest()
+                    .index(index).source(toSource(schema, after)).id(id)
+                    .opType(DocWriteRequest.OpType.INDEX));
+            responders.add(response -> BatchResponse.empty());
+            return this;
+        }
+
+        @Override
         public CompletableFuture<BatchResponse> write() {
 
-            return getIndices(indices)
-                    .thenCompose(ignored -> ElasticsearchUtils
-                            .<BulkResponse>future(listener -> client.bulkAsync(request, OPTIONS, listener))
-                            .thenApply(response -> {
-                                final SortedMap<BatchResponse.RefKey, Map<String, Object>> results = new TreeMap<>();
-                                final BulkItemResponse[] items = response.getItems();
-                                assert (items.length == responders.size());
-                                for (int i = 0; i != items.length; ++i) {
-                                    results.putAll(responders.get(i).apply(items[i]).getRefs());
-                                }
-                                return BatchResponse.fromRefs(results);
-                            }));
+            if(request.numberOfActions() == 0) {
+                return CompletableFuture.completedFuture(BatchResponse.empty());
+            } else {
+                return getIndices(indices)
+                        .thenCompose(ignored -> ElasticsearchUtils
+                                .<BulkResponse>future(listener -> client.bulkAsync(request, OPTIONS, listener))
+                                .thenApply(response -> {
+                                    final SortedMap<BatchResponse.RefKey, Map<String, Object>> results = new TreeMap<>();
+                                    final BulkItemResponse[] items = response.getItems();
+                                    assert (items.length == responders.size());
+                                    for (int i = 0; i != items.length; ++i) {
+                                        results.putAll(responders.get(i).apply(items[i]).getRefs());
+                                    }
+                                    return BatchResponse.fromRefs(results);
+                                }));
+            }
         }
     }
 
-    private Map<String, Object> toSource(final ReferableSchema schema, final Map<String, Object> data) {
+    private Map<String, Object> toSource(final LinkableSchema schema, final Map<String, Object> data) {
 
         final Mappings mappings = strategy.mappings(schema);
         return mappings.toSource(data);
     }
 
-    private Map<String, Object> fromSource(final ReferableSchema schema, final Map<String, Object> source) {
+    private Map<String, Object> fromSource(final LinkableSchema schema, final Map<String, Object> source) {
 
         final Mappings mappings = strategy.mappings(schema);
         return mappings.fromSource(source);
@@ -493,7 +514,7 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
                         src.query(new ESExpressionVisitor().visit(filter));
                         src.size(SCROLL_SIZE);
 
-                        final SearchRequest request = new SearchRequest(strategy.objectIndex(schema));
+                        final SearchRequest request = new SearchRequest(strategy.index(schema));
                         request.scroll(TimeValue.timeValueMinutes(SCROLL_KEEPALIVE_MINUTES));
                         request.source(src);
                         response = client.search(request, OPTIONS);

@@ -620,6 +620,12 @@ public class SQLStorage implements DefaultLayerStorage {
         }
 
         @Override
+        public WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
+
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public CompletableFuture<BatchResponse> write() {
 
             final SortedMap<BatchResponse.RefKey, Map<String, Object>> changes = new TreeMap<>();

@@ -7,6 +7,7 @@ import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.BasestarModule;
 import io.basestar.schema.Consistency;
+import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.ReferableSchema;
 import io.basestar.storage.*;
@@ -278,6 +279,12 @@ public class StepFunctionStorage implements DefaultLayerStorage {
             public void writeHistoryLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
 
 //                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public Storage.WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
+
+                throw new UnsupportedOperationException();
             }
 
             @Override

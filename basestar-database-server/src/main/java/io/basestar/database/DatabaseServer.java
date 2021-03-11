@@ -132,7 +132,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                 .thenApply(v -> v.get(SINGLE_BATCH_ROOT));
     }
 
-    private Set<Name> permissionExpand(final ReferableSchema schema, final Permission permission) {
+    private Set<Name> permissionExpand(final LinkableSchema schema, final Permission permission) {
 
         return permission == null ? Collections.emptySet() : Nullsafe.orDefault(permission.getExpand());
     }
@@ -389,7 +389,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
     // FIXME need to apply nested permissions
     private Instance restrict(final Caller caller, final Instance instance, final Set<Name> expand) {
 
-        final ReferableSchema schema = referableSchema(Instance.getSchema(instance));
+        final LinkableSchema schema = linkableSchema(Instance.getSchema(instance));
         final Permission read = schema.getPermission(Permission.READ);
         checkPermission(caller, schema, read, ImmutableMap.of(VAR_THIS, instance));
         final Instance visible = schema.applyVisibility(context(caller), instance);
@@ -403,7 +403,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             return CompletableFuture.completedFuture(null);
         }
 
-        final ReferableSchema schema = referableSchema(Instance.getSchema(instance));
+        final LinkableSchema schema = linkableSchema(Instance.getSchema(instance));
         final Permission read = schema.getPermission(Permission.READ);
         final Set<Name> permissionExpand = permissionExpand(schema, read);
         final Set<Name> callerExpand = Name.children(permissionExpand, Name.of(VAR_CALLER));
@@ -421,7 +421,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final Set<Name> callerExpand = new HashSet<>();
         final Set<Name> transientExpand = new HashSet<>();
         for(final Instance instance : instances) {
-            final ReferableSchema schema = referableSchema(Instance.getSchema(instance));
+            final LinkableSchema schema = linkableSchema(Instance.getSchema(instance));
             final Permission read = schema.getPermission(Permission.READ);
             final Set<Name> permissionExpand = permissionExpand(schema, read);
             callerExpand.addAll(Name.children(permissionExpand, Name.of(VAR_CALLER)));
@@ -490,7 +490,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         log.debug("Query: options={}", options);
 
-        final InstanceSchema schema = namespace.requireInstanceSchema(options.getSchema());
+        final LinkableSchema schema = namespace.requireLinkableSchema(options.getSchema());
 
         final int count = Nullsafe.orDefault(options.getCount(), QueryOptions.DEFAULT_COUNT);
         if (count > QueryOptions.MAX_COUNT) {
@@ -498,47 +498,36 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         }
         final Page.Token paging = options.getPaging();
 
-        if(schema instanceof ViewSchema) {
+        final Expression expression = options.getExpression();
 
-            throw new UnsupportedOperationException();
+        final Permission permission = schema.getPermission(Permission.READ);
 
-        } else if(schema instanceof ReferableSchema) {
+        final Context context = context(caller, ImmutableMap.of());
 
-            final ReferableSchema objectSchema = (ReferableSchema)schema;
-            final Expression expression = options.getExpression();
-
-            final Permission permission = objectSchema.getPermission(Permission.READ);
-
-            final Context context = context(caller, ImmutableMap.of());
-
-            final Expression rooted;
-            if (expression != null) {
-                rooted = expression.bind(Context.init(), Renaming.addPrefix(Name.of(Reserved.THIS)));
-            } else {
-                rooted = new Constant(true);
-            }
-
-            final Expression merged;
-            if (permission != null && !caller.isSuper()) {
-                merged = new And(permission.getExpression(), rooted);
-            } else {
-                merged = rooted;
-            }
-
-            final Expression bound = merged.bind(context);
-
-            final List<Sort> sort = Nullsafe.orDefault(options.getSort(), Collections.emptyList());
-            final Expression unrooted = bound.bind(Context.init(), Renaming.removeExpectedPrefix(Name.of(Reserved.THIS)));
-
-            return queryImpl(context, objectSchema, unrooted, sort, options.getExpand(), count, paging)
-                    .thenCompose(results -> expandAndRestrict(caller, results, options.getExpand()));
-
+        final Expression rooted;
+        if (expression != null) {
+            rooted = expression.bind(Context.init(), Renaming.addPrefix(Name.of(Reserved.THIS)));
         } else {
-            throw new IllegalStateException(options.getSchema() + " is not an object or view schema");
+            rooted = new Constant(true);
         }
+
+        final Expression merged;
+        if (permission != null && !caller.isSuper()) {
+            merged = new And(permission.getExpression(), rooted);
+        } else {
+            merged = rooted;
+        }
+
+        final Expression bound = merged.bind(context);
+
+        final List<Sort> sort = Nullsafe.orDefault(options.getSort(), Collections.emptyList());
+        final Expression unrooted = bound.bind(Context.init(), Renaming.removeExpectedPrefix(Name.of(Reserved.THIS)));
+
+        return queryImpl(context, schema, unrooted, sort, options.getExpand(), count, paging)
+                .thenCompose(results -> expandAndRestrict(caller, results, options.getExpand()));
     }
 
-    protected void checkPermission(final Caller caller, final ReferableSchema schema, final Permission permission, final Map<String, Object> scope) {
+    protected void checkPermission(final Caller caller, final LinkableSchema schema, final Permission permission, final Map<String, Object> scope) {
 
         if(caller.isAnon()) {
             if(permission == null || !permission.isAnonymous()) {

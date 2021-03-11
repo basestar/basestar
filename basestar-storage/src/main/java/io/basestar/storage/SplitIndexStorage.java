@@ -69,6 +69,13 @@ public class SplitIndexStorage implements IndexStorage {
         return new WriteTransaction() {
 
             @Override
+            public WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
+
+                objectTransaction.write(schema, after);
+                return this;
+            }
+
+            @Override
             public WriteTransaction createIndexes(final ReferableSchema schema, final List<Index> indexes, final String id, final Map<String, Object> after) {
 
                 indexTransaction.createIndexes(schema, indexes, id, after);
@@ -108,6 +115,13 @@ public class SplitIndexStorage implements IndexStorage {
 
                 objectTransaction.deleteObject(schema, id, before);
                 return deleteIndexes(schema, IndexStorage.getSyncIndexes(indexStorage.storageTraits(schema), schema), id, before);
+            }
+
+            @Override
+            public Storage.WriteTransaction writeHistory(final ObjectSchema schema, final String id, final Map<String, Object> after) {
+
+                objectTransaction.writeHistory(schema, id, after);
+                return this;
             }
 
             @Override

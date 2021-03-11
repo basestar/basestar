@@ -180,6 +180,12 @@ public class MemoryStorage implements DefaultIndexStorage {
             }
 
             @Override
+            public Storage.WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
+
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
             public void createObjectLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {
 
                 items.add(state -> {

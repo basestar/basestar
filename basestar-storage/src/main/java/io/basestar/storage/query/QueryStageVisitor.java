@@ -31,4 +31,7 @@ public interface QueryStageVisitor<T> {
     T union(List<T> inputs);
 
     T conform(T input, InstanceSchema schema, Set<Name> expand);
+
+    @Deprecated
+    T sql(String sql, InstanceSchema schema, Map<String, T> with);
 }

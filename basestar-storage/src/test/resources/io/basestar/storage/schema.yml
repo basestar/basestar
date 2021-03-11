@@ -274,3 +274,20 @@ GBAddresses:
   from:
     schema: Address
   where: country == 'United Kingdom'
+
+MatView:
+  type: view
+  materialized: true
+  group:
+    - country
+    - state
+  properties:
+    country: country
+    state: state
+    count: count()
+    hasZip: count(zip != null)
+    lon: avg(lon)
+    lat: avg(lat)
+    bound: "[min(lat), min(lon), max(lat), max(lon)]"
+  from:
+    schema: Address

@@ -24,10 +24,11 @@ public class ReplicaSyncEvent implements Event {
         CREATE,
         UPDATE,
         DELETE,
-        HISTORY,
-        INDEX_CREATE,
-        INDEX_UPDATE,
-        INDEX_DELETE
+//        HISTORY,
+//        INDEX_CREATE,
+//        INDEX_UPDATE,
+//        INDEX_DELETE,
+        WRITE
     }
 
     private Action action;
@@ -57,6 +58,11 @@ public class ReplicaSyncEvent implements Event {
     public static ReplicaSyncEvent delete(final Name schema, final String id, final Map<String, Object> before, final Consistency consistency, final Versioning versioning) {
 
         return new ReplicaSyncEvent(Action.DELETE, schema, id, before, null, consistency, versioning);
+    }
+
+    public static ReplicaSyncEvent write(final Name schema, final Map<String, Object> after, final Consistency consistency, final Versioning versioning) {
+
+        return new ReplicaSyncEvent(Action.WRITE, schema, null, null, after, consistency, versioning);
     }
 
     @Override

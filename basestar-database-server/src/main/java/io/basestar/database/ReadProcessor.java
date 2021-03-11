@@ -64,6 +64,11 @@ public class ReadProcessor {
         return namespace.requireReferableSchema(schema);
     }
 
+    protected LinkableSchema linkableSchema(final Name schema) {
+
+        return namespace.requireLinkableSchema(schema);
+    }
+
     protected CompletableFuture<Instance> readImpl(final ReferableSchema objectSchema, final String id, final Long version, final Set<Name> expand) {
 
         return readRaw(objectSchema, id, version, expand).thenApply(raw -> create(raw, expand));
@@ -110,17 +115,17 @@ public class ReadProcessor {
         return queryImpl(context, linkSchema, expression, link.getSort(), expand, count, paging);
     }
 
-    protected CompletableFuture<Page<Instance>> queryImpl(final Context context, final LinkableSchema objectSchema, final Expression expression,
+    protected CompletableFuture<Page<Instance>> queryImpl(final Context context, final LinkableSchema schema, final Expression expression,
                                                           final List<Sort> sort, final Set<Name> expand, final int count, final Page.Token paging) {
 
         final List<Sort> pageSort = ImmutableList.<Sort>builder()
                 .addAll(sort)
-                .add(Sort.asc(Name.of(ObjectSchema.ID)))
+                .add(Sort.asc(Name.of(schema.id())))
                 .build();
 
-        final Set<Name> queryExpand = Sets.union(Nullsafe.orDefault(expand), Nullsafe.orDefault(objectSchema.getExpand()));
+        final Set<Name> queryExpand = Sets.union(Nullsafe.orDefault(expand), Nullsafe.orDefault(schema.getExpand()));
 
-        final Pager<Instance> pager = storage.query(objectSchema, expression, pageSort, queryExpand)
+        final Pager<Instance> pager = storage.query(schema, expression, pageSort, queryExpand)
                 .map(v -> create(v, expand));
 
         return pager.page(paging, count)
@@ -178,7 +183,7 @@ public class ReadProcessor {
                 .thenApply(results -> {
                     final Map<ExpandKey<RefKey>, Instance> evaluated = new HashMap<>();
                     results.forEach((k, v) -> {
-                        final ReferableSchema schema = referableSchema(Instance.getSchema(v));
+                        final LinkableSchema schema = linkableSchema(Instance.getSchema(v));
                         evaluated.put(k, schema.evaluateTransients(context, v, k.getExpand()));
                     });
                     return evaluated;
@@ -197,7 +202,7 @@ public class ReadProcessor {
             if(!ref.getExpand().isEmpty()) {
                 final Name baseSchemaName = ref.getKey().getSchema();
                 final Name instanceSchemaName = Instance.getSchema(object);
-                final ReferableSchema resolvedSchema = referableSchema(Nullsafe.orDefault(instanceSchemaName, baseSchemaName));
+                final LinkableSchema resolvedSchema = linkableSchema(Nullsafe.orDefault(instanceSchemaName, baseSchemaName));
                 resolvedSchema.expand(object, new Expander() {
                     @Override
                     public Instance expandRef(final Name name, final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
@@ -350,7 +355,7 @@ public class ReadProcessor {
         if(data == null) {
             return null;
         }
-        final ReferableSchema schema = referableSchema(Instance.getSchema(data));
+        final LinkableSchema schema = linkableSchema(Instance.getSchema(data));
         return schema.create(data, schema.getExpand(), true);
     }
 
@@ -359,7 +364,7 @@ public class ReadProcessor {
         if(data == null) {
             return null;
         }
-        final ReferableSchema schema = referableSchema(Instance.getSchema(data));
+        final LinkableSchema schema = linkableSchema(Instance.getSchema(data));
         return schema.create(data, Immutable.addAll(schema.getExpand(), expand), true);
     }
 
