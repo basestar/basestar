@@ -10,6 +10,7 @@ import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Layout;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.expression.TypedExpression;
+import io.basestar.schema.util.Bucket;
 import io.basestar.spark.combiner.Combiner;
 import io.basestar.spark.source.Source;
 import io.basestar.spark.transform.*;
@@ -44,7 +45,7 @@ public interface QueryResolver {
         return resolve(schema, Constant.TRUE, ImmutableList.of(), expand);
     }
 
-    Query<Row> resolve(LinkableSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
+    Query<Row> resolve(LinkableSchema schema, Expression query, List<Sort> sort, Set<Name> expand, Set<Bucket> buckets);
 
     default Source<Dataset<Row>> ofSource(final LinkableSchema schema) {
 
@@ -63,7 +64,7 @@ public interface QueryResolver {
 
     static QueryResolver ofSources(final Function<LinkableSchema, Dataset<Row>> fn) {
 
-        return (schema, query, sort, expand) -> {
+        return (schema, query, sort, expand, buckets) -> {
             assert query.isConstant();
             assert sort.isEmpty();
             assert expand.isEmpty();
@@ -85,10 +86,10 @@ public interface QueryResolver {
         private final QueryResolver resolver;
 
         @Override
-        public Query<Row> resolve(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+        public Query<Row> resolve(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand, final Set<Bucket> buckets) {
 
             return () -> results.computeIfAbsent(new Key(schema, query, sort, expand),
-                    ignored -> resolver.resolve(schema, query, sort, expand).dataset().cache());
+                    ignored -> resolver.resolve(schema, query, sort, expand, buckets).dataset().cache());
         }
 
         @Override
@@ -215,10 +216,10 @@ public interface QueryResolver {
         }
 
         @Override
-        public Query<Row> resolve(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+        public Query<Row> resolve(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand, final Set<Bucket> buckets) {
 
-            final Dataset<Row> baseline = this.baseline.resolve(schema, query, sort, expand).dataset();
-            final Dataset<Row> overlay = this.overlay.resolve(schema, query, sort, expand).dataset();
+            final Dataset<Row> baseline = this.baseline.resolve(schema, query, sort, expand, buckets).dataset();
+            final Dataset<Row> overlay = this.overlay.resolve(schema, query, sort, expand, buckets).dataset();
             return () -> combiner.apply(schema, expand, baseline, overlay, joinType);
         }
     }
@@ -257,7 +258,7 @@ public interface QueryResolver {
         static Stage empty(final QueryResolver resolver, final LinkableSchema schema, final Set<Name> expand) {
 
             final Layout output = Layout.simple(schema.getSchema(), expand);
-            return from(resolver.resolve(schema, Constant.FALSE, ImmutableList.of(), expand), output);
+            return from(resolver.resolve(schema, Constant.FALSE, ImmutableList.of(), expand, null), output);
         }
 
         default Stage aggregate(final List<String> group, final Map<String, TypedExpression<?>> expressions) {

@@ -28,6 +28,7 @@ import io.basestar.spark.source.Source;
 import io.basestar.spark.transform.ConformTransform;
 import io.basestar.spark.transform.MarshallTransform;
 import io.basestar.spark.transform.SchemaTransform;
+import io.basestar.util.ISO8601;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -140,7 +141,7 @@ class TestSchemaTransform extends AbstractSparkTest {
         final Encoder<F> encoder = Encoders.bean(F.class);
 
         final java.sql.Date date = new java.sql.Date(2020 - 1900, 10, 10);
-        final java.sql.Timestamp datetime = new java.sql.Timestamp(Instant.now().toEpochMilli());
+        final java.sql.Timestamp datetime = new java.sql.Timestamp(ISO8601.now().toEpochMilli());
 
         final Source<Dataset<Row>> sourceF = sink -> sink.accept(session.createDataset(ImmutableList.of(
                 new F(date, datetime)

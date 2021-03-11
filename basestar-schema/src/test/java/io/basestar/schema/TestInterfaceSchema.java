@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Context;
 import io.basestar.schema.encoding.FlatEncoding;
 import io.basestar.test.CsvUtils;
+import io.basestar.util.ISO8601;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import org.junit.jupiter.api.Test;
@@ -28,7 +29,7 @@ class TestInterfaceSchema {
 
         final List<Map<String, String>> inputs = CsvUtils.read(TestInterfaceSchema.class, "/data/Petstore/Cat.csv");
 
-        final Instant now = Instant.now();
+        final Instant now = ISO8601.now();
         final Map<String, Object> metadata = new HashMap<>();
         Instance.setSchema(metadata, Name.of("Cat"));
         Instance.setCreated(metadata, now);

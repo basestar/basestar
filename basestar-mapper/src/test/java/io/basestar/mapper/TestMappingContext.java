@@ -35,6 +35,7 @@ import io.basestar.schema.Namespace;
 import io.basestar.schema.Schema;
 import io.basestar.schema.jsr380.Assert;
 import io.basestar.type.TypeContext;
+import io.basestar.util.ISO8601;
 import io.basestar.util.Name;
 import lombok.Data;
 import org.junit.jupiter.api.Test;
@@ -133,8 +134,8 @@ public class TestMappingContext {
 
         final Post post = schemaMapper.marshall(new Instance(ImmutableMap.<String, Object>builder()
                 .put(io.basestar.schema.ObjectSchema.ID, "test")
-                .put("updated", Instant.now())
-                .put("created", Instant.now())
+                .put("updated", ISO8601.now())
+                .put("created", ISO8601.now())
                 .put("date", "2020-01-01")
                 .put("comments", ImmutableList.of(ImmutableMap.of(
                         io.basestar.schema.ObjectSchema.ID, "c1"

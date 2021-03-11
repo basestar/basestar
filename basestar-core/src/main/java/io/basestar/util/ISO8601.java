@@ -6,7 +6,9 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAccessor;
+import java.time.temporal.TemporalUnit;
 import java.util.Date;
 
 /**
@@ -250,5 +252,10 @@ public class ISO8601 {
     public static java.sql.Timestamp toSqlTimestamp(final Instant instant) {
 
         return new java.sql.Timestamp(instant.toEpochMilli());
+    }
+
+    public static Instant now() {
+
+        return Instant.now().truncatedTo(ChronoUnit.MILLIS);
     }
 }

@@ -1,12 +1,16 @@
 package io.basestar.spark.upsert;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import io.basestar.mapper.annotation.Property;
 import io.basestar.schema.Bucketing;
 import io.basestar.schema.ReferableSchema;
 import io.basestar.spark.AbstractSparkTest;
 import io.basestar.spark.transform.BucketTransform;
 import io.basestar.spark.util.SparkCatalogUtils;
+import io.basestar.util.ISO8601;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
 import lombok.AllArgsConstructor;
@@ -35,8 +39,9 @@ class TestUpsertTable extends AbstractSparkTest {
 
         final SparkSession session = session();
 
+        final Bucketing bucketing = new Bucketing(ImmutableList.of(Name.of(ReferableSchema.ID)), 2);
         final BucketTransform bucket = BucketTransform.builder()
-                .bucketing(new Bucketing(ImmutableList.of(Name.of(ReferableSchema.ID)), 2))
+                .bucketing(bucketing)
                 .build();
 
         final String database = "tmp_" + UUID.randomUUID().toString().replaceAll("-", "_");
@@ -49,6 +54,11 @@ class TestUpsertTable extends AbstractSparkTest {
         final List<D> create = ImmutableList.of(new D("d:1", 5L), new D("d:2", 4L), new D("d:3", 3L), new D("d:4", 2L));
         final List<Delta> createDeltas = ImmutableList.of(Delta.create(create.get(0)), Delta.create(create.get(1)),
                 Delta.create(create.get(2)), Delta.create(create.get(3)));
+
+        assertEquals(1, bucketing.apply(v -> "d:1"));
+        assertEquals(0, bucketing.apply(v -> "d:2"));
+        assertEquals(0, bucketing.apply(v -> "d:3"));
+        assertEquals(0, bucketing.apply(v -> "d:4"));
 
         final Dataset<Row> createSource = bucket.accept(session.createDataset(create, Encoders.bean(D.class)).toDF());
         final StructType structType = createSource.schema();
@@ -65,11 +75,18 @@ class TestUpsertTable extends AbstractSparkTest {
 
         table.provision(session);
 
-        table.applyChanges(createSource, UpsertTable.sequence(Instant.now()), r -> UpsertOp.CREATE, r -> r);
+        table.applyChanges(createSource, UpsertTable.sequence(ISO8601.now()), r -> UpsertOp.CREATE, r -> r);
         assertState("After create", session, table, ImmutableList.of(), createDeltas, create);
 
         table.squashDeltas(session);
         assertState("After create + flatten", session, table, create, ImmutableList.of(), create);
+
+        final UpsertTable filtered0 = table.withPartitionFilter(ImmutableSet.of(ImmutableMap.of("__bucket", "0")));
+        final List<D> bucket0 = ImmutableList.of(create.get(1), create.get(2), create.get(3));
+        assertState("After create (filtered bucket 0)", session, filtered0, bucket0, ImmutableList.of(), bucket0);
+        final List<D> bucket1 = ImmutableList.of(create.get(0));
+        final UpsertTable filtered1 = table.withPartitionFilter(ImmutableSet.of(ImmutableMap.of("__bucket", "1")));
+        assertState("After create (filtered bucket 1)", session, filtered1, bucket1, ImmutableList.of(), bucket1);
 
         final List<D> update = ImmutableList.of(new D("d:1", 2L), new D("d:3", 4L));
         final List<Delta> updateDeltas = ImmutableList.of(Delta.update(update.get(0)), Delta.update(update.get(1)));
@@ -77,7 +94,7 @@ class TestUpsertTable extends AbstractSparkTest {
 
         final Dataset<Row> updateSource = bucket.accept(session.createDataset(update, Encoders.bean(D.class)).toDF());
 
-        table.applyChanges(updateSource, UpsertTable.sequence(Instant.now()), r -> UpsertOp.UPDATE, r -> r);
+        table.applyChanges(updateSource, UpsertTable.sequence(ISO8601.now()), r -> UpsertOp.UPDATE, r -> r);
         assertState("After update", session, table, create, updateDeltas, updateMerged);
 
         table.squashDeltas(session);
@@ -89,11 +106,14 @@ class TestUpsertTable extends AbstractSparkTest {
         final List<D> deleteMerged = ImmutableList.of(updateMerged.get(0), updateMerged.get(2));
 
         final Dataset<Row> deleteSource = bucket.accept(session.createDataset(delete, Encoders.bean(D.class)).toDF());
-        table.applyChanges(deleteSource, UpsertTable.sequence(Instant.now()), r -> UpsertOp.DELETE, r -> r);
+        table.applyChanges(deleteSource, UpsertTable.sequence(ISO8601.now()), r -> UpsertOp.DELETE, r -> r);
         assertState("After delete", session, table, updateMerged, deleteDeltas, deleteMerged);
 
         table.squashDeltas(session);
         assertState("After delete + flatten", session, table, deleteMerged, ImmutableList.of(), deleteMerged);
+
+        final List<SequenceEntry> sequence = table.getSequence(session);
+        System.err.println(sequence);
 
         table.dropBase(session, true);
         table.dropDeltas(session, false);
@@ -114,7 +134,7 @@ class TestUpsertTable extends AbstractSparkTest {
 
         final List<D> result = ImmutableList.<D>builder().addAll(deleteMerged).addAll(merge).build();
 
-        table.applyChanges(mergeSource, UpsertTable.sequence(Instant.now()), r -> UpsertOp.CREATE, r -> r);
+        table.applyChanges(mergeSource, UpsertTable.sequence(ISO8601.now()), r -> UpsertOp.CREATE, r -> r);
         assertState("After merge", session, table, deleteMerged, mergeDeltas, result);
 
         table.squashDeltas(session);

@@ -22,6 +22,7 @@ package io.basestar.spark.util;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.basestar.util.ISO8601;
 import io.basestar.util.Immutable;
 import io.basestar.util.Pair;
 import org.apache.hadoop.conf.Configuration;
@@ -59,7 +60,7 @@ public class SparkCatalogUtils {
 
     public static CatalogTablePartition partition(final Map<String, String> spec, final Format format, final URI location) {
 
-        final long now = Instant.now().toEpochMilli();
+        final long now = ISO8601.now().toEpochMilli();
         return CatalogTablePartition.apply(ScalaUtils.asScalaMap(spec), storageFormat(format, location), ScalaUtils.emptyScalaMap(), now, now, Option.empty());
     }
 
@@ -131,7 +132,7 @@ public class SparkCatalogUtils {
 
         final CatalogStorageFormat storage = SparkCatalogUtils.storageFormat(format, location);
 
-        final long now = Instant.now().toEpochMilli();
+        final long now = ISO8601.now().toEpochMilli();
 
         final long created;
         final boolean exists = catalog.tableExists(databaseName, tableName);

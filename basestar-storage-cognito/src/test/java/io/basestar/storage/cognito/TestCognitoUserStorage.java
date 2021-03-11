@@ -23,6 +23,7 @@ package io.basestar.storage.cognito;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Namespace;
 import io.basestar.storage.*;
+import io.basestar.util.ISO8601;
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderAsyncClient;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.*;
 
@@ -135,8 +136,8 @@ class TestCognitoUserStorage extends TestStorage {
                 .userStatus(UserStatusType.UNCONFIRMED)
                 .attributes(req.userAttributes())
                 .enabled(true)
-                .userCreateDate(Instant.now())
-                .userLastModifiedDate(Instant.now())
+                .userCreateDate(ISO8601.now())
+                .userLastModifiedDate(ISO8601.now())
                 .build();
     }
 

@@ -203,7 +203,7 @@ public class OverlayStorage implements Storage {
                 Instance.setSchema(tombstone, schema.getQualifiedName());
                 Instance.setId(tombstone, id);
                 Instance.setCreated(tombstone, before == null ? null : Instance.getCreated(before));
-                Instance.setUpdated(tombstone, Instant.now());
+                Instance.setUpdated(tombstone, ISO8601.now());
                 Instance.setVersion(tombstone, before == null ? null : Nullsafe.orDefault(Instance.getVersion(before)) + 1);
                 Instance.setHash(tombstone, schema.hash(tombstone));
                 tombstone.put(TOMBSTONE_KEY, true);

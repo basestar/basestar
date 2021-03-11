@@ -31,6 +31,7 @@ import io.basestar.schema.Permission;
 import io.basestar.schema.util.ValueContext;
 import io.basestar.storage.exception.ObjectMissingException;
 import io.basestar.storage.exception.VersionMismatchException;
+import io.basestar.util.ISO8601;
 import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -104,7 +105,7 @@ public class DeleteAction implements Action {
             final long afterVersion = beforeVersion + 1;
 
             final Map<String, Object> tombstone = new HashMap<>();
-            final Instant now = Instant.now();
+            final Instant now = ISO8601.now();
             Instance.setId(tombstone, id);
             Instance.setVersion(tombstone, afterVersion);
             Instance.setCreated(tombstone, Instance.getCreated(before));

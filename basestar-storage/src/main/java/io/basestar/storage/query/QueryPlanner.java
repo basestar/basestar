@@ -8,6 +8,7 @@ import io.basestar.schema.*;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.expression.TypedExpression;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.util.Bucket;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Sort;
@@ -17,17 +18,22 @@ import java.util.stream.Collectors;
 
 public interface QueryPlanner<T> {
 
-    T plan(QueryStageVisitor<T> visitor, LinkableSchema schema, Expression expression, List<Sort> sort, Set<Name> expand);
+    default T plan(final QueryStageVisitor<T> visitor, final LinkableSchema schema, final Expression expression, final List<Sort> sort, final Set<Name> expand) {
+
+        return plan(visitor, schema, expression, sort, expand, null);
+    }
+
+    T plan(QueryStageVisitor<T> visitor, LinkableSchema schema, Expression expression, List<Sort> sort, Set<Name> expand, Set<Bucket> buckets);
 
     class Default<T> implements QueryPlanner<T> {
 
         @Override
-        public T plan(final QueryStageVisitor<T> visitor, final LinkableSchema schema, final Expression expression, final List<Sort> sort, final Set<Name> expand) {
+        public T plan(final QueryStageVisitor<T> visitor, final LinkableSchema schema, final Expression expression, final List<Sort> sort, final Set<Name> expand, final Set<Bucket> buckets) {
 
-            return stage(visitor, schema, expression, sort, expand);
+            return stage(visitor, schema, expression, sort, expand, buckets);
         }
 
-        protected T stage(final QueryStageVisitor<T> visitor, final LinkableSchema schema, final Expression filter, final List<Sort> sort, final Set<Name> expand) {
+        protected T stage(final QueryStageVisitor<T> visitor, final LinkableSchema schema, final Expression filter, final List<Sort> sort, final Set<Name> expand, final Set<Bucket> buckets) {
 
             final boolean constFilter = filter != null && filter.isConstant();
             if(constFilter && !filter.evaluatePredicate(Context.init())) {
@@ -45,7 +51,7 @@ public interface QueryPlanner<T> {
                     remainingExpand = null;
                 }
 
-                T stage = stage(visitor, schema);
+                T stage = stage(visitor, schema, buckets);
 
                 stage = preExpandFilter(visitor, stage, schema, remainingFilter);
                 stage = preExpandSort(visitor, stage, schema, sort);
@@ -106,37 +112,37 @@ public interface QueryPlanner<T> {
             }
         }
 
-        protected T stage(final QueryStageVisitor<T> visitor, final LinkableSchema schema) {
+        protected T stage(final QueryStageVisitor<T> visitor, final LinkableSchema schema, final Set<Bucket> buckets) {
 
             if (schema instanceof ViewSchema) {
-                return viewStage(visitor, (ViewSchema)schema);
+                return viewStage(visitor, (ViewSchema)schema, buckets);
             } else {
-                return refStage(visitor, (ReferableSchema)schema);
+                return refStage(visitor, (ReferableSchema)schema, buckets);
             }
         }
 
-        protected T refStage(final QueryStageVisitor<T> visitor, final ReferableSchema schema) {
+        protected T refStage(final QueryStageVisitor<T> visitor, final ReferableSchema schema, final Set<Bucket> buckets) {
 
-            return visitor.conform(visitor.source(schema), schema, schema.getExpand());
+            return visitor.conform(visitor.source(schema, buckets), schema, schema.getExpand());
         }
 
-        protected T viewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema) {
+        protected T viewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema, final Set<Bucket> buckets) {
 
             if (schema.isAggregating() || schema.isGrouping()) {
-                return visitor.conform(aggViewStage(visitor, schema), schema, schema.getExpand());
+                return visitor.conform(aggViewStage(visitor, schema, buckets), schema, schema.getExpand());
             } else {
-                return visitor.conform(mapViewStage(visitor, schema), schema, schema.getExpand());
+                return visitor.conform(mapViewStage(visitor, schema, buckets), schema, schema.getExpand());
             }
         }
 
-        protected T viewFrom(final QueryStageVisitor<T> visitor, final ViewSchema schema) {
+        protected T viewFrom(final QueryStageVisitor<T> visitor, final ViewSchema schema, final Set<Bucket> buckets) {
 
             final ViewSchema.From from = schema.getFrom();
             final LinkableSchema fromSchema = from.getSchema();
 
             final Expression where = schema.getWhere();
             final List<Sort> sort = from.getSort();
-            return stage(visitor, fromSchema, where, sort, from.getExpand());
+            return stage(visitor, fromSchema, where, sort, from.getExpand(), buckets);
         }
 
         protected Map<String, TypedExpression<?>> viewExpressions(final ViewSchema schema) {
@@ -159,19 +165,19 @@ public interface QueryPlanner<T> {
             return output;
         }
 
-        protected T aggViewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema) {
+        protected T aggViewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema, final Set<Bucket> buckets) {
 
-            final T stage = viewFrom(visitor, schema);
+            final T stage = viewFrom(visitor, schema, buckets);
             return visitor.agg(stage, schema.getGroup(), viewExpressions(schema));
         }
 
-        protected T mapViewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema) {
+        protected T mapViewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema, final Set<Bucket> buckets) {
 
             // Must copy id into the view __key field or it will be lost
             final LinkableSchema fromSchema = schema.getFrom().getSchema();
             final Map<String, TypedExpression<?>> expressions = new HashMap<>(viewExpressions(schema));
             expressions.put(schema.id(), TypedExpression.from(new NameConstant(fromSchema.id()), fromSchema.typeOfId()));
-            final T stage = viewFrom(visitor, schema);
+            final T stage = viewFrom(visitor, schema, buckets);
             return visitor.map(stage, expressions);
         }
     }
@@ -179,7 +185,7 @@ public interface QueryPlanner<T> {
     class AggregateSplitting<T> extends Default<T> {
 
         @Override
-        protected T aggViewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema) {
+        protected T aggViewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema, final Set<Bucket> buckets) {
 
             final LinkableSchema fromSchema = schema.getFrom().getSchema();
             final List<String> group = schema.getGroup();
@@ -247,7 +253,7 @@ public interface QueryPlanner<T> {
                 agg.put(name, TypedExpression.from(original.copy(args), typeOf));
             }
 
-            T stage = viewFrom(visitor, schema);
+            T stage = viewFrom(visitor, schema, null);
             if(requiresPreAgg) {
                 stage = visitor.map(stage, preAgg);
             }
