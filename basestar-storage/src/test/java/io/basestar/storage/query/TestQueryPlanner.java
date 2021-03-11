@@ -11,6 +11,7 @@ import io.basestar.schema.use.UseBoolean;
 import io.basestar.schema.use.UseInteger;
 import io.basestar.schema.use.UseOptional;
 import io.basestar.schema.use.UseString;
+import io.basestar.schema.util.Bucket;
 import io.basestar.storage.TestStorage;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
@@ -282,7 +283,7 @@ class TestQueryPlanner {
         }
 
         @Override
-        public SimpleStage source(final LinkableSchema schema) {
+        public SimpleStage source(final LinkableSchema schema, final Set<Bucket> buckets) {
 
             return new SourceStage(schema);
         }

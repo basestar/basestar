@@ -45,6 +45,11 @@ public interface QueryResolver {
         return resolve(schema, Constant.TRUE, ImmutableList.of(), expand);
     }
 
+    default Query<Row> resolve(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        return resolve(schema, query, sort, expand, null);
+    }
+
     Query<Row> resolve(LinkableSchema schema, Expression query, List<Sort> sort, Set<Name> expand, Set<Bucket> buckets);
 
     default Source<Dataset<Row>> ofSource(final LinkableSchema schema) {
@@ -127,9 +132,9 @@ public interface QueryResolver {
         }
 
         @Override
-        public Query<Row> resolve(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+        public Query<Row> resolve(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand, final Set<Bucket> buckets) {
 
-            return plan(this, schema, query, sort, expand);
+            return plan(this, schema, query, sort, expand, buckets);
         }
 
         @Override
@@ -169,7 +174,7 @@ public interface QueryResolver {
         }
 
         @Override
-        public Stage source(final LinkableSchema schema) {
+        public Stage source(final LinkableSchema schema, final Set<Bucket> buckets) {
 
             return Stage.source(resolver, schema);
         }
