@@ -557,7 +557,7 @@ public class ViewSchema implements LinkableSchema {
     @Nonnull
     private final SortedMap<String, Serializable> extensions;
 
-    private final boolean isAggregating;
+    private final boolean aggregating;
 
     public static Builder builder() {
 
@@ -589,7 +589,7 @@ public class ViewSchema implements LinkableSchema {
             throw new ReservedNameException(qualifiedName.toString());
         }
         this.declaredProperties.values().forEach(p -> this.from.validateProperty(p));
-        this.isAggregating = getProperties().values().stream().map(Property::getExpression)
+        this.aggregating = getProperties().values().stream().map(Property::getExpression)
                 .filter(Objects::nonNull).anyMatch(Expression::isAggregate);
     }
 
@@ -734,6 +734,14 @@ public class ViewSchema implements LinkableSchema {
     public boolean isGrouping() {
 
         return !group.isEmpty();
+    }
+
+    public boolean isCoBucketed() {
+
+        if(isGrouping() || isAggregating()) {
+            return false;
+        }
+        return from instanceof From.FromSchema;
     }
 
     @Override

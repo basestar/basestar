@@ -59,6 +59,22 @@ public class StringMethods implements Serializable {
         return target.trim();
     }
 
+    public static String ltrim(final String target) {
+        int i = 0;
+        while (i < target.length() && Character.isWhitespace(target.charAt(i))) {
+            i++;
+        }
+        return target.substring(i);
+    }
+
+    public static String rtrim(final String target) {
+        int i = target.length()-1;
+        while (i >= 0 && Character.isWhitespace(target.charAt(i))) {
+            i--;
+        }
+        return target.substring(0,i+1);
+    }
+
     public LocalDate toDate(final String value, final String format) {
 
         return ISO8601.parseDate(value, format);

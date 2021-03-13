@@ -32,6 +32,7 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -105,11 +106,16 @@ public interface QueryResolver {
 
     static QueryResolver ofSources(final Function<LinkableSchema, Dataset<Row>> fn) {
 
+        return ofSources((schema, buckets) -> fn.apply(schema));
+    }
+
+    static QueryResolver ofSources(final BiFunction<LinkableSchema, Set<Bucket>, Dataset<Row>> fn) {
+
         return (schema, query, sort, expand, buckets) -> {
             assert query.isConstant();
             assert sort.isEmpty();
             assert expand.isEmpty();
-            final Dataset<Row> result = fn.apply(schema);
+            final Dataset<Row> result = fn.apply(schema, buckets);
             if(query.evaluatePredicate(Context.init())) {
                 return () -> result;
             } else {
@@ -213,7 +219,7 @@ public interface QueryResolver {
         @Override
         public Stage source(final LinkableSchema schema, final Set<Bucket> buckets) {
 
-            return Stage.source(resolver, schema);
+            return Stage.source(resolver, schema, buckets);
         }
 
         @Override
@@ -298,9 +304,9 @@ public interface QueryResolver {
             return from(Query.super.then(transform), layout);
         }
 
-        static Stage source(final QueryResolver resolver, final LinkableSchema schema) {
+        static Stage source(final QueryResolver resolver, final LinkableSchema schema, final Set<Bucket> buckets) {
 
-            return from(resolver.resolve(schema), Layout.simple(schema.getSchema(), ImmutableSet.of()));
+            return from(resolver.resolve(schema, Constant.TRUE, ImmutableList.of(), ImmutableSet.of(), buckets), Layout.simple(schema.getSchema(), ImmutableSet.of()));
         }
 
         static Stage empty(final QueryResolver resolver, final LinkableSchema schema, final Set<Name> expand) {

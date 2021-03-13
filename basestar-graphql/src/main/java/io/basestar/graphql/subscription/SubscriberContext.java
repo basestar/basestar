@@ -12,10 +12,10 @@ import java.util.concurrent.CompletableFuture;
 
 public interface SubscriberContext {
 
-    default CompletableFuture<?> subscribe(final ObjectSchema schema, final String id, final String alias, final Set<Name> names, final boolean query) {
+    default CompletableFuture<?> subscribe(final ObjectSchema schema, final String id, final String alias, final Set<Name> expand, final boolean query) {
 
-        return subscribe(schema, new Eq(new NameConstant(ObjectSchema.ID_NAME), new Constant(id)), alias, names, query);
+        return subscribe(schema, new Eq(new NameConstant(ObjectSchema.ID_NAME), new Constant(id)), alias, expand, query);
     }
 
-    CompletableFuture<?> subscribe(ObjectSchema schema, Expression expression, String alias, Set<Name> names, boolean query);
+    CompletableFuture<?> subscribe(ObjectSchema schema, Expression expression, String alias, Set<Name> expand, boolean query);
 }

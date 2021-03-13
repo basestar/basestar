@@ -9,11 +9,8 @@ import io.basestar.schema.ReferableSchema;
 import io.basestar.spark.AbstractSparkTest;
 import io.basestar.spark.transform.BucketTransform;
 import io.basestar.spark.util.SparkCatalogUtils;
-import io.basestar.util.ISO8601;
-import io.basestar.util.Immutable;
+import io.basestar.util.*;
 import io.basestar.spark.util.SparkRowUtils;
-import io.basestar.util.Name;
-import io.basestar.util.Sort;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -27,6 +24,7 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Test;
 
+import java.net.URI;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -66,10 +64,11 @@ class TestUpsertTable extends AbstractSparkTest {
         final StructType structType = createSource.schema();
 
         final UpsertTable table = UpsertTable.builder()
-                .database(database)
-                .name("D")
-                .structType(structType)
-                .location(location + "/D")
+                .tableName(Name.of(database, "D"))
+                .schema(structType)
+                .baseLocation(URI.create(location + "/D/base"))
+                .deltaLocation(URI.create(location + "/D/delta"))
+                .state(new UpsertState.Hdfs(URI.create(location + "/D/state")))
                 .partition(ImmutableList.of(bucket.getOutputColumn()))
                 .idColumn(ReferableSchema.ID)
                 .deletedColumn(true)
@@ -114,7 +113,7 @@ class TestUpsertTable extends AbstractSparkTest {
         table.squashDeltas(session);
         assertState("After delete + flatten", session, table, deleteMerged, ImmutableList.of(), deleteMerged);
 
-        final List<SequenceEntry> sequence = table.getSequence(session);
+        final List<DeltaState.Sequence> sequence = table.deltaState(session).getSequences();
         System.err.println(sequence);
 
         table.dropBase(session, true);
@@ -147,7 +146,7 @@ class TestUpsertTable extends AbstractSparkTest {
 
         SparkCatalogUtils.ensureDatabase(catalog, database2, location2 + "/D");
 
-        final UpsertTable table2 = table.copy(session, database2, "D", location2 + "/D");
+        final UpsertTable table2 = table.copy(session, Name.of(database2, "D"), URI.create(location2 + "/D/base"), URI.create(location2 + "/D/delta"), new UpsertState.Hdfs(URI.create(location2 + "/D/state")));
         assertState("After copy", session, table2, result, ImmutableList.of(), result);
     }
 
@@ -219,10 +218,11 @@ class TestUpsertTable extends AbstractSparkTest {
         final StructType initial = createSource.schema();
 
         final UpsertTable table = UpsertTable.builder()
-                .database(database)
-                .name("D")
-                .structType(initial)
-                .location(location + "/D")
+                .tableName(Name.of(database, "D"))
+                .schema(initial)
+                .baseLocation(URI.create(location + "/D/base"))
+                .deltaLocation(URI.create(location + "/D/delta"))
+                .state(new UpsertState.Hdfs(URI.create(location + "/D/state")))
                 .partition(ImmutableList.of("__bucket"))
                 .idColumn(ReferableSchema.ID)
                 .deletedColumn(true)
@@ -231,15 +231,7 @@ class TestUpsertTable extends AbstractSparkTest {
 
         final StructType appended = SparkRowUtils.append(initial, SparkRowUtils.field("test", DataTypes.BinaryType));
 
-        final UpsertTable table2 = UpsertTable.builder()
-                .database(database)
-                .name("D")
-                .structType(appended)
-                .location(location + "/D")
-                .partition(ImmutableList.of("__bucket"))
-                .idColumn(ReferableSchema.ID)
-                .deletedColumn(true)
-                .build();
+        final UpsertTable table2 = table.withSchema(appended);
         table2.provision(session);
     }
 }

@@ -462,11 +462,10 @@ public class GraphQLAdaptor {
         return (env) -> {
             final Caller caller = GraphQLUtils.caller(env.getContext());
             final SubscriberContext subscriberContext = GraphQLUtils.subscriber(env.getContext());
-            final Set<Name> names = paths(env);
             final Set<Name> expand = expand(schema, env);
             final String alias = Nullsafe.orDefault(env.getField().getAlias(), () -> strategy.subscribeMethodName(schema));
             final String id = env.getArgument(strategy.idArgumentName());
-            return subscriberContext.subscribe(schema, id, alias, names, false)
+            return subscriberContext.subscribe(schema, id, alias, expand, false)
                     .thenCompose(ignored -> read(caller, schema, id, null, expand));
         };
     }
@@ -477,7 +476,6 @@ public class GraphQLAdaptor {
             final Caller caller = GraphQLUtils.caller(env.getContext());
             final SubscriberContext subscriberContext = GraphQLUtils.subscriber(env.getContext());
             final Set<Name> expand = expand(schema, env, strategy.pageItemsFieldName());
-            final Set<Name> names = paths(env);
             final String alias = Nullsafe.orDefault(env.getField().getAlias(), () -> strategy.subscribeQueryMethodName(schema));
             final String query = env.getArgument(strategy.queryArgumentName());
             final Expression expression = Expression.parse(query);
@@ -490,7 +488,7 @@ public class GraphQLAdaptor {
                     .setSort(sort)
                     .setExpand(expand)
                     .build();
-            return subscriberContext.subscribe(schema, expression, alias, names, true)
+            return subscriberContext.subscribe(schema, expression, alias, expand, true)
                     .thenCompose(ignored -> database.query(caller, options)
                         .thenApply(result -> responseTransform.toResponsePage(schema, result)));
         };
@@ -530,52 +528,6 @@ public class GraphQLAdaptor {
     private Set<Name> expand(final InstanceSchema schema, final Field field) {
 
         return GraphQLUtils.expand(strategy, namespace, schema, field.getSelectionSet());
-    }
-
-    @Deprecated
-    private static Set<Name> paths(final DataFetchingEnvironment env) {
-
-        return paths(env.getMergedField().getSingleField().getSelectionSet());
-    }
-
-    @Deprecated
-    private static Set<Name> paths(final SelectionSet selections) {
-
-        if(selections == null || selections.getSelections() == null) {
-            return Collections.emptySet();
-        }
-        return selections.getSelections().stream()
-                .flatMap(selection -> {
-                    final Set<Name> paths = new HashSet<>();
-                    if(selection instanceof Field) {
-                        final Field field = (Field)selection;
-                        final Name path = path(field.getName());
-                        paths.add(path);
-                        paths(field.getSelectionSet()).forEach(v -> paths.add(path.with(v)));
-                    } else if(selection instanceof InlineFragment) {
-                        final InlineFragment fragment = (InlineFragment)selection;
-                        paths.addAll(paths(fragment.getSelectionSet()));
-                    } else {
-                        log.warn("Skipping selection {}", selection);
-                    }
-                    return paths.stream();
-                })
-                .filter(v -> !v.isEmpty())
-                .collect(Collectors.toSet());
-    }
-
-    private static Name path(final String name) {
-
-        // FIXME: if we do this properly then we don't need to use the reserved prefix in map key/value
-        return Name.of(Arrays.stream(name.split("/"))
-                .map(v -> {
-                    if(v.equals(GraphQLUtils.MAP_VALUE)) {
-                        return "*";
-                    } else {
-                        return v;
-                    }
-                }).filter(v -> !v.startsWith(Reserved.PREFIX))
-                .toArray(String[]::new));
     }
 
     private Long version(final Field field) {
