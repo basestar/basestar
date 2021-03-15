@@ -259,7 +259,7 @@ class TestQueryPlanner {
         }
 
         @Override
-        public SimpleStage expand(final SimpleStage input, final LinkableSchema schema, final Set<Name> expand) {
+        public SimpleStage expand(final SimpleStage input, final LinkableSchema schema, final Set<Name> expand, final Set<Bucket> buckets) {
 
             return new ExpandStage(input, schema, expand);
         }

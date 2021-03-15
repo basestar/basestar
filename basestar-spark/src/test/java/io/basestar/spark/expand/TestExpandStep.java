@@ -92,7 +92,7 @@ public class TestExpandStep extends AbstractSparkTest {
         final ExpandStep step = ExpandStep.from(schema, expansion);
         assertNotNull(step);
 
-        final Dataset<Row> result = step.apply(resolver, dataset);
+        final Dataset<Row> result = step.apply(resolver, dataset, null);
         final List<Row> results = result.collectAsList();
 
         System.err.println(result.showString(10, 30, false));

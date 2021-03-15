@@ -68,7 +68,7 @@ public interface QueryPlanner<T> {
                 stage = preExpandFilter(visitor, stage, schema, remainingFilter);
                 stage = preExpandSort(visitor, stage, schema, sort);
                 if(remainingExpand != null && !remainingExpand.isEmpty()) {
-                    stage = visitor.expand(stage, schema, remainingExpand);
+                    stage = visitor.expand(stage, schema, remainingExpand, buckets);
                 }
                 stage = postExpandFilter(visitor, stage, schema, remainingFilter);
                 stage = postExpandSort(visitor, stage, schema, sort);

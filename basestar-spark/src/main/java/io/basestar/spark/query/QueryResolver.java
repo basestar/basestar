@@ -11,11 +11,13 @@ import io.basestar.schema.Layout;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.ViewSchema;
 import io.basestar.schema.expression.TypedExpression;
+import io.basestar.schema.use.Use;
 import io.basestar.schema.util.Bucket;
 import io.basestar.spark.combiner.Combiner;
 import io.basestar.spark.source.Source;
 import io.basestar.spark.transform.*;
 import io.basestar.spark.util.SparkRowUtils;
+import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.spark.util.SparkUtils;
 import io.basestar.storage.query.QueryPlanner;
 import io.basestar.storage.query.QueryStageVisitor;
@@ -193,9 +195,9 @@ public interface QueryResolver {
         }
 
         @Override
-        public Stage expand(final Stage input, final LinkableSchema schema, final Set<Name> expand) {
+        public Stage expand(final Stage input, final LinkableSchema schema, final Set<Name> expand, final Set<Bucket> buckets) {
 
-            return input.expand(this, schema, expand);
+            return input.expand(this, schema, expand, buckets);
         }
 
         @Override
@@ -225,7 +227,24 @@ public interface QueryResolver {
         @Override
         public Stage union(final List<Stage> inputs) {
 
-            throw new UnsupportedOperationException();
+            if(inputs.isEmpty()) {
+                throw new IllegalStateException("Cannot create empty union");
+            }
+            final Map<String, Use<?>> schema = new HashMap<>();
+            inputs.forEach(input -> input.getLayout().getSchema().forEach((name, type) -> {
+                final Use<?> existing = schema.get(name);
+                if(existing != null) {
+                    final Use<?> common = Use.commonBase(existing, type);
+                    schema.put(name, common);
+                } else {
+                    schema.put(name, type);
+                }
+            }));
+            final Layout layout = Layout.simple(schema);
+            final StructType structType = SparkSchemaUtils.structType(layout);
+            return Stage.from(() -> inputs.stream()
+                    .map(input -> input.dataset().map(SparkUtils.map(row -> SparkRowUtils.conform(row, structType)), RowEncoder.apply(structType)))
+                    .reduce(Dataset::union).orElseThrow(IllegalStateException::new), layout);
         }
 
         @Override
@@ -337,13 +356,14 @@ public interface QueryResolver {
                             .outputLayout(outputLayout).build(), outputLayout);
         }
 
-        default Stage expand(final QueryResolver resolver, final LinkableSchema schema, final Set<Name> expand) {
+        default Stage expand(final QueryResolver resolver, final LinkableSchema schema, final Set<Name> expand, final Set<Bucket> buckets) {
 
             final Layout outputLayout = Layout.simple(schema.getSchema(), expand);
 
             return then(ExpandTransform.builder()
                             .expand(expand)
                             .schema(schema)
+                            .buckets(buckets)
                             .resolver(resolver).build(), outputLayout);
         }
 

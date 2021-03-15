@@ -27,7 +27,7 @@ public class ESQueryStageVisitor implements QueryStageVisitor<ESQueryStage> {
     }
 
     @Override
-    public ESQueryStage expand(final ESQueryStage input, final LinkableSchema schema, final Set<Name> expand) {
+    public ESQueryStage expand(final ESQueryStage input, final LinkableSchema schema, final Set<Name> expand, final Set<Bucket> buckets) {
 
         return input;
     }

@@ -26,7 +26,9 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
+import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.expression.constant.NameConstant;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.jackson.serde.AbbrevSetDeserializer;
 import io.basestar.jackson.serde.ExpressionDeserializer;
@@ -738,10 +740,36 @@ public class ViewSchema implements LinkableSchema {
 
     public boolean isCoBucketed() {
 
-        if(isGrouping() || isAggregating()) {
-            return false;
+        return isCompatibleBucketing(getEffectingBucketing());
+    }
+
+    @Override
+    public boolean isCompatibleBucketing(final List<Bucketing> other) {
+
+        if(from instanceof From.FromSchema) {
+            final List<Bucketing> fromBucketing = new ArrayList<>();
+            for(final Bucketing bucket : other) {
+                final List<Name> using = new ArrayList<>();
+                for(final Name name : bucket.getUsing()) {
+                    final Property property = getProperty(name.first(), true);
+                    if(property == null) {
+                        return false;
+                    }
+                    final Expression expression = property.getExpression();
+                    if(expression == null) {
+                        return false;
+                    }
+                    if(expression instanceof NameConstant) {
+                        using.add(((NameConstant) expression).getName().with(name.withoutFirst()));
+                    } else {
+                        return false;
+                    }
+                }
+                fromBucketing.add(new Bucketing(using, bucket.getCount(), bucket.getFunction()));
+            }
+            return ((From.FromSchema) from).getSchema().isCompatibleBucketing(fromBucketing);
         }
-        return from instanceof From.FromSchema;
+        return false;
     }
 
     @Override

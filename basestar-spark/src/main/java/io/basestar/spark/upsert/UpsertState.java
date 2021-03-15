@@ -23,6 +23,11 @@ public interface UpsertState {
 
     void dropState(SparkSession session, String key);
 
+    default boolean hasState(final SparkSession session, final String key) {
+
+        return getState(session, key, Object.class) != null;
+    }
+
     default <T> T updateState(final SparkSession session, final String key, final Class<T> as, final Function<T, T> apply) {
 
         final T before = getState(session, key, as);

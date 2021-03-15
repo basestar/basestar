@@ -62,13 +62,13 @@ public class DeltaState {
 
     public DeltaState dropSequences(final Set<String> drop) {
 
-        final List<Sequence> dropped = new ArrayList<>();
+        final List<Sequence> result = new ArrayList<>();
         for(final Sequence seq : sequences) {
             if(!drop.contains(seq.getSequence())) {
-                dropped.add(seq);
+                result.add(seq);
             }
         }
-        return new DeltaState(dropped);
+        return new DeltaState(result);
     }
 
     @Data

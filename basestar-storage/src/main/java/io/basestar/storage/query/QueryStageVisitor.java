@@ -16,7 +16,7 @@ public interface QueryStageVisitor<T> {
 
     T empty(LinkableSchema schema, Set<Name> expand);
 
-    T expand(T input, LinkableSchema schema, Set<Name> expand);
+    T expand(T input, LinkableSchema schema, Set<Name> expand, Set<Bucket> buckets);
 
     T filter(T input, Expression condition);
 
