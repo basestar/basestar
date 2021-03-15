@@ -922,4 +922,31 @@ public class SparkSchemaUtils {
 
         return (String) SparkRowUtils.get(row, ObjectSchema.HASH);
     }
+
+    public static Object fromSpark(final Object value) {
+
+        if(value instanceof scala.collection.Map) {
+            final Map<String, Object> result = new HashMap<>();
+            ((scala.collection.Map<?, ?>) value).foreach(ScalaUtils.scalaFunction(e -> {
+                final String k = (String) e._1();
+                final Object v = e._2();
+                result.put(k, fromSpark(v));
+                return null;
+            }));
+            return result;
+        } else if(value instanceof Seq<?>) {
+            final List<Object> result = new ArrayList<>();
+            ((Seq<?>) value).foreach(ScalaUtils.scalaFunction(v -> {
+                result.add(fromSpark(v));
+                return null;
+            }));
+            return result;
+        } else if(value instanceof java.sql.Date) {
+            return ISO8601.toDate(value);
+        } else if(value instanceof java.sql.Timestamp) {
+            return ISO8601.toDateTime(value);
+        } else {
+            return value;
+        }
+    }
 }
