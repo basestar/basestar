@@ -733,6 +733,8 @@ public class UpsertTable {
 
         if(tableName != null) {
 
+            autoProvision(session);
+
             final String database = tableName.first();
             final String table = tableName.withoutFirst().toString("_");
 
