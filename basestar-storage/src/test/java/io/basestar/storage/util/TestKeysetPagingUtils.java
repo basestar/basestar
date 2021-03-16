@@ -5,6 +5,7 @@ import io.basestar.schema.Instance;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.storage.TestStorage;
+import io.basestar.util.ISO8601;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
 import org.junit.jupiter.api.Test;
@@ -24,7 +25,7 @@ class TestKeysetPagingUtils {
         final ObjectSchema schema = namespace.requireObjectSchema("DateSort");
 
         final Map<String, Object> object = new HashMap<>();
-        Instance.setCreated(object, Instant.now());
+        Instance.setCreated(object, ISO8601.now());
 
         KeysetPagingUtils.keysetPagingToken(schema, ImmutableList.of(Sort.asc(Name.of("created"))), object);
     }

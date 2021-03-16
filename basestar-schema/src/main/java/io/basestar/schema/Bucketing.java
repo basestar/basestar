@@ -75,6 +75,11 @@ public class Bucketing implements Serializable {
         return function.apply(count, values);
     }
 
+    public boolean isCompatible(final Bucketing other) {
+
+        return equals(other);
+    }
+
     @Data
     public static class Builder {
 

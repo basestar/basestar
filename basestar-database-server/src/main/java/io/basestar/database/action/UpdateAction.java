@@ -31,6 +31,7 @@ import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.schema.util.ValueContext;
 import io.basestar.storage.exception.ObjectMissingException;
 import io.basestar.storage.exception.VersionMismatchException;
+import io.basestar.util.ISO8601;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.RequiredArgsConstructor;
@@ -81,7 +82,7 @@ public class UpdateAction implements Action {
 
         final long version;
         final Instant created;
-        final Instant updated = Instant.now();
+        final Instant updated = ISO8601.now();
 
         if (before == null) {
             if(mode == UpdateOptions.Mode.CREATE) {

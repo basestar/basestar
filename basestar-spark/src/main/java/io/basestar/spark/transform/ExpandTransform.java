@@ -1,6 +1,7 @@
 package io.basestar.spark.transform;
 
 import io.basestar.schema.LinkableSchema;
+import io.basestar.schema.util.Bucket;
 import io.basestar.spark.expand.ExpandStep;
 import io.basestar.spark.expand.Expansion;
 import io.basestar.spark.query.QueryResolver;
@@ -19,12 +20,15 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
     private final Set<Name> expand;
 
+    private final Set<Bucket> buckets;
+
     @lombok.Builder(builderClassName = "Builder")
-    protected ExpandTransform(final LinkableSchema schema, final QueryResolver resolver, final Set<Name> expand) {
+    protected ExpandTransform(final LinkableSchema schema, final QueryResolver resolver, final Set<Name> expand, final Set<Bucket> buckets) {
 
         this.schema = schema;
         this.resolver = resolver;
         this.expand = Immutable.set(expand);
+        this.buckets = buckets;
     }
 
     @Override
@@ -33,6 +37,6 @@ public class ExpandTransform implements Transform<Dataset<Row>, Dataset<Row>> {
         final Set<Expansion> expansion = Expansion.expansion(schema, expand);
         final ExpandStep step = ExpandStep.from(schema, expansion);
         assert step != null;
-        return step.apply(resolver, input);
+        return step.apply(resolver, input, buckets);
     }
 }

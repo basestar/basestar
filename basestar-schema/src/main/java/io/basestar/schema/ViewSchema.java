@@ -26,7 +26,9 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
+import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.expression.constant.NameConstant;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.jackson.serde.AbbrevSetDeserializer;
 import io.basestar.jackson.serde.ExpressionDeserializer;
@@ -557,7 +559,7 @@ public class ViewSchema implements LinkableSchema {
     @Nonnull
     private final SortedMap<String, Serializable> extensions;
 
-    private final boolean isAggregating;
+    private final boolean aggregating;
 
     public static Builder builder() {
 
@@ -589,7 +591,7 @@ public class ViewSchema implements LinkableSchema {
             throw new ReservedNameException(qualifiedName.toString());
         }
         this.declaredProperties.values().forEach(p -> this.from.validateProperty(p));
-        this.isAggregating = getProperties().values().stream().map(Property::getExpression)
+        this.aggregating = getProperties().values().stream().map(Property::getExpression)
                 .filter(Objects::nonNull).anyMatch(Expression::isAggregate);
     }
 
@@ -734,6 +736,40 @@ public class ViewSchema implements LinkableSchema {
     public boolean isGrouping() {
 
         return !group.isEmpty();
+    }
+
+    public boolean isCoBucketed() {
+
+        return isCompatibleBucketing(getEffectingBucketing());
+    }
+
+    @Override
+    public boolean isCompatibleBucketing(final List<Bucketing> other) {
+
+        if(from instanceof From.FromSchema) {
+            final List<Bucketing> fromBucketing = new ArrayList<>();
+            for(final Bucketing bucket : other) {
+                final List<Name> using = new ArrayList<>();
+                for(final Name name : bucket.getUsing()) {
+                    final Property property = getProperty(name.first(), true);
+                    if(property == null) {
+                        return false;
+                    }
+                    final Expression expression = property.getExpression();
+                    if(expression == null) {
+                        return false;
+                    }
+                    if(expression instanceof NameConstant) {
+                        using.add(((NameConstant) expression).getName().with(name.withoutFirst()));
+                    } else {
+                        return false;
+                    }
+                }
+                fromBucketing.add(new Bucketing(using, bucket.getCount(), bucket.getFunction()));
+            }
+            return ((From.FromSchema) from).getSchema().isCompatibleBucketing(fromBucketing);
+        }
+        return false;
     }
 
     @Override

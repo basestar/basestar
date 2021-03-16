@@ -14,6 +14,7 @@ import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseCollection;
 import io.basestar.schema.use.UseInstance;
 import io.basestar.schema.use.UseMap;
+import io.basestar.schema.util.Bucket;
 import io.basestar.spark.expression.ClosureExtractingVisitor;
 import io.basestar.spark.expression.SparkExpressionVisitor;
 import io.basestar.spark.query.QueryResolver;
@@ -177,7 +178,7 @@ public class ExpandLinkStep extends AbstractExpandStep {
     }
 
     @Override
-    protected <T> Dataset<Row> applyImpl(final QueryResolver resolver, final Dataset<Row> input, final Use<T> typeOfId) {
+    protected <T> Dataset<Row> applyImpl(final QueryResolver resolver, final Dataset<Row> input, final Set<Bucket> buckets, final Use<T> typeOfId) {
 
         final LinkableSchema linkSchema = link.getSchema();
 
@@ -216,7 +217,7 @@ public class ExpandLinkStep extends AbstractExpandStep {
                 final Row resolved = applyLink(root, name, cleanKeys(SparkRowUtils.nulled(tuples)));
                 return next.projectKeys(projectedType, resolved);
 
-            }), RowEncoder.apply(projectedType)));
+            }), RowEncoder.apply(projectedType)), buckets);
 
         } else {
 

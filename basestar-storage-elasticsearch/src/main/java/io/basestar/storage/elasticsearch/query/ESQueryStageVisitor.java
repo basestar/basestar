@@ -5,6 +5,7 @@ import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Layout;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.expression.TypedExpression;
+import io.basestar.schema.util.Bucket;
 import io.basestar.storage.elasticsearch.ElasticsearchStrategy;
 import io.basestar.storage.query.QueryStageVisitor;
 import io.basestar.util.Name;
@@ -26,7 +27,7 @@ public class ESQueryStageVisitor implements QueryStageVisitor<ESQueryStage> {
     }
 
     @Override
-    public ESQueryStage expand(final ESQueryStage input, final LinkableSchema schema, final Set<Name> expand) {
+    public ESQueryStage expand(final ESQueryStage input, final LinkableSchema schema, final Set<Name> expand, final Set<Bucket> buckets) {
 
         return input;
     }
@@ -56,7 +57,7 @@ public class ESQueryStageVisitor implements QueryStageVisitor<ESQueryStage> {
     }
 
     @Override
-    public ESQueryStage source(final LinkableSchema schema) {
+    public ESQueryStage source(final LinkableSchema schema, final Set<Bucket> buckets) {
 
         return new ESQueryStage.Source(strategy, schema);
     }

@@ -22,8 +22,10 @@ package io.basestar.spark.util;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.basestar.util.ISO8601;
 import io.basestar.util.Immutable;
 import io.basestar.util.Pair;
+import io.basestar.util.Text;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -60,7 +62,7 @@ public class SparkCatalogUtils {
 
     public static CatalogTablePartition partition(final Map<String, String> spec, final Format format, final URI location) {
 
-        final long now = Instant.now().toEpochMilli();
+        final long now = ISO8601.now().toEpochMilli();
         return CatalogTablePartition.apply(ScalaUtils.asScalaMap(spec), storageFormat(format, location), ScalaUtils.emptyScalaMap(), now, now, Option.empty());
     }
 
@@ -132,7 +134,7 @@ public class SparkCatalogUtils {
 
         final CatalogStorageFormat storage = SparkCatalogUtils.storageFormat(format, location);
 
-        final long now = Instant.now().toEpochMilli();
+        final long now = ISO8601.now().toEpochMilli();
 
         final long created;
         final boolean exists = catalog.tableExists(databaseName, tableName);
@@ -213,10 +215,17 @@ public class SparkCatalogUtils {
 
         final CatalogTable table = catalog.getTable(databaseName, tableName);
         final List<String> names = ScalaUtils.asJavaList(table.partitionColumnNames());
+        return findPartitions(configuration, tableLocation, names, strategy);
+    }
+
+    public static List<CatalogTablePartition> findPartitions(final Configuration configuration,
+                                                             final URI tableLocation, final List<String> partitionColumns,
+                                                             final FindPartitionsStrategy strategy) {
+
         try {
             final Path path = new Path(tableLocation);
             final FileSystem fs = path.getFileSystem(configuration);
-            return findPartitions(fs, path, names, ImmutableMap.of(), strategy);
+            return findPartitions(fs, path, partitionColumns, ImmutableMap.of(), strategy);
         } catch (final IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -298,7 +307,7 @@ public class SparkCatalogUtils {
 
     public static URI partitionLocation(final URI location, final List<Pair<String, String>> spec) {
 
-        return URI.create(location.toString() + "/" + spec.stream().map(v -> toPartitionPathTerm(v.getFirst(), v.getSecond()))
+        return URI.create(Text.ensureSuffix(location.toString(), "/") + spec.stream().map(v -> toPartitionPathTerm(v.getFirst(), v.getSecond()))
                 .collect(Collectors.joining("/")));
     }
 

@@ -20,8 +20,10 @@ package io.basestar.spark.util;
  * #L%
  */
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.basestar.jackson.BasestarModule;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import io.basestar.util.*;
@@ -34,6 +36,7 @@ import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.*;
 import scala.collection.Seq;
 
+import java.io.IOException;
 import java.lang.reflect.Type;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -42,6 +45,8 @@ import java.util.stream.Stream;
 
 @Slf4j
 public class SparkSchemaUtils {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().registerModule(BasestarModule.INSTANCE);
 
     public static final String PARTITION = Reserved.PREFIX + "partition";
 
@@ -239,7 +244,7 @@ public class SparkSchemaUtils {
             @Override
             public DataType visitAny(final UseAny type) {
 
-                throw new UnsupportedOperationException();
+                return DataTypes.StringType.asNullable();
             }
 
             @Override
@@ -524,12 +529,14 @@ public class SparkSchemaUtils {
             @Override
             public Object visitAny(final UseAny type) {
 
-                if(value instanceof Row || value instanceof scala.collection.Map<?, ?>) {
-                    return visitMap(UseMap.DEFAULT);
-                } else if(value instanceof Seq<?>) {
-                    return visitArray(UseArray.DEFAULT);
+                if(value instanceof String) {
+                    try {
+                        return OBJECT_MAPPER.readValue((String) value, Object.class);
+                    } catch (final IOException e) {
+                        throw new IllegalStateException();
+                    }
                 } else {
-                    return value;
+                    throw new IllegalStateException();
                 }
             }
 
@@ -767,12 +774,10 @@ public class SparkSchemaUtils {
             @Override
             public Object visitAny(final UseAny type) {
 
-                if(value instanceof Map<?, ?>) {
-                    return visitMap(UseMap.DEFAULT);
-                } else if(value instanceof Collection<?>) {
-                    return visitArray(UseArray.DEFAULT);
-                } else {
-                    return value;
+                try {
+                    return OBJECT_MAPPER.writeValueAsString(value);
+                } catch (final IOException e) {
+                    throw new IllegalStateException(e);
                 }
             }
 
@@ -881,7 +886,7 @@ public class SparkSchemaUtils {
             @Override
             public Encoder<?> visitAny(final UseAny type) {
 
-                throw new UnsupportedOperationException();
+                return Encoders.STRING();
             }
 
             @Override
@@ -921,5 +926,32 @@ public class SparkSchemaUtils {
     public static String getHash(final Row row) {
 
         return (String) SparkRowUtils.get(row, ObjectSchema.HASH);
+    }
+
+    public static Object fromSpark(final Object value) {
+
+        if(value instanceof scala.collection.Map) {
+            final Map<String, Object> result = new HashMap<>();
+            ((scala.collection.Map<?, ?>) value).foreach(ScalaUtils.scalaFunction(e -> {
+                final String k = (String) e._1();
+                final Object v = e._2();
+                result.put(k, fromSpark(v));
+                return null;
+            }));
+            return result;
+        } else if(value instanceof Seq<?>) {
+            final List<Object> result = new ArrayList<>();
+            ((Seq<?>) value).foreach(ScalaUtils.scalaFunction(v -> {
+                result.add(fromSpark(v));
+                return null;
+            }));
+            return result;
+        } else if(value instanceof java.sql.Date) {
+            return ISO8601.toDate(value);
+        } else if(value instanceof java.sql.Timestamp) {
+            return ISO8601.toDateTime(value);
+        } else {
+            return value;
+        }
     }
 }

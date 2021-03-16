@@ -6,10 +6,7 @@ import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.*;
 import io.basestar.schema.util.Expander;
 import io.basestar.secret.Secret;
-import io.basestar.util.Bytes;
-import io.basestar.util.Immutable;
-import io.basestar.util.Name;
-import io.basestar.util.Page;
+import io.basestar.util.*;
 import io.leangen.geantyref.GenericTypeReflector;
 import io.swagger.v3.oas.models.media.*;
 import org.junit.jupiter.api.Test;
@@ -218,7 +215,7 @@ class TestUse {
 
         final UseDateTime use = UseDateTime.DEFAULT;
         testUse(use, null);
-        testUse(use, Instant.now());
+        testUse(use, ISO8601.now());
         assertTrue(use.openApi(ImmutableSet.of()) instanceof DateTimeSchema);
         assertEquals(Instant.ofEpochMilli(0), use.defaultValue());
         assertEquals(Instant.class, use.javaType());

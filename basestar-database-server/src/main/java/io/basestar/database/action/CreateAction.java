@@ -29,6 +29,7 @@ import io.basestar.schema.*;
 import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.schema.util.ValueContext;
 import io.basestar.storage.exception.ObjectExistsException;
+import io.basestar.util.ISO8601;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.RequiredArgsConstructor;
@@ -79,7 +80,7 @@ public class CreateAction implements Action {
 
         final Map<String, Object> initial = new HashMap<>(schema.create(valueContext, data, null));
 
-        final Instant now = Instant.now();
+        final Instant now = ISO8601.now();
 
         // FIXME: split validation so that required validation can be applied here
         // FIXME: or make evaluation (including id evaluation) respect dependencies

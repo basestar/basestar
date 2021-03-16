@@ -217,7 +217,7 @@ public class SQLStorage implements DefaultLayerStorage {
                 seek = select.limit(DSL.inline(count));
             } else {
                 final List<Object> values = KeysetPagingUtils.keysetValues(schema, sort, token);
-                seek = select.seek(values.toArray(new Object[0])).limit(DSL.inline(count));
+                seek = select.seek(values.stream().map(DSL::inline).toArray(Object[]::new)).limit(DSL.inline(count));
             }
 
             return seek.fetchAsync().thenApply(results -> {

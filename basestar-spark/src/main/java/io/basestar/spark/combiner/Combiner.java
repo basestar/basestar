@@ -12,6 +12,7 @@ import io.basestar.schema.use.UseBoolean;
 import io.basestar.spark.util.SparkRowUtils;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.spark.util.SparkUtils;
+import io.basestar.util.ISO8601;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -104,7 +105,7 @@ public interface Combiner extends Serializable {
         @lombok.Builder(builderClassName = "Builder")
         public Consistent(final Instant timestamp, final Conflict conflict) {
 
-            this.timestamp = Nullsafe.orDefault(timestamp, Instant::now);
+            this.timestamp = Nullsafe.orDefault(timestamp, ISO8601::now);
             this.conflict = Nullsafe.orDefault(conflict, Conflict.REPAIR);
         }
 

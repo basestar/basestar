@@ -6,6 +6,7 @@ import com.google.common.collect.Iterators;
 import io.basestar.expression.constant.Constant;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
+import io.basestar.schema.util.Bucket;
 import io.basestar.spark.query.QueryResolver;
 import io.basestar.spark.util.ScalaUtils;
 import io.basestar.spark.util.SparkRowUtils;
@@ -112,7 +113,7 @@ public class ExpandRefsStep extends AbstractExpandStep {
         }
     }
 
-    protected <T> Dataset<Row> applyImpl(final QueryResolver resolver, final Dataset<Row> input, final Use<T> typeOfId) {
+    protected <T> Dataset<Row> applyImpl(final QueryResolver resolver, final Dataset<Row> input, final Set<Bucket> buckets, final Use<T> typeOfId) {
 
         final Dataset<Row> joinTo = resolver.resolve(target, Constant.TRUE, ImmutableList.of(), ImmutableSet.of()).dataset();
 
@@ -137,7 +138,7 @@ public class ExpandRefsStep extends AbstractExpandStep {
                     final Row clean = SparkRowUtils.remove(resolved, KEY);
                     return next.projectKeys(projectedType, clean);
 
-                }), RowEncoder.apply(projectedType)));
+                }), RowEncoder.apply(projectedType)), buckets);
 
             } else {
 
@@ -168,7 +169,7 @@ public class ExpandRefsStep extends AbstractExpandStep {
                     final Row clean = SparkRowUtils.remove(resolved, KEY);
                     return next.projectKeys(projectedType, clean);
 
-                }), RowEncoder.apply(projectedType)));
+                }), RowEncoder.apply(projectedType)), buckets);
 
             } else {
 

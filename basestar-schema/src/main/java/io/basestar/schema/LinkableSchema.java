@@ -123,4 +123,18 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver, Permissio
                 .flatMap(v -> v.validate(context, name, before.get(v.getName()), after.get(v.getName())).stream())
                 .collect(Collectors.toSet());
     }
+
+    default boolean isCompatibleBucketing(final List<Bucketing> other) {
+
+        final List<Bucketing> effective = getEffectingBucketing();
+        if(effective.size() == other.size()) {
+            for(int i = 0; i != effective.size(); ++i) {
+                if(!effective.get(i).isCompatible(other.get(i))) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
 }

@@ -2,6 +2,7 @@ package io.basestar.spark.expand;
 
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.ReferableSchema;
+import io.basestar.schema.util.Bucket;
 import io.basestar.spark.query.QueryResolver;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
@@ -26,7 +27,7 @@ public interface ExpandStep extends Serializable {
 
     Iterator<Row> projectKeys(StructType outputType, Row row);
 
-    Dataset<Row> apply(QueryResolver resolver, Dataset<Row> input);
+    Dataset<Row> apply(QueryResolver resolver, Dataset<Row> input, Set<Bucket> buckets);
 
     static ExpandStep from(final LinkableSchema root, final Set<Expansion> expansions) {
 

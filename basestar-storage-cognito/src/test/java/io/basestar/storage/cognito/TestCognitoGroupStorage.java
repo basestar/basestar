@@ -23,6 +23,7 @@ package io.basestar.storage.cognito;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Namespace;
 import io.basestar.storage.*;
+import io.basestar.util.ISO8601;
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderAsyncClient;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.*;
 
@@ -126,8 +127,8 @@ class TestCognitoGroupStorage extends TestStorage {
 
         return GroupType.builder()
                 .groupName(req.groupName())
-                .creationDate(Instant.now())
-                .lastModifiedDate(Instant.now())
+                .creationDate(ISO8601.now())
+                .lastModifiedDate(ISO8601.now())
                 .build();
     }
 

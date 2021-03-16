@@ -142,7 +142,7 @@ public abstract class TestStorage {
 
     protected Multimap<String, Map<String, Object>> loadAddresses() throws IOException {
 
-        final Instant now = Instant.now();
+        final Instant now = ISO8601.now();
         final Multimap<String, Map<String, Object>> results = ArrayListMultimap.create();
 
         try(final InputStream is = TestStorage.class.getResourceAsStream("/data/Petstore/Address.csv")) {
@@ -217,7 +217,7 @@ public abstract class TestStorage {
 
         assumeTrue(supportsIndexes());
 
-        final Instant now = Instant.now();
+        final Instant now = ISO8601.now();
 
         // Horrible index usage, but high storage support
         final String country = UUID.randomUUID().toString();
@@ -1027,7 +1027,7 @@ public abstract class TestStorage {
 
     private Instance instance(final ObjectSchema schema, final String id, final long version, final Map<String, Object> data) {
 
-        final Instant now = Instant.now();
+        final Instant now = ISO8601.now();
         final Map<String, Object> instance = new HashMap<>(data);
         Instance.setId(instance, id);
         Instance.setVersion(instance, version);

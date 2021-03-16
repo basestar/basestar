@@ -6,15 +6,15 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.expression.constant.Constant;
-import io.basestar.schema.InstanceSchema;
-import io.basestar.schema.Layout;
-import io.basestar.schema.LinkableSchema;
-import io.basestar.schema.ViewSchema;
+import io.basestar.schema.*;
 import io.basestar.schema.expression.TypedExpression;
+import io.basestar.schema.use.Use;
+import io.basestar.schema.util.Bucket;
 import io.basestar.spark.combiner.Combiner;
 import io.basestar.spark.source.Source;
 import io.basestar.spark.transform.*;
 import io.basestar.spark.util.SparkRowUtils;
+import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.spark.util.SparkUtils;
 import io.basestar.storage.query.QueryPlanner;
 import io.basestar.storage.query.QueryStageVisitor;
@@ -31,6 +31,7 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -46,7 +47,12 @@ public interface QueryResolver {
         return resolve(schema, Constant.TRUE, ImmutableList.of(), expand);
     }
 
-    Query<Row> resolve(LinkableSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
+    default Query<Row> resolve(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        return resolve(schema, query, sort, expand, null);
+    }
+
+    Query<Row> resolve(LinkableSchema schema, Expression query, List<Sort> sort, Set<Name> expand, Set<Bucket> buckets);
 
     default Stage sql(final String sql, final InstanceSchema schema, final Map<String, Stage> with) {
 
@@ -69,7 +75,7 @@ public interface QueryResolver {
                 result = result.map(SparkUtils.map(row -> {
                     final List<Object> keys = new ArrayList<>();
                     for(final String name : from.getPrimaryKey()) {
-                        keys.add(SparkRowUtils.get(row, name));
+                        keys.add(SparkSchemaUtils.fromSpark(SparkRowUtils.get(row, name)));
                     }
                     final byte[] id = BinaryKey.from(keys).getBytes();
                     return SparkRowUtils.append(row, idField, id);
@@ -99,11 +105,16 @@ public interface QueryResolver {
 
     static QueryResolver ofSources(final Function<LinkableSchema, Dataset<Row>> fn) {
 
-        return (schema, query, sort, expand) -> {
+        return ofSources((schema, buckets) -> fn.apply(schema));
+    }
+
+    static QueryResolver ofSources(final BiFunction<LinkableSchema, Set<Bucket>, Dataset<Row>> fn) {
+
+        return (schema, query, sort, expand, buckets) -> {
             assert query.isConstant();
             assert sort.isEmpty();
             assert expand.isEmpty();
-            final Dataset<Row> result = fn.apply(schema);
+            final Dataset<Row> result = fn.apply(schema, buckets);
             if(query.evaluatePredicate(Context.init())) {
                 return () -> result;
             } else {
@@ -121,10 +132,10 @@ public interface QueryResolver {
         private final QueryResolver resolver;
 
         @Override
-        public Query<Row> resolve(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+        public Query<Row> resolve(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand, final Set<Bucket> buckets) {
 
             return () -> results.computeIfAbsent(new Key(schema, query, sort, expand),
-                    ignored -> resolver.resolve(schema, query, sort, expand).dataset().cache());
+                    ignored -> resolver.resolve(schema, query, sort, expand, buckets).dataset().cache());
         }
 
         @Override
@@ -163,9 +174,9 @@ public interface QueryResolver {
         }
 
         @Override
-        public Query<Row> resolve(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+        public Query<Row> resolve(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand, final Set<Bucket> buckets) {
 
-            return plan(this, schema, query, sort, expand);
+            return plan(this, schema, query, sort, expand, buckets);
         }
 
         @Override
@@ -181,9 +192,9 @@ public interface QueryResolver {
         }
 
         @Override
-        public Stage expand(final Stage input, final LinkableSchema schema, final Set<Name> expand) {
+        public Stage expand(final Stage input, final LinkableSchema schema, final Set<Name> expand, final Set<Bucket> buckets) {
 
-            return input.expand(this, schema, expand);
+            return input.expand(this, schema, expand, buckets);
         }
 
         @Override
@@ -205,15 +216,32 @@ public interface QueryResolver {
         }
 
         @Override
-        public Stage source(final LinkableSchema schema) {
+        public Stage source(final LinkableSchema schema, final Set<Bucket> buckets) {
 
-            return Stage.source(resolver, schema);
+            return Stage.source(resolver, schema, buckets);
         }
 
         @Override
         public Stage union(final List<Stage> inputs) {
 
-            throw new UnsupportedOperationException();
+            if(inputs.isEmpty()) {
+                throw new IllegalStateException("Cannot create empty union");
+            }
+            final Map<String, Use<?>> schema = new HashMap<>();
+            inputs.forEach(input -> input.getLayout().getSchema().forEach((name, type) -> {
+                final Use<?> existing = schema.get(name);
+                if(existing != null) {
+                    final Use<?> common = Use.commonBase(existing, type);
+                    schema.put(name, common);
+                } else {
+                    schema.put(name, type);
+                }
+            }));
+            final Layout layout = Layout.simple(schema);
+            final StructType structType = SparkSchemaUtils.structType(layout);
+            return Stage.from(() -> inputs.stream()
+                    .map(input -> input.dataset().map(SparkUtils.map(row -> SparkRowUtils.conform(row, structType)), RowEncoder.apply(structType)))
+                    .reduce(Dataset::union).orElseThrow(IllegalStateException::new), layout);
         }
 
         @Override
@@ -258,10 +286,10 @@ public interface QueryResolver {
         }
 
         @Override
-        public Query<Row> resolve(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+        public Query<Row> resolve(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand, final Set<Bucket> buckets) {
 
-            final Dataset<Row> baseline = this.baseline.resolve(schema, query, sort, expand).dataset();
-            final Dataset<Row> overlay = this.overlay.resolve(schema, query, sort, expand).dataset();
+            final Dataset<Row> baseline = this.baseline.resolve(schema, query, sort, expand, buckets).dataset();
+            final Dataset<Row> overlay = this.overlay.resolve(schema, query, sort, expand, buckets).dataset();
             return () -> combiner.apply(schema, expand, baseline, overlay, joinType);
         }
     }
@@ -292,15 +320,15 @@ public interface QueryResolver {
             return from(Query.super.then(transform), layout);
         }
 
-        static Stage source(final QueryResolver resolver, final LinkableSchema schema) {
+        static Stage source(final QueryResolver resolver, final LinkableSchema schema, final Set<Bucket> buckets) {
 
-            return from(resolver.resolve(schema), Layout.simple(schema.getSchema(), ImmutableSet.of()));
+            return from(resolver.resolve(schema, Constant.TRUE, ImmutableList.of(), ImmutableSet.of(), buckets), Layout.simple(schema.getSchema(), ImmutableSet.of()));
         }
 
         static Stage empty(final QueryResolver resolver, final LinkableSchema schema, final Set<Name> expand) {
 
             final Layout output = Layout.simple(schema.getSchema(), expand);
-            return from(resolver.resolve(schema, Constant.FALSE, ImmutableList.of(), expand), output);
+            return from(resolver.resolve(schema, Constant.FALSE, ImmutableList.of(), expand, null), output);
         }
 
         default Stage aggregate(final List<String> group, final Map<String, TypedExpression<?>> expressions) {
@@ -325,13 +353,14 @@ public interface QueryResolver {
                             .outputLayout(outputLayout).build(), outputLayout);
         }
 
-        default Stage expand(final QueryResolver resolver, final LinkableSchema schema, final Set<Name> expand) {
+        default Stage expand(final QueryResolver resolver, final LinkableSchema schema, final Set<Name> expand, final Set<Bucket> buckets) {
 
             final Layout outputLayout = Layout.simple(schema.getSchema(), expand);
 
             return then(ExpandTransform.builder()
                             .expand(expand)
                             .schema(schema)
+                            .buckets(buckets)
                             .resolver(resolver).build(), outputLayout);
         }
 

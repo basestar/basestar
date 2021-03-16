@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.util.ISO8601;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.junit.jupiter.api.Test;
@@ -41,9 +42,7 @@ class TestAvroUtils {
         final Namespace namespace = Namespace.load(TestAvroUtils.class.getResource("schema.yml"));
         final ObjectSchema schema = namespace.requireObjectSchema("A");
 
-        final Instant now = Instant.now();
-
-
+        final Instant now = ISO8601.now();
 
         final Map<String, Object> before = schema.create(ImmutableMap.builder()
                 .put("id", "a")

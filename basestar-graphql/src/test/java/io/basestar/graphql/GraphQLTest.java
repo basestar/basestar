@@ -302,7 +302,7 @@ class GraphQLTest {
                         "}")
                 .build()).getData();
 
-        verify(subscriberContext).subscribe(namespace.requireObjectSchema("Test1"), "x", "a", ImmutableSet.of(Name.of("id")), false);
+        verify(subscriberContext).subscribe(namespace.requireObjectSchema("Test1"), "x", "a", ImmutableSet.of(), false);
     }
 
     @Test
@@ -323,7 +323,7 @@ class GraphQLTest {
                         "}")
                 .build()).getData();
 
-        verify(subscriberContext).subscribe(namespace.requireObjectSchema("Test1"), "x", "subscribeTest1", ImmutableSet.of(Name.of("id")), false);
+        verify(subscriberContext).subscribe(namespace.requireObjectSchema("Test1"), "x", "subscribeTest1", ImmutableSet.of(), false);
     }
 
     @Test

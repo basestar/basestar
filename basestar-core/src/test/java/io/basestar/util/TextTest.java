@@ -71,4 +71,13 @@ class TextTest {
         assertEquals("organizations", Text.plural("organization"));
         assertEquals("octopuses", Text.plural("octopus"));
     }
+
+    @Test
+    void testFileSizeBytes() {
+
+        assertEquals(1L, Text.parseFileSizeBytes("1"));
+        assertEquals(1000000L, Text.parseFileSizeBytes(" 1,000 K "));
+        assertEquals(10000000000L, Text.parseFileSizeBytes(" 10 GB "));
+
+    }
 }

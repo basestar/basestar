@@ -4,6 +4,7 @@ import io.basestar.expression.Expression;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.expression.TypedExpression;
+import io.basestar.schema.util.Bucket;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
 
@@ -15,7 +16,7 @@ public interface QueryStageVisitor<T> {
 
     T empty(LinkableSchema schema, Set<Name> expand);
 
-    T expand(T input, LinkableSchema schema, Set<Name> expand);
+    T expand(T input, LinkableSchema schema, Set<Name> expand, Set<Bucket> buckets);
 
     T filter(T input, Expression condition);
 
@@ -25,7 +26,7 @@ public interface QueryStageVisitor<T> {
 
     T sort(T input, List<Sort> sort);
 
-    T source(LinkableSchema schema);
+    T source(LinkableSchema schema, Set<Bucket> buckets);
 
     T union(List<T> inputs);
 

@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -198,6 +199,47 @@ public class Text {
             return input;
         } else {
             return using + input.replaceAll("\n", "\n" + using);
+        }
+    }
+
+    private static final Pattern FILE_SIZE_PATTERN = Pattern.compile("\\s*([\\d,]+)\\s*([KMG]?)B?\\s*", Pattern.CASE_INSENSITIVE);
+
+    public static long parseFileSizeBytes(final String size) {
+
+        final Matcher matcher = FILE_SIZE_PATTERN.matcher(size);
+        if(matcher.matches()) {
+            final long count = Long.parseLong(matcher.group(1).replaceAll(",", ""));
+            switch (matcher.group(2).toUpperCase()) {
+                case "K":
+                    return 1000 * count;
+                case "M":
+                    return 1000 * 1000 * count;
+                case "G":
+                    return 1000 * 1000 * 1000 * count;
+                case "":
+                default:
+                    return count;
+            }
+        } else {
+            throw new NumberFormatException("Cannot convert " + size + " to a file size");
+        }
+    }
+
+    public static String ensureSuffix(final String str, final String suffix) {
+
+        if(str.endsWith(suffix)) {
+            return str;
+        } else {
+            return str + suffix;
+        }
+    }
+
+    public static String ensurePrefix(final String str, final String prefix) {
+
+        if(str.endsWith(prefix)) {
+            return str;
+        } else {
+            return prefix + str;
         }
     }
 }

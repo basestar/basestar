@@ -23,6 +23,11 @@ public class Bucket implements Serializable {
         return values[id];
     }
 
+    public int size() {
+        
+        return values.length;
+    }
+
     @Override
     public boolean equals(final Object o) {
 
@@ -36,5 +41,11 @@ public class Bucket implements Serializable {
     public int hashCode() {
 
         return Arrays.hashCode(values);
+    }
+
+    @Override
+    public String toString() {
+
+        return "Bucket[values=" + Arrays.toString(values) + "]";
     }
 }

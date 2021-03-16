@@ -177,7 +177,7 @@ class TestSerde {
     @Test
     void testInstant() {
 
-        final Instant now = Instant.now();
+        final Instant now = ISO8601.now();
 
         assertEquals(now, objectMapper.convertValue(ImmutableMap.of(
                 "instant", ISO8601.toString(now)

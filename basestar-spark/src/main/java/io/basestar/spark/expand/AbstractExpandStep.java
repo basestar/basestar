@@ -9,6 +9,7 @@ import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseCollection;
 import io.basestar.schema.use.UseInstance;
 import io.basestar.schema.use.UseMap;
+import io.basestar.schema.util.Bucket;
 import io.basestar.spark.query.QueryResolver;
 import io.basestar.spark.util.SparkRowUtils;
 import io.basestar.spark.util.SparkSchemaUtils;
@@ -33,19 +34,19 @@ import java.util.Set;
 public abstract class AbstractExpandStep implements ExpandStep {
 
     @Override
-    public Dataset<Row> apply(final QueryResolver resolver, final Dataset<Row> input) {
+    public Dataset<Row> apply(final QueryResolver resolver, final Dataset<Row> input, final Set<Bucket> buckets) {
 
         log.warn(describe());
         final Dataset<Row> output;
         if (hasProjectedKeys(input.schema())) {
-            output = applyImpl(resolver, input, getRoot().typeOfId());
+            output = applyImpl(resolver, input, buckets, getRoot().typeOfId());
         } else {
             final StructType inputType = input.schema();
             final StructType projectedType = projectKeysType(inputType);
             output = applyImpl(resolver, input.flatMap(
                     (FlatMapFunction<Row, Row>) row -> projectKeys(projectedType, row),
                     RowEncoder.apply(projectedType)
-            ), getRoot().typeOfId());
+            ), buckets, getRoot().typeOfId());
         }
         return output;
     }
@@ -56,7 +57,7 @@ public abstract class AbstractExpandStep implements ExpandStep {
 
     protected abstract boolean hasProjectedKeys(StructType schema);
 
-    protected abstract <T> Dataset<Row> applyImpl(QueryResolver resolver, Dataset<Row> input, Use<T> typeOfId);
+    protected abstract <T> Dataset<Row> applyImpl(QueryResolver resolver, Dataset<Row> input, Set<Bucket> buckets, Use<T> typeOfId);
 
     @SuppressWarnings("unchecked")
     protected <T> KeyValueGroupedDataset<T, Tuple2<Row, Row>> groupResults(final Dataset<Tuple2<Row, Row>> input) {
