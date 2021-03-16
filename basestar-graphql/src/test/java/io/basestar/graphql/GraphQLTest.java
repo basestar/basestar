@@ -444,7 +444,12 @@ class GraphQLTest {
 
         graphQL.execute(ExecutionInput.newExecutionInput()
                 .query("mutation {\n" +
-                        "  updateTest7(id:\"test7\", data:{versionedRef:{id: \"test7\", version: 1}}) {\n" +
+                        "  updateTest7(id:\"test7\", data:{\n" +
+                        "    versionedRef:{id: \"test7\", version: 1},\n" +
+                        "    mapVersionedRef:{key:\"x\", value:{id: \"test7\", version: 1}},\n" +
+                        "    arrayVersionedRef:[{id: \"test7\", version: 1}],\n" +
+                        "    wrappers:[{ref:{id: \"test7\", version: 1}}]\n" +
+                        "  }) {\n" +
                         "    id\n" +
                         "  }\n" +
                         "}")
@@ -453,7 +458,10 @@ class GraphQLTest {
 
         final ExecutionResult result = graphQL.execute(ExecutionInput.newExecutionInput()
                 .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
-                .query("query { readTest7(id: \"test7\") { versionedRef { id version schema } } }")
+                .query("query { readTest7(id: \"test7\") { versionedRef { id version schema } " +
+                        "mapVersionedRef { key value { id version schema } }" +
+                        "arrayVersionedRef { id version schema }" +
+                        "wrappers { ref { id version schema } } } }")
                 .build());
 
         assertEquals(ImmutableMap.of(
@@ -462,7 +470,27 @@ class GraphQLTest {
                                 "id", "test7",
                                 "version", 1,
                                 "schema", "Test7"
-                        )
+                        ),
+                        "mapVersionedRef", ImmutableList.of(ImmutableMap.of(
+                                "key", "x",
+                                "value", ImmutableMap.of(
+                                    "id", "test7",
+                                    "version", 1,
+                                    "schema", "Test7"
+                                )
+                        )),
+                        "arrayVersionedRef", ImmutableList.of(ImmutableMap.of(
+                                "id", "test7",
+                                "version", 1,
+                                "schema", "Test7"
+                        )),
+                        "wrappers", ImmutableList.of(ImmutableMap.of(
+                                "ref", ImmutableMap.of(
+                                        "id", "test7",
+                                        "version", 1,
+                                        "schema", "Test7"
+                                )
+                        ))
                 )
         ), result.getData());
     }

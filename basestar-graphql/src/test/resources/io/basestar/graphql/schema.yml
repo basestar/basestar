@@ -59,6 +59,28 @@ Test7:
       type:
         Test7?:
           versioned: true
+    mapVersionedRef:
+      type:
+        map:
+          Test7?:
+            versioned: true
+    arrayVersionedRef:
+      type:
+        array:
+          Test7?:
+            versioned: true
+    wrappers:
+      type:
+        array: Test7Wrapper
+
+Test7Wrapper:
+  type: struct
+  properties:
+    ref:
+      type:
+        Test7?:
+          versioned: true
+
 
 EmptyObject:
   type: object

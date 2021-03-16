@@ -122,9 +122,9 @@ public class GraphQLUtils {
                     final Field field = (Field) selection;
                     final String name = field.getName();
                     if (MAP_KEY.equals(name)) {
-                        names.add(parent.with("*"));
+                        names.add(parent.with(UseMap.EXPAND_WILDCARD));
                     } else if (MAP_VALUE.equals(name)) {
-                        names.addAll(paths(type.getType(), parent.with("*"), field.getSelectionSet()));
+                        names.addAll(paths(type.getType(), parent.with(UseMap.EXPAND_WILDCARD), field.getSelectionSet()));
                     }
                 }
                 return names;
@@ -252,7 +252,10 @@ public class GraphQLUtils {
 
                 final Field field = findField(selections, GraphQLUtils.MAP_VALUE);
                 if(field != null) {
-                    return expand(strategy, namespace, type.getType(), field.getSelectionSet());
+                    final Name wildcard = Name.of(UseMap.EXPAND_WILDCARD);
+                    return expand(strategy, namespace, type.getType(), field.getSelectionSet())
+                            .stream().map(wildcard::with)
+                            .collect(Collectors.toSet());
                 } else {
                     return Collections.emptySet();
                 }
@@ -273,6 +276,12 @@ public class GraphQLUtils {
             public <V, T extends Collection<V>> Set<Name> visitCollection(final UseCollection<V, T> type) {
 
                 return expand(strategy, namespace, type.getType(), selections);
+            }
+
+            @Override
+            public Set<Name> visitStruct(final UseStruct type) {
+
+                return expand(strategy, namespace, type.getSchema(), selections);
             }
 
             @Override

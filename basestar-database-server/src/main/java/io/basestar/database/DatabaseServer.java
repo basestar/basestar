@@ -630,7 +630,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             final Instance before = schema.create(readResponse.get(schema, id), expand, true);
             if(before != null) {
                 final Set<Name> refExpand = schema.refExpand(refSchema.getQualifiedName(), schema.getExpand());
-                final Instance refAfter = refSchema.create(readResponse.get(refSchema, refId), expand, true);
+                final Instance refAfter = refSchema.create(readResponse.get(refSchema, refId), refExpand, true);
                 final Long refAfterVersion = refAfter == null ? null : Instance.getVersion(refAfter);
                 return expand(context(Caller.SUPER), refAfter, refExpand).thenCompose(expandedRefAfter -> {
 
