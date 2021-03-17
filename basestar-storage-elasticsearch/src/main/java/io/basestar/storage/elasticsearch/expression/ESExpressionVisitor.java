@@ -248,8 +248,7 @@ public class ESExpressionVisitor implements ExpressionVisitor.Defaulting<QueryBu
                 final Name name = ((NameConstant) of.getExpr()).getName();
                 final String value = of.getValue();
                 final Expression bound = lhs.bind(Context.init(), Renaming.move(Name.of(value), name));
-                final QueryBuilder lhsQuery = bound.visit(this);
-                return QueryBuilders.nestedQuery(name.toString(), lhsQuery, ScoreMode.Avg);
+                return bound.visit(this);
             }
         }
         return null;

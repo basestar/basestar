@@ -253,11 +253,7 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
 
         final Mappings mappings = strategy.mappings(schema);
         final Settings settings = strategy.settings(schema);
-        return ElasticsearchUtils.syncIndex(client, name, mappings, settings)
-                .exceptionally(e -> {
-                    log.error("Failed to sync index, continuing anyway", e);
-                    return null;
-                });
+        return ElasticsearchUtils.syncIndex(client, name, mappings, settings);
     }
 
     @Override
