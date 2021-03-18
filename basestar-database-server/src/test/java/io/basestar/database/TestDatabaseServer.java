@@ -977,6 +977,19 @@ class TestDatabaseServer {
         );
     }
 
+    @Test
+    void testRefQueryEvents() throws Exception {
+
+        final String id = UUID.randomUUID().toString();
+        final Set<Event> events = database.refQueryEvents(namespace.requireObjectSchema("NestedRef3"), id);
+        System.err.println(events);
+        final Set<Name> expand = namespace.requireObjectSchema("NestedRef1").refExpand(
+                namespace.requireObjectSchema("NestedRef2").getQualifiedName(),
+                namespace.requireObjectSchema("NestedRef1").getExpand()
+        );
+        System.err.println(expand);
+    }
+
     private Executable cause(final Executable target) {
 
         return () -> {

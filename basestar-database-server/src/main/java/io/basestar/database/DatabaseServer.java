@@ -638,13 +638,13 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             final Instance before = schema.create(readResponse.get(schema, id), expand, true);
             if(before != null) {
                 final Set<Name> refExpand = schema.refExpand(refSchema.getQualifiedName(), schema.getExpand());
-                final Instance refAfter = refSchema.create(readResponse.get(refSchema, refId), refExpand, true);
-                final Long refAfterVersion = refAfter == null ? null : Instance.getVersion(refAfter);
-                return expand(Consistency.ATOMIC, Consistency.ATOMIC, context(Caller.SUPER), refAfter, refExpand).thenCompose(expandedRefAfter -> {
+                final Instance unexpandedRefAfter = refSchema.create(readResponse.get(refSchema, refId), refExpand, true);
+                final Long refAfterVersion = unexpandedRefAfter == null ? null : Instance.getVersion(unexpandedRefAfter);
+                return expand(Consistency.ATOMIC, Consistency.ATOMIC, context(Caller.SUPER), unexpandedRefAfter, refExpand).thenCompose(refAfter -> {
 
                     final Long version = Instance.getVersion(before);
                     assert version != null;
-                    final Instance after = schema.expand(before, new Expander() {
+                    final Instance after = schema.expand(before, new Expander.Noop() {
                         @Override
                         public Instance expandRef(final Name name, final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
@@ -676,11 +676,6 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                             return schema.expand(ref, this, expand);
                         }
 
-                        @Override
-                        public Page<Instance> expandLink(final Name name, final Link link, final Page<Instance> value, final Set<Name> expand) {
-
-                            return value;
-                        }
                     }, schema.getExpand());
                     final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC, Versioning.CHECKED);
                     writeUpdate(write, schema, id, before, after);
@@ -694,7 +689,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         });
     }
 
-    private Set<Event> refQueryEvents(final ObjectSchema schema, final String id) {
+    protected Set<Event> refQueryEvents(final ObjectSchema schema, final String id) {
 
         final Set<Event> events = new HashSet<>();
         namespace.forEachObjectSchema((k, v) -> {

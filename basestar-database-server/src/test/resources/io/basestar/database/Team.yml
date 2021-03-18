@@ -129,3 +129,29 @@ TeamMemberStats:
   permissions:
     read:
       expression: this.team in caller.teams
+
+NestedRef3:
+  type: object
+
+NestedRef2:
+  type: object
+  properties:
+    ref:
+      type: NestedRef3
+    refs:
+      type:
+        array: NestedRef3
+
+NestedRef1:
+  type: object
+  properties:
+    ref:
+      type: NestedRef2
+    refs:
+      type:
+        array: NestedRef2
+  expand:
+    - ref.ref
+    - ref.refs
+    - refs.ref
+    - refs.refs
