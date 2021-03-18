@@ -24,9 +24,9 @@ public class SplitLayerStorage implements DefaultLayerStorage {
     private final LayeredStorage layerStorage;
 
     @Override
-    public Pager<Map<String, Object>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    public Pager<Map<String, Object>> queryObject(final Consistency consistency, final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        return objectStorage.query(schema, query, sort, expand);
+        return objectStorage.query(consistency, schema, query, sort, expand);
     }
 
     @Override

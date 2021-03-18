@@ -9,6 +9,7 @@ import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Member;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.Schema;
+import io.basestar.schema.from.From;
 import io.basestar.schema.use.Use;
 import io.basestar.type.PropertyContext;
 import io.basestar.type.TypeContext;
@@ -108,7 +109,7 @@ class TestTypescriptCodegen {
                 io.basestar.schema.Consistency.class,
                 io.basestar.schema.Concurrency.class,
                 io.basestar.schema.Constraint.class,
-                io.basestar.schema.ViewSchema.Descriptor.From.class,
+                From.Descriptor.class,
                 io.basestar.schema.validation.Validation.Validator.class,
                 io.basestar.schema.Transient.Descriptor.class,
                 io.basestar.schema.Visibility.class,

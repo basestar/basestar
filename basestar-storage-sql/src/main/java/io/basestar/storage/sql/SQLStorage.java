@@ -137,7 +137,7 @@ public class SQLStorage implements DefaultLayerStorage {
 //    }
 
     @Override
-    public Pager<Map<String, Object>> queryObject(final ObjectSchema schema, final Expression query,
+    public Pager<Map<String, Object>> queryObject(final Consistency consistency, final ObjectSchema schema, final Expression query,
                                                   final List<Sort> sort, final Set<Name> expand) {
 
         final Expression bound = query.bind(Context.init());

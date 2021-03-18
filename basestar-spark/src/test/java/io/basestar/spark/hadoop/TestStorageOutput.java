@@ -99,11 +99,11 @@ class TestStorageOutput extends AbstractSparkTest {
         assertNotNull(a2);
 
         // Check indexes were written
-        final Page<Map<String, Object>> b1 = storage.query(schemaA, Expression.parse("ref.id == 'b:1'"), ImmutableList.of(), ImmutableSet.of())
+        final Page<Map<String, Object>> b1 = storage.query(Consistency.EVENTUAL, schemaA, Expression.parse("ref.id == 'b:1'"), ImmutableList.of(), ImmutableSet.of())
                 .page(10).join();
         assertEquals(1, b1.size());
 
-        final Page<Map<String, Object>> b2 = storage.query(schemaA, Expression.parse("ref.id == 'b:2'"), ImmutableList.of(), ImmutableSet.of())
+        final Page<Map<String, Object>> b2 = storage.query(Consistency.EVENTUAL, schemaA, Expression.parse("ref.id == 'b:2'"), ImmutableList.of(), ImmutableSet.of())
                 .page(10).join();
         assertEquals(1, b2.size());
     }

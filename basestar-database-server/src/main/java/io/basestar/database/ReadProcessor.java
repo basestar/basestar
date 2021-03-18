@@ -103,7 +103,7 @@ public class ReadProcessor {
         return Consistency.ATOMIC;
     }
 
-    protected CompletableFuture<Page<Instance>> queryLinkImpl(final Context context, final Link link, final Instance owner,
+    protected CompletableFuture<Page<Instance>> queryLinkImpl(final Context context, final Consistency consistency, final Link link, final Instance owner,
                                                               final Set<Name> expand, final int count, final Page.Token paging) {
 
         final Expression expression = link.getExpression()
@@ -112,10 +112,10 @@ public class ReadProcessor {
                 )));
 
         final LinkableSchema linkSchema = link.getSchema();
-        return queryImpl(context, linkSchema, expression, link.getSort(), expand, count, paging);
+        return queryImpl(context, consistency, linkSchema, expression, link.getSort(), expand, count, paging);
     }
 
-    protected CompletableFuture<Page<Instance>> queryImpl(final Context context, final LinkableSchema schema, final Expression expression,
+    protected CompletableFuture<Page<Instance>> queryImpl(final Context context, final Consistency consistency, final LinkableSchema schema, final Expression expression,
                                                           final List<Sort> sort, final Set<Name> expand, final int count, final Page.Token paging) {
 
         final List<Sort> pageSort = ImmutableList.<Sort>builder()
@@ -125,7 +125,7 @@ public class ReadProcessor {
 
         final Set<Name> queryExpand = Sets.union(Nullsafe.orDefault(expand), Nullsafe.orDefault(schema.getExpand()));
 
-        final Pager<Instance> pager = storage.query(schema, expression, pageSort, queryExpand)
+        final Pager<Instance> pager = storage.query(consistency, schema, expression, pageSort, queryExpand)
                 .map(v -> create(v, expand));
 
         return pager.page(paging, count)
@@ -143,7 +143,7 @@ public class ReadProcessor {
                 });
     }
 
-    protected CompletableFuture<Instance> expand(final Context context, final Instance item, final Set<Name> expand) {
+    protected CompletableFuture<Instance> expand(final Consistency consistency, final Consistency linkConsistency, final Context context, final Instance item, final Set<Name> expand) {
 
         if(item == null) {
             return CompletableFuture.completedFuture(null);
@@ -151,12 +151,12 @@ public class ReadProcessor {
             return CompletableFuture.completedFuture(item);
         } else {
             final ExpandKey<RefKey> expandKey = ExpandKey.from(RefKey.latest(item), expand);
-            return expand(context, Collections.singletonMap(expandKey, item))
+            return expand(consistency, linkConsistency, context, Collections.singletonMap(expandKey, item))
                     .thenApply(results -> results.get(expandKey));
         }
     }
 
-    protected CompletableFuture<Page<Instance>> expand(final Context context, final Page<Instance> items, final Set<Name> expand) {
+    protected CompletableFuture<Page<Instance>> expand(final Consistency consistency, final Consistency linkConsistency, final Context context, final Page<Instance> items, final Set<Name> expand) {
 
         if(items == null) {
             return CompletableFuture.completedFuture(null);
@@ -168,7 +168,7 @@ public class ReadProcessor {
                             item -> ExpandKey.from(RefKey.latest(item), expand),
                             item -> item
                     ));
-            return expand(context, expandKeys)
+            return expand(consistency, linkConsistency, context, expandKeys)
                     .thenApply(expanded -> items.withPage(
                             items.stream()
                                     .map(v -> expanded.get(ExpandKey.from(RefKey.latest(v), expand)))
@@ -177,9 +177,9 @@ public class ReadProcessor {
         }
     }
 
-    protected CompletableFuture<Map<ExpandKey<RefKey>, Instance>> expand(final Context context, final Map<ExpandKey<RefKey>, Instance> items) {
+    protected CompletableFuture<Map<ExpandKey<RefKey>, Instance>> expand(final Consistency consistency, final Consistency linkConsistency, final Context context, final Map<ExpandKey<RefKey>, Instance> items) {
 
-        return expandImpl(context, items)
+        return expandImpl(consistency, linkConsistency, context, items)
                 .thenApply(results -> {
                     final Map<ExpandKey<RefKey>, Instance> evaluated = new HashMap<>();
                     results.forEach((k, v) -> {
@@ -191,12 +191,10 @@ public class ReadProcessor {
     }
 
     // FIXME: poor performance, need to batch more
-    protected CompletableFuture<Map<ExpandKey<RefKey>, Instance>> expandImpl(final Context context, final Map<ExpandKey<RefKey>, Instance> items) {
+    protected CompletableFuture<Map<ExpandKey<RefKey>, Instance>> expandImpl(final Consistency consistency, final Consistency linkConsistency, final Context context, final Map<ExpandKey<RefKey>, Instance> items) {
 
         final Set<ExpandKey<RefKey>> refs = new HashSet<>();
         final Map<ExpandKey<LinkKey>, CompletableFuture<Page<Instance>>> links = new HashMap<>();
-
-        final Consistency consistency = Consistency.ATOMIC;
 
         items.forEach((ref, object) -> {
             if(!ref.getExpand().isEmpty()) {
@@ -233,8 +231,8 @@ public class ReadProcessor {
                         final ExpandKey<LinkKey> linkKey = ExpandKey.from(LinkKey.from(refKey, link.getName()), expand);
                         log.debug("Expanding link: {}", linkKey);
                         // FIXME: do we need to pre-expand here? original implementation did
-                        links.put(linkKey, queryLinkImpl(context, link, object, linkKey.getExpand(), EXPAND_LINK_SIZE, null)
-                                .thenCompose(results -> expand(context, results, expand)));
+                        links.put(linkKey, queryLinkImpl(context, linkConsistency, link, object, linkKey.getExpand(), EXPAND_LINK_SIZE, null)
+                                .thenCompose(results -> expand(consistency, linkConsistency, context, results, expand)));
                         return null;
                     }
                 }, ref.getExpand());
@@ -292,7 +290,7 @@ public class ReadProcessor {
                         });
                     }
 
-                    return expand(context, resolved).thenApply(expanded -> {
+                    return expand(consistency, linkConsistency, context, resolved).thenApply(expanded -> {
 
                         final Map<ExpandKey<RefKey>, Instance> result = new HashMap<>();
 
@@ -368,7 +366,7 @@ public class ReadProcessor {
         return schema.create(data, Immutable.addAll(schema.getExpand(), expand), true);
     }
 
-    protected CompletableFuture<Caller> expandCaller(final Context context, final Caller caller, final Set<Name> expand) {
+    protected CompletableFuture<Caller> expandCaller(final Consistency consistency, final Consistency linkConsistency, final Context context, final Caller caller, final Set<Name> expand) {
 
         if(caller.getId() == null || caller.isSuper()) {
 
@@ -379,7 +377,7 @@ public class ReadProcessor {
             if(caller instanceof ExpandedCaller) {
 
                 final Instance object = ((ExpandedCaller)caller).getObject();
-                return expand(context, object, expand)
+                return expand(consistency, linkConsistency, context, object, expand)
                         .thenApply(result -> result == object ? caller : new ExpandedCaller(caller, result));
 
             } else {
@@ -388,7 +386,7 @@ public class ReadProcessor {
                     final Schema<?> schema = namespace.getSchema(caller.getSchema());
                     if(schema instanceof ObjectSchema) {
                         return readImpl((ObjectSchema)schema, caller.getId(), null, expand)
-                                .thenCompose(unexpanded -> expand(context, unexpanded, expand))
+                                .thenCompose(unexpanded -> expand(consistency, linkConsistency, context, unexpanded, expand))
                                 .thenApply(result -> new ExpandedCaller(caller, result));
                     }
                 }

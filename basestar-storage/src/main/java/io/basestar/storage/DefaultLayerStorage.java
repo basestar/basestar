@@ -81,32 +81,32 @@ public interface DefaultLayerStorage extends LayeredStorage, ValidatingStorage {
         return CompletableFuture.completedFuture(Collections.emptySet());
     }
 
-    Pager<Map<String, Object>> queryObject(ObjectSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
+    Pager<Map<String, Object>> queryObject(Consistency consistency, ObjectSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
 
-    default Pager<Map<String, Object>> queryView(final ViewSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    default Pager<Map<String, Object>> queryView(final Consistency consistency, final ViewSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         throw new UnsupportedOperationException();
     }
 
-    default Pager<Map<String, Object>> queryInterface(final InterfaceSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    default Pager<Map<String, Object>> queryInterface(final Consistency consistency, final InterfaceSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         final Collection<ObjectSchema> objectSchemas = schema.getConcreteExtended();
         final Map<String, Pager<Map<String, Object>>> pagers = new HashMap<>();
         objectSchemas.forEach(objectSchema -> {
-            pagers.put(objectSchema.getQualifiedName().toString(), queryObject(objectSchema, query, sort, expand));
+            pagers.put(objectSchema.getQualifiedName().toString(), queryObject(consistency, objectSchema, query, sort, expand));
         });
         return Pager.merge(Instance.comparator(sort), pagers);
     }
 
     @Override
-    default Pager<Map<String, Object>> query(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    default Pager<Map<String, Object>> query(final Consistency consistency, final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         if(schema instanceof ViewSchema) {
-            return queryView((ViewSchema)schema, query, sort, expand);
+            return queryView(consistency, (ViewSchema)schema, query, sort, expand);
         } else if(schema instanceof InterfaceSchema) {
-            return queryInterface((InterfaceSchema)schema, query, sort, expand);
+            return queryInterface(consistency, (InterfaceSchema)schema, query, sort, expand);
         } else {
-            return queryObject((ObjectSchema)schema, query, sort, expand);
+            return queryObject(consistency, (ObjectSchema)schema, query, sort, expand);
         }
     }
 

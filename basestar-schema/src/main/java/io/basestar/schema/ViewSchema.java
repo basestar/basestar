@@ -26,16 +26,15 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
-import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
-import io.basestar.jackson.serde.AbbrevSetDeserializer;
 import io.basestar.jackson.serde.ExpressionDeserializer;
 import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
-import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.expression.InferenceContext;
+import io.basestar.schema.from.From;
+import io.basestar.schema.from.FromSchema;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseBinary;
 import io.basestar.schema.use.UseView;
@@ -72,293 +71,10 @@ public class ViewSchema implements LinkableSchema {
         }
     }
 
-    public interface From extends Serializable {
-
-        Descriptor.From descriptor();
-
-        InferenceContext inferenceContext();
-
-        void collectMaterializationDependencies(Map<Name, LinkableSchema> out);
-
-        void collectDependencies(Map<Name, Schema<?>> out);
-
-        Use<?> typeOfId();
-
-        void validateProperty(Property property);
-        
-        @Getter
-        class FromSql implements From {
-
-            private final String sql;
-
-            private final List<String> primaryKey;
-
-            private final Map<String, From> using;
-
-            public FromSql(final Resolver.Constructing resolver, final Descriptor.From from) {
-
-                this.sql = Nullsafe.require(from.getSql());
-                this.primaryKey = Nullsafe.require(from.getPrimaryKey());
-                this.using = Immutable.transformValuesSorted(from.getUsing(), (k, v) -> v.build(resolver));
-            }
-
-            @Override
-            public Descriptor.From descriptor() {
-
-                return new Descriptor.From() {
-                    @Override
-                    public Name getSchema() {
-
-                        return null;
-                    }
-
-                    @Override
-                    public List<Sort> getSort() {
-
-                        return null;
-                    }
-
-                    @Override
-                    public Set<Name> getExpand() {
-
-                        return null;
-                    }
-
-                    @Override
-                    public String getSql() {
-
-                        return sql;
-                    }
-
-                    @Override
-                    public Map<String, Descriptor.From> getUsing() {
-
-                        return Immutable.transformValuesSorted(using, (k, v) -> v.descriptor());
-                    }
-
-                    @Override
-                    public List<String> getPrimaryKey() {
-
-                        return primaryKey;
-                    }
-                };
-            }
-
-            @Override
-            public InferenceContext inferenceContext() {
-
-                return InferenceContext.empty();
-            }
-
-            @Override
-            public void collectMaterializationDependencies(final Map<Name, LinkableSchema> out) {
-
-                using.forEach((k, v) -> v.collectMaterializationDependencies(out));
-            }
-
-            @Override
-            public void collectDependencies(final Map<Name, Schema<?>> out) {
-
-                using.forEach((k, v) -> v.collectDependencies(out));
-            }
-
-            @Override
-            public Use<?> typeOfId() {
-
-                return UseBinary.DEFAULT;
-            }
-
-            @Override
-            public void validateProperty(final Property property) {
-
-                if(property.getExpression() != null) {
-                    throw new SchemaValidationException(property.getQualifiedName(), "SQL view properties should not have expressions");
-                }
-            }
-        }
-
-        @Getter
-        class FromSchema implements From {
-
-            @Nonnull
-            private final LinkableSchema schema;
-
-            @Nonnull
-            private final List<Sort> sort;
-
-            @Nonnull
-            private final Set<Name> expand;
-
-            public FromSchema(final Resolver.Constructing resolver, final Descriptor.From from) {
-
-                this.schema = resolver.requireLinkableSchema(from.getSchema());
-                this.sort = Nullsafe.orDefault(from.getSort());
-                this.expand = Nullsafe.orDefault(from.getExpand());
-            }
-
-            @Override
-            public Descriptor.From descriptor() {
-
-                return new Descriptor.From() {
-                    @Override
-                    public Name getSchema() {
-
-                        return schema.getQualifiedName();
-                    }
-
-                    @Override
-                    public List<Sort> getSort() {
-
-                        return sort;
-                    }
-
-                    @Override
-                    public Set<Name> getExpand() {
-
-                        return expand;
-                    }
-
-                    @Override
-                    public String getSql() {
-
-                        return null;
-                    }
-
-                    @Override
-                    public Map<String, Descriptor.From> getUsing() {
-
-                        return null;
-                    }
-
-                    @Override
-                    public List<String> getPrimaryKey() {
-
-                        return null;
-                    }
-                };
-            }
-
-            @Override
-            public InferenceContext inferenceContext() {
-
-                return InferenceContext.from(getSchema());
-            }
-
-            @Override
-            public void collectMaterializationDependencies(final Map<Name, LinkableSchema> out) {
-
-                final LinkableSchema fromSchema = getSchema();
-                if(!out.containsKey(fromSchema.getQualifiedName())) {
-                    out.put(fromSchema.getQualifiedName(), fromSchema);
-                    fromSchema.collectMaterializationDependencies(getExpand(), out);
-                }
-            }
-
-            @Override
-            public void collectDependencies(final Map<Name, Schema<?>> out) {
-
-                getSchema().collectDependencies(getExpand(), out);
-            }
-
-            @Override
-            public Use<?> typeOfId() {
-
-                return getSchema().typeOfId();
-            }
-
-            @Override
-            public void validateProperty(final Property property) {
-
-                if(property.getExpression() == null) {
-                    throw new SchemaValidationException(property.getQualifiedName(), "Every view property must have an expression");
-                }
-            }
-        }
-
-        @Data
-        @Accessors(chain = true)
-        @JsonInclude(JsonInclude.Include.NON_NULL)
-        @JsonPropertyOrder({"schema", "expand", "sort"})
-        class Builder implements Descriptor.From {
-
-            @Nullable
-            private Name schema;
-
-            @Nullable
-            @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
-            @JsonSerialize(contentUsing = ToStringSerializer.class)
-            @JsonDeserialize(using = AbbrevSetDeserializer.class)
-            private Set<Name> expand;
-
-            @Nullable
-            @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
-            @JsonDeserialize(using = AbbrevListDeserializer.class)
-            private List<Sort> sort;
-
-            @Nullable
-            private String sql;
-
-            @Nullable
-            private Map<String, Descriptor.From> using;
-
-            @Nullable
-            @JsonDeserialize(using = AbbrevListDeserializer.class)
-            private List<String> primaryKey;
-
-            @JsonCreator
-            @SuppressWarnings("unused")
-            public static Builder fromSchema(final String schema) {
-
-                return fromSchema(Name.parse(schema));
-            }
-
-            public static Builder fromSchema(final Name schema) {
-
-                return new Builder().setSchema(schema);
-            }
-        }
-
-        static Builder builder() {
-
-            return new Builder();
-        }
-    }
-
     @JsonDeserialize(as = Builder.class)
     public interface Descriptor extends LinkableSchema.Descriptor<ViewSchema> {
 
         String TYPE = "view";
-
-        @JsonDeserialize(as = ViewSchema.From.Builder.class)
-        interface From {
-
-            @JsonInclude(JsonInclude.Include.NON_NULL)
-            Name getSchema();
-
-            @JsonInclude(JsonInclude.Include.NON_EMPTY)
-            List<Sort> getSort();
-
-            @JsonInclude(JsonInclude.Include.NON_EMPTY)
-            Set<Name> getExpand();
-
-            @JsonInclude(JsonInclude.Include.NON_NULL)
-            String getSql();
-
-            @JsonInclude(JsonInclude.Include.NON_EMPTY)
-            Map<String, From> getUsing();
-
-            @JsonInclude(JsonInclude.Include.NON_EMPTY)
-            List<String> getPrimaryKey();
-
-            default ViewSchema.From build(final Resolver.Constructing resolver) {
-
-                if(getSql() != null) {
-                    return new ViewSchema.From.FromSql(resolver, this);
-                } else {
-                    return new ViewSchema.From.FromSchema(resolver, this);
-                }
-            }
-        }
 
         @Override
         default String getType() {
@@ -368,7 +84,7 @@ public class ViewSchema implements LinkableSchema {
 
         Boolean getMaterialized();
 
-        From getFrom();
+        From.Descriptor getFrom();
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         List<Sort> getSort();
@@ -387,7 +103,7 @@ public class ViewSchema implements LinkableSchema {
             }
 
             @Override
-            default Descriptor.From getFrom() {
+            default From.Descriptor getFrom() {
 
                 return self().getFrom().descriptor();
             }
@@ -434,7 +150,7 @@ public class ViewSchema implements LinkableSchema {
         private Boolean materialized;
 
         @Nullable
-        private From from;
+        private From.Descriptor from;
 
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
@@ -479,9 +195,9 @@ public class ViewSchema implements LinkableSchema {
         public ViewSchema.Builder setSql(final String sql) {
             
             if(this.from == null) {
-                this.from = new ViewSchema.From.Builder();
+                this.from = new io.basestar.schema.from.From.Builder();
             }
-            ((ViewSchema.From.Builder)this.from).setSql(sql);
+            ((io.basestar.schema.from.From.Builder)this.from).setSql(sql);
             return this;
         }
 
@@ -489,18 +205,18 @@ public class ViewSchema implements LinkableSchema {
         public ViewSchema.Builder setPrimaryKey(final List<String> primaryKey) {
 
             if(this.from == null) {
-                this.from = new ViewSchema.From.Builder();
+                this.from = new io.basestar.schema.from.From.Builder();
             }
-            ((ViewSchema.From.Builder)this.from).setPrimaryKey(primaryKey);
+            ((io.basestar.schema.from.From.Builder)this.from).setPrimaryKey(primaryKey);
             return this;
         }
 
-        public ViewSchema.Builder setUsing(final Map<String, From> using) {
+        public ViewSchema.Builder setUsing(final Map<String, From.Descriptor> using) {
 
             if(this.from == null) {
-                this.from = new ViewSchema.From.Builder();
+                this.from = new io.basestar.schema.from.From.Builder();
             }
-            ((ViewSchema.From.Builder)this.from).setUsing(using);
+            ((io.basestar.schema.from.From.Builder)this.from).setUsing(using);
             return this;
         }
         
@@ -573,7 +289,7 @@ public class ViewSchema implements LinkableSchema {
         this.slot = slot;
         this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
         this.materialized = Nullsafe.orDefault(descriptor.getMaterialized());
-        final Descriptor.From from = Nullsafe.require(descriptor.getFrom());
+        final From.Descriptor from = Nullsafe.require(descriptor.getFrom());
         this.from = from.build(resolver);
         this.sort = Immutable.list(descriptor.getSort());
         this.description = descriptor.getDescription();
@@ -746,7 +462,7 @@ public class ViewSchema implements LinkableSchema {
     @Override
     public boolean isCompatibleBucketing(final List<Bucketing> other) {
 
-        if(from instanceof From.FromSchema) {
+        if(from instanceof FromSchema) {
             final List<Bucketing> fromBucketing = new ArrayList<>();
             for(final Bucketing bucket : other) {
                 final List<Name> using = new ArrayList<>();
@@ -767,7 +483,7 @@ public class ViewSchema implements LinkableSchema {
                 }
                 fromBucketing.add(new Bucketing(using, bucket.getCount(), bucket.getFunction()));
             }
-            return ((From.FromSchema) from).getSchema().isCompatibleBucketing(fromBucketing);
+            return ((FromSchema) from).getSchema().isCompatibleBucketing(fromBucketing);
         }
         return false;
     }

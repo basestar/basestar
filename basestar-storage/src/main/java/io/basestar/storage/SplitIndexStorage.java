@@ -23,9 +23,9 @@ public class SplitIndexStorage implements IndexStorage {
     private final IndexStorage indexStorage;
 
     @Override
-    public Pager<Map<String, Object>> query(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    public Pager<Map<String, Object>> query(final Consistency consistency, final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        return indexStorage.query(schema, query, sort, expand);
+        return indexStorage.query(consistency, schema, query, sort, expand);
     }
 
     @Override

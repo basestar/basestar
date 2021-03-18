@@ -79,7 +79,7 @@ public interface Storage {
                 .read().thenApply(results -> results.getVersion(schema.getQualifiedName(), id, version));
     }
 
-    Pager<Map<String, Object>> query(LinkableSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
+    Pager<Map<String, Object>> query(Consistency consistency, LinkableSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
 
     CompletableFuture<Set<Event>> afterCreate(ObjectSchema schema, String id, Map<String, Object> after);
 

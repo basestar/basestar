@@ -7,7 +7,9 @@ import io.basestar.mapper.MappingStrategy;
 import io.basestar.mapper.SchemaMapper;
 import io.basestar.mapper.internal.ViewSchemaMapper;
 import io.basestar.mapper.internal.annotation.SchemaDeclaration;
-import io.basestar.schema.ViewSchema;
+import io.basestar.schema.from.From;
+import io.basestar.schema.from.FromSchema;
+import io.basestar.schema.from.FromSql;
 import io.basestar.type.AnnotationContext;
 import io.basestar.type.TypeContext;
 import io.basestar.util.Name;
@@ -60,13 +62,13 @@ public @interface SqlViewSchema {
                     .setPrimaryKey(ImmutableList.copyOf(annotation.primaryKey()))
                     .setUsing(Stream.of(annotation.using()).collect(Collectors.toMap(
                             Using::as,
-                            e -> ViewSchema.From.builder().setSchema(Name.parse(e.schema()))
+                            e -> From.builder().setSchema(Name.parse(e.schema()))
                     )));
         }
 
         public static SqlViewSchema annotation(final io.basestar.schema.ViewSchema schema) {
 
-            final ViewSchema.From.FromSql from = (ViewSchema.From.FromSql)schema.getFrom();
+            final FromSql from = (FromSql)schema.getFrom();
             return new AnnotationContext<>(SqlViewSchema.class, ImmutableMap.<String, Object>builder()
                     .put("name", schema.getQualifiedName().toString())
                     .put("materialized", schema.isMaterialized())
@@ -75,7 +77,7 @@ public @interface SqlViewSchema {
                     .put("using", from.getUsing().entrySet().stream().map(
                             e -> new AnnotationContext<>(Using.class, ImmutableMap.<String, Object>builder()
                                     .put("as", e.getKey())
-                                    .put("schema", ((ViewSchema.From.FromSchema)e.getValue()).getSchema().getQualifiedName().toString())
+                                    .put("schema", ((FromSchema)e.getValue()).getSchema().getQualifiedName().toString())
                                     .build()).annotation()
                     ).toArray(Using[]::new))
                     .build()).annotation();

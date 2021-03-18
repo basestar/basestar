@@ -57,6 +57,7 @@ import io.basestar.storage.exception.ObjectMissingException;
 import io.basestar.storage.overlay.OverlayStorage;
 import io.basestar.util.*;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.units.qual.C;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -166,7 +167,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             }
         });
 
-        return expandCaller(Context.init(), caller, beforeCallerExpand).thenCompose(beforeCaller -> {
+        return expandCaller(Consistency.ATOMIC, Consistency.ATOMIC, Context.init(), caller, beforeCallerExpand).thenCompose(beforeCaller -> {
 
             final Context beforeContext = context(beforeCaller);
 
@@ -192,7 +193,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                     });
 
                     // FIXME need unexpanded results
-                    return expand(beforeContext, beforeUnexpanded)
+                    return expand(Consistency.ATOMIC, Consistency.ATOMIC, beforeContext, beforeUnexpanded)
                             .thenApply(this::processActionResults);
                 });
             } else {
@@ -259,7 +260,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
                 final ReadProcessor readOverlay = new ReadProcessor(namespace, overlayStorage);
 
-                return readOverlay.expandCaller(beforeContext, beforeCaller, afterCallerExpand).thenCompose(afterCaller -> {
+                return readOverlay.expandCaller(Consistency.ATOMIC, Consistency.ATOMIC, beforeContext, beforeCaller, afterCallerExpand).thenCompose(afterCaller -> {
 
                     final Context afterContext = context(afterCaller);
 
@@ -267,7 +268,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                     if (afterKeys.isEmpty()) {
                         afterFuture = CompletableFuture.completedFuture(Collections.emptyMap());
                     } else {
-                        afterFuture = readOverlay.expand(afterContext, afterKeys)
+                        afterFuture = readOverlay.expand(Consistency.ATOMIC, Consistency.ATOMIC, afterContext, afterKeys)
                                 .thenApply(this::processActionResults);
                     }
 
@@ -382,8 +383,11 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final String id = options.getId();
         final ReferableSchema objectSchema = namespace.requireReferableSchema(options.getSchema());
 
+        final Consistency consistency = Nullsafe.orDefault(options.getConsistency(), Consistency.ATOMIC);
+        final Consistency linkConsistency = Nullsafe.orDefault(options.getLinkConsistency(), Consistency.EVENTUAL);
+
         return readImpl(objectSchema, id, options.getVersion(), options.getExpand())
-                .thenCompose(initial -> expandAndRestrict(caller, initial, options.getExpand()));
+                .thenCompose(initial -> expandAndRestrict(consistency, linkConsistency, caller, initial, options.getExpand()));
     }
 
     // FIXME need to apply nested permissions
@@ -397,7 +401,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
     }
 
     // FIXME need to create a deeper permission expand for nested permissions
-    private CompletableFuture<Instance> expandAndRestrict(final Caller caller, final Instance instance, final Set<Name> expand) {
+    private CompletableFuture<Instance> expandAndRestrict(final Consistency consistency, final Consistency linkConsistency, final Caller caller, final Instance instance, final Set<Name> expand) {
 
         if(instance == null) {
             return CompletableFuture.completedFuture(null);
@@ -410,13 +414,13 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final Set<Name> readExpand = Sets.union(Name.children(permissionExpand, Name.of(VAR_THIS)), Nullsafe.orDefault(expand));
         final Set<Name> transientExpand = schema.transientExpand(Name.of(), readExpand);
 
-        return expandCaller(Context.init(), caller, callerExpand)
-                .thenCompose(expandedCaller -> expand(context(expandedCaller), instance, transientExpand)
+        return expandCaller(consistency, linkConsistency, Context.init(), caller, callerExpand)
+                .thenCompose(expandedCaller -> expand(consistency, linkConsistency, context(expandedCaller), instance, transientExpand)
                 .thenApply(v -> restrict(expandedCaller, v, expand)));
     }
 
     // FIXME need to create a deeper permission expand for nested permissions
-    private CompletableFuture<Page<Instance>> expandAndRestrict(final Caller caller, final Page<Instance> instances, final Set<Name> expand) {
+    private CompletableFuture<Page<Instance>> expandAndRestrict(final Consistency consistency, final Consistency linkConsistency, final Caller caller, final Page<Instance> instances, final Set<Name> expand) {
 
         final Set<Name> callerExpand = new HashSet<>();
         final Set<Name> transientExpand = new HashSet<>();
@@ -429,8 +433,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             transientExpand.addAll(schema.transientExpand(Name.of(), readExpand));
         }
 
-        return expandCaller(Context.init(), caller, callerExpand)
-                .thenCompose(expandedCaller -> expand(context(expandedCaller), instances, transientExpand)
+        return expandCaller(consistency, linkConsistency, Context.init(), caller, callerExpand)
+                .thenCompose(expandedCaller -> expand(consistency, linkConsistency, context(expandedCaller), instances, transientExpand)
                 .thenApply(vs -> vs.map(v -> restrict(expandedCaller, v, expand))));
     }
 
@@ -467,7 +471,9 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final Link link = ownerSchema.requireLink(options.getLink(), true);
         final String ownerId = options.getId();
 
-        return read(caller, ReadOptions.builder().setSchema(ownerSchema.getQualifiedName()).setId(ownerId).build())
+        final Consistency consistency = Nullsafe.orDefault(options.getConsistency(), Consistency.EVENTUAL);
+
+        return read(caller, ReadOptions.builder().setSchema(ownerSchema.getQualifiedName()).setId(ownerId).setConsistency(consistency).build())
                 .thenCompose(owner -> {
 
                     if (owner == null) {
@@ -480,8 +486,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                     }
                     final Page.Token paging = options.getPaging();
 
-                    return queryLinkImpl(context(caller), link, owner, options.getExpand(), count, paging)
-                            .thenCompose(results -> expandAndRestrict(caller, results, options.getExpand()));
+                    return queryLinkImpl(context(caller), consistency, link, owner, options.getExpand(), count, paging)
+                            .thenCompose(results -> expandAndRestrict(consistency, consistency, caller, results, options.getExpand()));
                 });
     }
 
@@ -504,6 +510,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         final Context context = context(caller, ImmutableMap.of());
 
+        final Consistency consistency = Nullsafe.orDefault(options.getConsistency(), Consistency.EVENTUAL);
+
         final Expression rooted;
         if (expression != null) {
             rooted = expression.bind(Context.init(), Renaming.addPrefix(Name.of(Reserved.THIS)));
@@ -523,8 +531,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final List<Sort> sort = Nullsafe.orDefault(options.getSort(), Collections.emptyList());
         final Expression unrooted = bound.bind(Context.init(), Renaming.removeExpectedPrefix(Name.of(Reserved.THIS)));
 
-        return queryImpl(context, schema, unrooted, sort, options.getExpand(), count, paging)
-                .thenCompose(results -> expandAndRestrict(caller, results, options.getExpand()));
+        return queryImpl(context, consistency, schema, unrooted, sort, options.getExpand(), count, paging)
+                .thenCompose(results -> expandAndRestrict(consistency, consistency, caller, results, options.getExpand()));
     }
 
     protected void checkPermission(final Caller caller, final LinkableSchema schema, final Permission permission, final Map<String, Object> scope) {
@@ -604,7 +612,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
     protected CompletableFuture<?> onRefQuery(final RefQueryEvent event) {
 
         final ObjectSchema schema = namespace.requireObjectSchema(event.getSchema());
-        final CompletableFuture<Page<Instance>> query = queryImpl(context(Caller.SUPER), schema,
+        final CompletableFuture<Page<Instance>> query = queryImpl(context(Caller.SUPER), Consistency.ATOMIC, schema,
                 event.getExpression(), ImmutableList.of(), ImmutableSet.of(), REF_QUERY_BATCH_SIZE, event.getPaging());
         return query.thenApply(page -> {
             final Set<Event> events = new HashSet<>();
@@ -632,7 +640,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                 final Set<Name> refExpand = schema.refExpand(refSchema.getQualifiedName(), schema.getExpand());
                 final Instance refAfter = refSchema.create(readResponse.get(refSchema, refId), refExpand, true);
                 final Long refAfterVersion = refAfter == null ? null : Instance.getVersion(refAfter);
-                return expand(context(Caller.SUPER), refAfter, refExpand).thenCompose(expandedRefAfter -> {
+                return expand(Consistency.ATOMIC, Consistency.ATOMIC, context(Caller.SUPER), refAfter, refExpand).thenCompose(expandedRefAfter -> {
 
                     final Long version = Instance.getVersion(before);
                     assert version != null;

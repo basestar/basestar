@@ -36,6 +36,8 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.action.DocWriteRequest;
+import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
+import org.elasticsearch.action.admin.indices.refresh.RefreshResponse;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -48,6 +50,7 @@ import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchScrollRequest;
+import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.action.support.WriteRequest;
 import org.elasticsearch.client.HttpAsyncResponseConsumerFactory;
 import org.elasticsearch.client.RequestOptions;
@@ -124,44 +127,57 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
     }
 
     @Override
-    public Pager<Map<String, Object>> query(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    public Pager<Map<String, Object>> query(final Consistency consistency, final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         final QueryPlanner<ESQueryStage> planner = new QueryPlanner.Default<>(false);
         final ESQueryStage stage = planner.plan(new ESQueryStageVisitor(strategy), schema, query, sort, expand);
 
         final Mappings mappings = strategy.mappings(schema);
 
-        return (stats, token, count) -> stage.request(stats, token, count)
-                .map(request -> {
-                    log.debug("Search request is {}", request);
-                    return ElasticsearchUtils.<SearchResponse>future(listener -> client.searchAsync(request, OPTIONS, listener))
-                            .thenApply(response -> {
-                                log.debug("Search response is {}", response);
-                                return stage.page(mappings, stats, token, count, response)
-                                        .map(v -> (Map<String, Object>)schema.create(v, expand, true));
-                            });
+        return (stats, token, count) -> {
+            final CompletableFuture<?> refreshFuture;
+            final Set<String> indices = stage.indices();
+            if(consistency.isStrongerOrEqual(Consistency.QUORUM) && !indices.isEmpty()) {
+                final RefreshRequest refresh = new RefreshRequest(indices.toArray(new String[0]))
+                        .indicesOptions(IndicesOptions.lenientExpandOpen());
+                refreshFuture = ElasticsearchUtils.<RefreshResponse>future(listener -> client.indices().refreshAsync(refresh, OPTIONS, listener));
+            } else {
+                refreshFuture = CompletableFuture.completedFuture(null);
+            }
+            return refreshFuture.thenCompose(ignored -> stage.request(stats, token, count)
+                    .map(request -> {
+                        log.debug("Search request is {}", request);
+                        return ElasticsearchUtils.<SearchResponse>future(listener -> client.searchAsync(request, OPTIONS, listener))
+                                .thenApply(response -> {
+                                    log.debug("Search response is {}", response);
+                                    return stage.page(mappings, stats, token, count, response)
+                                            .map(v -> (Map<String, Object>)schema.create(v, expand, true));
+                                });
 
-                }).orElse(CompletableFuture.completedFuture(Page.empty()));
+                    }).orElse(CompletableFuture.completedFuture(Page.empty())));
+        };
     }
 
     @Override
-    public Pager<Map<String, Object>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    public Pager<Map<String, Object>> queryObject(final Consistency consistency, final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        return query(schema, query, sort, expand);
+        return query(consistency, schema, query, sort, expand);
     }
 
     @Override
-    public Pager<Map<String, Object>> queryView(final ViewSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    public Pager<Map<String, Object>> queryView(final Consistency consistency, final ViewSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        return query(schema, query, sort, expand);
+        return query(consistency, schema, query, sort, expand);
     }
 
     @Override
     public ReadTransaction read(final Consistency consistency) {
 
+        final boolean refresh = consistency.isStrongerOrEqual(Consistency.QUORUM);
         return new ReadTransaction() {
 
-            private final MultiGetRequest request = new MultiGetRequest();
+            private final MultiGetRequest request = new MultiGetRequest()
+                            .refresh(refresh);
 
             private final Map<String, ReferableSchema> indexToSchema = new HashMap<>();
 

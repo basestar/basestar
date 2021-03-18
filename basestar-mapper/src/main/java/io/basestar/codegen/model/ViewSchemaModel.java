@@ -25,6 +25,7 @@ import io.basestar.codegen.CodegenContext;
 import io.basestar.mapper.annotation.Group;
 import io.basestar.mapper.annotation.Where;
 import io.basestar.schema.ViewSchema;
+import io.basestar.schema.from.FromSchema;
 
 import java.util.Collections;
 import java.util.List;
@@ -51,9 +52,9 @@ public class ViewSchemaModel extends LinkableSchemaModel {
 
         final ImmutableList.Builder<AnnotationModel<?>> annotations = ImmutableList.builder();
         annotations.addAll(super.getAnnotations());
-        if(schema.getFrom() instanceof ViewSchema.From.FromSchema) {
+        if(schema.getFrom() instanceof FromSchema) {
             annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.ViewSchema.Declaration.annotation(schema)));
-            annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.From.Modifier.annotation((ViewSchema.From.FromSchema) schema.getFrom())));
+            annotations.add(new AnnotationModel<>(getContext(), io.basestar.mapper.annotation.From.Modifier.annotation((FromSchema) schema.getFrom())));
             if (!schema.getGroup().isEmpty()) {
                 annotations.add(new AnnotationModel<>(getContext(), Group.Modifier.annotation(schema.getGroup())));
             }

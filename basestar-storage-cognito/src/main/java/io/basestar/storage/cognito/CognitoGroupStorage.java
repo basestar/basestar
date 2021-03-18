@@ -75,7 +75,7 @@ public class CognitoGroupStorage implements DefaultLayerStorage {
     }
 
     @Override
-    public Pager<Map<String, Object>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    public Pager<Map<String, Object>> queryObject(final Consistency consistency, final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         return (stats, token, count) -> {
             final String userPoolId = strategy.getUserPoolId(schema);

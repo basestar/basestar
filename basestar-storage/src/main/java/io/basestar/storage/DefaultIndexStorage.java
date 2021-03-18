@@ -92,7 +92,7 @@ public interface DefaultIndexStorage extends IndexStorage, DefaultLayerStorage {
     }
 
     @Override
-    default Pager<Map<String, Object>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    default Pager<Map<String, Object>> queryObject(final Consistency consistency, final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         final Expression bound = query.bind(Context.init());
         final Set<Expression> disjunction = bound.visit(new DisjunctionVisitor());

@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import io.basestar.auth.Caller;
 import io.basestar.database.Database;
 import io.basestar.expression.Expression;
+import io.basestar.schema.Consistency;
 import io.basestar.util.Name;
 import io.basestar.util.Page;
 import io.basestar.util.Sort;
@@ -57,6 +58,8 @@ public class QueryOptions implements Options {
     private final Set<Name> expand;
 
     private final Set<Name> projection;
+
+    private final Consistency consistency;
 
     private final Set<Page.Stat> stats;
 

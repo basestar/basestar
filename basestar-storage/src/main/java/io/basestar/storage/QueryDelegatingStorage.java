@@ -1,6 +1,7 @@
 package io.basestar.storage;
 
 import io.basestar.expression.Expression;
+import io.basestar.schema.Consistency;
 import io.basestar.schema.Instance;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Reserved;
@@ -33,25 +34,25 @@ public class QueryDelegatingStorage implements DelegatingStorage {
     }
 
     @Override
-    public Pager<Map<String, Object>> query(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    public Pager<Map<String, Object>> query(final Consistency consistency, final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        return tryQuery(0, schema, query, sort, expand);
+        return tryQuery(0, consistency, schema, query, sort, expand);
     }
 
-    protected Pager<Map<String, Object>> tryQuery(final int offset, final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    protected Pager<Map<String, Object>> tryQuery(final int offset, final Consistency consistency, final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         if (offset >= storage.size()) {
             throw new UnsupportedQueryException(schema.getQualifiedName(), query);
         } else {
             try {
-                final Pager<Map<String, Object>> result = storage.get(offset).query(schema, query, sort, expand);
+                final Pager<Map<String, Object>> result = storage.get(offset).query(consistency, schema, query, sort, expand);
                 if(offset != 0) {
                     return result.map(v -> Instance.without(v, Reserved.META));
                 } else {
                     return result;
                 }
             } catch (final UnsupportedQueryException e) {
-                return tryQuery(offset + 1, schema, query, sort, expand);
+                return tryQuery(offset + 1, consistency, schema, query, sort, expand);
             }
         }
     }

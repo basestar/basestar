@@ -169,7 +169,7 @@ public class StepFunctionStorage implements DefaultLayerStorage {
     }
 
     @Override
-    public Pager<Map<String, Object>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    public Pager<Map<String, Object>> queryObject(final Consistency consistency, final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         final String stepFunctionArn = strategy.stateMachineArn(schema);
         return (stats, paging, count) -> client.listExecutions(ListExecutionsRequest.builder()

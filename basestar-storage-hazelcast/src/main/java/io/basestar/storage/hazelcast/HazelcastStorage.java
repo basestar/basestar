@@ -154,7 +154,7 @@ public class HazelcastStorage implements DefaultLayerStorage {
 //    }
 
     @Override
-    public Pager<Map<String, Object>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    public Pager<Map<String, Object>> queryObject(final Consistency consistency, final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         return Pager.simple(CompletableFuture.supplyAsync(() -> {
             try {

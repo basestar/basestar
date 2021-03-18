@@ -18,21 +18,21 @@ public interface LayeredStorage extends Storage {
     @Override
     WriteTransaction write(Consistency consistency, Versioning versioning);
 
-    Pager<Map<String, Object>> queryObject(ObjectSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
+    Pager<Map<String, Object>> queryObject(Consistency consistency, ObjectSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
 
-    Pager<Map<String, Object>> queryInterface(InterfaceSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
+    Pager<Map<String, Object>> queryInterface(Consistency consistency, InterfaceSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
 
-    Pager<Map<String, Object>> queryView(ViewSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
+    Pager<Map<String, Object>> queryView(Consistency consistency, ViewSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
 
     @Override
-    default Pager<Map<String, Object>> query(final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    default Pager<Map<String, Object>> query(final Consistency consistency, final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         if(schema instanceof ViewSchema) {
-            return queryView((ViewSchema)schema, query, sort, expand);
+            return queryView(consistency, (ViewSchema)schema, query, sort, expand);
         } else if(schema instanceof InterfaceSchema) {
-            return queryInterface((InterfaceSchema)schema, query, sort, expand);
+            return queryInterface(consistency, (InterfaceSchema)schema, query, sort, expand);
         } else {
-            return queryObject((ObjectSchema)schema, query, sort, expand);
+            return queryObject(consistency, (ObjectSchema)schema, query, sort, expand);
         }
     }
 

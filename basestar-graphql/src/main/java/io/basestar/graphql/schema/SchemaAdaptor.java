@@ -155,6 +155,8 @@ public class SchemaAdaptor {
                 .name(strategy.idArgumentName()).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(strategy.versionArgumentName()).type(new TypeName(GraphQLUtils.INT_TYPE)).build());
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name(strategy.consistencyArgumentName()).type(new TypeName(strategy.consistencyTypeName())).build());
         return builder.build();
     }
 
@@ -188,6 +190,8 @@ public class SchemaAdaptor {
                 .name(strategy.countArgumentName()).type(new TypeName(GraphQLUtils.INT_TYPE)).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(strategy.pagingArgumentName()).type(new TypeName(GraphQLUtils.STRING_TYPE)).build());
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name(strategy.consistencyArgumentName()).type(new TypeName(strategy.consistencyTypeName())).build());
     }
 
     private ObjectTypeDefinition mutationDefinition() {

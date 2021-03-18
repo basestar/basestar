@@ -11,6 +11,9 @@ import io.basestar.schema.Reserved;
 import io.basestar.schema.ViewSchema;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.expression.TypedExpression;
+import io.basestar.schema.from.From;
+import io.basestar.schema.from.FromSchema;
+import io.basestar.schema.from.FromSql;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.util.Bucket;
 import io.basestar.util.Immutable;
@@ -142,17 +145,17 @@ public interface QueryPlanner<T> {
 
             if(schema.isMaterialized() && !ignoreMaterialization) {
                 return refStage(visitor, schema, buckets);
-            } else if(schema.getFrom() instanceof ViewSchema.From.FromSchema) {
+            } else if(schema.getFrom() instanceof FromSchema) {
                 if (schema.isAggregating() || schema.isGrouping()) {
                     return visitor.conform(aggViewStage(visitor, schema, buckets), schema, schema.getExpand());
                 } else {
                     return visitor.conform(mapViewStage(visitor, schema, buckets), schema, schema.getExpand());
                 }
             } else {
-                final ViewSchema.From.FromSql from = (ViewSchema.From.FromSql)schema.getFrom();
+                final FromSql from = (FromSql)schema.getFrom();
                 final T result = visitor.sql(from.getSql(), schema, Immutable.transformValues(from.getUsing(),
                         (k, v) -> {
-                            final ViewSchema.From.FromSchema from2 = (ViewSchema.From.FromSchema)v;
+                            final FromSchema from2 = (FromSchema)v;
                             return stage(visitor, from2.getSchema(), Constant.TRUE, from2.getSort(), from2.getExpand(), null);
                         }));
                 return visitor.conform(result, schema, schema.getExpand());
@@ -161,9 +164,9 @@ public interface QueryPlanner<T> {
 
         protected T viewFrom(final QueryStageVisitor<T> visitor, final ViewSchema schema, final Set<Bucket> buckets) {
 
-            final ViewSchema.From tmp = schema.getFrom();
-            if(tmp instanceof ViewSchema.From.FromSchema) {
-                final ViewSchema.From.FromSchema from = (ViewSchema.From.FromSchema)tmp;
+            final From tmp = schema.getFrom();
+            if(tmp instanceof FromSchema) {
+                final FromSchema from = (FromSchema)tmp;
                 final LinkableSchema fromSchema = from.getSchema();
 
                 final Expression where = schema.getWhere();
@@ -184,7 +187,7 @@ public interface QueryPlanner<T> {
                 output.put(name, expression);
             }
             // Group names can be either properties in the view, or simple names of members / metadata in from
-            final ViewSchema.From.FromSchema from = (ViewSchema.From.FromSchema)schema.getFrom();
+            final FromSchema from = (FromSchema)schema.getFrom();
             final LinkableSchema fromSchema = from.getSchema();
             for(final String name : schema.getGroup()) {
                 if(!output.containsKey(name)) {
@@ -204,7 +207,7 @@ public interface QueryPlanner<T> {
         protected T mapViewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema, final Set<Bucket> buckets) {
 
             // Must copy id into the view __key field or it will be lost
-            final ViewSchema.From.FromSchema from = (ViewSchema.From.FromSchema)schema.getFrom();
+            final FromSchema from = (FromSchema)schema.getFrom();
             final LinkableSchema fromSchema = from.getSchema();
             final Map<String, TypedExpression<?>> expressions = new HashMap<>(viewExpressions(schema));
             expressions.put(schema.id(), TypedExpression.from(new NameConstant(fromSchema.id()), fromSchema.typeOfId()));
@@ -223,7 +226,7 @@ public interface QueryPlanner<T> {
         @Override
         protected T aggViewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema, final Set<Bucket> buckets) {
 
-            final ViewSchema.From.FromSchema from = (ViewSchema.From.FromSchema)schema.getFrom();
+            final FromSchema from = (FromSchema)schema.getFrom();
             final LinkableSchema fromSchema = from.getSchema();
             final List<String> group = schema.getGroup();
             final Map<String, TypedExpression<?>> expressions = viewExpressions(schema);

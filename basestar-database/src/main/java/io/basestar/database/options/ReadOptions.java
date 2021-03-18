@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import io.basestar.auth.Caller;
 import io.basestar.database.Database;
+import io.basestar.schema.Consistency;
 import io.basestar.util.Name;
 import lombok.Builder;
 import lombok.Data;
@@ -45,6 +46,10 @@ public class ReadOptions implements Options {
     private final Set<Name> expand;
 
     private final Set<Name> projection;
+
+    private final Consistency consistency;
+
+    private final Consistency linkConsistency;
 
     private final Long version;
 

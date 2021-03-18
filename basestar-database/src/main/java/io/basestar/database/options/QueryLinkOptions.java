@@ -23,6 +23,7 @@ package io.basestar.database.options;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import io.basestar.expression.Expression;
+import io.basestar.schema.Consistency;
 import io.basestar.util.Name;
 import io.basestar.util.Page;
 import io.basestar.util.Sort;
@@ -50,6 +51,8 @@ public class QueryLinkOptions {
     private final String link;
 
     private final Expression expression;
+
+    private final Consistency consistency;
 
     private final Integer count;
 

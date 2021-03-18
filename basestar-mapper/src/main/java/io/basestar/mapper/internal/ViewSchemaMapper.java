@@ -25,6 +25,7 @@ import io.basestar.mapper.MappingContext;
 import io.basestar.schema.Bucketing;
 import io.basestar.schema.Permission;
 import io.basestar.schema.ViewSchema;
+import io.basestar.schema.from.From;
 import io.basestar.type.TypeContext;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
@@ -51,7 +52,7 @@ public class ViewSchemaMapper<T> extends LinkableSchemaMapper<ViewSchema.Builder
 
     private final List<String> primaryKey;
 
-    private final Map<String, ViewSchema.Descriptor.From> using;
+    private final Map<String, From.Descriptor> using;
 
     public ViewSchemaMapper(final Builder<T> builder) {
 
@@ -75,13 +76,13 @@ public class ViewSchemaMapper<T> extends LinkableSchemaMapper<ViewSchema.Builder
     @Override
     public ViewSchema.Builder schemaBuilder() {
 
-        final ViewSchema.From.Builder from;
+        final From.Builder from;
         if(sql == null) {
-            from = ViewSchema.From.builder()
+            from = From.builder()
                     .setSchema(fromSchema)
                     .setExpand(fromExpand.isEmpty() ? null : fromExpand);
         } else {
-            from = ViewSchema.From.builder()
+            from = From.builder()
                     .setSql(sql)
                     .setUsing(using)
                     .setPrimaryKey(primaryKey);
@@ -123,7 +124,7 @@ public class ViewSchemaMapper<T> extends LinkableSchemaMapper<ViewSchema.Builder
 
         private List<String> primaryKey;
 
-        private Map<String, ViewSchema.Descriptor.From> using;
+        private Map<String, From.Descriptor> using;
 
         @Override
         public ViewSchemaMapper<T> build() {

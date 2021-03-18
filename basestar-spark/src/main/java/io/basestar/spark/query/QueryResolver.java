@@ -8,6 +8,7 @@ import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.expression.constant.Constant;
 import io.basestar.schema.*;
 import io.basestar.schema.expression.TypedExpression;
+import io.basestar.schema.from.FromSql;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.util.Bucket;
 import io.basestar.spark.combiner.Combiner;
@@ -68,7 +69,7 @@ public interface QueryResolver {
             Dataset<Row> result = session.sql(sql);
             if(schema instanceof ViewSchema) {
                 final ViewSchema view = (ViewSchema)schema;
-                final ViewSchema.From.FromSql from = (ViewSchema.From.FromSql)view.getFrom();
+                final FromSql from = (FromSql)view.getFrom();
                 final StructField idField = SparkRowUtils.field(view.id(), DataTypes.BinaryType);
                 final StructType sourceType = result.schema();
                 final StructType targetType = SparkRowUtils.append(sourceType, idField);

@@ -39,7 +39,7 @@ public class NullStorage implements DefaultLayerStorage {
     private final EventStrategy eventStrategy;
 
     @Override
-    public Pager<Map<String, Object>> queryObject(final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    public Pager<Map<String, Object>> queryObject(final Consistency consistency, final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         return Pager.empty();
     }

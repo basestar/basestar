@@ -164,15 +164,17 @@ public class GraphQLAdaptor {
             final Set<Name> expand = expand(schema, env);
             final String id = env.getArgument(strategy.idArgumentName());
             final Long version = version(env);
-            return read(caller, schema, id, version, expand);
+            final Consistency consistency = consistency(env);
+            return read(caller, consistency, schema, id, version, expand);
         };
     }
 
-    private CompletableFuture<?> read(final Caller caller, final ReferableSchema schema, final String id, final Long version, final Set<Name> expand) {
+    private CompletableFuture<?> read(final Caller caller, final Consistency consistency, final ReferableSchema schema, final String id, final Long version, final Set<Name> expand) {
 
         final ReadOptions options = ReadOptions.builder()
                 .setSchema(schema.getQualifiedName())
                 .setId(id).setVersion(version).setExpand(expand)
+                .setConsistency(consistency)
                 .build();
         return database.read(caller, options)
                 .thenApply(object -> responseTransform.toResponse(schema, object));
@@ -189,6 +191,7 @@ public class GraphQLAdaptor {
             final Integer count = count(env);
             final List<Sort> sort = sort(env);
             final Set<Page.Stat> stats = stats(env);
+            final Consistency consistency = consistency(env);
             final QueryOptions options = QueryOptions.builder()
                     .setSchema(schema.getQualifiedName())
                     .setExpression(expression)
@@ -197,6 +200,7 @@ public class GraphQLAdaptor {
                     .setStats(stats)
                     .setSort(sort)
                     .setExpand(expand)
+                    .setConsistency(consistency)
                     .build();
             return database.query(caller, options)
                     .thenApply(result -> responseTransform.toResponsePage(schema, result));
@@ -215,6 +219,7 @@ public class GraphQLAdaptor {
             final Integer count = count(env);
             final List<Sort> sort = sort(env);
             final Set<Page.Stat> stats = stats(env);
+            final Consistency consistency = consistency(env);
             final QueryLinkOptions options = QueryLinkOptions.builder()
                     .setSchema(schema.getQualifiedName())
                     .setLink(link.getName())
@@ -224,6 +229,7 @@ public class GraphQLAdaptor {
                     .setCount(count)
                     .setStats(stats)
                     .setSort(sort)
+                    .setConsistency(consistency)
                     .build();
             return database.queryLink(caller, options)
                     .thenApply(result -> responseTransform.toResponsePage(linkSchema, result));
@@ -466,7 +472,7 @@ public class GraphQLAdaptor {
             final String alias = Nullsafe.orDefault(env.getField().getAlias(), () -> strategy.subscribeMethodName(schema));
             final String id = env.getArgument(strategy.idArgumentName());
             return subscriberContext.subscribe(schema, id, alias, expand, false)
-                    .thenCompose(ignored -> read(caller, schema, id, null, expand));
+                    .thenCompose(ignored -> read(caller, Consistency.ATOMIC, schema, id, null, expand));
         };
     }
 

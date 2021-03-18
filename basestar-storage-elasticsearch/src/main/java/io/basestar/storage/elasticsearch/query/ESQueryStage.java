@@ -1,5 +1,6 @@
 package io.basestar.storage.elasticsearch.query;
 
+import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.logical.And;
@@ -52,6 +53,8 @@ public interface ESQueryStage {
     Layout layout();
 
     Optional<SearchRequest> request(Set<Page.Stat> stats, Page.Token token, int count);
+
+    Set<String> indices();
 
     Page<Map<String, Object>> page(Mappings mappings, Set<Page.Stat> stats, Page.Token token, int count, SearchResponse response);
 
@@ -142,6 +145,12 @@ public interface ESQueryStage {
             request.source(sourceBuilder);
             request.indicesOptions(IndicesOptions.lenientExpandOpen());
             return Optional.of(request);
+        }
+
+        @Override
+        public Set<String> indices() {
+
+            return Immutable.set(strategy.index(schema));
         }
 
         @Override
@@ -286,6 +295,12 @@ public interface ESQueryStage {
         }
 
         @Override
+        public Set<String> indices() {
+
+            return source.indices();
+        }
+
+        @Override
         public Page<Map<String, Object>> page(final Mappings mappings, final Set<Page.Stat> stats, final Page.Token token, final int count, final SearchResponse response) {
 
             if(!group.isEmpty()) {
@@ -343,6 +358,12 @@ public interface ESQueryStage {
         public Optional<SearchRequest> request(final Set<Page.Stat> stats, final Page.Token token, final int count) {
 
             return Optional.empty();
+        }
+
+        @Override
+        public Set<String> indices() {
+
+            return Immutable.set();
         }
 
         @Override

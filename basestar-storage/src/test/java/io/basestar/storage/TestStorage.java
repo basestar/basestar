@@ -180,7 +180,7 @@ public abstract class TestStorage {
         );
 
         final Expression expr = Expression.parse("country == 'US' || state == 'England'");
-        final Page<Map<String, Object>> results = storage.query(schema, expr, sort, Collections.emptySet()).page(EnumSet.of(Page.Stat.TOTAL), null, 10).join();
+        final Page<Map<String, Object>> results = storage.query(Consistency.ATOMIC, schema, expr, sort, Collections.emptySet()).page(EnumSet.of(Page.Stat.TOTAL), null, 10).join();
 
         final List<String> ids = Arrays.asList("123", "189", "26", "67", "129", "159", "151", "116", "142", "179");
         assertEquals(ids, results.map(Instance::getId).getPage());
@@ -205,7 +205,7 @@ public abstract class TestStorage {
         );
 
         final Expression expr = Expression.parse("country == 'US' || state == 'England'");
-        final Page<Map<String, Object>> results = storage.query(schema, expr, sort, Collections.emptySet()).page(EnumSet.of(Page.Stat.TOTAL), null, 10).join();
+        final Page<Map<String, Object>> results = storage.query(Consistency.ATOMIC, schema, expr, sort, Collections.emptySet()).page(EnumSet.of(Page.Stat.TOTAL), null, 10).join();
 
         assertEquals(ImmutableList.of(), results.getPage());
     }
@@ -633,7 +633,7 @@ public abstract class TestStorage {
 
         final List<Sort> sort = ImmutableList.of(Sort.asc(Name.of(ObjectSchema.ID)));
         final Expression expr = Expression.parse("p.x == 10 && p.y == 100 for any p of points");
-        final Page<Map<String, Object>> results = storage.query(schema, expr, Collections.emptyList(), Collections.emptySet()).page(100).join();
+        final Page<Map<String, Object>> results = storage.query(Consistency.ATOMIC, schema, expr, Collections.emptyList(), Collections.emptySet()).page(100).join();
         assertEquals(1, results.size());
     }
 
@@ -748,7 +748,7 @@ public abstract class TestStorage {
         bulkLoad(storage, addresses);
 
         final List<Sort> sort = ImmutableList.of(Sort.desc(Name.of("country")), Sort.asc(Name.of("state")));
-        final Pager<Map<String, Object>> sources = storage.query(schema, Expression.parse("true"), sort, null);
+        final Pager<Map<String, Object>> sources = storage.query(Consistency.ATOMIC, schema, Expression.parse("true"), sort, null);
 
         final Page<Map<String, Object>> results = sources.page(300).join();
         log.debug("Aggregation results: {}", results);
@@ -994,7 +994,7 @@ public abstract class TestStorage {
 
     private Page<Map<String, Object>> page(final Storage storage, final ObjectSchema schema, final Expression expression, final List<Sort> sort, final Set<Name> expand, final int count) {
 
-        return storage.query(schema, expression.bind(Context.init()), sort, expand).page(count).join();
+        return storage.query(Consistency.ATOMIC, schema, expression.bind(Context.init()), sort, expand).page(count).join();
     }
 
     private String createComplete(final Storage storage, final ObjectSchema schema, final Map<String, Object> data) {
