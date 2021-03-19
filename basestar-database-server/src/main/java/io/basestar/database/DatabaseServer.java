@@ -383,7 +383,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final String id = options.getId();
         final ReferableSchema objectSchema = namespace.requireReferableSchema(options.getSchema());
 
-        final Consistency consistency = Nullsafe.orDefault(options.getConsistency(), Consistency.ATOMIC);
+        final Consistency consistency = Nullsafe.orDefault(options.getConsistency(), Consistency.EVENTUAL);
         final Consistency linkConsistency = Nullsafe.orDefault(options.getLinkConsistency(), Nullsafe.orDefault(options.getConsistency(), Consistency.EVENTUAL));
 
         return readImpl(objectSchema, id, options.getVersion(), options.getExpand())
