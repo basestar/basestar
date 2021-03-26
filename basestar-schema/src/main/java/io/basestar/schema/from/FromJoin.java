@@ -1,35 +1,28 @@
 package io.basestar.schema.from;
 
-import io.basestar.schema.Layout;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Property;
 import io.basestar.schema.Schema;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
-import io.basestar.util.Immutable;
 import io.basestar.util.Name;
-import io.basestar.util.Sort;
+import io.basestar.util.Nullsafe;
+import lombok.Data;
 import lombok.Getter;
 
-import javax.annotation.Nonnull;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 @Getter
-public
-class FromUnion implements From {
+public class FromJoin implements From {
 
-    @Nonnull
-    private final List<From> union;
+    private final Join join;
 
     private final String as;
 
-    public FromUnion(final Schema.Resolver.Constructing resolver, final From.Descriptor from) {
+    public FromJoin(final Schema.Resolver.Constructing resolver, final From.Descriptor from) {
 
-        this.union = Immutable.transform(from.getUnion(), v -> v.build(resolver));
+        this.join = Nullsafe.require(from.getJoin()).build(resolver);
         this.as = from.getAs();
     }
 
@@ -37,11 +30,10 @@ class FromUnion implements From {
     public From.Descriptor descriptor() {
 
         return new From.Descriptor() {
-
             @Override
-            public List<From.Descriptor> getUnion() {
+            public Join.Descriptor getJoin() {
 
-                return Immutable.transform(union, From::descriptor);
+                return join.descriptor();
             }
 
             @Override
@@ -61,13 +53,13 @@ class FromUnion implements From {
     @Override
     public void collectMaterializationDependencies(final Map<Name, LinkableSchema> out) {
 
-        union.forEach(v -> v.collectMaterializationDependencies(out));
+        join.collectMaterializationDependencies(out);
     }
 
     @Override
     public void collectDependencies(final Map<Name, Schema<?>> out) {
 
-        union.forEach(v -> v.collectDependencies(out));
+        join.collectDependencies(out);
     }
 
     @Override

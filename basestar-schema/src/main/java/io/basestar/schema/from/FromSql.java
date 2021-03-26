@@ -18,8 +18,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Getter
-public
-class FromSql implements From {
+public class FromSql implements From {
 
     private final String sql;
 
@@ -27,34 +26,20 @@ class FromSql implements From {
 
     private final Map<String, From> using;
 
+    private final String as;
+
     public FromSql(final Schema.Resolver.Constructing resolver, final From.Descriptor from) {
 
         this.sql = Nullsafe.require(from.getSql());
         this.primaryKey = Nullsafe.require(from.getPrimaryKey());
         this.using = Immutable.transformValuesSorted(from.getUsing(), (k, v) -> v.build(resolver));
+        this.as = from.getAs();
     }
 
     @Override
     public From.Descriptor descriptor() {
 
         return new From.Descriptor() {
-            @Override
-            public Name getSchema() {
-
-                return null;
-            }
-
-            @Override
-            public List<Sort> getSort() {
-
-                return null;
-            }
-
-            @Override
-            public Set<Name> getExpand() {
-
-                return null;
-            }
 
             @Override
             public String getSql() {
@@ -75,9 +60,9 @@ class FromSql implements From {
             }
 
             @Override
-            public List<From.Descriptor> getUnion() {
+            public String getAs() {
 
-                return null;
+                return as;
             }
         };
     }

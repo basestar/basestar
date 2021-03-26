@@ -22,7 +22,43 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/*
+
+# referenced schema
+
+from:
+    schema: X
+
+# inline schema
+
+from:
+    schema:
+        type: object
+
+# union
+
+from:
+    union:
+        - schema: X
+        - schema: Y
+
+# join
+
+from:
+    join:
+        left:
+            schema: X
+            as: x
+        right:
+            schema: Y
+            as: x
+        type: inner
+
+ */
+
 public interface From extends Serializable {
+
+    String getAs();
 
     Descriptor descriptor();
 
@@ -40,25 +76,55 @@ public interface From extends Serializable {
     interface Descriptor {
 
         @JsonInclude(JsonInclude.Include.NON_NULL)
-        Name getSchema();
+        default Name getSchema() {
+
+            return null;
+        }
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        List<Sort> getSort();
+        default List<Sort> getSort() {
+
+            return null;
+        }
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        Set<Name> getExpand();
+        default Set<Name> getExpand() {
+
+            return null;
+        }
 
         @JsonInclude(JsonInclude.Include.NON_NULL)
-        String getSql();
+        default String getSql() {
+
+            return null;
+        }
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        Map<String, Descriptor> getUsing();
+        default Map<String, Descriptor> getUsing() {
+
+            return null;
+        }
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        List<String> getPrimaryKey();
+        default List<String> getPrimaryKey() {
+
+            return null;
+        }
 
         @JsonInclude(JsonInclude.Include.NON_NULL)
-        List<Descriptor> getUnion();
+        default List<Descriptor> getUnion() {
+
+            return null;
+        }
+
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        default Join.Descriptor getJoin() {
+
+            return null;
+        }
+
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        String getAs();
 
         default From build(final Schema.Resolver.Constructing resolver) {
 
@@ -66,6 +132,8 @@ public interface From extends Serializable {
                 return new FromSql(resolver, this);
             } else if(getUnion() != null) {
                 return new FromUnion(resolver, this);
+            } else if(getJoin() != null) {
+                return new FromJoin(resolver, this);
             } else {
                 return new FromSchema(resolver, this);
             }
@@ -104,6 +172,12 @@ public interface From extends Serializable {
 
         @Nullable
         private List<Descriptor> union;
+
+        @Nullable
+        private Join.Descriptor join;
+
+        @Nullable
+        private String as;
 
         @JsonCreator
         @SuppressWarnings("unused")

@@ -88,6 +88,7 @@ public interface UpsertState {
                 final FileSystem fs = path.getFileSystem(configuration);
                 try(final OutputStream os = fs.create(path, true)) {
                     OBJECT_MAPPER.writeValue(os, value);
+
                 }
             } catch (final IOException e) {
                 throw new IllegalStateException("Failed to set state" + key, e);

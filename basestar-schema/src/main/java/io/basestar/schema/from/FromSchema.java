@@ -17,8 +17,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Getter
-public
-class FromSchema implements From {
+public class FromSchema implements From {
 
     @Nonnull
     private final LinkableSchema schema;
@@ -29,11 +28,14 @@ class FromSchema implements From {
     @Nonnull
     private final Set<Name> expand;
 
+    private final String as;
+
     public FromSchema(final Schema.Resolver.Constructing resolver, final From.Descriptor from) {
 
         this.schema = resolver.requireLinkableSchema(from.getSchema());
         this.sort = Nullsafe.orDefault(from.getSort());
         this.expand = Nullsafe.orDefault(from.getExpand());
+        this.as = from.getAs();
     }
 
     @Override
@@ -59,27 +61,9 @@ class FromSchema implements From {
             }
 
             @Override
-            public String getSql() {
+            public String getAs() {
 
-                return null;
-            }
-
-            @Override
-            public Map<String, From.Descriptor> getUsing() {
-
-                return null;
-            }
-
-            @Override
-            public List<String> getPrimaryKey() {
-
-                return null;
-            }
-
-            @Override
-            public List<From.Descriptor> getUnion() {
-
-                return null;
+                return as;
             }
         };
     }
