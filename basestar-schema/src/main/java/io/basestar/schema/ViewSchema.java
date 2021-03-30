@@ -57,20 +57,6 @@ public class ViewSchema implements LinkableSchema {
 
     public static final String ID = Reserved.PREFIX + "key";
 
-    public String id(final Map<String, Object> record) {
-
-        final Object key = record.get(ID);
-        if(key instanceof String) {
-            return (String)key;
-        } else if(key instanceof byte[]) {
-            return Bytes.valueOf((byte[])key).toBase64();
-        } else if(key instanceof Bytes) {
-            return ((Bytes)key).toBase64();
-        } else {
-            throw new IllegalStateException("Missing or invalid " + ID + " (" + key + ")");
-        }
-    }
-
     @JsonDeserialize(as = Builder.class)
     public interface Descriptor extends LinkableSchema.Descriptor<ViewSchema> {
 
@@ -306,9 +292,38 @@ public class ViewSchema implements LinkableSchema {
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName.toString());
         }
-        this.declaredProperties.values().forEach(p -> this.from.validateProperty(p));
+        this.declaredProperties.values().forEach(this.from::validateProperty);
         this.aggregating = getProperties().values().stream().map(Property::getExpression)
                 .filter(Objects::nonNull).anyMatch(Expression::isAggregate);
+    }
+
+    @Override
+    public String id(final Map<String, Object> record) {
+
+        final Object key = record.get(ID);
+        if(key instanceof String) {
+            return (String)key;
+        } else if(key instanceof byte[]) {
+            return Bytes.valueOf((byte[])key).toBase64();
+        } else if(key instanceof Bytes) {
+            return ((Bytes)key).toBase64();
+        } else {
+            throw new IllegalStateException("Missing or invalid " + ID + " (" + key + ")");
+        }
+    }
+
+    public BinaryKey createId(final Map<String, Object> row) {
+
+        if(isAggregating() || isGrouping()) {
+            final List<Object> values = new ArrayList<>();
+            group.forEach(name -> {
+                final Object[] keys = typeOf(Name.of(name)).key(row);
+                values.addAll(Arrays.asList(keys));
+            });
+            return BinaryKey.from(values);
+        } else {
+            return from.id(row);
+        }
     }
 
     @Override
@@ -319,16 +334,7 @@ public class ViewSchema implements LinkableSchema {
         if(Instance.getSchema(result) == null) {
             Instance.setSchema(result, this.getQualifiedName());
         }
-        if(isAggregating() || isGrouping()) {
-            result.computeIfAbsent(ID, k -> {
-                final List<Object> values = new ArrayList<>();
-                group.forEach(name -> {
-                    final Object[] keys = typeOf(Name.of(name)).key(result.get(name));
-                    values.addAll(Arrays.asList(keys));
-                });
-                return BinaryKey.from(values);
-            });
-        }
+        result.computeIfAbsent(ID, ignored -> createId(result));
         if(expand != null && !expand.isEmpty()) {
             final Map<String, Set<Name>> branches = Name.branch(expand);
             getLinks().forEach((name, link) -> {
@@ -462,30 +468,27 @@ public class ViewSchema implements LinkableSchema {
     @Override
     public boolean isCompatibleBucketing(final List<Bucketing> other) {
 
-        if(from instanceof FromSchema) {
-            final List<Bucketing> fromBucketing = new ArrayList<>();
-            for(final Bucketing bucket : other) {
-                final List<Name> using = new ArrayList<>();
-                for(final Name name : bucket.getUsing()) {
-                    final Property property = getProperty(name.first(), true);
-                    if(property == null) {
-                        return false;
-                    }
-                    final Expression expression = property.getExpression();
-                    if(expression == null) {
-                        return false;
-                    }
-                    if(expression instanceof NameConstant) {
-                        using.add(((NameConstant) expression).getName().with(name.withoutFirst()));
-                    } else {
-                        return false;
-                    }
+        final List<Bucketing> fromBucketing = new ArrayList<>();
+        for(final Bucketing bucket : other) {
+            final List<Name> using = new ArrayList<>();
+            for(final Name name : bucket.getUsing()) {
+                final Property property = getProperty(name.first(), true);
+                if(property == null) {
+                    return false;
                 }
-                fromBucketing.add(new Bucketing(using, bucket.getCount(), bucket.getFunction()));
+                final Expression expression = property.getExpression();
+                if(expression == null) {
+                    return false;
+                }
+                if(expression instanceof NameConstant) {
+                    using.add(((NameConstant) expression).getName().with(name.withoutFirst()));
+                } else {
+                    return false;
+                }
             }
-            return ((FromSchema) from).getSchema().isCompatibleBucketing(fromBucketing);
+            fromBucketing.add(new Bucketing(using, bucket.getCount(), bucket.getFunction()));
         }
-        return false;
+        return from.isCompatibleBucketing(fromBucketing);
     }
 
     @Override

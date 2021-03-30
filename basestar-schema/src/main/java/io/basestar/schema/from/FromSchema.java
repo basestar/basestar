@@ -1,17 +1,18 @@
 package io.basestar.schema.from;
 
-import io.basestar.schema.LinkableSchema;
-import io.basestar.schema.Property;
-import io.basestar.schema.Schema;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import io.basestar.expression.Expression;
+import io.basestar.expression.constant.NameConstant;
+import io.basestar.schema.*;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
-import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 import lombok.Getter;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -102,5 +103,29 @@ public class FromSchema implements From {
         if (property.getExpression() == null) {
             throw new SchemaValidationException(property.getQualifiedName(), "Every view property must have an expression");
         }
+    }
+
+    @Override
+    public BinaryKey id(final Map<String, Object> row) {
+
+        return BinaryKey.from(ImmutableList.of(row.get(schema.id())));
+    }
+
+    @Override
+    public Expression id() {
+
+        return new NameConstant(schema.id());
+    }
+
+    @Override
+    public boolean isCompatibleBucketing(final List<Bucketing> other) {
+
+        return schema.isCompatibleBucketing(other);
+    }
+
+    @Override
+    public List<FromSchema> schemas() {
+
+        return ImmutableList.of(this);
     }
 }

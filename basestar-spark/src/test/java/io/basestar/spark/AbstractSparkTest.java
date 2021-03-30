@@ -294,4 +294,40 @@ public abstract class AbstractSparkTest {
 
         private String lookupValue;
     }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class JoinLeft {
+
+        private String name;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class JoinRight {
+
+        private String name;
+
+        private String otherName;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class WithJoin {
+
+        private String name;
+
+        private String otherName;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class WithUnion {
+
+        private String name;
+    }
 }

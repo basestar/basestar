@@ -2,12 +2,14 @@ package io.basestar.schema;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import io.basestar.expression.Context;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.schema.use.*;
 import io.basestar.schema.util.ValueContext;
+import io.basestar.util.BinaryKey;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 
@@ -41,6 +43,7 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
             .put(CREATED, UseDateTime.DEFAULT)
             .put(UPDATED, UseDateTime.DEFAULT)
             .put(HASH, UseString.DEFAULT)
+            .put(__ID, UseBinary.DEFAULT)
             .build();
 
     SortedMap<String, Use<?>> REF_SCHEMA = ImmutableSortedMap.<String, Use<?>>orderedBy(Comparator.naturalOrder())
@@ -315,6 +318,10 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
         if (Instance.getHash(result) == null) {
             Instance.setHash(result, hash(result));
         }
+//        final String id = Instance.getId(result);
+//        if(id != null) {
+//            result.put(__ID, BinaryKey.from(ImmutableList.of(id)));
+//        }
         for (final Map.Entry<String, Object> entry : value.entrySet()) {
             if (entry.getKey().startsWith(Reserved.META_PREFIX)) {
                 result.put(entry.getKey(), entry.getValue());

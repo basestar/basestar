@@ -21,6 +21,8 @@ import java.util.stream.Stream;
 
 public interface LinkableSchema extends InstanceSchema, Link.Resolver, Permission.Resolver {
 
+    String __ID = "__id";
+
     interface Descriptor<S extends LinkableSchema> extends InstanceSchema.Descriptor<S>, Link.Resolver.Descriptor, Permission.Resolver.Descriptor {
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)

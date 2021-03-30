@@ -7,6 +7,7 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.constant.Constant;
 import io.basestar.schema.*;
 import io.basestar.schema.expression.TypedExpression;
+import io.basestar.schema.from.Join;
 import io.basestar.schema.use.UseBoolean;
 import io.basestar.schema.use.UseInteger;
 import io.basestar.schema.use.UseOptional;
@@ -302,6 +303,12 @@ class TestQueryPlanner {
 
         @Override
         public SimpleStage sql(final String sql, final InstanceSchema schema, final Map<String, SimpleStage> with) {
+
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public SimpleStage join(final SimpleStage left, final SimpleStage right, final Join join) {
 
             throw new UnsupportedOperationException();
         }

@@ -1,12 +1,13 @@
 package io.basestar.schema.from;
 
-import io.basestar.schema.Layout;
-import io.basestar.schema.LinkableSchema;
-import io.basestar.schema.Property;
-import io.basestar.schema.Schema;
+import io.basestar.expression.Expression;
+import io.basestar.expression.constant.NameConstant;
+import io.basestar.schema.*;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseBinary;
+import io.basestar.util.BinaryKey;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
@@ -17,10 +18,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Getter
-public
-class FromUnion implements From {
+public class FromUnion implements From {
 
     @Nonnull
     private final List<From> union;
@@ -55,7 +56,7 @@ class FromUnion implements From {
     @Override
     public InferenceContext inferenceContext() {
 
-        throw new UnsupportedOperationException();
+        return new InferenceContext.Union(union.stream().map(From::inferenceContext).collect(Collectors.toList()));
     }
 
     @Override
@@ -73,7 +74,9 @@ class FromUnion implements From {
     @Override
     public Use<?> typeOfId() {
 
-        throw new UnsupportedOperationException();
+        // FIXME: must validate that all clauses have the same id type
+        final From first = union.get(0);
+        return first.typeOfId();
     }
 
     @Override
@@ -82,5 +85,34 @@ class FromUnion implements From {
         if (property.getExpression() == null) {
             throw new SchemaValidationException(property.getQualifiedName(), "Every view property must have an expression");
         }
+    }
+
+    @Override
+    public BinaryKey id(final Map<String, Object> row) {
+
+        // FIXME: must validate that all clauses have the same id type
+        final From first = union.get(0);
+        return first.id(row);
+    }
+
+    @Override
+    public boolean isCompatibleBucketing(final List<Bucketing> other) {
+
+        return union.stream().allMatch(v -> v.isCompatibleBucketing(other));
+    }
+
+    @Override
+    public List<FromSchema> schemas() {
+
+        return union.stream().flatMap(from -> from.schemas().stream())
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Expression id() {
+
+        // FIXME: must validate that all clauses have the same id expression
+        final From first = union.get(0);
+        return first.id();
     }
 }

@@ -1,5 +1,7 @@
 package io.basestar.schema.from;
 
+import io.basestar.expression.Expression;
+import io.basestar.schema.Bucketing;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Property;
 import io.basestar.schema.Schema;
@@ -7,15 +9,14 @@ import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseBinary;
-import io.basestar.util.Immutable;
-import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 import lombok.Getter;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Getter
 public class FromSql implements From {
@@ -97,5 +98,30 @@ public class FromSql implements From {
         if (property.getExpression() != null) {
             throw new SchemaValidationException(property.getQualifiedName(), "SQL view properties should not have expressions");
         }
+    }
+
+    @Override
+    public BinaryKey id(final Map<String, Object> row) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isCompatibleBucketing(final List<Bucketing> other) {
+
+        return false;
+    }
+
+    @Override
+    public List<FromSchema> schemas() {
+
+        return getUsing().values().stream().flatMap(from -> from.schemas().stream())
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Expression id() {
+
+        throw new UnsupportedOperationException();
     }
 }

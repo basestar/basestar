@@ -4,7 +4,9 @@ import io.basestar.expression.Expression;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Layout;
 import io.basestar.schema.LinkableSchema;
+import io.basestar.schema.ViewSchema;
 import io.basestar.schema.expression.TypedExpression;
+import io.basestar.schema.from.Join;
 import io.basestar.schema.util.Bucket;
 import io.basestar.storage.elasticsearch.ElasticsearchStrategy;
 import io.basestar.storage.query.QueryStageVisitor;
@@ -76,6 +78,12 @@ public class ESQueryStageVisitor implements QueryStageVisitor<ESQueryStage> {
 
     @Override
     public ESQueryStage sql(final String sql, final InstanceSchema schema, final Map<String, ESQueryStage> with) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ESQueryStage join(final ESQueryStage left, final ESQueryStage right, final Join join) {
 
         throw new UnsupportedOperationException();
     }

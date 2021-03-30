@@ -9,9 +9,12 @@ import io.basestar.expression.constant.Constant;
 import io.basestar.schema.*;
 import io.basestar.schema.expression.TypedExpression;
 import io.basestar.schema.from.FromSql;
+import io.basestar.schema.from.Join;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseStruct;
 import io.basestar.schema.util.Bucket;
 import io.basestar.spark.combiner.Combiner;
+import io.basestar.spark.expression.SparkExpressionVisitor;
 import io.basestar.spark.source.Source;
 import io.basestar.spark.transform.*;
 import io.basestar.spark.util.SparkRowUtils;
@@ -22,10 +25,7 @@ import io.basestar.storage.query.QueryStageVisitor;
 import io.basestar.util.*;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SQLContext;
-import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.*;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
@@ -255,6 +255,44 @@ public interface QueryResolver {
         public Stage sql(final String sql, final InstanceSchema schema, final Map<String, Stage> with) {
 
             return resolver.sql(sql, schema, with);
+        }
+
+        @Override
+        public Stage join(final Stage left, final Stage right, final Join join) {
+
+            final String leftAs = join.getLeft().getAs();
+            final String rightAs = join.getRight().getAs();
+
+            final Map<String, Use<?>> schema = new HashMap<>();
+            schema.put(leftAs, UseStruct.from(left.getLayout().getSchema()));
+            schema.put(rightAs, UseStruct.from(right.getLayout().getSchema()));
+            final Layout layout = Layout.simple(schema);
+
+            final String joinType = join.getType().name().toLowerCase();
+
+            return Stage.from(
+                    () -> {
+
+                        final Dataset<Row> leftDs = left.dataset().as(leftAs);
+                        final Dataset<Row> rightDs = right.dataset().as(rightAs);
+
+                        final Function<Name, Column> columnResolver = name -> {
+                            if(name.first().equals(leftAs)) {
+                                return SparkRowUtils.resolveName(leftDs, name.withoutFirst());
+                            } else if(name.first().equals(rightAs)) {
+                                return SparkRowUtils.resolveName(rightDs, name.withoutFirst());
+                            } else {
+                                throw new IllegalStateException("Column " + name + " not found in join");
+                            }
+                        };
+                        final SparkExpressionVisitor visitor = new SparkExpressionVisitor(columnResolver);
+                        final Column condition = visitor.visit(join.getOn());
+
+                        return leftDs.join(rightDs, condition, joinType);
+
+                    },
+                    layout
+            );
         }
     }
 

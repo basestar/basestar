@@ -3,7 +3,9 @@ package io.basestar.storage.query;
 import io.basestar.expression.Expression;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.LinkableSchema;
+import io.basestar.schema.ViewSchema;
 import io.basestar.schema.expression.TypedExpression;
+import io.basestar.schema.from.Join;
 import io.basestar.schema.util.Bucket;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
@@ -34,4 +36,6 @@ public interface QueryStageVisitor<T> {
 
     @Deprecated
     T sql(String sql, InstanceSchema schema, Map<String, T> with);
+
+    T join(T left, T right, Join join);
 }

@@ -229,3 +229,44 @@ SqlView:
       type: string
     count:
       type: integer
+
+JoinLeft:
+  type: object
+  properties:
+    name:
+      type: string
+
+JoinRight:
+  type: object
+  properties:
+    name:
+      type: string
+    otherName:
+      type: string
+
+WithJoin:
+  type: view
+  from:
+    join:
+      left:
+        schema: JoinLeft
+        as: a
+      right:
+        schema: JoinRight
+        as: b
+      on: a.name == b.name
+  properties:
+    name:
+      expression: a.name
+    otherName:
+      expression: b.name
+
+WithUnion:
+  type: view
+  from:
+    union:
+      - JoinLeft
+      - JoinRight
+  properties:
+    name:
+      expression: name

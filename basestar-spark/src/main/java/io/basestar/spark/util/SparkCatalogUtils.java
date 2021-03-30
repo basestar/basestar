@@ -26,6 +26,7 @@ import io.basestar.util.ISO8601;
 import io.basestar.util.Immutable;
 import io.basestar.util.Pair;
 import io.basestar.util.Text;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -44,6 +45,7 @@ import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 public class SparkCatalogUtils {
 
     private static final String NO_PARTITION = "__HIVE_DEFAULT_PARTITION__";
@@ -99,6 +101,8 @@ public class SparkCatalogUtils {
                 alter.add(after);
             }
         }
+
+        log.info("Syncing partitions of {}.{} (create:{}, alter:{}, drop:{})", databaseName, tableName, create, alter, drop);
 
         if(!create.isEmpty()) {
             catalog.createPartitions(databaseName, tableName, ScalaUtils.asScalaSeq(create), false);

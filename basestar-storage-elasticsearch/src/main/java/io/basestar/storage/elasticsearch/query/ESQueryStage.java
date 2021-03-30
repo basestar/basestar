@@ -6,6 +6,7 @@ import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.logical.And;
 import io.basestar.schema.Layout;
 import io.basestar.schema.LinkableSchema;
+import io.basestar.schema.ViewSchema;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.expression.TypedExpression;
 import io.basestar.storage.elasticsearch.ElasticsearchStrategy;
@@ -202,6 +203,12 @@ public interface ESQueryStage {
 
         @Override
         public ESQueryStage map(final Map<String, TypedExpression<?>> expressions) {
+
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ESQueryStage viewKey(final ViewSchema schema) {
 
             throw new UnsupportedOperationException();
         }

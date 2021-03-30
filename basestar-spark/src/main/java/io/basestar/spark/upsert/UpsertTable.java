@@ -583,6 +583,8 @@ public class UpsertTable {
         squashMerge(session, current,  merge);
 
         updateDeltaState(session, state -> state.dropSequences(sequences));
+
+        refreshTable(session);
     }
 
     private void squashAppend(final SparkSession session,
@@ -701,8 +703,6 @@ public class UpsertTable {
         }
 
         updateBaseState(session, state -> state.mergePartitions(syncPartitions));
-
-        refreshTable(session);
 
         // Create empty files for partitions that were not output
 //        final Configuration configuration = session.sparkContext().hadoopConfiguration();

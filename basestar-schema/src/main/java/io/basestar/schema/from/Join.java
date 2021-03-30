@@ -11,10 +11,11 @@ import lombok.Data;
 import lombok.experimental.Accessors;
 
 import javax.annotation.Nonnull;
+import java.io.Serializable;
 import java.util.Map;
 
 @Data
-public class Join {
+public class Join implements Serializable {
 
     public enum Type {
 
@@ -37,7 +38,7 @@ public class Join {
     public Join(final Schema.Resolver.Constructing resolver, final Descriptor builder) {
 
         this.left = Nullsafe.require(builder.getLeft().build(resolver));
-        this.right = Nullsafe.require(builder.getLeft().build(resolver));
+        this.right = Nullsafe.require(builder.getRight().build(resolver));
         this.on = Nullsafe.require(builder.getOn());
         this.type = Nullsafe.orDefault(builder.getType(), Type.INNER);
     }
@@ -83,7 +84,7 @@ public class Join {
         };
     }
 
-    @JsonDeserialize(as = From.Builder.class)
+    @JsonDeserialize(as = Builder.class)
     interface Descriptor {
 
         From.Descriptor getLeft();

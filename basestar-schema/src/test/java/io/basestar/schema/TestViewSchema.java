@@ -42,4 +42,15 @@ class TestViewSchema {
         assertTrue(emailProp.typeOf() instanceof UseString);
         assertEquals(Expression.parse("email"), emailProp.getExpression());
     }
+
+    @Test
+    void testUnionView() throws IOException {
+
+        final Namespace namespace = Namespace.load(TestViewSchema.class.getResource("view.yml"));
+
+        final ViewSchema schema = namespace.requireViewSchema("WithUnion");
+        final Property nameProp = schema.getProperties().get("name");
+
+        assertTrue(nameProp.typeOf() instanceof UseString);
+    }
 }

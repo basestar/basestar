@@ -260,6 +260,50 @@ class TestViewTransform extends AbstractSparkTest {
         System.err.println(validate.accept(dataset).collectAsList());
     }
 
+    @Test
+    void testJoinView() throws IOException {
+
+        final SparkSession session = session();
+
+        final Map<Name, Dataset<Row>> datasets = ImmutableMap.of(
+                Name.of("JoinLeft"), session.createDataset(ImmutableList.of(
+                        new JoinLeft("a"),
+                        new JoinLeft("b")
+                ), Encoders.bean(JoinLeft.class)).toDF(),
+                Name.of("JoinRight"), session.createDataset(ImmutableList.of(
+                        new JoinRight("a", "a"),
+                        new JoinRight("a", "b"),
+                        new JoinRight("b", "a"),
+                        new JoinRight("b", "b")
+                ), Encoders.bean(JoinRight.class)).toDF()
+        );
+
+        final List<WithJoin> rows = view("WithJoin", WithJoin.class, datasets);
+        assertEquals(4, rows.size());
+    }
+
+    @Test
+    void testUnionView() throws IOException {
+
+        final SparkSession session = session();
+
+        final Map<Name, Dataset<Row>> datasets = ImmutableMap.of(
+                Name.of("JoinLeft"), session.createDataset(ImmutableList.of(
+                        new JoinLeft("a"),
+                        new JoinLeft("b")
+                ), Encoders.bean(JoinLeft.class)).toDF(),
+                Name.of("JoinRight"), session.createDataset(ImmutableList.of(
+                        new JoinRight("a", "a"),
+                        new JoinRight("a", "b"),
+                        new JoinRight("b", "a"),
+                        new JoinRight("b", "b")
+                ), Encoders.bean(JoinRight.class)).toDF()
+        );
+
+        final List<WithUnion> rows = view("WithUnion", WithUnion.class, datasets);
+        assertEquals(6, rows.size());
+    }
+
     private <T> List<T> view(final String view, final Class<T> as,  final Map<Name, Dataset<Row>> datasets) throws IOException {
 
         return view(view, as, datasets, ImmutableSet.of());

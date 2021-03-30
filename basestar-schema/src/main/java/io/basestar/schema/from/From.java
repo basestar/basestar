@@ -4,13 +4,16 @@ import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.jackson.serde.AbbrevSetDeserializer;
+import io.basestar.schema.Bucketing;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Property;
 import io.basestar.schema.Schema;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
+import io.basestar.util.BinaryKey;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
 import lombok.Data;
@@ -68,9 +71,17 @@ public interface From extends Serializable {
 
     void collectDependencies(Map<Name, Schema<?>> out);
 
+    Expression id();
+
     Use<?> typeOfId();
 
     void validateProperty(Property property);
+
+    BinaryKey id(Map<String, Object> row);
+
+    boolean isCompatibleBucketing(List<Bucketing> other);
+
+    List<FromSchema> schemas();
 
     @JsonDeserialize(as = Builder.class)
     interface Descriptor {

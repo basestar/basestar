@@ -5,10 +5,12 @@ import io.basestar.expression.Expression;
 import io.basestar.schema.Layout;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseAny;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Warnings;
 import lombok.RequiredArgsConstructor;
 
+import java.util.List;
 import java.util.Map;
 
 public interface InferenceContext {
@@ -100,6 +102,24 @@ public interface InferenceContext {
             } else {
                 return parent.typeOf(name);
             }
+        }
+    }
+
+    class Union implements InferenceContext {
+
+        private final List<InferenceContext> contexts;
+
+        public Union(final List<InferenceContext> contexts) {
+
+            this.contexts = Immutable.list(contexts);
+        }
+
+        @Override
+        @SuppressWarnings("rawtypes")
+        public Use<?> typeOf(final Name name) {
+
+            return contexts.stream().map(v -> (Use)v.typeOf(name))
+                    .reduce(Use::commonBase).orElse(UseAny.DEFAULT);
         }
     }
 }
