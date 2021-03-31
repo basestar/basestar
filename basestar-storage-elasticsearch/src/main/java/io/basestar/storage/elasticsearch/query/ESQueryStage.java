@@ -208,12 +208,6 @@ public interface ESQueryStage {
         }
 
         @Override
-        public ESQueryStage viewKey(final ViewSchema schema) {
-
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
         public ESQueryStage sort(final List<Sort> sort) {
 
             if(sort.stream().allMatch(s -> group.contains(s.getName().toString()))) {

@@ -317,7 +317,7 @@ public class ViewSchema implements LinkableSchema {
         if(isAggregating() || isGrouping()) {
             final List<Object> values = new ArrayList<>();
             group.forEach(name -> {
-                final Object[] keys = typeOf(Name.of(name)).key(row);
+                final Object[] keys = typeOf(Name.of(name)).key(row.get(name));
                 values.addAll(Arrays.asList(keys));
             });
             return BinaryKey.from(values);
@@ -334,7 +334,9 @@ public class ViewSchema implements LinkableSchema {
         if(Instance.getSchema(result) == null) {
             Instance.setSchema(result, this.getQualifiedName());
         }
-        result.computeIfAbsent(ID, ignored -> createId(result));
+        if(isAggregating() || isGrouping()) {
+            result.computeIfAbsent(ID, ignored -> createId(result));
+        }
         if(expand != null && !expand.isEmpty()) {
             final Map<String, Set<Name>> branches = Name.branch(expand);
             getLinks().forEach((name, link) -> {

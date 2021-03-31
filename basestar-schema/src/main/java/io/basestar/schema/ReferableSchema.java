@@ -43,7 +43,7 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
             .put(CREATED, UseDateTime.DEFAULT)
             .put(UPDATED, UseDateTime.DEFAULT)
             .put(HASH, UseString.DEFAULT)
-            .put(__ID, UseBinary.DEFAULT)
+//            .put(__ID, UseBinary.DEFAULT)
             .build();
 
     SortedMap<String, Use<?>> REF_SCHEMA = ImmutableSortedMap.<String, Use<?>>orderedBy(Comparator.naturalOrder())
