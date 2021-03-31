@@ -32,7 +32,7 @@ import io.basestar.secret.Secret;
 import io.basestar.storage.*;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
-import io.basestar.storage.query.DisjunctionVisitor;
+import io.basestar.expression.visitor.DisjunctionVisitor;
 import io.basestar.storage.query.Range;
 import io.basestar.storage.query.RangeVisitor;
 import io.basestar.util.*;

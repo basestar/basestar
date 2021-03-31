@@ -30,6 +30,7 @@ import io.basestar.expression.iterate.ContextIterator;
 import io.basestar.expression.iterate.ForAny;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Or;
+import io.basestar.expression.visitor.DisjunctionVisitor;
 import io.basestar.util.Name;
 import org.junit.jupiter.api.Test;
 

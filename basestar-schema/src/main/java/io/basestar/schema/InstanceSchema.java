@@ -469,4 +469,16 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
             }
         });
     }
+
+    default boolean isCompatibleBucketing(final List<Bucketing> other, final Set<Name> names) {
+
+        for(final Name name : names) {
+            if(!isCompatibleBucketing(other, name)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    boolean isCompatibleBucketing(List<Bucketing> other, Name name);
 }

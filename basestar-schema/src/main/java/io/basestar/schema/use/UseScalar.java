@@ -22,17 +22,16 @@ package io.basestar.schema.use;
 
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.schema.Bucketing;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
+import io.basestar.schema.util.Bucket;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
 
-import java.util.Collections;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 public interface UseScalar<T> extends Use<T> {
 
@@ -94,6 +93,12 @@ public interface UseScalar<T> extends Use<T> {
     default Set<Name> requiredExpand(final Set<Name> names) {
 
         return Collections.emptySet();
+    }
+
+    @Override
+    default boolean isCompatibleBucketing(final List<Bucketing> other, final Name name) {
+
+        return false;
     }
 
     @Override

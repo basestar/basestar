@@ -25,9 +25,11 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.iterate.ContextIterator;
 import io.basestar.expression.iterate.ForAny;
+import io.basestar.schema.Bucketing;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
+import io.basestar.schema.util.Bucket;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
@@ -154,6 +156,12 @@ public interface UseCollection<V, T extends Collection<V>> extends UseContainer<
     default void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, LinkableSchema> out) {
 
         getType().collectMaterializationDependencies(expand, out);
+    }
+
+    @Override
+    default boolean isCompatibleBucketing(final List<Bucketing> other, final Name name) {
+
+        return getType().isCompatibleBucketing(other, name);
     }
 
     @Override

@@ -29,6 +29,7 @@ import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.expression.InferenceVisitor;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseAny;
+import io.basestar.schema.util.Bucket;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.ValueContext;
 import io.basestar.schema.util.Widening;
@@ -37,6 +38,7 @@ import io.basestar.util.Warnings;
 
 import java.io.Serializable;
 import java.lang.reflect.Type;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -48,6 +50,11 @@ public interface Member extends Named, Described, Serializable, Extendable {
     boolean supportsTrivialJoin(Set<Name> expand);
 
     boolean requiresMigration(Member member, Widening widening);
+
+    default boolean isCompatibleBucketing(final List<Bucketing> other, final Name name) {
+
+        return typeOf().isCompatibleBucketing(other, name);
+    }
 
     interface Descriptor extends Described, Extendable {
 

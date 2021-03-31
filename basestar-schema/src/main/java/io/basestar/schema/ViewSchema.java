@@ -34,7 +34,6 @@ import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.from.From;
-import io.basestar.schema.from.FromSchema;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseBinary;
 import io.basestar.schema.use.UseView;
@@ -464,7 +463,7 @@ public class ViewSchema implements LinkableSchema {
 
     public boolean isCoBucketed() {
 
-        return isCompatibleBucketing(getEffectingBucketing());
+        return isCompatibleBucketing(getEffectiveBucketing());
     }
 
     @Override

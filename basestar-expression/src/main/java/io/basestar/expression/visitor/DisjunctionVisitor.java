@@ -1,4 +1,4 @@
-package io.basestar.storage.query;
+package io.basestar.expression.visitor;
 
 /*-
  * #%L

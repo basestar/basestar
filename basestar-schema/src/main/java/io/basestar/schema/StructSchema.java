@@ -258,6 +258,16 @@ public class StructSchema implements InstanceSchema {
     }
 
     @Override
+    public boolean isCompatibleBucketing(final List<Bucketing> other, final Name name) {
+
+        if(name.isEmpty()) {
+            return false;
+        }
+        final Member member = requireMember(name.first(), true);
+        return member.isCompatibleBucketing(other, name.withoutFirst());
+    }
+
+    @Override
     public boolean equals(final Object other) {
 
         return other instanceof StructSchema &&qualifiedNameEquals(other);

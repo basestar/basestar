@@ -12,6 +12,7 @@ import io.basestar.spark.util.ScalaUtils;
 import io.basestar.spark.util.SparkRowUtils;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.spark.util.SparkUtils;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -115,7 +116,14 @@ public class ExpandRefsStep extends AbstractExpandStep {
 
     protected <T> Dataset<Row> applyImpl(final QueryResolver resolver, final Dataset<Row> input, final Set<Bucket> buckets, final Use<T> typeOfId) {
 
-        final Dataset<Row> joinTo = resolver.resolve(target, Constant.TRUE, ImmutableList.of(), ImmutableSet.of()).dataset();
+        final boolean coBucketed = root.isCompatibleBucketing(root.getEffectiveBucketing(), names);
+        if(coBucketed) {
+            log.info("Refs are co-bucketed: schema={}, link={}, buckets={}", root, names, buckets);
+        } else {
+            log.info("Refs are not co-bucketed: schema={}, link={}", root, names);
+
+        }
+        final Dataset<Row> joinTo = resolver.resolve(target, Constant.TRUE, ImmutableList.of(), ImmutableSet.of(), coBucketed ? buckets : null).dataset();
 
         final StructType joinToType = joinTo.schema();
 

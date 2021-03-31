@@ -12,10 +12,7 @@ import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Warnings;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedSet;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -78,7 +75,7 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver, Permissio
 
     List<Bucketing> getDeclaredBucketing();
 
-    default List<Bucketing> getEffectingBucketing() {
+    default List<Bucketing> getEffectiveBucketing() {
 
         final List<Bucketing> bucketing = getDeclaredBucketing();
         if(bucketing.isEmpty()) {
@@ -128,7 +125,7 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver, Permissio
 
     default boolean isCompatibleBucketing(final List<Bucketing> other) {
 
-        final List<Bucketing> effective = getEffectingBucketing();
+        final List<Bucketing> effective = getEffectiveBucketing();
         if(effective.size() == other.size()) {
             for(int i = 0; i != effective.size(); ++i) {
                 if(!effective.get(i).isCompatible(other.get(i))) {
@@ -138,5 +135,15 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver, Permissio
             return true;
         }
         return false;
+    }
+
+    @Override
+    default boolean isCompatibleBucketing(final List<Bucketing> other, final Name name) {
+
+        if(name.isEmpty()) {
+            return isCompatibleBucketing(other);
+        }
+        final Member member = requireMember(name.first(), true);
+        return member.isCompatibleBucketing(other, name.withoutFirst());
     }
 }

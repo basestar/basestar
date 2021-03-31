@@ -25,6 +25,7 @@ import io.basestar.schema.*;
 import io.basestar.util.Name;
 
 import java.lang.reflect.Type;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -118,5 +119,11 @@ public interface UseInstance extends UseNamed<Instance> {
     default boolean areEqual(final Instance a, final Instance b) {
 
         return getSchema().areEqual(a, b);
+    }
+
+    @Override
+    default boolean isCompatibleBucketing(final List<Bucketing> other, final Name name) {
+
+        return getSchema().isCompatibleBucketing(other, name);
     }
 }

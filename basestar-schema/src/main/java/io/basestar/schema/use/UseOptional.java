@@ -2,6 +2,7 @@ package io.basestar.schema.use;
 
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.schema.Bucketing;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
@@ -15,6 +16,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -229,6 +231,12 @@ public class UseOptional<T> implements UseContainer<T, T> {
     public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, LinkableSchema> out) {
 
         type.collectMaterializationDependencies(expand, out);
+    }
+
+    @Override
+    public boolean isCompatibleBucketing(final List<Bucketing> other, final Name name) {
+
+        return type.isCompatibleBucketing(other, name);
     }
 
     @Override

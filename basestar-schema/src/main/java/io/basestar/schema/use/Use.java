@@ -25,11 +25,13 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.type.Numbers;
+import io.basestar.schema.Bucketing;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
 import io.basestar.schema.exception.InvalidKeyException;
 import io.basestar.schema.exception.TypeSyntaxException;
+import io.basestar.schema.util.Bucket;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.schema.util.ValueContext;
@@ -174,6 +176,8 @@ public interface Use<T> extends Serializable {
     void collectDependencies(Set<Name> expand, Map<Name, Schema<?>> out);
 
     void collectMaterializationDependencies(Set<Name> expand, Map<Name, LinkableSchema> out);
+
+    boolean isCompatibleBucketing(List<Bucketing> other, Name name);
 
     default Object[] key(final T value) {
 

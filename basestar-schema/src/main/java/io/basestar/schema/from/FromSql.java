@@ -109,7 +109,7 @@ public class FromSql implements From {
     @Override
     public boolean isCompatibleBucketing(final List<Bucketing> other) {
 
-        return false;
+        return using.values().stream().allMatch(v -> v.isCompatibleBucketing(other));
     }
 
     @Override

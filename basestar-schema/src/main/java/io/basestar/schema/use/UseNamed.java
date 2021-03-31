@@ -25,6 +25,7 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
 import io.basestar.schema.exception.MissingSchemaException;
+import io.basestar.schema.util.Bucket;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.schema.util.ValueContext;
@@ -34,6 +35,7 @@ import lombok.Data;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.lang.reflect.Type;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -223,6 +225,12 @@ public interface UseNamed<T> extends Use<T> {
 
         @Override
         public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, LinkableSchema> out) {
+
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean isCompatibleBucketing(final List<Bucketing> other, final Name name) {
 
             throw new UnsupportedOperationException();
         }

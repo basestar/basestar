@@ -27,8 +27,12 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.expression.ExpressionVisitor;
+import io.basestar.expression.visitor.DisjunctionVisitor;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.jackson.serde.ExpressionDeserializer;
 import io.basestar.schema.exception.MissingMemberException;
@@ -397,6 +401,16 @@ public class Link implements Member {
         ).reduce(Link::extend).orElse(Collections.emptyMap()));
     }
 
+    public boolean isCompatibleBucketing(final List<Bucketing> other, final Name name) {
+
+//        final Set<Name> names = other.stream().flatMap(v -> v.getUsing().stream()).collect(Collectors.toSet());
+//        final Set<Expression> disjunction = expression.visit(new DisjunctionVisitor());
+//        for(final Expression conjunction : disjunction) {
+//
+//        }
+        return typeOf().isCompatibleBucketing(other, name);
+    }
+
     public interface Resolver {
 
         interface Descriptor {
@@ -452,4 +466,15 @@ public class Link implements Member {
 
         return (Descriptor.Self) () -> Link.this;
     }
+
+
+//    private static class EqualsVisitor implements ExpressionVisitor.Defaulting<Set<Name>> {
+//
+//        @Override
+//        public Set<Name> visitDefault(final Expression expression) {
+//
+//            return ImmutableSet.of();
+//        }
+//    }
+
 }

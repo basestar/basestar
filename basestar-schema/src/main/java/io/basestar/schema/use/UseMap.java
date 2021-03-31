@@ -27,9 +27,11 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.iterate.ContextIterator;
 import io.basestar.expression.iterate.ForAny;
+import io.basestar.schema.Bucketing;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
+import io.basestar.schema.util.Bucket;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.schema.util.ValueContext;
@@ -378,6 +380,16 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
             return "{" + value.entrySet().stream().sorted(Map.Entry.comparingByKey())
                     .map(v -> v.getKey() + ": " + type.toString(v.getValue()))
                     .collect(Collectors.joining(", ")) + "}";
+        }
+    }
+
+    @Override
+    public boolean isCompatibleBucketing(final List<Bucketing> other, final Name name) {
+
+        if(name.isEmpty()) {
+            return false;
+        } else {
+            return type.isCompatibleBucketing(other, name.withoutFirst());
         }
     }
 
