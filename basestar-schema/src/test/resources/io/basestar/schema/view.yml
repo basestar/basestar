@@ -25,18 +25,20 @@ WithCompactExpand:
   properties:
     email: email
 
-JoinLeft:
+Person:
   type: object
   properties:
     name:
       type: string
 
-JoinRight:
+PersonAdddress:
   type: object
   properties:
     name:
       type: string
     otherName:
+      type: string
+    country:
       type: string
 
 WithJoin:
@@ -44,10 +46,10 @@ WithJoin:
   from:
     join:
       left:
-        schema: JoinLeft
+        schema: Person
         as: a
       right:
-        schema: JoinRight
+        schema: PersonAdddress
         as: b
       on: a.name == b.name
   properties:
@@ -55,14 +57,31 @@ WithJoin:
       expression: a.name
     otherName:
       expression: b.name
+    country:
+      expression: b.country
 
 WithUnion:
   type: view
   from:
     union:
-      - JoinLeft
-      - JoinRight
+      - Person
+      - PersonAdddress
   properties:
     name:
       expression: name
 
+WithInline:
+  type: view
+  from:
+    schema:
+      type: view
+      from:
+        union:
+          - Person
+          - PersonAdddress
+      properties:
+        name:
+          expression: name
+  properties:
+    name:
+      expression: name

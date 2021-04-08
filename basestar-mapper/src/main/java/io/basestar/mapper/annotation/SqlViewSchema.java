@@ -10,6 +10,7 @@ import io.basestar.mapper.internal.annotation.SchemaDeclaration;
 import io.basestar.schema.from.From;
 import io.basestar.schema.from.FromSchema;
 import io.basestar.schema.from.FromSql;
+import io.basestar.schema.util.SchemaRef;
 import io.basestar.type.AnnotationContext;
 import io.basestar.type.TypeContext;
 import io.basestar.util.Name;
@@ -62,7 +63,7 @@ public @interface SqlViewSchema {
                     .setPrimaryKey(ImmutableList.copyOf(annotation.primaryKey()))
                     .setUsing(Stream.of(annotation.using()).collect(Collectors.toMap(
                             Using::as,
-                            e -> From.builder().setSchema(Name.parse(e.schema()))
+                            e -> From.builder().setSchema(SchemaRef.withName(Name.parse(e.schema())))
                     )));
         }
 

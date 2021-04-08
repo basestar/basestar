@@ -8,6 +8,7 @@ import io.basestar.schema.*;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.util.SchemaRef;
 import io.basestar.util.*;
 import lombok.Getter;
 
@@ -33,7 +34,7 @@ public class FromSchema implements From {
 
     public FromSchema(final Schema.Resolver.Constructing resolver, final From.Descriptor from) {
 
-        this.schema = resolver.requireLinkableSchema(from.getSchema());
+        this.schema = from.getSchema().resolve(resolver);
         this.sort = Nullsafe.orDefault(from.getSort());
         this.expand = Nullsafe.orDefault(from.getExpand());
         this.as = from.getAs();
@@ -44,9 +45,13 @@ public class FromSchema implements From {
 
         return new From.Descriptor() {
             @Override
-            public Name getSchema() {
+            public SchemaRef getSchema() {
 
-                return schema.getQualifiedName();
+                if(schema.isAnonymous()) {
+                    return SchemaRef.withInline(schema.descriptor());
+                } else {
+                    return SchemaRef.withName(schema.getQualifiedName());
+                }
             }
 
             @Override

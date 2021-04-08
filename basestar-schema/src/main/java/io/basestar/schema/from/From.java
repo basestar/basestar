@@ -13,6 +13,7 @@ import io.basestar.schema.Property;
 import io.basestar.schema.Schema;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.util.SchemaRef;
 import io.basestar.util.BinaryKey;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
@@ -87,7 +88,7 @@ public interface From extends Serializable {
     interface Descriptor {
 
         @JsonInclude(JsonInclude.Include.NON_NULL)
-        default Name getSchema() {
+        default SchemaRef getSchema() {
 
             return null;
         }
@@ -158,7 +159,7 @@ public interface From extends Serializable {
     class Builder implements Descriptor {
 
         @Nullable
-        private Name schema;
+        private SchemaRef schema;
 
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
@@ -199,7 +200,7 @@ public interface From extends Serializable {
 
         public static Builder fromSchema(final Name schema) {
 
-            return new Builder().setSchema(schema);
+            return new Builder().setSchema(SchemaRef.withName(schema));
         }
     }
 

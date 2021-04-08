@@ -270,3 +270,19 @@ WithUnion:
   properties:
     name:
       expression: name
+
+WithInline:
+  type: view
+  from:
+    schema:
+      type: view
+      from:
+        union:
+          - JoinLeft
+          - JoinRight
+      properties:
+        name:
+          expression: name
+  properties:
+    name:
+      expression: name

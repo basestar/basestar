@@ -304,6 +304,28 @@ class TestViewTransform extends AbstractSparkTest {
         assertEquals(6, rows.size());
     }
 
+    @Test
+    void testInlineView() throws IOException {
+
+        final SparkSession session = session();
+
+        final Map<Name, Dataset<Row>> datasets = ImmutableMap.of(
+                Name.of("JoinLeft"), session.createDataset(ImmutableList.of(
+                        new JoinLeft("a"),
+                        new JoinLeft("b")
+                ), Encoders.bean(JoinLeft.class)).toDF(),
+                Name.of("JoinRight"), session.createDataset(ImmutableList.of(
+                        new JoinRight("a", "a"),
+                        new JoinRight("a", "b"),
+                        new JoinRight("b", "a"),
+                        new JoinRight("b", "b")
+                ), Encoders.bean(JoinRight.class)).toDF()
+        );
+
+        final List<WithUnion> rows = view("WithInline", WithUnion.class, datasets);
+        assertEquals(6, rows.size());
+    }
+
     private <T> List<T> view(final String view, final Class<T> as,  final Map<Name, Dataset<Row>> datasets) throws IOException {
 
         return view(view, as, datasets, ImmutableSet.of());

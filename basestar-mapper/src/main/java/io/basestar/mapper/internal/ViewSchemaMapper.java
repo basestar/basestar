@@ -26,6 +26,7 @@ import io.basestar.schema.Bucketing;
 import io.basestar.schema.Permission;
 import io.basestar.schema.ViewSchema;
 import io.basestar.schema.from.From;
+import io.basestar.schema.util.SchemaRef;
 import io.basestar.type.TypeContext;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
@@ -79,7 +80,7 @@ public class ViewSchemaMapper<T> extends LinkableSchemaMapper<ViewSchema.Builder
         final From.Builder from;
         if(sql == null) {
             from = From.builder()
-                    .setSchema(fromSchema)
+                    .setSchema(SchemaRef.withName(fromSchema))
                     .setExpand(fromExpand.isEmpty() ? null : fromExpand);
         } else {
             from = From.builder()
