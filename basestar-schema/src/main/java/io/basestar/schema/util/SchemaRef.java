@@ -1,6 +1,7 @@
 package io.basestar.schema.util;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
 import io.basestar.schema.Version;
@@ -37,6 +38,16 @@ public class SchemaRef {
     public static SchemaRef withInline(final Schema.Descriptor<?, ?> inline) {
 
         return new SchemaRef(null, inline);
+    }
+
+    @JsonValue
+    public Object toJson() {
+
+        if(name != null) {
+            return name;
+        } else {
+            return inline;
+        }
     }
 
     public LinkableSchema resolve(final Schema.Resolver.Constructing resolver) {
