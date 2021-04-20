@@ -291,7 +291,7 @@ public class ViewSchema implements LinkableSchema {
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName.toString());
         }
-        this.declaredProperties.values().forEach(this.from::validateProperty);
+        this.from.validateSchema(this);
         this.aggregating = getProperties().values().stream().map(Property::getExpression)
                 .filter(Objects::nonNull).anyMatch(Expression::isAggregate);
     }

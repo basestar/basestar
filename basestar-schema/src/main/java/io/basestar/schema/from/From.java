@@ -7,10 +7,7 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.jackson.serde.AbbrevSetDeserializer;
-import io.basestar.schema.Bucketing;
-import io.basestar.schema.LinkableSchema;
-import io.basestar.schema.Property;
-import io.basestar.schema.Schema;
+import io.basestar.schema.*;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.util.SchemaRef;
@@ -83,6 +80,11 @@ public interface From extends Serializable {
     boolean isCompatibleBucketing(List<Bucketing> other);
 
     List<FromSchema> schemas();
+
+    default void validateSchema(final ViewSchema schema) {
+
+        schema.getDeclaredProperties().values().forEach(this::validateProperty);
+    }
 
     @JsonDeserialize(as = Builder.class)
     interface Descriptor {

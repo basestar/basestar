@@ -1,10 +1,8 @@
 package io.basestar.schema.from;
 
 import io.basestar.expression.Expression;
-import io.basestar.schema.Bucketing;
-import io.basestar.schema.LinkableSchema;
-import io.basestar.schema.Property;
-import io.basestar.schema.Schema;
+import io.basestar.schema.*;
+import io.basestar.schema.exception.MissingPropertyException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
@@ -90,6 +88,19 @@ public class FromSql implements From {
     public Use<?> typeOfId() {
 
         return UseBinary.DEFAULT;
+    }
+
+    @Override
+    public void validateSchema(final ViewSchema schema) {
+
+        From.super.validateSchema(schema);
+            primaryKey.forEach(k -> {
+                try {
+                    schema.requireProperty(k, true);
+                } catch (final MissingPropertyException e) {
+                    throw new IllegalStateException("Cannot use " + k + " in primary key (must be defined in the schema)");
+                }
+            });
     }
 
     @Override
