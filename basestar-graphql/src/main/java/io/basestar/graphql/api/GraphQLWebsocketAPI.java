@@ -71,7 +71,7 @@ public class GraphQLWebsocketAPI implements API {
         }
     }
 
-    private CompletableFuture<APIResponse> handle(final APIRequest request, final RequestBody requestBody) {
+    protected CompletableFuture<APIResponse> handle(final APIRequest request, final RequestBody requestBody) {
 
         try {
             // Empty messages seem to be sent as keep-alives

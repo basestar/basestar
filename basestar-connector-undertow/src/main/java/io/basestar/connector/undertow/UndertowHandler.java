@@ -21,6 +21,7 @@ package io.basestar.connector.undertow;
  */
 
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
 import io.basestar.api.API;
 import io.basestar.api.APIRequest;
@@ -66,9 +67,9 @@ public class UndertowHandler implements HttpHandler {
 
             final APIRequest.Method method = APIRequest.Method.valueOf(exchange.getRequestMethod().toString());
             final String path = exchange.getRelativePath();
-            final Multimap<String, String> query = ArrayListMultimap.create();
+            final ListMultimap<String, String> query = ArrayListMultimap.create();
             exchange.getQueryParameters().forEach(query::putAll);
-            final Multimap<String, String> requestHeaders = ArrayListMultimap.create();
+            final ListMultimap<String, String> requestHeaders = ArrayListMultimap.create();
             exchange.getRequestHeaders()
                     .forEach(vs -> requestHeaders.putAll(vs.getHeaderName().toString().toLowerCase(), vs));
 
@@ -103,13 +104,13 @@ public class UndertowHandler implements HttpHandler {
                 }
 
                 @Override
-                public Multimap<String, String> getQuery() {
+                public ListMultimap<String, String> getQuery() {
 
                     return query;
                 }
 
                 @Override
-                public Multimap<String, String> getHeaders() {
+                public ListMultimap<String, String> getHeaders() {
 
                     return requestHeaders;
                 }

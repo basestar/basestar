@@ -20,9 +20,9 @@ package io.basestar.api;
  * #L%
  */
 
-import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Multimap;
+import com.google.common.collect.ListMultimap;
 import io.basestar.api.exception.UnsupportedContentException;
 import io.basestar.auth.Caller;
 import lombok.Data;
@@ -44,9 +44,9 @@ public interface APIRequest {
 
     String getPath();
 
-    Multimap<String, String> getQuery();
+    ListMultimap<String, String> getQuery();
 
-    Multimap<String, String> getHeaders();
+    ListMultimap<String, String> getHeaders();
 
     InputStream readBody() throws IOException;
 
@@ -61,8 +61,12 @@ public interface APIRequest {
 
     default String getFirstHeader(final String key) {
 
-        final Collection<String> result = getHeaders().get(key.toLowerCase());
-        return result.isEmpty() ? null : result.iterator().next();
+        for(final Map.Entry<String, String> entry : getHeaders().entries()) {
+            if(entry.getKey().equalsIgnoreCase(key)) {
+                return entry.getValue();
+            }
+        }
+        return null;
     }
 
     default String getFirstQuery(final String key) {
@@ -142,9 +146,9 @@ public interface APIRequest {
 
     static Simple request(final Caller caller, final Method method, final String path, final Map<String, String> query, final Map<String, String> headers, final APIFormat format, final byte[] body) {
 
-        final Multimap<String, String> allQuery = HashMultimap.create();
+        final ListMultimap<String, String> allQuery = ArrayListMultimap.create();
         query.forEach(allQuery::put);
-        final Multimap<String, String> allHeaders = HashMultimap.create();
+        final ListMultimap<String, String> allHeaders = ArrayListMultimap.create();
         headers.forEach(allHeaders::put);
         allHeaders.put("Accept", format.getContentType());
         if(body != null) {
@@ -162,9 +166,9 @@ public interface APIRequest {
 
         private final String path;
 
-        private final Multimap<String, String> query;
+        private final ListMultimap<String, String> query;
 
-        private final Multimap<String, String> headers;
+        private final ListMultimap<String, String> headers;
 
         private final byte[] body;
 
@@ -198,12 +202,12 @@ public interface APIRequest {
             return delegate.getPath();
         }
 
-        public Multimap<String, String> getQuery() {
+        public ListMultimap<String, String> getQuery() {
 
             return delegate.getQuery();
         }
 
-        public Multimap<String, String> getHeaders() {
+        public ListMultimap<String, String> getHeaders() {
 
             return delegate.getHeaders();
         }

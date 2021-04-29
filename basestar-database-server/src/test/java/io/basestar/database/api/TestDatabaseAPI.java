@@ -1,9 +1,9 @@
 package io.basestar.database.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Multimap;
+import com.google.common.collect.ListMultimap;
 import io.basestar.api.APIRequest;
 import io.basestar.api.APIResponse;
 import io.basestar.auth.Caller;
@@ -215,17 +215,17 @@ class TestDatabaseAPI {
             }
 
             @Override
-            public Multimap<String, String> getQuery() {
+            public ListMultimap<String, String> getQuery() {
 
-                final Multimap<String, String> result = HashMultimap.create();
+                final ListMultimap<String, String> result = ArrayListMultimap.create();
                 query.forEach(result::put);
                 return result;
             }
 
             @Override
-            public Multimap<String, String> getHeaders() {
+            public ListMultimap<String, String> getHeaders() {
 
-                return HashMultimap.create();
+                return ArrayListMultimap.create();
             }
 
             @Override

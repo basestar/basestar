@@ -1,7 +1,7 @@
 package io.basestar.api;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
 import io.basestar.auth.Caller;
 import io.basestar.util.Nullsafe;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -49,9 +49,9 @@ public class EnvelopedAPI implements API {
             }
 
             @Override
-            public Multimap<String, String> getQuery() {
+            public ListMultimap<String, String> getQuery() {
 
-                final Multimap<String, String> result = HashMultimap.create();
+                final ListMultimap<String, String> result = ArrayListMultimap.create();
                 request.getQuery().forEach(result::put);
                 if (body.getQuery() != null) {
                     body.getQuery().forEach(result::put);
@@ -60,9 +60,9 @@ public class EnvelopedAPI implements API {
             }
 
             @Override
-            public Multimap<String, String> getHeaders() {
+            public ListMultimap<String, String> getHeaders() {
 
-                final Multimap<String, String> result = HashMultimap.create();
+                final ListMultimap<String, String> result = ArrayListMultimap.create();
                 result.put("content-type", request.getContentType().getContentType());
                 result.put("content-length", Integer.toString(bytes.length));
                 request.getHeaders().asMap().forEach((k, vs) -> {

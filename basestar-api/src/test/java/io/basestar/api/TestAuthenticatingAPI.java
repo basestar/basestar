@@ -2,8 +2,8 @@ package io.basestar.api;
 
 
 import com.google.common.base.Charsets;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
 import io.basestar.auth.Authenticator;
 import io.basestar.auth.BasicAuthenticator;
 import io.basestar.auth.Caller;
@@ -54,17 +54,17 @@ class TestAuthenticatingAPI {
         final APIResponse response = api.handle(new APIRequest.Delegating(null) {
 
             @Override
-            public Multimap<String, String> getHeaders() {
+            public ListMultimap<String, String> getHeaders() {
 
-                final Multimap<String, String> map = HashMultimap.create();
+                final ListMultimap<String, String> map = ArrayListMultimap.create();
                 map.put("authorization", "Basic " + Base64.getEncoder().encodeToString("matt:password".getBytes(Charsets.UTF_8)));
                 return map;
             }
 
             @Override
-            public Multimap<String, String> getQuery() {
+            public ListMultimap<String, String> getQuery() {
 
-                return HashMultimap.create();
+                return ArrayListMultimap.create();
             }
 
             @Override
@@ -84,17 +84,17 @@ class TestAuthenticatingAPI {
         final APIResponse response = api.handle(new APIRequest.Delegating(null) {
 
             @Override
-            public Multimap<String, String> getHeaders() {
+            public ListMultimap<String, String> getHeaders() {
 
-                final Multimap<String, String> map = HashMultimap.create();
+                final ListMultimap<String, String> map = ArrayListMultimap.create();
                 map.put("X-Basic-Authorization", Base64.getEncoder().encodeToString("matt:password".getBytes(Charsets.UTF_8)));
                 return map;
             }
 
             @Override
-            public Multimap<String, String> getQuery() {
+            public ListMultimap<String, String> getQuery() {
 
-                return HashMultimap.create();
+                return ArrayListMultimap.create();
             }
 
             @Override
