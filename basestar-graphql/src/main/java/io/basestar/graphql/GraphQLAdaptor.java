@@ -484,7 +484,7 @@ public class GraphQLAdaptor {
             final Set<Name> expand = expand(schema, env, strategy.pageItemsFieldName());
             final String alias = Nullsafe.orDefault(env.getField().getAlias(), () -> strategy.subscribeQueryMethodName(schema));
             final String query = env.getArgument(strategy.queryArgumentName());
-            final Expression expression = Expression.parse(query);
+            final Expression expression = Nullsafe.mapOrDefault(query, Expression::parse, Constant.TRUE);
             final Integer count = count(env);
             final List<Sort> sort = sort(env);
             final QueryOptions options = QueryOptions.builder()
