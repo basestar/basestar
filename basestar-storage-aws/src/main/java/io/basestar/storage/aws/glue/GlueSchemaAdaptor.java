@@ -44,6 +44,20 @@ public class GlueSchemaAdaptor {
         return "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat";
     }
 
+    public TableInput tableInput(final String name, final String location) {
+
+        return tableInput(name, location, schema.getExpand());
+    }
+
+    public TableInput tableInput(final String name, final String location, final Set<Name> expand) {
+
+        return TableInput.builder()
+                .name(name)
+                .storageDescriptor(storageDescriptor(location, expand))
+                .partitionKeys(partitionKeys())
+                .build();
+    }
+
     protected StorageDescriptor storageDescriptor(final String location, final Set<Name> expand) {
 
         return StorageDescriptor.builder()
@@ -65,7 +79,7 @@ public class GlueSchemaAdaptor {
         );
     }
 
-    protected List<Column> columns(final Set<Name> expand) {
+    protected List<Column> partitionKeys() {
 
         final List<Column> columns = new ArrayList<>();
         for (int i = 0; i != schema.getEffectiveBucketing().size(); ++i) {
@@ -74,6 +88,12 @@ public class GlueSchemaAdaptor {
                     .type(type(UseInteger.DEFAULT))
                     .build());
         }
+        return columns;
+    }
+
+    protected List<Column> columns(final Set<Name> expand) {
+
+        final List<Column> columns = new ArrayList<>(partitionKeys());
 
         final Map<String, Use<?>> entries = new HashMap<>();
         entries.putAll(schema.layoutSchema(expand));
@@ -246,19 +266,6 @@ public class GlueSchemaAdaptor {
         return SerDeInfo.builder()
                 .serializationLibrary("org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe")
                 .parameters(ImmutableMap.of("serialization.format", "1"))
-                .build();
-    }
-
-    public TableInput tableInput(final String name, final String location) {
-
-        return tableInput(name, location, schema.getExpand());
-    }
-
-    public TableInput tableInput(final String name, final String location, final Set<Name> expand) {
-
-        return TableInput.builder()
-                .name(name)
-                .storageDescriptor(storageDescriptor(location, expand))
                 .build();
     }
 }

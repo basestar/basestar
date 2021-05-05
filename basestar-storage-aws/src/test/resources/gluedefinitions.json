@@ -1,0 +1,925 @@
+{
+  "VersionedRef": {
+    "name": "VersionedRef",
+    "storageDescriptor": {
+      "columns": [
+        {
+          "name": "__bucket0",
+          "type": "bigint"
+        },
+        {
+          "name": "schema",
+          "type": "string"
+        },
+        {
+          "name": "created",
+          "type": "timestamp"
+        },
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "updated",
+          "type": "timestamp"
+        },
+        {
+          "name": "version",
+          "type": "bigint"
+        },
+        {
+          "name": "versionedref",
+          "type": "struct<id:string,version:bigint>"
+        },
+        {
+          "name": "hash",
+          "type": "string"
+        }
+      ],
+      "location": "file://",
+      "inputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+      "outputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+      "compressed": true,
+      "serdeInfo": {
+        "serializationLibrary": "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
+        "parameters": {
+          "serialization.format": "1"
+        }
+      },
+      "parameters": {
+        "EXTERNAL": "true",
+        "parquet.compress": "SNAPPY"
+      }
+    },
+    "partitionKeys": [
+      {
+        "name": "__bucket0",
+        "type": "bigint"
+      }
+    ]
+  },
+  "ExtendA": {
+    "name": "ExtendA",
+    "storageDescriptor": {
+      "columns": [
+        {
+          "name": "__bucket0",
+          "type": "bigint"
+        },
+        {
+          "name": "schema",
+          "type": "string"
+        },
+        {
+          "name": "propa",
+          "type": "string"
+        },
+        {
+          "name": "created",
+          "type": "timestamp"
+        },
+        {
+          "name": "propbase",
+          "type": "string"
+        },
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "updated",
+          "type": "timestamp"
+        },
+        {
+          "name": "version",
+          "type": "bigint"
+        },
+        {
+          "name": "hash",
+          "type": "string"
+        }
+      ],
+      "location": "file://",
+      "inputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+      "outputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+      "compressed": true,
+      "serdeInfo": {
+        "serializationLibrary": "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
+        "parameters": {
+          "serialization.format": "1"
+        }
+      },
+      "parameters": {
+        "EXTERNAL": "true",
+        "parquet.compress": "SNAPPY"
+      }
+    },
+    "partitionKeys": [
+      {
+        "name": "__bucket0",
+        "type": "bigint"
+      }
+    ]
+  },
+  "Address": {
+    "name": "Address",
+    "storageDescriptor": {
+      "columns": [
+        {
+          "name": "__bucket0",
+          "type": "bigint"
+        },
+        {
+          "name": "schema",
+          "type": "string"
+        },
+        {
+          "name": "zip",
+          "type": "string"
+        },
+        {
+          "name": "country",
+          "type": "string"
+        },
+        {
+          "name": "city",
+          "type": "string"
+        },
+        {
+          "name": "created",
+          "type": "timestamp"
+        },
+        {
+          "name": "lon",
+          "type": "double"
+        },
+        {
+          "name": "version",
+          "type": "bigint"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "company",
+          "type": "string"
+        },
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "state",
+          "type": "string"
+        },
+        {
+          "name": "updated",
+          "type": "timestamp"
+        },
+        {
+          "name": "hash",
+          "type": "string"
+        },
+        {
+          "name": "lat",
+          "type": "double"
+        }
+      ],
+      "location": "file://",
+      "inputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+      "outputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+      "compressed": true,
+      "serdeInfo": {
+        "serializationLibrary": "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
+        "parameters": {
+          "serialization.format": "1"
+        }
+      },
+      "parameters": {
+        "EXTERNAL": "true",
+        "parquet.compress": "SNAPPY"
+      }
+    },
+    "partitionKeys": [
+      {
+        "name": "__bucket0",
+        "type": "bigint"
+      }
+    ]
+  },
+  "RefTarget": {
+    "name": "RefTarget",
+    "storageDescriptor": {
+      "columns": [
+        {
+          "name": "__bucket0",
+          "type": "bigint"
+        },
+        {
+          "name": "schema",
+          "type": "string"
+        },
+        {
+          "name": "created",
+          "type": "timestamp"
+        },
+        {
+          "name": "hello",
+          "type": "string"
+        },
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "source",
+          "type": "struct<id:string>"
+        },
+        {
+          "name": "updated",
+          "type": "timestamp"
+        },
+        {
+          "name": "version",
+          "type": "bigint"
+        },
+        {
+          "name": "hash",
+          "type": "string"
+        }
+      ],
+      "location": "file://",
+      "inputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+      "outputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+      "compressed": true,
+      "serdeInfo": {
+        "serializationLibrary": "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
+        "parameters": {
+          "serialization.format": "1"
+        }
+      },
+      "parameters": {
+        "EXTERNAL": "true",
+        "parquet.compress": "SNAPPY"
+      }
+    },
+    "partitionKeys": [
+      {
+        "name": "__bucket0",
+        "type": "bigint"
+      }
+    ]
+  },
+  "ExtendB": {
+    "name": "ExtendB",
+    "storageDescriptor": {
+      "columns": [
+        {
+          "name": "__bucket0",
+          "type": "bigint"
+        },
+        {
+          "name": "propb",
+          "type": "string"
+        },
+        {
+          "name": "schema",
+          "type": "string"
+        },
+        {
+          "name": "created",
+          "type": "timestamp"
+        },
+        {
+          "name": "propbase",
+          "type": "string"
+        },
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "updated",
+          "type": "timestamp"
+        },
+        {
+          "name": "version",
+          "type": "bigint"
+        },
+        {
+          "name": "hash",
+          "type": "string"
+        }
+      ],
+      "location": "file://",
+      "inputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+      "outputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+      "compressed": true,
+      "serdeInfo": {
+        "serializationLibrary": "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
+        "parameters": {
+          "serialization.format": "1"
+        }
+      },
+      "parameters": {
+        "EXTERNAL": "true",
+        "parquet.compress": "SNAPPY"
+      }
+    },
+    "partitionKeys": [
+      {
+        "name": "__bucket0",
+        "type": "bigint"
+      }
+    ]
+  },
+  "Simple": {
+    "name": "Simple",
+    "storageDescriptor": {
+      "columns": [
+        {
+          "name": "__bucket0",
+          "type": "bigint"
+        },
+        {
+          "name": "date",
+          "type": "date"
+        },
+        {
+          "name": "schema",
+          "type": "string"
+        },
+        {
+          "name": "struct",
+          "type": "struct<x:bigint,y:bigint>"
+        },
+        {
+          "name": "arrayinteger",
+          "type": "array<bigint>"
+        },
+        {
+          "name": "arrayboolean",
+          "type": "array<boolean>"
+        },
+        {
+          "name": "string",
+          "type": "string"
+        },
+        {
+          "name": "integer",
+          "type": "bigint"
+        },
+        {
+          "name": "number",
+          "type": "double"
+        },
+        {
+          "name": "datetime",
+          "type": "timestamp"
+        },
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "mapdatetime",
+          "type": "map<string,timestamp>"
+        },
+        {
+          "name": "mapstring",
+          "type": "map<string,string>"
+        },
+        {
+          "name": "created",
+          "type": "timestamp"
+        },
+        {
+          "name": "mapboolean",
+          "type": "map<string,boolean>"
+        },
+        {
+          "name": "mapinteger",
+          "type": "map<string,bigint>"
+        },
+        {
+          "name": "arrayobject",
+          "type": "array<struct<id:string>>"
+        },
+        {
+          "name": "mapnumber",
+          "type": "map<string,double>"
+        },
+        {
+          "name": "arraydate",
+          "type": "array<date>"
+        },
+        {
+          "name": "version",
+          "type": "bigint"
+        },
+        {
+          "name": "arraybinary",
+          "type": "array<binary>"
+        },
+        {
+          "name": "mapobject",
+          "type": "map<string,struct<id:string>>"
+        },
+        {
+          "name": "boolean",
+          "type": "boolean"
+        },
+        {
+          "name": "arraynumber",
+          "type": "array<double>"
+        },
+        {
+          "name": "binary",
+          "type": "binary"
+        },
+        {
+          "name": "mapbinary",
+          "type": "map<string,binary>"
+        },
+        {
+          "name": "mapstruct",
+          "type": "map<string,struct<x:bigint,y:bigint>>"
+        },
+        {
+          "name": "arraystring",
+          "type": "array<string>"
+        },
+        {
+          "name": "arraystruct",
+          "type": "array<struct<x:bigint,y:bigint>>"
+        },
+        {
+          "name": "arraydatetime",
+          "type": "array<timestamp>"
+        },
+        {
+          "name": "mapdate",
+          "type": "map<string,date>"
+        },
+        {
+          "name": "updated",
+          "type": "timestamp"
+        },
+        {
+          "name": "hash",
+          "type": "string"
+        },
+        {
+          "name": "object",
+          "type": "struct<id:string>"
+        }
+      ],
+      "location": "file://",
+      "inputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+      "outputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+      "compressed": true,
+      "serdeInfo": {
+        "serializationLibrary": "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
+        "parameters": {
+          "serialization.format": "1"
+        }
+      },
+      "parameters": {
+        "EXTERNAL": "true",
+        "parquet.compress": "SNAPPY"
+      }
+    },
+    "partitionKeys": [
+      {
+        "name": "__bucket0",
+        "type": "bigint"
+      }
+    ]
+  },
+  "ViewBase": {
+    "name": "ViewBase",
+    "storageDescriptor": {
+      "columns": [
+        {
+          "name": "__bucket0",
+          "type": "bigint"
+        },
+        {
+          "name": "schema",
+          "type": "string"
+        },
+        {
+          "name": "created",
+          "type": "timestamp"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "updated",
+          "type": "timestamp"
+        },
+        {
+          "name": "version",
+          "type": "bigint"
+        },
+        {
+          "name": "hash",
+          "type": "string"
+        },
+        {
+          "name": "status",
+          "type": "string"
+        }
+      ],
+      "location": "file://",
+      "inputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+      "outputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+      "compressed": true,
+      "serdeInfo": {
+        "serializationLibrary": "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
+        "parameters": {
+          "serialization.format": "1"
+        }
+      },
+      "parameters": {
+        "EXTERNAL": "true",
+        "parquet.compress": "SNAPPY"
+      }
+    },
+    "partitionKeys": [
+      {
+        "name": "__bucket0",
+        "type": "bigint"
+      }
+    ]
+  },
+  "Secret": {
+    "name": "Secret",
+    "storageDescriptor": {
+      "columns": [
+        {
+          "name": "__bucket0",
+          "type": "bigint"
+        },
+        {
+          "name": "schema",
+          "type": "string"
+        },
+        {
+          "name": "created",
+          "type": "timestamp"
+        },
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "secret",
+          "type": "binary"
+        },
+        {
+          "name": "updated",
+          "type": "timestamp"
+        },
+        {
+          "name": "version",
+          "type": "bigint"
+        },
+        {
+          "name": "hash",
+          "type": "string"
+        }
+      ],
+      "location": "file://",
+      "inputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+      "outputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+      "compressed": true,
+      "serdeInfo": {
+        "serializationLibrary": "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
+        "parameters": {
+          "serialization.format": "1"
+        }
+      },
+      "parameters": {
+        "EXTERNAL": "true",
+        "parquet.compress": "SNAPPY"
+      }
+    },
+    "partitionKeys": [
+      {
+        "name": "__bucket0",
+        "type": "bigint"
+      }
+    ]
+  },
+  "Pointset": {
+    "name": "Pointset",
+    "storageDescriptor": {
+      "columns": [
+        {
+          "name": "__bucket0",
+          "type": "bigint"
+        },
+        {
+          "name": "schema",
+          "type": "string"
+        },
+        {
+          "name": "created",
+          "type": "timestamp"
+        },
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "updated",
+          "type": "timestamp"
+        },
+        {
+          "name": "version",
+          "type": "bigint"
+        },
+        {
+          "name": "hash",
+          "type": "string"
+        },
+        {
+          "name": "points",
+          "type": "array<struct<x:bigint,y:bigint>>"
+        }
+      ],
+      "location": "file://",
+      "inputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+      "outputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+      "compressed": true,
+      "serdeInfo": {
+        "serializationLibrary": "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
+        "parameters": {
+          "serialization.format": "1"
+        }
+      },
+      "parameters": {
+        "EXTERNAL": "true",
+        "parquet.compress": "SNAPPY"
+      }
+    },
+    "partitionKeys": [
+      {
+        "name": "__bucket0",
+        "type": "bigint"
+      }
+    ]
+  },
+  "DateSort": {
+    "name": "DateSort",
+    "storageDescriptor": {
+      "columns": [
+        {
+          "name": "__bucket0",
+          "type": "bigint"
+        },
+        {
+          "name": "schema",
+          "type": "string"
+        },
+        {
+          "name": "created",
+          "type": "timestamp"
+        },
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "updated",
+          "type": "timestamp"
+        },
+        {
+          "name": "version",
+          "type": "bigint"
+        },
+        {
+          "name": "hash",
+          "type": "string"
+        },
+        {
+          "name": "group",
+          "type": "string"
+        }
+      ],
+      "location": "file://",
+      "inputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+      "outputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+      "compressed": true,
+      "serdeInfo": {
+        "serializationLibrary": "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
+        "parameters": {
+          "serialization.format": "1"
+        }
+      },
+      "parameters": {
+        "EXTERNAL": "true",
+        "parquet.compress": "SNAPPY"
+      }
+    },
+    "partitionKeys": [
+      {
+        "name": "__bucket0",
+        "type": "bigint"
+      }
+    ]
+  },
+  "RefSource": {
+    "name": "RefSource",
+    "storageDescriptor": {
+      "columns": [
+        {
+          "name": "__bucket0",
+          "type": "bigint"
+        },
+        {
+          "name": "schema",
+          "type": "string"
+        },
+        {
+          "name": "created",
+          "type": "timestamp"
+        },
+        {
+          "name": "hello",
+          "type": "string"
+        },
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "updated",
+          "type": "timestamp"
+        },
+        {
+          "name": "version",
+          "type": "bigint"
+        },
+        {
+          "name": "hash",
+          "type": "string"
+        },
+        {
+          "name": "target",
+          "type": "struct<id:string>"
+        }
+      ],
+      "location": "file://",
+      "inputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+      "outputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+      "compressed": true,
+      "serdeInfo": {
+        "serializationLibrary": "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
+        "parameters": {
+          "serialization.format": "1"
+        }
+      },
+      "parameters": {
+        "EXTERNAL": "true",
+        "parquet.compress": "SNAPPY"
+      }
+    },
+    "partitionKeys": [
+      {
+        "name": "__bucket0",
+        "type": "bigint"
+      }
+    ]
+  },
+  "Interface": {
+    "name": "Interface",
+    "storageDescriptor": {
+      "columns": [
+        {
+          "name": "__bucket0",
+          "type": "bigint"
+        },
+        {
+          "name": "schema",
+          "type": "string"
+        },
+        {
+          "name": "created",
+          "type": "timestamp"
+        },
+        {
+          "name": "propbase",
+          "type": "string"
+        },
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "updated",
+          "type": "timestamp"
+        },
+        {
+          "name": "version",
+          "type": "bigint"
+        },
+        {
+          "name": "hash",
+          "type": "string"
+        }
+      ],
+      "location": "file://",
+      "inputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+      "outputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+      "compressed": true,
+      "serdeInfo": {
+        "serializationLibrary": "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
+        "parameters": {
+          "serialization.format": "1"
+        }
+      },
+      "parameters": {
+        "EXTERNAL": "true",
+        "parquet.compress": "SNAPPY"
+      }
+    },
+    "partitionKeys": [
+      {
+        "name": "__bucket0",
+        "type": "bigint"
+      }
+    ]
+  },
+  "Expanded": {
+    "name": "Expanded",
+    "storageDescriptor": {
+      "columns": [
+        {
+          "name": "__bucket0",
+          "type": "bigint"
+        },
+        {
+          "name": "schema",
+          "type": "string"
+        },
+        {
+          "name": "created",
+          "type": "timestamp"
+        },
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "source",
+          "type": "struct<created:timestamp,hash:string,hello:string,id:string,schema:string,source:struct<id:string>,updated:timestamp,version:bigint>"
+        },
+        {
+          "name": "updated",
+          "type": "timestamp"
+        },
+        {
+          "name": "version",
+          "type": "bigint"
+        },
+        {
+          "name": "hash",
+          "type": "string"
+        },
+        {
+          "name": "target",
+          "type": "struct<created:timestamp,hash:string,hello:string,id:string,schema:string,source:struct<id:string>,updated:timestamp,version:bigint>"
+        }
+      ],
+      "location": "file://",
+      "inputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+      "outputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+      "compressed": true,
+      "serdeInfo": {
+        "serializationLibrary": "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
+        "parameters": {
+          "serialization.format": "1"
+        }
+      },
+      "parameters": {
+        "EXTERNAL": "true",
+        "parquet.compress": "SNAPPY"
+      }
+    },
+    "partitionKeys": [
+      {
+        "name": "__bucket0",
+        "type": "bigint"
+      }
+    ]
+  }
+}
