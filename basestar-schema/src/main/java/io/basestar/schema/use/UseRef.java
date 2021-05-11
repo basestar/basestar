@@ -20,6 +20,7 @@ package io.basestar.schema.use;
  * #L%
  */
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import io.basestar.expression.Context;
@@ -28,6 +29,7 @@ import io.basestar.expression.compare.Eq;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.type.Coercion;
 import io.basestar.schema.*;
+import io.basestar.schema.util.Cascade;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.schema.util.ValueContext;
@@ -38,10 +40,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Object Type
@@ -60,19 +59,25 @@ public class UseRef implements UseLinkable {
 
     public static final String VERSIONED_KEY = "versioned";
 
+    public static final String CASCADE_KEY = "cascade";
+
     private final ReferableSchema schema;
 
     private final boolean versioned;
 
+    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+    private final Cascade cascade;
+
     public UseRef(final ReferableSchema schema) {
 
-        this(schema, false);
+        this(schema, false, Cascade.NONE);
     }
 
-    public UseRef(final ReferableSchema schema, final boolean versioned) {
+    public UseRef(final ReferableSchema schema, final boolean versioned, final Cascade cascade) {
 
         this.schema = schema;
         this.versioned = versioned;
+        this.cascade = cascade;
     }
 
     @Override
@@ -84,12 +89,16 @@ public class UseRef implements UseLinkable {
     public static UseRef from(final ReferableSchema schema, final Object config) {
 
         final boolean versioned;
+        final Cascade cascade;
         if(config instanceof Map) {
-            versioned = Coercion.isTruthy(((Map<?, ?>) config).get(VERSIONED_KEY));
+            final Map<?, ?> map = ((Map<?, ?>) config);
+            versioned = Coercion.isTruthy(map.get(VERSIONED_KEY));
+            cascade = Cascade.from(map.get(CASCADE_KEY));
         } else {
             versioned = false;
+            cascade = Cascade.NONE;
         }
-        return new UseRef(schema, versioned);
+        return new UseRef(schema, versioned, cascade);
     }
 
     @Override
@@ -102,7 +111,7 @@ public class UseRef implements UseLinkable {
             if(resolved == schema) {
                 return this;
             } else {
-                return new UseRef(resolved, versioned);
+                return new UseRef(resolved, versioned, cascade);
             }
         }
     }
@@ -123,13 +132,18 @@ public class UseRef implements UseLinkable {
     @Override
     public Object toConfig(final boolean optional) {
 
+        final Map<String, Object> config = new HashMap<>();
         if(versioned) {
+            config.put(VERSIONED_KEY, true);
+        }
+        if(cascade != Cascade.NONE) {
+            config.put(CASCADE_KEY, cascade);
+        }
+        if(config.isEmpty()) {
             return UseLinkable.super.toConfig(optional);
         } else {
             return ImmutableMap.of(
-                    Use.name(getName().toString(), optional), ImmutableMap.of(
-                            VERSIONED_KEY, true
-                    )
+                    Use.name(getName().toString(), optional), config
             );
         }
     }
@@ -232,14 +246,24 @@ public class UseRef implements UseLinkable {
     }
 
     @Override
-    public Set<Expression> refQueries(final Name otherTypeName, final Set<Name> expand, final Name name) {
+    public Set<Expression> refQueries(final Name otherSchemaName, final Set<Name> expand, final Name name) {
 
         final Set<Expression> queries = new HashSet<>();
-        if(schema.getQualifiedName().equals(otherTypeName)) {
+        if(schema.getQualifiedName().equals(otherSchemaName)) {
             queries.add(new Eq(new NameConstant(name.with(ReferableSchema.ID)), new NameConstant(Name.of(Reserved.THIS, ReferableSchema.ID))));
         }
         if(expand != null && !expand.isEmpty()) {
-            queries.addAll(schema.refQueries(otherTypeName, expand, name));
+            queries.addAll(schema.refQueries(otherSchemaName, expand, name));
+        }
+        return queries;
+    }
+
+    @Override
+    public Set<Expression> cascadeQueries(final Cascade cascade, final Name otherSchemaName, final Name name) {
+
+        final Set<Expression> queries = new HashSet<>();
+        if(cascade.includes(this.cascade) && schema.getQualifiedName().equals(otherSchemaName)) {
+            queries.add(new Eq(new NameConstant(name.with(ReferableSchema.ID)), new NameConstant(Name.of(Reserved.THIS, ReferableSchema.ID))));
         }
         return queries;
     }

@@ -25,7 +25,7 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
 import io.basestar.schema.exception.MissingSchemaException;
-import io.basestar.schema.util.Bucket;
+import io.basestar.schema.util.Cascade;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.schema.util.ValueContext;
@@ -201,6 +201,12 @@ public interface UseNamed<T> extends Use<T> {
 
         @Override
         public Set<Expression> refQueries(final Name otherSchemaName, final Set<Name> expand, final Name name) {
+
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Set<Expression> cascadeQueries(final Cascade cascade, final Name otherSchemaName, final Name name) {
 
             throw new UnsupportedOperationException();
         }

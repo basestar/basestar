@@ -28,6 +28,7 @@ import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseInstance;
 import io.basestar.schema.use.UseString;
+import io.basestar.schema.util.Cascade;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.schema.util.ValueContext;
@@ -405,6 +406,18 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         return getMembers().entrySet().stream()
                 .filter(e -> branches.containsKey(e.getKey()))
                 .flatMap(e -> e.getValue().refQueries(otherSchemaName, branches.get(e.getKey()), name.with(e.getKey())).stream())
+                .collect(Collectors.toSet());
+    }
+
+    default Set<Expression> cascadeQueries(final Cascade cascade, final Name otherSchemaName) {
+
+        return cascadeQueries(cascade, otherSchemaName, Name.empty());
+    }
+
+    default Set<Expression> cascadeQueries(final Cascade cascade, final Name otherSchemaName, final Name name) {
+
+        return getMembers().entrySet().stream()
+                .flatMap(e -> e.getValue().cascadeQueries(cascade, otherSchemaName, name.with(e.getKey())).stream())
                 .collect(Collectors.toSet());
     }
 

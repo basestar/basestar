@@ -51,7 +51,9 @@ C:
   type: object
   properties:
     owner:
-      type: A?
+      type:
+        A?:
+          cascade: DELETE
 
 D:
   type: object

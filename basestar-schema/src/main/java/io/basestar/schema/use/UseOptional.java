@@ -6,6 +6,7 @@ import io.basestar.schema.Bucketing;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
+import io.basestar.schema.util.Cascade;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.schema.util.ValueContext;
@@ -207,6 +208,12 @@ public class UseOptional<T> implements UseContainer<T, T> {
     public Set<Expression> refQueries(final Name otherSchemaName, final Set<Name> expand, final Name name) {
 
         return type.refQueries(otherSchemaName, expand, name);
+    }
+
+    @Override
+    public Set<Expression> cascadeQueries(final Cascade cascade, final Name otherSchemaName, final Name name) {
+
+        return type.cascadeQueries(cascade, otherSchemaName, name);
     }
 
     @Override

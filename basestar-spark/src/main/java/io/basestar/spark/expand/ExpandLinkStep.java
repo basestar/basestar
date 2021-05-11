@@ -187,7 +187,6 @@ public class ExpandLinkStep extends AbstractExpandStep {
             log.info("Link is co-bucketed: schema={}, link={}, buckets={}", root, name, buckets);
         } else {
             log.info("Link is not co-bucketed: schema={}, link={}", root, name);
-
         }
         final Dataset<Row> joinTo = resolver.resolve(linkSchema, Constant.TRUE, ImmutableList.of(), ImmutableSet.of(), coBucketed ? buckets : null)
                 .dataset();

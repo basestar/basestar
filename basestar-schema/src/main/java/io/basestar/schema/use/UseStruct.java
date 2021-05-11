@@ -23,9 +23,12 @@ package io.basestar.schema.use;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.schema.*;
+import io.basestar.schema.Constraint;
+import io.basestar.schema.Instance;
+import io.basestar.schema.Schema;
+import io.basestar.schema.StructSchema;
 import io.basestar.schema.exception.TypeSyntaxException;
-import io.basestar.schema.util.Bucket;
+import io.basestar.schema.util.Cascade;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.schema.util.ValueContext;
@@ -37,7 +40,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -164,6 +166,12 @@ public class UseStruct implements UseInstance {
     public Set<Expression> refQueries(final Name otherSchemaName, final Set<Name> expand, final Name name) {
 
         return schema.refQueries(otherSchemaName, expand, name);
+    }
+
+    @Override
+    public Set<Expression> cascadeQueries(final Cascade cascade, final Name otherSchemaName, final Name name) {
+
+        return schema.cascadeQueries(cascade, otherSchemaName, name);
     }
 
     @Override

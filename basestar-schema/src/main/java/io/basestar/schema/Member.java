@@ -29,7 +29,7 @@ import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.expression.InferenceVisitor;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseAny;
-import io.basestar.schema.util.Bucket;
+import io.basestar.schema.util.Cascade;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.ValueContext;
 import io.basestar.schema.util.Widening;
@@ -141,6 +141,8 @@ public interface Member extends Named, Described, Serializable, Extendable {
     Object evaluateTransients(Context context, Object value, Set<Name> expand);
 
     Set<Expression> refQueries(Name otherSchemaName, Set<Name> expand, Name name);
+
+    Set<Expression> cascadeQueries(Cascade cascade, Name otherSchemaName, Name name);
 
     Set<Name> refExpand(Name otherSchemaName, Set<Name> expand);
 

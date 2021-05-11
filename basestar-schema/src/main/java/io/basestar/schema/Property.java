@@ -355,6 +355,12 @@ public class Property implements Member {
     }
 
     @Override
+    public Set<Expression> cascadeQueries(final Cascade cascade, final Name otherSchemaName, final Name name) {
+
+        return type.cascadeQueries(cascade, otherSchemaName, name);
+    }
+
+    @Override
     public Set<Name> refExpand(final Name otherSchemaName, final Set<Name> expand) {
 
         return type.refExpand(otherSchemaName, expand);

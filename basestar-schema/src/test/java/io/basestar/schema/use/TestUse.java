@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.*;
+import io.basestar.schema.util.Cascade;
 import io.basestar.schema.util.Expander;
 import io.basestar.secret.Secret;
 import io.basestar.util.*;
@@ -107,7 +108,16 @@ class TestUse {
         final Namespace namespace = namespace();
 
         final Use<?> use = Use.fromConfig(Immutable.map("Pet", Immutable.map("versioned", true)));
-        assertEquals(new UseRef(namespace.requireReferableSchema("Pet"), true), use.resolve(namespace));
+        assertEquals(new UseRef(namespace.requireReferableSchema("Pet"), true, Cascade.NONE), use.resolve(namespace));
+    }
+
+    @Test
+    void testCascadeRefResolve() throws Exception {
+
+        final Namespace namespace = namespace();
+
+        final Use<?> use = Use.fromConfig(Immutable.map("Pet", Immutable.map("cascade", "DELETE")));
+        assertEquals(new UseRef(namespace.requireReferableSchema("Pet"), false, Cascade.DELETE), use.resolve(namespace));
     }
 
     @Test

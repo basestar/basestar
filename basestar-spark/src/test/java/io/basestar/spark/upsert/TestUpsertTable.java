@@ -9,8 +9,10 @@ import io.basestar.schema.ReferableSchema;
 import io.basestar.spark.AbstractSparkTest;
 import io.basestar.spark.transform.BucketTransform;
 import io.basestar.spark.util.SparkCatalogUtils;
-import io.basestar.util.*;
 import io.basestar.spark.util.SparkRowUtils;
+import io.basestar.util.ISO8601;
+import io.basestar.util.Name;
+import io.basestar.util.Sort;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -25,7 +27,6 @@ import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -115,6 +116,9 @@ class TestUpsertTable extends AbstractSparkTest {
 
         final List<DeltaState.Sequence> sequence = table.deltaState(session).getSequences();
         System.err.println(sequence);
+
+        final Dataset<Row> deletes = table.deletesBetween(session, UpsertTable.minSequence(), UpsertTable.maxSequence()).orElseThrow(IllegalStateException::new);
+        assertEquals(2, deletes.count());
 
         table.dropBase(session, true);
         table.dropDeltas(session, false);

@@ -85,19 +85,25 @@ public class DeltaState {
             this.operations = Immutable.map(operations);
         }
 
-        public Stream<URI> locations(final URI location, final List<String> partitionColumns, @Nullable final Set<Map<String, String>> partitionFilter) {
+        public Stream<URI> locations(final URI location, final List<String> partitionColumns,
+                                     @Nullable final Set<Map<String, String>> partitionFilter) {
 
             final List<URI> locations = new ArrayList<>();
             for(final Map.Entry<UpsertOp, Set<Map<String, String>>> entry : operations.entrySet()) {
                 final UpsertOp op = entry.getKey();
                 for(final Map<String, String> spec : entry.getValue()) {
-                    if(partitionFilter == null || partitionFilter.isEmpty() || partitionFilter.stream()
-                            .anyMatch(filter -> spec.entrySet().containsAll(filter.entrySet()))) {
+                    if(matchesFilter(partitionFilter, op, spec)) {
                         locations.add(partitionLocation(location, partitionColumns, sequence, op, spec));
                     }
                 }
             }
             return locations.stream();
+        }
+
+        private boolean matchesFilter(final Set<Map<String, String>> partitionFilter, final UpsertOp op, final Map<String, String> spec) {
+
+            return partitionFilter == null || partitionFilter.isEmpty() || partitionFilter.stream()
+                    .anyMatch(filter -> spec.entrySet().containsAll(filter.entrySet()));
         }
 
         private static URI partitionLocation(final URI location, final List<String> partitionColumns, final String sequence, final UpsertOp op, final Map<String, String> spec) {

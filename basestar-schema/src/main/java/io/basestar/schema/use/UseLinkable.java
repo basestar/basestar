@@ -3,7 +3,6 @@ package io.basestar.schema.use;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.ViewSchema;
-import io.basestar.schema.util.Bucket;
 import io.basestar.util.Name;
 
 import java.util.Map;

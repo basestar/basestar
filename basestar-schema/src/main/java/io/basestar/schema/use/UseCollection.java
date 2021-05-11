@@ -29,7 +29,7 @@ import io.basestar.schema.Bucketing;
 import io.basestar.schema.Constraint;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
-import io.basestar.schema.util.Bucket;
+import io.basestar.schema.util.Cascade;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.util.Name;
@@ -75,6 +75,16 @@ public interface UseCollection<V, T extends Collection<V>> extends UseContainer<
         final int hash = System.identityHashCode(this);
         final String v = "v" + hash;
         return getType().refQueries(otherSchemaName, expand, Name.of(v)).stream().map(
+                q -> new ForAny(q, new ContextIterator.OfValue(v, new NameConstant(name)))
+        ).collect(Collectors.toSet());
+    }
+
+    @Override
+    default Set<Expression> cascadeQueries(final Cascade cascade, final Name otherSchemaName, final Name name) {
+
+        final int hash = System.identityHashCode(this);
+        final String v = "v" + hash;
+        return getType().cascadeQueries(cascade, otherSchemaName, Name.of(v)).stream().map(
                 q -> new ForAny(q, new ContextIterator.OfValue(v, new NameConstant(name)))
         ).collect(Collectors.toSet());
     }

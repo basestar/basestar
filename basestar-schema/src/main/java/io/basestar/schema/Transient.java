@@ -39,6 +39,7 @@ import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseCollection;
 import io.basestar.schema.use.UseMap;
 import io.basestar.schema.use.UseRef;
+import io.basestar.schema.util.Cascade;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.ValueContext;
 import io.basestar.schema.util.Widening;
@@ -232,6 +233,12 @@ public class Transient implements Member {
 
     @Override
     public Set<Expression> refQueries(final Name otherSchemaName, final Set<Name> expand, final Name name) {
+
+        return Collections.emptySet();
+    }
+
+    @Override
+    public Set<Expression> cascadeQueries(final Cascade cascade, final Name otherSchemaName, final Name name) {
 
         return Collections.emptySet();
     }

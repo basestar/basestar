@@ -194,13 +194,12 @@ public class UpsertTable {
 
     public Dataset<Row> select(final SparkSession session, final boolean includeDeleted) {
 
-        final boolean deletedColumn = this.deletedColumn;
         if(hasDeltas(session)) {
             final Dataset<Row> result = baseWithDeltas(selectBase(session, true), selectDelta(session));
             if(includeDeleted) {
                 return result;
             } else {
-                return result.filter(SparkUtils.filter(row -> !isDeleted(row, deletedColumn))).select(inputColumns());
+                return result.filter(SparkUtils.filter(row -> !isDeleted(row, true))).select(inputColumns());
             }
         } else {
             return selectBase(session, includeDeleted);
@@ -358,8 +357,9 @@ public class UpsertTable {
         final List<String> outputPartition = new ArrayList<>(basePartition);
         outputPartition.add(SEQUENCE);
 
-        final Dataset<Row> base = reduceDelta(deltas).select(outputCols.toArray(new Column[0]))
-                .filter(SparkUtils.filter(row -> !isDeleted(row, deletedColumn)));
+        final Dataset<Row> base = reduceDelta(deltas)
+                .filter(SparkUtils.filter(row -> !UpsertOp.DELETE.equals(SparkRowUtils.get(row,OPERATION))))
+                .select(outputCols.toArray(new Column[0]));
 
         base.write()
                 .partitionBy(outputPartition.toArray(new String[0]))
@@ -389,11 +389,11 @@ public class UpsertTable {
                     .load(locations);
         }
 
-        if(includeDeleted) {
+        final boolean deletedColumn = this.deletedColumn;
+        if(includeDeleted || !deletedColumn) {
             return result;
         } else {
-            final boolean deletedColumn = this.deletedColumn;
-            return result.filter(SparkUtils.filter(row -> !isDeleted(row, deletedColumn))).select(inputColumns());
+            return result.filter(SparkUtils.filter(row -> !isDeleted(row, true))).select(inputColumns());
         }
     }
 
@@ -957,6 +957,36 @@ public class UpsertTable {
 
         final Map<String, Map<UpsertOp, Set<Map<String, String>>>> sequences = rawSequenceBetween(session, afterSequence, beforeSequence);
         return sequences.entrySet().stream().map(entry -> new DeltaState.Sequence(entry.getKey(), entry.getValue())).collect(Collectors.toList());
+    }
+
+    public Optional<Dataset<Row>> deletesBetween(final SparkSession session, final String afterSequence, final String beforeSequence) {
+
+        // Capture all sequences after deletes, and all partitions where deletes occur
+        final List<DeltaState.Sequence> sequences = new ArrayList<>();
+        final Set<Map<String, String>> partitions = new HashSet<>();
+        for(final DeltaState.Sequence sequence : sequenceBetween(session, afterSequence, beforeSequence)) {
+            final Set<Map<String, String>> deletePartitions = sequence.getOperations().get(UpsertOp.DELETE);
+            if(deletePartitions != null && !deletePartitions.isEmpty()) {
+                sequences.add(sequence);
+                partitions.addAll(deletePartitions);
+            } else if(!sequences.isEmpty()) {
+                sequences.add(sequence);
+            }
+        }
+
+        if(!sequences.isEmpty()) {
+
+            final String[] locations = sequences.stream()
+                    .flatMap(seq -> seq.locations(deltaLocation, basePartition, partitions)
+                            .map(URI::toString)).toArray(String[]::new);
+
+            return Optional.of(reduceDelta(selectDelta(session, locations))
+                    .filter(SparkUtils.filter(row -> UpsertOp.DELETE.name().equals(SparkRowUtils.get(row, OPERATION))))
+                    .select(inputColumns()));
+
+        } else {
+            return Optional.empty();
+        }
     }
 
     public DeltaState.Sequence latestSequence(final SparkSession session) {

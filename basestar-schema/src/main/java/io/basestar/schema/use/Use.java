@@ -31,7 +31,7 @@ import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
 import io.basestar.schema.exception.InvalidKeyException;
 import io.basestar.schema.exception.TypeSyntaxException;
-import io.basestar.schema.util.Bucket;
+import io.basestar.schema.util.Cascade;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.schema.util.ValueContext;
@@ -168,6 +168,8 @@ public interface Use<T> extends Serializable {
     io.swagger.v3.oas.models.media.Schema<?> openApi(Set<Name> expand);
 
     Set<Expression> refQueries(Name otherSchemaName, Set<Name> expand, Name name);
+
+    Set<Expression> cascadeQueries(Cascade cascade, Name otherSchemaName, Name name);
 
     Set<Name> refExpand(Name otherSchemaName, Set<Name> expand);
 

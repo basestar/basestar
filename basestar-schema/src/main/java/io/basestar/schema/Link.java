@@ -27,18 +27,15 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.expression.ExpressionVisitor;
-import io.basestar.expression.visitor.DisjunctionVisitor;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.jackson.serde.ExpressionDeserializer;
 import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UsePage;
+import io.basestar.schema.util.Cascade;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.ValueContext;
 import io.basestar.schema.util.Widening;
@@ -348,6 +345,12 @@ public class Link implements Member {
     public Set<Expression> refQueries(Name otherSchemaName, final Set<Name> expand, final Name name) {
 
         // FIXME
+        return Collections.emptySet();
+    }
+
+    @Override
+    public Set<Expression> cascadeQueries(final Cascade cascade, final Name otherSchemaName, final Name name) {
+
         return Collections.emptySet();
     }
 
