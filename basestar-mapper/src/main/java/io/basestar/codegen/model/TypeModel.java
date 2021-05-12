@@ -239,6 +239,12 @@ public interface TypeModel {
             }
 
             @Override
+            public TypeModel visitDecimal(final UseDecimal useDecimal) {
+
+                return () -> "Decimal";
+            }
+
+            @Override
             public TypeModel visitBinary(final UseBinary type) {
 
                 return () -> "Binary";

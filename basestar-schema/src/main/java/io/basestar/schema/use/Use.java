@@ -457,6 +457,8 @@ public interface Use<T> extends Serializable {
 
         <T> R visitPage(UsePage<T> type);
 
+        R visitDecimal(UseDecimal type);
+
         interface Defaulting<R> extends Visitor<R> {
 
             default <T> R visitDefault(final Use<T> type) {
@@ -513,6 +515,12 @@ public interface Use<T> extends Serializable {
 
             @Override
             default R visitNumber(final UseNumber type) {
+
+                return visitNumeric(type);
+            }
+
+            @Override
+            default R visitDecimal(final UseDecimal type) {
 
                 return visitNumeric(type);
             }

@@ -162,6 +162,12 @@ public class Mappings {
                     }
 
                     @Override
+                    public FieldType visitDecimal(final UseDecimal type) {
+
+                        return FieldType.DECIMAL;
+                    }
+
+                    @Override
                     public <T> FieldType visitSet(final UseSet<T> type) {
 
                         return new FieldType.ArrayType(type.getType().visit(this));

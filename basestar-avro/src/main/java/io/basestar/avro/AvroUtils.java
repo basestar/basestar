@@ -142,6 +142,12 @@ public class AvroUtils {
             }
 
             @Override
+            public Schema visitDecimal(final UseDecimal useDecimal) {
+
+                return Schema.create(Schema.Type.STRING);
+            }
+
+            @Override
             public <T> Schema visitSet(final UseSet<T> type) {
 
                 return Schema.createArray(schema(type.getType(), expand));

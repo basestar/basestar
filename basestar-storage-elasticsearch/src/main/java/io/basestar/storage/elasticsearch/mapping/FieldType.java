@@ -53,6 +53,8 @@ public interface FieldType {
 
     NumericType DOUBLE = new NumericType(NumericType.Type.DOUBLE);
 
+    NumericType DECIMAL = new NumericType(NumericType.Type.SCALED_FLOAT);
+
     MultiType TEXT = new MultiType(
             KeywordType.CASE_SENSITIVE,
             ImmutableMap.of(

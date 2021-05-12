@@ -194,6 +194,12 @@ public class SparkSchemaUtils {
             }
 
             @Override
+            public DataType visitDecimal(final UseDecimal type) {
+
+                return DataTypes.createDecimalType(type.getPrecision(), type.getScale());
+            }
+
+            @Override
             public <T> DataType visitSet(final UseSet<T> type) {
 
                 return DataTypes.createArrayType(type.getType().visit(this)).asNullable();
@@ -434,6 +440,12 @@ public class SparkSchemaUtils {
                 } else {
                     throw new IllegalStateException();
                 }
+            }
+
+            @Override
+            public Object visitDecimal(final UseDecimal type) {
+
+                return type.create(value, expand, suppress);
             }
 
             @Override
@@ -702,6 +714,12 @@ public class SparkSchemaUtils {
             }
 
             @Override
+            public Object visitDecimal(final UseDecimal type) {
+
+                return type.create(value, expand, suppress);
+            }
+
+            @Override
             public <T> Object visitSet(final UseSet<T> type) {
 
                 return visitCollection(type);
@@ -839,6 +857,12 @@ public class SparkSchemaUtils {
             public <V> Encoder<?> visitPage(final UsePage<V> type) {
 
                 throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public Encoder<?> visitDecimal(final UseDecimal type) {
+
+                return Encoders.DECIMAL();
             }
 
             @Override

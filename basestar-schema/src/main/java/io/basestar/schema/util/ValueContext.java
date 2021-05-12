@@ -12,6 +12,7 @@ import io.basestar.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
@@ -67,6 +68,8 @@ public interface ValueContext {
     Secret createSecret(UseSecret type, Object value, Set<Name> expand);
 
     <T> Page<T> createPage(UsePage<T> type, Object value, Set<Name> expand);
+
+    BigDecimal createDecimal(UseDecimal useDecimal, Object value, Set<Name> expand);
 
     class Standard implements ValueContext {
 
@@ -258,6 +261,12 @@ public interface ValueContext {
             } else {
                 throw new UnexpectedTypeException(type, value);
             }
+        }
+
+        @Override
+        public BigDecimal createDecimal(final UseDecimal useDecimal, final Object value, final Set<Name> expand) {
+
+            return Coercion.toDecimal(value);
         }
     }
 

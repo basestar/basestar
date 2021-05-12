@@ -105,6 +105,12 @@ public class SQLUtils {
             }
 
             @Override
+            public DataType<?> visitDecimal(final UseDecimal type) {
+
+                return SQLDataType.DECIMAL(type.getPrecision(), type.getScale());
+            }
+
+            @Override
             public <T> DataType<?> visitSet(final UseSet<T> type) {
 
                 return SQLDataType.LONGVARCHAR;
@@ -234,6 +240,12 @@ public class SQLUtils {
             public <T> String visitPage(final UsePage<T> type) {
 
                 return toJson(value);
+            }
+
+            @Override
+            public Object visitDecimal(final UseDecimal type) {
+
+                return type.create(value);
             }
 
             @Override
@@ -394,6 +406,12 @@ public class SQLUtils {
 
                 final Collection<?> results = fromJson(value, new TypeReference<Collection<?>>() {});
                 return type.create(results);
+            }
+
+            @Override
+            public Object visitDecimal(final UseDecimal type) {
+
+                return type.create(value);
             }
 
             @Override

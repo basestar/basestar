@@ -5,6 +5,7 @@
     <#case "Integer">Long<#break>
     <#case "Map">java.util.Map<String, <@type of=of.type/>><#break>
     <#case "Number">Double<#break>
+    <#case "Decimal">java.math.BigDecimal<#break>
     <#case "Set">java.util.Set<<@type of=of.type/>><#break>
     <#case "String">String<#break>
     <#case "Date">java.time.LocalDate<#break>

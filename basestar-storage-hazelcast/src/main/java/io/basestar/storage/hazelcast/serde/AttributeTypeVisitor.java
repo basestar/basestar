@@ -75,6 +75,12 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
     }
 
     @Override
+    public AttributeType<?> visitDecimal(final UseDecimal type) {
+
+        return AttributeType.encoded(type);
+    }
+
+    @Override
     public <T> AttributeType<?> visitSet(final UseSet<T> type) {
 
         return type.getType().visit(OfArray.INSTANCE);
@@ -154,6 +160,12 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
         public AttributeType<?> visitNumber(final UseNumber type) {
 
             return AttributeType.NUMBER_ARRAY;
+        }
+
+        @Override
+        public AttributeType<?> visitDecimal(final UseDecimal type) {
+
+            return AttributeType.encodedArray(type);
         }
 
         @Override

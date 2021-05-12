@@ -253,6 +253,12 @@ public class GlueSchemaAdaptor {
 
                 return "array<" + type(type.getType(), expand) + ">";
             }
+
+            @Override
+            public String visitDecimal(final UseDecimal type) {
+
+                return "decimal(" + type.getPrecision() + "," + type.getScale() + ")";
+            }
         });
     }
 

@@ -72,7 +72,6 @@ class TestUpsertTable extends AbstractSparkTest {
                 .state(new UpsertState.Hdfs(URI.create(location + "/D/state")))
                 .partition(ImmutableList.of(bucket.getOutputColumn()))
                 .idColumn(ReferableSchema.ID)
-                .deletedColumn(true)
                 .build();
 
         table.provision(session);
@@ -229,7 +228,6 @@ class TestUpsertTable extends AbstractSparkTest {
                 .state(new UpsertState.Hdfs(URI.create(location + "/D/state")))
                 .partition(ImmutableList.of("__bucket"))
                 .idColumn(ReferableSchema.ID)
-                .deletedColumn(true)
                 .build();
         table.provision(session);
 

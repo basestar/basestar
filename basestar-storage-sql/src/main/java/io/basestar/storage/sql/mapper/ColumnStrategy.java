@@ -145,6 +145,12 @@ public interface ColumnStrategy {
                 }
 
                 @Override
+                public ColumnMapper<T> visitDecimal(final UseDecimal type) {
+
+                    return simple(SQLDataType.DECIMAL(type.getPrecision(), type.getScale()));
+                }
+
+                @Override
                 public <V> ColumnMapper<T> visitArray(final UseArray<V> type) {
 
                     return json();

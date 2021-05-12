@@ -26,6 +26,7 @@ import io.basestar.util.Bytes;
 import io.basestar.util.ISO8601;
 
 import java.lang.reflect.Modifier;
+import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -133,6 +134,36 @@ public class Coercion {
             return (double) ISO8601.toMillis((Date) value);
         } else {
             throw new TypeConversionException(Double.class, value);
+        }
+    }
+
+    public static BigDecimal toDecimal(final Object value) {
+
+        if (value == null) {
+            return null;
+        } else if (value instanceof Boolean) {
+            return ((Boolean) value) ? BigDecimal.ONE : BigDecimal.ZERO;
+        } else if (value instanceof Number) {
+            final Number number = (Number)value;
+            if(Numbers.isInteger(number)) {
+                return BigDecimal.valueOf(number.longValue());
+            } else {
+                return BigDecimal.valueOf(number.doubleValue());
+            }
+        } else if (value instanceof String) {
+            try {
+                return new BigDecimal((String) value);
+            } catch (final NumberFormatException e) {
+                throw new TypeConversionException(Double.class, value);
+            }
+        } else if (value instanceof LocalDate) {
+            return BigDecimal.valueOf(ISO8601.toMillis((LocalDate) value));
+        } else if (value instanceof Instant) {
+            return BigDecimal.valueOf(ISO8601.toMillis((Instant) value));
+        } else if (value instanceof Date) {
+            return BigDecimal.valueOf(ISO8601.toMillis((Date) value));
+        } else {
+            throw new TypeConversionException(BigDecimal.class, value);
         }
     }
 
