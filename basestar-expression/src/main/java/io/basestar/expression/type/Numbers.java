@@ -23,6 +23,7 @@ package io.basestar.expression.type;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.math.RoundingMode;
 
 public class Numbers {
 
@@ -38,14 +39,30 @@ public class Numbers {
 
     private static final Double DOUBLE_ZERO = 0D;
 
+    private static final BigDecimal DECIMAL_ZERO = BigDecimal.ZERO;
+
+    private static final boolean DECIMAL_OPTION_DEC31 = true;
+
+    public static final RoundingMode DECIMAL_ROUNDING_MODE = RoundingMode.HALF_UP;
+
     public static boolean isInteger(final Number value) {
 
-        return !isFloat(value);
+        return !isReal(value);
+    }
+
+    public static boolean isReal(final Number value) {
+
+        return isFloat(value) || isDecimal(value);
     }
 
     public static boolean isFloat(final Number value) {
 
-        return value instanceof Float || value instanceof Double || value instanceof BigDecimal;
+        return value instanceof Float || value instanceof Double;
+    }
+
+    public static boolean isDecimal(final Number value) {
+
+        return value instanceof BigDecimal;
     }
 
     public static boolean isBooleanType(final Class<?> cls) {
@@ -67,9 +84,39 @@ public class Numbers {
 
     public static boolean isRealType(final Class<?> cls) {
 
+        return isFloatType(cls) || isDecimalType(cls);
+    }
+
+    public static boolean isFloatType(final Class<?> cls) {
+
         return float.class.isAssignableFrom(cls) || double.class.isAssignableFrom(cls)
-                || Float.class.isAssignableFrom(cls) || Double.class.isAssignableFrom(cls)
-                || BigDecimal.class.isAssignableFrom(cls);
+                || Float.class.isAssignableFrom(cls) || Double.class.isAssignableFrom(cls);
+    }
+
+    public static boolean isDecimalType(final Class<?> cls) {
+
+        return BigDecimal.class.isAssignableFrom(cls);
+    }
+
+    public static long longValue(final Number number) {
+
+        return number.longValue();
+    }
+
+    public static double doubleValue(final Number number) {
+
+        return number.doubleValue();
+    }
+
+    public static BigDecimal decimalValue(final Number number) {
+
+        if (isDecimal(number)) {
+            return (BigDecimal) number;
+        } else if(isFloat(number)) {
+            return BigDecimal.valueOf(doubleValue(number));
+        } else {
+            return BigDecimal.valueOf(longValue(number));
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -87,6 +134,8 @@ public class Numbers {
             return (T)FLOAT_ZERO;
         } else if(double.class.isAssignableFrom(to) || Double.class.isAssignableFrom(to)) {
             return (T)DOUBLE_ZERO;
+        } else if(BigDecimal.class.isAssignableFrom(to)) {
+            return (T)DECIMAL_ZERO;
         } else {
             throw new IllegalStateException();
         }

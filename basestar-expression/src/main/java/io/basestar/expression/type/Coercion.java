@@ -99,6 +99,11 @@ public class Coercion {
             try {
                 return Long.parseLong((String) value);
             } catch (final NumberFormatException e) {
+                // ignore, try to parse as double and convert
+            }
+            try {
+                return ((Double)Double.parseDouble((String)value)).longValue();
+            } catch (final NumberFormatException e) {
                 throw new TypeConversionException(Long.class, value);
             }
         } else if (value instanceof LocalDate) {

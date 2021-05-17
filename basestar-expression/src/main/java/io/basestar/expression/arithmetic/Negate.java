@@ -29,6 +29,8 @@ import io.basestar.expression.match.UnaryMatch;
 import io.basestar.expression.match.UnaryNumberMatch;
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 /**
  * Negate
  */
@@ -113,6 +115,12 @@ public class Negate implements Unary {
         public Number apply(final Double value) {
 
             return -value;
+        }
+
+        @Override
+        public Number apply(final BigDecimal value) {
+
+            return value.negate();
         }
     };
 

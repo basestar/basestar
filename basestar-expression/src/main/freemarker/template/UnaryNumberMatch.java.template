@@ -23,6 +23,8 @@ package io.basestar.expression.match;
 import io.basestar.expression.type.Numbers;
 import io.basestar.expression.exception.BadOperandsException;
 
+import java.math.BigDecimal;
+
 import lombok.Generated;
 
 @Generated
@@ -42,10 +44,12 @@ public interface UnaryNumberMatch<T> {
 </#list>
     default T apply(final Number value) {
 
-        if(Numbers.isInteger(value)) {
-            return apply(value.longValue());
+        if(Numbers.isDecimal(value)) {
+            return apply(Numbers.decimalValue(value));
+        } else if(Numbers.isFloat(value)) {
+            return apply(Numbers.doubleValue(value));
         } else {
-            return apply(value.doubleValue());
+            return apply(Numbers.longValue(value));
         }
     }
 }

@@ -3,7 +3,8 @@
   "dataModel": {
     "types": [
       "Long",
-      "Double"
+      "Double",
+      "BigDecimal"
     ]
   }
 }

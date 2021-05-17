@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.*;
 import java.lang.reflect.Type;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -184,6 +185,27 @@ class TestUse {
         assertEquals(use, Use.fromJavaType(Float.class));
         assertEquals("null", use.toString(null));
         assertEquals("2.0", use.toString(2.0));
+        assertEquals(use, use.typeOf(Name.empty()));
+        assertTrue(use.isNumeric());
+    }
+
+    @Test
+    void testUseDecimal() throws Exception {
+
+        final UseDecimal use = UseDecimal.DEFAULT;
+        testUse(use, null);
+        testUse(use, BigDecimal.valueOf(1.5));
+        testUse(use, "2.5", BigDecimal.valueOf(2.5));
+        testUse(use, 3.5, BigDecimal.valueOf(3.5));
+        testUse(use, 4, BigDecimal.valueOf(4));
+        testUse(use, true, BigDecimal.ONE);
+        testUse(use, false, BigDecimal.ZERO);
+        assertTrue(use.openApi(ImmutableSet.of()) instanceof StringSchema);
+        assertEquals(BigDecimal.ZERO, use.defaultValue());
+        assertEquals(BigDecimal.class, use.javaType());
+        assertEquals(use, Use.fromJavaType(BigDecimal.class));
+        assertEquals("null", use.toString(null));
+        assertEquals("2.0", use.toString(BigDecimal.valueOf(2.0)));
         assertEquals(use, use.typeOf(Name.empty()));
         assertTrue(use.isNumeric());
     }

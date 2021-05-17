@@ -48,6 +48,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
@@ -244,6 +245,8 @@ public interface Use<T> extends Serializable {
         final Class<?> erased = GenericTypeReflector.erase(type);
         if(Numbers.isBooleanType(erased)) {
             return UseBoolean.DEFAULT;
+        } else if(BigDecimal.class.isAssignableFrom(erased)) {
+            return UseDecimal.DEFAULT;
         } else if(Numbers.isIntegerType(erased)) {
             return UseInteger.DEFAULT;
         } else if(Numbers.isNumberType(erased)) {

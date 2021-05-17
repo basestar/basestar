@@ -26,8 +26,12 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.match.BinaryMatch;
 import io.basestar.expression.match.BinaryNumberMatch;
+import io.basestar.expression.type.DecimalContext;
+import io.basestar.expression.type.Numbers;
 import lombok.Data;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
 import java.util.*;
 
 /**
@@ -123,6 +127,14 @@ public class Add implements Binary {
         public Number apply(final Double lhs, final Double rhs) {
 
             return lhs + rhs;
+        }
+
+        @Override
+        public Number apply(final BigDecimal lhs, final BigDecimal rhs) {
+
+            final DecimalContext.PrecisionAndScale ps = DecimalContext.DEFAULT.addition(lhs, rhs);
+            final MathContext mc = new MathContext(ps.getPrecision(), Numbers.DECIMAL_ROUNDING_MODE);
+            return lhs.add(rhs, mc).setScale(ps.getScale(), Numbers.DECIMAL_ROUNDING_MODE);
         }
     };
 

@@ -22,11 +22,13 @@ import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
 import io.basestar.expression.methods.Methods;
 import io.basestar.expression.text.Like;
+import io.basestar.expression.type.DecimalContext;
 import io.basestar.schema.use.*;
 import io.basestar.util.Name;
 
 import java.lang.reflect.Type;
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -61,26 +63,38 @@ public class InferenceVisitor implements ExpressionVisitor<Use<?>> {
         if(lhs instanceof UseString || rhs instanceof UseString) {
             return UseString.DEFAULT;
         } else {
-            return numericPromote(lhs, rhs);
+            return numericPromote(expression, lhs, rhs,
+                    (l, r) -> DecimalContext.DEFAULT.addition(
+                            l.getPrecision(), l.getScale(),
+                            r.getPrecision(), r.getScale()
+                    ));
         }
     }
 
     @Override
     public Use<?> visitDiv(final Div expression) {
 
-        return numericPromote(visit(expression.getLhs()), visit(expression.getRhs()));
+        return numericPromote(expression, visit(expression.getLhs()), visit(expression.getRhs()),
+                (lhs, rhs) -> DecimalContext.DEFAULT.division(
+                        lhs.getPrecision(), lhs.getScale(),
+                        rhs.getPrecision(), rhs.getScale()
+                ));
     }
 
     @Override
     public Use<?> visitMod(final Mod expression) {
 
-        return numericPromote(visit(expression.getLhs()), visit(expression.getRhs()));
+        return numericPromote(expression, visit(expression.getLhs()), visit(expression.getRhs()), null);
     }
 
     @Override
     public Use<?> visitMul(final Mul expression) {
 
-        return numericPromote(visit(expression.getLhs()), visit(expression.getRhs()));
+        return numericPromote(expression, visit(expression.getLhs()), visit(expression.getRhs()),
+                (lhs, rhs) -> DecimalContext.DEFAULT.multiplication(
+                        lhs.getPrecision(), lhs.getScale(),
+                        rhs.getPrecision(), rhs.getScale()
+                ));
     }
 
     @Override
@@ -92,18 +106,31 @@ public class InferenceVisitor implements ExpressionVisitor<Use<?>> {
     @Override
     public Use<?> visitPow(final Pow expression) {
 
-        return numericPromote(visit(expression.getLhs()), visit(expression.getRhs()));
+        return numericPromote(expression, visit(expression.getLhs()), visit(expression.getRhs()), null);
     }
 
     @Override
     public Use<?> visitSub(final Sub expression) {
 
-        return numericPromote(visit(expression.getLhs()), visit(expression.getRhs()));
+        return numericPromote(expression, visit(expression.getLhs()), visit(expression.getRhs()),
+                (lhs, rhs) -> DecimalContext.DEFAULT.addition(
+                        lhs.getPrecision(), lhs.getScale(),
+                        rhs.getPrecision(), rhs.getScale()
+                ));
     }
 
-    private Use<?> numericPromote(final Use<?> lhs, final Use<?> rhs) {
+    private Use<?> numericPromote(final Expression expression, final Use<?> lhs, final Use<?> rhs, final BiFunction<UseDecimal, UseDecimal, DecimalContext.PrecisionAndScale> decimalContext) {
 
-        if(lhs instanceof UseNumber || rhs instanceof UseNumber) {
+        if(lhs instanceof UseDecimal || rhs instanceof UseDecimal) {
+            if(decimalContext != null) {
+                final UseDecimal lhsDecimal = lhs instanceof UseDecimal ? (UseDecimal) lhs : UseDecimal.DEFAULT;
+                final UseDecimal rhsDecimal = rhs instanceof UseDecimal ? (UseDecimal) rhs : UseDecimal.DEFAULT;
+                final DecimalContext.PrecisionAndScale ps = decimalContext.apply(lhsDecimal, rhsDecimal);
+                return new UseDecimal(ps.getPrecision(), ps.getScale());
+            } else {
+                throw new UnsupportedOperationException("Cannot infer type of " + expression);
+            }
+        } else if(lhs instanceof UseNumber || rhs instanceof UseNumber) {
             return UseNumber.DEFAULT;
         } else {
             return UseInteger.DEFAULT;

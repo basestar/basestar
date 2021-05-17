@@ -16,10 +16,10 @@ public class TestNumbers {
     }
 
     @Test
-    void testIsFloat() {
+    void testIsReal() {
 
-        assertFalse(Numbers.isFloat(1));
-        assertFalse(Numbers.isFloat(1L));
-        assertTrue(Numbers.isFloat(1.0));
+        assertFalse(Numbers.isReal(1));
+        assertFalse(Numbers.isReal(1L));
+        assertTrue(Numbers.isReal(1.0));
     }
 }

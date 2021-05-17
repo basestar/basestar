@@ -10,6 +10,7 @@ import io.basestar.util.Bytes;
 import io.basestar.util.ISO8601;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -63,6 +64,8 @@ class TestCoercion {
         assertEquals(1L, Coercion.toInteger(1.0));
         assertEquals(2L, Coercion.toInteger(2));
         assertEquals(3L, Coercion.toInteger("3"));
+        assertEquals(4L, Coercion.toInteger("4.5"));
+        assertEquals(5L, Coercion.toInteger(5.5));
         assertEquals(1577836800000L, Coercion.toInteger(LocalDate.parse("2020-01-01")));
         assertEquals(1577836800000L, Coercion.toInteger(Instant.parse("2020-01-01T00:00:00Z")));
         assertEquals(1577836800000L, Coercion.toInteger(ISO8601.toSqlDate(LocalDate.parse("2020-01-01"))));
@@ -80,12 +83,33 @@ class TestCoercion {
         assertEquals(1.0, Coercion.toFloat(1.0));
         assertEquals(2.0, Coercion.toFloat(2));
         assertEquals(3.0, Coercion.toFloat("3"));
+        assertEquals(4.5, Coercion.toFloat("4.5"));
+        assertEquals(5.5, Coercion.toFloat(5.5));
         assertEquals(1577836800000.0, Coercion.toFloat(LocalDate.parse("2020-01-01")));
         assertEquals(1577836800000.0, Coercion.toFloat(Instant.parse("2020-01-01T00:00:00Z")));
         assertEquals(1577836800000.0, Coercion.toFloat(ISO8601.toSqlDate(LocalDate.parse("2020-01-01"))));
         assertEquals(1577836800000.0, Coercion.toFloat(ISO8601.toSqlTimestamp(Instant.parse("2020-01-01T00:00:00Z"))));
         assertThrows(TypeConversionException.class, () -> Coercion.toFloat(ImmutableMap.of()));
         assertThrows(TypeConversionException.class, () -> Coercion.toFloat("invalid"));
+    }
+
+    @Test
+    void testToDecimal() {
+
+        assertNull(Coercion.toDecimal(null));
+        assertEquals(BigDecimal.ONE, Coercion.toDecimal(true));
+        assertEquals(BigDecimal.ZERO, Coercion.toDecimal(false));
+        assertEquals(BigDecimal.valueOf(1.0), Coercion.toDecimal(1.0));
+        assertEquals(BigDecimal.valueOf(2), Coercion.toDecimal(2));
+        assertEquals(BigDecimal.valueOf(3), Coercion.toDecimal("3"));
+        assertEquals(BigDecimal.valueOf(4.5), Coercion.toDecimal("4.5"));
+        assertEquals(BigDecimal.valueOf(5.5), Coercion.toDecimal(5.5));
+        assertEquals(BigDecimal.valueOf(1577836800000L), Coercion.toDecimal(LocalDate.parse("2020-01-01")));
+        assertEquals(BigDecimal.valueOf(1577836800000L), Coercion.toDecimal(Instant.parse("2020-01-01T00:00:00Z")));
+        assertEquals(BigDecimal.valueOf(1577836800000L), Coercion.toDecimal(ISO8601.toSqlDate(LocalDate.parse("2020-01-01"))));
+        assertEquals(BigDecimal.valueOf(1577836800000L), Coercion.toDecimal(ISO8601.toSqlTimestamp(Instant.parse("2020-01-01T00:00:00Z"))));
+        assertThrows(TypeConversionException.class, () -> Coercion.toDecimal(ImmutableMap.of()));
+        assertThrows(TypeConversionException.class, () -> Coercion.toDecimal("invalid"));
     }
 
     @Test

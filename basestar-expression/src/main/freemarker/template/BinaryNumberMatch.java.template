@@ -23,6 +23,8 @@ package io.basestar.expression.match;
 import io.basestar.expression.type.Numbers;
 import io.basestar.expression.exception.BadOperandsException;
 
+import java.math.BigDecimal;
+
 import lombok.Generated;
 
 @Generated
@@ -54,20 +56,24 @@ public interface BinaryNumberMatch<T> {
 <#list types as t1>
     default T apply(final ${t1} lhs, final Number rhs) {
 
-        if (Numbers.isInteger(rhs)) {
-            return apply(lhs, rhs.longValue());
+        if(Numbers.isDecimal(rhs)) {
+            return apply(lhs, Numbers.decimalValue(rhs));
+        } else if (Numbers.isFloat(rhs)) {
+            return apply(lhs, Numbers.doubleValue(rhs));
         } else {
-            return apply(lhs, rhs.doubleValue());
+            return apply(lhs, Numbers.longValue(rhs));
         }
     }
 
 </#list>
     default T apply(final Number lhs, final Number rhs) {
 
-        if (Numbers.isInteger(lhs)) {
-            return apply(lhs.longValue(), rhs);
+        if(Numbers.isDecimal(lhs)) {
+            return apply(Numbers.decimalValue(lhs), rhs);
+        } else if(Numbers.isFloat(lhs)) {
+            return apply(Numbers.doubleValue(lhs), rhs);
         } else {
-            return apply(lhs.doubleValue(), rhs);
+            return apply(Numbers.longValue(lhs), rhs);
         }
     }
 
@@ -76,13 +82,37 @@ public interface BinaryNumberMatch<T> {
         @Override
         default T apply(final Long lhs, final Double rhs) {
 
-            return apply(lhs.doubleValue(), rhs);
+            return apply(Numbers.doubleValue(lhs), rhs);
+        }
+
+        @Override
+        default T apply(final Long lhs, final BigDecimal rhs) {
+
+            return apply(Numbers.decimalValue(lhs), rhs);
         }
 
         @Override
         default T apply(final Double lhs, final Long rhs) {
 
-            return apply(lhs, rhs.doubleValue());
+            return apply(lhs, Numbers.doubleValue(rhs));
+        }
+
+        @Override
+        default T apply(final Double lhs, final BigDecimal rhs) {
+
+            return apply(Numbers.decimalValue(lhs), rhs);
+        }
+
+        @Override
+        default T apply(final BigDecimal lhs, final Long rhs) {
+
+            return apply(lhs, Numbers.decimalValue(rhs));
+        }
+
+        @Override
+        default T apply(final BigDecimal lhs, final Double rhs) {
+
+            return apply(lhs, Numbers.decimalValue(rhs));
         }
     }
 }
