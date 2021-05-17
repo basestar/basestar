@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestDecimal {
 
-    private static final boolean GENERATE = true;
+    private static final boolean GENERATE = false;
 
     private void generateOrRunTest(final String name, final BiFunction<BigDecimal, BigDecimal, BigDecimal> fn) throws IOException {
 
