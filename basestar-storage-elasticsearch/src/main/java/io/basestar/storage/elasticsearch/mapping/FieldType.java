@@ -31,6 +31,7 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -52,8 +53,6 @@ public interface FieldType {
     NumericType LONG = new NumericType(NumericType.Type.LONG);
 
     NumericType DOUBLE = new NumericType(NumericType.Type.DOUBLE);
-
-    NumericType DECIMAL = new NumericType(NumericType.Type.SCALED_FLOAT);
 
     MultiType TEXT = new MultiType(
             KeywordType.CASE_SENSITIVE,
@@ -248,6 +247,31 @@ public interface FieldType {
         public Object fromSource(final Object value) {
 
             return value;
+        }
+    }
+
+    @RequiredArgsConstructor
+    class DecimalType implements FieldType {
+
+        @SuppressWarnings("unused")
+        private final int scale;
+
+        @Override
+        public Map<String, ?> source() {
+
+            return ImmutableMap.of("type", "keyword");
+        }
+
+        @Override
+        public Object toSource(final Object value) {
+
+            return value == null ? null : value.toString();
+        }
+
+        @Override
+        public Object fromSource(final Object value) {
+
+            return value == null ? null : new BigDecimal(value.toString());
         }
     }
 

@@ -164,7 +164,7 @@ public class Mappings {
                     @Override
                     public FieldType visitDecimal(final UseDecimal type) {
 
-                        return FieldType.DECIMAL;
+                        return new FieldType.DecimalType(type.getScale());
                     }
 
                     @Override

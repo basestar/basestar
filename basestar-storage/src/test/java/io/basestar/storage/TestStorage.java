@@ -42,6 +42,7 @@ import org.junit.jupiter.api.function.Executable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.*;
 
@@ -329,6 +330,7 @@ public abstract class TestStorage {
                 .put("boolean", true)
                 .put("integer", 1L)
                 .put("number", 2.5)
+                .put("decimal", BigDecimal.valueOf(3.5))
                 .put("string", "test")
                 .put("binary", Bytes.valueOf(1, 2, 3, 4))
                 .put("date", ISO8601.parseDate("2030-01-01"))
@@ -338,6 +340,7 @@ public abstract class TestStorage {
                 .put("arrayBoolean", Collections.singletonList(true))
                 .put("arrayInteger", Collections.singletonList(1L))
                 .put("arrayNumber", Collections.singletonList(2.5))
+                .put("arrayDecimal", Collections.singletonList(BigDecimal.valueOf(3.5)))
                 .put("arrayString", Collections.singletonList("test"))
                 .put("arrayBinary", Collections.singletonList(Bytes.valueOf(1, 2, 3, 4)))
                 .put("arrayStruct", Collections.singletonList(new Instance(ImmutableMap.of("x", 10L, "y", 5L))))
@@ -347,6 +350,7 @@ public abstract class TestStorage {
                 .put("mapBoolean", Collections.singletonMap("a", true))
                 .put("mapInteger", Collections.singletonMap("a", 1L))
                 .put("mapNumber", Collections.singletonMap("a", 2.5))
+                .put("mapDecimal", Collections.singletonMap("a", BigDecimal.valueOf(3.5)))
                 .put("mapString", Collections.singletonMap("a", "test"))
                 .put("mapBinary", Collections.singletonMap("a", Bytes.valueOf(1, 2, 3, 4)))
                 .put("mapStruct", Collections.singletonMap("a",new Instance(ImmutableMap.of("x", 10L, "y", 5L))))

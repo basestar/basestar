@@ -40,6 +40,8 @@ Simple:
       type: integer?
     number:
       type: number?
+    decimal:
+      type: decimal?
     string:
       type: string?
     binary:
@@ -61,6 +63,9 @@ Simple:
     arrayNumber:
       type:
         array?: number
+    arrayDecimal:
+      type:
+        array?: decimal
     arrayString:
       type:
         array?: string
@@ -88,6 +93,9 @@ Simple:
     mapNumber:
       type:
         map?: number
+    mapDecimal:
+      type:
+        map?: decimal
     mapString:
       type:
         map?: string

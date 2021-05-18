@@ -367,6 +367,10 @@
           "type": "string"
         },
         {
+          "name": "mapdecimal",
+          "type": "map<string,decimal(38,6)>"
+        },
+        {
           "name": "integer",
           "type": "bigint"
         },
@@ -389,6 +393,10 @@
         {
           "name": "mapstring",
           "type": "map<string,string>"
+        },
+        {
+          "name": "arraydecimal",
+          "type": "array<decimal(38,6)>"
         },
         {
           "name": "created",
@@ -453,6 +461,10 @@
         {
           "name": "arraystruct",
           "type": "array<struct<x:bigint,y:bigint>>"
+        },
+        {
+          "name": "decimal",
+          "type": "decimal(38,6)"
         },
         {
           "name": "arraydatetime",

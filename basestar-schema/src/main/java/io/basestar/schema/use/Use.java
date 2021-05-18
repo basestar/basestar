@@ -48,7 +48,6 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
@@ -72,6 +71,7 @@ public interface Use<T> extends Serializable {
         BOOLEAN,
         INTEGER,
         NUMBER,
+        DECIMAL,
         STRING,
         ENUM,
         ARRAY,
@@ -245,7 +245,7 @@ public interface Use<T> extends Serializable {
         final Class<?> erased = GenericTypeReflector.erase(type);
         if(Numbers.isBooleanType(erased)) {
             return UseBoolean.DEFAULT;
-        } else if(BigDecimal.class.isAssignableFrom(erased)) {
+        } else if(Numbers.isDecimalType(erased)) {
             return UseDecimal.DEFAULT;
         } else if(Numbers.isIntegerType(erased)) {
             return UseInteger.DEFAULT;
@@ -293,6 +293,8 @@ public interface Use<T> extends Serializable {
                 return UseInteger.from(config);
             case UseNumber.NAME:
                 return UseNumber.from(config);
+            case UseDecimal.NAME:
+                return UseDecimal.from(config);
             case UseString.NAME:
                 return UseString.from(config);
             case UseArray.NAME:
@@ -390,6 +392,8 @@ public interface Use<T> extends Serializable {
                 return (T)UseInteger.DEFAULT.deserializeValue(in);
             case NUMBER:
                 return (T)UseNumber.DEFAULT.deserializeValue(in);
+            case DECIMAL:
+                return (T)UseDecimal.DEFAULT.deserializeValue(in);
             case STRING:
                 return (T)UseString.DEFAULT.deserializeValue(in);
             case ENUM:
@@ -628,7 +632,9 @@ public interface Use<T> extends Serializable {
         if(a instanceof UseBoolean && b instanceof UseBoolean) {
             return UseBoolean.DEFAULT;
         } else if(a instanceof UseNumeric && b instanceof UseNumeric) {
-            if(a instanceof UseNumber || b instanceof UseNumber) {
+            if(a instanceof UseDecimal || b instanceof UseDecimal) {
+                return UseDecimal.DEFAULT;
+            } else if(a instanceof UseNumber || b instanceof UseNumber) {
                 return UseNumber.DEFAULT;
             } else {
                 return UseInteger.DEFAULT;

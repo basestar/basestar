@@ -32,7 +32,7 @@ public class UseDecimal implements UseNumeric<BigDecimal> {
 
     public static final int DEFAULT_PRECISION = 38;
 
-    public static final int DEFAULT_SCALE = 0;
+    public static final int DEFAULT_SCALE = 6;
 
     private final int precision;
 
@@ -83,7 +83,7 @@ public class UseDecimal implements UseNumeric<BigDecimal> {
     @Override
     public Code code() {
 
-        return Code.NUMBER;
+        return Code.DECIMAL;
     }
 
     @Override

@@ -484,6 +484,8 @@ class TestUse {
         assertEquals(UseInteger.DEFAULT, Use.commonBase(UseInteger.DEFAULT, UseInteger.DEFAULT));
         assertEquals(UseNumber.DEFAULT, Use.commonBase(UseNumber.DEFAULT, UseInteger.DEFAULT));
         assertEquals(UseNumber.DEFAULT, Use.commonBase(UseInteger.DEFAULT, UseNumber.DEFAULT));
+        assertEquals(UseDecimal.DEFAULT, Use.commonBase(UseInteger.DEFAULT, UseDecimal.DEFAULT));
+        assertEquals(UseDecimal.DEFAULT, Use.commonBase(UseDecimal.DEFAULT, UseNumber.DEFAULT));
         assertEquals(UseString.DEFAULT, Use.commonBase(UseString.DEFAULT, UseString.DEFAULT));
         assertEquals(UseDate.DEFAULT, Use.commonBase(UseDate.DEFAULT, UseDate.DEFAULT));
         assertEquals(UseDateTime.DEFAULT, Use.commonBase(UseDateTime.DEFAULT, UseDateTime.DEFAULT));
