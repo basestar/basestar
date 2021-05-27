@@ -81,7 +81,6 @@ public class TestMappingContext {
         @Nullable
         private String hash;
 
-        @Nullable
         @Size(min = 10, max = 100, groups = {Warning.class})
         private double value;
 
@@ -99,6 +98,9 @@ public class TestMappingContext {
 
         @Nullable
         private Comment comment;
+
+        @Link(expression = "true")
+        private PostView view;
 
         @ObjectSchema
         @Index(name = "parent", partition = "parent.id")

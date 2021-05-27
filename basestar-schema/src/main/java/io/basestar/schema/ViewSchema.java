@@ -20,7 +20,10 @@ package io.basestar.schema;
  * #L%
  */
 
-import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
@@ -269,7 +272,7 @@ public class ViewSchema implements LinkableSchema {
 
     private ViewSchema(final Descriptor descriptor, final Schema.Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
-        resolver.constructing(this);
+        resolver.constructing(qualifiedName, this);
         this.qualifiedName = qualifiedName;
         this.slot = slot;
         this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);

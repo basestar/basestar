@@ -40,6 +40,8 @@ import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Setter
 @Mojo(name = "codegen", defaultPhase = LifecyclePhase.GENERATE_SOURCES)
@@ -115,11 +117,13 @@ public class CodegenMojo extends AbstractMojo {
         }
     }
 
-    private static class ClassLoadingResolver implements Schema.Resolver {
+    private static class ClassLoadingResolver implements Schema.Resolver.Constructing {
 
         private final MappingContext mappingContext = new MappingContext();
 
         private final List<Name> packageNames;
+
+        private final Map<Name, Schema<?>> schemas = new ConcurrentHashMap<>();
 
         public ClassLoadingResolver(final List<String> packageNames) {
 
@@ -128,16 +132,26 @@ public class CodegenMojo extends AbstractMojo {
 
         @Nullable
         @Override
-        public Schema<?> getSchema(final Name name) {
+        public Schema<?> getSchema(final Name qualifiedName) {
 
-            for(final Name packageName : packageNames) {
-                try {
-                    final Class<?> cls = Class.forName(packageName.with(name).toString());
-                    return mappingContext.schema(this, cls);
-                } catch (final ClassNotFoundException e) {
+            if(schemas.containsKey(qualifiedName)) {
+                return schemas.get(qualifiedName);
+            } else {
+                for (final Name packageName : packageNames) {
+                    try {
+                        final Class<?> cls = Class.forName(packageName.with(qualifiedName).toString());
+                        return mappingContext.schema(this, cls);
+                    } catch (final ClassNotFoundException e) {
+                    }
                 }
+                return null;
             }
-            return null;
+        }
+
+        @Override
+        public void constructing(final Name qualifiedName, final Schema<?> schema) {
+
+            schemas.put(qualifiedName, schema);
         }
     }
 }

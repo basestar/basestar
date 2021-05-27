@@ -37,6 +37,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -59,6 +60,8 @@ public interface TypeMapper extends Serializable {
 
     Set<Class<?>> dependencies();
 
+    Set<Name> namedDependencies();
+
     // FIXME: support a wider variety of date/datetime types
 
     static TypeMapper fromDefault(final MappingContext context, final TypeContext type) {
@@ -68,6 +71,8 @@ public interface TypeMapper extends Serializable {
             return new OfBoolean();
         } else if (Numbers.isIntegerType(erased)) {
             return new OfInteger(type.erasedType());
+        } else if (Numbers.isDecimalType(erased)) {
+            return new OfDecimal(type.erasedType());
         } else if (Numbers.isRealType(erased)) {
             return new OfNumber(type.erasedType());
         } else if (String.class.isAssignableFrom(erased)) {
@@ -114,6 +119,7 @@ public interface TypeMapper extends Serializable {
         }
     }
 
+
     @RequiredArgsConstructor
     class OfBoolean implements TypeMapper {
 
@@ -143,6 +149,12 @@ public interface TypeMapper extends Serializable {
 
         @Override
         public Set<Class<?>> dependencies() {
+
+            return Collections.emptySet();
+        }
+
+        @Override
+        public Set<Name> namedDependencies() {
 
             return Collections.emptySet();
         }
@@ -183,6 +195,12 @@ public interface TypeMapper extends Serializable {
 
             return Collections.emptySet();
         }
+
+        @Override
+        public Set<Name> namedDependencies() {
+
+            return Collections.emptySet();
+        }
     }
 
     @RequiredArgsConstructor
@@ -220,6 +238,55 @@ public interface TypeMapper extends Serializable {
 
             return Collections.emptySet();
         }
+
+        @Override
+        public Set<Name> namedDependencies() {
+
+            return Collections.emptySet();
+        }
+    }
+
+    @RequiredArgsConstructor
+    class OfDecimal implements TypeMapper {
+
+        private final Class<?> erasedType;
+
+        @Override
+        public Use<?> use() {
+
+            return UseDecimal.DEFAULT;
+        }
+
+        @Override
+        public Object unmarshall(final Object value) {
+
+            return UseDecimal.DEFAULT.create(value);
+        }
+
+        @Override
+        public Object marshall(final Object value) {
+
+            final BigDecimal v = Coercion.toDecimal(value);
+            return Numbers.coerce(v, erasedType);
+        }
+
+        @Override
+        public Class<?> erasedType() {
+
+            return erasedType;
+        }
+
+        @Override
+        public Set<Class<?>> dependencies() {
+
+            return Collections.emptySet();
+        }
+
+        @Override
+        public Set<Name> namedDependencies() {
+
+            return Collections.emptySet();
+        }
     }
 
     @RequiredArgsConstructor
@@ -251,6 +318,12 @@ public interface TypeMapper extends Serializable {
 
         @Override
         public Set<Class<?>> dependencies() {
+
+            return Collections.emptySet();
+        }
+
+        @Override
+        public Set<Name> namedDependencies() {
 
             return Collections.emptySet();
         }
@@ -293,6 +366,12 @@ public interface TypeMapper extends Serializable {
 
             return value.dependencies();
         }
+
+        @Override
+        public Set<Name> namedDependencies() {
+
+            return Collections.emptySet();
+        }
     }
 
     @RequiredArgsConstructor
@@ -332,6 +411,12 @@ public interface TypeMapper extends Serializable {
 
             return value.dependencies();
         }
+
+        @Override
+        public Set<Name> namedDependencies() {
+
+            return value.namedDependencies();
+        }
     }
 
     @RequiredArgsConstructor
@@ -370,6 +455,12 @@ public interface TypeMapper extends Serializable {
         public Set<Class<?>> dependencies() {
 
             return value.dependencies();
+        }
+
+        @Override
+        public Set<Name> namedDependencies() {
+
+            return value.namedDependencies();
         }
     }
 
@@ -425,6 +516,12 @@ public interface TypeMapper extends Serializable {
         public Set<Class<?>> dependencies() {
 
             return value.dependencies();
+        }
+
+        @Override
+        public Set<Name> namedDependencies() {
+
+            return value.namedDependencies();
         }
     }
 
@@ -489,6 +586,12 @@ public interface TypeMapper extends Serializable {
 
             return ImmutableSet.of(erasedType);
         }
+
+        @Override
+        public Set<Name> namedDependencies() {
+
+            return ImmutableSet.of(qualifiedName.get());
+        }
     }
 
     @RequiredArgsConstructor
@@ -525,6 +628,12 @@ public interface TypeMapper extends Serializable {
 
             return Collections.emptySet();
         }
+
+        @Override
+        public Set<Name> namedDependencies() {
+
+            return Collections.emptySet();
+        }
     }
 
     @RequiredArgsConstructor
@@ -558,6 +667,12 @@ public interface TypeMapper extends Serializable {
 
             return Collections.emptySet();
         }
+
+        @Override
+        public Set<Name> namedDependencies() {
+
+            return Collections.emptySet();
+        }
     }
 
     @RequiredArgsConstructor
@@ -580,6 +695,12 @@ public interface TypeMapper extends Serializable {
 
             return value;
         }
+
+        @Override
+        public Set<Name> namedDependencies() {
+
+            return Collections.emptySet();
+        }
     }
 
     @RequiredArgsConstructor
@@ -601,6 +722,12 @@ public interface TypeMapper extends Serializable {
         public Instant unmarshallInstant(final LocalDateTime value) {
 
             return value.toInstant(ZoneOffset.UTC);
+        }
+
+        @Override
+        public Set<Name> namedDependencies() {
+
+            return Collections.emptySet();
         }
     }
 
@@ -638,6 +765,12 @@ public interface TypeMapper extends Serializable {
 
             return Collections.emptySet();
         }
+
+        @Override
+        public Set<Name> namedDependencies() {
+
+            return Collections.emptySet();
+        }
     }
 
     @RequiredArgsConstructor
@@ -669,6 +802,12 @@ public interface TypeMapper extends Serializable {
 
         @Override
         public Set<Class<?>> dependencies() {
+
+            return Collections.emptySet();
+        }
+
+        @Override
+        public Set<Name> namedDependencies() {
 
             return Collections.emptySet();
         }
@@ -718,6 +857,12 @@ public interface TypeMapper extends Serializable {
 
             return Collections.emptySet();
         }
+
+        @Override
+        public Set<Name> namedDependencies() {
+
+            return Collections.emptySet();
+        }
     }
 
     @RequiredArgsConstructor
@@ -750,6 +895,12 @@ public interface TypeMapper extends Serializable {
 
         @Override
         public Set<Class<?>> dependencies() {
+
+            return Collections.emptySet();
+        }
+
+        @Override
+        public Set<Name> namedDependencies() {
 
             return Collections.emptySet();
         }

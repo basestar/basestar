@@ -69,7 +69,11 @@ public class MappingContext implements Serializable {
                 if(!all.containsKey(cls)) {
                     final SchemaMapper<?, ?> schemaMapper = schemaMapper(cls);
                     all.put(cls, schemaMapper);
-                    next.addAll(schemaMapper.dependencies());
+                    schemaMapper.namedDependencies().forEach(name -> {
+                        mappers.entrySet().stream()
+                                .filter(e -> e.getValue().qualifiedName().equals(name))
+                                .forEach(e -> next.add(e.getKey()));
+                    });
                 }
             });
             dependencies.clear();

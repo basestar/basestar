@@ -1,0 +1,14 @@
+Source:
+  type: object
+  links:
+    view:
+      schema: View
+      expression: true
+
+View:
+  type: view
+  from: Source
+  properties:
+    source:
+      type: Source
+      expression: "this"

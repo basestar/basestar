@@ -248,6 +248,14 @@ public abstract class InstanceSchemaMapper<B extends InstanceSchema.Builder<B, ?
         return all;
     }
 
+    @Override
+    public Set<Name> namedDependencies() {
+
+        final Set<Name> all = new HashSet<>();
+        members.forEach(m -> all.addAll(m.namedDependencies()));
+        return all;
+    }
+
     private static MemberDeclaration.Declaration member(final TypeContext declType, final Annotation annotation) {
 
         try {

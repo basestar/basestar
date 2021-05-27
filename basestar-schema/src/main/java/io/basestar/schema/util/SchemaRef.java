@@ -56,7 +56,7 @@ public class SchemaRef {
             return (LinkableSchema) inline.build(null, new Schema.Resolver.Constructing() {
 
                 @Override
-                public void constructing(final Schema<?> schema) {
+                public void constructing(final Name qualifiedName, final Schema<?> schema) {
 
                     // no action (anonymous schema construction)
                 }

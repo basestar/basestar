@@ -61,6 +61,8 @@ public interface SchemaMapper<T, O> extends Serializable {
 
     Set<Class<?>> dependencies();
 
+    Set<Name> namedDependencies();
+
     interface Builder<T, O> {
 
         MappingContext getContext();

@@ -22,10 +22,7 @@ package io.basestar.maven;
 
 import com.google.common.base.Charsets;
 import io.basestar.mapper.MappingContext;
-import io.basestar.mapper.annotation.EnumSchema;
-import io.basestar.mapper.annotation.ObjectSchema;
-import io.basestar.mapper.annotation.StructSchema;
-import io.basestar.mapper.annotation.ViewSchema;
+import io.basestar.mapper.annotation.*;
 import io.basestar.schema.Namespace;
 import io.basestar.schema.Schema;
 import io.basestar.util.Name;
@@ -55,7 +52,7 @@ import java.util.Set;
 @Mojo(name = "namespace", defaultPhase = LifecyclePhase.GENERATE_RESOURCES)
 public class NamespaceMojo extends AbstractMojo {
 
-    private final Class<?>[] SCHEMA_CLASSES = new Class<?>[]{ObjectSchema.class, StructSchema.class, ViewSchema.class, EnumSchema.class};
+    private final Class<?>[] SCHEMA_CLASSES = new Class<?>[]{ObjectSchema.class, StructSchema.class, ViewSchema.class, EnumSchema.class, SqlViewSchema.class};
 
     @Parameter
     private List<String> classes;

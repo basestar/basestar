@@ -33,6 +33,7 @@ import io.basestar.util.Name;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -72,6 +73,19 @@ public class ViewSchemaMapper<T> extends LinkableSchemaMapper<ViewSchema.Builder
     public static <T> Builder<T> builder(final MappingContext context, final Name name, final TypeContext type) {
 
         return new Builder<>(context, name, type);
+    }
+
+    @Override
+    public Set<Name> namedDependencies() {
+
+        final Set<Name> all = new HashSet<>(super.namedDependencies());
+        all.add(fromSchema);
+        this.using.values().forEach(u -> {
+            if(u.getSchema() != null) {
+                all.add(u.getSchema().getName());
+            }
+        });
+        return all;
     }
 
     @Override

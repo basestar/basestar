@@ -196,10 +196,14 @@ public class Namespace implements Loadable, Schema.Resolver {
             final int slot = descriptors.headMap(inputName).size();
             return descriptor.build(this, new Schema.Resolver.Constructing() {
                 @Override
-                public void constructing(final Schema<?> schema) {
+                public void constructing(final Name qualifiedName, final Schema<?> schema) {
 
+                    assert qualifiedName.equals(outputName);
                     assert !out.containsKey(outputName);
                     out.put(outputName, schema);
+                    if(resolver instanceof Schema.Resolver.Constructing) {
+                        ((Constructing) resolver).constructing(qualifiedName, schema);
+                    }
                 }
 
                 @Nullable

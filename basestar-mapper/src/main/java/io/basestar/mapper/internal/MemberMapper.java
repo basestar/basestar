@@ -22,6 +22,7 @@ package io.basestar.mapper.internal;
 
 import io.basestar.expression.Expression;
 import io.basestar.schema.InstanceSchema;
+import io.basestar.util.Name;
 
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
@@ -54,4 +55,10 @@ public interface MemberMapper<B extends InstanceSchema.Builder<B, ?>> extends Se
 
         return getType().dependencies();
     }
+
+    default Set<? extends Name> namedDependencies() {
+
+        return getType().namedDependencies();
+    }
+
 }

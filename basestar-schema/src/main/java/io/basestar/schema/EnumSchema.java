@@ -142,7 +142,7 @@ public class EnumSchema implements Schema<String> {
 
     private EnumSchema(final Descriptor descriptor, final Resolver.Constructing resolver, final Name qualifiedName, final int slot) {
 
-        resolver.constructing(this);
+        resolver.constructing(qualifiedName, this);
         this.qualifiedName = qualifiedName;
         this.slot = slot;
         this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);

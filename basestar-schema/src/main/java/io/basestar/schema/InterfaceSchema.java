@@ -241,7 +241,7 @@ public class InterfaceSchema implements ReferableSchema {
 
     private InterfaceSchema(final Descriptor descriptor, final Namespace namespace, final Schema.Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
-        resolver.constructing(this);
+        resolver.constructing(qualifiedName, this);
         this.namespace = namespace;
         this.qualifiedName = qualifiedName;
         this.slot = slot;

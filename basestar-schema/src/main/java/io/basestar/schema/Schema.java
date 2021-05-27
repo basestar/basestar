@@ -198,14 +198,14 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
             // 'Magic' method to handle cycles in namespace builder, instance under construction
             // must call resolver.constructing(this); as first constructor line.
 
-            void constructing(final Schema<?> schema);
+            void constructing(final Name name, final Schema<?> schema);
 
             // Convenience for anonymous construction
 
             Constructing ANONYMOUS = new Constructing() {
 
                 @Override
-                public void constructing(final Schema<?> schema) {
+                public void constructing(final Name name, final Schema<?> schema) {
 
                 }
 

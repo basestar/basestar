@@ -111,6 +111,12 @@ public class EnumSchemaMapper<T extends Enum<?>> implements SchemaMapper<T, Stri
         return Collections.emptySet();
     }
 
+    @Override
+    public Set<Name> namedDependencies() {
+
+        return Collections.emptySet();
+    }
+
     @Data
     @Accessors(chain = true)
     public static class Builder<T extends Enum<?>> implements SchemaMapper.Builder<T, String> {
