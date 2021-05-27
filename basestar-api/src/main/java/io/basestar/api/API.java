@@ -20,7 +20,10 @@ package io.basestar.api;
  * #L%
  */
 
+import io.basestar.util.CompletableFutures;
 import io.swagger.v3.oas.models.OpenAPI;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
@@ -31,10 +34,15 @@ public interface API {
 
     default CompletableFuture<APIResponse> handleUnchecked(final APIRequest request) {
 
+        final Logger log = LoggerFactory.getLogger(getClass());
         try {
             return handle(request);
         } catch (final IOException e) {
+            log.error("Unhandled error", e);
             return CompletableFuture.completedFuture(APIResponse.error(request, 400, e));
+        } catch (final Exception e) {
+            log.error("Unhandled error", e);
+            return CompletableFutures.completedExceptionally(e);
         }
     }
 

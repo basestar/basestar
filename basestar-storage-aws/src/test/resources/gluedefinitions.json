@@ -703,6 +703,10 @@
           "type": "string"
         },
         {
+          "name": "grp",
+          "type": "string"
+        },
+        {
           "name": "created",
           "type": "timestamp"
         },
@@ -720,10 +724,6 @@
         },
         {
           "name": "hash",
-          "type": "string"
-        },
-        {
-          "name": "group",
           "type": "string"
         }
       ],

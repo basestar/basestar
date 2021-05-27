@@ -14,13 +14,21 @@ pair
  ;
 
 as
- : name Assign expr
+ : identifier Assign expr
  ;
 
 // Important! must list all name-like tokens here
 
+identifier
+ : (Identifier | With | For | In | Where | Any | All | Of | Like | ILike | Select | From | Union | Join | Left | Right | Inner | Outer | As | Group | Order | By)
+ ;
+
 name
- : (Identifier | With | For | In | Where | Any | All | Of | Like | ILike)
+ : Identifier (Dot Identifier)*?
+ ;
+
+names
+ : name (Comma name)*
  ;
 
 where
@@ -28,7 +36,7 @@ where
  ;
 
 of
- : (name | (LParen name (Comma name)* RParen)) Of expr where?
+ : (identifier | (LParen identifier (Comma identifier)* RParen)) Of expr where?
  ;
 
 expr
@@ -65,10 +73,14 @@ expr
  | LSquare exprs? RSquare #exprArray
  | LBrace exprs? RBrace #exprSet
  | LBrace (pair (Comma pair)*)? RBrace #exprObject
- | Identifier (Dot Identifier)*? #exprNameConstant
+ | name #exprNameConstant
  | String #exprString
  | LParen expr RParen #exprExpr
- | (name | (LParen name (Comma name)* RParen)) Arrow expr #exprLambda
+ | (identifier | (LParen identifier (Comma identifier)* RParen)) Arrow expr #exprLambda
+ | Select exprs From expr (Where expr)? (Group By names)? (Order By names)? #exprSelect
+ | expr side=(Left | Right)* type=(Inner | Outer)* Join expr #exprJoin
+ | expr Union expr #exprUnion
+ | expr As Identifier #exprAs
  ;
 
 Null     : N U L L;
@@ -81,6 +93,18 @@ Any      : A N Y;
 All      : A L L;
 Like     : L I K E;
 ILike    : I L I K E;
+Select   : S E L E C T;
+From     : F R O M;
+Union    : U N I O N;
+Join     : J O I N;
+Left     : L E F T;
+Right    : R I G H T;
+Inner    : I N N E R;
+Outer    : R I G H T;
+As       : A S;
+Group    : G R O U P;
+Order    : O R D E R;
+By       : B Y;
 
 Arrow    : '=>';
 Or       : '||';

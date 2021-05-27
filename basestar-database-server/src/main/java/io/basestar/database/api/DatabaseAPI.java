@@ -48,6 +48,7 @@ import io.swagger.v3.oas.models.parameters.Parameter;
 import io.swagger.v3.oas.models.parameters.RequestBody;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -62,6 +63,7 @@ import java.util.stream.Collectors;
 // FIXME: move to new module
 // TODO: implement secret handling
 
+@Slf4j
 public class DatabaseAPI implements API {
 
     private static final Splitter PATH_SPLITTER = Splitter.on("/").omitEmptyStrings();
@@ -175,6 +177,7 @@ public class DatabaseAPI implements API {
 
         } catch (final Exception e) {
 
+            log.error("Unhandled error", e);
             return CompletableFuture.completedFuture(APIResponse.error(request, e));
         }
     }

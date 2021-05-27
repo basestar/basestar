@@ -159,13 +159,13 @@ RefSource:
 DateSort:
   type: object
   properties:
-    group:
+    grp:
       type: string
   indexes:
     created:
       consistency: ATOMIC
       partition:
-        - group
+        - grp
       sort:
         - created
 

@@ -867,12 +867,12 @@ public abstract class TestStorage {
 
         for(int i = 0; i != 10; ++i) {
             createComplete(storage, dateSort, ImmutableMap.of(
-                    "group", "test"
+                    "grp", "test"
             ));
         }
 
         final List<Sort> sort = Sort.parseList("created", "id");
-        final Expression expression = Expression.parse("group == 'test' && created >= '2020-08-01T09:33:00.000Z' && created <= '2050-08-01T09:33:00.000Z'");
+        final Expression expression = Expression.parse("grp == 'test' && created >= '2020-08-01T09:33:00.000Z' && created <= '2050-08-01T09:33:00.000Z'");
         final Page<Map<String, Object>> page = page(storage, dateSort, expression, sort, 5);
         page.forEach(item -> assertTrue(expression.evaluatePredicate(Context.init(item))));
         assertEquals(5, page.size());
