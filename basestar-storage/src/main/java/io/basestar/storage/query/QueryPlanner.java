@@ -20,6 +20,7 @@ import io.basestar.util.Nullsafe;
 import io.basestar.util.Sort;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public interface QueryPlanner<T> {
@@ -33,11 +34,16 @@ public interface QueryPlanner<T> {
 
     class Default<T> implements QueryPlanner<T> {
 
-        private final boolean ignoreMaterialization;
+        private final Function<ViewSchema, Boolean> materialized;
 
         public Default(final boolean ignoreMaterialization) {
 
-            this.ignoreMaterialization = ignoreMaterialization;
+            this(view -> view.isMaterialized() && !ignoreMaterialization);
+        }
+
+        public Default(final Function<ViewSchema, Boolean> materialized) {
+
+            this.materialized = materialized;
         }
 
         @Override
@@ -141,7 +147,7 @@ public interface QueryPlanner<T> {
 
         protected T viewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema, final Set<Bucket> buckets) {
 
-            if(schema.isMaterialized() && !ignoreMaterialization) {
+            if(materialized.apply(schema)) {
                 return refStage(visitor, schema, buckets);
             } else if(schema.getFrom() instanceof FromSql) {
                 final FromSql from = (FromSql)schema.getFrom();
@@ -247,6 +253,11 @@ public interface QueryPlanner<T> {
     class AggregateSplitting<T> extends Default<T> {
 
         public AggregateSplitting(final boolean ignoreMaterialization) {
+
+            super(ignoreMaterialization);
+        }
+
+        public AggregateSplitting(final Function<ViewSchema, Boolean> ignoreMaterialization) {
 
             super(ignoreMaterialization);
         }

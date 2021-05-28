@@ -6,7 +6,10 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.expression.constant.Constant;
-import io.basestar.schema.*;
+import io.basestar.schema.InstanceSchema;
+import io.basestar.schema.Layout;
+import io.basestar.schema.LinkableSchema;
+import io.basestar.schema.ViewSchema;
 import io.basestar.schema.expression.TypedExpression;
 import io.basestar.schema.from.FromSql;
 import io.basestar.schema.from.Join;
@@ -164,7 +167,12 @@ public interface QueryResolver {
 
         public Automatic(final QueryResolver resolver) {
 
-            super(true);
+            this(resolver, ViewSchema::isMaterialized);
+        }
+
+        public Automatic(final QueryResolver resolver, final Function<ViewSchema, Boolean> materialized) {
+
+            super(materialized);
             this.resolver = resolver;
         }
 
