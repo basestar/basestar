@@ -27,18 +27,18 @@ import com.fasterxml.jackson.dataformat.javaprop.JavaPropsParser;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.Properties;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 public class SpringLikeJavaPropsFactory extends JavaPropsFactory {
 
-    private final Function<String, String> textProcessor;
+    private final UnaryOperator<String> textProcessor;
 
     public SpringLikeJavaPropsFactory() {
 
         this(SpringLikeTextProcessor.DEFAULT);
     }
 
-    public SpringLikeJavaPropsFactory(final Function<String, String> textProcessor) {
+    public SpringLikeJavaPropsFactory(final UnaryOperator<String> textProcessor) {
 
         this.textProcessor = textProcessor;
     }

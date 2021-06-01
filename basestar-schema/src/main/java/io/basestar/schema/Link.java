@@ -50,7 +50,7 @@ import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.util.*;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -361,12 +361,12 @@ public class Link implements Member {
         return Collections.emptySet();
     }
 
-    private Object transform(final Object value, final Function<Instance, Instance> fn) {
+    private Object transform(final Object value, final UnaryOperator<Instance> fn) {
 
         return fromArray(transform(toArray(value), fn));
     }
 
-    private Page<Instance> transform(final Page<Instance> value, final Function<Instance, Instance> fn) {
+    private Page<Instance> transform(final Page<Instance> value, final UnaryOperator<Instance> fn) {
 
         if(value == null) {
             return null;

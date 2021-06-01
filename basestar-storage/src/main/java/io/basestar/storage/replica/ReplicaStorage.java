@@ -20,6 +20,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 @Builder(builderClassName = "Builder", setterPrefix = "set")
 public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
@@ -98,9 +99,9 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
 
     private final Function<LinkableSchema, Optional<Storage>> replica;
 
-    private final Function<Consistency, Consistency> readConsistency;
+    private final UnaryOperator<Consistency> readConsistency;
 
-    private final Function<Consistency, Consistency> writeConsistency;
+    private final UnaryOperator<Consistency> writeConsistency;
 
     private final BiFunction<LinkableSchema, Consistency, Consistency> primaryConsistency;
 
