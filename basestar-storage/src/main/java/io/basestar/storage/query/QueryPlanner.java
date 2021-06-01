@@ -20,7 +20,7 @@ import io.basestar.util.Nullsafe;
 import io.basestar.util.Sort;
 
 import java.util.*;
-import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public interface QueryPlanner<T> {
@@ -34,14 +34,14 @@ public interface QueryPlanner<T> {
 
     class Default<T> implements QueryPlanner<T> {
 
-        private final Function<ViewSchema, Boolean> materialized;
+        private final Predicate<ViewSchema> materialized;
 
         public Default(final boolean ignoreMaterialization) {
 
             this(view -> view.isMaterialized() && !ignoreMaterialization);
         }
 
-        public Default(final Function<ViewSchema, Boolean> materialized) {
+        public Default(final Predicate<ViewSchema> materialized) {
 
             this.materialized = materialized;
         }
@@ -147,7 +147,7 @@ public interface QueryPlanner<T> {
 
         protected T viewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema, final Set<Bucket> buckets) {
 
-            if(materialized.apply(schema)) {
+            if(materialized.test(schema)) {
                 return refStage(visitor, schema, buckets);
             } else if(schema.getFrom() instanceof FromSql) {
                 final FromSql from = (FromSql)schema.getFrom();
@@ -257,7 +257,7 @@ public interface QueryPlanner<T> {
             super(ignoreMaterialization);
         }
 
-        public AggregateSplitting(final Function<ViewSchema, Boolean> ignoreMaterialization) {
+        public AggregateSplitting(final Predicate<ViewSchema> ignoreMaterialization) {
 
             super(ignoreMaterialization);
         }
