@@ -22,24 +22,24 @@ package io.basestar.jackson.conf;
 
 import io.basestar.util.Nullsafe;
 
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class SpringLikeTextProcessor implements Function<String, String> {
+public class SpringLikeTextProcessor implements UnaryOperator<String> {
 
     public static final SpringLikeTextProcessor DEFAULT = new SpringLikeTextProcessor();
 
     private static final Pattern PATTERN = Pattern.compile("\\$\\{([^:}]+)(?::([^}]*))?}");
 
-    private final Function<String, String> env;
+    private final UnaryOperator<String> env;
 
     public SpringLikeTextProcessor() {
 
         this(System::getenv);
     }
 
-    public SpringLikeTextProcessor(final Function<String, String> env) {
+    public SpringLikeTextProcessor(final UnaryOperator<String> env) {
 
         this.env = env;
     }

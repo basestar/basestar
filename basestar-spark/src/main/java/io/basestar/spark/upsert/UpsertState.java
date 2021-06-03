@@ -14,6 +14,7 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 
 public interface UpsertState {
 
@@ -28,7 +29,7 @@ public interface UpsertState {
         return getState(session, key, Object.class) != null;
     }
 
-    default <T> T updateState(final SparkSession session, final String key, final Class<T> as, final Function<T, T> apply) {
+    default <T> T updateState(final SparkSession session, final String key, final Class<T> as, final UnaryOperator<T> apply) {
 
         final T before = getState(session, key, as);
         final T after = apply.apply(before);

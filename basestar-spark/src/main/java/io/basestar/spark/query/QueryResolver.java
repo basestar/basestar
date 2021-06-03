@@ -37,6 +37,7 @@ import org.apache.spark.sql.types.StructType;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public interface QueryResolver {
@@ -170,7 +171,7 @@ public interface QueryResolver {
             this(resolver, ViewSchema::isMaterialized);
         }
 
-        public Automatic(final QueryResolver resolver, final Function<ViewSchema, Boolean> materialized) {
+        public Automatic(final QueryResolver resolver, final Predicate<ViewSchema> materialized) {
 
             super(materialized);
             this.resolver = resolver;

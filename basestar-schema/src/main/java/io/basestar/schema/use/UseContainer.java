@@ -6,12 +6,13 @@ import io.basestar.util.Name;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 public interface UseContainer<V, T> extends Use<T> {
 
     Use<V> getType();
 
-    default T transformValues(final T value, final Function<V, V> fn) {
+    default T transformValues(final T value, final UnaryOperator<V> fn) {
 
         return transformValues(value, (t, v) -> fn.apply(v));
     }

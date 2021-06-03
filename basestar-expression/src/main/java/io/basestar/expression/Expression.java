@@ -31,7 +31,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 public interface Expression extends Serializable {
@@ -106,7 +106,7 @@ public interface Expression extends Serializable {
     Expression copy(List<Expression> expressions);
 
     // FIXME: drop expressions/copy and just use this method
-    default Expression copy(final Function<Expression, Expression> fn) {
+    default Expression copy(final UnaryOperator<Expression> fn) {
 
         return copy(expressions().stream().map(fn).collect(Collectors.toList()));
     }

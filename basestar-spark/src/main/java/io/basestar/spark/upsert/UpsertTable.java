@@ -33,7 +33,7 @@ import java.io.UncheckedIOException;
 import java.net.URI;
 import java.time.Instant;
 import java.util.*;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -1047,7 +1047,7 @@ public class UpsertTable {
         return state.getState(session, BaseState.KEY, BaseState.class);
     }
 
-    private BaseState updateBaseState(final SparkSession session, final Function<BaseState, BaseState> apply) {
+    private BaseState updateBaseState(final SparkSession session, final UnaryOperator<BaseState> apply) {
 
         return state.updateState(session, BaseState.KEY, BaseState.class, apply);
     }
@@ -1059,7 +1059,7 @@ public class UpsertTable {
         return state.getState(session, DeltaState.KEY, DeltaState.class);
     }
 
-    private DeltaState updateDeltaState(final SparkSession session, final Function<DeltaState, DeltaState> apply) {
+    private DeltaState updateDeltaState(final SparkSession session, final UnaryOperator<DeltaState> apply) {
 
         return state.updateState(session, DeltaState.KEY, DeltaState.class, apply);
     }

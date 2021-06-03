@@ -15,7 +15,7 @@ import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.file.Paths;
-import java.util.function.BiFunction;
+import java.util.function.BinaryOperator;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -23,7 +23,7 @@ public class TestDecimal {
 
     private static final boolean GENERATE = false;
 
-    private void generateOrRunTest(final String name, final BiFunction<BigDecimal, BigDecimal, BigDecimal> fn) throws IOException {
+    private void generateOrRunTest(final String name, final BinaryOperator<BigDecimal> fn) throws IOException {
 
         final String csvPath = Paths.get("../basestar-expression/src/test/resources/decimal/" + name + ".csv").toAbsolutePath().normalize().toString();
 
