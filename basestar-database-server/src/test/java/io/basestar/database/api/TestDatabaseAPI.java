@@ -11,23 +11,33 @@ import io.basestar.database.Database;
 import io.basestar.database.options.*;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.BasestarModule;
+import io.basestar.schema.Instance;
 import io.basestar.schema.Namespace;
 import io.basestar.util.Name;
+import io.basestar.util.Page;
 import io.basestar.util.Sort;
 import io.swagger.v3.oas.models.OpenAPI;
 import lombok.Data;
+import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.skyscreamer.jsonassert.JSONAssert;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.EnumSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+import static java.util.Arrays.asList;
+import static java.util.Collections.singleton;
+import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -36,13 +46,51 @@ class TestDatabaseAPI {
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(BasestarModule.INSTANCE);
 
     @Test
-    void testQuery() {
+    void testQuery() throws Exception {
 
         final Database db = Mockito.mock(Database.class);
         final DatabaseAPI api = new DatabaseAPI(db);
-        api.handle(request(APIRequest.Method.GET, "Test1", ImmutableMap.of("query", "field1=='somevalue'", "sort", "x,y"))).join();
-        Mockito.verify(db).query(Caller.ANON, QueryOptions.builder()
-                .setSchema(Name.of("Test1")).setExpression(Expression.parse("field1 == 'somevalue'")).setSort(Sort.parseList("x,y")).build());
+
+        QueryOptions queryOpts = QueryOptions.builder()
+                .setSchema(Name.of("Test1"))
+                .setExpression(Expression.parse("field1 == 'somevalue'"))
+                .setSort(asList(Sort.asc(Name.of("x")), Sort.asc(Name.of("y"))))
+                .setStats(EnumSet.of(Page.Stat.TOTAL))
+                .build();
+
+        Instance instance = new Instance(ImmutableMap.<String, Object>builder()
+                .put("testKey", "testValue")
+                .build());
+
+        // mock returned page to test response values
+        Page<Instance> page = new Page<>(
+                singletonList(instance),
+                new Page.Token("AAAAAAAAAAA"),
+                Page.Stats.fromTotal(123)
+        );
+        Mockito.when(db.query(Caller.ANON, queryOpts)).thenReturn(CompletableFuture.completedFuture(page));
+
+        APIResponse result = api.handle(request(
+                APIRequest.Method.GET,
+                "Test1",
+                ImmutableMap.of(
+                        "query", "field1=='somevalue'",
+                        "sort", "x,y",
+                        "stats", "total")
+        )).join();
+        Mockito.verify(db).query(Caller.ANON, queryOpts);
+
+        assertEquals(
+                singleton("<Test1?paging=AAAAAAAAAAA&sort=x%2Cy&stats=total&query=field1%3D%3D%27somevalue%27>; rel=\"next\""),
+                result.getHeaders().get("Link"));
+
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            result.writeTo(baos);
+            String outputEntity = baos.toString("UTF-8");
+
+            String expected = loadExpectedFile("query.expected.json");
+            JSONAssert.assertEquals(expected, outputEntity, true);
+        }
     }
 
     @Test
@@ -50,9 +98,18 @@ class TestDatabaseAPI {
 
         final Database db = Mockito.mock(Database.class);
         final DatabaseAPI api = new DatabaseAPI(db);
-        api.handle(request(APIRequest.Method.GET, "Test1/1/link", ImmutableMap.of("count", "10"))).join();
+        api.handle(request(
+                APIRequest.Method.GET,
+                "Test1/1/link",
+                ImmutableMap.of("count", "10", "stats", "total")
+        )).join();
         Mockito.verify(db).queryLink(Caller.ANON, QueryLinkOptions.builder()
-                .setSchema(Name.of("Test1")).setId("1").setLink("link").setCount(10).build());
+                .setSchema(Name.of("Test1"))
+                .setId("1")
+                .setLink("link")
+                .setCount(10)
+                .setStats(EnumSet.of(Page.Stat.TOTAL))
+                .build());
     }
 
     @Test
@@ -70,7 +127,7 @@ class TestDatabaseAPI {
 
         final Database db = Mockito.mock(Database.class);
         Mockito.when(db.read(Mockito.any(Caller.class), Mockito.any(ReadOptions.class)))
-            .thenReturn(CompletableFuture.completedFuture(null));
+                .thenReturn(CompletableFuture.completedFuture(null));
         final DatabaseAPI api = new DatabaseAPI(db);
         final APIResponse response = api.handle(request(APIRequest.Method.GET, "Test1/1")).join();
         assertEquals(404, response.getStatusCode());
@@ -151,7 +208,7 @@ class TestDatabaseAPI {
 
         final Database db = Mockito.mock(Database.class);
         final DatabaseAPI api = new DatabaseAPI(db);
-        try(final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+        try (final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             final APIResponse response = api.handle(request(APIRequest.Method.GET, "/")).join();
             assertEquals(200, response.getStatusCode());
             response.writeTo(baos);
@@ -231,7 +288,7 @@ class TestDatabaseAPI {
             @Override
             public InputStream readBody() throws IOException {
 
-                if(body != null) {
+                if (body != null) {
                     final String str = objectMapper.writeValueAsString(body);
                     return new ByteArrayInputStream(str.getBytes(StandardCharsets.UTF_8));
                 } else {
@@ -245,5 +302,10 @@ class TestDatabaseAPI {
                 return UUID.randomUUID().toString();
             }
         };
+    }
+
+    private String loadExpectedFile(String expectedFile) throws IOException {
+        URL expectedUrl = Objects.requireNonNull(this.getClass().getResource(expectedFile));
+        return IOUtils.toString(expectedUrl, StandardCharsets.UTF_8);
     }
 }
