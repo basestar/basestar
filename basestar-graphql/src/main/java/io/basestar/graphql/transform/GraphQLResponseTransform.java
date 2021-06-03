@@ -33,7 +33,7 @@ public interface GraphQLResponseTransform {
 
             log.debug("Transforming GQL response page {}", input);
             final Map<String, Object> result = new HashMap<>();
-            result.put(strategy.pageItemsFieldName(), input.map(v -> toResponse(schema, v)).getPage());
+            result.put(strategy.pageItemsFieldName(), input.map(v -> toResponse(schema, v)).getItems());
             if (input.hasMore()) {
                 result.put(strategy.pagePagingFieldName(), input.getPaging().toString());
             }

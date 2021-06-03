@@ -9,9 +9,9 @@ package io.basestar.util;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,22 +20,19 @@ package io.basestar.util;
  * #L%
  */
 
+import com.google.common.base.Splitter;
 import com.google.common.io.BaseEncoding;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.RequiredArgsConstructor;
-import lombok.With;
+import lombok.*;
 
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.AbstractList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.toSet;
 
 @Data
 @With
@@ -44,9 +41,32 @@ import java.util.stream.Collectors;
 public class Page<T> extends AbstractList<T> implements Serializable {
 
     public enum Stat {
+        TOTAL("total"),
+        APPROX_TOTAL("approxTotal", "approx-total");
 
-        TOTAL,
-        APPROX_TOTAL
+        public static final char MULTIPLE_DELIMITER = ',';
+
+        private final Set<String> aliases;
+
+        Stat(String... aliases) {
+            this.aliases = new HashSet<>(Arrays.asList(aliases));
+            this.aliases.add(name());
+        }
+
+        public static Stat parse(final String str) {
+            return Arrays.stream(values())
+                    .filter(v -> v.aliases.contains(str))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException("Invalid stat: " + str));
+        }
+
+        public static Set<Stat> parseSet(final Iterable<String> strs) {
+            return Streams.stream(strs).map(Stat::parse).collect(toSet());
+        }
+
+        public static Set<Stat> parseSet(final String str) {
+            return parseSet(Splitter.on(MULTIPLE_DELIMITER).omitEmptyStrings().trimResults().split(str));
+        }
     }
 
     @Data
@@ -74,7 +94,7 @@ public class Page<T> extends AbstractList<T> implements Serializable {
         // Sum is deliberately poisoned by null
         public static Stats sum(final Stats a, final Stats b) {
 
-            if(a == null || b == null) {
+            if (a == null || b == null) {
                 return NULL;
             } else {
                 final Long total = (a.total == null || b.total == null) ? null : a.total + b.total;
@@ -84,15 +104,15 @@ public class Page<T> extends AbstractList<T> implements Serializable {
         }
     }
 
-    private final List<T> page;
+    private final List<T> items;
 
     private final Token paging;
 
     private final Stats stats;
 
-    public Page(final List<T> page, final Token paging) {
+    public Page(final List<T> items, final Token paging) {
 
-        this(page, paging, null);
+        this(items, paging, null);
     }
 
     public static <T> Page<T> empty() {
@@ -118,7 +138,7 @@ public class Page<T> extends AbstractList<T> implements Serializable {
     public <U> Page<U> map(final Function<? super T, ? extends U> fn) {
 
         final Page<T> delegate = this;
-        final List<U> results = delegate.getPage().stream().map(fn)
+        final List<U> results = delegate.getItems().stream().map(fn)
                 .collect(Collectors.toList());
 
         return new Page<>(results, paging, stats);
@@ -127,7 +147,7 @@ public class Page<T> extends AbstractList<T> implements Serializable {
     public Page<T> filter(final Predicate<? super T> fn) {
 
         final Page<T> delegate = this;
-        final List<T> results = delegate.getPage().stream().filter(fn)
+        final List<T> results = delegate.getItems().stream().filter(fn)
                 .collect(Collectors.toList());
 
         return new Page<>(results, paging, stats);
@@ -136,13 +156,17 @@ public class Page<T> extends AbstractList<T> implements Serializable {
     @Override
     public T get(final int index) {
 
-        return page.get(index);
+        return items.get(index);
     }
 
     @Override
     public int size() {
 
-        return page.size();
+        return items.size();
+    }
+
+    public Page.Envelope<T> toEnvelope() {
+        return new Page.Envelope<>(items, paging, stats);
     }
 
     @Data
@@ -156,9 +180,9 @@ public class Page<T> extends AbstractList<T> implements Serializable {
 
         public Token(final byte[] value) {
 
-            if(value.length  == 0) {
+            if (value.length == 0) {
                 throw new IllegalStateException("Cannot create empty token");
-            } else if(value.length > MAX_SIZE) {
+            } else if (value.length > MAX_SIZE) {
                 throw new IllegalStateException("Token is too long (was " + value.length + " bytes)");
             }
             this.value = Arrays.copyOf(value, value.length);
@@ -198,4 +222,18 @@ public class Page<T> extends AbstractList<T> implements Serializable {
             return buffer.getLong();
         }
     }
+
+    /**
+     * An envelope data structure to wrap Page data in responses.
+     * Can be used to avoid special serialization due to Page extending AbstractList.
+     *
+     * @param <T>
+     */
+    @Value
+    public static class Envelope<T> {
+        List<T> items;
+        Token paging;
+        Stats stats;
+    }
+
 }

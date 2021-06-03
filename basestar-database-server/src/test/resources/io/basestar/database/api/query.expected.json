@@ -1,0 +1,12 @@
+{
+  "items": [
+    {
+      "testKey": "testValue"
+    }
+  ],
+  "paging": "AAAAAAAAAAA",
+  "stats": {
+    "approxTotal": 123,
+    "total": 123
+  }
+}
