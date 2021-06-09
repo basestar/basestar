@@ -151,6 +151,14 @@ class TestUpsertTable extends AbstractSparkTest {
 
         final UpsertTable table2 = table.copy(session, Name.of(database2, "D"), URI.create(location2 + "/D/base"), URI.create(location2 + "/D/delta"), new UpsertState.Hdfs(URI.create(location2 + "/D/state")));
         assertState("After copy", session, table2, result, ImmutableList.of(), result);
+
+        System.err.println(table.select(session).collectAsList());
+
+        final List<D> create2 = ImmutableList.of(new D("d:8", 5L));
+        final Dataset<Row> createSource2 = bucket.accept(session.createDataset(create2, Encoders.bean(D.class)).toDF());
+
+        table.applyChanges(createSource2, UpsertTable.sequence(ISO8601.now()), r -> UpsertOp.CREATE, r -> r);
+        System.err.println(table.select(session).collectAsList());
     }
 
     private void assertState(final String step, final SparkSession session, final UpsertTable table,

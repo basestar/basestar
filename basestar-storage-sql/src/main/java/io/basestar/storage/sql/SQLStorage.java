@@ -22,6 +22,7 @@ package io.basestar.storage.sql;
 
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.expression.visitor.DisjunctionVisitor;
 import io.basestar.schema.Index;
 import io.basestar.schema.*;
 import io.basestar.schema.use.Use;
@@ -33,7 +34,6 @@ import io.basestar.storage.StorageTraits;
 import io.basestar.storage.Versioning;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
-import io.basestar.expression.visitor.DisjunctionVisitor;
 import io.basestar.storage.query.Range;
 import io.basestar.storage.query.RangeVisitor;
 import io.basestar.storage.util.KeysetPagingUtils;
@@ -68,8 +68,6 @@ public class SQLStorage implements DefaultLayerStorage {
 
     private final DataSource dataSource;
 
-    private final SQLDialect dialect;
-
     private final SQLStrategy strategy;
 
     private final EventStrategy eventStrategy;
@@ -77,7 +75,6 @@ public class SQLStorage implements DefaultLayerStorage {
     private SQLStorage(final Builder builder) {
 
         this.dataSource = builder.dataSource;
-        this.dialect = builder.dialect;
         this.strategy = builder.strategy;
         this.eventStrategy = Nullsafe.orDefault(builder.eventStrategy, EventStrategy.EMIT);
     }
@@ -107,12 +104,14 @@ public class SQLStorage implements DefaultLayerStorage {
 
     private List<SelectFieldOrAsterisk> selectFields(final ObjectSchema schema) {
 
+        final SQLDialect dialect = strategy.dialect();
+
         final List<SelectFieldOrAsterisk> fields = new ArrayList<>();
         schema.metadataSchema().forEach((name, type) -> {
-            fields.add(SQLUtils.selectField(DSL.field(DSL.name(name)), type).as(DSL.name(name)));
+            fields.add(dialect.selectField(DSL.field(DSL.name(name)), type).as(DSL.name(name)));
         });
         schema.getProperties().forEach((name, prop) -> {
-            fields.add(SQLUtils.selectField(DSL.field(DSL.name(name)), prop.typeOf()).as(DSL.name(name)));
+            fields.add(dialect.selectField(DSL.field(DSL.name(name)), prop.typeOf()).as(DSL.name(name)));
         });
         return fields;
     }
@@ -170,20 +169,24 @@ public class SQLStorage implements DefaultLayerStorage {
 
     private Condition condition(final DSLContext context, final ObjectSchema schema, final Index index, final Expression expression) {
 
+        final SQLDialect dialect = strategy.dialect();
+
         final Function<Name, QueryPart> columnResolver;
         if(index == null) {
             columnResolver = objectColumnResolver(context, schema);
         } else {
             columnResolver = indexColumnResolver(context, schema, index);
         }
-        return new SQLExpressionVisitor(columnResolver).condition(expression);
+        return new SQLExpressionVisitor(dialect, columnResolver).condition(expression);
     }
 
     private List<OrderField<?>> orderFields(final List<Sort> sort) {
 
+        final SQLDialect dialect = strategy.dialect();
+
         return sort.stream()
                 .map(v -> {
-                    final Field<?> field = DSL.field(SQLUtils.columnName(v.getName()));
+                    final Field<?> field = DSL.field(dialect.columnName(v.getName()));
                     return v.getOrder() == Sort.Order.ASC ? field.asc() : field.desc();
                 })
                 .collect(Collectors.toList());
@@ -268,6 +271,8 @@ public class SQLStorage implements DefaultLayerStorage {
 
     private Function<Name, QueryPart> objectColumnResolver(final DSLContext context, final ObjectSchema schema) {
 
+        final SQLDialect dialect = strategy.dialect();
+
         return name -> {
 
             if(schema.metadataSchema().containsKey(name.first())) {
@@ -294,7 +299,7 @@ public class SQLStorage implements DefaultLayerStorage {
                         public QueryPart visitStruct(final UseStruct type) {
 
                             // FIXME
-                            return DSL.field(SQLUtils.columnName(name));
+                            return DSL.field(dialect.columnName(name));
                         }
 
                         @Override
@@ -315,8 +320,10 @@ public class SQLStorage implements DefaultLayerStorage {
 
     private Function<Name, QueryPart> indexColumnResolver(final DSLContext context, final ObjectSchema schema, final Index index) {
 
+        final SQLDialect dialect = strategy.dialect();
+
         // FIXME
-        return name -> DSL.field(SQLUtils.columnName(name));
+        return name -> DSL.field(dialect.columnName(name));
     }
 //
 //    @Override
@@ -659,10 +666,13 @@ public class SQLStorage implements DefaultLayerStorage {
 
     private <T> CompletableFuture<T> withContext(final Function<DSLContext, CompletionStage<T>> with) {
 
+        final SQLDialect dialect = strategy.dialect();
+
         Connection conn = null;
         try {
             conn = dataSource.getConnection();
-            final DSLContext context = DSL.using(conn, dialect);
+            conn.setAutoCommit(false);
+            final DSLContext context = DSL.using(conn, dialect.dmlDialect());
             final Connection conn2 = conn;
             return with.apply(context)
                     .toCompletableFuture()
@@ -731,30 +741,38 @@ public class SQLStorage implements DefaultLayerStorage {
 
     private Map<String, Object> fromRecord(final ReferableSchema schema, final Record record) {
 
+        final SQLDialect dialect = strategy.dialect();
+
         final Map<String, Object> data = record.intoMap();
         final Map<String, Object> result = new HashMap<>();
         schema.metadataSchema().forEach((k, v) ->
-                result.put(k, SQLUtils.fromSQLValue(v, data.get(k))));
+                result.put(k, dialect.fromSQLValue(v, data.get(k))));
         schema.getProperties().forEach((k, v) ->
-                result.put(k, SQLUtils.fromSQLValue(v.typeOf(), data.get(k))));
+                result.put(k, dialect.fromSQLValue(v.typeOf(), data.get(k))));
         return result;
     }
 
     private Map<Field<?>, Object> toRecord(final ReferableSchema schema, final Map<String, Object> object) {
 
+        final SQLDialect dialect = strategy.dialect();
+
         final Map<Field<?>, Object> result = new HashMap<>();
         schema.metadataSchema().forEach((k, v) ->
-                result.put(DSL.field(DSL.name(k)), SQLUtils.toSQLValue(v, object.get(k))));
+                result.put(DSL.field(DSL.name(k)), dialect.toSQLValue(v, object.get(k))));
         schema.getProperties().forEach((k, v) ->
-                result.put(DSL.field(DSL.name(k)), SQLUtils.toSQLValue(v.typeOf(), object.get(k))));
-        return result;
+                result.put(DSL.field(DSL.name(k)), dialect.toSQLValue(v.typeOf(), object.get(k))));
+
+        return result.entrySet().stream().filter(e -> e.getValue() != null)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     private Map<Field<?>, Object> toRecord(final ReferableSchema schema, final Index index, final Index.Key key, final Map<String, Object> object) {
 
+        final SQLDialect dialect = strategy.dialect();
+
         final Map<Field<?>, Object> result = new HashMap<>();
         index.projectionSchema(schema).forEach((k, v) ->
-                result.put(DSL.field(DSL.name(k)), SQLUtils.toSQLValue(v, object.get(k))));
+                result.put(DSL.field(DSL.name(k)), dialect.toSQLValue(v, object.get(k))));
 
         final List<Name> partitionNames = index.resolvePartitionNames();
         final List<Object> partition = key.getPartition();
@@ -763,7 +781,7 @@ public class SQLStorage implements DefaultLayerStorage {
             final Name name = partitionNames.get(i);
             final Object value = partition.get(i);
             final Use<?> type = schema.typeOf(name);
-            result.put(DSL.field(SQLUtils.columnName(name)), SQLUtils.toSQLValue(type, value));
+            result.put(DSL.field(dialect.columnName(name)), dialect.toSQLValue(type, value));
         }
         final List<Sort> sortPaths = index.getSort();
         final List<Object> sort = key.getSort();
@@ -772,7 +790,7 @@ public class SQLStorage implements DefaultLayerStorage {
             final Name name = sortPaths.get(i).getName();
             final Object value = sort.get(i);
             final Use<?> type = schema.typeOf(name);
-            result.put(DSL.field(SQLUtils.columnName(name)), SQLUtils.toSQLValue(type, value));
+            result.put(DSL.field(dialect.columnName(name)), dialect.toSQLValue(type, value));
         }
         return result;
     }

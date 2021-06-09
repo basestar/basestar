@@ -25,58 +25,17 @@ import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.Schema;
 import io.basestar.storage.Storage;
 import io.basestar.storage.TestStorage;
-import io.basestar.storage.sql.mapper.ColumnStrategy;
-import lombok.extern.slf4j.Slf4j;
-import org.h2.jdbcx.JdbcDataSource;
 import org.jooq.DSLContext;
-import org.jooq.SQLDialect;
 import org.jooq.impl.DSL;
 
+import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-@Slf4j
-class TestSQLStorage extends TestStorage {
-
-    @Override
-    protected Storage storage(final Namespace namespace) {
-
-        final JdbcDataSource ds = new JdbcDataSource();
-        ds.setURL("jdbc:h2:mem:test;DB_CLOSE_DELAY=100");
-
-        final String objectSchema = UUID.randomUUID().toString().replaceAll("-", "_");
-        final String historySchema = UUID.randomUUID().toString().replaceAll("-", "_");
-        final SQLStrategy strategy = SQLStrategy.Simple.builder()
-                .objectSchemaName(objectSchema)
-                .historySchemaName(historySchema)
-                .columnStrategy(ColumnStrategy.Simple.builder().build())
-                .build();
-
-        final List<ReferableSchema> schemas = new ArrayList<>();
-        for(final Schema<?> schema : namespace.getSchemas().values()) {
-            if(schema instanceof ReferableSchema) {
-                schemas.add((ReferableSchema)schema);
-            }
-        }
-
-        try(final Connection conn = ds.getConnection()) {
-            conn.prepareStatement("CREATE DOMAIN IF NOT EXISTS JSONB AS JSON").execute();
-            final DSLContext context = DSL.using(conn, SQLDialect.H2);
-            strategy.createTables(context, schemas);
-            conn.commit();
-        } catch (final SQLException e) {
-            throw new IllegalStateException(e);
-        }
-
-        return SQLStorage.builder()
-                .setDataSource(ds)
-                .setDialect(SQLDialect.H2)
-                .setStrategy(strategy)
-                .build();
-    }
+abstract class TestSQLStorage extends TestStorage {
 
     protected boolean supportsLike() {
 
@@ -93,4 +52,44 @@ class TestSQLStorage extends TestStorage {
 
         // FIXME: versioned ref storage will need a strategy that supports multiple output columns per input value
     }
+
+
+    @Override
+    protected Storage storage(final Namespace namespace) {
+
+        final DataSource ds = dataSource();
+        final SQLDialect dialect = dialect();
+
+        final String objectSchema = "obj_" + UUID.randomUUID().toString().replaceAll("-", "_");
+        final String historySchema = "his_" + UUID.randomUUID().toString().replaceAll("-", "_");
+        final SQLStrategy strategy = SQLStrategy.Simple.builder()
+                .objectSchemaName(objectSchema)
+                .historySchemaName(historySchema)
+                .dialect(dialect)
+                .build();
+
+        final List<ReferableSchema> schemas = new ArrayList<>();
+        for(final Schema<?> schema : namespace.getSchemas().values()) {
+            if(schema instanceof ReferableSchema) {
+                schemas.add((ReferableSchema)schema);
+            }
+        }
+        try(final Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            final DSLContext context = DSL.using(conn, dialect.ddlDialect());
+            strategy.createTables(context, schemas);
+            conn.commit();
+        } catch (final SQLException e) {
+            throw new IllegalStateException(e);
+        }
+
+        return SQLStorage.builder()
+                .setDataSource(ds)
+                .setStrategy(strategy)
+                .build();
+    }
+
+    protected abstract SQLDialect dialect();
+
+    protected abstract DataSource dataSource();
 }

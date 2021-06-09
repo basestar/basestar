@@ -53,6 +53,8 @@ import java.util.function.Function;
 @RequiredArgsConstructor
 public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryPart> {
 
+    private final SQLDialect dialect;
+    
     private final Function<Name, QueryPart> columnResolver;
 
     @Override
@@ -64,102 +66,102 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     @Override
     public QueryPart visitAdd(final Add expression) {
 
-        final Field<Object> lhs = SQLUtils.field(expression.getLhs().visit(this), Object.class);
-        final Field<Number> rhs = SQLUtils.field(expression.getRhs().visit(this), Number.class);
+        final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
+        final Field<Number> rhs = dialect.field(expression.getRhs().visit(this), Number.class);
         return (lhs != null && rhs != null) ? lhs.add(rhs) : null;
     }
 
     @Override
     public QueryPart visitDiv(final Div expression) {
 
-        final Field<Object> lhs = SQLUtils.field(expression.getLhs().visit(this), Object.class);
-        final Field<Number> rhs = SQLUtils.field(expression.getRhs().visit(this), Number.class);
+        final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
+        final Field<Number> rhs = dialect.field(expression.getRhs().visit(this), Number.class);
         return (lhs != null && rhs != null) ? lhs.div(rhs) : null;
     }
 
     @Override
     public QueryPart visitMod(final Mod expression) {
 
-        final Field<Object> lhs = SQLUtils.field(expression.getLhs().visit(this), Object.class);
-        final Field<Number> rhs = SQLUtils.field(expression.getRhs().visit(this), Number.class);
+        final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
+        final Field<Number> rhs = dialect.field(expression.getRhs().visit(this), Number.class);
         return (lhs != null && rhs != null) ? lhs.mod(rhs) : null;
     }
 
     @Override
     public QueryPart visitMul(final Mul expression) {
 
-        final Field<Object> lhs = SQLUtils.field(expression.getLhs().visit(this), Object.class);
-        final Field<Number> rhs = SQLUtils.field(expression.getRhs().visit(this), Number.class);
+        final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
+        final Field<Number> rhs = dialect.field(expression.getRhs().visit(this), Number.class);
         return (lhs != null && rhs != null) ? lhs.mul(rhs) : null;
     }
 
     @Override
     public QueryPart visitNegate(final Negate expression) {
 
-        final Field<Object> with = SQLUtils.field(expression.getOperand().visit(this), Object.class);
+        final Field<Object> with = dialect.field(expression.getOperand().visit(this), Object.class);
         return with != null ? with.neg() : null;
     }
 
     @Override
     public QueryPart visitPow(final Pow expression) {
 
-        final Field<Object> lhs = SQLUtils.field(expression.getLhs().visit(this), Object.class);
-        final Field<Number> rhs = SQLUtils.field(expression.getRhs().visit(this), Number.class);
+        final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
+        final Field<Number> rhs = dialect.field(expression.getRhs().visit(this), Number.class);
         return (lhs != null && rhs != null) ? lhs.pow(rhs) : null;
     }
 
     @Override
     public QueryPart visitSub(final Sub expression) {
 
-        final Field<Object> lhs = SQLUtils.field(expression.getLhs().visit(this), Object.class);
-        final Field<Number> rhs = SQLUtils.field(expression.getRhs().visit(this), Number.class);
+        final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
+        final Field<Number> rhs = dialect.field(expression.getRhs().visit(this), Number.class);
         return (lhs != null && rhs != null) ? lhs.sub(rhs) : null;
     }
 
     @Override
     public QueryPart visitBitAnd(final BitAnd expression) {
 
-        final Field<Object> lhs = SQLUtils.field(expression.getLhs().visit(this), Object.class);
-        final Field<Object> rhs = SQLUtils.field(expression.getRhs().visit(this), Object.class);
+        final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
+        final Field<Object> rhs = dialect.field(expression.getRhs().visit(this), Object.class);
         return (lhs != null && rhs != null) ? lhs.bitAnd(rhs) : null;
     }
 
     @Override
     public QueryPart visitBitFlip(final BitNot expression) {
 
-        final Field<Object> with = SQLUtils.field(expression.getOperand().visit(this), Object.class);
+        final Field<Object> with = dialect.field(expression.getOperand().visit(this), Object.class);
         return with != null ? with.bitNot() : null;
     }
 
     @Override
     public QueryPart visitBitLsh(final BitLsh expression) {
 
-        final Field<Object> lhs = SQLUtils.field(expression.getLhs().visit(this), Object.class);
-        final Field<Number> rhs = SQLUtils.field(expression.getRhs().visit(this), Number.class);
+        final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
+        final Field<Number> rhs = dialect.field(expression.getRhs().visit(this), Number.class);
         return (lhs != null && rhs != null) ? lhs.shl(rhs) : null;
     }
 
     @Override
     public QueryPart visitBitOr(final BitOr expression) {
 
-        final Field<Object> lhs = SQLUtils.field(expression.getLhs().visit(this), Object.class);
-        final Field<Object> rhs = SQLUtils.field(expression.getRhs().visit(this), Object.class);
+        final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
+        final Field<Object> rhs = dialect.field(expression.getRhs().visit(this), Object.class);
         return (lhs != null && rhs != null) ? lhs.bitOr(rhs) : null;
     }
 
     @Override
     public QueryPart visitBitRsh(final BitRsh expression) {
 
-        final Field<Object> lhs = SQLUtils.field(expression.getLhs().visit(this), Object.class);
-        final Field<Number> rhs = SQLUtils.field(expression.getRhs().visit(this), Number.class);
+        final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
+        final Field<Number> rhs = dialect.field(expression.getRhs().visit(this), Number.class);
         return (lhs != null && rhs != null) ? lhs.shr(rhs) : null;
     }
 
     @Override
     public QueryPart visitBitXor(final BitXor expression) {
 
-        final Field<Object> lhs = SQLUtils.field(expression.getLhs().visit(this), Object.class);
-        final Field<Object> rhs = SQLUtils.field(expression.getRhs().visit(this), Object.class);
+        final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
+        final Field<Object> rhs = dialect.field(expression.getRhs().visit(this), Object.class);
         return (lhs != null && rhs != null) ? lhs.bitXor(rhs) : null;
     }
 
@@ -172,48 +174,48 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     @Override
     public QueryPart visitEq(final Eq expression) {
 
-        final Field<Object> lhs = SQLUtils.field(expression.getLhs().visit(this), Object.class);
-        final Field<Object> rhs = SQLUtils.field(expression.getRhs().visit(this), Object.class);
+        final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
+        final Field<Object> rhs = dialect.field(expression.getRhs().visit(this), Object.class);
         return (lhs != null && rhs != null) ? lhs.eq(rhs) : null;
     }
 
     @Override
     public QueryPart visitGt(final Gt expression) {
 
-        final Field<Object> lhs = SQLUtils.field(expression.getLhs().visit(this), Object.class);
-        final Field<Object> rhs = SQLUtils.field(expression.getRhs().visit(this), Object.class);
+        final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
+        final Field<Object> rhs = dialect.field(expression.getRhs().visit(this), Object.class);
         return (lhs != null && rhs != null) ? lhs.gt(rhs) : null;
     }
 
     @Override
     public QueryPart visitGte(final Gte expression) {
 
-        final Field<Object> lhs = SQLUtils.field(expression.getLhs().visit(this), Object.class);
-        final Field<Object> rhs = SQLUtils.field(expression.getRhs().visit(this), Object.class);
+        final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
+        final Field<Object> rhs = dialect.field(expression.getRhs().visit(this), Object.class);
         return (lhs != null && rhs != null) ? lhs.ge(rhs) : null;
     }
 
     @Override
     public QueryPart visitLt(final Lt expression) {
 
-        final Field<Object> lhs = SQLUtils.field(expression.getLhs().visit(this), Object.class);
-        final Field<Object> rhs = SQLUtils.field(expression.getRhs().visit(this), Object.class);
+        final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
+        final Field<Object> rhs = dialect.field(expression.getRhs().visit(this), Object.class);
         return (lhs != null && rhs != null) ? lhs.lt(rhs) : null;
     }
 
     @Override
     public QueryPart visitLte(final Lte expression) {
 
-        final Field<Object> lhs = SQLUtils.field(expression.getLhs().visit(this), Object.class);
-        final Field<Object> rhs = SQLUtils.field(expression.getRhs().visit(this), Object.class);
+        final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
+        final Field<Object> rhs = dialect.field(expression.getRhs().visit(this), Object.class);
         return (lhs != null && rhs != null) ? lhs.le(rhs) : null;
     }
 
     @Override
     public QueryPart visitNe(final Ne expression) {
 
-        final Field<Object> lhs = SQLUtils.field(expression.getLhs().visit(this), Object.class);
-        final Field<Object> rhs = SQLUtils.field(expression.getRhs().visit(this), Object.class);
+        final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
+        final Field<Object> rhs = dialect.field(expression.getRhs().visit(this), Object.class);
         return (lhs != null && rhs != null) ? lhs.ne(rhs) : null;
     }
 
@@ -234,17 +236,27 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     @Override
     public QueryPart visitCoalesce(final Coalesce expression) {
 
-        final Field<Object> lhs = SQLUtils.field(expression.getLhs().visit(this), Object.class);
-        final Field<Object> rhs = SQLUtils.field(expression.getRhs().visit(this), Object.class);
+        final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
+        final Field<Object> rhs = dialect.field(expression.getRhs().visit(this), Object.class);
         return (lhs != null && rhs != null) ? DSL.coalesce(lhs, rhs) : null;
     }
 
     @Override
     public QueryPart visitLike(final Like expression) {
 
-        final Field<Object> lhs = SQLUtils.field(expression.getLhs().visit(this), Object.class);
-        final Field<String> rhs = SQLUtils.field(expression.getRhs().visit(this), String.class);
-        return (lhs != null && rhs != null) ? (expression.isCaseSensitive() ? lhs.like(rhs) : lhs.likeIgnoreCase(rhs)) : null;
+        final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
+        final Field<String> rhs = dialect.field(expression.getRhs().visit(this), String.class);
+        if(lhs != null && rhs != null) {
+            if(expression.isCaseSensitive()) {
+                return lhs.like(rhs);
+            } else if(dialect.supportsILike()) {
+                return lhs.likeIgnoreCase(rhs);
+            } else {
+                return DSL.lower(DSL.cast(lhs, String.class)).like(DSL.lower(rhs));
+            }
+        } else {
+            return null;
+        }
     }
 
     @Override
@@ -256,8 +268,8 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     @Override
     public QueryPart visitIn(final In expression) {
 
-        final Field<Object> lhs = SQLUtils.field(expression.getLhs().visit(this), Object.class);
-        final Field<Object> rhs = SQLUtils.field(expression.getRhs().visit(this), Object.class);
+        final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
+        final Field<Object> rhs = dialect.field(expression.getRhs().visit(this), Object.class);
         return (lhs != null && rhs != null) ? lhs.in(rhs) : null;
     }
 
@@ -289,7 +301,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     public QueryPart visitAnd(final And expression) {
 
         return DSL.and(expression.getTerms().stream()
-                .map(v -> SQLUtils.condition(v.visit(this)))
+                .map(v -> dialect.condition(v.visit(this)))
                 .filter(Objects::nonNull)
                 .toArray(Condition[]::new));
     }
@@ -297,14 +309,14 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     @Override
     public QueryPart visitNot(final Not expression) {
 
-        final Condition cond = SQLUtils.condition(expression.visit(this));
+        final Condition cond = dialect.condition(expression.visit(this));
         return cond != null ? DSL.not(cond) : null;
     }
 
     @Override
     public QueryPart visitOr(final Or expression) {
 
-        final Condition[] conditions = expression.getTerms().stream().map(v -> SQLUtils.condition(v.visit(this)))
+        final Condition[] conditions = expression.getTerms().stream().map(v -> dialect.condition(v.visit(this)))
                 .toArray(Condition[]::new);
         // Unlike and, if any OR elements are null we can't create a condition
         if(Arrays.stream(conditions).allMatch(Objects::nonNull)) {
@@ -317,7 +329,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     @Override
     public Field<?> visitSum(final Sum aggregate) {
 
-        final Field<? extends Number> input = SQLUtils.cast(field(aggregate.getInput()), Number.class);
+        final Field<? extends Number> input = dialect.cast(field(aggregate.getInput()), Number.class);
         return DSL.sum(input);
     }
 
@@ -338,7 +350,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     @Override
     public Field<?> visitAvg(final Avg aggregate) {
 
-        final Field<? extends Number> input = SQLUtils.cast(field(aggregate.getInput()), Number.class);
+        final Field<? extends Number> input = dialect.cast(field(aggregate.getInput()), Number.class);
         return DSL.avg(input);
     }
 
@@ -360,11 +372,11 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
 
     public Condition condition(final Expression expression) {
 
-        return SQLUtils.condition(visit(expression));
+        return dialect.condition(visit(expression));
     }
 
     public Field<?> field(final Expression expression) {
 
-        return SQLUtils.field(visit(expression));
+        return dialect.field(visit(expression));
     }
 }

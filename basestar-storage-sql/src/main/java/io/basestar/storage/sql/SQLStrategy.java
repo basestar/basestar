@@ -24,9 +24,6 @@ import io.basestar.schema.Index;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.Reserved;
-import io.basestar.storage.sql.mapper.ColumnStrategy;
-import io.basestar.storage.sql.mapper.RowMapper;
-import io.basestar.util.Name;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -35,8 +32,7 @@ import org.jooq.exception.DataAccessException;
 import org.jooq.impl.DSL;
 
 import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.List;mport java.util.Map;
 import java.util.Set;
 
 public interface SQLStrategy {
@@ -50,7 +46,7 @@ public interface SQLStrategy {
 
     void createTables(DSLContext context, Collection<ReferableSchema> schemas);
 
-    RowMapper<Map<String, Object>> rowMapper(ReferableSchema schema, Set<Name> expand);
+    SQLDialect dialect();
 
     @Data
     @Slf4j
@@ -61,7 +57,7 @@ public interface SQLStrategy {
 
         private final String historySchemaName;
 
-        private final ColumnStrategy columnStrategy;
+        private final SQLDialect dialect;
 
         private String name(final ReferableSchema schema) {
 
@@ -88,9 +84,9 @@ public interface SQLStrategy {
         }
 
         @Override
-        public RowMapper<Map<String, Object>> rowMapper(final ReferableSchema schema, final Set<Name> expand) {
+        public SQLDialect dialect() {
 
-            return RowMapper.forInstance(columnStrategy, schema, expand);
+            return dialect;
         }
 
         @Override
@@ -108,48 +104,69 @@ public interface SQLStrategy {
                 final org.jooq.Name objectTableName = objectTableName(schema);
                 final org.jooq.Name historyTableName = historyTableName(schema);
 
-                final List<Field<?>> columns = SQLUtils.fields(schema); //rowMapper(schema, schema.getExpand()).columns();
+                final List<Field<?>> columns = dialect.fields(schema); //rowMapper(schema, schema.getExpand()).columns();
 
                 log.info("Creating table {}", objectTableName);
-                try(final CreateTableFinalStep create = context.createTableIfNotExists(objectTableName)
-                        .columns(columns)
-                        .constraint(DSL.primaryKey(ObjectSchema.ID))) {
+                try(final CreateTableFinalStep create = withPrimaryKey(schema, context.createTableIfNotExists(objectTableName)
+                        .columns(columns))) {
                     create.execute();
                 }
 
-                for(final Index index : schema.getIndexes().values()) {
-                    if(index.isMultiValue()) {
-                        final org.jooq.Name indexTableName = indexTableName(schema, index);
-                        log.info("Creating multi-value index table {}", indexTableName);
-                        try(final CreateTableFinalStep create = context.createTableIfNotExists(indexTableName(schema, index))
-                                .columns(SQLUtils.fields(schema, index))
-                                .constraints(SQLUtils.primaryKey(schema, index))) {
-                            create.execute();
-                        }
-                    } else if(index.isUnique()) {
-                        log.info("Creating unique index {}:{}", objectTableName, index.getName());
-                        try(final CreateIndexFinalStep create = context.createUniqueIndexIfNotExists(index.getName())
-                                .on(DSL.table(objectTableName), SQLUtils.indexKeys(schema, index))) {
-                            create.execute();
-                        }
-                    } else {
-                        log.info("Creating index {}:{}", objectTableName, index.getName());
-                        try(final CreateIndexFinalStep create = context.createIndexIfNotExists(index.getName())
-                                .on(DSL.table(objectTableName), SQLUtils.indexKeys(schema, index))) {
-                            create.execute();
-                        } catch (final DataAccessException e) {
-                            // FIXME
-                            log.error("Failed to create index", e);
+                if(dialect.supportsIndexes()) {
+                    for(final Index index : schema.getIndexes().values()) {
+                        if(index.isMultiValue()) {
+                            final org.jooq.Name indexTableName = indexTableName(schema, index);
+                            log.info("Creating multi-value index table {}", indexTableName);
+                            try(final CreateTableFinalStep create = context.createTableIfNotExists(indexTableName(schema, index))
+                                    .columns(dialect.fields(schema, index))
+                                    .constraints(dialect.primaryKey(schema, index))) {
+                                create.execute();
+                            }
+                        } else if(index.isUnique()) {
+                            log.info("Creating unique index {}:{}", objectTableName, index.getName());
+                            try(final CreateIndexFinalStep create = context.createUniqueIndexIfNotExists(index.getName())
+                                    .on(DSL.table(objectTableName), dialect.indexKeys(schema, index))) {
+                                create.execute();
+                            }
+                        } else {
+                            log.info("Creating index {}:{}", objectTableName, index.getName());
+                            // Fixme
+                            if(!index.getName().equals("expanded")) {
+                                try (final CreateIndexFinalStep create = context.createIndexIfNotExists(index.getName())
+                                        .on(DSL.table(objectTableName), dialect.indexKeys(schema, index))) {
+                                    create.execute();
+                                } catch (final DataAccessException e) {
+                                    // FIXME
+                                    log.error("Failed to create index", e);
+                                }
+                            }
                         }
                     }
                 }
 
                 log.info("Creating table {}", historyTableName);
-                try(final CreateTableFinalStep create = context.createTableIfNotExists(historyTableName)
-                        .columns(columns)
-                        .constraint(DSL.primaryKey(ObjectSchema.ID, ObjectSchema.VERSION))) {
+                try(final CreateTableFinalStep create = withHistoryPrimaryKey(schema, context.createTableIfNotExists(historyTableName)
+                        .columns(columns))) {
                     create.execute();
                 }
+            }
+        }
+
+        private CreateTableFinalStep withPrimaryKey(final LinkableSchema schema, final CreateTableColumnStep create) {
+
+            if(dialect.supportsConstraints()) {
+                return create.constraint(DSL.primaryKey(schema.id()));
+            } else {
+                return create;
+            }
+        }
+
+        private CreateTableFinalStep withHistoryPrimaryKey(final ReferableSchema schema, final CreateTableColumnStep create) {
+
+            if(dialect.supportsConstraints()) {
+                return create.constraint(DSL.primaryKey(ObjectSchema.ID, ObjectSchema.VERSION));
+            } else {
+                return create;
             }
         }
     }
