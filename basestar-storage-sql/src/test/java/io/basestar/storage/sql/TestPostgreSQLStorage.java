@@ -2,6 +2,7 @@ package io.basestar.storage.sql;
 
 import io.basestar.storage.sql.dialect.PostgresDialect;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.Disabled;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.containers.JdbcDatabaseContainer;
 import org.testcontainers.containers.PostgreSQLContainerProvider;
@@ -9,6 +10,7 @@ import org.testcontainers.containers.PostgreSQLContainerProvider;
 import javax.sql.DataSource;
 
 @Slf4j
+@Disabled
 public class TestPostgreSQLStorage extends TestSQLStorage {
 
     private static final String USERNAME = "test";

@@ -3,11 +3,13 @@ package io.basestar.storage.sql;
 import io.basestar.storage.sql.dialect.TrinoDialect;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.dbcp2.BasicDataSource;
+import org.junit.jupiter.api.Disabled;
 import org.testcontainers.containers.TrinoContainer;
 
 import javax.sql.DataSource;
 
 @Slf4j
+@Disabled
 public class TestTrinoSQLStorage extends TestSQLStorage {
 
     private static final String USERNAME = "test";
