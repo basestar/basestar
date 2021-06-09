@@ -70,7 +70,7 @@ class UpsertReducer extends UserDefinedAggregateFunction {
     private boolean isLater(final MutableAggregationBuffer buffer, final Row row) {
 
         int cmp = compare(buffer, row, sequenceOffset);
-        if(cmp == 0) {
+        if(cmp == 0 && versionOffset != null) {
             cmp = compare(buffer, row, versionOffset);
         }
         return cmp >= 0;
