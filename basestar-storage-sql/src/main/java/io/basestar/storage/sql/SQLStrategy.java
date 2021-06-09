@@ -22,6 +22,7 @@ package io.basestar.storage.sql;
 
 import io.basestar.schema.Index;
 import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.Reserved;
 import lombok.Builder;
