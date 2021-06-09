@@ -32,8 +32,7 @@ import org.jooq.exception.DataAccessException;
 import org.jooq.impl.DSL;
 
 import java.util.Collection;
-import java.util.List;mport java.util.Map;
-import java.util.Set;
+import java.util.List;
 
 public interface SQLStrategy {
 
