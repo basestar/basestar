@@ -133,4 +133,10 @@ public class TestTrinoSQLStorage extends TestSQLStorage {
 
         // FIXME
     }
+
+    @Override
+    protected void testRefIndex() {
+
+        // FIXME
+    }
 }

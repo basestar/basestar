@@ -1,9 +1,20 @@
 package io.basestar.storage.sql.dialect;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import io.basestar.schema.Instance;
+import io.basestar.schema.ObjectSchema;
+import io.basestar.schema.use.UseRef;
 import io.basestar.schema.use.UseString;
+import io.basestar.util.Name;
+import org.jooq.Configuration;
 import org.jooq.DataType;
+import org.jooq.QueryPart;
 import org.jooq.SQLDialect;
+import org.jooq.impl.DSL;
+import org.jooq.impl.DefaultDataType;
 import org.jooq.impl.SQLDataType;
+
+import java.util.Map;
 
 public class TrinoDialect extends JSONDialect {
 
@@ -47,6 +58,37 @@ public class TrinoDialect extends JSONDialect {
     public DataType<?> stringType(final UseString type) {
 
         return SQLDataType.VARCHAR;
+    }
+
+    @Override
+    public DataType<?> refType(final UseRef type) {
+
+        return new RefDataType<>();
+    }
+
+    @Override
+    public Object refToSQLValue(final UseRef type, final Instance value) {
+
+        return toJson(value);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Instance refFromSQLValue(final UseRef type, final Object value) {
+
+        final Map<String, ?> map = fromJson(value, new TypeReference<Map<String, ?>>() {});
+        return map == null ? null : new Instance((Map<String, Object>) map);
+    }
+
+    @Override
+    public QueryPart refIdField(final UseRef type, final Name name) {
+
+        final Name rest = name.withoutFirst();
+        if (rest.equals(ObjectSchema.ID_NAME)) {
+            return DSL.field(DSL.name(name.first(), name.last()), String.class);
+        } else {
+            throw new UnsupportedOperationException("Query of this type is not supported");
+        }
     }
 
 //    @Override
@@ -139,4 +181,30 @@ public class TrinoDialect extends JSONDialect {
 //            return "map<varchar," + dataType + ">";
 //        }
 //    }
+
+    static class RefDataType<T> extends DefaultDataType<Map<String, String>> {
+
+        @SuppressWarnings("unchecked")
+        public RefDataType() {
+
+            super(null, (Class<Map<String, String>>)(Class<?>)Map.class, getRefType());
+        }
+
+        @Override
+        public final String getTypeName(final Configuration configuration) {
+
+            return getRefType();
+        }
+
+        @Override
+        public final String getCastTypeName(final Configuration configuration) {
+
+            return getRefType();
+        }
+
+        private static String getRefType() {
+
+            return "row(id varchar)";
+        }
+    }
 }

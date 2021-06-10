@@ -305,12 +305,7 @@ public class SQLStorage implements DefaultLayerStorage {
                         @Override
                         public QueryPart visitRef(final UseRef type) {
 
-                            final Field<String> sourceId = DSL.field(DSL.name(name.first()), String.class);
-                            if (rest.equals(ObjectSchema.ID_NAME)) {
-                                return sourceId;
-                            } else {
-                                throw new UnsupportedOperationException("Query of this type is not supported");
-                            }
+                            return dialect.refIdField(type, name);
                         }
                     });
                 }

@@ -1,14 +1,13 @@
 package io.basestar.storage.sql;
 
 import io.basestar.schema.Instance;
+import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.schema.use.*;
 import io.basestar.secret.Secret;
-import io.basestar.util.Bytes;
-import io.basestar.util.Page;
-import io.basestar.util.Sort;
-import io.basestar.util.Warnings;
+import io.basestar.util.Name;
+import io.basestar.util.*;
 import org.jooq.*;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
@@ -629,6 +628,17 @@ public interface SQLDialect {
             return (Condition)part;
         } else {
             throw new IllegalStateException();
+        }
+    }
+
+    default QueryPart refIdField(final UseRef type, final Name name) {
+
+        final Name rest = name.withoutFirst();
+        final Field<String> sourceId = DSL.field(DSL.name(name.first()), String.class);
+        if (rest.equals(ObjectSchema.ID_NAME)) {
+            return sourceId;
+        } else {
+            throw new UnsupportedOperationException("Query of this type is not supported");
         }
     }
 }
