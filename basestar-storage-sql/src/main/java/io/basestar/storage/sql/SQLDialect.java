@@ -107,7 +107,11 @@ public interface SQLDialect {
 
     <V> Field<?> selectMap(final UseMap<V> type, final Field<?> field);
 
+    Field<?> selectRef(final UseRef type, final Field<?> field);
+
     Field<?> selectStruct(final UseStruct type, final Field<?> field);
+
+    Field<?> selectView(final UseView type, final Field<?> field);
 
     boolean supportsConstraints();
 
@@ -574,9 +578,21 @@ public interface SQLDialect {
             }
 
             @Override
+            public Field<?> visitRef(final UseRef type) {
+
+                return selectRef(type, field);
+            }
+
+            @Override
             public Field<?> visitStruct(final UseStruct type) {
 
                 return selectStruct(type, field);
+            }
+
+            @Override
+            public Field<?> visitView(final UseView type) {
+
+                return selectView(type, field);
             }
         });
     }

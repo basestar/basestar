@@ -215,6 +215,12 @@ public abstract class JSONDialect implements SQLDialect {
     }
 
     @Override
+    public Field<?> selectRef(final UseRef type, final Field<?> field) {
+
+        return field.cast(jsonType());
+    }
+
+    @Override
     public <V> Field<?> selectMap(final UseMap<V> type, final Field<?> field) {
 
         return field.cast(jsonType());
@@ -222,6 +228,12 @@ public abstract class JSONDialect implements SQLDialect {
 
     @Override
     public Field<?> selectStruct(final UseStruct type, final Field<?> field) {
+
+        return field.cast(jsonType());
+    }
+
+    @Override
+    public Field<?> selectView(final UseView type, final Field<?> field) {
 
         return field.cast(jsonType());
     }
