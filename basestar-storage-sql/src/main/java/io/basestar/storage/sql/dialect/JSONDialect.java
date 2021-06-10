@@ -217,7 +217,7 @@ public abstract class JSONDialect implements SQLDialect {
     @Override
     public Field<?> selectRef(final UseRef type, final Field<?> field) {
 
-        return field.cast(jsonType());
+        return field.cast(stringType(UseString.DEFAULT));
     }
 
     @Override

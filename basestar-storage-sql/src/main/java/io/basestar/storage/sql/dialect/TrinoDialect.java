@@ -6,10 +6,7 @@ import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.use.UseRef;
 import io.basestar.schema.use.UseString;
 import io.basestar.util.Name;
-import org.jooq.Configuration;
-import org.jooq.DataType;
-import org.jooq.QueryPart;
-import org.jooq.SQLDialect;
+import org.jooq.*;
 import org.jooq.impl.DSL;
 import org.jooq.impl.DefaultDataType;
 import org.jooq.impl.SQLDataType;
@@ -70,6 +67,12 @@ public class TrinoDialect extends JSONDialect {
     public Object refToSQLValue(final UseRef type, final Instance value) {
 
         return toJson(value);
+    }
+
+    @Override
+    public Field<?> selectRef(final UseRef type, final Field<?> field) {
+
+        return field.cast(jsonType());
     }
 
     @Override
