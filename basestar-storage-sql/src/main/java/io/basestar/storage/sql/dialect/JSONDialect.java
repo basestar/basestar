@@ -243,19 +243,22 @@ public abstract class JSONDialect implements SQLDialect {
         if(value == null) {
             return null;
         }
+        final String str;
+        if(value instanceof JSON) {
+            str = unescapeJson(((JSON)value).data());
+        } else if(value instanceof JSONB) {
+            str = unescapeJson(((JSONB) value).data());
+        } else if(value instanceof String) {
+            str = (String)value;
+        } else {
+            log.error("Unexpected JSON type {} ({})", value.getClass(), value);
+            return null;
+        }
         try {
-            final String str;
-            if(value instanceof JSON) {
-                str = unescapeJson(((JSON)value).data());
-            } else if(value instanceof JSONB) {
-                str = unescapeJson(((JSONB)value).data());
-            } else {
-                log.error("Unexpected JSON type {} ({})", value.getClass(), value);
-                return null;
-            }
             return objectMapper.readValue(str, ref);
         } catch (final IOException e) {
-            throw new UncheckedIOException(e);
+            log.error("Failed to read JSON ({})", str);
+            return null;
         }
     }
 
