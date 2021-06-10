@@ -9,6 +9,7 @@ import io.basestar.schema.use.*;
 import io.basestar.storage.sql.SQLDialect;
 import io.basestar.util.Bytes;
 import io.basestar.util.Page;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.StringEscapeUtils;
 import org.jooq.DataType;
 import org.jooq.Field;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+@Slf4j
 public abstract class JSONDialect implements SQLDialect {
 
     private static final ObjectMapper objectMapper = new ObjectMapper().registerModule(BasestarModule.INSTANCE);
@@ -248,7 +250,8 @@ public abstract class JSONDialect implements SQLDialect {
             } else if(value instanceof JSONB) {
                 str = unescapeJson(((JSONB)value).data());
             } else {
-                throw new IllegalStateException("Unexpected JSON type " + value.getClass());
+                log.error("Unexpected JSON type {} ({})", value.getClass(), value);
+                return null;
             }
             return objectMapper.readValue(str, ref);
         } catch (final IOException e) {
