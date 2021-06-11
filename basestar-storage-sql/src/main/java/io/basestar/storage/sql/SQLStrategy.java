@@ -21,15 +21,11 @@ package io.basestar.storage.sql;
  */
 
 import io.basestar.schema.Index;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.LinkableSchema;
-import io.basestar.schema.ReferableSchema;
-import io.basestar.schema.Reserved;
+import io.basestar.schema.*;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.*;
-import org.jooq.exception.DataAccessException;
 import org.jooq.impl.DSL;
 
 import java.util.Collection;
@@ -40,6 +36,8 @@ public interface SQLStrategy {
     org.jooq.Name objectTableName(ReferableSchema schema);
 
     org.jooq.Name historyTableName(ReferableSchema schema);
+
+    org.jooq.Name viewSchemaName(ViewSchema schema);
 
     // Only used for multi-value indexes
     org.jooq.Name indexTableName(ReferableSchema schema, Index index);
@@ -59,13 +57,19 @@ public interface SQLStrategy {
 
         private final SQLDialect dialect;
 
-        private String name(final ReferableSchema schema) {
+        private String name(final LinkableSchema schema) {
 
-            return schema.getQualifiedName().toString(Reserved.PREFIX);
+            return schema.getQualifiedName().toString("_").toLowerCase();
         }
 
         @Override
         public org.jooq.Name objectTableName(final ReferableSchema schema) {
+
+            return DSL.name(DSL.name(objectSchemaName), DSL.name(name(schema)));
+        }
+
+        @Override
+        public Name viewSchemaName(final ViewSchema schema) {
 
             return DSL.name(DSL.name(objectSchemaName), DSL.name(name(schema)));
         }
@@ -94,9 +98,14 @@ public interface SQLStrategy {
 
             try(final CreateSchemaFinalStep create = context.createSchemaIfNotExists(DSL.name(objectSchemaName))) {
                 create.execute();
+            } catch (final Exception e) {
+                log.error("Failed to create object schema", e);
             }
+
             try(final CreateSchemaFinalStep create = context.createSchemaIfNotExists(DSL.name(historySchemaName))) {
                 create.execute();
+            } catch (final Exception e) {
+                log.error("Failed to create history schema", e);
             }
 
             for(final ReferableSchema schema : schemas) {
@@ -110,6 +119,8 @@ public interface SQLStrategy {
                 try(final CreateTableFinalStep create = withPrimaryKey(schema, context.createTableIfNotExists(objectTableName)
                         .columns(columns))) {
                     create.execute();
+                } catch (final Exception e) {
+                    log.error("Failed to create object table {}", schema.getQualifiedName(), e);
                 }
 
                 if(dialect.supportsIndexes()) {
@@ -121,12 +132,16 @@ public interface SQLStrategy {
                                     .columns(dialect.fields(schema, index))
                                     .constraints(dialect.primaryKey(schema, index))) {
                                 create.execute();
+                            } catch (final Exception e) {
+                                log.error("Failed to create index table {}.{}", schema.getQualifiedName(), index.getName(), e);
                             }
                         } else if(index.isUnique()) {
                             log.info("Creating unique index {}:{}", objectTableName, index.getName());
                             try(final CreateIndexFinalStep create = context.createUniqueIndexIfNotExists(index.getName())
                                     .on(DSL.table(objectTableName), dialect.indexKeys(schema, index))) {
                                 create.execute();
+                            } catch (final Exception e) {
+                                log.error("Failed to create unique index {}.{}", schema.getQualifiedName(), index.getName(), e);
                             }
                         } else {
                             log.info("Creating index {}:{}", objectTableName, index.getName());
@@ -135,9 +150,8 @@ public interface SQLStrategy {
                                 try (final CreateIndexFinalStep create = context.createIndexIfNotExists(index.getName())
                                         .on(DSL.table(objectTableName), dialect.indexKeys(schema, index))) {
                                     create.execute();
-                                } catch (final DataAccessException e) {
-                                    // FIXME
-                                    log.error("Failed to create index", e);
+                                } catch (final Exception e) {
+                                    log.error("Failed to create index {}.{}", schema.getQualifiedName(), index.getName(), e);
                                 }
                             }
                         }

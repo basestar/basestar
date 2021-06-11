@@ -624,7 +624,29 @@ public class SQLStorage implements DefaultLayerStorage {
         @Override
         public WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
 
-            throw new UnsupportedOperationException();
+            // Fixme: should support materialized views
+            if(schema instanceof ReferableSchema) {
+                steps.add(context -> {
+
+                    try {
+
+                        context.insertInto(DSL.table(schemaTableName(schema)))
+                                .set(toRecord(schema, after))
+                                .execute();
+
+                        return BatchResponse.fromRef(schema.getQualifiedName(), after);
+
+                    } catch (final DataAccessException e) {
+                        if (SQLStateClass.C23_INTEGRITY_CONSTRAINT_VIOLATION.equals(e.sqlStateClass())) {
+                            throw new ObjectExistsException(schema.getQualifiedName(), Instance.getId(after));
+                        } else {
+                            throw e;
+                        }
+                    }
+                });
+            }
+
+            return this;
         }
 
         @Override
@@ -703,6 +725,17 @@ public class SQLStorage implements DefaultLayerStorage {
         return DSL.field(DSL.name(ObjectSchema.VERSION), Long.class);
     }
 
+    private org.jooq.Name schemaTableName(final LinkableSchema schema) {
+
+        if(schema instanceof ReferableSchema) {
+            return strategy.objectTableName((ReferableSchema) schema);
+        } else if(schema instanceof ViewSchema) {
+            return strategy.viewSchemaName((ViewSchema) schema);
+        } else {
+            throw new IllegalStateException("Cannot determine name for schema " + schema);
+        }
+    }
+
     private org.jooq.Name objectTableName(final ReferableSchema schema) {
 
         return strategy.objectTableName(schema);
@@ -734,7 +767,7 @@ public class SQLStorage implements DefaultLayerStorage {
                 .collect(Collectors.toList());
     }
 
-    private Map<String, Object> fromRecord(final ReferableSchema schema, final Record record) {
+    private Map<String, Object> fromRecord(final LinkableSchema schema, final Record record) {
 
         final SQLDialect dialect = strategy.dialect();
 
@@ -747,7 +780,7 @@ public class SQLStorage implements DefaultLayerStorage {
         return result;
     }
 
-    private Map<Field<?>, Object> toRecord(final ReferableSchema schema, final Map<String, Object> object) {
+    private Map<Field<?>, Object> toRecord(final LinkableSchema schema, final Map<String, Object> object) {
 
         final SQLDialect dialect = strategy.dialect();
 
