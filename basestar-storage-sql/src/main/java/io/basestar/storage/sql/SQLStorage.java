@@ -102,7 +102,7 @@ public class SQLStorage implements DefaultLayerStorage {
         }
     }
 
-    private List<SelectFieldOrAsterisk> selectFields(final ObjectSchema schema) {
+    private List<SelectFieldOrAsterisk> selectFields(final LinkableSchema schema) {
 
         final SQLDialect dialect = strategy.dialect();
 
@@ -136,6 +136,20 @@ public class SQLStorage implements DefaultLayerStorage {
 //    }
 
     @Override
+    public Pager<Map<String, Object>> queryView(final Consistency consistency, final ViewSchema schema, final Expression query,
+                                                  final List<Sort> sort, final Set<Name> expand) {
+
+        if(schema.isMaterialized()) {
+
+            final Expression bound = query.bind(Context.init());
+            return (stats, token, count) -> queryImpl(schema, null, bound, sort, expand, count, token, stats);
+
+        } else {
+            return DefaultLayerStorage.super.queryView(consistency, schema, query, sort, expand);
+        }
+    }
+
+    @Override
     public Pager<Map<String, Object>> queryObject(final Consistency consistency, final ObjectSchema schema, final Expression query,
                                                   final List<Sort> sort, final Set<Name> expand) {
 
@@ -167,7 +181,7 @@ public class SQLStorage implements DefaultLayerStorage {
         return Pager.merge(Instance.comparator(sort), sources);
     }
 
-    private Condition condition(final DSLContext context, final ObjectSchema schema, final Index index, final Expression expression) {
+    private Condition condition(final DSLContext context, final LinkableSchema schema, final Index index, final Expression expression) {
 
         final SQLDialect dialect = strategy.dialect();
 
@@ -175,7 +189,7 @@ public class SQLStorage implements DefaultLayerStorage {
         if(index == null) {
             columnResolver = objectColumnResolver(context, schema);
         } else {
-            columnResolver = indexColumnResolver(context, schema, index);
+            columnResolver = indexColumnResolver(context, (ReferableSchema) schema, index);
         }
         return new SQLExpressionVisitor(dialect, columnResolver).condition(expression);
     }
@@ -192,7 +206,7 @@ public class SQLStorage implements DefaultLayerStorage {
                 .collect(Collectors.toList());
     }
 
-    private CompletableFuture<Page<Map<String, Object>>> queryImpl(final ObjectSchema schema, final Index index,
+    private CompletableFuture<Page<Map<String, Object>>> queryImpl(final LinkableSchema schema, final Index index,
                                                                    final Expression expression, final List<Sort> sort,
                                                                    final Set<Name> expand, final int count,
                                                                    final Page.Token token, final Set<Page.Stat> stats) {
@@ -201,9 +215,9 @@ public class SQLStorage implements DefaultLayerStorage {
 
         final Table<Record> table;
         if(index == null) {
-            table = DSL.table(objectTableName(schema));
+            table = DSL.table(schemaTableName(schema));
         } else {
-            table = DSL.table(indexTableName(schema, index));
+            table = DSL.table(indexTableName((ReferableSchema)schema, index));
         }
 
         final CompletableFuture<Page<Map<String, Object>>> pageFuture = withContext(context -> {
@@ -269,7 +283,7 @@ public class SQLStorage implements DefaultLayerStorage {
         }
     }
 
-    private Function<Name, QueryPart> objectColumnResolver(final DSLContext context, final ObjectSchema schema) {
+    private Function<Name, QueryPart> objectColumnResolver(final DSLContext context, final LinkableSchema schema) {
 
         final SQLDialect dialect = strategy.dialect();
 
@@ -313,7 +327,7 @@ public class SQLStorage implements DefaultLayerStorage {
         };
     }
 
-    private Function<Name, QueryPart> indexColumnResolver(final DSLContext context, final ObjectSchema schema, final Index index) {
+    private Function<Name, QueryPart> indexColumnResolver(final DSLContext context, final ReferableSchema schema, final Index index) {
 
         final SQLDialect dialect = strategy.dialect();
 
@@ -751,7 +765,7 @@ public class SQLStorage implements DefaultLayerStorage {
         return strategy.indexTableName(schema, index);
     }
 
-    private Map<String, Object> first(final ReferableSchema schema, final Result<Record> result) {
+    private Map<String, Object> first(final LinkableSchema schema, final Result<Record> result) {
 
         if(result.isEmpty()) {
             return null;
@@ -760,7 +774,7 @@ public class SQLStorage implements DefaultLayerStorage {
         }
     }
 
-    private List<Map<String, Object>> all(final ReferableSchema schema, final Result<Record> result) {
+    private List<Map<String, Object>> all(final LinkableSchema schema, final Result<Record> result) {
 
         return result.stream()
                 .map(v -> fromRecord(schema, v))
