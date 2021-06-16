@@ -53,33 +53,33 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 @SuppressWarnings(Warnings.JUNIT_VISIBILITY)
 public abstract class TestStorage {
 
-    private static final int RECORD_COUNT = 100;
+    protected static final int RECORD_COUNT = 100;
 
-    private static final String ADDRESS = "Address";
+    protected static final String ADDRESS = "Address";
 
-    private static final String ADDRESS_STATS = "AddressStats";
+    protected static final String ADDRESS_STATS = "AddressStats";
 
-    private static final String SIMPLE = "Simple";
+    protected static final String SIMPLE = "Simple";
 
-    private static final String POINTSET = "Pointset";
+    protected static final String POINTSET = "Pointset";
 
-    private static final String REF_TARGET = "RefTarget";
+    protected static final String REF_TARGET = "RefTarget";
 
-    private static final String REF_SOURCE = "RefSource";
+    protected static final String REF_SOURCE = "RefSource";
 
-    private static final String DATE_SORT = "DateSort";
+    protected static final String DATE_SORT = "DateSort";
 
-    private static final String EXPANDED = "Expanded";
+    protected static final String EXPANDED = "Expanded";
 
-    private static final String VERSIONED_REF = "VersionedRef";
+    protected static final String VERSIONED_REF = "VersionedRef";
 
-    private static final String INTERFACE = "Interface";
+    protected static final String INTERFACE = "Interface";
 
-    private static final String EXTEND_A = "ExtendA";
+    protected static final String EXTEND_A = "ExtendA";
 
-    private static final String EXTEND_B = "ExtendB";
+    protected static final String EXTEND_B = "ExtendB";
 
-    private static final String SECRET = "Secret";
+    protected static final String SECRET = "Secret";
 
     protected final Namespace namespace;
 

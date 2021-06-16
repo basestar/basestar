@@ -307,10 +307,13 @@ class TestExpression {
     @Test
     void testEquals() {
 
+        check("'a:b' == \"a:b\"", true, Context.init());
+
         Stream.of(
                 Pair.of(ImmutableMap.of("a", 1), ImmutableMap.of("a", 1L)),
                 Pair.of(ImmutableList.of("a", 1, 0L), ImmutableList.of("a", 1L, 0)),
-                Pair.of(ImmutableSet.of(1L), ImmutableSet.of(1))
+                Pair.of(ImmutableSet.of(1L), ImmutableSet.of(1)),
+                Pair.of(ImmutableSet.of("a:b"), ImmutableSet.of("a:b"))
         ).forEach(pair -> {
 
             final Map<String, Object> scope = new HashMap<>();

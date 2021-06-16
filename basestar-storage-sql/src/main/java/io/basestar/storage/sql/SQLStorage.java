@@ -791,6 +791,10 @@ public class SQLStorage implements DefaultLayerStorage {
                 result.put(k, dialect.fromSQLValue(v, data.get(k))));
         schema.getProperties().forEach((k, v) ->
                 result.put(k, dialect.fromSQLValue(v.typeOf(), data.get(k))));
+
+        if(Instance.getSchema(result) == null) {
+            Instance.setSchema(result, schema.getQualifiedName());
+        }
         return result;
     }
 

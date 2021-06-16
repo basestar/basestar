@@ -20,13 +20,15 @@ package io.basestar.storage.sql;
  * #L%
  */
 
-import io.basestar.schema.Namespace;
-import io.basestar.schema.ReferableSchema;
-import io.basestar.schema.Schema;
+import com.google.common.collect.ImmutableSet;
+import io.basestar.expression.Expression;
+import io.basestar.schema.*;
 import io.basestar.storage.Storage;
 import io.basestar.storage.TestStorage;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
+import org.junit.Test;
+import org.testcontainers.shaded.com.google.common.collect.ImmutableList;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -92,4 +94,14 @@ abstract class TestSQLStorage extends TestStorage {
     protected abstract SQLDialect dialect();
 
     protected abstract DataSource dataSource();
+
+    @Test
+    public void testSpecialChars() throws Exception {
+
+        final Storage storage = storage(namespace);
+        final ObjectSchema schema = namespace.requireObjectSchema(ADDRESS);
+
+        storage.query(Consistency.ASYNC, schema, Expression.parse("id == 'SOME:ID'"), ImmutableList.of(), ImmutableSet.of())
+                .page(1).get();
+    }
 }
