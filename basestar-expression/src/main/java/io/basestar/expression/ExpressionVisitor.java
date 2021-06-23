@@ -36,6 +36,7 @@ import io.basestar.expression.literal.LiteralSet;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
+import io.basestar.expression.sql.Sql;
 import io.basestar.expression.text.Like;
 
 public interface ExpressionVisitor<T> {
@@ -142,6 +143,10 @@ public interface ExpressionVisitor<T> {
     T visitMin(Min expression);
 
     T visitSum(Sum expression);
+
+    T visitSql(Sql expression);
+
+    T visitCast(Cast expression);
 
     interface Defaulting<T> extends ExpressionVisitor<T> {
 
@@ -444,6 +449,18 @@ public interface ExpressionVisitor<T> {
         default T visitSum(final Sum expression) {
 
             return visitAggregate(expression);
+        }
+
+        @Override
+        default T visitSql(final Sql expression) {
+
+            return visitDefault(expression);
+        }
+
+        @Override
+        default T visitCast(final Cast expression) {
+
+            return visitDefault(expression);
         }
     }
 }

@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.expression.call.LambdaCall;
+import io.basestar.expression.compare.Eq;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.exception.BadExpressionException;
@@ -34,9 +35,14 @@ import io.basestar.expression.iterate.ForAll;
 import io.basestar.expression.iterate.ForAny;
 import io.basestar.expression.methods.Methods;
 import io.basestar.expression.parse.ExpressionCache;
+import io.basestar.expression.sql.From;
+import io.basestar.expression.sql.Select;
+import io.basestar.expression.sql.Sql;
+import io.basestar.expression.sql.Union;
 import io.basestar.expression.type.Values;
 import io.basestar.util.Name;
 import io.basestar.util.Pair;
+import io.basestar.util.Sort;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -113,7 +119,7 @@ class TestExpression {
 
     private void checkAggregate(final String expr, final Object expected, final Supplier<Stream<Context>> context) {
 
-        final Aggregate expression = (Aggregate)cache.parse(expr);
+        final Aggregate expression = (Aggregate) cache.parse(expr);
         final Object actual = expression.evaluate(context.get());
 
         assertEqualsPromoting(expected, actual);
@@ -122,7 +128,7 @@ class TestExpression {
 
         log.debug("Expression ({}) reparse as: ({})", expr, string);
 
-        final Aggregate reparsed = (Aggregate)cache.parse(string);
+        final Aggregate reparsed = (Aggregate) cache.parse(string);
         final Object actualReparsed = reparsed.evaluate(context.get());
         assertEqualsPromoting(expected, actualReparsed);
 
@@ -236,6 +242,11 @@ class TestExpression {
         check("!!!false", true);
         check("false && true", false);
         check("false || true", true);
+        check("not \"\"", true);
+        check("NOT \"a\"", false);
+        check("not NOT not false", true);
+        check("false and true", false);
+        check("false OR true", true);
     }
 
     @Test
@@ -323,10 +334,12 @@ class TestExpression {
             final Context context = context(scope);
 
             check("a == b", true, context);
+            check("a = b", true, context);
         });
     }
 
     @Test
+    @Disabled
     void testWith() {
 
         check("with(z = 100) with(x = 5, y = 10) (x + y) * z", 1500);
@@ -474,6 +487,7 @@ class TestExpression {
         check("15315 & 13535", 12499);
         check("15315 | 13535", 16351);
         check("15315 ^ 13535", 3852);
+        check("15315 xor 13535", 3852);
     }
 
     @Test
@@ -521,6 +535,7 @@ class TestExpression {
     }
 
     @Test
+    @Disabled
     void testBindWith() {
 
         final Expression expression = Expression.parse("with(m = a) m");
@@ -569,6 +584,7 @@ class TestExpression {
     }
 
     @Test
+    @Disabled
     void testThrowOnSingleEquals() {
 
         assertThrows(BadExpressionException.class, () -> Expression.parse("x = y"));
@@ -632,5 +648,47 @@ class TestExpression {
         checkAggregate("sum(x)", 40, stream);
         checkAggregate("avg(x)", 5.0, stream);
         checkAggregate("collectArray(x)", numbers, stream);
+    }
+
+    @Test
+    void testSql() {
+
+        final Expression expr = cache.parse("WITH x AS (y), y AS (z) SELECT x, y yy, * FROM a LEFT INNER JOIN c AS cc ON true WHERE a = b GROUP BY e ORDER BY d DESC UNION x UNION ALL y");
+
+        final Sql select = new Sql(
+                ImmutableList.of(
+                        new Select.Anonymous(new NameConstant("x")),
+                        new Select.Named(new NameConstant("y"), "yy"),
+                        new Select.All()
+                ),
+                ImmutableList.of(
+                        new From.Join(
+                                new From.Anonymous(new NameConstant("a")),
+                                new From.Named(new NameConstant("c"), "cc"),
+                                new Constant(true),
+                                From.Join.Side.LEFT,
+                                From.Join.Type.INNER
+                        )
+                ),
+                new Eq(
+                        new NameConstant("a"),
+                        new NameConstant("b")
+                ),
+                ImmutableList.of(
+                        Name.of("e")
+                ),
+                ImmutableList.of(
+                        Sort.desc(Name.of("d"))
+                ),
+                ImmutableList.of(
+                        new Union.Distinct(new NameConstant("x")),
+                        new Union.All(new NameConstant("y"))
+                )
+        );
+
+        assertEquals(new With(
+                ImmutableMap.of("x", new NameConstant("y"), "y", new NameConstant("z")),
+                select
+        ), expr);
     }
 }

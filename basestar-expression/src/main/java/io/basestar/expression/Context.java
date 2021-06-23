@@ -75,6 +75,12 @@ public interface Context extends Serializable {
 
                 return methods.callable(target, method, args);
             }
+
+            @Override
+            public Object cast(final Object value, final String type) {
+
+                throw new UnsupportedOperationException();
+            }
         };
     }
 
@@ -103,6 +109,12 @@ public interface Context extends Serializable {
             public Callable callable(final Type target, final String method, final Type... args) {
 
                 return delegate.callable(target, method, args);
+            }
+
+            @Override
+            public Object cast(final Object value, final String type) {
+
+                return delegate.cast(value, type);
             }
         };
     }
@@ -150,4 +162,6 @@ public interface Context extends Serializable {
             }
         }
     }
+
+    Object cast(Object value, String type);
 }

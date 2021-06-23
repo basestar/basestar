@@ -25,7 +25,7 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.Renaming;
 import io.basestar.expression.constant.Constant;
-import io.basestar.expression.function.With;
+import io.basestar.expression.iterate.ForAll;
 import io.basestar.util.Name;
 import lombok.Data;
 
@@ -46,7 +46,7 @@ public class LiteralArray implements Expression {
 
     public static final String TOKEN = "[]";
 
-    public static final int PRECEDENCE = With.PRECEDENCE + 1;
+    public static final int PRECEDENCE = ForAll.PRECEDENCE + 1;
 
     private final List<Expression> args;
 

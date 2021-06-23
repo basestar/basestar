@@ -41,6 +41,8 @@ public interface DecimalContext {
 
     class Default implements DecimalContext {
 
+        public static final int MIN_DIVISION_SCALE = 6;
+
         @Override
         public PrecisionAndScale addition(final int p1, final int s1, final int p2, final int s2) {
 
@@ -63,8 +65,8 @@ public interface DecimalContext {
         public PrecisionAndScale division(final int p1, final int s1, final int p2, final int s2) {
 
             final int l1 = p1 - s1;
-            final int p = l1 + s2 + Math.max(s1 + p2 + 1, 6);
-            final int s = Math.max(s1 + p2 + 1, 6);
+            final int p = l1 + s2 + Math.max(s1 + p2 + 1, MIN_DIVISION_SCALE);
+            final int s = Math.max(s1 + p2 + 1, MIN_DIVISION_SCALE);
             return new PrecisionAndScale(p, s);
         }
     }

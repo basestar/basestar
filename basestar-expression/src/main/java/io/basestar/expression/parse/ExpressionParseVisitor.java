@@ -26,15 +26,11 @@ import io.basestar.expression.arithmetic.Add;
 import io.basestar.expression.arithmetic.Div;
 import io.basestar.expression.arithmetic.Mod;
 import io.basestar.expression.arithmetic.Mul;
-import io.basestar.expression.arithmetic.Pow;
 import io.basestar.expression.arithmetic.Sub;
 import io.basestar.expression.arithmetic.*;
-import io.basestar.expression.bitwise.BitAnd;
 import io.basestar.expression.bitwise.BitLsh;
-import io.basestar.expression.bitwise.BitNot;
-import io.basestar.expression.bitwise.BitOr;
 import io.basestar.expression.bitwise.BitRsh;
-import io.basestar.expression.bitwise.BitXor;
+import io.basestar.expression.bitwise.*;
 import io.basestar.expression.call.LambdaCall;
 import io.basestar.expression.call.MemberCall;
 import io.basestar.expression.compare.Cmp;
@@ -43,9 +39,10 @@ import io.basestar.expression.compare.Gt;
 import io.basestar.expression.compare.Gte;
 import io.basestar.expression.compare.Lt;
 import io.basestar.expression.compare.Lte;
-import io.basestar.expression.compare.Ne;
+import io.basestar.expression.compare.*;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.NameConstant;
+import io.basestar.expression.function.Case;
 import io.basestar.expression.function.In;
 import io.basestar.expression.function.With;
 import io.basestar.expression.function.*;
@@ -57,13 +54,14 @@ import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
 import io.basestar.expression.parse.ExpressionParser.*;
+import io.basestar.expression.sql.From;
+import io.basestar.expression.sql.Select;
+import io.basestar.expression.sql.Sql;
+import io.basestar.expression.sql.Union;
 import io.basestar.expression.text.ILike;
 import io.basestar.expression.text.SLike;
-import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
-import io.basestar.util.Text;
+import io.basestar.util.*;
 import lombok.RequiredArgsConstructor;
-import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.RuleContext;
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -73,11 +71,14 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static io.basestar.expression.parse.ExpressionLexer.Add;
+import static io.basestar.expression.parse.ExpressionLexer.Bang;
+import static io.basestar.expression.parse.ExpressionLexer.BangEq;
 import static io.basestar.expression.parse.ExpressionLexer.BitLsh;
-import static io.basestar.expression.parse.ExpressionLexer.BitNot;
 import static io.basestar.expression.parse.ExpressionLexer.BitRsh;
+import static io.basestar.expression.parse.ExpressionLexer.Desc;
 import static io.basestar.expression.parse.ExpressionLexer.Div;
 import static io.basestar.expression.parse.ExpressionLexer.Eq;
+import static io.basestar.expression.parse.ExpressionLexer.EqEq;
 import static io.basestar.expression.parse.ExpressionLexer.Gt;
 import static io.basestar.expression.parse.ExpressionLexer.Gte;
 import static io.basestar.expression.parse.ExpressionLexer.ILike;
@@ -86,9 +87,9 @@ import static io.basestar.expression.parse.ExpressionLexer.Lt;
 import static io.basestar.expression.parse.ExpressionLexer.Lte;
 import static io.basestar.expression.parse.ExpressionLexer.Mod;
 import static io.basestar.expression.parse.ExpressionLexer.Mul;
-import static io.basestar.expression.parse.ExpressionLexer.Ne;
 import static io.basestar.expression.parse.ExpressionLexer.Not;
 import static io.basestar.expression.parse.ExpressionLexer.Sub;
+import static io.basestar.expression.parse.ExpressionLexer.Tilde;
 
 @RequiredArgsConstructor
 public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression> implements ExpressionVisitor<Expression> {
@@ -112,13 +113,19 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
     }
 
     @Override
-    public Expression visitAs(final AsContext ctx) {
+    public Expression visitIdentifier(final IdentifierContext ctx) {
 
         throw new UnsupportedOperationException();
     }
 
     @Override
     public Expression visitName(final NameContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitNames(final NamesContext ctx) {
 
         throw new UnsupportedOperationException();
     }
@@ -131,6 +138,102 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
 
     @Override
     public Expression visitOf(final OfContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitTypeExpr(final TypeExprContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitWithExprs(final WithExprsContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitWithExpr(final WithExprContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitCaseExpr(final CaseExprContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitSelectAll(final SelectAllContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitSelectAnon(final SelectAnonContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitSelectNamed(final SelectNamedContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitSelectExprs(final SelectExprsContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitFromAnon(final FromAnonContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitFromNamed(final FromNamedContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitFromJoin(final FromJoinContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitFromExprs(final FromExprsContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitUnionDistinct(final UnionDistinctContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitUnionAll(final UnionAllContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitSorts(final SortsContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitSort(final SortContext ctx) {
 
         throw new UnsupportedOperationException();
     }
@@ -200,9 +303,25 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
         return visit(ctx.expr());
     }
 
+    @Override
+    public Expression visitExprCase(final ExprCaseContext ctx) {
+
+        final List<Pair<Expression, Expression>> exprs = new ArrayList<>();
+        for(final CaseExprContext c : ctx.caseExpr()) {
+            exprs.add(Pair.of(visit(c.expr(0)), visit(c.expr(1))));
+        }
+        final Expression otherwise;
+        if(ctx.expr() != null) {
+            otherwise = visit(ctx.expr());
+        } else {
+            otherwise = null;
+        }
+        return new Case(exprs, otherwise);
+    }
+
     protected ContextIterator iterator(final OfContext ctx) {
 
-        final List<String> as = ctx.name().stream().map(RuleContext::getText).collect(Collectors.toList());
+        final List<String> as = ctx.identifier().stream().map(RuleContext::getText).collect(Collectors.toList());
         final Expression with = visit(ctx.expr());
         final Expression where = Nullsafe.map(ctx.where(), w -> visit(w.expr()));
         final ContextIterator iter;
@@ -305,14 +424,25 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
             case Sub:
                 return new Negate(visit(ctx.expr()));
             case Not:
+            case Bang:
                 return new Not(visit(ctx.expr()));
-            case BitNot:
+            case Tilde:
                 return new BitNot(visit(ctx.expr()));
             default:
                 throw new UnsupportedOperationException();
         }
     }
 
+    @Override
+    public Expression visitExprWith(final ExprWithContext ctx) {
+
+        final Map<String, Expression> with = new HashMap<>();
+        final Expression yield = visit(ctx.expr());
+        for(final WithExprContext c : ctx.withExprs().withExpr()) {
+            with.put(c.identifier().getText(), visit(c.expr()));
+        }
+        return new With(with, yield);
+    }
 
     @Override
     public Expression visitExprAdd(final ExprAddContext ctx) {
@@ -330,8 +460,38 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
     @Override
     public Expression visitExprNameConstant(final ExprNameConstantContext ctx) {
 
-        final Name name = Name.of(ctx.Identifier().stream().map(ParseTree::getText).toArray(java.lang.String[]::new));
+        final Name name = name(ctx.name());
         return new NameConstant(name);
+    }
+
+    private List<Name> names(final NamesContext ctx) {
+
+        return ctx == null ? Immutable.list() : ctx.name().stream().map(this::name).collect(Collectors.toList());
+    }
+
+    private Name name(final NameContext ctx) {
+
+        return Name.of(ctx.Identifier().stream().map(ParseTree::getText).toArray(java.lang.String[]::new));
+    }
+
+    private List<Sort> sorts(final SortsContext ctx) {
+
+        return ctx == null ? Immutable.list() : ctx.sort().stream().map(this::sort).collect(Collectors.toList());
+    }
+
+    private Sort sort(final SortContext ctx) {
+
+        final Name name = name(ctx.name());
+        if(ctx.order != null && Desc == ctx.order.getType()) {
+            return Sort.desc(name);
+        } else {
+            return Sort.asc(name);
+        }
+    }
+
+    private String identifier(final IdentifierContext ctx) {
+
+        return ctx.Identifier().getText();
     }
 
     @Override
@@ -345,13 +505,92 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
         );
     }
 
+    private io.basestar.expression.sql.Select visitSelection(final SelectExprContext ctx) {
+
+        if(ctx instanceof SelectAnonContext) {
+            final SelectAnonContext anon = (SelectAnonContext)ctx;
+            final Expression expr = visit(anon.expr());
+            return new Select.Anonymous(expr);
+        } else if(ctx instanceof SelectNamedContext) {
+            final SelectNamedContext named = (SelectNamedContext)ctx;
+            final Expression expr = visit(named.expr());
+            final String name = named.identifier().getText();
+            return new Select.Named(expr, name);
+        } else if(ctx instanceof SelectAllContext) {
+            return new Select.All();
+        } else {
+            throw new UnsupportedOperationException("Unexpected " + ctx);
+        }
+    }
+
+    private io.basestar.expression.sql.From visitFrom(final FromExprContext ctx) {
+
+        if(ctx instanceof FromAnonContext) {
+            final FromAnonContext anon = (FromAnonContext)ctx;
+            final Expression expr = visit(anon.expr());
+            return new From.Anonymous(expr);
+        } else if(ctx instanceof FromNamedContext) {
+            final FromNamedContext named = (FromNamedContext)ctx;
+            final Expression expr = visit(named.expr());
+            final String name = named.identifier().getText();
+            return new From.Named(expr, name);
+        } else if(ctx instanceof FromJoinContext) {
+            final FromJoinContext join = (FromJoinContext)ctx;
+            final io.basestar.expression.sql.From left = visitFrom(join.fromExpr(0));
+            final io.basestar.expression.sql.From right = visitFrom(join.fromExpr(1));
+            final Expression on = visit(join.expr());
+            final io.basestar.expression.sql.From.Join.Side side = Nullsafe.map(join.side, v -> io.basestar.expression.sql.From.Join.Side.valueOf(v.getText().toUpperCase()));
+            final io.basestar.expression.sql.From.Join.Type type = Nullsafe.map(join.type, v ->   io.basestar.expression.sql.From.Join.Type.valueOf(v.getText().toUpperCase()));
+            return new From.Join(left, right, on, side, type);
+        } else {
+            throw new UnsupportedOperationException("Unexpected " + ctx);
+        }
+    }
+
+    private io.basestar.expression.sql.Union visitUnion(final UnionExprContext ctx) {
+
+        if(ctx instanceof UnionDistinctContext) {
+            final UnionDistinctContext distinct = (UnionDistinctContext)ctx;
+            final Expression expr = visit(distinct.expr());
+            return new Union.Distinct(expr);
+        } else if(ctx instanceof UnionAllContext) {
+            final UnionAllContext all = (UnionAllContext) ctx;
+            final Expression expr = visit(all.expr());
+            return new Union.All(expr);
+        } else {
+            throw new UnsupportedOperationException("Unexpected " + ctx);
+        }
+    }
+
+    @Override
+    public Expression visitExprSelect(final ExprSelectContext ctx) {
+
+        final List<io.basestar.expression.sql.Select> select = new ArrayList<>();
+        for(final SelectExprContext c : ctx.selectExprs().selectExpr()) {
+            select.add(visitSelection(c));
+        }
+        final List<io.basestar.expression.sql.From> from = new ArrayList<>();
+        for(final FromExprContext c : ctx.fromExprs().fromExpr()) {
+            from.add(visitFrom(c));
+        }
+        final Expression where = ctx.expr() == null ? new Constant(true) : visit(ctx.expr());
+        final List<Name> group = names(ctx.names());
+        final List<Sort> order = sorts(ctx.sorts());
+        final List<io.basestar.expression.sql.Union> union = new ArrayList<>();
+        for(final UnionExprContext c : ctx.unionExpr()) {
+            union.add(visitUnion(c));
+        }
+        return new Sql(select, from, where, group, order, union);
+    }
+
     @Override
     public Expression visitExprEq(final ExprEqContext ctx) {
 
         switch (ctx.op.getType()) {
             case Eq:
+            case EqEq:
                 return new Eq(visit(ctx.expr(0)), visit(ctx.expr(1)));
-            case Ne:
+            case BangEq:
                 return new Ne(visit(ctx.expr(0)), visit(ctx.expr(1)));
             default:
                 throw new UnsupportedOperationException();
@@ -368,7 +607,7 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
     @Override
     public Expression visitExprLambda(final ExprLambdaContext ctx) {
 
-        final List<String> args = ctx.name().stream().map(NameContext::getText).collect(Collectors.toList());
+        final List<String> args = ctx.identifier().stream().map(RuleContext::getText).collect(Collectors.toList());
         return new Lambda(args, visit(ctx.expr()));
     }
 
@@ -382,6 +621,14 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
     public Expression visitExprOr(final ExprOrContext ctx) {
 
         return new Or(visit(ctx.expr(0)), visit(ctx.expr(1)));
+    }
+
+    @Override
+    public Expression visitExprCast(final ExprCastContext ctx) {
+
+        final Expression expr = visit(ctx.expr());
+        final String type = ctx.typeExpr().identifier().toString();
+        return new io.basestar.expression.function.Cast(expr, type);
     }
 
     @Override
@@ -471,21 +718,21 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
         return new BitOr(visit(ctx.expr(0)), visit(ctx.expr(1)));
     }
 
-    @Override
-    public Expression visitExprWith(final ExprWithContext ctx) {
-
-        final Map<String, Expression> set = new LinkedHashMap<>();
-        for (final AsContext as : ctx.as()) {
-            set.put(as.name().getText(), visit(as.expr()));
-        }
-        final Expression yield = visit(ctx.expr());
-        return new With(set, yield);
-    }
+//    @Override
+//    public Expression visitExprWith(final ExprWithContext ctx) {
+//
+//        final Map<String, Expression> set = new LinkedHashMap<>();
+//        for (final AsContext as : ctx.as()) {
+//            set.put(as.identifier().getText(), visit(as.expr()));
+//        }
+//        final Expression yield = visit(ctx.expr());
+//        return new With(set, yield);
+//    }
 
     private List<Expression> visit(final List<ExprContext> exprs) {
 
         final List<Expression> content = new ArrayList<>();
-        for (final ParserRuleContext expr : exprs) {
+        for (final ExprContext expr : exprs) {
             content.add(visit(expr));
         }
         return content;

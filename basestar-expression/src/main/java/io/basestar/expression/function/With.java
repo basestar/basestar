@@ -25,7 +25,6 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.Renaming;
 import io.basestar.expression.constant.Constant;
-import io.basestar.expression.iterate.ForAll;
 import io.basestar.util.Name;
 import lombok.Data;
 
@@ -47,7 +46,7 @@ public class With implements Expression {
 
     private static final String TOKEN = "with";
 
-    public static final int PRECEDENCE = ForAll.PRECEDENCE + 1;
+    public static final int PRECEDENCE = Index.PRECEDENCE + 1;
 
     private final Map<String, Expression> with;
 

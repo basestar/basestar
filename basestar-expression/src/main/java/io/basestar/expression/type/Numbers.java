@@ -41,8 +41,6 @@ public class Numbers {
 
     private static final BigDecimal DECIMAL_ZERO = BigDecimal.ZERO;
 
-    private static final boolean DECIMAL_OPTION_DEC31 = true;
-
     public static final RoundingMode DECIMAL_ROUNDING_MODE = RoundingMode.HALF_UP;
 
     public static boolean isInteger(final Number value) {
