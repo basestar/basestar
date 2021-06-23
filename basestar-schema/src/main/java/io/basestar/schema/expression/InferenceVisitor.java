@@ -21,9 +21,7 @@ import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
 import io.basestar.expression.methods.Methods;
-import io.basestar.expression.sql.Join;
-import io.basestar.expression.sql.Select;
-import io.basestar.expression.sql.Union;
+import io.basestar.expression.sql.Sql;
 import io.basestar.expression.text.Like;
 import io.basestar.expression.type.DecimalContext;
 import io.basestar.schema.use.*;
@@ -484,21 +482,15 @@ public class InferenceVisitor implements ExpressionVisitor<Use<?>> {
     }
 
     @Override
-    public Use<?> visitSelect(final Select expression) {
+    public Use<?> visitSql(final Sql expression) {
 
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public Use<?> visitUnion(final Union expression) {
+    public Use<?> visitCast(final Cast expression) {
 
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Use<?> visitJoin(final Join expression) {
-
-        throw new UnsupportedOperationException();
+        return context.namedType(expression.getType());
     }
 
     protected Use<?> typeOfCall(final Use<?> target, final String member, final List<Use<?>> args) {

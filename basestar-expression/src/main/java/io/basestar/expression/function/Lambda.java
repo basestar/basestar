@@ -196,5 +196,11 @@ public class Lambda implements Expression {
 
             return context.callable(target, method, args);
         }
+
+        @Override
+        public Object cast(final Object value, final String type) {
+
+            return context.cast(value, type);
+        }
     }
 }

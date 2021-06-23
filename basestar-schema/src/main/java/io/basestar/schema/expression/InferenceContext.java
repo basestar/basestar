@@ -69,6 +69,11 @@ public interface InferenceContext {
         return TypedExpression.from(expr, typeOf(expr));
     }
 
+    default Use<?> namedType(final String type) {
+
+        return Use.fromName(type);
+    }
+
     class FromLayout implements InferenceContext {
 
         private final Layout layout;

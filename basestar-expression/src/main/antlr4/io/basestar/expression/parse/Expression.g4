@@ -13,14 +13,10 @@ pair
  : expr Colon expr
  ;
 
-as
- : identifier Assign expr
- ;
-
 // Important! must list all name-like tokens here
 
 identifier
- : (Identifier | With | For | In | Where | Any | All | Of | Like | ILike | Select | From | Union | Join | Left | Right | Inner | Outer | As | Group | Order | By)
+ : (Identifier | With | For | In | Where | Any | All | Of | Like | ILike | Select | From | Union | Join | Left | Right | Inner | Outer | As | Group | Order | By |  Cast)
  ;
 
 name
@@ -39,26 +35,85 @@ of
  : (identifier | (LParen identifier (Comma identifier)* RParen)) Of expr where?
  ;
 
+typeExpr
+ : identifier
+ ;
+
+withExprs
+ : withExpr (Comma withExpr)*
+ ;
+
+withExpr
+ : identifier As expr
+ ;
+
+caseExpr
+ : When expr Then expr
+ ;
+
+//selectExpr
+// : namedExpr
+// ;
+//
+//fromExpr
+// : expr
+// ;
+
+selectExpr
+ : Mul #selectAll
+ | expr #selectAnon
+ | expr As? identifier #selectNamed
+ ;
+
+selectExprs
+ : selectExpr (Comma selectExpr)*
+ ;
+
+fromExpr
+ : expr #fromAnon
+ | expr As? identifier #fromNamed
+ | fromExpr side=(Left | Right)* type=(Inner | Outer)* Join fromExpr On expr #fromJoin
+ ;
+
+fromExprs
+ : fromExpr (Comma fromExpr)*
+ ;
+
+unionExpr
+ : Union expr #unionDistinct
+ | Union All expr #unionAll
+ ;
+
+sorts
+ : sort (Comma sort)*
+ ;
+
+sort
+ : name order=(Asc | Desc)?
+ ;
+
 expr
  : expr (Dot Identifier)? LParen exprs ? RParen #exprCall
+ | Cast LParen expr As typeExpr RParen #exprCast
 // | expr Dot Mul Dot Identifier #exprStarMember
  | expr Dot Identifier #exprMember
  | expr LSquare expr RSquare #exprIndex
- | op=(Sub | Not | BitNot) expr #exprUnary
- | <assoc=right> expr Pow expr #exprPow
+ | With withExprs expr #exprWith
+ | op=(Sub | Bang | Not | Tilde) expr #exprUnary
+ | <assoc=right> expr AstAst expr #exprPow
  | expr op=(Mul | Div | Mod) expr #exprMul
  | expr op=(Add | Sub ) expr #exprAdd
  | expr op=(BitLsh | BitRsh) expr #exprBitSh
  | expr Cmp expr #exprCmp
  | expr op=(Gte | Lte | Gt | Lt) expr #exprRel
- | expr op=(Eq | Ne) expr #exprEq
- | expr BitAnd expr  #exprBitAnd
- | expr BitXor expr #exprBitXor
- | expr BitOr expr #exprBitOr
+ | expr op=(Eq | EqEq | BangEq) expr #exprEq
+ | expr Amp expr  #exprBitAnd
+ | expr (Xor | Caret) expr #exprBitXor
+ | expr Pipe expr #exprBitOr
  | expr In expr #exprIn
  | expr op=(Like | ILike) expr #exprLike
- | expr And expr #exprAnd
- | expr Or expr #exprOr
+ | expr (AmpAmp | And) expr #exprAnd
+ | expr (PipePipe | Or) expr #exprOr
  | <assoc=right> expr QQMark expr #exprCoalesce
  | expr QMark expr Colon expr #exprIfElse
  | LBrace expr Colon expr For of RBrace #exprForObject
@@ -66,7 +121,6 @@ expr
  | LSquare expr For of RSquare #exprForArray
  | expr For Any of #exprForAny
  | expr For All of #exprForAll
- | With LParen as (Comma as)* RParen expr #exprWith
  | Number #exprNumber
  | Bool #exprBool
  | Null #exprNull
@@ -77,10 +131,8 @@ expr
  | String #exprString
  | LParen expr RParen #exprExpr
  | (identifier | (LParen identifier (Comma identifier)* RParen)) Arrow expr #exprLambda
- | Select exprs From expr (Where expr)? (Group By names)? (Order By names)? #exprSelect
- | expr side=(Left | Right)* type=(Inner | Outer)* Join expr #exprJoin
- | expr Union expr #exprUnion
- | expr As Identifier #exprAs
+ | Select selectExprs From fromExprs (Where expr)? (Group By names)? (Order By sorts)? unionExpr* #exprSelect
+ | Case caseExpr+ (Else expr)? End #exprCase
  ;
 
 Null     : N U L L;
@@ -101,28 +153,42 @@ Left     : L E F T;
 Right    : R I G H T;
 Inner    : I N N E R;
 Outer    : R I G H T;
+On       : O N;
 As       : A S;
 Group    : G R O U P;
 Order    : O R D E R;
 By       : B Y;
+Cast     : C A S T;
+And      : A N D;
+Or       : O R;
+Xor      : X O R;
+Not      : N O T;
+Case     : C A S E;
+When     : W H E N;
+Then     : T H E N;
+Else     : E L S E;
+End      : E N D;
+Is       : I S;
+Asc      : A S C;
+Desc     : D E S C;
 
 Arrow    : '=>';
-Or       : '||';
-And      : '&&';
-BitOr    : '|';
-BitAnd   : '&';
-BitXor   : '^';
-BitNot   : '~';
+PipePipe : '||';
+AmpAmp   : '&&';
+Pipe     : '|';
+Amp      : '&';
+Caret    : '^';
+Tilde    : '~';
 BitLsh   : '<<';
 BitRsh   : '>>';
 Cmp      : '<=>';
-Eq       : '==';
-Ne       : '!=';
+EqEq     : '==';
+BangEq   : '!=';
 Gte      : '>=';
 Lte      : '<=';
-Pow      : '**';
+AstAst   : '**';
 QQMark   : '??';
-Not      : '!';
+Bang     : '!';
 Gt       : '>';
 Lt       : '<';
 Add      : '+';
@@ -140,7 +206,7 @@ Comma    : ',';
 QMark    : '?';
 Colon    : ':';
 Dot      : '.';
-Assign   : '=';
+Eq       : '=';
 
 Bool
  : T R U E

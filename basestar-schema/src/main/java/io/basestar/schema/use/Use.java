@@ -677,4 +677,26 @@ public interface Use<T> extends Serializable {
 
         return UseAny.DEFAULT;
     }
+
+    static Use<?> fromName(final String name) {
+
+        switch (name.toLowerCase()) {
+            case UseBoolean.NAME:
+                return UseBoolean.DEFAULT;
+            case UseInteger.NAME:
+                return UseInteger.DEFAULT;
+            case UseNumber.NAME:
+                return UseNumber.DEFAULT;
+            case UseString.NAME:
+                return UseString.DEFAULT;
+            case UseDate.NAME:
+                return UseDate.DEFAULT;
+            case UseDateTime.NAME:
+                return UseDateTime.DEFAULT;
+            case UseDecimal.NAME:
+                return UseDecimal.DEFAULT;
+            default:
+                throw new UnsupportedOperationException("Type " + name + " not recognized");
+        }
+    }
 }
