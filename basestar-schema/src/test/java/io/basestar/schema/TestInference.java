@@ -143,7 +143,7 @@ class TestInference {
     @Test
     void testWith() {
 
-        test("with(x = number) integer + x", UseNumber.DEFAULT);
+        test("with x as number integer + x", UseNumber.DEFAULT);
     }
 
     @Test

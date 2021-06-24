@@ -98,7 +98,6 @@ expr
 // | expr Dot Mul Dot Identifier #exprStarMember
  | expr Dot Identifier #exprMember
  | expr LSquare expr RSquare #exprIndex
- | With withExprs expr #exprWith
  | op=(Sub | Bang | Not | Tilde) expr #exprUnary
  | <assoc=right> expr AstAst expr #exprPow
  | expr op=(Mul | Div | Mod) expr #exprMul
@@ -133,6 +132,7 @@ expr
  | (identifier | (LParen identifier (Comma identifier)* RParen)) Arrow expr #exprLambda
  | Select selectExprs From fromExprs (Where expr)? (Group By names)? (Order By sorts)? unionExpr* #exprSelect
  | Case caseExpr+ (Else expr)? End #exprCase
+ | With withExprs expr #exprWith
  ;
 
 Null     : N U L L;

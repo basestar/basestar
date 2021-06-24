@@ -4,6 +4,7 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.Renaming;
+import io.basestar.expression.function.Lambda;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
@@ -16,6 +17,8 @@ import java.util.Set;
 public class Sql implements Expression {
 
     public static final String TOKEN = "SELECT";
+
+    public static final int PRECEDENCE = Lambda.PRECEDENCE + 1;
 
     private final List<Select> select;
 

@@ -4,6 +4,7 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.Renaming;
+import io.basestar.expression.sql.Sql;
 import io.basestar.util.Name;
 import io.basestar.util.Pair;
 import lombok.Data;
@@ -13,6 +14,10 @@ import java.util.Set;
 
 @Data
 public class Case implements Expression {
+
+    private static final String TOKEN = "case";
+
+    public static final int PRECEDENCE = Sql.PRECEDENCE + 1;
 
     private final List<Pair<Expression, Expression>> when;
 

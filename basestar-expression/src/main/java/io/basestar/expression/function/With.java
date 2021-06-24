@@ -46,7 +46,7 @@ public class With implements Expression {
 
     private static final String TOKEN = "with";
 
-    public static final int PRECEDENCE = Index.PRECEDENCE + 1;
+    public static final int PRECEDENCE = Case.PRECEDENCE + 1;
 
     private final Map<String, Expression> with;
 
