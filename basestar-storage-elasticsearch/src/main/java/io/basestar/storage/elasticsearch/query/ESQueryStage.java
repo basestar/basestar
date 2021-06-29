@@ -1,12 +1,10 @@
 package io.basestar.storage.elasticsearch.query;
 
-import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.logical.And;
 import io.basestar.schema.Layout;
 import io.basestar.schema.LinkableSchema;
-import io.basestar.schema.ViewSchema;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.expression.TypedExpression;
 import io.basestar.storage.elasticsearch.ElasticsearchStrategy;
@@ -142,6 +140,7 @@ public interface ESQueryStage {
             }
             sourceBuilder.query(query);
             sourceBuilder.size(count);
+            // FIXME: do not track total hits when stats doesn't say we should
             sourceBuilder.trackTotalHits(true);
             request.source(sourceBuilder);
             request.indicesOptions(IndicesOptions.lenientExpandOpen());

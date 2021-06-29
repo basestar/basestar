@@ -1001,4 +1001,26 @@ class TestDatabaseServer {
             }
         };
     }
+
+    @Test
+    void testPassStats() throws Exception {
+
+        final Set<Page.Stat> expected = ImmutableSet.of(Page.Stat.TOTAL);
+
+        final Storage storage = mock(Storage.class);
+        when(storage.query(any(), any(), any(), any(), any()))
+                .thenReturn(((stats, token, count) -> {
+                    assertEquals(expected, stats);
+                    return CompletableFuture.completedFuture(Page.empty());
+                }));
+        final Database database = DatabaseServer.builder()
+                .namespace(namespace).storage(storage)
+                .emitter(emitter).build();
+        final Caller caller = Mockito.mock(Caller.class);
+
+        database.query(caller, QueryOptions.builder()
+                .setSchema(SIMPLE)
+                .setStats(expected)
+                .build()).get();
+    }
 }

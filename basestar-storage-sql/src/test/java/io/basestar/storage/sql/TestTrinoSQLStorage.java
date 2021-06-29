@@ -131,7 +131,7 @@ public class TestTrinoSQLStorage extends TestSQLStorage {
     @Override
     protected void testCreate() {
 
-        // FIXME
+        // Trino connector does not support create
     }
 
     @Override

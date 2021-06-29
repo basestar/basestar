@@ -57,7 +57,6 @@ import io.basestar.storage.exception.ObjectMissingException;
 import io.basestar.storage.overlay.OverlayStorage;
 import io.basestar.util.*;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.units.qual.C;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -485,8 +484,9 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         throw new IllegalStateException("Count too high (max " +  QueryLinkOptions.MAX_COUNT + ")");
                     }
                     final Page.Token paging = options.getPaging();
+                    final Set<Page.Stat> stats = Nullsafe.orDefault(options.getStats());
 
-                    return queryLinkImpl(context(caller), consistency, link, owner, options.getExpand(), count, paging)
+                    return queryLinkImpl(context(caller), consistency, link, owner, options.getExpand(), count, paging, stats)
                             .thenCompose(results -> expandAndRestrict(consistency, consistency, caller, results, options.getExpand()));
                 });
     }
@@ -531,7 +531,9 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final List<Sort> sort = Nullsafe.orDefault(options.getSort(), Collections.emptyList());
         final Expression unrooted = bound.bind(Context.init(), Renaming.removeExpectedPrefix(Name.of(Reserved.THIS)));
 
-        return queryImpl(context, consistency, schema, unrooted, sort, options.getExpand(), count, paging)
+        final Set<Page.Stat> stats = Nullsafe.orDefault(options.getStats());
+
+        return queryImpl(context, consistency, schema, unrooted, sort, options.getExpand(), count, paging, stats)
                 .thenCompose(results -> expandAndRestrict(consistency, consistency, caller, results, options.getExpand()));
     }
 
@@ -613,7 +615,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         final ObjectSchema schema = namespace.requireObjectSchema(event.getSchema());
         final CompletableFuture<Page<Instance>> query = queryImpl(context(Caller.SUPER), Consistency.ATOMIC, schema,
-                event.getExpression(), ImmutableList.of(), ImmutableSet.of(), REF_QUERY_BATCH_SIZE, event.getPaging());
+                event.getExpression(), ImmutableList.of(), ImmutableSet.of(), REF_QUERY_BATCH_SIZE, event.getPaging(), Collections.emptySet());
         return query.thenApply(page -> {
             final Set<Event> events = new HashSet<>();
             page.forEach(instance -> events.add(RefRefreshEvent.of(event.getRef(), schema.getQualifiedName(), Instance.getId(instance))));

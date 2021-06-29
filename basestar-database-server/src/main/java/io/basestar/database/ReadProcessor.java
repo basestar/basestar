@@ -104,7 +104,7 @@ public class ReadProcessor {
     }
 
     protected CompletableFuture<Page<Instance>> queryLinkImpl(final Context context, final Consistency consistency, final Link link, final Instance owner,
-                                                              final Set<Name> expand, final int count, final Page.Token paging) {
+                                                              final Set<Name> expand, final int count, final Page.Token paging, final Set<Page.Stat> stats) {
 
         final Expression expression = link.getExpression()
                 .bind(context.with(ImmutableMap.of(
@@ -112,11 +112,11 @@ public class ReadProcessor {
                 )));
 
         final LinkableSchema linkSchema = link.getSchema();
-        return queryImpl(context, consistency, linkSchema, expression, link.getSort(), expand, count, paging);
+        return queryImpl(context, consistency, linkSchema, expression, link.getSort(), expand, count, paging, stats);
     }
 
     protected CompletableFuture<Page<Instance>> queryImpl(final Context context, final Consistency consistency, final LinkableSchema schema, final Expression expression,
-                                                          final List<Sort> sort, final Set<Name> expand, final int count, final Page.Token paging) {
+                                                          final List<Sort> sort, final Set<Name> expand, final int count, final Page.Token paging, final Set<Page.Stat> stats) {
 
         final List<Sort> pageSort = ImmutableList.<Sort>builder()
                 .addAll(sort)
@@ -128,7 +128,7 @@ public class ReadProcessor {
         final Pager<Instance> pager = storage.query(consistency, schema, expression, pageSort, queryExpand)
                 .map(v -> create(v, expand));
 
-        return pager.page(paging, count)
+        return pager.page(stats, paging, count)
                 .thenApply(results -> {
                     // Expressions that could not be pushed down are applied after auto-paging.
                     return results.filter(instance -> {
@@ -231,7 +231,7 @@ public class ReadProcessor {
                         final ExpandKey<LinkKey> linkKey = ExpandKey.from(LinkKey.from(refKey, link.getName()), expand);
                         log.debug("Expanding link: {}", linkKey);
                         // FIXME: do we need to pre-expand here? original implementation did
-                        links.put(linkKey, queryLinkImpl(context, linkConsistency, link, object, linkKey.getExpand(), EXPAND_LINK_SIZE, null)
+                        links.put(linkKey, queryLinkImpl(context, linkConsistency, link, object, linkKey.getExpand(), EXPAND_LINK_SIZE, null, Collections.emptySet())
                                 .thenCompose(results -> expand(consistency, linkConsistency, context, results, expand)));
                         return null;
                     }
