@@ -412,13 +412,18 @@ public class UpsertTable {
         return reduceDelta(selectDelta(session));
     }
 
-    public Dataset<Row> selectSequenceAfter(final SparkSession session, final String sequence) {
+    public Dataset<Row> selectDeltaAfter(final SparkSession session, final String sequence) {
 
         final String[] locations = sequenceAfter(session, sequence).stream()
                 .flatMap(seq -> seq.locations(deltaLocation, basePartition, partitionFilter))
                 .map(URI::toString).toArray(String[]::new);
 
         return selectDelta(session, locations);
+    }
+
+    public Dataset<Row> selectAfter(final SparkSession session, final String sequence) {
+
+        return reduceDelta(selectDeltaAfter(session, sequence));
     }
 
     protected Dataset<Row> reduceDelta(final Dataset<Row> input) {
