@@ -7,6 +7,7 @@ import io.basestar.mapper.annotation.Property;
 import io.basestar.schema.Bucketing;
 import io.basestar.schema.ReferableSchema;
 import io.basestar.spark.AbstractSparkTest;
+import io.basestar.spark.exception.DataIntegrityException;
 import io.basestar.spark.transform.BucketTransform;
 import io.basestar.spark.util.SparkCatalogUtils;
 import io.basestar.spark.util.SparkRowUtils;
@@ -31,6 +32,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @Slf4j
 class TestUpsertTable extends AbstractSparkTest {
@@ -243,5 +245,45 @@ class TestUpsertTable extends AbstractSparkTest {
 
         final UpsertTable table2 = table.withSchema(appended);
         table2.provision(session);
+    }
+
+    @Test
+    void testValidate() {
+
+        final SparkSession session = session();
+
+        final String database = "tmp_" + UUID.randomUUID().toString().replaceAll("-", "_");
+        final String location = testDataPath("spark/" + database);
+
+        final ExternalCatalog catalog = session.sharedState().externalCatalog();
+        SparkCatalogUtils.ensureDatabase(catalog, database, location);
+
+        final List<D> create = ImmutableList.of(new D("d:1", 5L), new D("d:2", 4L), new D("d:3", 3L), new D("d:4", 2L));
+
+        final BucketTransform bucket = BucketTransform.builder()
+                .bucketing(new Bucketing(ImmutableList.of(Name.of(ReferableSchema.ID)), 2))
+                .build();
+
+        final Dataset<Row> createSource = bucket.accept(session.createDataset(create, Encoders.bean(D.class)).toDF());
+        final StructType initial = createSource.schema();
+
+        final UpsertTable table = UpsertTable.builder()
+                .tableName(Name.of(database, "D"))
+                .schema(initial)
+                .baseLocation(URI.create(location + "/D/base"))
+                .deltaLocation(URI.create(location + "/D/delta"))
+                .state(new UpsertState.Hdfs(URI.create(location + "/D/state")))
+                .partition(ImmutableList.of("__bucket"))
+                .idColumn(ReferableSchema.ID)
+                .build();
+        table.provision(session);
+
+        table.applyChanges(createSource, UpsertTable.sequence(ISO8601.now()), r -> UpsertOp.CREATE, r -> r);
+        table.squashDeltas(session);
+
+        table.applyChanges(createSource, UpsertTable.sequence(ISO8601.now()), r -> UpsertOp.CREATE, r -> r);
+        table.squashDeltas(session);
+
+        assertThrows(DataIntegrityException.class, () -> table.validate(session));
     }
 }
