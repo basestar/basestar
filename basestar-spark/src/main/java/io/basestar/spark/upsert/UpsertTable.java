@@ -6,6 +6,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.basestar.schema.Reserved;
+import io.basestar.spark.exception.DataIntegrityException;
 import io.basestar.spark.query.Query;
 import io.basestar.spark.source.Source;
 import io.basestar.spark.util.*;
@@ -718,6 +719,21 @@ public class UpsertTable {
 
         updateBaseState(session, state -> state.mergePartitions(syncPartitions));
 
+    }
+
+    public void validate(final SparkSession session) {
+
+        if(provisioned) {
+
+            final Dataset<Row> rows = select(session).groupBy(idColumn)
+                    .agg(functions.count(functions.col(idColumn)).as("__count"))
+                    .where(functions.col("__count").gt(functions.lit(1)));
+
+            if(rows.count() > 0) {
+                final List<Row> ids = rows.select(idColumn).limit(10).collectAsList();
+                throw new DataIntegrityException("Duplicate record found for ids " + ids);
+            }
+        }
     }
 
     public void refreshTable(final SparkSession session) {
