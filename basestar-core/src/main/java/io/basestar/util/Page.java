@@ -166,7 +166,8 @@ public class Page<T> extends AbstractList<T> implements Serializable {
     }
 
     public Page.Envelope<T> toEnvelope() {
-        return new Page.Envelope<>(items, paging, stats);
+        // drop empty stats to avoid empty wrapper in serialized output
+        return new Page.Envelope<>(items, paging, Stats.NULL.equals(stats) ? null : stats);
     }
 
     @Data

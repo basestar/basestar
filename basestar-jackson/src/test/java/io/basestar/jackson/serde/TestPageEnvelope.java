@@ -54,7 +54,13 @@ public class TestPageEnvelope {
 
     @Test
     public void testPageEnvelopeNoStatsPaging() throws Exception {
-        Page<Dummy> page = Page.single(new Dummy(Name.parse("dummy3"), emptyList()));
+        Page<Dummy> page = Page.single(dummy3());
+        assertSer(page, "pageEnvelopeNoStatsPaging.expected.json");
+    }
+
+    @Test
+    public void testPageEnvelopeEmptyStats() throws Exception {
+        Page<Dummy> page = new Page<>(singletonList(dummy3()), null, Page.Stats.NULL);
         assertSer(page, "pageEnvelopeNoStatsPaging.expected.json");
     }
 
@@ -68,11 +74,15 @@ public class TestPageEnvelope {
         return new Page<>(
                 asList(
                         new Dummy(Name.parse("dummy1.dummy2"), asList("ld1", "ld2")),
-                        new Dummy(Name.parse("dummy3"), emptyList())
+                        dummy3()
                 ),
                 new Page.Token("token555"),
                 new Page.Stats(123L, 456L)
         );
+    }
+
+    private Dummy dummy3() {
+        return new Dummy(Name.parse("dummy3"), emptyList());
     }
 
     private void assertSer(Object page, String expectedFile) throws IOException, JSONException {
