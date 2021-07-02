@@ -723,20 +723,19 @@ public class UpsertTable {
 
     public void validate(final SparkSession session) {
 
-        if(provisioned) {
+        autoProvision(session);
 
-            final Dataset<Row> rows = selectDelta(session)
-                    .filter(SparkUtils.filter(row -> UpsertOp.CREATE.name().equals(SparkRowUtils.get(row, OPERATION))))
-                    .select(deltaColumnsToBaseColumns())
-                    .union(selectBase(session))
-                    .groupBy(idColumn)
-                    .agg(functions.count(functions.col(idColumn)).as("__count"))
-                    .where(functions.col("__count").gt(functions.lit(1)));
+        final Dataset<Row> rows = selectDelta(session)
+                .filter(SparkUtils.filter(row -> UpsertOp.CREATE.name().equals(SparkRowUtils.get(row, OPERATION))))
+                .select(deltaColumnsToBaseColumns())
+                .union(selectBase(session))
+                .groupBy(idColumn)
+                .agg(functions.count(functions.col(idColumn)).as("__count"))
+                .where(functions.col("__count").gt(functions.lit(1)));
 
-            if(rows.count() > 0) {
-                final List<Row> ids = rows.select(idColumn).limit(10).collectAsList();
-                throw new DataIntegrityException("Duplicate record found for ids " + ids);
-            }
+        if(rows.count() > 0) {
+            final List<Row> ids = rows.select(idColumn).limit(10).collectAsList();
+            throw new DataIntegrityException("Duplicate record found for ids " + ids);
         }
     }
 
@@ -786,6 +785,7 @@ public class UpsertTable {
             provisionBase(session);
             provisionDelta(session);
         }
+        provisioned = true;
     }
 
     public void repair(final SparkSession session) {
@@ -1186,7 +1186,6 @@ public class UpsertTable {
         synchronized (this) {
             if(!provisioned) {
                 provision(session);
-                provisioned = true;
             }
         }
     }
