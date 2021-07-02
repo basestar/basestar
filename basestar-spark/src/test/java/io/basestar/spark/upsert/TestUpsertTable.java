@@ -282,7 +282,6 @@ class TestUpsertTable extends AbstractSparkTest {
         table.squashDeltas(session);
 
         table.applyChanges(createSource, UpsertTable.sequence(ISO8601.now()), r -> UpsertOp.CREATE, r -> r);
-        table.squashDeltas(session);
 
         assertThrows(DataIntegrityException.class, () -> table.validate(session));
     }

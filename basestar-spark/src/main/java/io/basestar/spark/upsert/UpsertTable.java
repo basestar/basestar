@@ -725,7 +725,11 @@ public class UpsertTable {
 
         if(provisioned) {
 
-            final Dataset<Row> rows = select(session).groupBy(idColumn)
+            final Dataset<Row> rows = selectDelta(session)
+                    .filter(SparkUtils.filter(row -> UpsertOp.CREATE.name().equals(SparkRowUtils.get(row, OPERATION))))
+                    .select(deltaColumnsToBaseColumns())
+                    .union(selectBase(session))
+                    .groupBy(idColumn)
                     .agg(functions.count(functions.col(idColumn)).as("__count"))
                     .where(functions.col("__count").gt(functions.lit(1)));
 
