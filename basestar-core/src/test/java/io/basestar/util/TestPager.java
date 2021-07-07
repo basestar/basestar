@@ -48,7 +48,7 @@ class TestPager {
         final Pager<String> pager = Pager.merge(String::compareTo, ImmutableMap.of("a", a, "b", b));
 
         final Page<String> page = pager.page(EnumSet.of(Page.Stat.TOTAL), null,10).get();
-        assertEquals(ImmutableList.of("a", "b", "c", "d", "e", "f", "g", "h"), page.getPage());
+        assertEquals(ImmutableList.of("a", "b", "c", "d", "e", "f", "g", "h"), page.getItems());
         assertNull(page.getPaging());
         assertNotNull(page.getStats());
         assertEquals(20, page.getStats().getTotal());
@@ -76,19 +76,19 @@ class TestPager {
     void testPaging() {
 
         final Page<Integer> page1 = sort().page(3).join();
-        assertEquals(Lists.newArrayList(1, 2, 3), page1.getPage());
+        assertEquals(Lists.newArrayList(1, 2, 3), page1.getItems());
         assertNotNull(page1.getPaging());
         final Page<Integer> page2 = sort().page(page1.getPaging(), 2).join();
-        assertEquals(Lists.newArrayList(4, 5), page2.getPage());
+        assertEquals(Lists.newArrayList(4, 5), page2.getItems());
         assertNotNull(page1.getPaging());
         final Page<Integer> page3 = sort().page(page2.getPaging(), 1).join();
-        assertEquals(Lists.newArrayList(6), page3.getPage());
+        assertEquals(Lists.newArrayList(6), page3.getItems());
         assertNotNull(page3.getPaging());
         final Page<Integer> page4 = sort().page(page3.getPaging(), 6).join();
-        assertEquals(Lists.newArrayList(7, 8, 9, 10, 11, 12), page4.getPage());
+        assertEquals(Lists.newArrayList(7, 8, 9, 10, 11, 12), page4.getItems());
         assertNotNull(page4.getPaging());
         final Page<Integer> page5 = sort().page(page4.getPaging(), 10).join();
-        assertEquals(Lists.newArrayList(13, 14, 15), page5.getPage());
+        assertEquals(Lists.newArrayList(13, 14, 15), page5.getItems());
         assertNull(page5.getPaging());
     }
 }

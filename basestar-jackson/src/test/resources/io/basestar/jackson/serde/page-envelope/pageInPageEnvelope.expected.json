@@ -1,0 +1,29 @@
+{
+  "items": [
+    {
+      "items": [
+        {
+          "dummy1": "dummy1.dummy2",
+          "dummyList": [
+            "ld1",
+            "ld2"
+          ]
+        },
+        {
+          "dummy1": "dummy3",
+          "dummyList": []
+        }
+      ],
+      "paging": "token555",
+      "stats": {
+        "approxTotal": 123,
+        "total": 456
+      }
+    }
+  ],
+  "paging": "token999",
+  "stats": {
+    "approxTotal": 987,
+    "total": 654
+  }
+}

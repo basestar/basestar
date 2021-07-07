@@ -184,7 +184,7 @@ public abstract class TestStorage {
         final Page<Map<String, Object>> results = storage.query(Consistency.ATOMIC, schema, expr, sort, Collections.emptySet()).page(EnumSet.of(Page.Stat.TOTAL), null, 10).join();
 
         final List<String> ids = Arrays.asList("123", "189", "26", "67", "129", "159", "151", "116", "142", "179");
-        assertEquals(ids, results.map(Instance::getId).getPage());
+        assertEquals(ids, results.map(Instance::getId).getItems());
         if(results.getStats() != null && results.getStats().getTotal() != null) {
             assertEquals(16, results.getStats().getTotal());
         }
@@ -208,7 +208,7 @@ public abstract class TestStorage {
         final Expression expr = Expression.parse("country == 'US' || state == 'England'");
         final Page<Map<String, Object>> results = storage.query(Consistency.ATOMIC, schema, expr, sort, Collections.emptySet()).page(EnumSet.of(Page.Stat.TOTAL), null, 10).join();
 
-        assertEquals(ImmutableList.of(), results.getPage());
+        assertEquals(ImmutableList.of(), results.getItems());
     }
 
     // FIXME: needs to cover non-trivial case(s)
@@ -764,7 +764,7 @@ public abstract class TestStorage {
                 v -> schema.create(encoding.decode(v))
         );
 
-        assertEquals(expected, results.getPage());
+        assertEquals(expected, results.getItems());
 //        assertEquals(100, results.size());
 //        final FlatEncoding encoding = new FlatEncoding();
 //

@@ -9,9 +9,9 @@ package io.basestar.database.api;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -82,6 +82,8 @@ public class DatabaseAPI implements API {
 
     private static final String PARAM_PAGING = "paging";
 
+    private static final String PARAM_STATS = "stats";
+
     private static final String PARAM_ID = "id";
 
     private static final String IN_QUERY = "query";
@@ -109,7 +111,7 @@ public class DatabaseAPI implements API {
             final Caller caller = request.getCaller();
 
             final List<String> path;
-            if(request.getPath().equals("/")) {
+            if (request.getPath().equals("/")) {
                 path = Collections.emptyList();
             } else {
                 path = Lists.newArrayList(PATH_SPLITTER.split(request.getPath()));
@@ -118,7 +120,7 @@ public class DatabaseAPI implements API {
             final APIRequest.Method method = request.getMethod();
             switch (path.size()) {
                 case 0:
-                    switch(method) {
+                    switch (method) {
                         case HEAD:
                         case OPTIONS:
                             return head(request);
@@ -136,7 +138,7 @@ public class DatabaseAPI implements API {
                             return head(request);
                         case GET:
                             if (path.get(0).equals("favicon.ico")) {
-                                return CompletableFuture.completedFuture(APIResponse.response(request,404, null));
+                                return CompletableFuture.completedFuture(APIResponse.response(request, 404, null));
                             } else {
                                 return query(caller, Name.parse(path.get(0)), request);
                             }
@@ -194,12 +196,12 @@ public class DatabaseAPI implements API {
 
     private CompletableFuture<APIResponse> head(final APIRequest request) {
 
-        return CompletableFuture.completedFuture(APIResponse.success(request,null));
+        return CompletableFuture.completedFuture(APIResponse.success(request, null));
     }
 
     private CompletableFuture<APIResponse> batch(final Caller caller, final APIRequest request) {
 
-        try(final InputStream is = request.readBody()) {
+        try (final InputStream is = request.readBody()) {
 
             final Options options = request.getContentType().getMapper().readValue(is, Options.class);
             return respond(request, options.apply(caller, database), ignored -> 200);
@@ -231,7 +233,7 @@ public class DatabaseAPI implements API {
                 .build();
 
         return respond(request, database.read(caller, options).thenApply(result -> {
-            if(result != null) {
+            if (result != null) {
                 return result;
             } else {
                 throw new ObjectMissingException(schema, id);
@@ -273,6 +275,7 @@ public class DatabaseAPI implements API {
                 .setExpand(parseExpand(request))
                 .setSort(parseSort(request))
                 .setPaging(parsePaging(request))
+                .setStats(parseStats(request))
                 .build();
 
         return respondPaged(request, database.query(caller, options));
@@ -285,6 +288,7 @@ public class DatabaseAPI implements API {
                 .setCount(parseCount(request))
                 .setExpand(parseExpand(request))
                 .setPaging(parsePaging(request))
+                .setStats(parseStats(request))
                 .build();
 
         return respondPaged(request, database.queryLink(caller, options));
@@ -294,7 +298,7 @@ public class DatabaseAPI implements API {
 
         try {
             final String expand = request.getFirstQuery(PARAM_EXPAND);
-            if(expand != null) {
+            if (expand != null) {
                 return Name.parseSet(expand);
             } else {
                 return null;
@@ -308,7 +312,7 @@ public class DatabaseAPI implements API {
 
         try {
             final String mode = request.getFirstQuery(PARAM_MODE);
-            if(mode != null) {
+            if (mode != null) {
                 return UpdateOptions.Mode.valueOf(mode.toUpperCase());
             } else {
                 return null;
@@ -322,7 +326,7 @@ public class DatabaseAPI implements API {
 
         try {
             final String count = request.getFirstQuery(PARAM_COUNT);
-            if(count != null) {
+            if (count != null) {
                 return Integer.parseInt(count);
             } else {
                 return null;
@@ -336,7 +340,7 @@ public class DatabaseAPI implements API {
 
         try {
             final String sort = request.getFirstQuery(PARAM_SORT);
-            if(sort != null) {
+            if (sort != null) {
                 return Sort.parseList(sort);
             } else {
                 return null;
@@ -350,7 +354,7 @@ public class DatabaseAPI implements API {
 
         try {
             final String version = request.getFirstQuery(PARAM_VERSION);
-            if(version != null) {
+            if (version != null) {
                 return Long.parseLong(version);
             } else {
                 return null;
@@ -364,7 +368,7 @@ public class DatabaseAPI implements API {
 
         try {
             final String paging = request.getFirstQuery(PARAM_PAGING);
-            if(paging != null) {
+            if (paging != null) {
                 return new Page.Token(paging);
             } else {
                 return null;
@@ -374,10 +378,24 @@ public class DatabaseAPI implements API {
         }
     }
 
+    private Set<Page.Stat> parseStats(final APIRequest request) {
+
+        try {
+            final String stats = request.getFirstQuery(PARAM_STATS);
+            if (stats != null) {
+                return Page.Stat.parseSet(stats);
+            } else {
+                return null;
+            }
+        } catch (final Exception e) {
+            throw new InvalidQueryException(PARAM_STATS, e.getMessage());
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private Map<String, Object> parseData(final APIRequest request) {
 
-        try(final InputStream is = request.readBody()) {
+        try (final InputStream is = request.readBody()) {
             return (Map<String, Object>) request.getContentType().getMapper().readValue(is, Map.class);
         } catch (final IOException e) {
             throw new InvalidBodyException(e.getMessage());
@@ -417,7 +435,7 @@ public class DatabaseAPI implements API {
 
     private Multimap<String, String> linkHeaders(final APIRequest request, final Page<?> paged) {
 
-        if(paged.hasMore()) {
+        if (paged.hasMore()) {
             final Multimap<String, String> headers = HashMultimap.create();
             final String path = request.getPath();
             final HashMultimap<String, String> query = HashMultimap.create(request.getQuery());
@@ -458,8 +476,8 @@ public class DatabaseAPI implements API {
         namespace.getSchemas().forEach((qualifiedName, schema) -> {
             final String name = name(schema);
             components.addSchemas(name, schema.openApi());
-            if(schema instanceof ObjectSchema) {
-                final ObjectSchema objectSchema = (ObjectSchema)schema;
+            if (schema instanceof ObjectSchema) {
+                final ObjectSchema objectSchema = (ObjectSchema) schema;
                 components.addRequestBodies(name, openApiRequestBody(openApiRef(objectSchema)));
                 components.addResponses(name, openApiResponse(openApiRef(objectSchema)));
                 components.addResponses(name + "Page", openApiResponse(new ArraySchema().items(openApiRef(objectSchema))));
@@ -588,7 +606,7 @@ public class DatabaseAPI implements API {
     private Content openApiContent(final io.swagger.v3.oas.models.media.Schema<?> schema) {
 
         final Content content = new Content();
-        for(final APIFormat format : APIFormat.values()) {
+        for (final APIFormat format : APIFormat.values()) {
             content.addMediaType(format.getContentType(), new MediaType().schema(schema));
         }
         return content;
