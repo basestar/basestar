@@ -1,49 +1,65 @@
 package io.basestar.schema.from;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
-import io.basestar.schema.*;
+import io.basestar.schema.Bucketing;
+import io.basestar.schema.LinkableSchema;
+import io.basestar.schema.Property;
+import io.basestar.schema.Schema;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.util.SchemaRef;
-import io.basestar.util.*;
+import io.basestar.util.BinaryKey;
+import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
 import lombok.Getter;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 @Getter
-public class FromSchema implements From {
+public class FromSchema extends AbstractFrom {
 
     @Nonnull
     private final LinkableSchema schema;
 
     @Nonnull
-    private final List<Sort> sort;
-
-    @Nonnull
     private final Set<Name> expand;
 
-    private final String as;
+    public FromSchema(final LinkableSchema schema, final Set<Name> expand) {
+
+        this.schema = Nullsafe.require(schema);
+        this.expand = Nullsafe.orDefault(expand);
+    }
+
+    protected FromSchema(final LinkableSchema schema, final Set<Name> expand, final Arguments arguments) {
+
+        super(arguments);
+        this.schema = Nullsafe.require(schema);
+        this.expand = Nullsafe.orDefault(expand);
+    }
 
     public FromSchema(final Schema.Resolver.Constructing resolver, final From.Descriptor from) {
 
+        super(from);
         this.schema = from.getSchema().resolve(resolver);
-        this.sort = Nullsafe.orDefault(from.getSort());
         this.expand = Nullsafe.orDefault(from.getExpand());
-        this.as = from.getAs();
+    }
+
+    @Override
+    protected FromSchema with(final Arguments arguments) {
+
+        return new FromSchema(schema, expand, arguments);
     }
 
     @Override
     public From.Descriptor descriptor() {
 
-        return new From.Descriptor() {
+        return new AbstractFrom.Descriptor(getArguments()) {
             @Override
             public SchemaRef getSchema() {
 
@@ -55,27 +71,15 @@ public class FromSchema implements From {
             }
 
             @Override
-            public List<Sort> getSort() {
-
-                return sort;
-            }
-
-            @Override
             public Set<Name> getExpand() {
 
                 return expand;
-            }
-
-            @Override
-            public String getAs() {
-
-                return as;
             }
         };
     }
 
     @Override
-    public InferenceContext inferenceContext() {
+    protected InferenceContext undecoratedInferenceContext() {
 
         return InferenceContext.from(getSchema());
     }

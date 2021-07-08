@@ -16,7 +16,7 @@ pair
 // Important! must list all name-like tokens here
 
 identifier
- : (Identifier | With | For | In | Where | Any | All | Of | Like | ILike | Select | From | Union | Join | Left | Right | Inner | Outer | As | Group | Order | By |  Cast)
+ : (Identifier | With | For | In | Where | Any | All | Of | Like | ILike | Select | From | Union | Join | Left | Right | Inner | Outer | As | Group | Order | By |  Cast | Full)
  ;
 
 name
@@ -72,7 +72,10 @@ selectExprs
 fromExpr
  : expr #fromAnon
  | expr As? identifier #fromNamed
- | fromExpr side=(Left | Right)* type=(Inner | Outer)* Join fromExpr On expr #fromJoin
+ | fromExpr Inner? Join fromExpr On expr #fromInnerJoin
+ | fromExpr Left Outer? Join fromExpr On expr #fromLeftOuterJoin
+ | fromExpr Right Outer? Join fromExpr On expr #fromRightOuterJoin
+ | fromExpr Full Outer? Join fromExpr On expr #fromFullOuterJoin
  ;
 
 fromExprs
@@ -152,7 +155,8 @@ Join     : J O I N;
 Left     : L E F T;
 Right    : R I G H T;
 Inner    : I N N E R;
-Outer    : R I G H T;
+Outer    : O U T E R;
+Full     : F U L L;
 On       : O N;
 As       : A S;
 Group    : G R O U P;

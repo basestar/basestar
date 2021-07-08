@@ -1,60 +1,68 @@
 package io.basestar.schema.from;
 
 import io.basestar.expression.Expression;
-import io.basestar.expression.constant.NameConstant;
-import io.basestar.schema.*;
+import io.basestar.schema.Bucketing;
+import io.basestar.schema.LinkableSchema;
+import io.basestar.schema.Property;
+import io.basestar.schema.Schema;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
-import io.basestar.schema.use.UseBinary;
 import io.basestar.util.BinaryKey;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
-import io.basestar.util.Sort;
+import io.basestar.util.Nullsafe;
 import lombok.Getter;
 
 import javax.annotation.Nonnull;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Getter
-public class FromUnion implements From {
+public class FromUnion extends AbstractFrom {
 
     @Nonnull
     private final List<From> union;
 
-    private final String as;
+    public FromUnion(final List<From> union) {
+
+        this.union = Nullsafe.require(union);
+    }
+
+    protected FromUnion(final List<From> union, final Arguments arguments) {
+
+        super(arguments);
+        this.union = Nullsafe.require(union);
+    }
 
     public FromUnion(final Schema.Resolver.Constructing resolver, final From.Descriptor from) {
 
+        super(from);
         this.union = Immutable.transform(from.getUnion(), v -> v.build(resolver));
-        this.as = from.getAs();
+    }
+
+    @Override
+    protected FromUnion with(final Arguments arguments) {
+
+        return new FromUnion(union, arguments);
     }
 
     @Override
     public From.Descriptor descriptor() {
 
-        return new From.Descriptor() {
+        return new AbstractFrom.Descriptor(getArguments()) {
 
             @Override
             public List<From.Descriptor> getUnion() {
 
                 return Immutable.transform(union, From::descriptor);
             }
-
-            @Override
-            public String getAs() {
-
-                return as;
-            }
         };
     }
 
     @Override
-    public InferenceContext inferenceContext() {
+    public InferenceContext undecoratedInferenceContext() {
 
         return new InferenceContext.Union(union.stream().map(From::inferenceContext).collect(Collectors.toList()));
     }

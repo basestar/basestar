@@ -208,7 +208,7 @@ public interface QueryPlanner<T> {
             final List<T> inputs = from.getUnion().stream().map(v -> viewFrom(visitor, v, Constant.TRUE, buckets))
                     .collect(Collectors.toList());
 
-            final T result = visitor.union(inputs);
+            final T result = visitor.union(inputs, false);
             return where == null ? result : visitor.filter(result, where);
         }
 

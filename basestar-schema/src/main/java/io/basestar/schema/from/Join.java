@@ -20,8 +20,9 @@ public class Join implements Serializable {
     public enum Type {
 
         INNER,
-        LEFT,
-        RIGHT
+        LEFT_OUTER,
+        RIGHT_OUTER,
+        FULL_OUTER
     }
 
     @Nonnull
@@ -34,6 +35,14 @@ public class Join implements Serializable {
 
     @Nonnull
     private final Type type;
+
+    public Join(final From left, final From right, final Expression on, final Type type) {
+
+        this.left = Nullsafe.require(left);
+        this.right = Nullsafe.require(right);
+        this.on = Nullsafe.require(on);
+        this.type = Nullsafe.require(type);
+    }
 
     public Join(final Schema.Resolver.Constructing resolver, final Descriptor builder) {
 

@@ -232,7 +232,7 @@ public interface QueryResolver {
         }
 
         @Override
-        public Stage union(final List<Stage> inputs) {
+        public Stage union(final List<Stage> inputs, final boolean all) {
 
             if(inputs.isEmpty()) {
                 throw new IllegalStateException("Cannot create empty union");

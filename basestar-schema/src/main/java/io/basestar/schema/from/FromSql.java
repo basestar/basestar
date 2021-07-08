@@ -7,17 +7,19 @@ import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseBinary;
-import io.basestar.util.*;
+import io.basestar.util.BinaryKey;
+import io.basestar.util.Immutable;
+import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
 import lombok.Getter;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Getter
-public class FromSql implements From {
+@Deprecated
+public class FromSql extends AbstractFrom {
 
     private final String sql;
 
@@ -25,20 +27,32 @@ public class FromSql implements From {
 
     private final Map<String, From> using;
 
-    private final String as;
+    public FromSql(final String sql, final List<String> primaryKey, final Map<String, From> using, final Arguments arguments) {
+
+        super(arguments);
+        this.sql = sql;
+        this.primaryKey = Immutable.list(primaryKey);
+        this.using = Immutable.map(using);
+    }
 
     public FromSql(final Schema.Resolver.Constructing resolver, final From.Descriptor from) {
 
+        super(from);
         this.sql = Nullsafe.require(from.getSql());
-        this.primaryKey = Nullsafe.require(from.getPrimaryKey());
+        this.primaryKey = Immutable.list(Nullsafe.require(from.getPrimaryKey()));
         this.using = Immutable.transformValuesSorted(from.getUsing(), (k, v) -> v.build(resolver));
-        this.as = from.getAs();
+    }
+
+    @Override
+    protected AbstractFrom with(final Arguments arguments) {
+
+        return new FromSql(sql, primaryKey, using, arguments);
     }
 
     @Override
     public From.Descriptor descriptor() {
 
-        return new From.Descriptor() {
+        return new AbstractFrom.Descriptor(getArguments()) {
 
             @Override
             public String getSql() {
@@ -57,17 +71,11 @@ public class FromSql implements From {
 
                 return primaryKey;
             }
-
-            @Override
-            public String getAs() {
-
-                return as;
-            }
         };
     }
 
     @Override
-    public InferenceContext inferenceContext() {
+    public InferenceContext undecoratedInferenceContext() {
 
         return InferenceContext.empty();
     }
@@ -93,14 +101,14 @@ public class FromSql implements From {
     @Override
     public void validateSchema(final ViewSchema schema) {
 
-        From.super.validateSchema(schema);
-            primaryKey.forEach(k -> {
-                try {
-                    schema.requireProperty(k, true);
-                } catch (final MissingPropertyException e) {
-                    throw new IllegalStateException("Cannot use " + k + " in primary key (must be defined in the schema)");
-                }
-            });
+        super.validateSchema(schema);
+        primaryKey.forEach(k -> {
+            try {
+                schema.requireProperty(k, true);
+            } catch (final MissingPropertyException e) {
+                throw new IllegalStateException("Cannot use " + k + " in primary key (must be defined in the schema)");
+            }
+        });
     }
 
     @Override

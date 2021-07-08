@@ -653,7 +653,7 @@ class TestExpression {
     @Test
     void testSql() {
 
-        final Expression expr = cache.parse("WITH x AS (y), y AS (z) SELECT x, y yy, * FROM a LEFT INNER JOIN c AS cc ON true WHERE a = b GROUP BY e ORDER BY d DESC UNION x UNION ALL y");
+        final Expression expr = cache.parse("WITH x AS (y), y AS (z) SELECT x, y yy, * FROM a LEFT OUTER JOIN c AS cc ON true WHERE a = b GROUP BY e ORDER BY d DESC UNION x UNION ALL y");
 
         final Sql select = new Sql(
                 ImmutableList.of(
@@ -666,8 +666,7 @@ class TestExpression {
                                 new From.Anonymous(new NameConstant("a")),
                                 new From.Named(new NameConstant("c"), "cc"),
                                 new Constant(true),
-                                From.Join.Side.LEFT,
-                                From.Join.Type.INNER
+                                From.Join.Type.LEFT_OUTER
                         )
                 ),
                 new Eq(

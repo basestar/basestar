@@ -21,6 +21,7 @@ package io.basestar.schema;
  */
 
 import io.basestar.expression.Expression;
+import io.basestar.schema.use.UseInteger;
 import io.basestar.schema.use.UseString;
 import org.junit.jupiter.api.Test;
 
@@ -52,5 +53,16 @@ class TestViewSchema {
         final Property nameProp = schema.getProperties().get("name");
 
         assertTrue(nameProp.typeOf() instanceof UseString);
+    }
+
+    @Test
+    void testSqlView() throws IOException {
+
+        final Namespace namespace = Namespace.load(TestViewSchema.class.getResource("view.yml"));
+
+        final ViewSchema schema = namespace.requireViewSchema("WithSqlSimple");
+        final Property nameProp = schema.getProperties().get("count");
+
+        assertTrue(nameProp.typeOf() instanceof UseInteger);
     }
 }

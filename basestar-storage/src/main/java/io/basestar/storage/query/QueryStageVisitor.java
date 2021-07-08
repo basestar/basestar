@@ -3,7 +3,6 @@ package io.basestar.storage.query;
 import io.basestar.expression.Expression;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.LinkableSchema;
-import io.basestar.schema.ViewSchema;
 import io.basestar.schema.expression.TypedExpression;
 import io.basestar.schema.from.Join;
 import io.basestar.schema.util.Bucket;
@@ -30,7 +29,7 @@ public interface QueryStageVisitor<T> {
 
     T source(LinkableSchema schema, Set<Bucket> buckets);
 
-    T union(List<T> inputs);
+    T union(List<T> inputs, boolean all);
 
     T conform(T input, InstanceSchema schema, Set<Name> expand);
 

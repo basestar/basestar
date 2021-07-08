@@ -203,7 +203,25 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
     }
 
     @Override
-    public Expression visitFromJoin(final FromJoinContext ctx) {
+    public Expression visitFromInnerJoin(final FromInnerJoinContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitFromLeftOuterJoin(final FromLeftOuterJoinContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitFromRightOuterJoin(final FromRightOuterJoinContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitFromFullOuterJoin(final FromFullOuterJoinContext ctx) {
 
         throw new UnsupportedOperationException();
     }
@@ -363,7 +381,6 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
         final ContextIterator of = iterator(ctx.of());
         return new ForSet(yield, of);
     }
-
 
     @Override
     public Expression visitExprForAll(final ExprForAllContext ctx) {
@@ -534,17 +551,29 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
             final Expression expr = visit(named.expr());
             final String name = named.identifier().getText();
             return new From.Named(expr, name);
-        } else if(ctx instanceof FromJoinContext) {
-            final FromJoinContext join = (FromJoinContext)ctx;
-            final io.basestar.expression.sql.From left = visitFrom(join.fromExpr(0));
-            final io.basestar.expression.sql.From right = visitFrom(join.fromExpr(1));
-            final Expression on = visit(join.expr());
-            final io.basestar.expression.sql.From.Join.Side side = Nullsafe.map(join.side, v -> io.basestar.expression.sql.From.Join.Side.valueOf(v.getText().toUpperCase()));
-            final io.basestar.expression.sql.From.Join.Type type = Nullsafe.map(join.type, v ->   io.basestar.expression.sql.From.Join.Type.valueOf(v.getText().toUpperCase()));
-            return new From.Join(left, right, on, side, type);
+        } else if(ctx instanceof FromInnerJoinContext) {
+            final FromInnerJoinContext join = (FromInnerJoinContext)ctx;
+            return fromJoin(From.Join.Type.INNER, join.fromExpr(0), join.fromExpr(1), join.expr());
+        } else if(ctx instanceof FromLeftOuterJoinContext) {
+            final FromLeftOuterJoinContext join = (FromLeftOuterJoinContext)ctx;
+            return fromJoin(From.Join.Type.LEFT_OUTER, join.fromExpr(0), join.fromExpr(1), join.expr());
+        } else if(ctx instanceof FromRightOuterJoinContext) {
+            final FromRightOuterJoinContext join = (FromRightOuterJoinContext)ctx;
+            return fromJoin(From.Join.Type.RIGHT_OUTER, join.fromExpr(0), join.fromExpr(1), join.expr());
+        } else if(ctx instanceof FromFullOuterJoinContext) {
+            final FromFullOuterJoinContext join = (FromFullOuterJoinContext)ctx;
+            return fromJoin(From.Join.Type.FULL_OUTER, join.fromExpr(0), join.fromExpr(1), join.expr());
         } else {
             throw new UnsupportedOperationException("Unexpected " + ctx);
         }
+    }
+
+    private io.basestar.expression.sql.From fromJoin(final From.Join.Type type, final FromExprContext leftExpr, final FromExprContext rightExpr, final ExprContext onExpr) {
+
+        final io.basestar.expression.sql.From left = visitFrom(leftExpr);
+        final io.basestar.expression.sql.From right = visitFrom(rightExpr);
+        final Expression on = visit(onExpr);
+        return new From.Join(left, right, on, type);
     }
 
     private io.basestar.expression.sql.Union visitUnion(final UnionExprContext ctx) {

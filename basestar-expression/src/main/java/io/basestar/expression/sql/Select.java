@@ -7,6 +7,8 @@ public interface Select {
 
     boolean isConstant(Expression.Closure closure);
 
+    <T> T visit(Visitor<T> visitor);
+
     @Data
     class All implements Select {
 
@@ -14,6 +16,12 @@ public interface Select {
         public boolean isConstant(final Expression.Closure closure) {
 
             return true;
+        }
+
+        @Override
+        public <T> T visit(final Visitor<T> visitor) {
+
+            return visitor.visitAll(this);
         }
     }
 
@@ -26,6 +34,12 @@ public interface Select {
         public boolean isConstant(final Expression.Closure closure) {
 
             return expression.isConstant(closure);
+        }
+
+        @Override
+        public <T> T visit(final Visitor<T> visitor) {
+
+            return visitor.visitAnonymous(this);
         }
     }
 
@@ -41,5 +55,20 @@ public interface Select {
 
             return expression.isConstant(closure);
         }
+
+        @Override
+        public <T> T visit(final Visitor<T> visitor) {
+
+            return visitor.visitNamed(this);
+        }
+    }
+
+    interface Visitor<T> {
+
+        T visitAll(All from);
+
+        T visitAnonymous(Anonymous from);
+
+        T visitNamed(Named from);
     }
 }

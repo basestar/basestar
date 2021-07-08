@@ -14,6 +14,8 @@ public interface From {
 
     Set<String> names();
 
+    <T> T visit(Visitor<T> visitor);
+
     @Data
     class Anonymous implements From {
 
@@ -29,6 +31,12 @@ public interface From {
         public Set<String> names() {
 
             return ImmutableSet.of();
+        }
+
+        @Override
+        public <T> T visit(final Visitor<T> visitor) {
+
+            return visitor.visitAnonymous(this);
         }
     }
 
@@ -50,21 +58,23 @@ public interface From {
 
             return ImmutableSet.of(name);
         }
+
+        @Override
+        public <T> T visit(final Visitor<T> visitor) {
+
+            return visitor.visitNamed(this);
+        }
     }
 
     @Data
     class Join implements From {
 
-        public enum Side {
-
-            LEFT,
-            RIGHT
-        }
-
         public enum Type {
 
             INNER,
-            OUTER
+            LEFT_OUTER,
+            RIGHT_OUTER,
+            FULL_OUTER
         }
 
         private final From left;
@@ -72,8 +82,6 @@ public interface From {
         private final From right;
 
         private final Expression on;
-
-        private final Join.Side side;
 
         private final Join.Type type;
 
@@ -88,5 +96,20 @@ public interface From {
 
             return Stream.concat(left.names().stream(), right.names().stream()).collect(Collectors.toSet());
         }
+
+        @Override
+        public <T> T visit(final Visitor<T> visitor) {
+
+            return visitor.visitJoin(this);
+        }
+    }
+
+    interface Visitor<T> {
+
+        T visitAnonymous(Anonymous from);
+
+        T visitNamed(Named from);
+
+        T visitJoin(Join from);
     }
 }

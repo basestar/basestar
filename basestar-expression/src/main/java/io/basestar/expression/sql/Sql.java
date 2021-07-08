@@ -1,5 +1,7 @@
 package io.basestar.expression.sql;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
@@ -57,7 +59,7 @@ public class Sql implements Expression {
     @Override
     public Set<Name> names() {
 
-        return null;
+        return ImmutableSet.of();
     }
 
     @Override
@@ -87,12 +89,12 @@ public class Sql implements Expression {
     @Override
     public List<Expression> expressions() {
 
-        return null;
+        return ImmutableList.of(where);
     }
 
     @Override
     public Expression copy(final List<Expression> expressions) {
 
-        return null;
+        throw new UnsupportedOperationException();
     }
 }

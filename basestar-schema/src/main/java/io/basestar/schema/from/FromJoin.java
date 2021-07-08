@@ -10,7 +10,6 @@ import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseBinary;
 import io.basestar.schema.use.UseString;
 import io.basestar.util.BinaryKey;
-import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.Getter;
@@ -21,38 +20,47 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Getter
-public class FromJoin implements From {
+public class FromJoin extends AbstractFrom {
 
     private final Join join;
 
-    private final String as;
+    public FromJoin(final Join join) {
 
-    public FromJoin(final Schema.Resolver.Constructing resolver, final From.Descriptor from) {
+        this.join = Nullsafe.require(join);
+    }
 
+    public FromJoin(final Join join, final Arguments arguments) {
+
+        super(arguments);
+        this.join = Nullsafe.require(join);
+    }
+
+    protected FromJoin(final Schema.Resolver.Constructing resolver, final From.Descriptor from) {
+
+        super(from);
         this.join = Nullsafe.require(from.getJoin()).build(resolver);
-        this.as = from.getAs();
+    }
+
+    @Override
+    protected FromJoin with(final Arguments arguments) {
+
+        return new FromJoin(join, arguments);
     }
 
     @Override
     public From.Descriptor descriptor() {
 
-        return new From.Descriptor() {
+        return new AbstractFrom.Descriptor(getArguments()) {
             @Override
             public Join.Descriptor getJoin() {
 
                 return join.descriptor();
             }
-
-            @Override
-            public String getAs() {
-
-                return as;
-            }
         };
     }
 
     @Override
-    public InferenceContext inferenceContext() {
+    public InferenceContext undecoratedInferenceContext() {
 
         // Temp exceptions, should support anon left/right sides as long as there are no naming conflicts
         if(join.getLeft().getAs() == null) {

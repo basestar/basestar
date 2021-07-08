@@ -85,3 +85,13 @@ WithInline:
   properties:
     name:
       expression: name
+
+WithSqlSimple:
+  type: view
+  from:
+    sql: SELECT name, COUNT() AS count FROM WithInline WHERE name != 'test' GROUP BY name
+  properties:
+    name:
+      expression: name
+    count:
+      expression: count
