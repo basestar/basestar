@@ -28,6 +28,7 @@ import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -248,7 +249,7 @@ class TestUpsertTable extends AbstractSparkTest {
     }
 
     @Test
-    void testValidate() {
+    void testValidateAndDeduplicate() {
 
         final SparkSession session = session();
 
@@ -281,8 +282,23 @@ class TestUpsertTable extends AbstractSparkTest {
         table.applyChanges(createSource, UpsertTable.sequence(ISO8601.now()), r -> UpsertOp.CREATE, r -> r);
         table.squashDeltas(session);
 
+        final long originalCount = table.select(session).count();
+
         table.applyChanges(createSource, UpsertTable.sequence(ISO8601.now()), r -> UpsertOp.CREATE, r -> r);
 
         assertThrows(DataIntegrityException.class, () -> table.validate(session));
+
+        table.squashDeltas(session);
+
+        assertThrows(DataIntegrityException.class, () -> table.validate(session));
+
+        table.forceDeduplicate(session, UpsertTable.sequence(Instant.now()));
+
+        final long count = table.select(session).count();
+
+        assertEquals(originalCount, count);
+
+        table.validate(session);
     }
+
 }
