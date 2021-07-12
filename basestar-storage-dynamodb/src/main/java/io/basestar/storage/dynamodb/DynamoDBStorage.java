@@ -618,10 +618,19 @@ public class DynamoDBStorage implements DefaultIndexStorage {
         }
 
         @Override
+        @Deprecated
         public WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
 
+            if(schema instanceof ReferableSchema) {
+                items.add(TransactWriteItem.builder()
+                        .put(Put.builder().tableName(strategy.objectTableName((ReferableSchema) schema))
+                                .item(objectItem(strategy, (ReferableSchema) schema, Instance.getId(after), after)).build())
+                        .build());
+
+                exceptions.add(null);
+            }
+
             return this;
-//            throw new UnsupportedOperationException();
         }
 
         @Override
@@ -749,13 +758,25 @@ public class DynamoDBStorage implements DefaultIndexStorage {
             if(items == null || lastEvaluatedKey != null) {
                 final ScanRequest request = ScanRequest.builder()
                         .tableName(strategy.objectTableName(schema))
+                        .filterExpression("#schema = :schema")
+                        .expressionAttributeValues(ImmutableMap.of(
+                                ":schema", AttributeValue.builder().s(schema.getQualifiedName().toString()).build()
+                        ))
+                        .expressionAttributeNames(ImmutableMap.of(
+                                "#schema", ReferableSchema.SCHEMA
+                        ))
                         .totalSegments(segments)
+                        .segment(segment)
                         .exclusiveStartKey(lastEvaluatedKey)
                         .build();
 
                 final ScanResponse response = client.scan(request).join();
                 items = new LinkedList<>(response.items());
+                // FIXME: apply filter expression here
                 lastEvaluatedKey = response.lastEvaluatedKey();
+                if(lastEvaluatedKey.isEmpty()) {
+                    lastEvaluatedKey = null;
+                }
             }
         }
 
@@ -763,7 +784,7 @@ public class DynamoDBStorage implements DefaultIndexStorage {
         public boolean hasNext() {
 
             prepare();
-            return !items.isEmpty() && lastEvaluatedKey == null;
+            return !(items.isEmpty() && lastEvaluatedKey == null);
         }
 
         @Override

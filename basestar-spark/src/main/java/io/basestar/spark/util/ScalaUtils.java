@@ -103,15 +103,23 @@ public class ScalaUtils {
     }
 
     // FIXME: check if this is still needed, it's only useful for scala not really for spark
-    public static <A, R> SerializableFunction1<A, R> scalaFunction(final Function<A, R> fn) {
+    public static <A, R> SerializableFunction1<A, R> scalaFunction(final SerializableFunction<A, R> fn) {
 
         return new SerializableFunction1<>(fn);
     }
 
     // FIXME: check if this is still needed, it's only useful for scala not really for spark
-    public static <A, B, R> SerializableFunction2<A, B, R> scalaFunction(final BiFunction<A, B, R> fn) {
+    public static <A, B, R> SerializableFunction2<A, B, R> scalaFunction(final SerializableBiFunction<A, B, R> fn) {
 
         return new SerializableFunction2<>(fn);
+    }
+
+    public interface SerializableFunction<T, R> extends Function<T, R>, Serializable {
+
+    }
+
+    public interface SerializableBiFunction<A, B, R> extends BiFunction<A, B, R>, Serializable {
+
     }
 
     @RequiredArgsConstructor
