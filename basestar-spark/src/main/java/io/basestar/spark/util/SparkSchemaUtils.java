@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import io.basestar.jackson.BasestarModule;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
+import io.basestar.secret.Secret;
 import io.basestar.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Encoder;
@@ -802,7 +803,8 @@ public class SparkSchemaUtils {
             @Override
             public Object visitSecret(final UseSecret type) {
 
-                return type.create(value, expand, suppress);
+                final Secret converted = type.create(value, expand, suppress);
+                return converted == null ? null : converted.encrypted();
             }
         });
     }
