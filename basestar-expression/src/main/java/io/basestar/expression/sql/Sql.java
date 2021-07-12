@@ -12,6 +12,7 @@ import io.basestar.util.Name;
 import io.basestar.util.Sort;
 import lombok.Data;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
 
@@ -26,15 +27,16 @@ public class Sql implements Expression {
 
     private final List<From> from;
 
+    @Nullable
     private final Expression where;
 
-    private final List<Name> group;
+    private final List<Expression> group;
 
     private final List<Sort> order;
 
     private final List<Union> union;
 
-    public Sql(final List<Select> select, final List<From> from, final Expression where, final List<Name> group, final List<Sort> order, final List<Union> union) {
+    public Sql(final List<Select> select, final List<From> from, @Nullable final Expression where, final List<Expression> group, final List<Sort> order, final List<Union> union) {
 
         this.select = Immutable.list(select);
         this.from = Immutable.list(from);
@@ -47,7 +49,14 @@ public class Sql implements Expression {
     @Override
     public Expression bind(final Context context, final Renaming root) {
 
-        return this;
+        return new Sql(
+                Immutable.transform(select, v -> v.bind(context, root)),
+                Immutable.transform(from, v -> v.bind(context, root)),
+                where == null ? null : where.bind(context, root),
+                Immutable.transform(group, v -> v.bind(context, root)),
+                order,
+                Immutable.transform(union, v -> v.bind(context, root))
+        );
     }
 
     @Override

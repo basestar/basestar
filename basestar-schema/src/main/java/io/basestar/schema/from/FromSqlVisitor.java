@@ -93,7 +93,7 @@ public class FromSqlVisitor implements ExpressionVisitor.Defaulting<From> {
         final List<Select> selects = expression.getSelect();
         final Expression where = expression.getWhere();
         final List<io.basestar.expression.sql.From> froms = expression.getFrom();
-        final List<Name> group = expression.getGroup();
+        final List<Expression> group = expression.getGroup();
         final List<Union> unions = expression.getUnion();
 
         From result;
@@ -105,11 +105,7 @@ public class FromSqlVisitor implements ExpressionVisitor.Defaulting<From> {
         }
 
         if(where != null) {
-            result = result.where(where);
-        }
-
-        if(group != null) {
-            result = result.group(group);
+            result = result.filter(where);
         }
 
         if(selects != null) {
@@ -138,7 +134,19 @@ public class FromSqlVisitor implements ExpressionVisitor.Defaulting<From> {
             }
 
             if(!inputs.isEmpty()) {
-                result = result.select(inputs);
+
+                if(group != null && !group.isEmpty()) {
+                    final List<String> groupNames = Immutable.transform(group, v -> {
+                        if(v instanceof NameConstant) {
+                            return ((NameConstant) v).getName().toString();
+                        } else {
+                            throw new UnsupportedOperationException();
+                        }
+                    });
+                    result = result.agg(groupNames, inputs);
+                } else {
+                    result = result.select(inputs);
+                }
             }
         }
 
@@ -160,7 +168,7 @@ public class FromSqlVisitor implements ExpressionVisitor.Defaulting<From> {
                     }
                 });
             }
-            result = new FromUnion(inputs);
+            result = new FromUnion(inputs, false);
         }
 
         return result;

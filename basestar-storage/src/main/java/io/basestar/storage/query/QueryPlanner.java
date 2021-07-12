@@ -149,14 +149,14 @@ public interface QueryPlanner<T> {
 
             if(materialized.test(schema)) {
                 return refStage(visitor, schema, buckets);
-            } else if(schema.getFrom() instanceof FromSql) {
-                final FromSql from = (FromSql)schema.getFrom();
-                final T result = visitor.sql(from.getSql(), schema, Immutable.transformValues(from.getUsing(),
-                        (k, v) -> {
-                            final FromSchema from2 = (FromSchema)v;
-                            return stage(visitor, from2.getSchema(), Constant.TRUE, from2.getSort(), from2.getExpand(), null);
-                        }));
-                return visitor.conform(result, schema, schema.getExpand());
+//            } else if(schema.getFrom() instanceof FromSql) {
+//                final FromSql from = (FromSql)schema.getFrom();
+//                final T result = visitor.sql(from.getSql(), schema, Immutable.transformValues(from.getUsing(),
+//                        (k, v) -> {
+//                            final FromSchema from2 = (FromSchema)v;
+//                            return stage(visitor, from2.getSchema(), Constant.TRUE, from2.getSort(), from2.getExpand(), null);
+//                        }));
+//                return visitor.conform(result, schema, schema.getExpand());
             } else {
                 if (schema.isAggregating() || schema.isGrouping()) {
                     return visitor.conform(aggViewStage(visitor, schema, buckets), schema, schema.getExpand());
@@ -173,23 +173,96 @@ public interface QueryPlanner<T> {
 
         protected T viewFrom(final QueryStageVisitor<T> visitor, final From from, final Expression where, final Set<Bucket> buckets) {
 
-            if(from instanceof FromSchema) {
-                return viewFromSchema(visitor, (FromSchema)from, where, buckets);
-            } else if(from instanceof FromJoin) {
-                return viewFromJoin(visitor, (FromJoin)from, where, buckets);
-            } else if(from instanceof FromUnion) {
-                return viewFromUnion(visitor, (FromUnion)from, where, buckets);
-            } else {
-                throw new UnsupportedOperationException("View type " + from.getClass() + " not supported");
-            }
+            return from.visit(new FromVisitor<T>() {
+                @Override
+                public T visitAgg(final FromAgg from) {
+
+                    final T result = from.getFrom().visit(this);
+                    return visitor.agg(result, from.getGroup(), from.typedAgg());
+                }
+
+                @Override
+                public T visitAlias(final FromAlias from) {
+
+                    return from.getFrom().visit(this);
+                }
+
+                @Override
+                public T visitFilter(final FromFilter from) {
+
+                    final T result = from.getFrom().visit(this);
+                    return visitor.filter(result, from.getCondition());
+                }
+
+                @Override
+                public T visitJoin(final FromJoin from) {
+
+                    return viewFromJoin(visitor, from, where, buckets);
+                }
+
+                @Override
+                public T visitMap(final FromMap from) {
+
+                    final T result = from.getFrom().visit(this);
+                    return visitor.map(result, from.typedMap());
+                }
+
+                @Override
+                public T visitSchema(final FromSchema from) {
+
+                    return viewFromSchema(visitor, from, where, buckets);
+                }
+
+                @Override
+                public T visitSort(final FromSort from) {
+
+                    final T result = from.getFrom().visit(this);
+                    return visitor.sort(result, from.getSort());
+                }
+
+                @Override
+                public T visitUnion(final FromUnion from) {
+
+                    return viewFromUnion(visitor, from, where, buckets);
+                }
+            });
         }
+
+//        protected T viewFrom(final QueryStageVisitor<T> visitor, final From from, final Expression where, final Set<Bucket> buckets) {
+//
+//            T result = viewFromImpl(visitor, from, where, buckets);
+//            if (from.hasSelect()) {
+//                if(from.isGrouping() || from.isAggregating()) {
+//                    result = visitor.agg(result, from.getGroup(), from.selectExpressions());
+//                } else {
+//                    result = visitor.map(result, from.selectExpressions());
+//                }
+//            }
+//            if(from.hasSort()) {
+//                result = visitor.sort(result, from.getSort());
+//            }
+//            return result;
+//        }
+//
+//        protected T viewFromImpl(final QueryStageVisitor<T> visitor, final From from, final Expression where, final Set<Bucket> buckets) {
+//
+//            if(from instanceof FromSchema) {
+//                return viewFromSchema(visitor, (FromSchema)from, where, buckets);
+//            } else if(from instanceof FromJoin) {
+//                return viewFromJoin(visitor, (FromJoin)from, where, buckets);
+//            } else if(from instanceof FromUnion) {
+//                return viewFromUnion(visitor, (FromUnion) from, where, buckets);
+//            } else {
+//                throw new UnsupportedOperationException("View type " + from.getClass() + " not supported");
+//            }
+//        }
 
         protected T viewFromSchema(final QueryStageVisitor<T> visitor, final FromSchema from, final Expression where, final Set<Bucket> buckets) {
 
             final LinkableSchema fromSchema = from.getSchema();
 
-            final List<Sort> sort = from.getSort();
-            return stage(visitor, fromSchema, where, sort, from.getExpand(), buckets);
+//            final List<Sort> sort = from.getSort();
+            return stage(visitor, fromSchema, where, Immutable.list(), from.getExpand(), buckets);
         }
 
         protected T viewFromJoin(final QueryStageVisitor<T> visitor, final FromJoin from, final Expression where, final Set<Bucket> buckets) {
@@ -218,7 +291,8 @@ public interface QueryPlanner<T> {
             for(final Map.Entry<String, Property> entry : schema.getProperties().entrySet()) {
                 final String name = entry.getKey();
                 final Property property = entry.getValue();
-                final TypedExpression<?> expression = Nullsafe.require(property.getTypedExpression());
+                final TypedExpression<?> expression = Nullsafe.orDefault(property.getTypedExpression(),
+                        () -> TypedExpression.from(new NameConstant(property.getName()), property.getType()));
                 output.put(name, expression);
             }
             // Group names can be either properties in the view, or simple names of members / metadata in from

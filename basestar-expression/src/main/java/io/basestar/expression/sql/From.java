@@ -1,7 +1,9 @@
 package io.basestar.expression.sql;
 
 import com.google.common.collect.ImmutableSet;
+import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.expression.Renaming;
 import lombok.Data;
 
 import java.util.Set;
@@ -15,6 +17,8 @@ public interface From {
     Set<String> names();
 
     <T> T visit(Visitor<T> visitor);
+
+    From bind(Context context, Renaming root);
 
     @Data
     class Anonymous implements From {
@@ -37,6 +41,13 @@ public interface From {
         public <T> T visit(final Visitor<T> visitor) {
 
             return visitor.visitAnonymous(this);
+        }
+
+        @Override
+        public From bind(final Context context, final Renaming root) {
+
+            final Expression bound = expression.bind(context, root);
+            return bound == expression ? this : new Anonymous(bound);
         }
     }
 
@@ -63,6 +74,13 @@ public interface From {
         public <T> T visit(final Visitor<T> visitor) {
 
             return visitor.visitNamed(this);
+        }
+
+        @Override
+        public From bind(final Context context, final Renaming root) {
+
+            final Expression bound = expression.bind(context, root);
+            return bound == expression ? this : new Named(bound, name);
         }
     }
 
@@ -101,6 +119,19 @@ public interface From {
         public <T> T visit(final Visitor<T> visitor) {
 
             return visitor.visitJoin(this);
+        }
+
+        @Override
+        public From bind(final Context context, final Renaming root) {
+
+            final From left = this.left.bind(context, root);
+            final From right = this.right.bind(context, root);
+            final Expression on = this.on.bind(context, root);
+            if(left == this.left && right == this.right && on == this.on) {
+                return this;
+            } else {
+                return new Join(left, right, on, type);
+            }
         }
     }
 

@@ -20,6 +20,7 @@ package io.basestar.mapper.internal;
  * #L%
  */
 
+import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.mapper.MappingContext;
 import io.basestar.schema.Bucketing;
@@ -98,7 +99,7 @@ public class ViewSchemaMapper<T> extends LinkableSchemaMapper<ViewSchema.Builder
                     .setExpand(fromExpand.isEmpty() ? null : fromExpand);
         } else {
             from = From.builder()
-                    .setSql(sql)
+                    .setSql(Expression.parseAndBind(Context.init(), sql))
                     .setUsing(using)
                     .setPrimaryKey(primaryKey);
         }

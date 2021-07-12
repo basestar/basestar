@@ -4,18 +4,18 @@ import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.jackson.serde.AbbrevSetDeserializer;
-import io.basestar.schema.*;
+import io.basestar.schema.Bucketing;
+import io.basestar.schema.LinkableSchema;
+import io.basestar.schema.Schema;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.util.SchemaRef;
-import io.basestar.util.BinaryKey;
-import io.basestar.util.Immutable;
-import io.basestar.util.Name;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -24,6 +24,7 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /*
 
@@ -61,25 +62,51 @@ from:
 
 public interface From extends Serializable {
 
-    String getAs();
-
-    List<Sort> getSort();
-
-    Map<String, Expression> getSelect();
-
-    Expression getWhere();
-
-    List<Name> getGroup();
+//    String getAs();
+//
+//    List<Sort> getSort();
+//
+//    Map<String, Expression> getSelect();
+//
+//    Expression getWhere();
+//
+//    List<String> getGroup();
 
     Descriptor descriptor();
 
-    From as(String as);
+    default From as(final String as) {
 
-    From select(Map<String, Expression> select);
+        return new FromAlias(this, as);
+    }
 
-    From where(Expression where);
+    default From map(final Map<String, Expression> map) {
 
-    From group(List<Name> group);
+        return new FromMap(this, map);
+    }
+
+    default From filter(final Expression where) {
+
+        return new FromFilter(this, where);
+    }
+
+    default From agg(final List<String> group, final Map<String, Expression> agg) {
+
+        return new FromAgg(this, group, agg);
+    }
+
+    default From select(final Map<String, Expression> select) {
+
+        if(select.values().stream().anyMatch(Expression::isAggregate)) {
+            return agg(Immutable.list(), select);
+        } else {
+            return map(select);
+        }
+    }
+
+    default From sort(final List<Sort> order) {
+
+        return new FromSort(this, order);
+    }
 
     InferenceContext inferenceContext();
 
@@ -91,7 +118,7 @@ public interface From extends Serializable {
 
     Use<?> typeOfId();
 
-    void validateProperty(Property property);
+    Map<String, Use<?>> getProperties();
 
     BinaryKey id(Map<String, Object> row);
 
@@ -99,94 +126,340 @@ public interface From extends Serializable {
 
     List<FromSchema> schemas();
 
-    default void validateSchema(final ViewSchema schema) {
+    default boolean hasAlias() {
 
-        schema.getDeclaredProperties().values().forEach(this::validateProperty);
+        return false;
     }
 
-    default boolean isGrouping() {
+    default String getAlias() {
 
-        return !getGroup().isEmpty();
+        throw new UnsupportedOperationException();
     }
 
-    default boolean isAggregating() {
+//    default boolean isGrouping() {
+//
+//        return !getGroup().isEmpty();
+//    }
+//
+//    default boolean isAggregating() {
+//
+//        return getSelect().values().stream().anyMatch(Expression::isAggregate);
+//    }
 
-        return getSelect().values().stream().anyMatch(Expression::isAggregate);
-    }
+//    default boolean hasSelect() {
+//
+//        return !Nullsafe.orDefault(getSelect()).isEmpty();
+//    }
+//
+//    default boolean hasWhere() {
+//
+//        return getWhere() != null;
+//    }
+//
+//    default boolean hasSort() {
+//
+//        return !Nullsafe.orDefault(getSort()).isEmpty();
+//    }
 
     @JsonDeserialize(as = Builder.class)
     interface Descriptor {
 
-        @JsonInclude(JsonInclude.Include.NON_NULL)
-        default SchemaRef getSchema() {
+        String FROM = "from";
 
-            return null;
-        }
+        String SQL = "sql";
 
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        default Set<Name> getExpand() {
+        String UNION = "union";
 
-            return null;
-        }
+        String JOIN = "join";
+
+        String SCHEMA = "schema";
 
         @JsonInclude(JsonInclude.Include.NON_NULL)
-        default String getSql() {
-
-            return null;
-        }
-
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        default Map<String, Descriptor> getUsing() {
-
-            return null;
-        }
-
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        default List<String> getPrimaryKey() {
-
-            return null;
-        }
+        Descriptor getFrom();
 
         @JsonInclude(JsonInclude.Include.NON_NULL)
-        default List<Descriptor> getUnion() {
-
-            return null;
-        }
-
-        @JsonInclude(JsonInclude.Include.NON_NULL)
-        default Join.Descriptor getJoin() {
-
-            return null;
-        }
+        SchemaRef getSchema();
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        List<Sort> getSort();
+        Set<Name> getExpand();
+
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        Expression getSql();
+
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        Map<String, Descriptor> getUsing();
+
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        List<String> getPrimaryKey();
+
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        List<Descriptor> getUnion();
+
+        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+        Boolean getAll();
+
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        Join.Descriptor getJoin();
+
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        List<Sort> getOrder();
 
         @JsonInclude(JsonInclude.Include.NON_NULL)
         Map<String, Expression> getSelect();
 
         @JsonInclude(JsonInclude.Include.NON_NULL)
-        Expression getWhere();
+        List<String> getGroup();
 
         @JsonInclude(JsonInclude.Include.NON_NULL)
-        List<Name> getGroup();
+        Expression getWhere();
 
         @JsonInclude(JsonInclude.Include.NON_NULL)
         String getAs();
 
-        default From build(final Schema.Resolver.Constructing resolver) {
+        default From buildUndecorated(final Schema.Resolver.Constructing resolver, final Context context) {
 
-            if(getSql() != null) {
-                final Map<String, From> using = Immutable.transformValues(getUsing(), (k, v) -> v.build(resolver));
-                final FromSqlVisitor visitor = new FromSqlVisitor(resolver, using);
-                final Context context = Context.init();
-                return visitor.visit(Expression.parseAndBind(context, getSql()));
-            } else if(getUnion() != null) {
-                return new FromUnion(resolver, this);
-            } else if(getJoin() != null) {
-                return new FromJoin(resolver, this);
+            final Descriptor from = getFrom();
+            final Expression sql = getSql();
+            final List<Descriptor> union = getUnion();
+            final Join.Descriptor join = getJoin();
+            final SchemaRef schema = getSchema();
+
+            final Map<String, Boolean> args = ImmutableMap.of(
+                    FROM, from != null,
+                    SQL, sql != null,
+                    UNION, union != null,
+                    JOIN, join != null,
+                    SCHEMA, schema != null
+            );
+
+            final List<String> names = args.entrySet().stream().filter(Map.Entry::getValue)
+                    .map(Map.Entry::getKey).collect(Collectors.toList());
+
+            if(names.size() == 1) {
+
+                if(from != null) {
+                    return from.build(resolver, context);
+                } else if(sql != null) {
+                    final Map<String, From> using = Immutable.transformValues(getUsing(), (k, v) -> v.build(resolver, context));
+                    final FromSqlVisitor visitor = new FromSqlVisitor(resolver, using);
+                    return visitor.visit(sql.bind(context));
+                } else if(union != null && !union.isEmpty()) {
+                    final List<From> unionFrom = Immutable.transform(getUnion(), v -> v.build(resolver, context));
+                    return new FromUnion(unionFrom, Nullsafe.orDefault(getAll()));
+                } else if(join != null) {
+                    final Join joinFrom = join.build(resolver, context);
+                    return new FromJoin(joinFrom);
+                } else if(schema != null) {
+                    return new FromSchema(schema.resolve(resolver), Nullsafe.orDefault(getExpand()));
+                } else {
+                    throw new UnsupportedOperationException();
+                }
+
+            } else if(names.size() == 0) {
+                throw new IllegalStateException("Exactly one of " + args.keySet() + " is required");
             } else {
-                return new FromSchema(resolver, this);
+                throw new IllegalStateException("Exactly one of " + args.keySet() + " is required (provided: " + names + ")");
+            }
+        }
+
+        default From build(final Schema.Resolver.Constructing resolver, final Context context) {
+
+            From result = buildUndecorated(resolver, context);
+            final Expression where = getWhere();
+            if(where != null) {
+                result = result.filter(where.bind(context));
+            }
+            final List<String> group = getGroup();
+            final Map<String, Expression> select = getSelect();
+            if(group != null && !group.isEmpty()) {
+                result = result.agg(group, Immutable.transformValues(select, (k, v) -> v.bind(context)));
+            } else if(select != null && !select.isEmpty()) {
+                result = result.select(Immutable.transformValues(select, (k, v) -> v.bind(context)));
+            }
+            final List<Sort> order = getOrder();
+            if(order != null && !order.isEmpty()) {
+                result = result.sort(order);
+            }
+            final String as = getAs();
+            if(as != null) {
+                result = result.as(as);
+            }
+            return result;
+        }
+
+        interface Defaulting extends Descriptor {
+
+            @Override
+            default Descriptor getFrom() {
+
+                return null;
+            }
+
+            @Override
+            default SchemaRef getSchema() {
+
+                return null;
+            }
+
+            @Override
+            default Set<Name> getExpand() {
+
+                return null;
+            }
+
+            @Override
+            default Expression getSql() {
+
+                return null;
+            }
+
+            @Override
+            default Map<String, Descriptor> getUsing() {
+
+                return null;
+            }
+
+            @Override
+            default List<String> getPrimaryKey() {
+
+                return null;
+            }
+
+            @Override
+            default List<Descriptor> getUnion() {
+
+                return null;
+            }
+
+            @Override
+            default Boolean getAll() {
+
+                return null;
+            }
+
+            @Override
+            default Join.Descriptor getJoin() {
+
+                return null;
+            }
+
+            @Override
+            default List<Sort> getOrder() {
+
+                return null;
+            }
+
+            @Override
+            default Map<String, Expression> getSelect() {
+
+                return null;
+            }
+
+            @Override
+            default List<String> getGroup() {
+
+                return null;
+            }
+
+            @Override
+            default Expression getWhere() {
+
+                return null;
+            }
+
+            @Override
+            default String getAs() {
+
+                return null;
+            }
+        }
+
+        interface Delegating extends Descriptor {
+
+            Descriptor delegate();
+
+            @Override
+            default Descriptor getFrom() {
+
+                return delegate().getFrom();
+            }
+
+            @Override
+            default SchemaRef getSchema() {
+
+                return delegate().getSchema();
+            }
+
+            @Override
+            default Set<Name> getExpand() {
+
+                return delegate().getExpand();
+            }
+
+            @Override
+            default Expression getSql() {
+
+                return delegate().getSql();
+            }
+
+            @Override
+            default Map<String, Descriptor> getUsing() {
+
+                return delegate().getUsing();
+            }
+
+            @Override
+            default List<String> getPrimaryKey() {
+
+                return delegate().getPrimaryKey();
+            }
+
+            @Override
+            default List<Descriptor> getUnion() {
+
+                return delegate().getUnion();
+            }
+
+            @Override
+            default Boolean getAll() {
+
+                return delegate().getAll();
+            }
+
+            @Override
+            default Join.Descriptor getJoin() {
+
+                return delegate().getJoin();
+            }
+
+            @Override
+            default List<Sort> getOrder() {
+
+                return delegate().getOrder();
+            }
+
+            @Override
+            default Map<String, Expression> getSelect() {
+
+                return delegate().getSelect();
+            }
+
+            @Override
+            default List<String> getGroup() {
+
+                return delegate().getGroup();
+            }
+
+            @Override
+            default Expression getWhere() {
+
+                return delegate().getWhere();
+            }
+
+            @Override
+            default String getAs() {
+
+                return delegate().getAs();
             }
         }
     }
@@ -196,6 +469,9 @@ public interface From extends Serializable {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonPropertyOrder({"schema", "expand", "sort"})
     class Builder implements Descriptor {
+
+        @Nullable
+        private Descriptor from;
 
         @Nullable
         private SchemaRef schema;
@@ -209,10 +485,10 @@ public interface From extends Serializable {
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         @JsonDeserialize(using = AbbrevListDeserializer.class)
-        private List<Sort> sort;
+        private List<Sort> order;
 
         @Nullable
-        private String sql;
+        private Expression sql;
 
         @Nullable
         private Map<String, Descriptor> using;
@@ -223,6 +499,9 @@ public interface From extends Serializable {
 
         @Nullable
         private List<Descriptor> union;
+
+        @Nullable
+        private Boolean all;
 
         @Nullable
         private Join.Descriptor join;
@@ -236,10 +515,10 @@ public interface From extends Serializable {
         private Map<String, Expression> select;
 
         @Nullable
-        private Expression where;
+        private List<String> group;
 
         @Nullable
-        private List<Name> group;
+        private Expression where;
 
         @Nullable
         private Integer limit;
@@ -258,10 +537,17 @@ public interface From extends Serializable {
 
             return new Builder().setSchema(SchemaRef.withName(schema));
         }
+
+        public Builder setSort(final List<Sort> sort) {
+
+            return setOrder(sort);
+        }
     }
 
     static Builder builder() {
 
         return new Builder();
     }
+
+    <T> T visit(FromVisitor<T> visitor);
 }

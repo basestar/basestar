@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
+import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
@@ -180,7 +181,7 @@ public class ViewSchema implements LinkableSchema {
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private Map<String, Serializable> extensions;
         
-        public ViewSchema.Builder setSql(final String sql) {
+        public ViewSchema.Builder setSql(final Expression sql) {
             
             if(this.from == null) {
                 this.from = new io.basestar.schema.from.From.Builder();
@@ -278,7 +279,7 @@ public class ViewSchema implements LinkableSchema {
         this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
         this.materialized = Nullsafe.orDefault(descriptor.getMaterialized());
         final From.Descriptor from = Nullsafe.require(descriptor.getFrom());
-        this.from = from.build(resolver);
+        this.from = from.build(resolver, Context.init());
         this.sort = Immutable.list(descriptor.getSort());
         this.description = descriptor.getDescription();
         this.group = Immutable.list(descriptor.getGroup());
@@ -294,7 +295,6 @@ public class ViewSchema implements LinkableSchema {
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName.toString());
         }
-        this.from.validateSchema(this);
         this.aggregating = getProperties().values().stream().map(Property::getExpression)
                 .filter(Objects::nonNull).anyMatch(Expression::isAggregate);
     }

@@ -11,7 +11,6 @@ import io.basestar.schema.Layout;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.ViewSchema;
 import io.basestar.schema.expression.TypedExpression;
-import io.basestar.schema.from.FromSql;
 import io.basestar.schema.from.Join;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseStruct;
@@ -25,16 +24,23 @@ import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.spark.util.SparkUtils;
 import io.basestar.storage.query.QueryPlanner;
 import io.basestar.storage.query.QueryStageVisitor;
-import io.basestar.util.*;
+import io.basestar.util.Immutable;
+import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
+import io.basestar.util.Sort;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
-import org.apache.spark.sql.*;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SQLContext;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -59,39 +65,39 @@ public interface QueryResolver {
 
     Query<Row> resolve(LinkableSchema schema, Expression query, List<Sort> sort, Set<Name> expand, Set<Bucket> buckets);
 
-    default Stage sql(final String sql, final InstanceSchema schema, final Map<String, Stage> with) {
-
-        SparkSession session = null;
-        for(final Map.Entry<String, Stage> entry : with.entrySet()) {
-            final String as = entry.getKey();
-            final Stage query = entry.getValue();
-            final Dataset<Row> ds = query.dataset();
-            ds.registerTempTable(as);
-            session = ds.sparkSession();
-        }
-        if(session != null) {
-            Dataset<Row> result = session.sql(sql);
-            if(schema instanceof ViewSchema) {
-                final ViewSchema view = (ViewSchema)schema;
-                final FromSql from = (FromSql)view.getFrom();
-                final StructField idField = SparkRowUtils.field(view.id(), DataTypes.BinaryType);
-                final StructType sourceType = result.schema();
-                final StructType targetType = SparkRowUtils.append(sourceType, idField);
-                result = result.map(SparkUtils.map(row -> {
-                    final List<Object> keys = new ArrayList<>();
-                    for(final String name : from.getPrimaryKey()) {
-                        keys.add(SparkSchemaUtils.fromSpark(SparkRowUtils.get(row, name)));
-                    }
-                    final byte[] id = BinaryKey.from(keys).getBytes();
-                    return SparkRowUtils.append(row, idField, id);
-                }), RowEncoder.apply(targetType));
-            }
-            final Dataset<Row> tmp = result;
-            return Stage.from(() -> tmp, schema);
-        } else {
-            throw new IllegalStateException("SQL query must define at least one source");
-        }
-    }
+//    default Stage sql(final String sql, final InstanceSchema schema, final Map<String, Stage> with) {
+//
+//        SparkSession session = null;
+//        for(final Map.Entry<String, Stage> entry : with.entrySet()) {
+//            final String as = entry.getKey();
+//            final Stage query = entry.getValue();
+//            final Dataset<Row> ds = query.dataset();
+//            ds.registerTempTable(as);
+//            session = ds.sparkSession();
+//        }
+//        if(session != null) {
+//            Dataset<Row> result = session.sql(sql);
+//            if(schema instanceof ViewSchema) {
+//                final ViewSchema view = (ViewSchema)schema;
+//                final FromSql from = (FromSql)view.getFrom();
+//                final StructField idField = SparkRowUtils.field(view.id(), DataTypes.BinaryType);
+//                final StructType sourceType = result.schema();
+//                final StructType targetType = SparkRowUtils.append(sourceType, idField);
+//                result = result.map(SparkUtils.map(row -> {
+//                    final List<Object> keys = new ArrayList<>();
+//                    for(final String name : from.getPrimaryKey()) {
+//                        keys.add(SparkSchemaUtils.fromSpark(SparkRowUtils.get(row, name)));
+//                    }
+//                    final byte[] id = BinaryKey.from(keys).getBytes();
+//                    return SparkRowUtils.append(row, idField, id);
+//                }), RowEncoder.apply(targetType));
+//            }
+//            final Dataset<Row> tmp = result;
+//            return Stage.from(() -> tmp, schema);
+//        } else {
+//            throw new IllegalStateException("SQL query must define at least one source");
+//        }
+//    }
 
     default Source<Dataset<Row>> ofSource(final LinkableSchema schema) {
 
@@ -263,14 +269,15 @@ public interface QueryResolver {
         @Override
         public Stage sql(final String sql, final InstanceSchema schema, final Map<String, Stage> with) {
 
-            return resolver.sql(sql, schema, with);
+            throw new UnsupportedOperationException();
+//            return resolver.sql(sql, schema, with);
         }
 
         @Override
         public Stage join(final Stage left, final Stage right, final Join join) {
 
-            final String leftAs = join.getLeft().getAs();
-            final String rightAs = join.getRight().getAs();
+            final String leftAs = join.getLeft().getAlias();
+            final String rightAs = join.getRight().getAlias();
 
             final Map<String, Use<?>> schema = new HashMap<>();
             schema.put(leftAs, UseStruct.from(left.getLayout().getSchema()));

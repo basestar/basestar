@@ -1,17 +1,13 @@
 package io.basestar.mapper.annotation;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.MappingStrategy;
 import io.basestar.mapper.SchemaMapper;
 import io.basestar.mapper.internal.ViewSchemaMapper;
 import io.basestar.mapper.internal.annotation.SchemaDeclaration;
 import io.basestar.schema.from.From;
-import io.basestar.schema.from.FromSchema;
-import io.basestar.schema.from.FromSql;
 import io.basestar.schema.util.SchemaRef;
-import io.basestar.type.AnnotationContext;
 import io.basestar.type.TypeContext;
 import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
@@ -69,19 +65,20 @@ public @interface SqlViewSchema {
 
         public static SqlViewSchema annotation(final io.basestar.schema.ViewSchema schema) {
 
-            final FromSql from = (FromSql)schema.getFrom();
-            return new AnnotationContext<>(SqlViewSchema.class, ImmutableMap.<String, Object>builder()
-                    .put("name", schema.getQualifiedName().toString())
-                    .put("materialized", schema.isMaterialized())
-                    .put("query", from.getSql())
-                    .put("primaryKey", from.getPrimaryKey().toArray(new String[0]))
-                    .put("using", from.getUsing().entrySet().stream().map(
-                            e -> new AnnotationContext<>(Using.class, ImmutableMap.<String, Object>builder()
-                                    .put("as", e.getKey())
-                                    .put("schema", ((FromSchema)e.getValue()).getSchema().getQualifiedName().toString())
-                                    .build()).annotation()
-                    ).toArray(Using[]::new))
-                    .build()).annotation();
+            throw new UnsupportedOperationException();
+//            final FromSql from = (FromSql)schema.getFrom();
+//            return new AnnotationContext<>(SqlViewSchema.class, ImmutableMap.<String, Object>builder()
+//                    .put("name", schema.getQualifiedName().toString())
+//                    .put("materialized", schema.isMaterialized())
+//                    .put("query", from.getSql())
+//                    .put("primaryKey", from.getPrimaryKey().toArray(new String[0]))
+//                    .put("using", from.getUsing().entrySet().stream().map(
+//                            e -> new AnnotationContext<>(Using.class, ImmutableMap.<String, Object>builder()
+//                                    .put("as", e.getKey())
+//                                    .put("schema", ((FromSchema)e.getValue()).getSchema().getQualifiedName().toString())
+//                                    .build()).annotation()
+//                    ).toArray(Using[]::new))
+//                    .build()).annotation();
 
         }
     }

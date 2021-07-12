@@ -133,7 +133,7 @@ expr
  | String #exprString
  | LParen expr RParen #exprExpr
  | (identifier | (LParen identifier (Comma identifier)* RParen)) Arrow expr #exprLambda
- | Select selectExprs From fromExprs (Where expr)? (Group By names)? (Order By sorts)? unionExpr* #exprSelect
+ | Select selectExprs From fromExprs (Where expr)? (Group By exprs)? (Order By sorts)? unionExpr* #exprSelect
  | Case caseExpr+ (Else expr)? End #exprCase
  | With withExprs expr #exprWith
  ;

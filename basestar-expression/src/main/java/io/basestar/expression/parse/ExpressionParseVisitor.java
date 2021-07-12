@@ -602,8 +602,8 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
         for(final FromExprContext c : ctx.fromExprs().fromExpr()) {
             from.add(visitFrom(c));
         }
-        final Expression where = ctx.expr() == null ? new Constant(true) : visit(ctx.expr());
-        final List<Name> group = names(ctx.names());
+        final Expression where = ctx.expr() == null ? null : visit(ctx.expr());
+        final List<Expression> group = ctx.exprs() == null ? null : visit(ctx.exprs().expr());
         final List<Sort> order = sorts(ctx.sorts());
         final List<io.basestar.expression.sql.Union> union = new ArrayList<>();
         for(final UnionExprContext c : ctx.unionExpr()) {

@@ -5,24 +5,23 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.schema.Bucketing;
 import io.basestar.schema.LinkableSchema;
-import io.basestar.schema.Property;
 import io.basestar.schema.Schema;
-import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.util.SchemaRef;
 import io.basestar.util.BinaryKey;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import lombok.Getter;
+import lombok.Data;
 
 import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-@Getter
-public class FromSchema extends AbstractFrom {
+@Data
+public class FromSchema implements From {
 
     @Nonnull
     private final LinkableSchema schema;
@@ -33,33 +32,28 @@ public class FromSchema extends AbstractFrom {
     public FromSchema(final LinkableSchema schema, final Set<Name> expand) {
 
         this.schema = Nullsafe.require(schema);
-        this.expand = Nullsafe.orDefault(expand);
+        this.expand = Immutable.set(expand);
     }
 
-    protected FromSchema(final LinkableSchema schema, final Set<Name> expand, final Arguments arguments) {
-
-        super(arguments);
-        this.schema = Nullsafe.require(schema);
-        this.expand = Nullsafe.orDefault(expand);
-    }
-
-    public FromSchema(final Schema.Resolver.Constructing resolver, final From.Descriptor from) {
-
-        super(from);
-        this.schema = from.getSchema().resolve(resolver);
-        this.expand = Nullsafe.orDefault(from.getExpand());
-    }
-
-    @Override
-    protected FromSchema with(final Arguments arguments) {
-
-        return new FromSchema(schema, expand, arguments);
-    }
+//
+//    protected FromSchema(final LinkableSchema schema, final Set<Name> expand, final Arguments arguments) {
+//
+//        super(arguments);
+//        this.schema = Nullsafe.require(schema);
+//        this.expand = Nullsafe.orDefault(expand);
+//    }
+//
+//    public FromSchema(final Schema.Resolver.Constructing resolver, final From.Descriptor from) {
+//
+//        super(from);
+//        this.schema = from.getSchema().resolve(resolver);
+//        this.expand = Nullsafe.orDefault(from.getExpand());
+//    }
 
     @Override
     public From.Descriptor descriptor() {
 
-        return new AbstractFrom.Descriptor(getArguments()) {
+        return new Descriptor.Defaulting() {
             @Override
             public SchemaRef getSchema() {
 
@@ -79,7 +73,7 @@ public class FromSchema extends AbstractFrom {
     }
 
     @Override
-    protected InferenceContext undecoratedInferenceContext() {
+    public InferenceContext inferenceContext() {
 
         return InferenceContext.from(getSchema());
     }
@@ -107,11 +101,9 @@ public class FromSchema extends AbstractFrom {
     }
 
     @Override
-    public void validateProperty(final Property property) {
+    public Map<String, Use<?>> getProperties() {
 
-        if (property.getExpression() == null) {
-            throw new SchemaValidationException(property.getQualifiedName(), "Every view property must have an expression");
-        }
+        return schema.layoutSchema(expand);
     }
 
     @Override
@@ -136,5 +128,11 @@ public class FromSchema extends AbstractFrom {
     public List<FromSchema> schemas() {
 
         return ImmutableList.of(this);
+    }
+
+    @Override
+    public <T> T visit(final FromVisitor<T> visitor) {
+
+        return visitor.visitSchema(this);
     }
 }

@@ -2,6 +2,7 @@ package io.basestar.schema.from;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
@@ -44,11 +45,11 @@ public class Join implements Serializable {
         this.type = Nullsafe.require(type);
     }
 
-    public Join(final Schema.Resolver.Constructing resolver, final Descriptor builder) {
+    public Join(final Schema.Resolver.Constructing resolver, final Context context, final Descriptor builder) {
 
-        this.left = Nullsafe.require(builder.getLeft().build(resolver));
-        this.right = Nullsafe.require(builder.getRight().build(resolver));
-        this.on = Nullsafe.require(builder.getOn());
+        this.left = Nullsafe.require(builder.getLeft().build(resolver, context));
+        this.right = Nullsafe.require(builder.getRight().build(resolver, context));
+        this.on = Nullsafe.require(builder.getOn()).bind(context);
         this.type = Nullsafe.orDefault(builder.getType(), Type.INNER);
     }
 
@@ -104,9 +105,9 @@ public class Join implements Serializable {
 
         Type getType();
 
-        default Join build(final Schema.Resolver.Constructing resolver) {
+        default Join build(final Schema.Resolver.Constructing resolver, final Context context) {
 
-            return new Join(resolver, this);
+            return new Join(resolver, context, this);
         }
     }
 

@@ -60,7 +60,18 @@ class TestViewSchema {
 
         final Namespace namespace = Namespace.load(TestViewSchema.class.getResource("view.yml"));
 
-        final ViewSchema schema = namespace.requireViewSchema("WithSqlSimple");
+        final ViewSchema schema = namespace.requireViewSchema("WithSqlGroup");
+        final Property nameProp = schema.getProperties().get("count");
+
+        assertTrue(nameProp.typeOf() instanceof UseInteger);
+    }
+
+    @Test
+    void testSqlNestedView() throws IOException {
+
+        final Namespace namespace = Namespace.load(TestViewSchema.class.getResource("view.yml"));
+
+        final ViewSchema schema = namespace.requireViewSchema("WithSqlNested");
         final Property nameProp = schema.getProperties().get("count");
 
         assertTrue(nameProp.typeOf() instanceof UseInteger);

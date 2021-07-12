@@ -674,7 +674,7 @@ class TestExpression {
                         new NameConstant("b")
                 ),
                 ImmutableList.of(
-                        Name.of("e")
+                        new NameConstant("e")
                 ),
                 ImmutableList.of(
                         Sort.desc(Name.of("d"))

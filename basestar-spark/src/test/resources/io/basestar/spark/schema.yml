@@ -224,13 +224,15 @@ SqlView:
   type: view
   using:
     A: A
-  sql: SELECT ref.id AS refId, COUNT(*) AS count, DATE_DIFF('day', FROM_ISO8601_DATE('2020-01-01'), FROM_ISO8601_DATE('2020-01-02')) AS diff FROM A GROUP BY refId
+  sql: SELECT ref.id AS refId, COUNT(1) AS count FROM A GROUP BY refId
   primaryKey: refId
   properties:
     refId:
       type: string
     count:
       type: integer
+
+#DATE_DIFF('day', FROM_ISO8601_DATE('2020-01-01'), FROM_ISO8601_DATE('2020-01-02')) AS diff
 
 JoinLeft:
   type: object

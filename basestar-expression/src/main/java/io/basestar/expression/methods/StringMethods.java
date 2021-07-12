@@ -20,7 +20,6 @@ package io.basestar.expression.methods;
  * #L%
  */
 
-import com.google.common.base.CharMatcher;
 import io.basestar.util.ISO8601;
 
 import java.io.Serializable;
