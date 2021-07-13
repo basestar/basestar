@@ -784,7 +784,7 @@ public class DynamoDBStorage implements DefaultIndexStorage {
         public boolean hasNext() {
 
             prepare();
-            return items.isEmpty();
+            return !items.isEmpty();
         }
 
         @Override
