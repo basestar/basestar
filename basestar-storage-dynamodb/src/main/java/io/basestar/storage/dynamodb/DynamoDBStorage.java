@@ -53,6 +53,8 @@ public class DynamoDBStorage implements DefaultIndexStorage {
 
     private static final int WRITE_BATCH = 25;
 
+    private static final long EMPTY_SCAN_DELAY_MILLIS = 1000L;
+
     private static final String OVERSIZE_KEY = Reserved.PREFIX + "oversize";
 
     private final DynamoDbAsyncClient client;
@@ -776,6 +778,14 @@ public class DynamoDBStorage implements DefaultIndexStorage {
                 lastEvaluatedKey = response.lastEvaluatedKey();
                 if(lastEvaluatedKey.isEmpty()) {
                     lastEvaluatedKey = null;
+                } else if(items.isEmpty()) {
+                    // Sleep a bit to avoid hitting DDB thresholds
+                    try {
+                        Thread.sleep(EMPTY_SCAN_DELAY_MILLIS);
+                    } catch (final InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
                 }
             }
         }
