@@ -53,7 +53,9 @@ public class DynamoDBStorage implements DefaultIndexStorage {
 
     private static final int WRITE_BATCH = 25;
 
-    private static final long EMPTY_SCAN_DELAY_MILLIS = 1000L;
+    private static final long DEFAULT_SCAN_DELAY_MILLIS = 100L;
+
+    private static final long DEFAULT_EMPTY_SCAN_DELAY_MILLIS = 1000L;
 
     private static final String OVERSIZE_KEY = Reserved.PREFIX + "oversize";
 
@@ -65,12 +67,18 @@ public class DynamoDBStorage implements DefaultIndexStorage {
 
     private final EventStrategy eventStrategy;
 
+    private final long scanDelayMillis;
+
+    private final long emptyScanDelayMillis;
+
     private DynamoDBStorage(final Builder builder) {
 
         this.client = builder.client;
         this.strategy = builder.strategy;
         this.oversizeStash = builder.oversizeStash;
         this.eventStrategy = Nullsafe.orDefault(builder.eventStrategy, EventStrategy.EMIT);
+        this.scanDelayMillis = Nullsafe.orDefault(builder.scanDelayMillis, DEFAULT_SCAN_DELAY_MILLIS);
+        this.emptyScanDelayMillis = Nullsafe.orDefault(builder.emptyScanDelayMillis, Nullsafe.orDefault(builder.scanDelayMillis, DEFAULT_EMPTY_SCAN_DELAY_MILLIS));
     }
 
     public static Builder builder() {
@@ -89,6 +97,10 @@ public class DynamoDBStorage implements DefaultIndexStorage {
         private Stash oversizeStash;
 
         private EventStrategy eventStrategy;
+
+        private Long scanDelayMillis;
+
+        private Long emptyScanDelayMillis;
 
         public DynamoDBStorage build() {
 
@@ -778,10 +790,10 @@ public class DynamoDBStorage implements DefaultIndexStorage {
                 lastEvaluatedKey = response.lastEvaluatedKey();
                 if(lastEvaluatedKey.isEmpty()) {
                     lastEvaluatedKey = null;
-                } else if(items.isEmpty()) {
+                } else {
                     // Sleep a bit to avoid hitting DDB thresholds
                     try {
-                        Thread.sleep(EMPTY_SCAN_DELAY_MILLIS);
+                        Thread.sleep(items.isEmpty() ? emptyScanDelayMillis : scanDelayMillis);
                     } catch (final InterruptedException e) {
                         Thread.currentThread().interrupt();
                         break;
