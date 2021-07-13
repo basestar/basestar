@@ -755,7 +755,7 @@ public class DynamoDBStorage implements DefaultIndexStorage {
 
         private void prepare() {
 
-            if(items == null || (items.isEmpty() && lastEvaluatedKey != null)) {
+            while(items == null || (items.isEmpty() && lastEvaluatedKey != null)) {
                 final ScanRequest request = ScanRequest.builder()
                         .tableName(strategy.objectTableName(schema))
                         .filterExpression("#schema = :schema")
