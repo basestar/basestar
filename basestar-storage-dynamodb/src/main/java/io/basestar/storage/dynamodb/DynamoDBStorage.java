@@ -770,19 +770,36 @@ public class DynamoDBStorage implements DefaultIndexStorage {
         private void prepare() {
 
             while(items == null || (items.isEmpty() && lastEvaluatedKey != null)) {
-                final ScanRequest request = ScanRequest.builder()
+
+                final String prefix = strategy.objectPartitionPrefix(schema);
+
+                final ScanRequest.Builder builder = ScanRequest.builder()
                         .tableName(strategy.objectTableName(schema))
-                        .filterExpression("#schema = :schema")
-                        .expressionAttributeValues(ImmutableMap.of(
-                                ":schema", AttributeValue.builder().s(schema.getQualifiedName().toString()).build()
-                        ))
-                        .expressionAttributeNames(ImmutableMap.of(
-                                "#schema", ReferableSchema.SCHEMA
-                        ))
                         .totalSegments(segments)
                         .segment(segment)
-                        .exclusiveStartKey(lastEvaluatedKey)
-                        .build();
+                        .exclusiveStartKey(lastEvaluatedKey);
+
+                if(prefix != null) {
+                    builder.filterExpression("begins_with(#partition, :prefix) and #schema = :schema")
+                            .expressionAttributeNames(ImmutableMap.of(
+                                    "#partition", strategy.objectPartitionName(schema),
+                                    "#schema", ReferableSchema.SCHEMA
+                            ))
+                            .expressionAttributeValues(ImmutableMap.of(
+                                    ":prefix", AttributeValue.builder().s(prefix).build(),
+                                    ":schema", AttributeValue.builder().s(schema.getQualifiedName().toString()).build()
+                            ));
+                } else {
+                    builder.filterExpression("#schema = :schema")
+                            .expressionAttributeNames(ImmutableMap.of(
+                                    "#schema", ReferableSchema.SCHEMA
+                            ))
+                            .expressionAttributeValues(ImmutableMap.of(
+                                    ":schema", AttributeValue.builder().s(schema.getQualifiedName().toString()).build()
+                            ));
+                }
+
+                final ScanRequest request = builder.build();
 
                 final ScanResponse response = client.scan(request).join();
                 items = new LinkedList<>(response.items());

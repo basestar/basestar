@@ -24,6 +24,7 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.*;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.expression.constant.Constant;
 import io.basestar.expression.type.Values;
 import io.basestar.schema.*;
 import io.basestar.schema.encoding.FlatEncoding;
@@ -112,6 +113,11 @@ public abstract class TestStorage {
     protected boolean supportsOversize() {
 
         return true;
+    }
+
+    protected boolean supportsScan() {
+
+        return false;
     }
 
     protected void bulkLoad(final Storage storage, final Multimap<String, Map<String, Object>> data) {
@@ -1164,6 +1170,35 @@ public abstract class TestStorage {
         final Storage storage = storage(namespace);
         final BatchResponse response = storage.write(Consistency.ATOMIC, Versioning.UNCHECKED).write().join();
         assertEquals(0, response.getRefs().size());
+    }
+
+    @Test
+    void testScan() {
+
+        assumeTrue(supportsScan());
+
+        final Storage storage = storage(namespace);
+
+        final ObjectSchema schema = namespace.requireObjectSchema(SIMPLE);
+
+        final Storage.WriteTransaction write = storage.write(Consistency.ASYNC, Versioning.CHECKED);
+        for(int i = 0; i != 200; ++i) {
+            final String id = UUID.randomUUID().toString();
+            final Map<String, Object> data = data();
+            final Map<String, Object> instance = instance(schema, id, 1L, data);
+            write.createObject(schema, id, instance);
+        }
+        write.write().join();
+
+        final Scan scan = storage.scan(schema, new Constant(true), 4);
+        final List<Map<String, Object>> results = new ArrayList<>();
+        for(int i = 0; i != 4; ++i) {
+            final Scan.Segment segment = scan.segment(i);
+            while(segment.hasNext()) {
+                results.add(segment.next());
+            }
+        }
+        assertEquals(200, results.size());
     }
 
     private static void assumeConcurrentObjectWrite(final Storage storage, final ObjectSchema schema) {
