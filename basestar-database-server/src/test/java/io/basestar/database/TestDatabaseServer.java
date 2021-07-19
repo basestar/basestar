@@ -30,6 +30,7 @@ import io.basestar.database.exception.DatabaseReadonlyException;
 import io.basestar.database.options.*;
 import io.basestar.event.Emitter;
 import io.basestar.event.Event;
+import io.basestar.event.EventSerialization;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.compare.Eq;
@@ -56,10 +57,7 @@ import org.junit.jupiter.api.function.Executable;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
-import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -1022,5 +1020,14 @@ class TestDatabaseServer {
                 .setSchema(SIMPLE)
                 .setStats(expected)
                 .build()).get();
+    }
+
+    @Test
+    void testMessage() {
+
+        final RefRefreshEvent event = RefRefreshEvent.of(Ref.of(Name.parse("foo.File"), "not_exists"), Name.parse("foo.File"), "also_not_exists");
+        final String b64 = Base64.getEncoder().encodeToString(EventSerialization.gzipBson().serialize(event));
+        System.err.println(b64);
+
     }
 }

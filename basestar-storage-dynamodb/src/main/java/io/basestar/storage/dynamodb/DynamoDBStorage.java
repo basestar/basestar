@@ -786,7 +786,7 @@ public class DynamoDBStorage implements DefaultIndexStorage {
                                     "#schema", ReferableSchema.SCHEMA
                             ))
                             .expressionAttributeValues(ImmutableMap.of(
-                                    ":prefix", AttributeValue.builder().s(prefix).build(),
+                                    ":prefix", AttributeValue.builder().s(prefix + Reserved.DELIMITER).build(),
                                     ":schema", AttributeValue.builder().s(schema.getQualifiedName().toString()).build()
                             ));
                 } else {

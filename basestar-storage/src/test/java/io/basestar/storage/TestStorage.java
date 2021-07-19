@@ -1190,6 +1190,14 @@ public abstract class TestStorage {
         }
         write.write().join();
 
+        // Make sure there are other objects (tests e.g. single-table DDB scan)
+        createComplete(storage, namespace.requireObjectSchema(POINTSET), ImmutableMap.of(
+                "points", ImmutableList.of(
+                        new Instance(ImmutableMap.of("x", 10L, "y", 100L)),
+                        new Instance(ImmutableMap.of("x", 5L, "y", 10L))
+                )
+        ));
+
         final Scan scan = storage.scan(schema, new Constant(true), 4);
         final List<Map<String, Object>> results = new ArrayList<>();
         for(int i = 0; i != 4; ++i) {
