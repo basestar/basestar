@@ -76,14 +76,14 @@ public class CascadeJoiner {
 
         final SortedMap<String, Use<?>> leftLayout = new TreeMap<>();
         for(final Map.Entry<String, Expression> entry : leftConstants.entrySet()) {
-            leftLayout.put(entry.getKey(), inference.visit(entry.getValue()));
+            leftLayout.put(entry.getKey(), inference.typeOf(entry.getValue()));
         }
         final StructType leftType = SparkSchemaUtils.structType(leftLayout, null);
 
         final SortedMap<String, Use<?>> rightLayout = new TreeMap<>();
         rightLayout.putAll(toSchema.layoutSchema(ImmutableSet.of()));
         for(final Map.Entry<String, Expression> entry : rightConstants.entrySet()) {
-            rightLayout.put(entry.getKey(), inference.visit(entry.getValue()));
+            rightLayout.put(entry.getKey(), inference.typeOf(entry.getValue()));
         }
         final StructType rightType = SparkSchemaUtils.structType(rightLayout, null);
 

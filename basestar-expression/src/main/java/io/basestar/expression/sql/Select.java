@@ -33,6 +33,12 @@ public interface Select {
 
             return this;
         }
+
+        @Override
+        public String toString() {
+
+            return "*";
+        }
     }
 
     @Data
@@ -57,6 +63,12 @@ public interface Select {
 
             final Expression bound = expression.bind(context, root);
             return bound == expression ? this : new Anonymous(bound);
+        }
+
+        @Override
+        public String toString() {
+
+            return expression.toString();
         }
     }
 
@@ -84,6 +96,12 @@ public interface Select {
 
             final Expression bound = expression.bind(context, root);
             return bound == expression ? this : new Named(bound, name);
+        }
+
+        @Override
+        public String toString() {
+
+            return expression.toString() + " AS " + name;
         }
     }
 

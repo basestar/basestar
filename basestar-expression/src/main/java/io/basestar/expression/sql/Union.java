@@ -28,6 +28,12 @@ public interface Union {
             final Expression expr = this.expr.bind(context, root);
             return expr == this.expr ? this : new Distinct(expr);
         }
+
+        @Override
+        public String toString() {
+
+            return "UNION DISTINCT " + expr;
+        }
     }
 
     @Data
@@ -46,6 +52,12 @@ public interface Union {
 
             final Expression expr = this.expr.bind(context, root);
             return expr == this.expr ? this : new All(expr);
+        }
+
+        @Override
+        public String toString() {
+
+            return "UNION ALL " + expr;
         }
     }
 

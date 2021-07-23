@@ -24,10 +24,7 @@ import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.spark.util.SparkUtils;
 import io.basestar.storage.query.QueryPlanner;
 import io.basestar.storage.query.QueryStageVisitor;
-import io.basestar.util.Immutable;
-import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.apache.spark.sql.Column;
@@ -391,18 +388,23 @@ public interface QueryResolver {
             final Layout inputLayout = getLayout();
             final Layout outputLayout = Layout.simple(Immutable.transformValues(expressions, (k, v) -> v.getType()));
 
+            final List<Pair<String, Expression>> groups = group.stream().map(k -> {
+
+                final TypedExpression<?> e = expressions.get(k);
+                if(e == null) {
+                    throw new UnsupportedOperationException("Grouped name " + k + " must appear in expressions");
+                } else {
+                    return Pair.of(k, expressions.get(k).getExpression());
+                }
+
+            }).collect(Collectors.toList());
+
             final Map<String, Aggregate> aggregates = expressions.entrySet().stream()
-                    .filter(e -> {
-                        if(e.getValue().getExpression().isAggregate()) {
-                            return true;
-                        } else {
-                            assert group.contains(e.getKey());
-                            return false;
-                        }
-                    }).collect(Collectors.toMap(Map.Entry::getKey, e -> (Aggregate)e.getValue().getExpression()));
+                    .filter(e -> e.getValue().getExpression().isAggregate())
+                    .collect(Collectors.toMap(Map.Entry::getKey, e -> (Aggregate)e.getValue().getExpression()));
 
             return then(AggregateTransform.builder()
-                            .group(group)
+                            .group(groups)
                             .aggregates(aggregates)
                             .inputLayout(inputLayout)
                             .outputLayout(outputLayout).build(), outputLayout);

@@ -3,6 +3,7 @@ package io.basestar.schema.from;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
+import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.function.With;
 import io.basestar.expression.sql.Select;
@@ -12,6 +13,7 @@ import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
+import io.basestar.util.Pair;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -41,8 +43,8 @@ public class FromSqlVisitor implements ExpressionVisitor.Defaulting<From> {
 
         final Map<String, From> using = new HashMap<>(this.using);
         FromSqlVisitor visitor = this;
-        for(final Map.Entry<String, Expression> entry : expression.getWith().entrySet()) {
-            using.put(entry.getKey(), visitor.visit(entry.getValue()));
+        for (final Pair<String, Expression> entry : expression.getWith()) {
+            using.put(entry.getFirst(), visitor.visit(entry.getSecond()));
             visitor = new FromSqlVisitor(resolver, using);
         }
         return visitor.visit(expression.getYield());
@@ -53,7 +55,7 @@ public class FromSqlVisitor implements ExpressionVisitor.Defaulting<From> {
 
         final Name name = expression.getName();
         final From resolved = using.get(name.toString());
-        if(resolved != null) {
+        if (resolved != null) {
             return resolved;
         } else {
             final LinkableSchema schema = resolver.requireLinkableSchema(name);
@@ -64,27 +66,35 @@ public class FromSqlVisitor implements ExpressionVisitor.Defaulting<From> {
     private From buildFrom(final io.basestar.expression.sql.From from) {
 
         return from.visit(new io.basestar.expression.sql.From.Visitor<From>() {
-                    @Override
-                    public From visitAnonymous(final io.basestar.expression.sql.From.Anonymous from) {
+            @Override
+            public From visitAnonymous(final io.basestar.expression.sql.From.Anonymous from) {
 
-                        return visit(from.getExpression());
+                final From result = visit(from.getExpression());
+                if (from.getExpression() instanceof NameConstant) {
+                    final Name name = ((NameConstant) from.getExpression()).getName();
+                    if (name.size() == 1) {
+                        return result.as(name.first());
                     }
+                }
+                return result;
+            }
 
-                    @Override
-                    public From visitNamed(final io.basestar.expression.sql.From.Named from) {
+            @Override
+            public From visitNamed(final io.basestar.expression.sql.From.Named from) {
 
-                        return visit(from.getExpression()).as(from.getName());
-                    }
+                return visit(from.getExpression()).as(from.getName());
+            }
 
-                    @Override
-                    public From visitJoin(final io.basestar.expression.sql.From.Join from) {
+            @Override
+            public From visitJoin(final io.basestar.expression.sql.From.Join from) {
 
-                        final From left = buildFrom(from.getLeft());
-                        final From right = buildFrom(from.getRight());
-                        final Expression on = from.getOn();
-                        return new FromJoin(new Join(left, right, on, Join.Type.valueOf(from.getType().name())));
-                    }
-                });
+                final From left = buildFrom(from.getLeft());
+                final From right = buildFrom(from.getRight());
+                final Join.Type type = Join.Type.valueOf(from.getType().name());
+                final Expression on = from.getOn();
+                return new FromJoin(new Join(left, right, type, on));
+            }
+        });
     }
 
     @Override
@@ -97,52 +107,61 @@ public class FromSqlVisitor implements ExpressionVisitor.Defaulting<From> {
         final List<Union> unions = expression.getUnion();
 
         From result;
-        if(froms.size() == 1) {
+        if (froms.size() == 1) {
             result = buildFrom(froms.get(0));
         } else {
+            result = null;
+            for (final io.basestar.expression.sql.From from : froms) {
+                if (result == null) {
+                    result = buildFrom(from);
+                } else {
+                    // FIXME
+                    result = result.join(buildFrom(from), Join.Type.INNER, new Constant(true));
+                }
+            }
             // Old-style join
-            throw new UnsupportedOperationException();
+//            throw new UnsupportedOperationException();
         }
 
-        if(where != null) {
+        if (where != null) {
             result = result.filter(where);
         }
 
-        if(selects != null) {
+        if (selects != null) {
 
             final Map<String, Expression> inputs = new HashMap<>();
-            for(final Select select : selects) {
-               select.visit(new Select.Visitor<Object>() {
-                   @Override
-                   public Object visitAll(final Select.All from) {
+            for (final Select select : selects) {
+                select.visit(new Select.Visitor<Object>() {
+                    @Override
+                    public Object visitAll(final Select.All from) {
 
-                       return null;
-                   }
+                        return null;
+                    }
 
-                   @Override
-                   public Object visitAnonymous(final Select.Anonymous from) {
+                    @Override
+                    public Object visitAnonymous(final Select.Anonymous from) {
 
-                       return inputs.put(from.getExpression().toString(), from.getExpression());
-                   }
+                        return inputs.put(selectName(from.getExpression(), inputs), from.getExpression());
+                    }
 
-                   @Override
-                   public Object visitNamed(final Select.Named from) {
+                    @Override
+                    public Object visitNamed(final Select.Named from) {
 
-                       return inputs.put(from.getName(), from.getExpression());
-                   }
-               });
+                        return inputs.put(from.getName(), from.getExpression());
+                    }
+                });
             }
 
-            if(!inputs.isEmpty()) {
+            if (!inputs.isEmpty()) {
 
-                if(group != null && !group.isEmpty()) {
-                    final List<String> groupNames = Immutable.transform(group, v -> {
-                        if(v instanceof NameConstant) {
-                            return ((NameConstant) v).getName().toString();
-                        } else {
-                            throw new UnsupportedOperationException();
-                        }
-                    });
+                if (group != null && !group.isEmpty()) {
+
+                    final List<String> groupNames = new ArrayList<>();
+                    for (final Expression g : group) {
+                        final String name = selectName(g, inputs);
+                        inputs.put(name, g);
+                        groupNames.add(name);
+                    }
                     result = result.agg(groupNames, inputs);
                 } else {
                     result = result.select(inputs);
@@ -150,10 +169,10 @@ public class FromSqlVisitor implements ExpressionVisitor.Defaulting<From> {
             }
         }
 
-        if(unions != null && !unions.isEmpty()) {
+        if (unions != null && !unions.isEmpty()) {
             final List<From> inputs = new ArrayList<>();
             inputs.add(result);
-            for(final Union union : unions) {
+            for (final Union union : unions) {
                 union.visit(new Union.Visitor<Object>() {
                     @Override
                     public Object visitDistinct(final Union.Distinct from) {
@@ -172,5 +191,18 @@ public class FromSqlVisitor implements ExpressionVisitor.Defaulting<From> {
         }
 
         return result;
+    }
+
+    private String selectName(final Expression expression, final Map<String, Expression> select) {
+
+        if (expression instanceof NameConstant) {
+            final Name name = ((NameConstant) expression).getName();
+            final String last = name.last();
+            final Expression other = select.get(last);
+            if (other == null || expression.equals(other)) {
+                return last;
+            }
+        }
+        return "v" + expression.digest();
     }
 }

@@ -89,16 +89,17 @@ public class UseStruct implements UseInstance {
     @Override
     public UseStruct resolve(final Schema.Resolver resolver) {
 
-        if(schema.isAnonymous()) {
-            return this;
-        } else {
-            final StructSchema resolved = resolver.requireStructSchema(schema.getQualifiedName());
-            if(resolved == schema) {
-                return this;
-            } else {
-                return new UseStruct(resolved);
-            }
-        }
+        return this;
+//        if(schema.isAnonymous()) {
+//            return this;
+//        } else {
+//            final StructSchema resolved = resolver.requireStructSchema(schema.getQualifiedName());
+//            if(resolved == schema) {
+//                return this;
+//            } else {
+//                return new UseStruct(resolved);
+//            }
+//        }
     }
 
     @Override

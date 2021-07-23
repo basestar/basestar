@@ -686,7 +686,7 @@ class TestExpression {
         );
 
         assertEquals(new With(
-                ImmutableMap.of("x", new NameConstant("y"), "y", new NameConstant("z")),
+                ImmutableList.of(Pair.of("x", new NameConstant("y")), Pair.of("y", new NameConstant("z"))),
                 select
         ), expr);
     }

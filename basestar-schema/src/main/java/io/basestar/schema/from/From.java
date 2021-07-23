@@ -94,6 +94,12 @@ public interface From extends Serializable {
         return new FromAgg(this, group, agg);
     }
 
+    default From join(final From right, final Join.Type type, final Expression on) {
+
+        return new FromJoin(new Join(this, right, type, on));
+    }
+
+
     default From select(final Map<String, Expression> select) {
 
         if(select.values().stream().anyMatch(Expression::isAggregate)) {
@@ -131,9 +137,14 @@ public interface From extends Serializable {
         return false;
     }
 
+    default String digest() {
+
+        return  "" + System.identityHashCode(this);
+    }
+
     default String getAlias() {
 
-        throw new UnsupportedOperationException();
+        return "_anon_" + digest();
     }
 
 //    default boolean isGrouping() {
@@ -242,7 +253,7 @@ public interface From extends Serializable {
                 } else if(sql != null) {
                     final Map<String, From> using = Immutable.transformValues(getUsing(), (k, v) -> v.build(resolver, context));
                     final FromSqlVisitor visitor = new FromSqlVisitor(resolver, using);
-                    return visitor.visit(sql.bind(context));
+                    return new FromSql(sql, getPrimaryKey(), using, visitor.visit(sql.bind(context)));
                 } else if(union != null && !union.isEmpty()) {
                     final List<From> unionFrom = Immutable.transform(getUnion(), v -> v.build(resolver, context));
                     return new FromUnion(unionFrom, Nullsafe.orDefault(getAll()));

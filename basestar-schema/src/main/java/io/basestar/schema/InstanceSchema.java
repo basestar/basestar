@@ -170,18 +170,23 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
     }
 
     @SuppressWarnings("unchecked")
-    default <T> Use<T> typeOf(final Name name) {
+    @Override
+    default <T> Optional<Use<T>> optionalTypeOf(final Name name) {
 
         if(name.isEmpty()) {
-            return (Use<T>) typeOf();
+            return Optional.of((Use<T>) typeOf());
         } else {
             final String first = name.first();
             final Map<String, Use<?>> metadataSchema = metadataSchema();
             if(metadataSchema.containsKey(first)) {
-                return (Use<T>)metadataSchema.get(first).typeOf(name.withoutFirst());
+                return Optional.of((Use<T>)metadataSchema.get(first).typeOf(name.withoutFirst()));
             } else {
-                final Member member = requireMember(first, true);
-                return member.typeOf(name.withoutFirst());
+                final Member member = getMember(first, true);
+                if(member == null) {
+                    return Optional.empty();
+                } else {
+                    return member.optionalTypeOf(name.withoutFirst());
+                }
             }
         }
     }

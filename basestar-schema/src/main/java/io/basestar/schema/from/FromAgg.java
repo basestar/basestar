@@ -100,7 +100,6 @@ public class FromAgg implements From {
 
         final InferenceContext context = from.inferenceContext();
         final Map<String, Use<?>> properties = new HashMap<>();
-        group.forEach(k -> properties.put(k, context.typeOf(Name.of(k))));
         agg.keySet().forEach(k -> properties.put(k, context.typeOf(Name.of(k))));
         return properties;
     }

@@ -22,7 +22,7 @@ package io.basestar.expression;
 
 import io.basestar.util.Name;
 
-import java.util.Set;
+import java.util.Collection;
 
 public interface Renaming {
 
@@ -71,7 +71,7 @@ public interface Renaming {
         };
     }
 
-    static Renaming closure(final Set<String> closed, final Renaming transform) {
+    static Renaming closure(final Collection<String> closed, final Renaming transform) {
 
         return closure(Expression.Closure.from(closed), transform);
     }

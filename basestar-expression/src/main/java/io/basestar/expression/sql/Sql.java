@@ -15,6 +15,7 @@ import lombok.Data;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Data
 public class Sql implements Expression {
@@ -105,5 +106,31 @@ public class Sql implements Expression {
     public Expression copy(final List<Expression> expressions) {
 
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String toString() {
+
+        final StringBuilder str = new StringBuilder();
+        str.append("SELECT ");
+        str.append(select.stream().map(Select::toString).collect(Collectors.joining(", ")));
+        str.append(" FROM ");
+        str.append(from.stream().map(From::toString).collect(Collectors.joining(", ")));
+        if(where != null) {
+            str.append(" WHERE ");
+            str.append(where);
+        }
+        if(!group.isEmpty()) {
+            str.append(" GROUP BY ");
+            str.append(group.stream().map(Expression::toString).collect(Collectors.joining(", ")));
+        }
+        if(!order.isEmpty()) {
+            str.append(" ORDER BY ");
+            str.append(order.stream().map(s -> s.getName() + " " + s.getOrder().name()).collect(Collectors.joining(", ")));
+        }
+        if(!union.isEmpty()) {
+            str.append(union.stream().map(Union::toString).collect(Collectors.joining(" ")));
+        }
+        return str.toString();
     }
 }

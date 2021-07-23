@@ -251,23 +251,25 @@ public abstract class TestStorage {
         );
 
         final Expression expr = Expression.parse("country == '" + country + "'");
-//        final List<Pager.Source<Map<String, Object>>> sources = storage.queryObject(schema, expr, sort, Collections.emptySet());
-//        final Comparator<Map<String, Object>> comparator = Instance.comparator(sort);
-//
-//        final List<Map<String, Object>> results = new ArrayList<>();
-//        Page.Token paging = null;
-//        for(int i = 0; i != 10; ++i) {
-//            final Pager<Map<String, Object>> pager = new Pager<>(comparator, sources, paging);
-//            final Page<Map<String, Object>> page = pager.page(10).join();
-//            results.addAll(page);
-//            paging = page.getPaging();
-//            assertNotNull(paging);
-//        }
-//        assertEquals(100, results.size());
-//        final Page<Map<String, Object>> empty = new Pager<>(comparator, sources, paging).page(10).join();
-//        assertEquals(0, empty.size());
-//        assertNull(empty.getPaging());
-//        assertTrue(Ordering.from(comparator).isOrdered(results));
+        final Pager<Map<String, Object>> pager = storage.query(Consistency.EVENTUAL, schema, expr, sort, Collections.emptySet());
+
+        final Set<String> results = new HashSet<>();
+        Page.Token token = null;
+        for(int i = 0; i != 10; ++i) {
+            final Page<Map<String, Object>> page = pager.page(ImmutableSet.of(Page.Stat.TOTAL, Page.Stat.APPROX_TOTAL), token,10).join();
+            final Page.Stats stats = page.getStats();
+            if(stats != null) {
+                if(stats.getTotal() != null) {
+                    assertEquals(100, stats.getTotal());
+                }
+                if(stats.getApproxTotal() != null) {
+                    assertEquals(100, stats.getApproxTotal());
+                }
+            }
+            page.forEach(object -> results.add(Instance.getId(object)));
+            token = page.getPaging();
+        }
+        assertEquals(100, results.size());
     }
 
     @Test

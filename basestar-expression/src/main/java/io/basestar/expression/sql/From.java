@@ -49,6 +49,12 @@ public interface From {
             final Expression bound = expression.bind(context, root);
             return bound == expression ? this : new Anonymous(bound);
         }
+
+        @Override
+        public String toString() {
+
+            return expression.toString();
+        }
     }
 
     @Data
@@ -82,6 +88,12 @@ public interface From {
             final Expression bound = expression.bind(context, root);
             return bound == expression ? this : new Named(bound, name);
         }
+
+        @Override
+        public String toString() {
+
+            return expression.toString() + " AS " + name;
+        }
     }
 
     @Data
@@ -89,10 +101,23 @@ public interface From {
 
         public enum Type {
 
-            INNER,
-            LEFT_OUTER,
-            RIGHT_OUTER,
-            FULL_OUTER
+            INNER("INNER"),
+            LEFT_OUTER("LEFT OUTER"),
+            RIGHT_OUTER("RIGHT OUTER"),
+            FULL_OUTER("FULL OUTER");
+
+            private final String string;
+
+            Type(final String string) {
+
+                this.string = string;
+            }
+
+            @Override
+            public String toString() {
+
+                return string;
+            }
         }
 
         private final From left;
@@ -132,6 +157,12 @@ public interface From {
             } else {
                 return new Join(left, right, on, type);
             }
+        }
+
+        @Override
+        public String toString() {
+
+            return left + " " + type + " JOIN " + right + " ON " + on;
         }
     }
 

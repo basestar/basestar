@@ -109,6 +109,8 @@ expr
  | expr Cmp expr #exprCmp
  | expr op=(Gte | Lte | Gt | Lt) expr #exprRel
  | expr op=(Eq | EqEq | BangEq) expr #exprEq
+ | expr Is Null #exprIsNull
+ | expr Is Not Null #exprIsNotNull
  | expr Amp expr  #exprBitAnd
  | expr (Xor | Caret) expr #exprBitXor
  | expr Pipe expr #exprBitOr
@@ -134,7 +136,8 @@ expr
  | LParen expr RParen #exprExpr
  | (identifier | (LParen identifier (Comma identifier)* RParen)) Arrow expr #exprLambda
  | Select selectExprs From fromExprs (Where expr)? (Group By exprs)? (Order By sorts)? unionExpr* #exprSelect
- | Case caseExpr+ (Else expr)? End #exprCase
+ | Case expr caseExpr+ (Else expr)? End #exprSimpleCase
+ | Case caseExpr+ (Else expr)? End #exprSearchedCase
  | With withExprs expr #exprWith
  ;
 

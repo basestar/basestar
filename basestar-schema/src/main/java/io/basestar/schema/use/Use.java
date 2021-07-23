@@ -125,7 +125,12 @@ public interface Use<T> extends Serializable {
 
     Code code();
 
-    Use<?> typeOf(Name name);
+    default Use<?> typeOf(final Name name) {
+
+        return optionalTypeOf(name).orElse(UseAny.DEFAULT);
+    }
+
+    Optional<Use<?>> optionalTypeOf(Name name);
 
     default Type javaType() {
 

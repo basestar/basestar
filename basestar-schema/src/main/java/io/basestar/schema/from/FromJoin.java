@@ -10,7 +10,6 @@ import io.basestar.schema.ViewSchema;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseBinary;
-import io.basestar.schema.use.UseString;
 import io.basestar.util.BinaryKey;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -55,17 +54,20 @@ public class FromJoin implements From {
 
         final From left = join.getLeft();
         final From right = join.getRight();
-        // Temp exceptions, should support anon left/right sides as long as there are no naming conflicts
-        if(!left.hasAlias()) {
-           throw new IllegalStateException("Left side of join must be named (with as=)");
-        }
-        if(!right.hasAlias()) {
-            throw new IllegalStateException("Right side of join must be named (with as=)");
-        }
 
-        return InferenceContext.from(ImmutableMap.of(ViewSchema.ID, UseString.DEFAULT))
-                .overlay(left.getAlias(), left.inferenceContext())
-                .overlay(right.getAlias(), right.inferenceContext());
+        final InferenceContext leftContext = left.inferenceContext();
+        final InferenceContext rightContext = right.inferenceContext();
+
+        InferenceContext result = new InferenceContext.Join(leftContext, rightContext);
+        if(left.hasAlias()) {
+            result = result.overlay(left.getAlias(), leftContext);
+        }
+        if(right.hasAlias()) {
+            result = result.overlay(right.getAlias(), rightContext);
+        }
+        return result.with(ImmutableMap.of(
+                ViewSchema.ID, UseBinary.DEFAULT
+        ));
     }
 
     @Override

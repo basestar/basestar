@@ -69,13 +69,13 @@ public class FromAlias implements From {
     @Override
     public Expression id() {
 
-        return null;
+        return from.id();
     }
 
     @Override
     public Use<?> typeOfId() {
 
-        return null;
+        return from.typeOfId();
     }
 
     @Override
@@ -87,13 +87,13 @@ public class FromAlias implements From {
     @Override
     public BinaryKey id(final Map<String, Object> row) {
 
-        return null;
+        return from.id(row);
     }
 
     @Override
     public boolean isCompatibleBucketing(final List<Bucketing> other) {
 
-        return false;
+        return from.isCompatibleBucketing(other);
     }
 
     @Override

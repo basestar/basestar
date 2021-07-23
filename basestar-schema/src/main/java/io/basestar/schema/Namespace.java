@@ -39,6 +39,8 @@ import javax.annotation.Nullable;
 import java.io.*;
 import java.net.URL;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
@@ -172,7 +174,7 @@ public class Namespace implements Loadable, Schema.Resolver {
                 throw new SchemaValidationException(rename, "Cannot apply renaming, it will duplicate the name: " + rename);
             }
         });
-        final Map<Name, Schema<?>> out = new HashMap<>();
+        final ConcurrentMap<Name, Schema<?>> out = new ConcurrentHashMap<>();
         for(final Map.Entry<Name, Schema.Descriptor<?, ?>> entry : descriptors.entrySet()) {
             resolveCyclic(resolver, version, entry.getKey(), entry.getValue(), descriptors, renaming, out);
         }
@@ -198,9 +200,10 @@ public class Namespace implements Loadable, Schema.Resolver {
                 @Override
                 public void constructing(final Name qualifiedName, final Schema<?> schema) {
 
-                    assert qualifiedName.equals(outputName);
-                    assert !out.containsKey(outputName);
-                    out.put(outputName, schema);
+                    if(qualifiedName.equals(outputName)) {
+                        assert !out.containsKey(qualifiedName);
+                        out.put(qualifiedName, schema);
+                    }
                     if(resolver instanceof Schema.Resolver.Constructing) {
                         ((Constructing) resolver).constructing(qualifiedName, schema);
                     }
@@ -214,7 +217,7 @@ public class Namespace implements Loadable, Schema.Resolver {
                     if (builder == null) {
                         return resolver.getSchema(qualifiedName);
                     } else {
-                        return resolveCyclic(resolver, version, qualifiedName, builder, descriptors, naming, out);
+                        return resolveCyclic(this, version, qualifiedName, builder, descriptors, naming, out);
                     }
                 }
 

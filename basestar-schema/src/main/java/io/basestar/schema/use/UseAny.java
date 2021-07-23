@@ -110,13 +110,9 @@ public class UseAny implements Use<Object> {
     }
 
     @Override
-    public Use<?> typeOf(final Name name) {
+    public Optional<Use<?>> optionalTypeOf(final Name name) {
 
-        if(name.isEmpty()) {
-            return this;
-        } else {
-            throw new IllegalStateException();
-        }
+        return Optional.of(this);
     }
 
     @Override

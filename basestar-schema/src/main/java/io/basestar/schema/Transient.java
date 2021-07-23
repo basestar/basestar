@@ -258,9 +258,9 @@ public class Transient implements Member {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T> Use<T> typeOf(final Name name) {
+    public <T> Optional<Use<T>> optionalTypeOf(final Name name) {
 
-        return (Use<T>)type.typeOf(name);
+        return (Optional<Use<T>>)(Optional<?>)type.optionalTypeOf(name);
     }
 
     @Override
