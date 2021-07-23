@@ -326,6 +326,29 @@ class TestViewTransform extends AbstractSparkTest {
         assertEquals(6, rows.size());
     }
 
+    @Test
+    void testSqlJoinView() throws IOException {
+
+        final SparkSession session = session();
+
+        final Map<Name, Dataset<Row>> datasets = ImmutableMap.of(
+                Name.of("A"), session.createDataset(ImmutableList.of(
+                        new A("a1", new B("b1")),
+                        new A("a2", new B("b2"))
+                ), Encoders.bean(A.class)).toDF(),
+                Name.of("B"), session.createDataset(ImmutableList.of(
+                        new B("b1", new D("d1", 3L), 2L),
+                        new B("b2", new D("d2", 4L), 5L)
+                ), Encoders.bean(B.class)).toDF()
+        );
+
+        final Set<WithSqlJoin> rows = ImmutableSet.copyOf(view("WithSqlJoin", WithSqlJoin.class, datasets));
+        assertEquals(ImmutableSet.of(
+                new WithSqlJoin("a1b1", "a1", new D("d1", null)),
+                new WithSqlJoin("a2b2", "a2", new D("d2", null))
+        ), rows);
+    }
+
     private <T> List<T> view(final String view, final Class<T> as,  final Map<Name, Dataset<Row>> datasets) throws IOException {
 
         return view(view, as, datasets, ImmutableSet.of());

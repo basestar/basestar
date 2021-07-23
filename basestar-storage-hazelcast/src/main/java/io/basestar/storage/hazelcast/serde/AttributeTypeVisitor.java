@@ -81,6 +81,12 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
     }
 
     @Override
+    public AttributeType<?> visitComposite(final UseComposite type) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public <T> AttributeType<?> visitSet(final UseSet<T> type) {
 
         return type.getType().visit(OfArray.INSTANCE);
@@ -166,6 +172,12 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
         public AttributeType<?> visitDecimal(final UseDecimal type) {
 
             return AttributeType.encodedArray(type);
+        }
+
+        @Override
+        public AttributeType<?> visitComposite(final UseComposite type) {
+
+            throw new UnsupportedOperationException();
         }
 
         @Override

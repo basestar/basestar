@@ -148,6 +148,12 @@ public class AvroUtils {
             }
 
             @Override
+            public Schema visitComposite(final UseComposite type) {
+
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
             public <T> Schema visitSet(final UseSet<T> type) {
 
                 return Schema.createArray(schema(type.getType(), expand));

@@ -61,17 +61,16 @@ public class UseView implements UseLinkable {
     @Override
     public UseView resolve(final Schema.Resolver resolver) {
 
-        return this;
-//        if(schema.isAnonymous()) {
-//            return this;
-//        } else {
-//            final ViewSchema resolved = resolver.requireViewSchema(schema.getQualifiedName());
-//            if(resolved == schema) {
-//                return this;
-//            } else {
-//                return new UseView(resolved);
-//            }
-//        }
+        if(schema.isAnonymous()) {
+            return this;
+        } else {
+            final ViewSchema resolved = resolver.requireViewSchema(schema.getQualifiedName());
+            if(resolved == schema) {
+                return this;
+            } else {
+                return new UseView(resolved);
+            }
+        }
     }
 
     @Override

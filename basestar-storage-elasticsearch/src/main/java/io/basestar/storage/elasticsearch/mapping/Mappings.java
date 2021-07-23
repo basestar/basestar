@@ -168,6 +168,12 @@ public class Mappings {
                     }
 
                     @Override
+                    public FieldType visitComposite(final UseComposite type) {
+
+                        throw new UnsupportedOperationException();
+                    }
+
+                    @Override
                     public <T> FieldType visitSet(final UseSet<T> type) {
 
                         return new FieldType.ArrayType(type.getType().visit(this));

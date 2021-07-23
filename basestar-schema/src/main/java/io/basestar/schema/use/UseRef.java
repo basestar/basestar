@@ -104,17 +104,16 @@ public class UseRef implements UseLinkable {
     @Override
     public UseRef resolve(final Schema.Resolver resolver) {
 
-        return this;
-//        if(schema.isAnonymous()) {
-//            return this;
-//        } else {
-//            final ReferableSchema resolved = resolver.requireReferableSchema(schema.getQualifiedName());
-//            if(resolved == schema) {
-//                return this;
-//            } else {
-//                return new UseRef(resolved, versioned, cascade);
-//            }
-//        }
+        if(schema.isAnonymous()) {
+            return this;
+        } else {
+            final ReferableSchema resolved = resolver.requireReferableSchema(schema.getQualifiedName());
+            if(resolved == schema) {
+                return this;
+            } else {
+                return new UseRef(resolved, versioned, cascade);
+            }
+        }
     }
 
     @Override

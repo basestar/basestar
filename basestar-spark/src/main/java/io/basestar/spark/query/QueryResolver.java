@@ -13,7 +13,7 @@ import io.basestar.schema.ViewSchema;
 import io.basestar.schema.expression.TypedExpression;
 import io.basestar.schema.from.Join;
 import io.basestar.schema.use.Use;
-import io.basestar.schema.use.UseStruct;
+import io.basestar.schema.use.UseComposite;
 import io.basestar.schema.util.Bucket;
 import io.basestar.spark.combiner.Combiner;
 import io.basestar.spark.expression.SparkExpressionVisitor;
@@ -32,6 +32,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SQLContext;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
+import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 
 import java.util.HashMap;
@@ -277,9 +278,18 @@ public interface QueryResolver {
             final String rightAs = join.getRight().getAlias();
 
             final Map<String, Use<?>> schema = new HashMap<>();
-            schema.put(leftAs, UseStruct.from(left.getLayout().getSchema()));
-            schema.put(rightAs, UseStruct.from(right.getLayout().getSchema()));
+            schema.putAll(left.getLayout().getSchema());
+            schema.putAll(right.getLayout().getSchema());
+            if(join.getLeft().hasAlias()) {
+                schema.put(leftAs, new UseComposite(left.getLayout().getSchema()));
+            }
+            if(join.getRight().hasAlias()) {
+                schema.put(rightAs, new UseComposite(right.getLayout().getSchema()));
+            }
             final Layout layout = Layout.simple(schema);
+            final StructType leftType = SparkSchemaUtils.structType(left.getLayout());
+            final StructType rightType = SparkSchemaUtils.structType(right.getLayout());
+            final StructType structType = SparkSchemaUtils.structType(layout);
 
             final String joinType = join.getType().name().toLowerCase();
 
@@ -301,7 +311,26 @@ public interface QueryResolver {
                         final SparkExpressionVisitor visitor = new SparkExpressionVisitor(columnResolver);
                         final Column condition = visitor.visit(join.getOn());
 
-                        return leftDs.join(rightDs, condition, joinType);
+                        return leftDs.joinWith(rightDs, condition, joinType).map(SparkUtils.map(tuple -> {
+
+                            final Map<String, Object> result = new HashMap<>();
+                            for(final StructField field : leftType.fields()) {
+                                result.put(field.name(), SparkRowUtils.get(tuple._1(), field.name()));
+                            }
+                            for(final StructField field : rightType.fields()) {
+                                result.put(field.name(), SparkRowUtils.get(tuple._2(), field.name()));
+                            }
+                            if(join.getLeft().hasAlias()) {
+                                final Row leftRow = SparkRowUtils.conform(tuple._1(), leftType);
+                                result.put(leftAs, leftRow);
+                            }
+                            if(join.getRight().hasAlias()) {
+                                final Row rightRow = SparkRowUtils.conform(tuple._2(), rightType);
+                                result.put(rightAs, rightRow);
+                            }
+                            return SparkRowUtils.create(structType, result);
+
+                        }), RowEncoder.apply(structType));
 
                     },
                     layout

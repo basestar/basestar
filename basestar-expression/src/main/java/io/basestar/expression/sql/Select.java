@@ -5,7 +5,9 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.Renaming;
 import lombok.Data;
 
-public interface Select {
+import java.io.Serializable;
+
+public interface Select extends Serializable {
 
     boolean isConstant(Expression.Closure closure);
 

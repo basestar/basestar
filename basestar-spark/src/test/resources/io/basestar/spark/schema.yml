@@ -290,3 +290,13 @@ WithInline:
   properties:
     name:
       expression: name
+
+WithSqlJoin:
+  type: view
+  from:
+    sql: SELECT a.id AS id, key FROM A AS a INNER JOIN B AS b ON a.ref.id = b.id
+  properties:
+    id:
+      type: string
+    key:
+      type: D

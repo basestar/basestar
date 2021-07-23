@@ -6,11 +6,12 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.Renaming;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public interface From {
+public interface From extends Serializable {
 
     boolean isConstant(Expression.Closure closure);
 

@@ -5,7 +5,9 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.Renaming;
 import lombok.Data;
 
-public interface Union {
+import java.io.Serializable;
+
+public interface Union extends Serializable {
 
     <T> T visit(Visitor<T> visitor);
 

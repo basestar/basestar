@@ -269,4 +269,15 @@ public class SparkRowUtils {
 
         return Iterators.transform(tuples, SparkRowUtils::nulled);
     }
+
+    public static Row create(final StructType structType, final Map<String, Object> values) {
+
+        final Object[] row = new Object[structType.size()];
+        int i = 0;
+        for(final StructField field : structType.fields()) {
+            row[i] = values.get(field.name());
+            ++i;
+        }
+        return new GenericRowWithSchema(row, structType);
+    }
 }

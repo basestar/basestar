@@ -23,7 +23,7 @@ public class ValidateTransform implements Transform<Dataset<Row>, Dataset<Row>> 
     public static final String VIOLATIONS_KEY = Reserved.PREFIX + "violations";
 
     public static final Map<String, Use<?>> VIOLATIONS_METADATA = ImmutableMap.of(
-            VIOLATIONS_KEY, new UseMap<>(new UseArray<>(UseStruct.from(ImmutableMap.of(
+            VIOLATIONS_KEY, new UseMap<>(new UseArray<>(new UseComposite(ImmutableMap.of(
                     "name", UseString.DEFAULT,
                     "type", UseString.DEFAULT,
                     "message", UseString.DEFAULT

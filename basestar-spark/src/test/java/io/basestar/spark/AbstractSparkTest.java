@@ -330,4 +330,16 @@ public abstract class AbstractSparkTest {
 
         private String name;
     }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class WithSqlJoin {
+
+        private String __key;
+
+        private String id;
+
+        private D key;
+    }
 }
