@@ -27,10 +27,11 @@ import io.basestar.util.ISO8601;
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderAsyncClient;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.*;
 
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
@@ -41,7 +42,7 @@ class TestCognitoGroupStorage extends TestStorage {
     @Override
     protected Storage storage(final Namespace namespace) {
 
-        final Map<String, Map<String, GroupType>> userPools = new HashMap<>();
+        final ConcurrentMap<String, Map<String, GroupType>> userPools = new ConcurrentHashMap<>();
 
         final CognitoIdentityProviderAsyncClient client = mock(CognitoIdentityProviderAsyncClient.class);
 
