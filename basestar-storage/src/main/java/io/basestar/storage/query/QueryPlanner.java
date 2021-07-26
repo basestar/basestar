@@ -32,7 +32,7 @@ public interface QueryPlanner<T> {
 
     T plan(QueryStageVisitor<T> visitor, LinkableSchema schema, Expression expression, List<Sort> sort, Set<Name> expand, Set<Bucket> buckets);
 
-    class Default<T> implements QueryPlanner<T> {
+    abstract class Default<T> implements QueryPlanner<T> {
 
         private final Predicate<ViewSchema> materialized;
 
@@ -178,7 +178,13 @@ public interface QueryPlanner<T> {
                 public T visitAgg(final FromAgg from) {
 
                     final T result = from.getFrom().visit(this);
-                    return visitor.agg(result, from.getGroup(), from.typedAgg());
+
+                    final InferenceContext inference = from.getFrom().inferenceContext();
+
+                    final List<String> group = from.getGroup();
+                    final Map<String, TypedExpression<?>> expressions = from.typedAgg();
+
+                    return aggViewStage(visitor, result, inference, group, expressions, buckets);
                 }
 
                 @Override
@@ -300,17 +306,25 @@ public interface QueryPlanner<T> {
             final InferenceContext context = from.inferenceContext();
             for(final String name : schema.getGroup()) {
                 if(!output.containsKey(name)) {
-                    final Use<?> typeOf = context.typeOf(Name.of(name));
+                    final Use<?> typeOf = context.requireTypeOf(Name.of(name));
                     output.put(name, TypedExpression.from(new NameConstant(name), typeOf));
                 }
             }
             return output;
         }
 
+
         protected T aggViewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema, final Set<Bucket> buckets) {
 
-            final T stage = viewFrom(visitor, schema, buckets);
-            return visitor.agg(stage, schema.getGroup(), viewExpressions(schema));
+            final T fromStage = viewFrom(visitor, schema, null);
+
+            final InferenceContext inference = schema.getFrom().inferenceContext()
+                    .overlay(Reserved.THIS, InferenceContext.from(schema));
+
+            final List<String> group = schema.getGroup();
+            final Map<String, TypedExpression<?>> expressions = viewExpressions(schema);
+
+            return aggViewStage(visitor, fromStage, inference, group, expressions, buckets);
         }
 
         protected T mapViewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema, final Set<Bucket> buckets) {
@@ -322,6 +336,9 @@ public interface QueryPlanner<T> {
             final T stage = viewFrom(visitor, schema, buckets);
             return visitor.map(stage, expressions);
         }
+
+        protected abstract T aggViewStage(QueryStageVisitor<T> visitor, T from, InferenceContext inference,
+                                          List<String> group, Map<String, TypedExpression<?>> expressions, Set<Bucket> buckets);
     }
 
     class AggregateSplitting<T> extends Default<T> {
@@ -337,12 +354,8 @@ public interface QueryPlanner<T> {
         }
 
         @Override
-        protected T aggViewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema, final Set<Bucket> buckets) {
-
-            final FromSchema from = (FromSchema)schema.getFrom();
-            final LinkableSchema fromSchema = from.getSchema();
-            final List<String> group = schema.getGroup();
-            final Map<String, TypedExpression<?>> expressions = viewExpressions(schema);
+        protected T aggViewStage(final QueryStageVisitor<T> visitor, final T from, final InferenceContext inference,
+                                 final List<String> group, final Map<String, TypedExpression<?>> expressions, final Set<Bucket> buckets) {
 
             // Move complex expressions around aggregates into a post-map stage
             final Map<String, TypedExpression<?>> postAgg = new HashMap<>();
@@ -359,12 +372,10 @@ public interface QueryPlanner<T> {
                 } else if(group.contains(name)) {
                     postAgg.put(name, TypedExpression.from(new NameConstant(name), typedExpr.getType()));
                 } else {
-                    throw new IllegalStateException("Property " + name + " must be group or aggregate");
+                    requiresPostAgg = true;
+                    postAgg.put(name, typedExpr);
                 }
             }
-
-            final InferenceContext inference = InferenceContext.from(fromSchema)
-                    .overlay(Reserved.THIS, InferenceContext.from(schema));
 
             final Map<String, ? extends Expression> extractedAgg;
             if(requiresPostAgg) {
@@ -379,11 +390,11 @@ public interface QueryPlanner<T> {
             boolean requiresPreAgg = false;
             final Map<String, TypedExpression<?>> agg = new HashMap<>();
             final Map<String, TypedExpression<?>> preAgg = new HashMap<>();
-            for(final String name : schema.getGroup()) {
+            for(final String name : group) {
                 final TypedExpression<?> expr = Nullsafe.require(expressions.get(name));
                 requiresPreAgg = requiresPreAgg || !isSimpleName(expr.getExpression());
                 preAgg.put(name, expr);
-                agg.put(name, expr);
+                agg.put(name, new TypedExpression<>(new NameConstant(name), expr.getType()));
             }
             for(final Map.Entry<String, ? extends Expression> entry : extractedAgg.entrySet()) {
                 final String name = entry.getKey();
@@ -402,11 +413,11 @@ public interface QueryPlanner<T> {
                         preAgg.put(id, inference.typed(expr));
                     }
                 }
-                final Use<?> typeOf = inference.typeOf(original);
+                final Use<?> typeOf = inference.requireTypeOf(original);
                 agg.put(name, TypedExpression.from(original.copy(args), typeOf));
             }
 
-            T stage = viewFrom(visitor, schema, null);
+            T stage = from;
             if(requiresPreAgg) {
                 stage = visitor.map(stage, preAgg);
             }

@@ -476,6 +476,11 @@ public interface Use<T> extends Serializable {
 
         R visitComposite(UseComposite type);
 
+//        default R visitCallable(UseCallable useCallable) {
+//
+//            throw new UnsupportedOperationException();
+//        }
+
         interface Defaulting<R> extends Visitor<R> {
 
             default <T> R visitDefault(final Use<T> type) {

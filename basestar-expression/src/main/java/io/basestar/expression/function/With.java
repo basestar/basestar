@@ -54,7 +54,8 @@ public class With implements Expression {
     public Expression bind(final Context context, final Renaming root) {
 
         boolean constant = true;
-        boolean changed = false;
+        final Expression yield = this.yield.bind(context, root);
+        boolean changed = yield != this.yield;
         final List<Pair<String, Expression>> with = new ArrayList<>();
         for(final Pair<String, Expression> entry : this.with) {
             final Expression before = entry.getSecond();
@@ -64,7 +65,7 @@ public class With implements Expression {
             changed = changed || after != before;
         }
         if(constant) {
-            final Expression _return = this.yield.bind(context, Renaming.closure(withKeys(), root));
+            final Expression _return = yield.bind(context, Renaming.closure(withKeys(), root));
             if(_return instanceof Constant) {
                 return _return;
             } else {

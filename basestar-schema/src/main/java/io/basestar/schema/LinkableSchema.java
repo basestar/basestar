@@ -26,6 +26,7 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver, Permissio
     interface Descriptor<S extends LinkableSchema> extends InstanceSchema.Descriptor<S>, Link.Resolver.Descriptor, Permission.Resolver.Descriptor {
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        @JsonDeserialize(using = AbbrevListDeserializer.class)
         Set<Name> getExpand();
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)

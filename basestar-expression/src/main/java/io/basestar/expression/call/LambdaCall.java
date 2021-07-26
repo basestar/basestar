@@ -27,12 +27,15 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.Renaming;
 import io.basestar.expression.constant.Constant;
+import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.function.Member;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import lombok.Data;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -91,12 +94,19 @@ public class LambdaCall implements Expression {
     @Override
     public Object evaluate(final Context context) {
 
-        final Object with = this.with.evaluate(context);
-        final Object[] args = this.args.stream().map(v -> v.evaluate(context)).toArray();
-        if (with instanceof Callable) {
-            return ((Callable) with).call(args);
+        if(this.with instanceof NameConstant) {
+            final Name name = ((NameConstant)this.with).getName();
+            final Object[] args = this.args.stream().map(v -> v.evaluate(context)).toArray();
+            final Type[] argTypes = Arrays.stream(args).map(Object::getClass).toArray(Type[]::new);
+            return context.callable(name.toString(), argTypes).call(args);
         } else {
-            throw new IllegalStateException();
+            final Object with = this.with.evaluate(context);
+            final Object[] args = this.args.stream().map(v -> v.evaluate(context)).toArray();
+            if (with instanceof Callable) {
+                return ((Callable) with).call(args);
+            } else {
+                throw new IllegalStateException();
+            }
         }
     }
 

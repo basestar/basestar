@@ -313,7 +313,14 @@ public class InferenceVisitor implements ExpressionVisitor<Optional<Use<?>>> {
     @Override
     public Optional<Use<?>> visitLambdaCall(final LambdaCall expression) {
 
-        return Optional.empty();
+        final Expression with = expression.getWith();
+        if(with instanceof NameConstant) {
+            final List<Use<?>> args = expression.getArgs().stream()
+                    .map(this::typeOf).collect(Collectors.toList());
+            return Optional.of(typeOfCall(((NameConstant) with).getName(), args));
+        } else {
+            return Optional.empty();
+        }
     }
 
     @Override
@@ -518,13 +525,28 @@ public class InferenceVisitor implements ExpressionVisitor<Optional<Use<?>>> {
     @Override
     public Optional<Use<?>> visitCase(final Case expression) {
 
-        return Optional.of(UseAny.DEFAULT);
+        Stream<Expression> expressions = expression.getWhen().stream().map(Pair::getSecond);
+        if(expression.getOtherwise() != null) {
+            expressions = Stream.concat(expressions, Stream.of(expression.getOtherwise()));
+        }
+
+        final Optional<Optional<Use<?>>> result = expressions.map(this::optionalTypeOf)
+                .reduce((a, b) -> Optionals.map(a, b, Use::commonBase));
+
+        return result.orElseGet(Optional::empty);
     }
 
     protected Use<?> typeOfCall(final Use<?> target, final String member, final List<Use<?>> args) {
 
         final Type[] argTypes = args.stream().map(Use::javaType).toArray(Type[]::new);
         final Callable callable = methods.callable(target.javaType(), member, argTypes);
+        return Use.fromJavaType(callable.type());
+    }
+
+    protected Use<?> typeOfCall(final Name name, final List<Use<?>> args) {
+
+        final Type[] argTypes = args.stream().map(Use::javaType).toArray(Type[]::new);
+        final Callable callable = methods.callable(name, argTypes);
         return Use.fromJavaType(callable.type());
     }
 }

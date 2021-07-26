@@ -1,5 +1,6 @@
 package io.basestar.spark.transform;
 
+import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Layout;
@@ -52,11 +53,11 @@ public class AggregateTransform implements Transform<Dataset<Row>, Dataset<Row>>
         });
 
         final Column[] aggCols = aggregates.entrySet().stream()
-                .map(v -> expressionVisitor.visit(v.getValue()).as(v.getKey()))
+                .map(v -> expressionVisitor.visit(v.getValue().bind(Context.init())).as(v.getKey()))
                 .toArray(Column[]::new);
 
         final Column[] groupCols = group.stream()
-                .map(e -> expressionVisitor.visit(e.getSecond()).as(e.getFirst()))
+                .map(e -> expressionVisitor.visit(e.getSecond().bind(Context.init())).as(e.getFirst()))
                 .toArray(Column[]::new);
 
         final Dataset<Row> grouped = input.groupBy(groupCols)

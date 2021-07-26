@@ -34,4 +34,19 @@ public class NumberMethods implements Serializable {
 
         return Math.sqrt(num.doubleValue());
     }
+
+    public long floor(final Number a) {
+
+        return (long)Math.floor(a.doubleValue());
+    }
+
+    public long ceil(final Number a) {
+
+        return (long)Math.ceil(a.doubleValue());
+    }
+
+    public double pow(final Number a, final Number b) {
+
+        return Math.pow(a.doubleValue(), b.doubleValue());
+    }
 }

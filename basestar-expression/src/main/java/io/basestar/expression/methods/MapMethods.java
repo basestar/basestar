@@ -33,17 +33,17 @@ public class MapMethods implements Serializable {
         return target.size();
     }
 
-    public boolean isEmpty(final Map<?, ?> target) {
+    public boolean isempty(final Map<?, ?> target) {
 
         return target.isEmpty();
     }
 
-    public boolean containsKey(final Map<?, ?> target, final Object o) {
+    public boolean containskey(final Map<?, ?> target, final Object o) {
 
         return target.keySet().stream().anyMatch(v -> Values.equals(v, o));
     }
 
-    public boolean containsValue(final Map<?, ?> target, final Object o) {
+    public boolean containsvalue(final Map<?, ?> target, final Object o) {
 
         return target.values().stream().anyMatch(v -> Values.equals(v, o));
     }

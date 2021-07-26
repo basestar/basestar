@@ -23,6 +23,7 @@ package io.basestar.expression;
 import io.basestar.expression.call.Callable;
 import io.basestar.expression.exception.MemberNotFoundException;
 import io.basestar.expression.methods.Methods;
+import io.basestar.util.Name;
 
 import java.io.Serializable;
 import java.lang.reflect.Type;
@@ -77,6 +78,16 @@ public interface Context extends Serializable {
             }
 
             @Override
+            public Callable callable(final String method, final Type... args) {
+
+                if(scopeCopy.containsKey(method)) {
+                    return (Callable) scopeCopy.get(method);
+                } else {
+                    return methods.callable(Name.of(method), args);
+                }
+            }
+
+            @Override
             public Object cast(final Object value, final String type) {
 
                 throw new UnsupportedOperationException();
@@ -109,6 +120,16 @@ public interface Context extends Serializable {
             public Callable callable(final Type target, final String method, final Type... args) {
 
                 return delegate.callable(target, method, args);
+            }
+
+            @Override
+            public Callable callable(final String method, final Type... args) {
+
+                if(scopeCopy.containsKey(method)) {
+                    return (Callable) scopeCopy.get(method);
+                } else {
+                    return delegate.callable(method, args);
+                }
             }
 
             @Override
@@ -146,6 +167,8 @@ public interface Context extends Serializable {
     }
 
     Callable callable(Type target, String method, Type... args);
+
+    Callable callable(String method, Type... args);
 
     default Object member(final Object target, final String member) {
 

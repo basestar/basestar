@@ -35,6 +35,16 @@ public interface InferenceContext {
         return optionalTypeOf(expression).orElse(UseAny.DEFAULT);
     }
 
+    default Use<?> requireTypeOf(final Name name) {
+
+        return optionalTypeOf(name).orElseThrow(() -> new IllegalStateException("Type of " + name + " cannot be inferred"));
+    }
+
+    default Use<?> requireTypeOf(final Expression expression) {
+
+        return optionalTypeOf(expression).orElseThrow(() -> new IllegalStateException("Type of " + expression + " cannot be inferred"));
+    }
+
     default InferenceContext overlay(final String name, final InferenceContext override) {
 
         return overlay(ImmutableMap.of(name, override));

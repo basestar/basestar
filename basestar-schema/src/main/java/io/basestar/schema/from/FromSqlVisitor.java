@@ -15,10 +15,7 @@ import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Pair;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class FromSqlVisitor implements ExpressionVisitor.Defaulting<From> {
 
@@ -97,6 +94,23 @@ public class FromSqlVisitor implements ExpressionVisitor.Defaulting<From> {
         });
     }
 
+//    @RequiredArgsConstructor
+//    public class ClosureExtractingVisitor implements ExpressionVisitor.Defaulting<Pair<Expression, Expression>> {
+//
+//        private final Expression.Closure closure;
+//
+//        @Override
+//        public Pair<Expression, Expression> visitDefault(final Expression expression) {
+//
+//            if(!expression.isConstant() && expression.isConstant(closure)) {
+//                return Pair.of(expression, new Constant(true));
+//            } else {
+//                return Pair.of(new Constant(true), expression.copy(expression.expressions().stream()
+//                        .map(this::visit).collect(Collectors.toList())));
+//            }
+//        }
+//    }
+
     @Override
     public From visitSql(final Sql expression) {
 
@@ -105,6 +119,8 @@ public class FromSqlVisitor implements ExpressionVisitor.Defaulting<From> {
         final List<io.basestar.expression.sql.From> froms = expression.getFrom();
         final List<Expression> group = expression.getGroup();
         final List<Union> unions = expression.getUnion();
+
+        Expression closedWhere = where;
 
         From result;
         if (froms.size() == 1) {
@@ -115,12 +131,16 @@ public class FromSqlVisitor implements ExpressionVisitor.Defaulting<From> {
                 if (result == null) {
                     result = buildFrom(from);
                 } else {
+                    if(closedWhere != null) {
+
+                    }
                     // FIXME
                     result = result.join(buildFrom(from), Join.Type.INNER, new Constant(true));
                 }
             }
-            // Old-style join
-//            throw new UnsupportedOperationException();
+            if(result == null) {
+                throw new IllegalStateException("No valid select-from");
+            }
         }
 
         if (where != null) {
@@ -158,9 +178,17 @@ public class FromSqlVisitor implements ExpressionVisitor.Defaulting<From> {
 
                     final List<String> groupNames = new ArrayList<>();
                     for (final Expression g : group) {
-                        final String name = selectName(g, inputs);
-                        inputs.put(name, g);
-                        groupNames.add(name);
+
+                        final Optional<Map.Entry<String, Expression>> found = inputs.entrySet().stream().filter(e -> e.getValue().equals(g)).findFirst();
+                        if(found.isPresent()) {
+                            final Map.Entry<String, Expression> entry = found.get();
+                            final String name = entry.getKey();
+                            groupNames.add(name);
+                        } else {
+                            final String name = selectName(g, inputs);
+                            inputs.put(name, g);
+                            groupNames.add(name);
+                        }
                     }
                     result = result.agg(groupNames, inputs);
                 } else {

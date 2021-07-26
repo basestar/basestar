@@ -349,6 +349,27 @@ class TestViewTransform extends AbstractSparkTest {
         ), rows);
     }
 
+    @Test
+    void testSqlAggView() throws IOException {
+
+        final SparkSession session = session();
+
+        final Map<Name, Dataset<Row>> datasets = ImmutableMap.of(
+                Name.of("G"), session.createDataset(ImmutableList.of(
+                        new G("g1", "a", 10L),
+                        new G("g2", "a", 20L),
+                        new G("g3", "b", 30L),
+                        new G("g4", "b", 40L)
+                ), Encoders.bean(G.class)).toDF()
+        );
+
+        final Set<WithSqlAgg> rows = ImmutableSet.copyOf(view("WithSqlAgg", WithSqlAgg.class, datasets));
+        assertEquals(ImmutableSet.of(
+                new WithSqlAgg("ga", 34L),
+                new WithSqlAgg("gb", 74L)
+        ), rows);
+    }
+
     private <T> List<T> view(final String view, final Class<T> as,  final Map<Name, Dataset<Row>> datasets) throws IOException {
 
         return view(view, as, datasets, ImmutableSet.of());

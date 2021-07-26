@@ -30,7 +30,6 @@ import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.function.Coalesce;
 import io.basestar.expression.function.IfElse;
 import io.basestar.expression.function.Index;
-import io.basestar.expression.function.Member;
 import io.basestar.expression.literal.LiteralObject;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
@@ -248,12 +247,5 @@ public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Colu
         } else {
             return lhs.getItem(rhs);
         }
-    }
-
-    @Override
-    public Column visitMember(final Member expression) {
-
-        final Column lhs = visit(expression.getWith());
-        return lhs.getField(expression.getMember());
     }
 }

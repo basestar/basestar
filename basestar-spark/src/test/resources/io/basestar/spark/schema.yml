@@ -78,7 +78,9 @@ F:
 G:
   type: object
   properties:
-    x:
+    name:
+      type: string
+    value:
       type: integer
 
 AggView:
@@ -300,3 +302,13 @@ WithSqlJoin:
       type: string
     key:
       type: D
+
+WithSqlAgg:
+  type: view
+  from:
+    sql: "SELECT SUM(value + 2) AS values, CONCAT('g', name) AS names FROM G AS a GROUP BY name"
+  properties:
+    names:
+      type: string
+    values:
+      type: integer

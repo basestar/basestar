@@ -198,6 +198,16 @@ public class Lambda implements Expression {
         }
 
         @Override
+        public Callable callable(final String method, final Type... args) {
+
+            if(Lambda.this.args.contains(method)) {
+                throw new IllegalStateException("illegal bind to lambda parameter");
+            } else {
+                return context.callable(method, args);
+            }
+        }
+
+        @Override
         public Object cast(final Object value, final String type) {
 
             return context.cast(value, type);

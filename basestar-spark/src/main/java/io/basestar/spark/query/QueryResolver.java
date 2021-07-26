@@ -304,12 +304,16 @@ public interface QueryResolver {
                                 return SparkRowUtils.resolveName(leftDs, name.withoutFirst());
                             } else if(name.first().equals(rightAs)) {
                                 return SparkRowUtils.resolveName(rightDs, name.withoutFirst());
+                            } else if(SparkRowUtils.findField(leftType, name.first()).isPresent()) {
+                                return SparkRowUtils.resolveName(leftDs, name);
+                            } else if(SparkRowUtils.findField(rightType, name.first()).isPresent()) {
+                                return SparkRowUtils.resolveName(rightDs, name);
                             } else {
                                 throw new IllegalStateException("Column " + name + " not found in join");
                             }
                         };
                         final SparkExpressionVisitor visitor = new SparkExpressionVisitor(columnResolver);
-                        final Column condition = visitor.visit(join.getOn());
+                        final Column condition = visitor.visit(join.getOn().bind(Context.init()));
 
                         return leftDs.joinWith(rightDs, condition, joinType).map(SparkUtils.map(tuple -> {
 
@@ -331,7 +335,6 @@ public interface QueryResolver {
                             return SparkRowUtils.create(structType, result);
 
                         }), RowEncoder.apply(structType));
-
                     },
                     layout
             );
