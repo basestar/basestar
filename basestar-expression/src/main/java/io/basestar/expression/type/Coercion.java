@@ -55,8 +55,8 @@ public class Coercion {
             } else {
                 return number.floatValue() != 0.0f;
             }
-        } else if (value instanceof String) {
-            final String str = (String) value;
+        } else if (value instanceof CharSequence) {
+            final String str = value.toString();
             return !(str.isEmpty() || str.equalsIgnoreCase("false"));
         } else if (value instanceof Collection) {
             return !((Collection<?>) value).isEmpty();
@@ -79,8 +79,8 @@ public class Coercion {
             } else {
                 return ((Number) value).longValue() != 0L;
             }
-        } else if (value instanceof String) {
-            final String str = (String) value;
+        } else if (value instanceof CharSequence) {
+            final String str = value.toString();
             return !(str.isEmpty() || str.equalsIgnoreCase("false"));
         } else {
             throw new TypeConversionException(Boolean.class, value);
@@ -95,14 +95,15 @@ public class Coercion {
             return ((Boolean) value) ? 1L : 0L;
         } else if (value instanceof Number) {
             return ((Number) value).longValue();
-        } else if (value instanceof String) {
+        } else if (value instanceof CharSequence) {
+            final String str = value.toString();
             try {
-                return Long.parseLong((String) value);
+                return Long.parseLong(str);
             } catch (final NumberFormatException e) {
                 // ignore, try to parse as double and convert
             }
             try {
-                return ((Double)Double.parseDouble((String)value)).longValue();
+                return ((Double) Double.parseDouble(str)).longValue();
             } catch (final NumberFormatException e) {
                 throw new TypeConversionException(Long.class, value);
             }
@@ -125,9 +126,9 @@ public class Coercion {
             return ((Boolean) value) ? 1.0 : 0.0;
         } else if (value instanceof Number) {
             return ((Number) value).doubleValue();
-        } else if (value instanceof String) {
+        } else if (value instanceof CharSequence) {
             try {
-                return Double.parseDouble((String) value);
+                return Double.parseDouble(value.toString());
             } catch (final NumberFormatException e) {
                 throw new TypeConversionException(Double.class, value);
             }
@@ -149,15 +150,15 @@ public class Coercion {
         } else if (value instanceof Boolean) {
             return ((Boolean) value) ? BigDecimal.ONE : BigDecimal.ZERO;
         } else if (value instanceof Number) {
-            final Number number = (Number)value;
-            if(Numbers.isInteger(number)) {
+            final Number number = (Number) value;
+            if (Numbers.isInteger(number)) {
                 return BigDecimal.valueOf(number.longValue());
             } else {
                 return BigDecimal.valueOf(number.doubleValue());
             }
-        } else if (value instanceof String) {
+        } else if (value instanceof CharSequence) {
             try {
-                return new BigDecimal((String) value);
+                return new BigDecimal(value.toString());
             } catch (final NumberFormatException e) {
                 throw new TypeConversionException(Double.class, value);
             }
@@ -182,8 +183,8 @@ public class Coercion {
             return ISO8601.toString((TemporalAccessor) value);
         } else if (value instanceof Date) {
             return ISO8601.toString((Date) value);
-        } else if (value instanceof String) {
-            return (String) value;
+        } else if (value instanceof CharSequence) {
+            return value.toString();
         } else if (value instanceof Bytes) {
             return value.toString();
         } else if (value instanceof byte[]) {
