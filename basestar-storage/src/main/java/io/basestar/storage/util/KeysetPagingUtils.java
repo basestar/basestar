@@ -9,9 +9,9 @@ package io.basestar.storage.util;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,14 +24,14 @@ import com.google.common.collect.ImmutableList;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseInteger;
 import io.basestar.util.Name;
 import io.basestar.util.Page;
 import io.basestar.util.Sort;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Consumer;
 
 public class KeysetPagingUtils {
 
@@ -42,13 +42,13 @@ public class KeysetPagingUtils {
     public static List<Sort> normalizeSort(final LinkableSchema schema, final List<Sort> sort) {
 
         final Name id = Name.of(schema.id());
-        if(sort == null) {
+        if (sort == null) {
             return ImmutableList.of(Sort.asc(id));
         } else {
             final List<Sort> result = new ArrayList<>();
-            for(final Sort s : sort) {
+            for (final Sort s : sort) {
                 result.add(s);
-                if(s.getName().equals(id)) {
+                if (s.getName().equals(id)) {
                     // Other sort paths are irrelevant
                     return result;
                 }
@@ -62,14 +62,9 @@ public class KeysetPagingUtils {
 
         final byte[] bytes = token.getValue();
         final List<Object> values = new ArrayList<>();
-        try(final ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
-            final DataInputStream dis = new DataInputStream(bais)) {
-            for(final Sort s : sort) {
-                final Name name = s.getName();
-                final Use<Object> type = schema.typeOf(name);
-                final Object value = type.deserialize(dis);
-                values.add(value);
-            }
+        try (final ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+             final DataInputStream dis = new DataInputStream(bais)) {
+            getSortingInfo(schema, sort, dis, values::add);
         } catch (final IOException e) {
             // Shouldn't be possible, not doing real IO
             throw new UncheckedIOException(e);
@@ -80,19 +75,81 @@ public class KeysetPagingUtils {
 
     public static Page.Token keysetPagingToken(final InstanceSchema schema, final List<Sort> sort, final Map<String, Object> object) {
 
-        try(final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            final DataOutputStream dos = new DataOutputStream(baos)) {
-            for (final Sort s : sort) {
-                final Name name = s.getName();
-                final Use<Object> type = schema.typeOf(name);
-                final Object value = type.create(name.get(object));
-                type.serialize(value, dos);
-            }
+        try (final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             final DataOutputStream dos = new DataOutputStream(baos)) {
+            addSortingInfo(schema, sort, object, dos);
             dos.flush();
             return new Page.Token(baos.toByteArray());
         } catch (final IOException e) {
             // Shouldn't be possible, not doing real IO
             throw new UncheckedIOException(e);
+        }
+    }
+
+    public static Page.Token countPreservingKeysetPagingToken(final InstanceSchema schema,
+                                                              final List<Sort> sort,
+                                                              final Map<String, Object> object,
+                                                              final long count) {
+
+        try (final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             final DataOutputStream dos = new DataOutputStream(baos)) {
+            final UseInteger countType = UseInteger.DEFAULT;
+            countType.serialize(count, dos);
+            addSortingInfo(schema, sort, object, dos);
+
+            dos.flush();
+            return new Page.Token(baos.toByteArray());
+        } catch (final IOException e) {
+            // Shouldn't be possible, not doing real IO
+            throw new UncheckedIOException(e);
+        }
+    }
+
+
+    public static Map<String, List<Object>> countPreservingKeysetValues(final InstanceSchema schema,
+                                                                        final List<Sort> sort,
+                                                                        final Page.Token token) {
+        final byte[] bytes = token.getValue();
+        final List<Object> values = new ArrayList<>();
+        final HashMap<String, List<Object>> results = new HashMap<>();
+        long count;
+        try (final ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+             final DataInputStream dis = new DataInputStream(bais)) {
+
+            final UseInteger countType = UseInteger.DEFAULT;
+            count = countType.deserialize(dis);
+            getSortingInfo(schema, sort, dis, values::add);
+        } catch (final IOException e) {
+            // Shouldn't be possible, not doing real IO
+            throw new UncheckedIOException(e);
+        }
+        assert values.size() == sort.size();
+        results.put("sort", values);
+        results.put("count", Collections.singletonList(count));
+        return results;
+    }
+
+    private static void addSortingInfo(InstanceSchema schema,
+                                       List<Sort> sort,
+                                       Map<String, Object> object,
+                                       DataOutputStream dos) throws IOException {
+        for (final Sort s : sort) {
+            final Name name = s.getName();
+            final Use<Object> type = schema.typeOf(name);
+            final Object value = type.create(name.get(object));
+            type.serialize(value, dos);
+        }
+    }
+
+    private static void getSortingInfo(InstanceSchema schema,
+                                       List<Sort> sort,
+                                       DataInputStream dis,
+                                       Consumer<Object> consumer) throws IOException {
+        for (final Sort s : sort) {
+            final Name name = s.getName();
+            final Use<Object> type = schema.typeOf(name);
+            final Object value = type.deserialize(dis);
+            consumer.accept(value);
         }
     }
 }

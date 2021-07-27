@@ -150,18 +150,19 @@ public class ElasticsearchUtils {
 
     public static QueryBuilder pagingQueryBuilder(final LinkableSchema schema, final List<Sort> sort, final Page.Token token) {
 
-        final List<Object> values = KeysetPagingUtils.keysetValues(schema, sort, token);
+        Map<String, List<Object>> stringListMap = KeysetPagingUtils.countPreservingKeysetValues(schema, sort, token);
+        final List<Object> sorting = stringListMap.get("sort");
         final BoolQueryBuilder outer = QueryBuilders.boolQuery();
         for(int i = 0; i < sort.size(); ++i) {
             if(i == 0) {
-                outer.should(pagingRange(sort.get(i), values.get(i)));
+                outer.should(pagingRange(sort.get(i), sorting.get(i)));
             } else {
                 final BoolQueryBuilder inner = QueryBuilders.boolQuery();
                 for (int j = 0; j < i; ++j) {
                     final Name name = sort.get(j).getName();
-                    inner.must(QueryBuilders.termQuery(name.toString(), values.get(j)));
+                    inner.must(QueryBuilders.termQuery(name.toString(), sorting.get(j)));
                 }
-                inner.must(pagingRange(sort.get(i), values.get(i)));
+                inner.must(pagingRange(sort.get(i), sorting.get(i)));
                 outer.should(inner);
             }
         }

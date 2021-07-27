@@ -40,9 +40,7 @@ import org.apache.commons.csv.CSVParser;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
+import java.io.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.*;
@@ -264,14 +262,14 @@ public abstract class TestStorage {
         for(int i = 0; i != 10; ++i) {
             final Page<Map<String, Object>> page = pager.page(ImmutableSet.of(Page.Stat.TOTAL, Page.Stat.APPROX_TOTAL), token,10).join();
             final Page.Stats stats = page.getStats();
-//            if(stats != null) {
-//                if(stats.getTotal() != null) {
-//                    assertEquals(100, stats.getTotal());
-//                }
-//                if(stats.getApproxTotal() != null) {
-//                    assertEquals(100, stats.getApproxTotal());
-//                }
-//            }
+               if(stats != null) {
+                   if(stats.getTotal() != null) {
+                       assertEquals(100, stats.getTotal());
+                   }
+                   if(stats.getApproxTotal() != null) {
+                       assertEquals(100, stats.getApproxTotal());
+                   }
+               }
             page.forEach(object -> results.add(Instance.getId(object)));
             token = page.getPaging();
         }

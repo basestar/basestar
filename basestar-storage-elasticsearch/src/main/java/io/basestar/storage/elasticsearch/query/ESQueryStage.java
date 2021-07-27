@@ -79,7 +79,7 @@ public interface ESQueryStage {
         public ESQueryStage filter(final Expression filter) {
 
             final Expression newFilter;
-            if(this.filter != null) {
+            if (this.filter != null) {
                 newFilter = new And(this.filter, filter);
             } else {
                 newFilter = filter;
@@ -117,13 +117,13 @@ public interface ESQueryStage {
             final SearchRequest request = new SearchRequest(strategy.index(schema));
             final SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
             final QueryBuilder basicQuery;
-            if(filter != null) {
+            if (filter != null) {
                 basicQuery = new ESExpressionVisitor().visit(filter);
             } else {
                 basicQuery = null;
             }
             final QueryBuilder query;
-            if(count != 0) {
+            if (count != 0) {
                 final List<Sort> normalizedSort = KeysetPagingUtils.normalizeSort(schema, sort);
                 normalizedSort.forEach(s -> sourceBuilder.sort(ElasticsearchUtils.sort(s)));
                 if (token == null) {
@@ -165,14 +165,22 @@ public interface ESQueryStage {
                 last = mappings.fromSource(hit.getSourceAsMap());
                 results.add(last);
             }
-            final long total = hits.getTotalHits().value;
+            final long total = getTotal(token, hits);
             final Page.Token newPaging;
             if (total > results.size() && last != null) {
-                newPaging = KeysetPagingUtils.keysetPagingToken(schema, normalizedSort, last);
+                newPaging = KeysetPagingUtils.countPreservingKeysetPagingToken(schema, normalizedSort, last, total);
             } else {
                 newPaging = null;
             }
             return new Page<>(results, newPaging, Page.Stats.fromTotal(total));
+        }
+
+        private long getTotal(Page.Token token, SearchHits hits) {
+            if (token != null) {
+                Map<String, List<Object>> objects = KeysetPagingUtils.countPreservingKeysetValues(schema, sort, token);
+                return (Long) objects.get("count").get(0);
+            }
+           return hits.getTotalHits().value;
         }
     }
 
@@ -209,7 +217,7 @@ public interface ESQueryStage {
         @Override
         public ESQueryStage sort(final List<Sort> sort) {
 
-            if(sort.stream().allMatch(s -> group.contains(s.getName().toString()))) {
+            if (sort.stream().allMatch(s -> group.contains(s.getName().toString()))) {
                 return new Agg(source, group, sort, expressions);
             } else {
                 throw new UnsupportedOperationException("Sorting of aggregates by non-group terms is not supported");
@@ -225,7 +233,7 @@ public interface ESQueryStage {
         private CompositeValuesSourceBuilder<?> groupSource(final String name) {
 
             final TypedExpression<?> expr = expressions.get(name);
-            if(expr.getExpression() instanceof NameConstant) {
+            if (expr.getExpression() instanceof NameConstant) {
                 final Name field = ((NameConstant) expr.getExpression()).getName();
                 return new TermsValuesSourceBuilder(name).field(field.toString())
                         .missingBucket(true).order(order(name));
@@ -236,7 +244,7 @@ public interface ESQueryStage {
 
         private SortOrder order(final String name) {
 
-            if(sort == null) {
+            if (sort == null) {
                 return SortOrder.ASC;
             } else {
                 return sort.stream().filter(v -> v.getName().toString().equals(name))
@@ -250,7 +258,7 @@ public interface ESQueryStage {
             final ESAggregateVisitor aggVisitor = new ESAggregateVisitor(inference);
             final Map<String, ESAggregate> aggs = new HashMap<>();
             expressions.forEach((k, expr) -> {
-                if(!group.contains(k)) {
+                if (!group.contains(k)) {
                     aggs.put(k, aggVisitor.visit(expr.getExpression()));
                 }
             });
@@ -262,7 +270,7 @@ public interface ESQueryStage {
             final List<AggregationBuilder> aggs = new ArrayList<>();
             final Set<String> seen = new HashSet<>();
             aggs().values().forEach(agg -> agg.builders().forEach(builder -> {
-                if(!seen.contains(builder.getName())) {
+                if (!seen.contains(builder.getName())) {
                     seen.add(builder.getName());
                     aggs.add(builder);
                 }
@@ -272,7 +280,7 @@ public interface ESQueryStage {
 
         private List<AggregationBuilder> aggs(final Set<Page.Stat> stats, final Page.Token token, final int count) {
 
-            if(!group.isEmpty()) {
+            if (!group.isEmpty()) {
                 final List<CompositeValuesSourceBuilder<?>> sources = new ArrayList<>();
                 group.forEach(g -> sources.add(groupSource(g)));
                 final CompositeAggregationBuilder agg = AggregationBuilders.composite("group", sources);
@@ -303,11 +311,11 @@ public interface ESQueryStage {
         @Override
         public Page<Map<String, Object>> page(final Mappings mappings, final Set<Page.Stat> stats, final Page.Token token, final int count, final SearchResponse response) {
 
-            if(!group.isEmpty()) {
+            if (!group.isEmpty()) {
                 final List<Map<String, Object>> results = new ArrayList<>();
                 final CompositeAggregation group = response.getAggregations().get("group");
                 final Map<String, ESAggregate> aggs = aggs();
-                for(final CompositeAggregation.Bucket bucket : group.getBuckets()) {
+                for (final CompositeAggregation.Bucket bucket : group.getBuckets()) {
                     final Map<String, Object> result = new HashMap<>(bucket.getKey());
                     aggs.forEach((key, agg) -> result.put(key, agg.read(bucket)));
                     results.add(mappings.fromSource(result));
