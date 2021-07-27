@@ -2,6 +2,7 @@ package io.basestar.storage.query;
 
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.aggregate.AggregateExtractingVisitor;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.NameConstant;
@@ -18,6 +19,7 @@ import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Sort;
+import lombok.RequiredArgsConstructor;
 
 import java.util.*;
 import java.util.function.Predicate;
@@ -32,7 +34,7 @@ public interface QueryPlanner<T> {
 
     T plan(QueryStageVisitor<T> visitor, LinkableSchema schema, Expression expression, List<Sort> sort, Set<Name> expand, Set<Bucket> buckets);
 
-    abstract class Default<T> implements QueryPlanner<T> {
+    class Default<T> implements QueryPlanner<T> {
 
         private final Predicate<ViewSchema> materialized;
 
@@ -337,8 +339,11 @@ public interface QueryPlanner<T> {
             return visitor.map(stage, expressions);
         }
 
-        protected abstract T aggViewStage(QueryStageVisitor<T> visitor, T from, InferenceContext inference,
-                                          List<String> group, Map<String, TypedExpression<?>> expressions, Set<Bucket> buckets);
+        protected T aggViewStage(QueryStageVisitor<T> visitor, T from, InferenceContext inference,
+                                 List<String> group, Map<String, TypedExpression<?>> expressions, Set<Bucket> buckets) {
+
+            return visitor.agg(from, group, expressions);
+        }
     }
 
     class AggregateSplitting<T> extends Default<T> {
@@ -353,6 +358,27 @@ public interface QueryPlanner<T> {
             super(ignoreMaterialization);
         }
 
+        @RequiredArgsConstructor
+        private static class CommonExpressionExtractingVisitor implements ExpressionVisitor.Defaulting<Expression> {
+
+            private final Map<String, Expression> expressions;
+
+            @Override
+            public Expression visitDefault(final Expression expression) {
+
+                final Optional<NameConstant> found = expressions.entrySet().stream()
+                        .filter(e -> e.getValue().equals(expression))
+                        .map(e -> new NameConstant(e.getKey()))
+                        .findFirst();
+
+                if (found.isPresent()) {
+                    return found.get();
+                } else {
+                    return expression.copy(this::visit);
+                }
+            }
+        }
+
         @Override
         protected T aggViewStage(final QueryStageVisitor<T> visitor, final T from, final InferenceContext inference,
                                  final List<String> group, final Map<String, TypedExpression<?>> expressions, final Set<Bucket> buckets) {
@@ -361,19 +387,28 @@ public interface QueryPlanner<T> {
             final Map<String, TypedExpression<?>> postAgg = new HashMap<>();
             boolean requiresPostAgg = false;
             final AggregateExtractingVisitor extractAggregates = new AggregateExtractingVisitor();
-            for(final Map.Entry<String, TypedExpression<?>> entry : expressions.entrySet()) {
+            for (final Map.Entry<String, TypedExpression<?>> entry : expressions.entrySet()) {
                 final String name = entry.getKey();
                 final TypedExpression<?> typedExpr = Nullsafe.require(entry.getValue());
                 final Expression expr = typedExpr.getExpression();
-                if(expr.hasAggregates()) {
+                final Map<String, Expression> otherExpressions = new HashMap<>();
+                expressions.forEach((k, v) -> {
+                    if (!k.equals(entry.getKey())) {
+                        otherExpressions.put(k, v.getExpression());
+                    }
+                });
+                final CommonExpressionExtractingVisitor extractCommonExpressions = new CommonExpressionExtractingVisitor(otherExpressions);
+                if (expr.hasAggregates()) {
                     requiresPostAgg = requiresPostAgg || !expr.isAggregate();
                     final Expression withoutAggregates = extractAggregates.visit(expr);
-                    postAgg.put(name, TypedExpression.from(withoutAggregates, typedExpr.getType()));
-                } else if(group.contains(name)) {
+                    final Expression withCommon = extractCommonExpressions.visit(withoutAggregates);
+                    postAgg.put(name, TypedExpression.from(withCommon, typedExpr.getType()));
+                } else if (group.contains(name)) {
                     postAgg.put(name, TypedExpression.from(new NameConstant(name), typedExpr.getType()));
                 } else {
                     requiresPostAgg = true;
-                    postAgg.put(name, typedExpr);
+                    final Expression withCommon = extractCommonExpressions.visit(expr);
+                    postAgg.put(name, TypedExpression.from(withCommon, typedExpr.getType()));
                 }
             }
 

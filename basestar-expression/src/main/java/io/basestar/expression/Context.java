@@ -23,6 +23,7 @@ package io.basestar.expression;
 import io.basestar.expression.call.Callable;
 import io.basestar.expression.exception.MemberNotFoundException;
 import io.basestar.expression.methods.Methods;
+import io.basestar.expression.type.Coercion;
 import io.basestar.util.Name;
 
 import java.io.Serializable;
@@ -90,7 +91,27 @@ public interface Context extends Serializable {
             @Override
             public Object cast(final Object value, final String type) {
 
-                throw new UnsupportedOperationException();
+                // FIXME:
+                switch (type.toLowerCase()) {
+                    case "string":
+                        return Coercion.toString(value);
+                    case "date":
+                        return Coercion.toDate(value);
+                    case "datetime":
+                        return Coercion.toDateTime(value);
+                    case "int":
+                    case "long":
+                        return Coercion.toInteger(value);
+                    case "float":
+                    case "double":
+                        return Coercion.toFloat(value);
+                    case "decimal":
+                        return Coercion.toDecimal(value);
+                    case "boolean":
+                        return Coercion.toBoolean(value);
+                    default:
+                        throw new UnsupportedOperationException("Cannot cast to " + type);
+                }
             }
         };
     }

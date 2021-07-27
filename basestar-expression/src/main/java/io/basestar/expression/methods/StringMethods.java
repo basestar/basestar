@@ -55,6 +55,18 @@ public class StringMethods implements Serializable {
         return target.substring(begin.intValue(), end.intValue());
     }
 
+    public String _substr(final String target, final Number begin) {
+
+        return target.substring(begin.intValue() - 1);
+    }
+
+    public String _substr(final String target, final Number begin, final Number count) {
+
+        final int beginPos = begin.intValue() - 1;
+        final int endPos = Math.min(target.length(), beginPos + count.intValue());
+        return target.substring(beginPos, endPos);
+    }
+
     public String trim(final String target) {
 
         return target.trim();
@@ -88,12 +100,12 @@ public class StringMethods implements Serializable {
         return ISO8601.parseDateTime(value, format);
     }
 
-    public String concat(final Object a, final Object b) {
+    public String _concat(final Object a, final Object b) {
 
         return Coercion.toString(a) + Coercion.toString(b);
     }
 
-    public String concat(final Object a, final Object b, final Object c) {
+    public String _concat(final Object a, final Object b, final Object c) {
 
         return Coercion.toString(a) + Coercion.toString(b) + Coercion.toString(c);
     }

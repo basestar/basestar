@@ -51,13 +51,13 @@ public class FromMap implements From {
     public InferenceContext inferenceContext() {
 
         final InferenceContext context = from.inferenceContext();
-        return InferenceContext.from(Immutable.transformValues(map, (k, v) -> context.typeOf(v)));
+        return InferenceContext.from(Immutable.transformValues(map, (k, v) -> context.requireTypeOf(v)));
     }
 
     public Map<String, TypedExpression<?>> typedMap() {
 
         final InferenceContext context = from.inferenceContext();
-        return Immutable.transformValues(map, (k, v) -> TypedExpression.from(v, context.typeOf(v)));
+        return Immutable.transformValues(map, (k, v) -> TypedExpression.from(v, context.requireTypeOf(v)));
     }
 
     @Override
@@ -88,7 +88,7 @@ public class FromMap implements From {
     public Map<String, Use<?>> getProperties() {
 
         final InferenceContext context = inferenceContext();
-        return Immutable.transformValues(map, (k, v) -> context.typeOf(v));
+        return Immutable.transformValues(map, (k, v) -> context.requireTypeOf(v));
     }
 
     @Override

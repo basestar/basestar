@@ -129,6 +129,7 @@ public class Sql implements Expression {
             str.append(order.stream().map(s -> s.getName() + " " + s.getOrder().name()).collect(Collectors.joining(", ")));
         }
         if(!union.isEmpty()) {
+            str.append(" ");
             str.append(union.stream().map(Union::toString).collect(Collectors.joining(" ")));
         }
         return str.toString();

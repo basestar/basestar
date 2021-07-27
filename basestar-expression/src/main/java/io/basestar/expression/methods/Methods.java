@@ -87,7 +87,7 @@ public class Methods implements Serializable {
         final Class<?>[] argTypes = Arrays.stream(args).map(GenericTypeReflector::erase).toArray(Class<?>[]::new);
 
         for(final Object filter : filters) {
-            final Method resolved = findMethod(filter.getClass(), method, argTypes);
+            final Method resolved = findMethod(filter.getClass(), "_" + method, argTypes);
             if(resolved != null) {
                 return callable(resolved, filter);
             }

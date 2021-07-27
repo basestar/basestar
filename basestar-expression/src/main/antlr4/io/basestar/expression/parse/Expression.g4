@@ -16,7 +16,7 @@ pair
 // Important! must list all name-like tokens here
 
 identifier
- : (Identifier | With | For | In | Where | Any | All | Of | Like | ILike | Select | From | Union | Join | Left | Right | Inner | Outer | As | Group | Order | By |  Cast | Full)
+ : (Identifier | With | For | In | Where | Any | All | Of | Like | ILike | Select | From | Union | Distinct | Join | Left | Right | Inner | Outer | As | Group | Order | By |  Cast | Full)
  ;
 
 name
@@ -83,7 +83,7 @@ fromExprs
  ;
 
 unionExpr
- : Union expr #unionDistinct
+ : Union Distinct? expr #unionDistinct
  | Union All expr #unionAll
  ;
 
@@ -154,6 +154,7 @@ ILike    : I L I K E;
 Select   : S E L E C T;
 From     : F R O M;
 Union    : U N I O N;
+Distinct : D I S T I N C T;
 Join     : J O I N;
 Left     : L E F T;
 Right    : R I G H T;

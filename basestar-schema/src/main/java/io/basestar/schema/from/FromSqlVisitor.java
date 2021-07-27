@@ -3,7 +3,6 @@ package io.basestar.schema.from;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
-import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.function.With;
 import io.basestar.expression.sql.Select;
@@ -94,23 +93,6 @@ public class FromSqlVisitor implements ExpressionVisitor.Defaulting<From> {
         });
     }
 
-//    @RequiredArgsConstructor
-//    public class ClosureExtractingVisitor implements ExpressionVisitor.Defaulting<Pair<Expression, Expression>> {
-//
-//        private final Expression.Closure closure;
-//
-//        @Override
-//        public Pair<Expression, Expression> visitDefault(final Expression expression) {
-//
-//            if(!expression.isConstant() && expression.isConstant(closure)) {
-//                return Pair.of(expression, new Constant(true));
-//            } else {
-//                return Pair.of(new Constant(true), expression.copy(expression.expressions().stream()
-//                        .map(this::visit).collect(Collectors.toList())));
-//            }
-//        }
-//    }
-
     @Override
     public From visitSql(final Sql expression) {
 
@@ -127,15 +109,23 @@ public class FromSqlVisitor implements ExpressionVisitor.Defaulting<From> {
             result = buildFrom(froms.get(0));
         } else {
             result = null;
+            final Set<String> names = new HashSet<>();
             for (final io.basestar.expression.sql.From from : froms) {
                 if (result == null) {
                     result = buildFrom(from);
+                    names.add(result.getAlias());
                 } else {
-                    if(closedWhere != null) {
-
+                    final From right = buildFrom(from);
+                    names.add(right.getAlias());
+                    if (closedWhere != null) {
+                        final JoinExpressionVisitor visitor = new JoinExpressionVisitor(Expression.Closure.from(names));
+                        final Pair<Expression, Expression> sides = visitor.visitAndSimplify(closedWhere);
+                        final Expression on = sides.getFirst();
+                        closedWhere = sides.getSecond();
+                        result = result.join(right, Join.Type.INNER, on);
+                    } else {
+                        throw new IllegalStateException("Old-style join with no where clause is forbidden");
                     }
-                    // FIXME
-                    result = result.join(buildFrom(from), Join.Type.INNER, new Constant(true));
                 }
             }
             if(result == null) {

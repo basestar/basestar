@@ -82,9 +82,9 @@ public class LambdaCall implements Expression {
             constant = constant && after instanceof Constant;
             changed = changed || (before != after);
         }
-        if(constant) {
+        if (constant) {
             return new Constant(new LambdaCall(with, args).evaluate(context));
-        } else if(with == this.with) {
+        } else if (!changed) {
             return this;
         } else {
             return new LambdaCall(with, args);
