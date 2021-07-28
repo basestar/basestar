@@ -9,9 +9,9 @@ package io.basestar.storage.elasticsearch;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.storage.elasticsearch.mapping.Mappings;
 import io.basestar.storage.elasticsearch.mapping.Settings;
+import io.basestar.storage.util.CountPreservingTokenInfo;
 import io.basestar.storage.util.KeysetPagingUtils;
 import io.basestar.util.Name;
 import io.basestar.util.Page;
@@ -94,13 +95,13 @@ public class ElasticsearchUtils {
                 client.indices().createAsync(new CreateIndexRequest(name).source(createIndexSource(mappings, settings)), OPTIONS, listener))
                 .exceptionally(e -> {
                     final Optional<ElasticsearchStatusException> statusException = Throwables.find(e, ElasticsearchStatusException.class);
-                    if(statusException.map(s -> s.getDetailedMessage().contains("resource_already_exists_exception")).orElse(false)) {
+                    if (statusException.map(s -> s.getDetailedMessage().contains("resource_already_exists_exception")).orElse(false)) {
                         return null;
                     } else {
                         throw Throwables.findRuntimeCause(e).orElseGet(() -> new CompletionException(e));
                     }
                 }).thenCompose(v -> {
-                    if(v == null) {
+                    if (v == null) {
                         return CompletableFuture.allOf(
                                 putMappings(client, name, mappings),
                                 putDynamicSettings(client, name, settings)
@@ -150,18 +151,19 @@ public class ElasticsearchUtils {
 
     public static QueryBuilder pagingQueryBuilder(final LinkableSchema schema, final List<Sort> sort, final Page.Token token) {
 
-        final List<Object> values = KeysetPagingUtils.keysetValues(schema, sort, token);
+        final CountPreservingTokenInfo countPreservingTokenInfo = KeysetPagingUtils.countPreservingTokenInfo(token);
+        final List<Object> sorting = KeysetPagingUtils.keysetValues(schema, sort, countPreservingTokenInfo.getToken());
         final BoolQueryBuilder outer = QueryBuilders.boolQuery();
-        for(int i = 0; i < sort.size(); ++i) {
-            if(i == 0) {
-                outer.should(pagingRange(sort.get(i), values.get(i)));
+        for (int i = 0; i < sort.size(); ++i) {
+            if (i == 0) {
+                outer.should(pagingRange(sort.get(i), sorting.get(i)));
             } else {
                 final BoolQueryBuilder inner = QueryBuilders.boolQuery();
                 for (int j = 0; j < i; ++j) {
                     final Name name = sort.get(j).getName();
-                    inner.must(QueryBuilders.termQuery(name.toString(), values.get(j)));
+                    inner.must(QueryBuilders.termQuery(name.toString(), sorting.get(j)));
                 }
-                inner.must(pagingRange(sort.get(i), values.get(i)));
+                inner.must(pagingRange(sort.get(i), sorting.get(i)));
                 outer.should(inner);
             }
         }
@@ -171,7 +173,7 @@ public class ElasticsearchUtils {
     public static QueryBuilder pagingRange(final Sort sort, final Object value) {
 
         final String name = sort.getName().toString();
-        if(sort.getOrder() == Sort.Order.ASC) {
+        if (sort.getOrder() == Sort.Order.ASC) {
             return QueryBuilders.rangeQuery(name).gt(value);
         } else {
             return QueryBuilders.rangeQuery(name).lt(value);
