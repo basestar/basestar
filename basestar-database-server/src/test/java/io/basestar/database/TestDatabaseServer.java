@@ -214,6 +214,12 @@ class TestDatabaseServer {
                 "map", ImmutableMap.of("c", "d")
         );
 
+        final Map<String, Object> repeatedDataUpdate = database.update(caller, SIMPLE, id, 1L, data1).get();
+
+
+        assertEquals(1, Instance.getVersion(repeatedDataUpdate));
+        assertEquals(Instance.getCreated(repeatedDataUpdate), Instance.getUpdated(repeatedDataUpdate));
+
         final Map<String, Object> update = database.update(caller, SIMPLE, id, 1L, data2).get();
         assertObject(SIMPLE, id, 2, data2, update);
 
