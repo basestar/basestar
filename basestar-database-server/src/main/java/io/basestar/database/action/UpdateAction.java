@@ -9,9 +9,9 @@ package io.basestar.database.action;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -59,7 +59,7 @@ public class UpdateAction implements Action {
     @Override
     public Permission permission(final Instance before) {
 
-        if(before == null) {
+        if (before == null) {
             return schema.getPermission(Permission.CREATE);
         } else {
             return schema.getPermission(Permission.UPDATE);
@@ -80,60 +80,67 @@ public class UpdateAction implements Action {
         final Map<String, Object> data = new HashMap<>();
         final UpdateOptions.Mode mode = Nullsafe.orDefault(options.getMode(), UpdateOptions.Mode.REPLACE);
 
-        final long version;
+        final long afterVersion;
         final Instant created;
         final Instant updated = ISO8601.now();
 
         if (before == null) {
-            if(mode == UpdateOptions.Mode.CREATE) {
-                version = 1L;
+            if (mode == UpdateOptions.Mode.CREATE) {
+                afterVersion = 1L;
                 created = updated;
             } else {
                 throw new ObjectMissingException(options.getSchema(), id);
             }
         } else {
-            if(!schema.getQualifiedName().equals(Instance.getSchema(before))) {
+            if (!schema.getQualifiedName().equals(Instance.getSchema(before))) {
                 throw new IllegalStateException("Cannot change instance schema");
             }
 
-            if(mode == UpdateOptions.Mode.MERGE || mode == UpdateOptions.Mode.MERGE_DEEP) {
+            if (mode == UpdateOptions.Mode.MERGE || mode == UpdateOptions.Mode.MERGE_DEEP) {
                 data.putAll(before);
             }
 
             final Long beforeVersion = Instance.getVersion(before);
             assert beforeVersion != null;
 
-            if(options.getVersion() != null && !beforeVersion.equals(options.getVersion())) {
+            if (options.getVersion() != null && !beforeVersion.equals(options.getVersion())) {
                 throw new VersionMismatchException(options.getSchema(), id, options.getVersion());
             }
 
-            version = beforeVersion + 1;
+            afterVersion = beforeVersion + 1;
             created = Instance.getCreated(before);
         }
 
-        if(options.getData() != null) {
-            if(mode == UpdateOptions.Mode.MERGE_DEEP) {
+        if (options.getData() != null) {
+            if (mode == UpdateOptions.Mode.MERGE_DEEP) {
                 mergeDeep(data, options.getData());
             } else {
                 data.putAll(options.getData());
             }
         }
-        if(options.getExpressions() != null) {
+        if (options.getExpressions() != null) {
             options.getExpressions().forEach((k, expr) -> data.put(k, expr.evaluate(expressionContext)));
         }
         final Map<String, Object> initial = new HashMap<>(schema.create(valueContext, data, null));
 
         Instance.setId(initial, id);
         Instance.setSchema(initial, schema.getQualifiedName());
-        Instance.setVersion(initial, version);
         Instance.setCreated(initial, created);
-        Instance.setUpdated(initial, updated);
+        if (before != null) {
+            Instance.setVersion(initial, Instance.getVersion(before));
+            Instance.setUpdated(initial, Instance.getUpdated(before));
+        }
+
+        if (!schema.areEqual(before, initial)) {
+            Instance.setVersion(initial, afterVersion);
+            Instance.setUpdated(initial, updated);
+        }
         Instance.setHash(initial, schema.hash(initial));
 
         final Instance evaluated = schema.evaluateProperties(expressionContext.with(CommonVars.VAR_THIS, initial), new Instance(initial), Collections.emptySet());
 
         final Set<Constraint.Violation> violations = schema.validate(expressionContext.with(CommonVars.VAR_THIS, evaluated), before == null ? evaluated : before, evaluated);
-        if(!violations.isEmpty()) {
+        if (!violations.isEmpty()) {
             throw new ConstraintViolationException(violations);
         }
 
@@ -143,13 +150,13 @@ public class UpdateAction implements Action {
     @SuppressWarnings("unchecked")
     private void mergeDeep(final Map<String, Object> target, final Map<String, Object> source) {
 
-        for(final Map.Entry<String, Object> e: source.entrySet()) {
+        for (final Map.Entry<String, Object> e : source.entrySet()) {
             final String key = e.getKey();
             final Object merging = e.getValue();
             final Object current = target.get(key);
-            if(current instanceof Map && merging instanceof Map) {
-                final Map<String, Object> merged = new HashMap<>((Map<String, Object>)current);
-                mergeDeep(merged, (Map<String, Object>)merging);
+            if (current instanceof Map && merging instanceof Map) {
+                final Map<String, Object> merged = new HashMap<>((Map<String, Object>) current);
+                mergeDeep(merged, (Map<String, Object>) merging);
                 target.put(key, merged);
             } else {
                 target.put(key, merging);
@@ -166,7 +173,7 @@ public class UpdateAction implements Action {
     @Override
     public Event event(final Instance before, final Instance after) {
 
-        if(before == null) {
+        if (before == null) {
             final Name schema = Instance.getSchema(after);
             final String id = Instance.getId(after);
             return ObjectCreatedEvent.of(schema, id, after);
