@@ -9,9 +9,9 @@ package io.basestar.storage.elasticsearch.mapping;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -87,17 +87,16 @@ public interface FieldType {
 
         @Override
         public Map<String, ?> source() {
-
-            return ImmutableMap.of("type", "binary");
+            return ImmutableMap.of("type", "keyword", "normalizer", "lowercase");
         }
 
         @Override
         public String toSource(final Object value) {
 
-            if(value == null) {
+            if (value == null) {
                 return null;
-            } else if(value instanceof Bytes) {
-                return ((Bytes)value).toBase64();
+            } else if (value instanceof Bytes) {
+                return ((Bytes) value).toBase64();
             } else {
                 throw new IllegalStateException();
             }
@@ -106,10 +105,10 @@ public interface FieldType {
         @Override
         public byte[] fromSource(final Object value) {
 
-            if(value == null) {
+            if (value == null) {
                 return null;
-            } else if(value instanceof String) {
-                return BaseEncoding.base64().decode((String)value);
+            } else if (value instanceof String) {
+                return BaseEncoding.base64().decode((String) value);
             } else {
                 throw new IllegalStateException();
             }
@@ -191,7 +190,7 @@ public interface FieldType {
         @Override
         public Map<String, ?> source() {
 
-            if(caseSensitive) {
+            if (caseSensitive) {
                 return ImmutableMap.of("type", "keyword");
             } else {
                 return ImmutableMap.of("type", "keyword", "normalizer", "lowercase");
@@ -290,7 +289,7 @@ public interface FieldType {
         @Override
         public Map<String, Object> toSource(final Object value) {
 
-            if(value == null) {
+            if (value == null) {
                 return null;
             } else {
                 final Map<?, ?> tmp = (Map<?, ?>) value;
@@ -306,7 +305,7 @@ public interface FieldType {
         @Override
         public Object fromSource(final Object value) {
 
-            if(value == null) {
+            if (value == null) {
                 return null;
             } else {
                 final Map<?, ?> tmp = (Map<?, ?>) value;
@@ -335,7 +334,7 @@ public interface FieldType {
         @SuppressWarnings(Warnings.RETURN_NULL_ARRAY_OR_COLLECTION)
         public List<?> toSource(final Object value) {
 
-            if(value == null) {
+            if (value == null) {
                 return null;
             } else {
                 return ((Collection<?>) value).stream()
@@ -347,7 +346,7 @@ public interface FieldType {
         @Override
         public List<?> fromSource(final Object value) {
 
-            if(value == null) {
+            if (value == null) {
                 return null;
             } else {
                 final Collection<?> tmp;
@@ -385,12 +384,12 @@ public interface FieldType {
         @SuppressWarnings(Warnings.RETURN_NULL_ARRAY_OR_COLLECTION)
         public Collection<?> toSource(final Object value) {
 
-            if(value == null) {
+            if (value == null) {
                 return null;
-            } else if(value instanceof Map) {
+            } else if (value instanceof Map) {
                 final List<Object> result = new ArrayList<>();
-                ((Map<?, ?>)value).forEach((k, v) -> {
-                    if(k != null) {
+                ((Map<?, ?>) value).forEach((k, v) -> {
+                    if (k != null) {
                         result.add(Immutable.map(
                                 KEY, k,
                                 VALUE, valueType.toSource(v)
@@ -406,13 +405,13 @@ public interface FieldType {
         @Override
         public Map<String, Object> fromSource(final Object value) {
 
-            if(value == null) {
+            if (value == null) {
                 return null;
-            } else if(value instanceof Collection) {
+            } else if (value instanceof Collection) {
                 final Map<String, Object> result = new HashMap<>();
-                ((Collection<?>)value).forEach(v -> {
-                    final Map<?, ?> tmp = (Map<?, ?>)v;
-                    result.put((String)tmp.get(KEY), valueType.fromSource(tmp.get(VALUE)));
+                ((Collection<?>) value).forEach(v -> {
+                    final Map<?, ?> tmp = (Map<?, ?>) v;
+                    result.put((String) tmp.get(KEY), valueType.fromSource(tmp.get(VALUE)));
                 });
                 return result;
             } else {
@@ -484,10 +483,10 @@ public interface FieldType {
         @Override
         public String toSource(final Object value) {
 
-            if(value == null) {
+            if (value == null) {
                 return null;
-            } else if(value instanceof Secret) {
-                return BaseEncoding.base64().encode(((Secret)value).encrypted());
+            } else if (value instanceof Secret) {
+                return BaseEncoding.base64().encode(((Secret) value).encrypted());
             } else {
                 throw new IllegalStateException();
             }
@@ -496,10 +495,10 @@ public interface FieldType {
         @Override
         public Secret.Encrypted fromSource(final Object value) {
 
-            if(value == null) {
+            if (value == null) {
                 return null;
-            } else if(value instanceof String) {
-                return Secret.encrypted((String)value);
+            } else if (value instanceof String) {
+                return Secret.encrypted((String) value);
             } else {
                 throw new IllegalStateException();
             }
