@@ -42,8 +42,12 @@ public interface APIResponse {
 
     default String getFirstHeader(final String key) {
 
-        final Collection<String> result = getHeaders().get(key.toLowerCase());
-        return result.isEmpty() ? null : result.iterator().next();
+        for(final Map.Entry<String, String> entry : getHeaders().entries()) {
+            if(entry.getKey().equalsIgnoreCase(key)) {
+                return entry.getValue();
+            }
+        }
+        return null;
     }
 
     void writeTo(OutputStream out) throws IOException;

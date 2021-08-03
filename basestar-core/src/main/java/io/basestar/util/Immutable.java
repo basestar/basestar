@@ -280,4 +280,17 @@ public class Immutable {
             return Collections.unmodifiableSortedMap(result);
         }
     }
+
+    @SafeVarargs
+    public static <K, V> Map<K, V> map(final Map.Entry<K, V>... entries) {
+
+        final Map<K, V> result = new HashMap<>();
+        Arrays.stream(entries).forEach(e -> result.put(e.getKey(), e.getValue()));
+        return Collections.unmodifiableMap(result);
+    }
+
+    public static <K, V> Map.Entry<K, V> entry(final K k, final V v) {
+
+        return new AbstractMap.SimpleImmutableEntry<>(k, v);
+    }
 }

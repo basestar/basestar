@@ -108,6 +108,12 @@ class TestElasticsearchStorage extends TestStorage {
     }
 
     @Override
+    protected boolean supportsMaterializedView() {
+
+        return true;
+    }
+
+    @Override
     protected void testMultiValueIndex() {
 
         // Skipped

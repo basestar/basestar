@@ -40,7 +40,9 @@ import org.apache.commons.csv.CSVParser;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.*;
@@ -79,6 +81,8 @@ public abstract class TestStorage {
     protected static final String EXTEND_B = "ExtendB";
 
     protected static final String SECRET = "Secret";
+
+    protected static final String MAT_VIEW = "MatView";
 
     protected final Namespace namespace;
 
@@ -1213,5 +1217,32 @@ public abstract class TestStorage {
 
         assumeTrue(storage.storageTraits(schema).getObjectConcurrency().isEnabled(),
                 "Object concurrency must be enabled for this test");
+    }
+
+    protected boolean supportsMaterializedView() {
+
+        return false;
+    }
+
+    @Test
+    public void testMaterializedViewQuery() throws Exception {
+
+        assumeTrue(supportsMaterializedView());
+
+        final Storage storage = storage(namespace);
+
+        final ViewSchema viewSchema = namespace.requireViewSchema(MAT_VIEW);
+
+        final Storage.WriteTransaction transaction = storage.write(Consistency.ATOMIC, Versioning.UNCHECKED);
+        transaction.write(viewSchema, ImmutableMap.of(
+                "__key", viewSchema.createId(ImmutableMap.of("country", "GB", "state", "London")),
+                "country", "GB",
+                "state", "London",
+                "count", 10
+        ));
+        transaction.write().get();
+
+        final Page<Map<String, Object>> page = storage.query(Consistency.ATOMIC, viewSchema, Constant.TRUE, ImmutableList.of(), ImmutableSet.of()).page(1).get();
+        assertEquals(1, page.size());
     }
 }
