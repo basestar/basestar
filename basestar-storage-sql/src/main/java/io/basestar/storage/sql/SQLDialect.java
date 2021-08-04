@@ -1,13 +1,11 @@
 package io.basestar.storage.sql;
 
-import io.basestar.schema.Instance;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.ReferableSchema;
-import io.basestar.schema.Reserved;
+import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import io.basestar.secret.Secret;
 import io.basestar.util.Name;
 import io.basestar.util.*;
+import org.jooq.Constraint;
 import org.jooq.*;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
@@ -487,7 +485,7 @@ public interface SQLDialect {
     }
 
     @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
-    default List<Field<?>> fields(final ReferableSchema schema) {
+    default List<Field<?>> fields(final LinkableSchema schema) {
 
         return Stream.concat(
                 schema.metadataSchema().entrySet().stream()
@@ -613,8 +611,10 @@ public interface SQLDialect {
     @SuppressWarnings("unchecked")
     default <T> Field<T> cast(final Field<?> field, final Class<T> type) {
 
-        if(type == Object.class) {
-            return (Field<T>)field;
+        if (type == Object.class) {
+            return (Field<T>) field;
+        } else if (type.equals(Double.class)) {
+            return (Field<T>) field.cast(SQLDataType.DOUBLE);
         } else {
             return field.cast(type);
         }

@@ -44,6 +44,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.*;
 
@@ -774,7 +775,7 @@ public abstract class TestStorage {
                 v -> schema.create(encoding.decode(v))
         );
 
-        assertEquals(expected, results.getItems());
+        assertEquals(normalizePrecision(expected), normalizePrecision(results.getItems()));
 //        assertEquals(100, results.size());
 //        final FlatEncoding encoding = new FlatEncoding();
 //
@@ -783,6 +784,28 @@ public abstract class TestStorage {
 //        try(final Writer writer = new FileWriter("aggregates.csv")) {
 //            CsvUtils.write(writer, flat);
 //        }
+    }
+
+    protected Object normalizePrecision(final Object v) {
+
+        if (v instanceof Collection) {
+            final List<Object> result = new ArrayList<>();
+            ((Collection<?>) v).forEach(v2 -> result.add(normalizePrecision(v2)));
+            return result;
+        } else if (v instanceof Map) {
+            final Map<String, Object> result = new HashMap<>();
+            ((Map<?, ?>) v).forEach((k, v2) -> {
+                result.put((String) k, normalizePrecision(v2));
+            });
+            return result;
+        } else if (v instanceof Double) {
+            final Double d = (Double) v;
+            return BigDecimal.valueOf(d)
+                    .setScale(3, RoundingMode.HALF_UP)
+                    .doubleValue();
+        } else {
+            return v;
+        }
     }
 
     @Test
@@ -1242,7 +1265,11 @@ public abstract class TestStorage {
         ));
         transaction.write().get();
 
-        final Page<Map<String, Object>> page = storage.query(Consistency.ATOMIC, viewSchema, Constant.TRUE, ImmutableList.of(), ImmutableSet.of()).page(1).get();
+        final List<Sort> sort = ImmutableList.of(
+                Sort.asc(Name.of("__key"))
+        );
+
+        final Page<Map<String, Object>> page = storage.query(Consistency.ATOMIC, viewSchema, Constant.TRUE, sort, ImmutableSet.of()).page(1).get();
         assertEquals(1, page.size());
     }
 }

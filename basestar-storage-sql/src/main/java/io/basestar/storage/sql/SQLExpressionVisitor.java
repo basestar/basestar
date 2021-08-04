@@ -34,11 +34,14 @@ import io.basestar.expression.function.IfElse;
 import io.basestar.expression.function.In;
 import io.basestar.expression.iterate.ContextIterator;
 import io.basestar.expression.iterate.ForAny;
+import io.basestar.expression.literal.LiteralArray;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
 import io.basestar.expression.logical.Or;
 import io.basestar.expression.text.Like;
 import io.basestar.expression.type.Coercion;
+import io.basestar.schema.expression.InferenceContext;
+import io.basestar.schema.use.UseString;
 import io.basestar.util.Name;
 import lombok.RequiredArgsConstructor;
 import org.jooq.Condition;
@@ -46,7 +49,9 @@ import org.jooq.Field;
 import org.jooq.QueryPart;
 import org.jooq.impl.DSL;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 
@@ -54,7 +59,9 @@ import java.util.function.Function;
 public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryPart> {
 
     private final SQLDialect dialect;
-    
+
+    private final InferenceContext inferenceContext;
+
     private final Function<Name, QueryPart> columnResolver;
 
     @Override
@@ -67,15 +74,22 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     public QueryPart visitAdd(final Add expression) {
 
         final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
-        final Field<Number> rhs = dialect.field(expression.getRhs().visit(this), Number.class);
-        return (lhs != null && rhs != null) ? lhs.add(rhs) : null;
+        final Field<Object> rhs = dialect.field(expression.getRhs().visit(this), Object.class);
+        if (lhs == null || rhs == null) {
+            return null;
+        } else if (inferenceContext.typeOf(expression.getLhs()) instanceof UseString
+                || inferenceContext.typeOf(expression.getRhs()) instanceof UseString) {
+            return lhs.concat(rhs);
+        } else {
+            return lhs.add(rhs);
+        }
     }
 
     @Override
     public QueryPart visitDiv(final Div expression) {
 
         final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
-        final Field<Number> rhs = dialect.field(expression.getRhs().visit(this), Number.class);
+        final Field<Double> rhs = dialect.field(expression.getRhs().visit(this), Double.class);
         return (lhs != null && rhs != null) ? lhs.div(rhs) : null;
     }
 
@@ -83,7 +97,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     public QueryPart visitMod(final Mod expression) {
 
         final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
-        final Field<Number> rhs = dialect.field(expression.getRhs().visit(this), Number.class);
+        final Field<Double> rhs = dialect.field(expression.getRhs().visit(this), Double.class);
         return (lhs != null && rhs != null) ? lhs.mod(rhs) : null;
     }
 
@@ -91,7 +105,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     public QueryPart visitMul(final Mul expression) {
 
         final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
-        final Field<Number> rhs = dialect.field(expression.getRhs().visit(this), Number.class);
+        final Field<Double> rhs = dialect.field(expression.getRhs().visit(this), Double.class);
         return (lhs != null && rhs != null) ? lhs.mul(rhs) : null;
     }
 
@@ -106,7 +120,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     public QueryPart visitPow(final Pow expression) {
 
         final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
-        final Field<Number> rhs = dialect.field(expression.getRhs().visit(this), Number.class);
+        final Field<Double> rhs = dialect.field(expression.getRhs().visit(this), Double.class);
         return (lhs != null && rhs != null) ? lhs.pow(rhs) : null;
     }
 
@@ -114,7 +128,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     public QueryPart visitSub(final Sub expression) {
 
         final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
-        final Field<Number> rhs = dialect.field(expression.getRhs().visit(this), Number.class);
+        final Field<Double> rhs = dialect.field(expression.getRhs().visit(this), Double.class);
         return (lhs != null && rhs != null) ? lhs.sub(rhs) : null;
     }
 
@@ -137,7 +151,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     public QueryPart visitBitLsh(final BitLsh expression) {
 
         final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
-        final Field<Number> rhs = dialect.field(expression.getRhs().visit(this), Number.class);
+        final Field<Double> rhs = dialect.field(expression.getRhs().visit(this), Double.class);
         return (lhs != null && rhs != null) ? lhs.shl(rhs) : null;
     }
 
@@ -153,7 +167,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     public QueryPart visitBitRsh(final BitRsh expression) {
 
         final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
-        final Field<Number> rhs = dialect.field(expression.getRhs().visit(this), Number.class);
+        final Field<Double> rhs = dialect.field(expression.getRhs().visit(this), Double.class);
         return (lhs != null && rhs != null) ? lhs.shr(rhs) : null;
     }
 
@@ -174,9 +188,22 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     @Override
     public QueryPart visitEq(final Eq expression) {
 
-        final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
-        final Field<Object> rhs = dialect.field(expression.getRhs().visit(this), Object.class);
-        return (lhs != null && rhs != null) ? lhs.eq(rhs) : null;
+        if (isConstantNull(expression.getLhs())) {
+            final Field<Object> rhs = dialect.field(expression.getRhs().visit(this), Object.class);
+            return rhs != null ? rhs.isNull() : null;
+        } else if (isConstantNull(expression.getRhs())) {
+            final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
+            return lhs != null ? lhs.isNull() : null;
+        } else {
+            final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
+            final Field<Object> rhs = dialect.field(expression.getRhs().visit(this), Object.class);
+            return (lhs != null && rhs != null) ? lhs.eq(rhs) : null;
+        }
+    }
+
+    private boolean isConstantNull(final Expression expression) {
+
+        return expression instanceof Constant && ((Constant) expression).getValue() == null;
     }
 
     @Override
@@ -214,9 +241,17 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     @Override
     public QueryPart visitNe(final Ne expression) {
 
-        final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
-        final Field<Object> rhs = dialect.field(expression.getRhs().visit(this), Object.class);
-        return (lhs != null && rhs != null) ? lhs.ne(rhs) : null;
+        if (isConstantNull(expression.getLhs())) {
+            final Field<Object> rhs = dialect.field(expression.getRhs().visit(this), Object.class);
+            return rhs != null ? rhs.isNotNull() : null;
+        } else if (isConstantNull(expression.getRhs())) {
+            final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
+            return lhs != null ? lhs.isNotNull() : null;
+        } else {
+            final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
+            final Field<Object> rhs = dialect.field(expression.getRhs().visit(this), Object.class);
+            return (lhs != null && rhs != null) ? lhs.ne(rhs) : null;
+        }
     }
 
     @Override
@@ -329,7 +364,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     @Override
     public Field<?> visitSum(final Sum aggregate) {
 
-        final Field<? extends Number> input = dialect.cast(field(aggregate.getInput()), Number.class);
+        final Field<? extends Double> input = dialect.cast(field(aggregate.getInput()), Double.class);
         return DSL.sum(input);
     }
 
@@ -348,9 +383,10 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public Field<?> visitAvg(final Avg aggregate) {
 
-        final Field<? extends Number> input = dialect.cast(field(aggregate.getInput()), Number.class);
+        final Field<? extends Double> input = dialect.cast(field(aggregate.getInput()), Double.class);
         return DSL.avg(input);
     }
 
@@ -359,7 +395,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
 
         if(aggregate.getPredicate() instanceof Constant) {
             final boolean value = Coercion.isTruthy(((Constant) aggregate.getPredicate()).getValue());
-            if(value) {
+            if (value) {
                 return DSL.count();
             } else {
                 return DSL.inline(0);
@@ -368,6 +404,14 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
             final Field<?> input = field(aggregate.getPredicate());
             return DSL.count(DSL.nullif(input, false));
         }
+    }
+
+    @Override
+    public Field<?> visitLiteralArray(final LiteralArray expression) {
+
+        final List<Field<?>> items = new ArrayList<>();
+        expression.getArgs().forEach(arg -> items.add(field(arg)));
+        return DSL.array(items.toArray(new Field<?>[0]));
     }
 
     public Condition condition(final Expression expression) {
