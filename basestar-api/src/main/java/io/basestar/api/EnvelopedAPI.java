@@ -63,7 +63,7 @@ public class EnvelopedAPI implements API {
             public ListMultimap<String, String> getHeaders() {
 
                 final ListMultimap<String, String> result = ArrayListMultimap.create();
-                result.put("content-type", request.getContentType().getContentType());
+                result.put("content-type", request.getContentType().getMimeType());
                 result.put("content-length", Integer.toString(bytes.length));
                 request.getHeaders().asMap().forEach((k, vs) -> {
                     final String name = k.toLowerCase();

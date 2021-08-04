@@ -22,10 +22,12 @@ package io.basestar.api;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import io.basestar.jackson.BasestarModule;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.commonjava.mimeparse.MIMEParse;
 
 import java.util.Arrays;
 import java.util.Set;
@@ -39,32 +41,36 @@ public enum APIFormat {
             .setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)),
 
     YAML("application/yaml", new YAMLMapper().registerModule(BasestarModule.INSTANCE)
+            .setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)),
+
+    XML("application/xml", new XmlMapper().registerModule(BasestarModule.INSTANCE)
             .setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL));
 
-    private final String contentType;
+    private final String mimeType;
 
     private final ObjectMapper mapper;
 
     public static Set<String> contentTypes() {
 
-        return Arrays.stream(values()).map(APIFormat::getContentType)
+        return Arrays.stream(values()).map(APIFormat::getMimeType)
                 .collect(Collectors.toSet());
     }
 
-    public static APIFormat forContentType(final String contentType) {
+    public static APIFormat forMimeType(final String mimeType) {
 
-        return Arrays.stream(values()).filter(v -> v.getContentType().equals(contentType))
+        return Arrays.stream(values()).filter(v -> v.getMimeType().equals(mimeType))
                 .findFirst().orElse(null);
     }
 
-    public static APIFormat bestMatch(final String contentType) {
+    public static APIFormat bestMatch(final String mimeType) {
 
-        return bestMatch(contentType, null);
+        return bestMatch(mimeType, null);
     }
 
-    public static APIFormat bestMatch(final String contentType, final APIFormat defaultValue) {
+    public static APIFormat bestMatch(final String mimeType, final APIFormat defaultValue) {
 
-        return APIFormat.JSON;
+        final String bestMatch = MIMEParse.bestMatch(APIFormat.contentTypes(), mimeType);
+        return APIFormat.forMimeType(bestMatch);
     }
 
     public static APIFormat forFormat(final String format) {

@@ -85,7 +85,7 @@ public interface APIResponse {
 
     static APIResponse success(final APIRequest request, final Object data) {
 
-        return success(request, null, data == null ? null : Entity.from(request.getContentType(), data));
+        return success(request, null, data == null ? null : Entity.from(request.getAccept(), data));
     }
 
     static APIResponse success(final APIRequest request, final Entity data) {
@@ -95,7 +95,7 @@ public interface APIResponse {
 
     static APIResponse success(final APIRequest request, final Multimap<String, String> extraHeaders, final Object data) {
 
-        return success(request, extraHeaders, data == null ? null : Entity.from(request.getContentType(), data));
+        return success(request, extraHeaders, data == null ? null : Entity.from(request.getAccept(), data));
     }
 
     static APIResponse success(final APIRequest request, final Multimap<String, String> extraHeaders, final Entity data) {
@@ -145,7 +145,7 @@ public interface APIResponse {
 
     static APIResponse response(final APIRequest request, final int status, final Object data) {
 
-        return response(request, status, data == null ? null : Entity.from(request.getContentType(), data));
+        return response(request, status, data == null ? null : Entity.from(request.getAccept(), data));
     }
 
     static APIResponse response(final APIRequest request, final int status, final Entity data) {
@@ -155,7 +155,7 @@ public interface APIResponse {
 
     static APIResponse response(final APIRequest request, final int status, final Multimap<String, String> extraHeaders, final Object data) {
 
-        return response(request, status, extraHeaders, Entity.from(request.getContentType(), data));
+        return response(request, status, extraHeaders, Entity.from(request.getAccept(), data));
     }
 
     static APIResponse response(final APIRequest request, final int status, final Multimap<String, String> extraHeaders, final Entity entity) {
@@ -235,7 +235,7 @@ public interface APIResponse {
                 @Override
                 public String getContentType() {
 
-                    return format.getContentType();
+                    return format.getMimeType();
                 }
 
                 @Override

@@ -150,9 +150,9 @@ public interface APIRequest {
         query.forEach(allQuery::put);
         final ListMultimap<String, String> allHeaders = ArrayListMultimap.create();
         headers.forEach(allHeaders::put);
-        allHeaders.put("Accept", format.getContentType());
+        allHeaders.put("Accept", format.getMimeType());
         if(body != null) {
-            allHeaders.put("Content-Type", format.getContentType());
+            allHeaders.put("Content-Type", format.getMimeType());
         }
         return new Simple(caller, method, path, allQuery, allHeaders, body, UUID.randomUUID().toString());
     }

@@ -607,7 +607,7 @@ public class DatabaseAPI implements API {
 
         final Content content = new Content();
         for (final APIFormat format : APIFormat.values()) {
-            content.addMediaType(format.getContentType(), new MediaType().schema(schema));
+            content.addMediaType(format.getMimeType(), new MediaType().schema(schema));
         }
         return content;
     }
