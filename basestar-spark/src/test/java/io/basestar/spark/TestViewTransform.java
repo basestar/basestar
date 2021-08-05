@@ -331,6 +331,8 @@ class TestViewTransform extends AbstractSparkTest {
 
         final SparkSession session = session();
 
+        CompatibilityUDFs.register(session);
+
         final Map<Name, Dataset<Row>> datasets = ImmutableMap.of(
                 Name.of("A"), session.createDataset(ImmutableList.of(
                         new A("a1", new B("b1")),
@@ -353,6 +355,8 @@ class TestViewTransform extends AbstractSparkTest {
     void testSqlAggView() throws IOException {
 
         final SparkSession session = session();
+
+        CompatibilityUDFs.register(session);
 
         final Map<Name, Dataset<Row>> datasets = ImmutableMap.of(
                 Name.of("G"), session.createDataset(ImmutableList.of(

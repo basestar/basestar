@@ -301,12 +301,14 @@ WithSqlJoin:
         schema: A
       B:
         schema: B
-    sql: SELECT a.id AS id, key FROM A AS a INNER JOIN B AS b ON a.ref.id = b.id
+    sql: SELECT a.id AS id, key, DATE_ADD('DAY', 1, a.created) AS dayAfterCreated FROM A AS a INNER JOIN B AS b ON a.ref.id = b.id
     primaryKey:
       - id
   properties:
     id:
       type: string
+    dayAfterCreated:
+      type: date
     key:
       type: D
 
