@@ -26,6 +26,8 @@ import io.basestar.expression.text.Like;
 import io.basestar.expression.type.DecimalContext;
 import io.basestar.schema.use.*;
 import io.basestar.util.Name;
+import io.basestar.util.Optionals;
+import io.basestar.util.Pair;
 
 import java.lang.reflect.Type;
 import java.util.*;
@@ -33,7 +35,7 @@ import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class InferenceVisitor implements ExpressionVisitor<Use<?>> {
+public class InferenceVisitor implements ExpressionVisitor<Optional<Use<?>>> {
 
     private final InferenceContext context;
 
@@ -50,74 +52,93 @@ public class InferenceVisitor implements ExpressionVisitor<Use<?>> {
         this.methods = methods;
     }
 
-    @Override
-    public Use<?> visit(final Expression expression) {
+    public Use<?> typeOf(final Expression expression) {
 
-        return expression.visit(this).optional(false);
+        return optionalTypeOf(expression).orElse(UseAny.DEFAULT);
+    }
+
+    public Optional<Use<?>> optionalTypeOf(final Expression expression) {
+
+        return visit(expression);
     }
 
     @Override
-    public Use<?> visitAdd(final Add expression) {
+    public Optional<Use<?>> visit(final Expression expression) {
 
-        final Use<?> lhs = visit(expression.getLhs());
-        final Use<?> rhs = visit(expression.getRhs());
-        if(lhs instanceof UseString || rhs instanceof UseString) {
-            return UseString.DEFAULT;
-        } else {
-            return numericPromote(expression, lhs, rhs,
-                    (l, r) -> DecimalContext.DEFAULT.addition(
+        if(expression == null) {
+            throw new IllegalStateException("Expression cannot be null");
+        }
+        final Optional<Use<?>> opt = expression.visit(this);
+        return opt.map(v -> v.optional(false));
+    }
+
+    @Override
+    public Optional<Use<?>> visitAdd(final Add expression) {
+
+        return Optionals.map(visit(expression.getLhs()), visit(expression.getRhs()), (lhs, rhs) -> {
+            if (lhs instanceof UseString || rhs instanceof UseString) {
+                return UseString.DEFAULT;
+            } else {
+                return numericPromote(expression, lhs, rhs,
+                        (l, r) -> DecimalContext.DEFAULT.addition(
+                                l.getPrecision(), l.getScale(),
+                                r.getPrecision(), r.getScale()
+                        ));
+            }
+        });
+    }
+
+    @Override
+    public Optional<Use<?>> visitDiv(final Div expression) {
+
+        return Optionals.map(visit(expression.getLhs()), visit(expression.getRhs()),
+                (lhs, rhs) -> numericPromote(expression, lhs, rhs,
+                        (l, r) -> DecimalContext.DEFAULT.division(
                             l.getPrecision(), l.getScale(),
                             r.getPrecision(), r.getScale()
-                    ));
-        }
+                    )));
     }
 
     @Override
-    public Use<?> visitDiv(final Div expression) {
+    public Optional<Use<?>> visitMod(final Mod expression) {
 
-        return numericPromote(expression, visit(expression.getLhs()), visit(expression.getRhs()),
-                (lhs, rhs) -> DecimalContext.DEFAULT.division(
-                        lhs.getPrecision(), lhs.getScale(),
-                        rhs.getPrecision(), rhs.getScale()
-                ));
+        return Optionals.map(visit(expression.getLhs()), visit(expression.getRhs()),
+                (lhs, rhs) -> numericPromote(expression, lhs, rhs, null));
     }
 
     @Override
-    public Use<?> visitMod(final Mod expression) {
+    public Optional<Use<?>> visitMul(final Mul expression) {
 
-        return numericPromote(expression, visit(expression.getLhs()), visit(expression.getRhs()), null);
+        return Optionals.map(visit(expression.getLhs()), visit(expression.getRhs()),
+                (lhs, rhs) -> numericPromote(expression, lhs, rhs,
+                        (l, r) -> DecimalContext.DEFAULT.multiplication(
+                            l.getPrecision(), l.getScale(),
+                            r.getPrecision(), r.getScale()
+                    )));
     }
 
     @Override
-    public Use<?> visitMul(final Mul expression) {
-
-        return numericPromote(expression, visit(expression.getLhs()), visit(expression.getRhs()),
-                (lhs, rhs) -> DecimalContext.DEFAULT.multiplication(
-                        lhs.getPrecision(), lhs.getScale(),
-                        rhs.getPrecision(), rhs.getScale()
-                ));
-    }
-
-    @Override
-    public Use<?> visitNegate(final Negate expression) {
+    public Optional<Use<?>> visitNegate(final Negate expression) {
 
         return visit(expression.getOperand());
     }
 
     @Override
-    public Use<?> visitPow(final Pow expression) {
+    public Optional<Use<?>> visitPow(final Pow expression) {
 
-        return numericPromote(expression, visit(expression.getLhs()), visit(expression.getRhs()), null);
+        return Optionals.map(visit(expression.getLhs()), visit(expression.getRhs()),
+                (lhs, rhs) -> numericPromote(expression, lhs, rhs, null));
     }
 
     @Override
-    public Use<?> visitSub(final Sub expression) {
+    public Optional<Use<?>> visitSub(final Sub expression) {
 
-        return numericPromote(expression, visit(expression.getLhs()), visit(expression.getRhs()),
-                (lhs, rhs) -> DecimalContext.DEFAULT.addition(
-                        lhs.getPrecision(), lhs.getScale(),
-                        rhs.getPrecision(), rhs.getScale()
-                ));
+        return Optionals.map(visit(expression.getLhs()), visit(expression.getRhs()),
+                (lhs, rhs) -> numericPromote(expression, lhs, rhs,
+                        (l, r) -> DecimalContext.DEFAULT.addition(
+                                l.getPrecision(), l.getScale(),
+                                r.getPrecision(), r.getScale()
+                        )));
     }
 
     private Use<?> numericPromote(final Expression expression, final Use<?> lhs, final Use<?> rhs, final BiFunction<UseDecimal, UseDecimal, DecimalContext.PrecisionAndScale> decimalContext) {
@@ -139,88 +160,88 @@ public class InferenceVisitor implements ExpressionVisitor<Use<?>> {
     }
 
     @Override
-    public Use<?> visitBitAnd(final BitAnd expression) {
+    public Optional<Use<?>> visitBitAnd(final BitAnd expression) {
 
-        return UseInteger.DEFAULT;
+        return Optional.of(UseInteger.DEFAULT);
     }
 
     @Override
-    public Use<?> visitBitFlip(final BitNot expression) {
+    public Optional<Use<?>> visitBitFlip(final BitNot expression) {
 
-        return UseInteger.DEFAULT;
+        return Optional.of(UseInteger.DEFAULT);
     }
 
     @Override
-    public Use<?> visitBitLsh(final BitLsh expression) {
+    public Optional<Use<?>> visitBitLsh(final BitLsh expression) {
 
-        return UseInteger.DEFAULT;
+        return Optional.of(UseInteger.DEFAULT);
     }
 
     @Override
-    public Use<?> visitBitOr(final BitOr expression) {
+    public Optional<Use<?>> visitBitOr(final BitOr expression) {
 
-        return UseInteger.DEFAULT;
+        return Optional.of(UseInteger.DEFAULT);
     }
 
     @Override
-    public Use<?> visitBitRsh(final BitRsh expression) {
+    public Optional<Use<?>> visitBitRsh(final BitRsh expression) {
 
-        return UseInteger.DEFAULT;
+        return Optional.of(UseInteger.DEFAULT);
     }
 
     @Override
-    public Use<?> visitBitXor(final BitXor expression) {
+    public Optional<Use<?>> visitBitXor(final BitXor expression) {
 
-        return UseInteger.DEFAULT;
+        return Optional.of(UseInteger.DEFAULT);
     }
 
     @Override
-    public Use<?> visitCmp(final Cmp expression) {
+    public Optional<Use<?>> visitCmp(final Cmp expression) {
 
-        return UseInteger.DEFAULT;
+        return Optional.of(UseInteger.DEFAULT);
     }
 
     @Override
-    public Use<?> visitEq(final Eq expression) {
+    public Optional<Use<?>> visitEq(final Eq expression) {
 
-        return UseBoolean.DEFAULT;
+        return Optional.of(UseBoolean.DEFAULT);
     }
 
     @Override
-    public Use<?> visitGt(final Gt expression) {
+    public Optional<Use<?>> visitGt(final Gt expression) {
 
-        return UseBoolean.DEFAULT;
+        return Optional.of(UseBoolean.DEFAULT);
     }
 
     @Override
-    public Use<?> visitGte(final Gte expression) {
+    public Optional<Use<?>> visitGte(final Gte expression) {
 
-        return UseBoolean.DEFAULT;
+        return Optional.of(UseBoolean.DEFAULT);
     }
 
     @Override
-    public Use<?> visitLt(final Lt expression) {
+    public Optional<Use<?>> visitLt(final Lt expression) {
 
-        return UseBoolean.DEFAULT;
+        return Optional.of(UseBoolean.DEFAULT);
     }
 
     @Override
-    public Use<?> visitLte(final Lte expression) {
+    public Optional<Use<?>> visitLte(final Lte expression) {
 
-        return UseBoolean.DEFAULT;
+        return Optional.of(UseBoolean.DEFAULT);
     }
 
     @Override
-    public Use<?> visitNe(final Ne expression) {
+    public Optional<Use<?>> visitNe(final Ne expression) {
 
-        return UseBoolean.DEFAULT;
+        return Optional.of(UseBoolean.DEFAULT);
     }
 
     @Override
-    public Use<?> visitConstant(final Constant expression) {
+    public Optional<Use<?>> visitConstant(final Constant expression) {
 
         final Object value = expression.getValue();
-        return constantType(value);
+        return Optional.of(constantType(value));
     }
 
     private static Use<?> constantType(final Object value) {
@@ -245,105 +266,113 @@ public class InferenceVisitor implements ExpressionVisitor<Use<?>> {
     }
 
     @Override
-    public Use<?> visitNameConstant(final NameConstant expression) {
+    public Optional<Use<?>> visitNameConstant(final NameConstant expression) {
 
         final Name name = expression.getName();
-        return context.typeOf(name);
+        return context.optionalTypeOf(name);
     }
 
     @Override
-    public Use<?> visitCoalesce(final Coalesce expression) {
+    public Optional<Use<?>> visitCoalesce(final Coalesce expression) {
 
-        return Use.commonBase(visit(expression.getLhs()), visit(expression.getRhs()));
+        return Optionals.map(visit(expression.getLhs()), visit(expression.getRhs()), Use::commonBase);
     }
 
     @Override
-    public Use<?> visitIfElse(final IfElse expression) {
+    public Optional<Use<?>> visitIfElse(final IfElse expression) {
 
-        return Use.commonBase(visit(expression.getThen()), visit(expression.getOtherwise()));
+        return Optionals.map(visit(expression.getThen()), visit(expression.getOtherwise()), Use::commonBase);
     }
 
     @Override
-    public Use<?> visitIn(final In expression) {
+    public Optional<Use<?>> visitIn(final In expression) {
 
-        return UseBoolean.DEFAULT;
+        return Optional.of(UseBoolean.DEFAULT);
     }
 
     @Override
-    public Use<?> visitIndex(final Index expression) {
+    public Optional<Use<?>> visitIndex(final Index expression) {
 
-        final Use<?> lhs = visit(expression.getLhs());
-        if(lhs instanceof UseCollection) {
-            return ((UseCollection<?, ?>)lhs).getType();
-        } else if(lhs instanceof UseMap<?>) {
-            return ((UseMap<?>)lhs).getType();
+        return visit(expression.getLhs()).map((lhs) -> {
+            if (lhs instanceof UseCollection) {
+                return ((UseCollection<?, ?>) lhs).getType();
+            } else if (lhs instanceof UseMap<?>) {
+                return ((UseMap<?>) lhs).getType();
+            } else {
+                throw new UnsupportedOperationException("Cannot infer type of " + expression);
+            }
+        });
+    }
+
+    @Override
+    public Optional<Use<?>> visitLambda(final Lambda expression) {
+
+        return Optional.empty();
+    }
+
+    @Override
+    public Optional<Use<?>> visitLambdaCall(final LambdaCall expression) {
+
+        final Expression with = expression.getWith();
+        if(with instanceof NameConstant) {
+            final List<Use<?>> args = expression.getArgs().stream()
+                    .map(this::typeOf).collect(Collectors.toList());
+            return Optional.of(typeOfCall(((NameConstant) with).getName(), args));
         } else {
-            throw new UnsupportedOperationException("Cannot infer type of " + expression);
+            return Optional.empty();
         }
     }
 
     @Override
-    public Use<?> visitLambda(final Lambda expression) {
+    public Optional<Use<?>> visitMemberCall(final MemberCall expression) {
 
-        return UseAny.DEFAULT;
-    }
-
-    @Override
-    public Use<?> visitLambdaCall(final LambdaCall expression) {
-
-        return UseAny.DEFAULT;
-    }
-
-    @Override
-    public Use<?> visitMemberCall(final MemberCall expression) {
-
-        final Use<?> with = visit(expression.getWith());
+        final Use<?> with = typeOf(expression.getWith());
         final String member = expression.getMember();
         final List<Use<?>> args = expression.getArgs().stream()
-                .map(this::visit).collect(Collectors.toList());
-        return typeOfCall(with, member, args);
+                .map(this::typeOf).collect(Collectors.toList());
+        return Optional.of(typeOfCall(with, member, args));
     }
 
     @Override
-    public Use<?> visitMember(final Member expression) {
+    public Optional<Use<?>> visitMember(final Member expression) {
 
-        final Use<?> with = visit(expression.getWith());
+        final Use<?> with = typeOf(expression.getWith());
         final String member = expression.getMember();
         if(with != null) {
-            return with.typeOf(Name.of(member));
+            return Optional.of(with.typeOf(Name.of(member)));
         } else {
             throw new UnsupportedOperationException("Cannot infer type of " + expression);
         }
     }
 
     @Override
-    public Use<?> visitWith(final With expression) {
+    public Optional<Use<?>> visitWith(final With expression) {
 
-        final Map<String, Use<?>> with = expression.getWith().entrySet().stream().collect(Collectors.toMap(
-                Map.Entry::getKey,
-                e -> visit(e.getValue())
+        final Map<String, Use<?>> with = expression.getWith().stream().collect(Collectors.toMap(
+                Pair::getFirst,
+                e -> typeOf(e.getSecond())
         ));
         final InferenceContext newContext = context.with(with);
         return new InferenceVisitor(newContext, methods).visit(expression.getYield());
     }
 
     @Override
-    public Use<?> visitForAll(final ForAll expression) {
+    public Optional<Use<?>> visitForAll(final ForAll expression) {
 
-        return UseBoolean.DEFAULT;
+        return Optional.of(UseBoolean.DEFAULT);
     }
 
     @Override
-    public Use<?> visitForAny(final ForAny expression) {
+    public Optional<Use<?>> visitForAny(final ForAny expression) {
 
-        return UseBoolean.DEFAULT;
+        return Optional.of(UseBoolean.DEFAULT);
     }
     
     private Map<String, Use<?>> iteratorTypes(final ContextIterator iterator) {
         
         if(iterator instanceof ContextIterator.OfKeyValue) {
             final ContextIterator.OfKeyValue ofKeyValue = (ContextIterator.OfKeyValue)iterator;
-            final Use<?> containerType = visit(ofKeyValue.getExpr());
+            final Use<?> containerType = typeOf(ofKeyValue.getExpr());
             if(containerType instanceof UseCollection) {
                 return ImmutableMap.of(
                         ofKeyValue.getKey(), UseInteger.DEFAULT,
@@ -357,7 +386,7 @@ public class InferenceVisitor implements ExpressionVisitor<Use<?>> {
             }
         } else if(iterator instanceof ContextIterator.OfValue) {
             final ContextIterator.OfValue ofValue = (ContextIterator.OfValue)iterator;
-            final Use<?> containerType = visit(ofValue.getExpr());
+            final Use<?> containerType = typeOf(ofValue.getExpr());
             if(containerType instanceof UseCollection) {
                 return ImmutableMap.of(
                         ofValue.getValue(), ((UseCollection<?, ?>) containerType).getType()
@@ -374,135 +403,156 @@ public class InferenceVisitor implements ExpressionVisitor<Use<?>> {
     }
 
     @Override
-    public Use<?> visitForArray(final ForArray expression) {
+    public Optional<Use<?>> visitForArray(final ForArray expression) {
 
         final Expression yield = expression.getYield();
         final InferenceContext newContext = context.with(iteratorTypes(expression.getIterator()));
-        final Use<?> valueType = new InferenceVisitor(newContext, methods).visit(yield);
-        return UseArray.from(valueType);
+        final Use<?> valueType = new InferenceVisitor(newContext, methods).typeOf(yield);
+        return Optional.of(UseArray.from(valueType));
     }
 
     @Override
-    public Use<?> visitForObject(final ForObject expression) {
+    public Optional<Use<?>> visitForObject(final ForObject expression) {
 
         final Expression yield = expression.getYieldValue();
         final InferenceContext newContext = context.with(iteratorTypes(expression.getIterator()));
-        final Use<?> valueType = new InferenceVisitor(newContext, methods).visit(yield);
-        return UseMap.from(valueType);
+        final Use<?> valueType = new InferenceVisitor(newContext, methods).typeOf(yield);
+        return Optional.of(UseMap.from(valueType));
     }
 
     @Override
-    public Use<?> visitForSet(final ForSet expression) {
+    public Optional<Use<?>> visitForSet(final ForSet expression) {
 
         final Expression yield = expression.getYield();
         final InferenceContext newContext = context.with(iteratorTypes(expression.getIterator()));
-        final Use<?> valueType = new InferenceVisitor(newContext, methods).visit(yield);
-        return UseSet.from(valueType);
+        final Use<?> valueType = new InferenceVisitor(newContext, methods).typeOf(yield);
+        return Optional.of(UseSet.from(valueType));
     }
 
     @Override
-    public Use<?> visitLiteralArray(final LiteralArray expression) {
+    public Optional<Use<?>> visitLiteralArray(final LiteralArray expression) {
 
-        final Stream<Use<?>> args = expression.getArgs().stream().map(this::visit);
-        return UseArray.from(args.reduce(Use::commonBase).orElse(UseAny.DEFAULT));
+        final Stream<Use<?>> args = expression.getArgs().stream().map(this::typeOf);
+        return Optional.of(UseArray.from(args.reduce(Use::commonBase).orElse(UseAny.DEFAULT)));
     }
 
     @Override
-    public Use<?> visitLiteralObject(final LiteralObject expression) {
+    public Optional<Use<?>> visitLiteralObject(final LiteralObject expression) {
 
-        final Stream<Use<?>> args = expression.getArgs().values().stream().map(this::visit);
-        return UseMap.from(args.reduce(Use::commonBase).orElse(UseAny.DEFAULT));
+        final Stream<Use<?>> args = expression.getArgs().values().stream().map(this::typeOf);
+        return Optional.of(UseMap.from(args.reduce(Use::commonBase).orElse(UseAny.DEFAULT)));
     }
 
     @Override
-    public Use<?> visitLiteralSet(final LiteralSet expression) {
+    public Optional<Use<?>> visitLiteralSet(final LiteralSet expression) {
 
-        final Stream<Use<?>> args = expression.getArgs().stream().map(this::visit);
-        return UseSet.from(args.reduce(Use::commonBase).orElse(UseAny.DEFAULT));
+        final Stream<Use<?>> args = expression.getArgs().stream().map(this::typeOf);
+        return Optional.of(UseSet.from(args.reduce(Use::commonBase).orElse(UseAny.DEFAULT)));
     }
 
     @Override
-    public Use<?> visitAnd(final And expression) {
+    public Optional<Use<?>> visitAnd(final And expression) {
 
-        return UseBoolean.DEFAULT;
+        return Optional.of(UseBoolean.DEFAULT);
     }
 
     @Override
-    public Use<?> visitNot(final Not expression) {
+    public Optional<Use<?>> visitNot(final Not expression) {
 
-        return UseBoolean.DEFAULT;
+        return Optional.of(UseBoolean.DEFAULT);
     }
 
     @Override
-    public Use<?> visitOr(final Or expression) {
+    public Optional<Use<?>> visitOr(final Or expression) {
 
-        return UseBoolean.DEFAULT;
+        return Optional.of(UseBoolean.DEFAULT);
     }
 
     @Override
-    public Use<?> visitLike(final Like like) {
+    public Optional<Use<?>> visitLike(final Like like) {
 
-        return UseBoolean.DEFAULT;
+        return Optional.of(UseBoolean.DEFAULT);
     }
 
     @Override
-    public Use<?> visitAvg(final Avg expression) {
+    public Optional<Use<?>> visitAvg(final Avg expression) {
 
-        return UseNumber.DEFAULT;
+        return Optional.of(UseNumber.DEFAULT);
     }
 
     @Override
-    public Use<?> visitCollectArray(final CollectArray expression) {
+    public Optional<Use<?>> visitCollectArray(final CollectArray expression) {
 
-        return UseArray.from(visit(expression.getInput()));
+        return Optional.of(UseArray.from(typeOf(expression.getInput())));
     }
 
     @Override
-    public Use<?> visitCount(final Count expression) {
+    public Optional<Use<?>> visitCount(final Count expression) {
 
-        return UseInteger.DEFAULT;
+        return Optional.of(UseInteger.DEFAULT);
     }
 
     @Override
-    public Use<?> visitMax(final Max expression) {
+    public Optional<Use<?>> visitMax(final Max expression) {
 
         return visit(expression.getInput());
     }
 
     @Override
-    public Use<?> visitMin(final Min expression) {
+    public Optional<Use<?>> visitMin(final Min expression) {
 
         return visit(expression.getInput());
     }
 
     @Override
-    public Use<?> visitSum(final Sum expression) {
+    public Optional<Use<?>> visitSum(final Sum expression) {
 
         return visit(expression.getInput());
     }
 
     @Override
-    public Use<?> visitSql(final Sql expression) {
+    public Optional<Use<?>> visitSql(final Sql expression) {
 
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public Use<?> visitCast(final Cast expression) {
+    public Optional<Use<?>> visitCast(final Cast expression) {
 
-        return context.namedType(expression.getType());
+        return Optional.of(context.namedType(expression.getType()));
     }
 
     @Override
-    public Use<?> visitBinaryConcat(final BinaryConcat expression) {
+    public Optional<Use<?>> visitCase(final Case expression) {
 
-        return UseBinary.DEFAULT;
+        Stream<Expression> expressions = expression.getWhen().stream().map(Pair::getSecond);
+        if(expression.getOtherwise() != null) {
+            expressions = Stream.concat(expressions, Stream.of(expression.getOtherwise()));
+        }
+
+        final Optional<Optional<Use<?>>> result = expressions.map(this::optionalTypeOf)
+                .reduce((a, b) -> Optionals.map(a, b, Use::commonBase));
+
+        return result.orElseGet(Optional::empty);
+    }
+
+    @Override
+    public Optional<Use<?>> visitBinaryConcat(final BinaryConcat expression) {
+
+        return Optional.of(UseBinary.DEFAULT);
     }
 
     protected Use<?> typeOfCall(final Use<?> target, final String member, final List<Use<?>> args) {
 
         final Type[] argTypes = args.stream().map(Use::javaType).toArray(Type[]::new);
         final Callable callable = methods.callable(target.javaType(), member, argTypes);
+        return Use.fromJavaType(callable.type());
+    }
+
+    protected Use<?> typeOfCall(final Name name, final List<Use<?>> args) {
+
+        final Type[] argTypes = args.stream().map(Use::javaType).toArray(Type[]::new);
+        final Callable callable = methods.callable(name, argTypes);
         return Use.fromJavaType(callable.type());
     }
 }

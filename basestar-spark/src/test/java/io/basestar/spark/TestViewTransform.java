@@ -326,6 +326,50 @@ class TestViewTransform extends AbstractSparkTest {
         assertEquals(6, rows.size());
     }
 
+    @Test
+    void testSqlJoinView() throws IOException {
+
+        final SparkSession session = session();
+
+        final Map<Name, Dataset<Row>> datasets = ImmutableMap.of(
+                Name.of("A"), session.createDataset(ImmutableList.of(
+                        new A("a1", new B("b1")),
+                        new A("a2", new B("b2"))
+                ), Encoders.bean(A.class)).toDF(),
+                Name.of("B"), session.createDataset(ImmutableList.of(
+                        new B("b1", new D("d1", 3L), 2L),
+                        new B("b2", new D("d2", 4L), 5L)
+                ), Encoders.bean(B.class)).toDF()
+        );
+
+        final Set<WithSqlJoin> rows = ImmutableSet.copyOf(view("WithSqlJoin", WithSqlJoin.class, datasets));
+        assertEquals(ImmutableSet.of(
+                new WithSqlJoin("BWEx", "a1", new D("d1", null)),
+                new WithSqlJoin("BWEy", "a2", new D("d2", null))
+        ), rows);
+    }
+
+    @Test
+    void testSqlAggView() throws IOException {
+
+        final SparkSession session = session();
+
+        final Map<Name, Dataset<Row>> datasets = ImmutableMap.of(
+                Name.of("G"), session.createDataset(ImmutableList.of(
+                        new G("g1", "a", 10L),
+                        new G("g2", "a", 20L),
+                        new G("g3", "b", 30L),
+                        new G("g4", "b", 40L)
+                ), Encoders.bean(G.class)).toDF()
+        );
+
+        final Set<WithSqlAgg> rows = ImmutableSet.copyOf(view("WithSqlAgg", WithSqlAgg.class, datasets));
+        assertEquals(ImmutableSet.of(
+                new WithSqlAgg("ga", 34L),
+                new WithSqlAgg("gb", 74L)
+        ), rows);
+    }
+
     private <T> List<T> view(final String view, final Class<T> as,  final Map<Name, Dataset<Row>> datasets) throws IOException {
 
         return view(view, as, datasets, ImmutableSet.of());

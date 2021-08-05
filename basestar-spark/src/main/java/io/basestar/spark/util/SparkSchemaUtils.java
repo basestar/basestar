@@ -201,6 +201,12 @@ public class SparkSchemaUtils {
             }
 
             @Override
+            public DataType visitComposite(final UseComposite type) {
+
+                return structType(type.getTypes(), expand).asNullable();
+            }
+
+            @Override
             public <T> DataType visitSet(final UseSet<T> type) {
 
                 return DataTypes.createArrayType(type.getType().visit(this)).asNullable();
@@ -447,6 +453,12 @@ public class SparkSchemaUtils {
             public Object visitDecimal(final UseDecimal type) {
 
                 return type.create(value, expand, suppress);
+            }
+
+            @Override
+            public Object visitComposite(final UseComposite type) {
+
+                return type.create(fromSpark(Layout.simple(type.getTypes(), expand), (Row)value));
             }
 
             @Override
@@ -721,6 +733,13 @@ public class SparkSchemaUtils {
             }
 
             @Override
+            @SuppressWarnings("unchecked")
+            public Object visitComposite(final UseComposite type) {
+
+                return toSpark(Layout.simple(type.getTypes(), expand), (StructType) dataType, (Map<String, Object>)value);
+            }
+
+            @Override
             public <T> Object visitSet(final UseSet<T> type) {
 
                 return visitCollection(type);
@@ -865,6 +884,12 @@ public class SparkSchemaUtils {
             public Encoder<?> visitDecimal(final UseDecimal type) {
 
                 return Encoders.DECIMAL();
+            }
+
+            @Override
+            public Encoder<?> visitComposite(final UseComposite type) {
+
+                throw new UnsupportedOperationException();
             }
 
             @Override

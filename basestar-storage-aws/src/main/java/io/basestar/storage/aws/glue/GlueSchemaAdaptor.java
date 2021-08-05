@@ -259,6 +259,12 @@ public class GlueSchemaAdaptor {
 
                 return "decimal(" + type.getPrecision() + "," + type.getScale() + ")";
             }
+
+            @Override
+            public String visitComposite(final UseComposite type) {
+
+                return structType(type.getTypes(), expand);
+            }
         });
     }
 

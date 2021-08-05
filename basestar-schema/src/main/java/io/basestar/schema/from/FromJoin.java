@@ -3,50 +3,48 @@ package io.basestar.schema.from;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Expression;
 import io.basestar.expression.arithmetic.Add;
-import io.basestar.schema.*;
-import io.basestar.schema.exception.SchemaValidationException;
+import io.basestar.schema.Bucketing;
+import io.basestar.schema.LinkableSchema;
+import io.basestar.schema.Schema;
+import io.basestar.schema.ViewSchema;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseBinary;
-import io.basestar.schema.use.UseString;
 import io.basestar.util.BinaryKey;
-import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
-import lombok.Getter;
+import lombok.Data;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-@Getter
+@Data
 public class FromJoin implements From {
 
     private final Join join;
 
-    private final String as;
+    public FromJoin(final Join join) {
 
-    public FromJoin(final Schema.Resolver.Constructing resolver, final From.Descriptor from) {
-
-        this.join = Nullsafe.require(from.getJoin()).build(resolver);
-        this.as = from.getAs();
+        this.join = Nullsafe.require(join);
     }
+
+//    protected FromJoin(final Schema.Resolver.Constructing resolver, final From.Descriptor from) {
+//
+//        super(from);
+//        this.join = Nullsafe.require(from.getJoin()).build(resolver);
+//    }
 
     @Override
     public From.Descriptor descriptor() {
 
-        return new From.Descriptor() {
+        return new Descriptor.Defaulting() {
             @Override
             public Join.Descriptor getJoin() {
 
                 return join.descriptor();
-            }
-
-            @Override
-            public String getAs() {
-
-                return as;
             }
         };
     }
@@ -54,17 +52,22 @@ public class FromJoin implements From {
     @Override
     public InferenceContext inferenceContext() {
 
-        // Temp exceptions, should support anon left/right sides as long as there are no naming conflicts
-        if(join.getLeft().getAs() == null) {
-           throw new IllegalStateException("Left side of join must be named (with as=)");
-        }
-        if(join.getRight().getAs() == null) {
-            throw new IllegalStateException("Right side of join must be named (with as=)");
-        }
+        final From left = join.getLeft();
+        final From right = join.getRight();
 
-        return InferenceContext.from(ImmutableMap.of(ViewSchema.ID, UseString.DEFAULT))
-                .overlay(join.getLeft().getAs(), join.getLeft().inferenceContext())
-                .overlay(join.getRight().getAs(), join.getRight().inferenceContext());
+        final InferenceContext leftContext = left.inferenceContext();
+        final InferenceContext rightContext = right.inferenceContext();
+
+        InferenceContext result = new InferenceContext.Join(leftContext, rightContext);
+        if(left.hasAlias()) {
+            result = result.overlay(left.getAlias(), leftContext);
+        }
+        if(right.hasAlias()) {
+            result = result.overlay(right.getAlias(), rightContext);
+        }
+        return result.with(ImmutableMap.of(
+                ViewSchema.ID, UseBinary.DEFAULT
+        ));
     }
 
     @Override
@@ -86,19 +89,20 @@ public class FromJoin implements From {
     }
 
     @Override
-    public void validateProperty(final Property property) {
+    public Map<String, Use<?>> getProperties() {
 
-        if (property.getExpression() == null) {
-            throw new SchemaValidationException(property.getQualifiedName(), "Every view property must have an expression");
-        }
+        final Map<String, Use<?>> result = new HashMap<>();
+        result.putAll(join.getLeft().getProperties());
+        result.putAll(join.getRight().getProperties());
+        return result;
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public BinaryKey id(final Map<String, Object> row) {
 
-        final BinaryKey left = join.getLeft().id((Map<String, Object>)row.get(join.getLeft().getAs()));
-        final BinaryKey right = join.getRight().id((Map<String, Object>)row.get(join.getRight().getAs()));
+        final BinaryKey left = join.getLeft().id((Map<String, Object>)row.get(join.getLeft().getAlias()));
+        final BinaryKey right = join.getRight().id((Map<String, Object>)row.get(join.getRight().getAlias()));
         return left.concat(right);
     }
 
@@ -119,5 +123,11 @@ public class FromJoin implements From {
     public Expression id() {
 
         return new Add(join.getLeft().id(), join.getRight().id());
+    }
+
+    @Override
+    public <T> T visit(final FromVisitor<T> visitor) {
+
+        return visitor.visitJoin(this);
     }
 }

@@ -21,17 +21,44 @@ package io.basestar.expression.methods;
  */
 
 import java.io.Serializable;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 @SuppressWarnings("unused")
 public class NumberMethods implements Serializable {
 
-    public Number round(final Number a, final Number places) {
+    public Number _round(final Number a, final Number places) {
 
-        throw new UnsupportedOperationException();
+        return BigDecimal.valueOf(a.doubleValue()).setScale(places.intValue(), RoundingMode.HALF_UP).doubleValue();
     }
 
     public double sqrt(final Number num) {
 
+        return _sqrt(num);
+    }
+
+    public long floor(final Number a) {
+
+        return _floor(a);
+    }
+
+    public double _sqrt(final Number num) {
+
         return Math.sqrt(num.doubleValue());
+    }
+
+    public long _floor(final Number a) {
+
+        return (long) Math.floor(a.doubleValue());
+    }
+
+    public long _ceil(final Number a) {
+
+        return (long) Math.ceil(a.doubleValue());
+    }
+
+    public double _pow(final Number a, final Number b) {
+
+        return Math.pow(a.doubleValue(), b.doubleValue());
     }
 }

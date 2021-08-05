@@ -1,49 +1,59 @@
 package io.basestar.schema.from;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
-import io.basestar.schema.*;
-import io.basestar.schema.exception.SchemaValidationException;
+import io.basestar.schema.Bucketing;
+import io.basestar.schema.LinkableSchema;
+import io.basestar.schema.Schema;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.util.SchemaRef;
-import io.basestar.util.*;
-import lombok.Getter;
+import io.basestar.util.BinaryKey;
+import io.basestar.util.Immutable;
+import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
+import lombok.Data;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-@Getter
+@Data
 public class FromSchema implements From {
 
     @Nonnull
     private final LinkableSchema schema;
 
     @Nonnull
-    private final List<Sort> sort;
-
-    @Nonnull
     private final Set<Name> expand;
 
-    private final String as;
+    public FromSchema(final LinkableSchema schema, final Set<Name> expand) {
 
-    public FromSchema(final Schema.Resolver.Constructing resolver, final From.Descriptor from) {
-
-        this.schema = from.getSchema().resolve(resolver);
-        this.sort = Nullsafe.orDefault(from.getSort());
-        this.expand = Nullsafe.orDefault(from.getExpand());
-        this.as = from.getAs();
+        this.schema = Nullsafe.require(schema);
+        this.expand = Immutable.set(expand);
     }
+
+//
+//    protected FromSchema(final LinkableSchema schema, final Set<Name> expand, final Arguments arguments) {
+//
+//        super(arguments);
+//        this.schema = Nullsafe.require(schema);
+//        this.expand = Nullsafe.orDefault(expand);
+//    }
+//
+//    public FromSchema(final Schema.Resolver.Constructing resolver, final From.Descriptor from) {
+//
+//        super(from);
+//        this.schema = from.getSchema().resolve(resolver);
+//        this.expand = Nullsafe.orDefault(from.getExpand());
+//    }
 
     @Override
     public From.Descriptor descriptor() {
 
-        return new From.Descriptor() {
+        return new Descriptor.Defaulting() {
             @Override
             public SchemaRef getSchema() {
 
@@ -55,21 +65,9 @@ public class FromSchema implements From {
             }
 
             @Override
-            public List<Sort> getSort() {
-
-                return sort;
-            }
-
-            @Override
             public Set<Name> getExpand() {
 
                 return expand;
-            }
-
-            @Override
-            public String getAs() {
-
-                return as;
             }
         };
     }
@@ -103,11 +101,9 @@ public class FromSchema implements From {
     }
 
     @Override
-    public void validateProperty(final Property property) {
+    public Map<String, Use<?>> getProperties() {
 
-        if (property.getExpression() == null) {
-            throw new SchemaValidationException(property.getQualifiedName(), "Every view property must have an expression");
-        }
+        return schema.layoutSchema(expand);
     }
 
     @Override
@@ -132,5 +128,11 @@ public class FromSchema implements From {
     public List<FromSchema> schemas() {
 
         return ImmutableList.of(this);
+    }
+
+    @Override
+    public <T> T visit(final FromVisitor<T> visitor) {
+
+        return visitor.visitSchema(this);
     }
 }

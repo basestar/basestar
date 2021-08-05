@@ -9,6 +9,7 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 public interface Layout extends Serializable {
@@ -17,7 +18,13 @@ public interface Layout extends Serializable {
 
     Set<Name> getExpand();
 
-    <T> Use<T> typeOf(Name name);
+    @SuppressWarnings("unchecked")
+    default <T> Use<T> typeOf(final Name name) {
+
+        return (Use<T>)optionalTypeOf(name).orElse(UseAny.DEFAULT);
+    }
+
+    <T> Optional<Use<T>> optionalTypeOf(Name name);
 
     static Layout simple(final Map<String, Use<?>> schema) {
 
@@ -44,14 +51,14 @@ public interface Layout extends Serializable {
 
         @Override
         @SuppressWarnings("unchecked")
-        public <T> Use<T> typeOf(final Name name) {
+        public <T> Optional<Use<T>> optionalTypeOf(final Name name) {
 
             final String first = name.first();
             final Use<?> use = schema.get(first);
             if(use != null) {
-                return (Use<T>)use.typeOf(name.withoutFirst());
+                return Optional.of((Use<T>)use.typeOf(name.withoutFirst()));
             } else {
-                return (Use<T>)UseAny.DEFAULT;
+                return Optional.empty();
             }
         }
     }

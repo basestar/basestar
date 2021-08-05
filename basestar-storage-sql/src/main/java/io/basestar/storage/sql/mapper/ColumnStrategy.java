@@ -151,6 +151,12 @@ public interface ColumnStrategy {
                 }
 
                 @Override
+                public ColumnMapper<T> visitComposite(final UseComposite type) {
+
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
                 public <V> ColumnMapper<T> visitArray(final UseArray<V> type) {
 
                     return json();

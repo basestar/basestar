@@ -316,9 +316,9 @@ public class Link implements Member {
     //FIXME
     @Override
     @SuppressWarnings("unchecked")
-    public <T> Use<T> typeOf(final Name name) {
+    public <T> Optional<Use<T>> optionalTypeOf(final Name name) {
 
-        return (Use<T>) typeOf().typeOf(name);
+        return (Optional<Use<T>>)(Optional<?>)typeOf().optionalTypeOf(name);
     }
 
     @Override

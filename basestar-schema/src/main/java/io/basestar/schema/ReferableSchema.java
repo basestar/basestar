@@ -2,14 +2,12 @@ package io.basestar.schema;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import io.basestar.expression.Context;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.schema.use.*;
 import io.basestar.schema.util.ValueContext;
-import io.basestar.util.BinaryKey;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 

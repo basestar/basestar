@@ -28,6 +28,7 @@ import io.basestar.util.Name;
 
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -126,13 +127,13 @@ public interface Expression extends Serializable {
             return name -> false;
         }
 
-        static Closure from(final Set<String> closure) {
+        static Closure from(final Collection<String> closure) {
 
             final Set<String> copy = Immutable.set(closure);
             return copy::contains;
         }
 
-        default Closure with(final Set<String> closure) {
+        default Closure with(final Collection<String> closure) {
 
             final Set<String> copy = Immutable.set(closure);
             return name -> copy.contains(name) || Closure.this.has(name);

@@ -26,10 +26,12 @@ import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.Renaming;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.text.Like;
+import io.basestar.expression.type.Coercion;
 import io.basestar.util.Name;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -73,12 +75,19 @@ public class And implements Expression {
 
         boolean changed = false;
         boolean constant = true;
-        final List<Expression> terms = this.terms.stream().map(v -> v.bind(context, root)).collect(Collectors.toList());
-        for(int i = 0; i != terms.size(); ++i) {
+        final List<Expression> terms = new ArrayList<>();
+        for (int i = 0; i != this.terms.size(); ++i) {
             final Expression before = this.terms.get(i);
-            final Expression after = terms.get(i);
+            final Expression after = before.bind(context, root);
             changed = changed || before != after;
-            constant = constant && after instanceof Constant;
+            if (after instanceof Constant) {
+                if (!Coercion.isTruthy(((Constant) after).getValue())) {
+                    return Constant.FALSE;
+                }
+            } else {
+                constant = false;
+                terms.add(after);
+            }
         }
         if(constant) {
             return new Constant(new And(terms).evaluate(context));

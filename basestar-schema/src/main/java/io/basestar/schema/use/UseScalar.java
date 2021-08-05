@@ -108,10 +108,10 @@ public interface UseScalar<T> extends Use<T> {
     }
 
     @Override
-    default Use<?> typeOf(final Name name) {
+    default Optional<Use<?>> optionalTypeOf(final Name name) {
 
         if(name.isEmpty()) {
-            return this;
+            return Optional.of(this);
         } else {
             throw new IllegalStateException();
         }

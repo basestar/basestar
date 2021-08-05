@@ -26,12 +26,10 @@ import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.Renaming;
 import io.basestar.expression.constant.Constant;
 import io.basestar.util.Name;
+import io.basestar.util.Pair;
 import lombok.Data;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -44,11 +42,11 @@ import java.util.stream.Stream;
 @Data
 public class With implements Expression {
 
-    private static final String TOKEN = "with";
+    private static final String TOKEN = "WITH";
 
     public static final int PRECEDENCE = Case.PRECEDENCE + 1;
 
-    private final Map<String, Expression> with;
+    private final List<Pair<String, Expression>> with;
 
     private final Expression yield;
 
@@ -56,17 +54,18 @@ public class With implements Expression {
     public Expression bind(final Context context, final Renaming root) {
 
         boolean constant = true;
-        boolean changed = false;
-        final Map<String, Expression> with = new HashMap<>();
-        for(final Map.Entry<String, Expression> entry : this.with.entrySet()) {
-            final Expression before = entry.getValue();
+        final Expression yield = this.yield.bind(context, root);
+        boolean changed = yield != this.yield;
+        final List<Pair<String, Expression>> with = new ArrayList<>();
+        for(final Pair<String, Expression> entry : this.with) {
+            final Expression before = entry.getSecond();
             final Expression after = before.bind(context, root);
-            with.put(entry.getKey(), after);
+            with.add(Pair.of(entry.getFirst(), after));
             constant = constant && after instanceof Constant;
             changed = changed || after != before;
         }
         if(constant) {
-            final Expression _return = this.yield.bind(context, Renaming.closure(with.keySet(), root));
+            final Expression _return = yield.bind(context, Renaming.closure(withKeys(), root));
             if(_return instanceof Constant) {
                 return _return;
             } else {
@@ -83,8 +82,8 @@ public class With implements Expression {
     public Object evaluate(final Context context) {
 
         final Map<String, Object> with = new HashMap<>();
-        for(final Map.Entry<String, Expression> entry : this.with.entrySet()) {
-            with.put(entry.getKey(), entry.getValue().evaluate(context));
+        for(final Pair<String, Expression> entry : this.with) {
+            with.put(entry.getFirst(), entry.getSecond().evaluate(context));
         }
         return yield.evaluate(context.with(with));
     }
@@ -92,7 +91,7 @@ public class With implements Expression {
     @Override
     public Set<Name> names() {
 
-        return Stream.concat(Stream.of(yield), with.values().stream())
+        return Stream.concat(Stream.of(yield), withValues().stream())
                 .flatMap(v -> v.names().stream())
                 .collect(Collectors.toSet());
     }
@@ -109,10 +108,20 @@ public class With implements Expression {
         return PRECEDENCE;
     }
 
+    private List<String> withKeys() {
+
+        return with.stream().map(Pair::getFirst).collect(Collectors.toList());
+    }
+
+    private List<Expression> withValues() {
+
+        return with.stream().map(Pair::getSecond).collect(Collectors.toList());
+    }
+
     @Override
     public boolean isConstant(final Closure closure) {
 
-        return yield.isConstant(closure.with(with.keySet()));
+        return yield.isConstant(closure.with(withKeys()));
     }
 
     @Override
@@ -124,17 +133,17 @@ public class With implements Expression {
     @Override
     public List<Expression> expressions() {
 
-        return Stream.concat(with.values().stream(), Stream.of(yield))
+        return Stream.concat(withValues().stream(), Stream.of(yield))
                 .collect(Collectors.toList());
     }
 
     @Override
     public Expression copy(final List<Expression> expressions) {
 
-        final Map<String, Expression> result = new HashMap<>();
+        final List<Pair<String, Expression>> result = new ArrayList<>();
         int offset = 0;
-        for(final Map.Entry<String, Expression> entry : with.entrySet()) {
-            result.put(entry.getKey(), expressions.get(offset));
+        for(final Pair<String, Expression> entry : with) {
+            result.add(Pair.of(entry.getFirst(), expressions.get(offset)));
             ++offset;
         }
         return new With(result, expressions.get(offset));
@@ -143,8 +152,8 @@ public class With implements Expression {
     @Override
     public String toString() {
 
-        return TOKEN + "(" + with.entrySet().stream()
-                .map(entry -> entry.getKey() + " = " + entry.getValue())
-                .collect(Collectors.joining(", ")) + ") " + yield;
+        return TOKEN + with.stream()
+                .map(entry -> " " + entry.getFirst() + " AS (" + entry.getSecond() + ")")
+                .collect(Collectors.joining(", ")) + " " + yield;
     }
 }

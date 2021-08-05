@@ -176,6 +176,12 @@ public interface SQLDialect {
             }
 
             @Override
+            public DataType<?> visitComposite(final UseComposite type) {
+
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
             public <T> DataType<?> visitSet(final UseSet<T> type) {
 
                 return setType(type);
@@ -296,6 +302,12 @@ public interface SQLDialect {
             public Object visitDecimal(final UseDecimal type) {
 
                 return type.create(value);
+            }
+
+            @Override
+            public Object visitComposite(final UseComposite type) {
+
+                throw new UnsupportedOperationException();
             }
 
             @Override
@@ -420,6 +432,12 @@ public interface SQLDialect {
             public Object visitDecimal(final UseDecimal type) {
 
                 return type.create(value);
+            }
+
+            @Override
+            public Object visitComposite(final UseComposite type) {
+
+                throw new UnsupportedOperationException();
             }
 
             @Override

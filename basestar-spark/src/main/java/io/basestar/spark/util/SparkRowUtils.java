@@ -204,7 +204,10 @@ public class SparkRowUtils {
         return findField(schema, name.first()).flatMap(field -> {
             final Column next = input.col(field.name());
             return resolveName(next, field.dataType(), name.withoutFirst());
-        }).orElseThrow(() -> new IllegalStateException("Name " + name + " not found"));
+        }).orElseThrow(() -> {
+            System.err.println("here");
+            return new IllegalStateException("Name " + name + " not found");
+        });
     }
 
     private static Optional<Column> resolveName(final Column col, final StructType schema, final Name name) {
@@ -268,5 +271,16 @@ public class SparkRowUtils {
     public static Iterator<Tuple2<Row, Row>> nulled(final Iterator<Tuple2<Row, Row>> tuples) {
 
         return Iterators.transform(tuples, SparkRowUtils::nulled);
+    }
+
+    public static Row create(final StructType structType, final Map<String, Object> values) {
+
+        final Object[] row = new Object[structType.size()];
+        int i = 0;
+        for(final StructField field : structType.fields()) {
+            row[i] = values.get(field.name());
+            ++i;
+        }
+        return new GenericRowWithSchema(row, structType);
     }
 }

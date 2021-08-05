@@ -59,7 +59,6 @@ class TestKeysetPagingUtils {
         assertEquals(now, sort.get(0));
     }
 
-
     @Test
     void testMismatchingTokenDeserialization() throws IOException {
 

@@ -12,7 +12,6 @@ import io.basestar.spark.util.ScalaUtils;
 import io.basestar.spark.util.SparkRowUtils;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.spark.util.SparkUtils;
-import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

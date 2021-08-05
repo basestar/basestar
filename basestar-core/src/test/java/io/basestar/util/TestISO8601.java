@@ -41,6 +41,9 @@ class TestISO8601 {
         assertEquals("2020-01-01", ISO8601.toString(ISO8601.parseDate("2020-001")));
         assertEquals("2020-01-01", ISO8601.toString(ISO8601.parseDate("2020001")));
         assertEquals("2020-01-01", ISO8601.toString(ISO8601.parseDate("2020-01-01T00:00:00-01:00")));
+        assertEquals("2020-04-01", ISO8601.toString(ISO8601.parseDate("202004", "yyyyMM")));
+        assertEquals("2020-01-01", ISO8601.toString(ISO8601.parseDate("2020", "yyyy")));
+        assertEquals("1970-01-30", ISO8601.toString(ISO8601.parseDate("0130", "MMdd")));
     }
 
     @Test

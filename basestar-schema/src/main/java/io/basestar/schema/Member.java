@@ -124,7 +124,13 @@ public interface Member extends Named, Described, Serializable, Extendable {
 
     Set<Name> requiredExpand(Set<Name> names);
 
-    <T> Use<T> typeOf(Name name);
+    <T> Optional<Use<T>> optionalTypeOf(Name name);
+
+    @SuppressWarnings("unchecked")
+    default <T> Use<T> typeOf(final Name name) {
+
+        return (Use<T>)optionalTypeOf(name).orElse(UseAny.DEFAULT);
+    }
 
     @SuppressWarnings("unchecked")
     default String toString(Object value) {
@@ -192,11 +198,11 @@ public interface Member extends Named, Described, Serializable, Extendable {
 
         if(type == null) {
             if(context != null && expression != null) {
-                final Use<?> inferredType = new InferenceVisitor(context).visit(expression);
-                if(inferredType instanceof UseAny) {
+                final Optional<Use<?>> inferredType = new InferenceVisitor(context).visit(expression);
+                if(!inferredType.isPresent()) {
                     throw new IllegalStateException("Cannot infer type from expression " + expression);
                 } else {
-                    return inferredType;
+                    return inferredType.get();
                 }
             } else {
                 throw new IllegalStateException("Property type or expression must be specified");

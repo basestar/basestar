@@ -84,7 +84,8 @@ public interface Use<T> extends Serializable {
         DATETIME,
         VIEW,
         SECRET,
-        PAGE;
+        PAGE,
+        COMPOSITE;
     }
 
     <R> R visit(Visitor<R> visitor);
@@ -125,7 +126,12 @@ public interface Use<T> extends Serializable {
 
     Code code();
 
-    Use<?> typeOf(Name name);
+    default Use<?> typeOf(final Name name) {
+
+        return optionalTypeOf(name).orElse(UseAny.DEFAULT);
+    }
+
+    Optional<Use<?>> optionalTypeOf(Name name);
 
     default Type javaType() {
 
@@ -313,8 +319,8 @@ public interface Use<T> extends Serializable {
                 return UseOptional.from(config);
             case UseEnum.NAME:
                 return UseEnum.from(config);
-            case UseStruct.NAME:
-                return UseStruct.from(config);
+            case UseComposite.NAME:
+                return UseComposite.from(config);
             case UseSecret.NAME:
                 return UseSecret.from(config);
             default:
@@ -416,6 +422,8 @@ public interface Use<T> extends Serializable {
                 return (T)UseDateTime.DEFAULT.deserializeValue(in);
             case VIEW:
                 return (T) UseView.deserializeAnyValue(in);
+            case COMPOSITE:
+                return (T)UseComposite.deserializeAnyValue(in);
             default:
                 throw new IllegalStateException();
         }
@@ -465,6 +473,13 @@ public interface Use<T> extends Serializable {
         <T> R visitPage(UsePage<T> type);
 
         R visitDecimal(UseDecimal type);
+
+        R visitComposite(UseComposite type);
+
+//        default R visitCallable(UseCallable useCallable) {
+//
+//            throw new UnsupportedOperationException();
+//        }
 
         interface Defaulting<R> extends Visitor<R> {
 
@@ -621,6 +636,12 @@ public interface Use<T> extends Serializable {
             default R visitSecret(final UseSecret type) {
 
                 return visitScalar(type);
+            }
+
+            @Override
+            default R visitComposite(final UseComposite type) {
+
+                return visitDefault(type);
             }
         }
     }

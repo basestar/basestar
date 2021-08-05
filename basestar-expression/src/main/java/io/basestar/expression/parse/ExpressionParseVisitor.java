@@ -67,7 +67,9 @@ import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 import org.antlr.v4.runtime.tree.ParseTree;
 
 import java.lang.String;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import static io.basestar.expression.parse.ExpressionLexer.Add;
@@ -203,7 +205,25 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
     }
 
     @Override
-    public Expression visitFromJoin(final FromJoinContext ctx) {
+    public Expression visitFromInnerJoin(final FromInnerJoinContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitFromLeftOuterJoin(final FromLeftOuterJoinContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitFromRightOuterJoin(final FromRightOuterJoinContext ctx) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Expression visitFromFullOuterJoin(final FromFullOuterJoinContext ctx) {
 
         throw new UnsupportedOperationException();
     }
@@ -304,7 +324,24 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
     }
 
     @Override
-    public Expression visitExprCase(final ExprCaseContext ctx) {
+    public Expression visitExprSimpleCase(final ExprSimpleCaseContext ctx) {
+
+        final Expression with =  visit(ctx.expr(0));
+        final List<Pair<Expression, Expression>> exprs = new ArrayList<>();
+        for(final CaseExprContext c : ctx.caseExpr()) {
+            exprs.add(Pair.of(visit(c.expr(0)), visit(c.expr(1))));
+        }
+        final Expression otherwise;
+        if(ctx.expr() != null) {
+            otherwise = visit(ctx.expr(1));
+        } else {
+            otherwise = null;
+        }
+        return new Case.Simple(with, exprs, otherwise);
+    }
+
+    @Override
+    public Expression visitExprSearchedCase(final ExprSearchedCaseContext ctx) {
 
         final List<Pair<Expression, Expression>> exprs = new ArrayList<>();
         for(final CaseExprContext c : ctx.caseExpr()) {
@@ -316,7 +353,21 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
         } else {
             otherwise = null;
         }
-        return new Case(exprs, otherwise);
+        return new Case.Searched(exprs, otherwise);
+    }
+
+    @Override
+    public Expression visitExprIsNull(final ExprIsNullContext ctx) {
+
+        final Expression expr = visit(ctx.expr());
+        return new Eq(expr, Constant.NULL);
+    }
+
+    @Override
+    public Expression visitExprIsNotNull(final ExprIsNotNullContext ctx) {
+
+        final Expression expr = visit(ctx.expr());
+        return new Ne(expr, Constant.NULL);
     }
 
     protected ContextIterator iterator(final OfContext ctx) {
@@ -363,7 +414,6 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
         final ContextIterator of = iterator(ctx.of());
         return new ForSet(yield, of);
     }
-
 
     @Override
     public Expression visitExprForAll(final ExprForAllContext ctx) {
@@ -436,10 +486,10 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
     @Override
     public Expression visitExprWith(final ExprWithContext ctx) {
 
-        final Map<String, Expression> with = new HashMap<>();
+        final List<Pair<String, Expression>> with = new ArrayList<>();
         final Expression yield = visit(ctx.expr());
         for(final WithExprContext c : ctx.withExprs().withExpr()) {
-            with.put(c.identifier().getText(), visit(c.expr()));
+            with.add(Pair.of(c.identifier().getText(), visit(c.expr())));
         }
         return new With(with, yield);
     }
@@ -534,17 +584,29 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
             final Expression expr = visit(named.expr());
             final String name = named.identifier().getText();
             return new From.Named(expr, name);
-        } else if(ctx instanceof FromJoinContext) {
-            final FromJoinContext join = (FromJoinContext)ctx;
-            final io.basestar.expression.sql.From left = visitFrom(join.fromExpr(0));
-            final io.basestar.expression.sql.From right = visitFrom(join.fromExpr(1));
-            final Expression on = visit(join.expr());
-            final io.basestar.expression.sql.From.Join.Side side = Nullsafe.map(join.side, v -> io.basestar.expression.sql.From.Join.Side.valueOf(v.getText().toUpperCase()));
-            final io.basestar.expression.sql.From.Join.Type type = Nullsafe.map(join.type, v ->   io.basestar.expression.sql.From.Join.Type.valueOf(v.getText().toUpperCase()));
-            return new From.Join(left, right, on, side, type);
+        } else if(ctx instanceof FromInnerJoinContext) {
+            final FromInnerJoinContext join = (FromInnerJoinContext)ctx;
+            return fromJoin(From.Join.Type.INNER, join.fromExpr(0), join.fromExpr(1), join.expr());
+        } else if(ctx instanceof FromLeftOuterJoinContext) {
+            final FromLeftOuterJoinContext join = (FromLeftOuterJoinContext)ctx;
+            return fromJoin(From.Join.Type.LEFT_OUTER, join.fromExpr(0), join.fromExpr(1), join.expr());
+        } else if(ctx instanceof FromRightOuterJoinContext) {
+            final FromRightOuterJoinContext join = (FromRightOuterJoinContext)ctx;
+            return fromJoin(From.Join.Type.RIGHT_OUTER, join.fromExpr(0), join.fromExpr(1), join.expr());
+        } else if(ctx instanceof FromFullOuterJoinContext) {
+            final FromFullOuterJoinContext join = (FromFullOuterJoinContext)ctx;
+            return fromJoin(From.Join.Type.FULL_OUTER, join.fromExpr(0), join.fromExpr(1), join.expr());
         } else {
             throw new UnsupportedOperationException("Unexpected " + ctx);
         }
+    }
+
+    private io.basestar.expression.sql.From fromJoin(final From.Join.Type type, final FromExprContext leftExpr, final FromExprContext rightExpr, final ExprContext onExpr) {
+
+        final io.basestar.expression.sql.From left = visitFrom(leftExpr);
+        final io.basestar.expression.sql.From right = visitFrom(rightExpr);
+        final Expression on = visit(onExpr);
+        return new From.Join(left, right, on, type);
     }
 
     private io.basestar.expression.sql.Union visitUnion(final UnionExprContext ctx) {
@@ -573,8 +635,8 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
         for(final FromExprContext c : ctx.fromExprs().fromExpr()) {
             from.add(visitFrom(c));
         }
-        final Expression where = ctx.expr() == null ? new Constant(true) : visit(ctx.expr());
-        final List<Name> group = names(ctx.names());
+        final Expression where = ctx.expr() == null ? null : visit(ctx.expr());
+        final List<Expression> group = ctx.exprs() == null ? null : visit(ctx.exprs().expr());
         final List<Sort> order = sorts(ctx.sorts());
         final List<io.basestar.expression.sql.Union> union = new ArrayList<>();
         for(final UnionExprContext c : ctx.unionExpr()) {
@@ -627,7 +689,7 @@ public class ExpressionParseVisitor extends AbstractParseTreeVisitor<Expression>
     public Expression visitExprCast(final ExprCastContext ctx) {
 
         final Expression expr = visit(ctx.expr());
-        final String type = ctx.typeExpr().identifier().toString();
+        final String type = ctx.typeExpr().identifier().getText();
         return new io.basestar.expression.function.Cast(expr, type);
     }
 

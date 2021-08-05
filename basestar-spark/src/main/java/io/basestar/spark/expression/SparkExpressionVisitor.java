@@ -29,6 +29,7 @@ import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.function.Coalesce;
 import io.basestar.expression.function.IfElse;
+import io.basestar.expression.function.Index;
 import io.basestar.expression.literal.LiteralObject;
 import io.basestar.expression.logical.And;
 import io.basestar.expression.logical.Not;
@@ -234,5 +235,17 @@ public class SparkExpressionVisitor implements ExpressionVisitor.Defaulting<Colu
 
         final Column input = visit(expression.getPredicate());
         return functions.count(input);
+    }
+
+    @Override
+    public Column visitIndex(final Index expression) {
+
+        final Column lhs = visit(expression.getLhs());
+        final Object rhs = expression.getRhs().evaluate(Context.init());
+        if(rhs instanceof String) {
+            return lhs.getField((String) rhs);
+        } else {
+            return lhs.getItem(rhs);
+        }
     }
 }

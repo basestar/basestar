@@ -23,6 +23,7 @@ package io.basestar.expression.methods;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ObjectArrays;
 import io.basestar.expression.call.Callable;
+import io.basestar.util.Name;
 import io.leangen.geantyref.GenericTypeReflector;
 import lombok.AccessLevel;
 import lombok.Data;
@@ -34,6 +35,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Data
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
@@ -62,15 +64,36 @@ public class Methods implements Serializable {
         }
 
         if(whitelist) {
-            throw new IllegalStateException("Cannot call " + method + " (restricted)");
+            throw new IllegalStateException("Cannot call non-whitelisted method " + methodString(method, args));
         } else {
             final Method resolved = findMethod(targetType, method, argTypes);
             if(resolved != null) {
                 return callable(resolved, null);
             } else {
-                throw new IllegalStateException("method not found");
+                throw new IllegalStateException("Method " + methodString(method, args) + " not found");
             }
         }
+    }
+
+    private String methodString(final String method, final Type[] args) {
+
+        return method + "(" + Arrays.stream(args).map(Object::toString).collect(Collectors.joining(", ")) + ")";
+    }
+
+    public Callable callable(final Name name, final Type[] args) {
+
+        final String method = name.toString();
+
+        final Class<?>[] argTypes = Arrays.stream(args).map(GenericTypeReflector::erase).toArray(Class<?>[]::new);
+
+        for(final Object filter : filters) {
+            final Method resolved = findMethod(filter.getClass(), "_" + method, argTypes);
+            if(resolved != null) {
+                return callable(resolved, filter);
+            }
+        }
+
+        throw new IllegalStateException("Cannot call non-whitelisted method " + methodString(method, args));
     }
 
     private static Callable callable(final Method method, final Object target) {
@@ -132,7 +155,7 @@ public class Methods implements Serializable {
     private static Method findMethod(final Class<?> type, final String name, final Class<?>... args) {
 
         for(final Method method : type.getMethods()) {
-            if(!method.getDeclaringClass().equals(Object.class) && method.getName().equals(name)) {
+            if(!method.getDeclaringClass().equals(Object.class) && method.getName().equalsIgnoreCase(name)) {
                 final Class<?>[] methodArgs = method.getParameterTypes();
                 if(args.length == methodArgs.length) {
                     boolean matched = true;

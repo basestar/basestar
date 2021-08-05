@@ -653,7 +653,7 @@ class TestExpression {
     @Test
     void testSql() {
 
-        final Expression expr = cache.parse("WITH x AS (y), y AS (z) SELECT x, y yy, * FROM a LEFT INNER JOIN c AS cc ON true WHERE a = b GROUP BY e ORDER BY d DESC UNION x UNION ALL y");
+        final Expression expr = cache.parse("WITH x AS (y), y AS (z) SELECT x, y yy, * FROM a LEFT OUTER JOIN c AS cc ON true WHERE a = b GROUP BY e ORDER BY d DESC UNION x UNION ALL y");
 
         final Sql select = new Sql(
                 ImmutableList.of(
@@ -666,8 +666,7 @@ class TestExpression {
                                 new From.Anonymous(new NameConstant("a")),
                                 new From.Named(new NameConstant("c"), "cc"),
                                 new Constant(true),
-                                From.Join.Side.LEFT,
-                                From.Join.Type.INNER
+                                From.Join.Type.LEFT_OUTER
                         )
                 ),
                 new Eq(
@@ -675,7 +674,7 @@ class TestExpression {
                         new NameConstant("b")
                 ),
                 ImmutableList.of(
-                        Name.of("e")
+                        new NameConstant("e")
                 ),
                 ImmutableList.of(
                         Sort.desc(Name.of("d"))
@@ -687,8 +686,14 @@ class TestExpression {
         );
 
         assertEquals(new With(
-                ImmutableMap.of("x", new NameConstant("y"), "y", new NameConstant("z")),
+                ImmutableList.of(Pair.of("x", new NameConstant("y")), Pair.of("y", new NameConstant("z"))),
                 select
         ), expr);
+    }
+
+    @Test
+    void test() {
+
+        Expression.parse("SELECT wer.fileId, \"wer_20\" AS type, wer.currency, wer.grossRoyaltyAmount, wer.taxAmount, wer.commissionAmount, wer.grossRoyaltyAmount - wer.taxAmount - wer.commissionAmount AS netRoyaltyAmount, 0 AS adjustmentAmount, 0 AS returnedAmount FROM wer20 AS wer UNION DISTINCT SELECT wep.fileId, \"wep_20\" AS type, wep.currency, wep.grossRoyaltyAmount, wep.taxAmount, wep.commissionAmount, wep.grossRoyaltyAmount - wep.taxAmount - wep.commissionAmount AS netRoyaltyAmount, 0 AS adjustmentAmount, 0 AS returnedAmount FROM wep20 AS wep UNION DISTINCT SELECT wea.fileId, \"wea_20\" AS type, wea.currency, wea.grossRoyaltyAmount, wea.taxAmount, wea.commissionAmount, wea.grossRoyaltyAmount - wea.taxAmount - wea.commissionAmount AS netRoyaltyAmount, 0 AS adjustmentAmount, 0 AS returnedAmount FROM wea20 AS wea UNION DISTINCT SELECT wbi.fileId, \"wbi_20\" AS type, wbi.currency, wbi.grossRoyaltyAmount, wbi.taxAmount, wbi.commissionAmount, wbi.grossRoyaltyAmount - wbi.taxAmount - wbi.commissionAmount AS netRoyaltyAmount, 0 AS adjustmentAmount, 0 AS returnedAmount FROM wbi20 AS wbi UNION DISTINCT SELECT icc.fileId, \"icc_20\" AS type, icc.currency, 0 AS grossRoyaltyAmount, 0 AS taxAmount, 0 AS commissionAmount, CASE icc.remittingSocietyContingencyAmountSign WHEN \"-\" THEN -icc.remittingSocietyContingencyAmount ELSE icc.remittingSocietyContingencyAmount END AS netRoyaltyAmount, 0 AS adjustmentAmount, 0 AS returnedAmount FROM icc20 AS icc UNION DISTINCT SELECT adj.fileId, \"adj_20\" AS type, sdn.remittanceCurrency AS currency, 0 AS grossRoyaltyAmount, 0 AS taxAmount, 0 AS commissionAmount, 0 AS netRoyaltyAmount, CASE adj.adjustmentAmountSign WHEN \"-\" THEN -adj.adjustmentAmount ELSE adj.adjustmentAmount END AS adjustmentAmount, 0 AS returnedAmount FROM adj20 AS adj, sdn20 AS sdn WHERE adj.fileId == sdn.fileId UNION DISTINCT SELECT rrp.fileId, \"rrp_20\" AS type, sdn.remittanceCurrency AS currency, 0 AS grossRoyaltyAmount, 0 AS taxAmount, 0 AS commissionAmount, 0 AS netRoyaltyAmount, 0 AS adjustmentAmount, CASE rrp.returnAmountSign WHEN \"-\" THEN -rrp.returnAmount ELSE rrp.returnAmount END AS returnedAmount FROM rrp20 AS rrp, sdn20 AS sdn WHERE rrp.fileId == sdn.fileId");
     }
 }

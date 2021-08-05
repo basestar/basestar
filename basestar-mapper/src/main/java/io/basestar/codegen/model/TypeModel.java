@@ -245,6 +245,12 @@ public interface TypeModel {
             }
 
             @Override
+            public TypeModel visitComposite(final UseComposite type) {
+
+                return () -> "Composite";
+            }
+
+            @Override
             public TypeModel visitBinary(final UseBinary type) {
 
                 return () -> "Binary";

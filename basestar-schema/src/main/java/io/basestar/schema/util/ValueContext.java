@@ -69,7 +69,9 @@ public interface ValueContext {
 
     <T> Page<T> createPage(UsePage<T> type, Object value, Set<Name> expand);
 
-    BigDecimal createDecimal(UseDecimal useDecimal, Object value, Set<Name> expand);
+    BigDecimal createDecimal(UseDecimal type, Object value, Set<Name> expand);
+
+    Map<String, Object> createComposite(UseComposite type, Object value, Set<Name> expand);
 
     class Standard implements ValueContext {
 
@@ -239,7 +241,7 @@ public interface ValueContext {
         }
 
         @Override
-        public Bytes createBinary(final UseBinary useBinary, final Object value, final Set<Name> expand) {
+        public Bytes createBinary(final UseBinary type, final Object value, final Set<Name> expand) {
 
             return Coercion.toBinary(value);
         }
@@ -264,9 +266,25 @@ public interface ValueContext {
         }
 
         @Override
-        public BigDecimal createDecimal(final UseDecimal useDecimal, final Object value, final Set<Name> expand) {
+        public BigDecimal createDecimal(final UseDecimal type, final Object value, final Set<Name> expand) {
 
             return Coercion.toDecimal(value);
+        }
+
+        @Override
+        public Map<String, Object> createComposite(final UseComposite type, final Object value, final Set<Name> expand) {
+
+            if(value instanceof Map) {
+                @SuppressWarnings("unchecked")
+                final Map<String, Object> input = (Map<String, Object>)value;
+                final Map<String, Object> output = new HashMap<>();
+                for(final Map.Entry<String, Use<?>> entry : type.getTypes().entrySet()) {
+                    output.put(entry.getKey(), entry.getValue().create(input.get(entry.getKey())));
+                }
+                return output;
+            } else {
+                throw new UnexpectedTypeException(type, value);
+            }
         }
     }
 
@@ -496,6 +514,32 @@ public interface ValueContext {
             }
             try {
                 return super.createSecret(type, value, expand);
+            } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
+                return null;
+            }
+        }
+
+        @Override
+        public BigDecimal createDecimal(final UseDecimal type, final Object value, final Set<Name> expand) {
+
+            if(value == null) {
+                return null;
+            }
+            try {
+                return super.createDecimal(type, value, expand);
+            } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
+                return null;
+            }
+        }
+
+        @Override
+        public Map<String, Object> createComposite(final UseComposite type, final Object value, final Set<Name> expand) {
+
+            if(value == null) {
+                return null;
+            }
+            try {
+                return super.createComposite(type, value, expand);
             } catch (final UnexpectedTypeException | TypeConversionException | ConstraintViolationException e) {
                 return null;
             }

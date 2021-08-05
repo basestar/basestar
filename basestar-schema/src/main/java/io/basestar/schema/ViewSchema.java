@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
+import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.function.BinaryConcat;
@@ -183,11 +184,11 @@ public class ViewSchema implements LinkableSchema {
         private Map<String, Serializable> extensions;
         
         public ViewSchema.Builder setSql(final String sql) {
-            
-            if(this.from == null) {
+
+            if (this.from == null) {
                 this.from = new io.basestar.schema.from.From.Builder();
             }
-            ((io.basestar.schema.from.From.Builder)this.from).setSql(sql);
+            ((io.basestar.schema.from.From.Builder) this.from).setSql(sql);
             return this;
         }
 
@@ -280,7 +281,7 @@ public class ViewSchema implements LinkableSchema {
         this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
         this.materialized = Nullsafe.orDefault(descriptor.getMaterialized());
         final From.Descriptor from = Nullsafe.require(descriptor.getFrom());
-        this.from = from.build(resolver);
+        this.from = from.build(resolver, Context.init());
         this.sort = Immutable.list(descriptor.getSort());
         this.description = descriptor.getDescription();
         this.group = Immutable.list(descriptor.getGroup());
@@ -296,7 +297,6 @@ public class ViewSchema implements LinkableSchema {
         if(Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName.toString());
         }
-        this.from.validateSchema(this);
         this.aggregating = getProperties().values().stream().map(Property::getExpression)
                 .filter(Objects::nonNull).anyMatch(Expression::isAggregate);
     }

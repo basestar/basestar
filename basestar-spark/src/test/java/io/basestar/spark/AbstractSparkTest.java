@@ -201,6 +201,18 @@ public abstract class AbstractSparkTest {
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
+    public static class G {
+
+        private String id;
+
+        private String name;
+
+        private Long value;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class AggView {
 
         private String key;
@@ -329,5 +341,27 @@ public abstract class AbstractSparkTest {
     public static class WithUnion {
 
         private String name;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class WithSqlJoin {
+
+        private String __key;
+
+        private String id;
+
+        private D key;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class WithSqlAgg {
+
+        private String names;
+
+        private Long values;
     }
 }
