@@ -13,6 +13,7 @@ import io.basestar.util.Sort;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,7 +58,6 @@ class TestKeysetPagingUtils {
         assertEquals(1, sort.size());
         assertEquals(now, sort.get(0));
     }
-
 
     @Test
     void testMismatchingTokenDeserialization() throws IOException {

@@ -36,11 +36,12 @@ public class UseComposite implements Use<Map<String, Object>> {
         this.types = Immutable.sortedMap(types);
     }
 
-    @SuppressWarnings("unchecked")
     public static UseComposite from(final Object config) {
 
         if(config instanceof Map) {
-            return new UseComposite((Map<String, Use<?>>)config);
+            final Map<String, Use<?>> types = new HashMap<>();
+            ((Map<?, ?>) config).forEach((k, v) -> types.put((String) k, Use.fromConfig(v)));
+            return new UseComposite(types);
         } else {
             throw new TypeSyntaxException();
         }
