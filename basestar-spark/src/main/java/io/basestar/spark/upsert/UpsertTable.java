@@ -83,13 +83,15 @@ public class UpsertTable {
 
     private final Set<Map<String, String>> partitionFilter;
 
+    private final boolean minimizePartitions;
+
     private volatile boolean provisioned;
 
     @lombok.Builder(builderClassName = "Builder", access = AccessLevel.PUBLIC)
     protected UpsertTable(final Name tableName, final StructType schema,
                           final String idColumn, final String versionColumn,
                           final URI baseLocation, final URI deltaLocation, final UpsertState state,
-                          final List<String> partition, final boolean provisioned,
+                          final List<String> partition, final boolean minimizePartitions, final boolean provisioned,
                           final Set<Map<String, String>> partitionFilter) {
 
         this.tableName = tableName;
@@ -109,17 +111,18 @@ public class UpsertTable {
         this.deltaLocation = Nullsafe.require(deltaLocation);
         this.state = Nullsafe.require(state);
         this.partitionFilter = Immutable.set(partitionFilter);
+        this.minimizePartitions = minimizePartitions;
         this.provisioned = provisioned;
     }
 
     public UpsertTable withPartitionFilter(final Set<Map<String, String>> partitionFilter) {
 
-        return new UpsertTable(tableName, schema, idColumn, versionColumn, baseLocation, deltaLocation, state, basePartition, provisioned, partitionFilter);
+        return new UpsertTable(tableName, schema, idColumn, versionColumn, baseLocation, deltaLocation, state, basePartition, minimizePartitions, provisioned, partitionFilter);
     }
 
     public UpsertTable withSchema(final StructType schema) {
 
-        return new UpsertTable(tableName, schema, idColumn, versionColumn, baseLocation, deltaLocation, state, basePartition, provisioned, partitionFilter);
+        return new UpsertTable(tableName, schema, idColumn, versionColumn, baseLocation, deltaLocation, state, basePartition, minimizePartitions, provisioned, partitionFilter);
     }
 
     private static StructType createBaseType(final StructType structType) {
@@ -147,46 +150,6 @@ public class UpsertTable {
 
         return MAX_SEQUENCE;
     }
-
-//    protected String baseTableName() {
-//
-//        return name + "_base";
-//    }
-//
-//    protected static URI baseLocation(final String location) {
-//
-//        return URI.create(location(location) + "base");
-//    }
-//
-//    protected URI baseLocation() {
-//
-//        return baseLocation(location);
-//    }
-//
-//    protected String deltaTableName() {
-//
-//        return name + "_delta";
-//    }
-//
-//    protected static URI deltaLocation(final String location) {
-//
-//        return URI.create(location(location) + "delta");
-//    }
-//
-//    protected URI deltaLocation() {
-//
-//        return deltaLocation(location);
-//    }
-//
-//    protected static URI stateLocation(final String location) {
-//
-//        return URI.create(location(location) + "state.json");
-//    }
-//
-//    protected URI stateLocation() {
-//
-//        return stateLocation(location);
-//    }
 
     public Dataset<Row> select(final SparkSession session) {
 
@@ -238,7 +201,7 @@ public class UpsertTable {
         final SparkContext sc = changes.sparkSession().sparkContext();
         SparkUtils.withJobGroup(sc, "Delta " + tableName, () -> {
 
-            upsert.write().format(FORMAT.getSparkFormat())
+            minimizePartitions(deltaPartition, upsert).write().format(FORMAT.getSparkFormat())
                     .mode(SaveMode.Append)
                     .partitionBy(deltaPartition.toArray(new String[0]))
                     .save(deltaLocation.toString());
@@ -268,62 +231,21 @@ public class UpsertTable {
             merge.computeIfAbsent(op, ignored -> new HashSet<>()).add(values);
         });
 
-        if(!merge.isEmpty()) {
+        if (!merge.isEmpty()) {
             log.info("Applying delta changes {} {}", tableName, merge);
             updateDeltaState(session, state -> state.mergeSequence(sequence, merge));
         }
     }
 
-//    private Dataset<Row> select(final SparkSession session, final StructType schema, final String tableName, final URI tableLocation) {
-//
-//        if(partitionFilter.isEmpty()) {
-//            return session.sqlContext().read()
-//                    .table(SparkCatalogUtils.escapeName(database, tableName))
-//                    .select(Arrays.stream(schema.fieldNames()).map(functions::col).toArray(Column[]::new));
-//        } else {
-//            final ExternalCatalog catalog = session.sharedState().externalCatalog();
-//            final List<String> locations = filteredPartitions(catalog, baseTableName(), partitionFilter)
-//                    .stream().map(v -> v.location().toString()).collect(Collectors.toList());
-//            return session.sqlContext().read()
-//                    .format(FORMAT.getSparkFormat())
-//                    .option(BASE_PATH_OPTION, tableLocation.toString())
-//                    .schema(schema)
-//                    .load(ScalaUtils.asScalaSeq(locations));
-//        }
-//    }
-//
-//    private List<CatalogTablePartition> filteredPartitions(final ExternalCatalog catalog, final String tableName, final Set<Map<String, String>> partitionFilter) {
-//
-//        final List<CatalogTablePartition> locations = new ArrayList<>();
-//        ScalaUtils.asJavaStream(catalog.listPartitions(database, tableName, Option.empty())).forEach(part -> {
-//            boolean matched = (partitionFilter == null);
-//            if(!matched) {
-//                for (final Map<String, String> filter : partitionFilter) {
-//                    boolean entryMatched = true;
-//                    for (final Map.Entry<String, String> entry : filter.entrySet()) {
-//                        if (!entry.getValue().equals(part.spec().get(entry.getKey()).get())) {
-//                            entryMatched = false;
-//                            break;
-//                        }
-//                    }
-//                    if (entryMatched) {
-//                        matched = true;
-//                        break;
-//                    }
-//                }
-//            }
-//            if(matched) {
-//                locations.add(part);
-//            }
-//        });
-//        return locations;
-//    }
+    private Dataset<Row> minimizePartitions(final List<String> partition, final Dataset<Row> ds) {
 
-//    public UpsertTable copy(final SparkSession session, final String database, final String name, final String location) {
-//
-//        return copy(session, database, name, location, (String)null);
-//    }
-//
+        if (minimizePartitions) {
+            return ds.repartition(partition.stream().map(functions::col).toArray(Column[]::new));
+        } else {
+            return ds;
+        }
+    }
+
     public UpsertTable copy(final SparkSession session, final Name newTableName, final URI newBaseLocation, final URI newDeltaLocation, final UpsertState newState) {
 
         return copy(session, newTableName, newBaseLocation, newDeltaLocation, newState, null);
@@ -337,7 +259,7 @@ public class UpsertTable {
         if(beforeSequence != null) {
             deltas = deltas.filter(functions.col(SEQUENCE).lt(beforeSequence));
         }
-        deltas.select(deltaColumns())
+        minimizePartitions(deltaPartition, deltas.select(deltaColumns()))
                 .write()
                 .partitionBy(deltaPartition.toArray(new String[0]))
                 .parquet(newDeltaLocation.toString());
@@ -352,11 +274,12 @@ public class UpsertTable {
                 .filter(SparkUtils.filter(row -> !isDeltaDeleted(row)))
                 .select(outputCols.toArray(new Column[0]));
 
-        base.write()
+        minimizePartitions(outputPartition, base)
+                .write()
                 .partitionBy(outputPartition.toArray(new String[0]))
                 .parquet(newBaseLocation.toString());
 
-        final UpsertTable copy = new UpsertTable(newTableName, schema, idColumn, versionColumn, newBaseLocation, newDeltaLocation, newState, basePartition, false, null);
+        final UpsertTable copy = new UpsertTable(newTableName, schema, idColumn, versionColumn, newBaseLocation, newDeltaLocation, newState, basePartition, minimizePartitions, false, null);
         copy.repair(session);
         return copy;
     }
@@ -673,7 +596,7 @@ public class UpsertTable {
 
         final List<String> basePartition = this.basePartition;
 
-        output.select(schemaColumns())
+        minimizePartitions(outputPartition, output.select(schemaColumns())
                 .map(SparkUtils.map(row -> {
 
                     final List<String> partition = new ArrayList<>();
@@ -681,7 +604,7 @@ public class UpsertTable {
                     final String sequence = sequences.get(partition);
                     return SparkRowUtils.append(row, sequenceField, sequence);
 
-                }), RowEncoder.apply(outputType))
+                }), RowEncoder.apply(outputType)))
                 .write().format(FORMAT.getSparkFormat())
                 .mode(SaveMode.Append)
                 .partitionBy(outputPartition.toArray(new String[0]))
@@ -727,7 +650,7 @@ public class UpsertTable {
         final List<String> outputPartition = new ArrayList<>(basePartition);
         outputPartition.add(SEQUENCE);
 
-        ds.write().format(FORMAT.getSparkFormat())
+        minimizePartitions(outputPartition, ds).write().format(FORMAT.getSparkFormat())
                 .mode(SaveMode.Append)
                 .partitionBy(outputPartition.toArray(new String[0]))
                 .save(baseLocation.toString());

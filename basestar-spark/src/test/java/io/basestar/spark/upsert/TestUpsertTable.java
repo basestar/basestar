@@ -83,6 +83,7 @@ class TestUpsertTable extends AbstractSparkTest {
                 .state(new UpsertState.Hdfs(URI.create(location + "/D/state")))
                 .partition(ImmutableList.of(bucket.getOutputColumn()))
                 .idColumn(ReferableSchema.ID)
+//                .minimizePartitions(true)
                 .build();
 
         table.provision(session);
