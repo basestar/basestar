@@ -6,6 +6,7 @@ import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -26,7 +27,7 @@ public class CsvUtils {
 
     public static List<Map<String, String>> read(final InputStream is) throws IOException {
 
-        try(final InputStreamReader reader = new InputStreamReader(is)) {
+        try (final InputStreamReader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
             return read(reader);
         }
     }
