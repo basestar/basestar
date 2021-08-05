@@ -718,7 +718,28 @@ public class UpsertTable {
         });
 
         updateBaseState(session, state -> state.mergePartitions(syncPartitions));
+    }
 
+    public void forceDeduplicate(final SparkSession session, final String sequence) {
+
+        final Dataset<Row> ds = selectBase(session).dropDuplicates(idColumn).drop(SEQUENCE).withColumn(SEQUENCE, functions.lit(sequence));
+
+        final List<String> outputPartition = new ArrayList<>(basePartition);
+        outputPartition.add(SEQUENCE);
+
+        ds.write().format(FORMAT.getSparkFormat())
+                .mode(SaveMode.Append)
+                .partitionBy(outputPartition.toArray(new String[0]))
+                .save(baseLocation.toString());
+
+        final BaseState baseState = baseState(session);
+
+        final Map<Map<String, String>, String> syncPartitions = new HashMap<>();
+        baseState.getPartitions().forEach(partition -> syncPartitions.put(partition.getSpec(), sequence));
+
+        updateBaseState(session, state -> state.mergePartitions(syncPartitions));
+
+        refreshTable(session);
     }
 
     public void validate(final SparkSession session) {

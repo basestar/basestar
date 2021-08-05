@@ -536,6 +536,12 @@ public class InferenceVisitor implements ExpressionVisitor<Optional<Use<?>>> {
         return result.orElseGet(Optional::empty);
     }
 
+    @Override
+    public Use<?> visitBinaryConcat(final BinaryConcat expression) {
+
+        return UseBinary.DEFAULT;
+    }
+
     protected Use<?> typeOfCall(final Use<?> target, final String member, final List<Use<?>> args) {
 
         final Type[] argTypes = args.stream().map(Use::javaType).toArray(Type[]::new);

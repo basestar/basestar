@@ -32,6 +32,7 @@ import com.google.common.collect.ImmutableSortedMap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
+import io.basestar.expression.function.BinaryConcat;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.jackson.serde.ExpressionDeserializer;
 import io.basestar.jackson.serde.NameDeserializer;
@@ -54,6 +55,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Getter
 public class ViewSchema implements LinkableSchema {
@@ -571,6 +573,15 @@ public class ViewSchema implements LinkableSchema {
     public String toString() {
 
         return getQualifiedName().toString();
+    }
+
+    public Expression idExpression() {
+
+        if (isGrouping()) {
+            return new BinaryConcat(group.stream().map(NameConstant::new).collect(Collectors.toList()));
+        } else {
+            return from.id();
+        }
     }
 
     @Override

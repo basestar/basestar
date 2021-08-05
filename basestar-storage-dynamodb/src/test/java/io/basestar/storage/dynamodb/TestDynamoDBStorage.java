@@ -148,4 +148,10 @@ class TestDynamoDBStorage extends TestStorage {
 
         return true;
     }
+
+    @Override
+    protected boolean supportsScan() {
+
+        return true;
+    }
 }

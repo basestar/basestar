@@ -186,6 +186,7 @@ public class SparkCatalogUtils {
                     changed = true;
                 }
             }
+            // This is being marked as changed when it isn't
             if(changed) {
                 catalog.alterTableDataSchema(databaseName, tableName, dataType);
             }

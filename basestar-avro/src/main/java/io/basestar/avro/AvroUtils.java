@@ -20,8 +20,12 @@ package io.basestar.avro;
  * #L%
  */
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import io.basestar.expression.type.Coercion;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import org.apache.avro.Schema;
@@ -46,27 +50,38 @@ public class AvroUtils {
 
     public static Schema schema(final io.basestar.schema.Schema<?> schema) {
 
-        if(schema instanceof InstanceSchema) {
+        if (schema instanceof InstanceSchema) {
             return schema(schema, ((InstanceSchema) schema).getExpand());
         } else {
             return schema(schema, Collections.emptySet());
         }
     }
 
+    public static Schema schema(final io.basestar.schema.Schema<?> schema, final Map<String, Use<?>> additionalMetadata) {
+
+        return schema(schema, additionalMetadata, ImmutableSet.of());
+    }
+
     public static Schema schema(final io.basestar.schema.Schema<?> schema, final Set<Name> expand) {
 
-        if(schema instanceof EnumSchema) {
-            final EnumSchema enumSchema = (EnumSchema)schema;
+        return schema(schema, ImmutableMap.of(), expand);
+    }
+
+    public static Schema schema(final io.basestar.schema.Schema<?> schema, final Map<String, Use<?>> additionalMetadata, final Set<Name> expand) {
+
+        if (schema instanceof EnumSchema) {
+            final EnumSchema enumSchema = (EnumSchema) schema;
             final List<String> values = enumSchema.getValues();
             return Schema.createEnum(name(schema), schema.getDescription(), null, values);
-        } else if(schema instanceof InstanceSchema) {
-            final InstanceSchema instanceSchema = (InstanceSchema)schema;
+        } else if (schema instanceof InstanceSchema) {
+            final InstanceSchema instanceSchema = (InstanceSchema) schema;
             final List<Schema.Field> fields = new ArrayList<>();
             final Map<String, Set<Name>> branches = Name.branch(expand);
             instanceSchema.metadataSchema()
                     .forEach((k, v) -> fields.add(new Schema.Field(k, schema(v, Collections.emptySet()))));
             instanceSchema.getProperties()
                     .forEach((k, v) -> fields.add(new Schema.Field(k, schema(v, branches.get(k)))));
+            additionalMetadata.forEach((k, v) -> fields.add(new Schema.Field(k, schema(v, branches.get(k)))));
             return Schema.createRecord(name(schema), schema.getDescription(), null, false, fields);
         } else {
             throw new IllegalStateException();
@@ -217,20 +232,34 @@ public class AvroUtils {
 
     public static GenericRecord encode(final InstanceSchema instanceSchema, final Schema schema, final Map<String, Object> object) {
 
-        return encode(instanceSchema, schema, instanceSchema.getExpand(), object);
+        return encode(instanceSchema, Immutable.map(), schema, instanceSchema.getExpand(), object);
+    }
+
+    public static GenericRecord encode(final InstanceSchema instanceSchema, final Map<String, Use<?>> additionalMetadata, final Schema schema, final Map<String, Object> object) {
+
+        return encode(instanceSchema, additionalMetadata, schema, instanceSchema.getExpand(), object);
     }
 
     public static GenericRecord encode(final InstanceSchema instanceSchema, final Schema schema, final Set<Name> expand, final Map<String, Object> object) {
 
+        return encode(instanceSchema, Immutable.map(), schema, expand, object);
+    }
+
+    public static GenericRecord encode(final InstanceSchema instanceSchema, final Map<String, Use<?>> additionalMetadata, final Schema schema, final Set<Name> expand, final Map<String, Object> object) {
+
         final GenericRecord record = new GenericData.Record(schema);
         instanceSchema.metadataSchema().forEach((k, v) -> {
             final Schema.Field field = schema.getField(k);
-            record.put(k, encode(v, field.schema(), Collections.emptySet(), Nullsafe.orDefault(object.get(k), v::defaultValue)));
+            record.put(k, encode(v, field.schema(), Collections.emptySet(), object.get(k)));
         });
         final Map<String, Set<Name>> branches = Name.branch(expand);
         instanceSchema.getProperties().forEach((k, v) -> {
             final Schema.Field field = schema.getField(k);
             record.put(k, encode(v.typeOf(), field.schema(), branches.get(k), object.get(k)));
+        });
+        additionalMetadata.forEach((k, v) -> {
+            final Schema.Field field = schema.getField(k);
+            record.put(k, encode(v, field.schema(), branches.get(k), object.get(k)));
         });
         return record;
     }
@@ -249,7 +278,11 @@ public class AvroUtils {
     private static Object encode(final Use<?> use, final Schema schema, final Set<Name> expand, final Object value) {
 
         if(value == null) {
-            return null;
+            if (use.isOptional()) {
+                return null;
+            } else {
+                return use.defaultValue();
+            }
         }
         return use.visit(new Use.Visitor.Defaulting<Object>() {
 
@@ -287,12 +320,10 @@ public class AvroUtils {
             @Override
             public <T> Map<?, ?> visitMap(final UseMap<T> type) {
 
-                final Map<?, ?> map = (Map<?, ?>)value;
-                return map.entrySet().stream()
-                        .collect(Collectors.toMap(
-                                Map.Entry::getKey,
-                                e -> encode(type.getType(), schema.getValueType(), expand, e.getValue())
-                        ));
+                final Map<?, ?> map = (Map<?, ?>) value;
+                final Map<String, Object> result = new HashMap<>();
+                map.forEach((k, v) -> result.put(Coercion.toString(k), encode(type.getType(), schema.getValueType(), expand, v)));
+                return result;
             }
 
             @Override
@@ -322,6 +353,16 @@ public class AvroUtils {
 
     public static Map<String, Object> decode(final InstanceSchema instanceSchema, final Schema schema, final Set<Name> expand, final IndexedRecord record) {
 
+        return decode(instanceSchema, Immutable.map(), schema, expand, record);
+    }
+
+    public static Map<String, Object> decode(final InstanceSchema instanceSchema, final Map<String, Use<?>> additionalMetadata, final Schema schema, final IndexedRecord record) {
+
+        return decode(instanceSchema, additionalMetadata, schema, ImmutableSet.of(), record);
+    }
+
+    public static Map<String, Object> decode(final InstanceSchema instanceSchema, final Map<String, Use<?>> additionalMetadata, final Schema schema, final Set<Name> expand, final IndexedRecord record) {
+
         final Map<String, Object> object = new HashMap<>();
         instanceSchema.metadataSchema().forEach((k, v) -> {
             final Schema.Field field = schema.getField(k);
@@ -331,6 +372,10 @@ public class AvroUtils {
         instanceSchema.getProperties().forEach((k, v) -> {
             final Schema.Field field = schema.getField(k);
             object.put(k, decode(v.typeOf(), field.schema(), branches.get(k), record.get(field.pos())));
+        });
+        additionalMetadata.forEach((k, v) -> {
+            final Schema.Field field = schema.getField(k);
+            object.put(k, decode(v, field.schema(), branches.get(k), record.get(field.pos())));
         });
         return object;
     }

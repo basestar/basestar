@@ -23,12 +23,15 @@ package io.basestar.api;
 import io.basestar.auth.Authenticator;
 import io.basestar.auth.Authorization;
 import io.basestar.auth.Caller;
+import io.basestar.auth.exception.AuthenticationFailedException;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
@@ -51,22 +54,30 @@ public class AuthenticatingAPI implements API {
 
     protected Authorization authorization(final APIRequest request) {
 
+        final List<Authorization> authorizations = new ArrayList<>();
         final String authHeader = request.getFirstHeader("Authorization");
         if(authHeader != null && !authHeader.isEmpty()) {
-            return Authorization.from(authHeader);
-        } else {
-            for(final Map.Entry<String, String> header : request.getHeaders().entries()) {
-                final String value = header.getValue();
-                if(value != null && !value.isEmpty() && !value.equalsIgnoreCase("null")) {
-                    final Matcher matcher = CUSTOM_AUTH_HEADER_PATTERN.matcher(header.getKey());
-                    if (matcher.matches()) {
-                        final String type = matcher.group(1);
-                        return Authorization.of(type, value);
-                    }
+            authorizations.add(Authorization.from(authHeader));
+        }
+        for(final Map.Entry<String, String> header : request.getHeaders().entries()) {
+            final String value = header.getValue();
+            if(value != null && !value.isEmpty() && !value.equalsIgnoreCase("null")) {
+                final Matcher matcher = CUSTOM_AUTH_HEADER_PATTERN.matcher(header.getKey());
+                if (matcher.matches()) {
+                    final String type = matcher.group(1);
+                    authorizations.add(Authorization.of(type, value));
                 }
             }
         }
-        return Authorization.of(null, null);
+
+        if(authorizations.size() == 0) {
+            return Authorization.of(null, null);
+        } else if(authorizations.size() == 1) {
+            return authorizations.get(0);
+        } else {
+            // Must be an error, otherwise proxy authorization cannot be trusted
+            throw new AuthenticationFailedException("Got invalid multiple authorization sources");
+        }
     }
 
     @Override

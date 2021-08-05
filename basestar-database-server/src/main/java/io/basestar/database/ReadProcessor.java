@@ -169,7 +169,7 @@ public class ReadProcessor {
                             item -> item
                     ));
             return expand(consistency, linkConsistency, context, expandKeys)
-                    .thenApply(expanded -> items.withPage(
+                    .thenApply(expanded -> items.withItems(
                             items.stream()
                                     .map(v -> expanded.get(ExpandKey.from(RefKey.latest(v), expand)))
                                     .collect(Collectors.toList())

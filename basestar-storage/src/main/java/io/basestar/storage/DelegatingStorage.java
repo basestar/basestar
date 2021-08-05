@@ -149,6 +149,7 @@ public interface DelegatingStorage extends Storage {
             }
 
             @Override
+            @Deprecated
             public WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
 
                 delegate(schema).write(schema, after);

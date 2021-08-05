@@ -24,6 +24,7 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.*;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.expression.constant.Constant;
 import io.basestar.expression.type.Values;
 import io.basestar.schema.*;
 import io.basestar.schema.encoding.FlatEncoding;
@@ -43,6 +44,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.*;
 
@@ -81,6 +83,8 @@ public abstract class TestStorage {
 
     protected static final String SECRET = "Secret";
 
+    protected static final String MAT_VIEW = "MatView";
+
     protected final Namespace namespace;
 
     protected TestStorage() {
@@ -112,6 +116,11 @@ public abstract class TestStorage {
     protected boolean supportsOversize() {
 
         return true;
+    }
+
+    protected boolean supportsScan() {
+
+        return false;
     }
 
     protected void bulkLoad(final Storage storage, final Multimap<String, Map<String, Object>> data) {
@@ -184,7 +193,7 @@ public abstract class TestStorage {
         final Page<Map<String, Object>> results = storage.query(Consistency.ATOMIC, schema, expr, sort, Collections.emptySet()).page(EnumSet.of(Page.Stat.TOTAL), null, 10).join();
 
         final List<String> ids = Arrays.asList("123", "189", "26", "67", "129", "159", "151", "116", "142", "179");
-        assertEquals(ids, results.map(Instance::getId).getPage());
+        assertEquals(ids, results.map(Instance::getId).getItems());
         if(results.getStats() != null && results.getStats().getTotal() != null) {
             assertEquals(16, results.getStats().getTotal());
         }
@@ -208,7 +217,7 @@ public abstract class TestStorage {
         final Expression expr = Expression.parse("country == 'US' || state == 'England'");
         final Page<Map<String, Object>> results = storage.query(Consistency.ATOMIC, schema, expr, sort, Collections.emptySet()).page(EnumSet.of(Page.Stat.TOTAL), null, 10).join();
 
-        assertEquals(ImmutableList.of(), results.getPage());
+        assertEquals(ImmutableList.of(), results.getItems());
     }
 
     // FIXME: needs to cover non-trivial case(s)
@@ -251,21 +260,21 @@ public abstract class TestStorage {
         );
 
         final Expression expr = Expression.parse("country == '" + country + "'");
-        final Pager<Map<String, Object>> pager = storage.query(Consistency.EVENTUAL, schema, expr, sort, Collections.emptySet());
+        final Pager<Map<String, Object>> pager = storage.query(Consistency.ASYNC, schema, expr, sort, Collections.emptySet());
 
         final Set<String> results = new HashSet<>();
         Page.Token token = null;
         for(int i = 0; i != 10; ++i) {
             final Page<Map<String, Object>> page = pager.page(ImmutableSet.of(Page.Stat.TOTAL, Page.Stat.APPROX_TOTAL), token,10).join();
             final Page.Stats stats = page.getStats();
-            if(stats != null) {
-                if(stats.getTotal() != null) {
-                    assertEquals(100, stats.getTotal());
-                }
-                if(stats.getApproxTotal() != null) {
-                    assertEquals(100, stats.getApproxTotal());
-                }
-            }
+               if(stats != null) {
+                   if(stats.getTotal() != null) {
+                       assertEquals(100, stats.getTotal());
+                   }
+                   if(stats.getApproxTotal() != null) {
+                       assertEquals(100, stats.getApproxTotal());
+                   }
+               }
             page.forEach(object -> results.add(Instance.getId(object)));
             token = page.getPaging();
         }
@@ -766,7 +775,7 @@ public abstract class TestStorage {
                 v -> schema.create(encoding.decode(v))
         );
 
-        assertEquals(expected, results.getPage());
+        assertEquals(normalizePrecision(expected), normalizePrecision(results.getItems()));
 //        assertEquals(100, results.size());
 //        final FlatEncoding encoding = new FlatEncoding();
 //
@@ -775,6 +784,28 @@ public abstract class TestStorage {
 //        try(final Writer writer = new FileWriter("aggregates.csv")) {
 //            CsvUtils.write(writer, flat);
 //        }
+    }
+
+    protected Object normalizePrecision(final Object v) {
+
+        if (v instanceof Collection) {
+            final List<Object> result = new ArrayList<>();
+            ((Collection<?>) v).forEach(v2 -> result.add(normalizePrecision(v2)));
+            return result;
+        } else if (v instanceof Map) {
+            final Map<String, Object> result = new HashMap<>();
+            ((Map<?, ?>) v).forEach((k, v2) -> {
+                result.put((String) k, normalizePrecision(v2));
+            });
+            return result;
+        } else if (v instanceof Double) {
+            final Double d = (Double) v;
+            return BigDecimal.valueOf(d)
+                    .setScale(3, RoundingMode.HALF_UP)
+                    .doubleValue();
+        } else {
+            return v;
+        }
     }
 
     @Test
@@ -1168,9 +1199,77 @@ public abstract class TestStorage {
         assertEquals(0, response.getRefs().size());
     }
 
+    @Test
+    void testScan() {
+
+        assumeTrue(supportsScan());
+
+        final Storage storage = storage(namespace);
+
+        final ObjectSchema schema = namespace.requireObjectSchema(SIMPLE);
+
+        final Storage.WriteTransaction write = storage.write(Consistency.ASYNC, Versioning.CHECKED);
+        for(int i = 0; i != 200; ++i) {
+            final String id = UUID.randomUUID().toString();
+            final Map<String, Object> data = data();
+            final Map<String, Object> instance = instance(schema, id, 1L, data);
+            write.createObject(schema, id, instance);
+        }
+        write.write().join();
+
+        // Make sure there are other objects (tests e.g. single-table DDB scan)
+        createComplete(storage, namespace.requireObjectSchema(POINTSET), ImmutableMap.of(
+                "points", ImmutableList.of(
+                        new Instance(ImmutableMap.of("x", 10L, "y", 100L)),
+                        new Instance(ImmutableMap.of("x", 5L, "y", 10L))
+                )
+        ));
+
+        final Scan scan = storage.scan(schema, new Constant(true), 4);
+        final List<Map<String, Object>> results = new ArrayList<>();
+        for(int i = 0; i != 4; ++i) {
+            final Scan.Segment segment = scan.segment(i);
+            while(segment.hasNext()) {
+                results.add(segment.next());
+            }
+        }
+        assertEquals(200, results.size());
+    }
+
     private static void assumeConcurrentObjectWrite(final Storage storage, final ObjectSchema schema) {
 
         assumeTrue(storage.storageTraits(schema).getObjectConcurrency().isEnabled(),
                 "Object concurrency must be enabled for this test");
+    }
+
+    protected boolean supportsMaterializedView() {
+
+        return false;
+    }
+
+    @Test
+    public void testMaterializedViewQuery() throws Exception {
+
+        assumeTrue(supportsMaterializedView());
+
+        final Storage storage = storage(namespace);
+
+        final ViewSchema viewSchema = namespace.requireViewSchema(MAT_VIEW);
+
+        final Storage.WriteTransaction transaction = storage.write(Consistency.ATOMIC, Versioning.UNCHECKED);
+        transaction.write(viewSchema, ImmutableMap.of(
+                "__key", viewSchema.createId(ImmutableMap.of("country", "GB", "state", "London")),
+                "country", "GB",
+                "state", "London",
+                "count", 10
+        ));
+        transaction.write().get();
+
+        final List<Sort> sort = ImmutableList.of(
+                Sort.asc(Name.of("__key"))
+        );
+
+        final Page<Map<String, Object>> page = storage.query(Consistency.ATOMIC, viewSchema, Constant.TRUE, sort, ImmutableSet.of()).page(1).get();
+        assertEquals(1, page.size());
     }
 }

@@ -66,12 +66,12 @@ public class ISO8601 {
             return ((java.sql.Timestamp) value).toInstant();
         } else if(value instanceof java.sql.Date) {
             return toDateTime(((java.sql.Date) value).toLocalDate());
-        } else if(value instanceof Date) {
+        } else if (value instanceof Date) {
             return ((Date) value).toInstant();
-        } else if(value instanceof String) {
-            return parseDateTime((String)value);
-        } else if(value instanceof Number) {
-            return toDateTime(((Number)value).longValue());
+        } else if (value instanceof CharSequence) {
+            return parseDateTime(value.toString());
+        } else if (value instanceof Number) {
+            return toDateTime(((Number) value).longValue());
         } else {
             throw new InvalidDateTimeException(value);
         }
@@ -156,12 +156,12 @@ public class ISO8601 {
             return toDate(((java.sql.Timestamp) value).toInstant());
         } else if(value instanceof java.sql.Date) {
             return ((java.sql.Date) value).toLocalDate();
-        } else if(value instanceof Date) {
+        } else if (value instanceof Date) {
             return toDate(((Date) value).toInstant());
-        } else if(value instanceof String) {
-            return parseDate((String) value);
-        } else if(value instanceof Number) {
-            return toDate(toDateTime(((Number)value).longValue()));
+        } else if (value instanceof CharSequence) {
+            return parseDate(value.toString());
+        } else if (value instanceof Number) {
+            return toDate(toDateTime(((Number) value).longValue()));
         } else {
             throw new InvalidDateTimeException(value);
         }

@@ -53,6 +53,10 @@ public class DynamoDBStorage implements DefaultIndexStorage {
 
     private static final int WRITE_BATCH = 25;
 
+    private static final long DEFAULT_SCAN_DELAY_MILLIS = 100L;
+
+    private static final long DEFAULT_EMPTY_SCAN_DELAY_MILLIS = 1000L;
+
     private static final String OVERSIZE_KEY = Reserved.PREFIX + "oversize";
 
     private final DynamoDbAsyncClient client;
@@ -63,12 +67,18 @@ public class DynamoDBStorage implements DefaultIndexStorage {
 
     private final EventStrategy eventStrategy;
 
+    private final long scanDelayMillis;
+
+    private final long emptyScanDelayMillis;
+
     private DynamoDBStorage(final Builder builder) {
 
         this.client = builder.client;
         this.strategy = builder.strategy;
         this.oversizeStash = builder.oversizeStash;
         this.eventStrategy = Nullsafe.orDefault(builder.eventStrategy, EventStrategy.EMIT);
+        this.scanDelayMillis = Nullsafe.orDefault(builder.scanDelayMillis, DEFAULT_SCAN_DELAY_MILLIS);
+        this.emptyScanDelayMillis = Nullsafe.orDefault(builder.emptyScanDelayMillis, Nullsafe.orDefault(builder.scanDelayMillis, DEFAULT_EMPTY_SCAN_DELAY_MILLIS));
     }
 
     public static Builder builder() {
@@ -87,6 +97,10 @@ public class DynamoDBStorage implements DefaultIndexStorage {
         private Stash oversizeStash;
 
         private EventStrategy eventStrategy;
+
+        private Long scanDelayMillis;
+
+        private Long emptyScanDelayMillis;
 
         public DynamoDBStorage build() {
 
@@ -618,10 +632,19 @@ public class DynamoDBStorage implements DefaultIndexStorage {
         }
 
         @Override
+        @Deprecated
         public WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
 
+            if(schema instanceof ReferableSchema) {
+                items.add(TransactWriteItem.builder()
+                        .put(Put.builder().tableName(strategy.objectTableName((ReferableSchema) schema))
+                                .item(objectItem(strategy, (ReferableSchema) schema, Instance.getId(after), after)).build())
+                        .build());
+
+                exceptions.add(null);
+            }
+
             return this;
-//            throw new UnsupportedOperationException();
         }
 
         @Override
@@ -746,16 +769,53 @@ public class DynamoDBStorage implements DefaultIndexStorage {
 
         private void prepare() {
 
-            if(items == null || lastEvaluatedKey != null) {
-                final ScanRequest request = ScanRequest.builder()
+            while(items == null || (items.isEmpty() && lastEvaluatedKey != null)) {
+
+                final String prefix = strategy.objectPartitionPrefix(schema);
+
+                final ScanRequest.Builder builder = ScanRequest.builder()
                         .tableName(strategy.objectTableName(schema))
                         .totalSegments(segments)
-                        .exclusiveStartKey(lastEvaluatedKey)
-                        .build();
+                        .segment(segment)
+                        .exclusiveStartKey(lastEvaluatedKey);
+
+                if(prefix != null) {
+                    builder.filterExpression("begins_with(#partition, :prefix) and #schema = :schema")
+                            .expressionAttributeNames(ImmutableMap.of(
+                                    "#partition", strategy.objectPartitionName(schema),
+                                    "#schema", ReferableSchema.SCHEMA
+                            ))
+                            .expressionAttributeValues(ImmutableMap.of(
+                                    ":prefix", AttributeValue.builder().s(prefix + Reserved.DELIMITER).build(),
+                                    ":schema", AttributeValue.builder().s(schema.getQualifiedName().toString()).build()
+                            ));
+                } else {
+                    builder.filterExpression("#schema = :schema")
+                            .expressionAttributeNames(ImmutableMap.of(
+                                    "#schema", ReferableSchema.SCHEMA
+                            ))
+                            .expressionAttributeValues(ImmutableMap.of(
+                                    ":schema", AttributeValue.builder().s(schema.getQualifiedName().toString()).build()
+                            ));
+                }
+
+                final ScanRequest request = builder.build();
 
                 final ScanResponse response = client.scan(request).join();
                 items = new LinkedList<>(response.items());
+                // FIXME: apply filter expression here
                 lastEvaluatedKey = response.lastEvaluatedKey();
+                if(lastEvaluatedKey.isEmpty()) {
+                    lastEvaluatedKey = null;
+                } else {
+                    // Sleep a bit to avoid hitting DDB thresholds
+                    try {
+                        Thread.sleep(items.isEmpty() ? emptyScanDelayMillis : scanDelayMillis);
+                    } catch (final InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
             }
         }
 
@@ -763,7 +823,7 @@ public class DynamoDBStorage implements DefaultIndexStorage {
         public boolean hasNext() {
 
             prepare();
-            return !items.isEmpty() && lastEvaluatedKey == null;
+            return !items.isEmpty();
         }
 
         @Override

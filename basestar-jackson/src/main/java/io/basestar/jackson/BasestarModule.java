@@ -22,6 +22,7 @@ package io.basestar.jackson;
 
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.ser.std.StdDelegatingSerializer;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.*;
@@ -81,5 +82,6 @@ public class BasestarModule extends SimpleModule {
         addSerializer(Bytes.class, new BytesSerializer());
         addDeserializer(Bytes.class, new BytesDeserializer());
 
+        addSerializer(Page.class, new StdDelegatingSerializer(new PageEnvelopeConverter<>()));
     }
 }

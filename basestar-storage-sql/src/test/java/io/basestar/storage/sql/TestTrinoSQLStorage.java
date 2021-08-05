@@ -139,4 +139,11 @@ public class TestTrinoSQLStorage extends TestSQLStorage {
 
         // FIXME
     }
+
+    @Override
+    protected boolean supportsMaterializedView() {
+
+        // Trino connector does not support write
+        return false;
+    }
 }

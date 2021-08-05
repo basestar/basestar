@@ -122,6 +122,7 @@ public interface Storage {
 
     interface WriteTransaction {
 
+        @Deprecated
         WriteTransaction write(LinkableSchema schema, Map<String, Object> after);
 
         WriteTransaction createObject(ObjectSchema schema, String id, Map<String, Object> after);

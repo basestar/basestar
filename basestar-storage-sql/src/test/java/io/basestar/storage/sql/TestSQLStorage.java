@@ -22,19 +22,19 @@ package io.basestar.storage.sql;
 
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
-import io.basestar.schema.*;
+import io.basestar.schema.Consistency;
+import io.basestar.schema.Namespace;
+import io.basestar.schema.ObjectSchema;
 import io.basestar.storage.Storage;
 import io.basestar.storage.TestStorage;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.testcontainers.shaded.com.google.common.collect.ImmutableList;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 abstract class TestSQLStorage extends TestStorage {
@@ -70,16 +70,10 @@ abstract class TestSQLStorage extends TestStorage {
                 .dialect(dialect)
                 .build();
 
-        final List<ReferableSchema> schemas = new ArrayList<>();
-        for(final Schema<?> schema : namespace.getSchemas().values()) {
-            if(schema instanceof ReferableSchema) {
-                schemas.add((ReferableSchema)schema);
-            }
-        }
         try(final Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             final DSLContext context = DSL.using(conn, dialect.ddlDialect());
-            strategy.createTables(context, schemas);
+            strategy.createTables(context, namespace.getSchemas().values());
             conn.commit();
         } catch (final SQLException e) {
             throw new IllegalStateException(e);
@@ -103,5 +97,17 @@ abstract class TestSQLStorage extends TestStorage {
 
         storage.query(Consistency.ASYNC, schema, Expression.parse("id == 'SOME:ID'"), ImmutableList.of(), ImmutableSet.of())
                 .page(1).get();
+    }
+
+    @Override
+    protected boolean supportsAggregation() {
+
+        return true;
+    }
+
+    @Override
+    protected boolean supportsMaterializedView() {
+
+        return true;
     }
 }
