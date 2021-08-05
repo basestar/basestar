@@ -40,7 +40,7 @@ public class UseComposite implements Use<Map<String, Object>> {
 
         if(config instanceof Map) {
             final Map<String, Use<?>> types = new HashMap<>();
-            ((Map<?, ?>) config).forEach((k, v) -> types.put((String) k, Use.fromConfig(v)));
+            ((Map<?, ?>) config).forEach((k, v) -> types.put((String) k, Use.fromNestedConfig(v)));
             return new UseComposite(types);
         } else {
             throw new TypeSyntaxException();

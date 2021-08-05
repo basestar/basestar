@@ -6,6 +6,7 @@ import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
+import io.basestar.schema.use.UseBinary;
 import io.basestar.util.BinaryKey;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
@@ -13,6 +14,8 @@ import lombok.Data;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Temporary wrapper to keep hold of SQL expression for codegen
@@ -58,60 +61,98 @@ public class FromSql implements From {
     @Override
     public InferenceContext inferenceContext() {
 
-        return impl.inferenceContext();
+        if (impl != null) {
+            return impl.inferenceContext();
+        } else {
+            return InferenceContext.empty();
+        }
     }
 
     @Override
     public void collectMaterializationDependencies(final Map<Name, LinkableSchema> out) {
 
-        impl.collectMaterializationDependencies(out);
+        if (impl != null) {
+            impl.collectMaterializationDependencies(out);
+        }
+        using.forEach((k, v) -> v.collectMaterializationDependencies(out));
+
     }
 
     @Override
     public void collectDependencies(final Map<Name, Schema<?>> out) {
 
-        impl.collectDependencies(out);
+        if (impl != null) {
+            impl.collectDependencies(out);
+        }
+        using.forEach((k, v) -> v.collectDependencies(out));
     }
 
     @Override
     public Expression id() {
 
-        return impl.id();
+        if (impl != null) {
+            return impl.id();
+        } else {
+            throw new UnsupportedOperationException("Raw SQL view cannot be processed");
+        }
     }
 
     @Override
     public Use<?> typeOfId() {
 
-        return impl.typeOfId();
+        if (impl != null) {
+            return impl.typeOfId();
+        } else {
+            return UseBinary.DEFAULT;
+        }
     }
 
     @Override
     public Map<String, Use<?>> getProperties() {
 
-        return impl.getProperties();
+        if (impl != null) {
+            return impl.getProperties();
+        } else {
+            throw new UnsupportedOperationException("Raw SQL view cannot be processed");
+        }
     }
 
     @Override
     public BinaryKey id(final Map<String, Object> row) {
 
-        return impl.id(row);
+        if (impl != null) {
+            return impl.id(row);
+        } else {
+            throw new UnsupportedOperationException("Raw SQL view cannot be processed");
+        }
     }
 
     @Override
     public boolean isCompatibleBucketing(final List<Bucketing> other) {
 
-        return impl.isCompatibleBucketing(other);
+        if (impl != null) {
+            return impl.isCompatibleBucketing(other);
+        } else {
+            return false;
+        }
     }
 
     @Override
     public List<FromSchema> schemas() {
 
-        return impl.schemas();
+        return Stream.concat(
+                getUsing().values().stream().flatMap(from -> from.schemas().stream()),
+                impl.schemas().stream()
+        ).collect(Collectors.toList());
     }
 
     @Override
     public <T> T visit(final FromVisitor<T> visitor) {
 
-        return impl.visit(visitor);
+        if (impl != null) {
+            return impl.visit(visitor);
+        } else {
+            throw new UnsupportedOperationException("Raw SQL view cannot be processed");
+        }
     }
 }

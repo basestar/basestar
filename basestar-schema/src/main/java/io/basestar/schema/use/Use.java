@@ -328,15 +328,20 @@ public interface Use<T> extends Serializable {
         }
     }
 
+    static Use<?> fromNestedConfig(final Object config) {
+
+        return fromNestedConfig(config, (use, ignored) -> use);
+    }
+
     @SuppressWarnings("unchecked")
     static <T extends Use<?>, V extends Use<?>> T fromNestedConfig(final Object config, final BiFunction<V, Map<String, Object>, T> apply) {
 
         final Use<?> nestedType;
         final Map<String, Object> nestedConfig;
-        if(config instanceof Use<?>) {
-            nestedType = (Use<?>)config;
+        if (config instanceof Use<?>) {
+            nestedType = (Use<?>) config;
             nestedConfig = null;
-        } else if(config instanceof Type) {
+        } else if (config instanceof Type) {
             nestedType = Use.fromJavaType((Type)config);
             nestedConfig = null;
         } else if(config instanceof String) {
