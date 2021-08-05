@@ -181,12 +181,12 @@ public class ViewSchema implements LinkableSchema {
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         private Map<String, Serializable> extensions;
         
-        public ViewSchema.Builder setSql(final Expression sql) {
-            
-            if(this.from == null) {
+        public ViewSchema.Builder setSql(final String sql) {
+
+            if (this.from == null) {
                 this.from = new io.basestar.schema.from.From.Builder();
             }
-            ((io.basestar.schema.from.From.Builder)this.from).setSql(sql);
+            ((io.basestar.schema.from.From.Builder) this.from).setSql(sql);
             return this;
         }
 

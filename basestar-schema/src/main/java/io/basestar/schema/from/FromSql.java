@@ -22,7 +22,7 @@ import java.util.Map;
 @Deprecated
 public class FromSql implements From {
 
-    private final Expression sql;
+    private final String sql;
 
     private final List<String> primaryKey;
 
@@ -36,7 +36,7 @@ public class FromSql implements From {
         return new Descriptor.Defaulting() {
 
             @Override
-            public Expression getSql() {
+            public String getSql() {
 
                 return sql;
             }

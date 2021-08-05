@@ -344,8 +344,8 @@ class TestViewTransform extends AbstractSparkTest {
 
         final Set<WithSqlJoin> rows = ImmutableSet.copyOf(view("WithSqlJoin", WithSqlJoin.class, datasets));
         assertEquals(ImmutableSet.of(
-                new WithSqlJoin("a1b1", "a1", new D("d1", null)),
-                new WithSqlJoin("a2b2", "a2", new D("d2", null))
+                new WithSqlJoin("BWEx", "a1", new D("d1", null)),
+                new WithSqlJoin("BWEy", "a2", new D("d2", null))
         ), rows);
     }
 

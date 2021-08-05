@@ -1,5 +1,6 @@
 package io.basestar.storage.query;
 
+import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.ExpressionVisitor;
@@ -46,6 +47,11 @@ public interface QueryPlanner<T> {
         public Default(final Predicate<ViewSchema> materialized) {
 
             this.materialized = materialized;
+        }
+
+        protected boolean directSql() {
+
+            return true;
         }
 
         @Override
@@ -149,16 +155,16 @@ public interface QueryPlanner<T> {
 
         protected T viewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema, final Set<Bucket> buckets) {
 
-            if(materialized.test(schema)) {
+            if (materialized.test(schema)) {
                 return refStage(visitor, schema, buckets);
-//            } else if(schema.getFrom() instanceof FromSql) {
-//                final FromSql from = (FromSql)schema.getFrom();
-//                final T result = visitor.sql(from.getSql(), schema, Immutable.transformValues(from.getUsing(),
-//                        (k, v) -> {
-//                            final FromSchema from2 = (FromSchema)v;
-//                            return stage(visitor, from2.getSchema(), Constant.TRUE, from2.getSort(), from2.getExpand(), null);
-//                        }));
-//                return visitor.conform(result, schema, schema.getExpand());
+            } else if (directSql() && schema.getFrom() instanceof FromSql) {
+                final FromSql from = (FromSql) schema.getFrom();
+                final T result = visitor.sql(from.getSql(), schema, Immutable.transformValues(from.getUsing(),
+                        (k, v) -> {
+                            final FromSchema from2 = (FromSchema) v;
+                            return stage(visitor, from2.getSchema(), Constant.TRUE, ImmutableList.of(), from2.getExpand(), null);
+                        }));
+                return visitor.conform(result, schema, schema.getExpand());
             } else {
                 if (schema.isAggregating() || schema.isGrouping()) {
                     return visitor.conform(aggViewStage(visitor, schema, buckets), schema, schema.getExpand());

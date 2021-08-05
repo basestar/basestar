@@ -296,7 +296,14 @@ WithInline:
 WithSqlJoin:
   type: view
   from:
+    using:
+      A:
+        schema: A
+      B:
+        schema: B
     sql: SELECT a.id AS id, key FROM A AS a INNER JOIN B AS b ON a.ref.id = b.id
+    primaryKey:
+      - id
   properties:
     id:
       type: string
@@ -306,7 +313,12 @@ WithSqlJoin:
 WithSqlAgg:
   type: view
   from:
+    using:
+      G:
+        schema: G
     sql: "SELECT SUM(value + 2) AS values, CONCAT('g', name) AS names FROM G AS a GROUP BY name"
+    primaryKey:
+      - names
   properties:
     names:
       type: string

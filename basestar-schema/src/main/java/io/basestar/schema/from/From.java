@@ -18,6 +18,8 @@ import io.basestar.schema.util.SchemaRef;
 import io.basestar.util.*;
 import lombok.Data;
 import lombok.experimental.Accessors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.io.Serializable;
@@ -195,7 +197,7 @@ public interface From extends Serializable {
         Set<Name> getExpand();
 
         @JsonInclude(JsonInclude.Include.NON_NULL)
-        Expression getSql();
+        String getSql();
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Map<String, Descriptor> getUsing();
@@ -229,8 +231,10 @@ public interface From extends Serializable {
 
         default From buildUndecorated(final Schema.Resolver.Constructing resolver, final Context context) {
 
+            final Logger log = LoggerFactory.getLogger(Descriptor.class);
+
             final Descriptor from = getFrom();
-            final Expression sql = getSql();
+            final String sql = getSql();
             final List<Descriptor> union = getUnion();
             final Join.Descriptor join = getJoin();
             final SchemaRef schema = getSchema();
@@ -253,7 +257,13 @@ public interface From extends Serializable {
                 } else if(sql != null) {
                     final Map<String, From> using = Immutable.transformValues(getUsing(), (k, v) -> v.build(resolver, context));
                     final FromSqlVisitor visitor = new FromSqlVisitor(resolver, using);
-                    return new FromSql(sql, getPrimaryKey(), using, visitor.visit(sql.bind(context)));
+                    From impl = null;
+                    try {
+                        impl = visitor.visit(Expression.parseAndBind(context, sql));
+                    } catch (final Exception e) {
+                        log.error("Failed to process SQL from clause, leaving as raw SQL", e);
+                    }
+                    return new FromSql(sql, getPrimaryKey(), using, impl);
                 } else if(union != null && !union.isEmpty()) {
                     final List<From> unionFrom = Immutable.transform(getUnion(), v -> v.build(resolver, context));
                     return new FromUnion(unionFrom, Nullsafe.orDefault(getAll()));
@@ -319,7 +329,7 @@ public interface From extends Serializable {
             }
 
             @Override
-            default Expression getSql() {
+            default String getSql() {
 
                 return null;
             }
@@ -408,7 +418,7 @@ public interface From extends Serializable {
             }
 
             @Override
-            default Expression getSql() {
+            default String getSql() {
 
                 return delegate().getSql();
             }
@@ -499,7 +509,7 @@ public interface From extends Serializable {
         private List<Sort> order;
 
         @Nullable
-        private Expression sql;
+        private String sql;
 
         @Nullable
         private Map<String, Descriptor> using;
