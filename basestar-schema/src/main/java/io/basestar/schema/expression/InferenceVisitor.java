@@ -537,9 +537,9 @@ public class InferenceVisitor implements ExpressionVisitor<Optional<Use<?>>> {
     }
 
     @Override
-    public Use<?> visitBinaryConcat(final BinaryConcat expression) {
+    public Optional<Use<?>> visitBinaryConcat(final BinaryConcat expression) {
 
-        return UseBinary.DEFAULT;
+        return Optional.of(UseBinary.DEFAULT);
     }
 
     protected Use<?> typeOfCall(final Use<?> target, final String member, final List<Use<?>> args) {
