@@ -112,7 +112,6 @@ class TestUpsertTable extends AbstractSparkTest {
         table.squashDeltas(session);
         assertState("After update + flatten", session, table, updateMerged, ImmutableList.of(), updateMerged);
 
-        // FIXME: failing periodically because of a possible list-after-write inconsistency
         final List<D> delete = ImmutableList.of(new D("d:2", 3L), new D("d:4", 5L));
         final List<Delta> deleteDeltas = ImmutableList.of(Delta.delete(delete.get(0)), Delta.delete(delete.get(1)));
         final List<D> deleteMerged = ImmutableList.of(updateMerged.get(0), updateMerged.get(2));
@@ -163,15 +162,14 @@ class TestUpsertTable extends AbstractSparkTest {
 
         SparkCatalogUtils.ensureDatabase(catalog, database2, location2 + "/D");
 
-        // FIXME: work out why this fails sometimes on build server
-//        final UpsertTable table2 = table.copy(session, Name.of(database2, "D"), URI.create(location2 + "/D/base"), URI.create(location2 + "/D/delta"), new UpsertState.Hdfs(URI.create(location2 + "/D/state")));
-//        assertState("After copy", session, table2, result, ImmutableList.of(), result);
+        final UpsertTable table2 = table.copy(session, Name.of(database2, "D"), URI.create(location2 + "/D/base"), URI.create(location2 + "/D/delta"), new UpsertState.Hdfs(URI.create(location2 + "/D/state")));
+        assertState("After copy", session, table2, result, ImmutableList.of(), result);
 
         final List<D> create2 = ImmutableList.of(new D("d:8", 5L));
         final Dataset<Row> createSource2 = bucket.accept(session.createDataset(create2, Encoders.bean(D.class)).toDF());
 
         table.applyChanges(createSource2, sequence(), r -> UpsertOp.CREATE, r -> r);
-        System.err.println(table.select(session).collectAsList());
+        log.warn("Result: {}", table.select(session).collectAsList());
     }
 
     private void assertState(final String step, final SparkSession session, final UpsertTable table,
