@@ -103,8 +103,10 @@ public class Property implements Member {
         @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         Boolean getImmutable();
 
+        @JsonInclude(JsonInclude.Include.NON_NULL)
         Expression getExpression();
 
+        @JsonInclude(JsonInclude.Include.NON_NULL)
         Serializable getDefault();
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
