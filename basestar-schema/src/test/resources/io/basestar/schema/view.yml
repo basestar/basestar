@@ -93,6 +93,7 @@ WithSqlSimple:
   properties:
     name:
       expression: name
+      type: string
 
 WithSqlGroup:
   type: view
@@ -101,8 +102,10 @@ WithSqlGroup:
   properties:
     name:
       expression: name
+      type: string
     count:
       expression: count
+      type: integer
 
 WithSqlNested:
   type: view
