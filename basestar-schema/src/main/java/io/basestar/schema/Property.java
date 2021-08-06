@@ -94,6 +94,7 @@ public class Property implements Member {
     @JsonDeserialize(as = Builder.class)
     public interface Descriptor extends Member.Descriptor {
 
+        @JsonInclude(JsonInclude.Include.NON_NULL)
         Use<?> getType();
 
         @Deprecated

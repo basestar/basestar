@@ -120,6 +120,7 @@ public class Index implements Named, Described, Serializable, Extendable {
     @JsonDeserialize(as = Builder.class)
     public interface Descriptor extends Described, Extendable {
 
+        @JsonInclude(JsonInclude.Include.NON_NULL)
         Long getVersion();
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
@@ -134,6 +135,7 @@ public class Index implements Named, Described, Serializable, Extendable {
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Map<String, Name> getOver();
 
+        @JsonInclude(JsonInclude.Include.NON_NULL)
         Consistency getConsistency();
 
         @JsonInclude(JsonInclude.Include.NON_DEFAULT)

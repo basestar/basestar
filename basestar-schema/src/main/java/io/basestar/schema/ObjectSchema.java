@@ -218,8 +218,10 @@ public class ObjectSchema implements ReferableSchema {
             return TYPE;
         }
 
+        @JsonInclude(JsonInclude.Include.NON_NULL)
         Id.Descriptor getId();
 
+        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         Boolean getReadonly();
 
         interface Self extends ReferableSchema.Descriptor.Self<ObjectSchema>, Descriptor {

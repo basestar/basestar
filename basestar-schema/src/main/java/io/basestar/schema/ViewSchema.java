@@ -83,6 +83,7 @@ public class ViewSchema implements LinkableSchema {
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         List<String> getGroup();
 
+        @JsonInclude(JsonInclude.Include.NON_NULL)
         Expression getWhere();
 
         interface Self extends LinkableSchema.Descriptor.Self<ViewSchema>, Descriptor {

@@ -95,12 +95,16 @@ public class Permission implements Serializable {
     @JsonDeserialize(as = Builder.class)
     public interface Descriptor extends Described {
 
+        @JsonInclude(JsonInclude.Include.NON_NULL)
         Boolean getAnonymous();
 
+        @JsonInclude(JsonInclude.Include.NON_NULL)
         Expression getExpression();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Set<Name> getExpand();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Set<Name> getInherit();
 
         default Permission build(final String name) {

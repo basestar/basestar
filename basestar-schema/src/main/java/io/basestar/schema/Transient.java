@@ -93,10 +93,13 @@ public class Transient implements Member {
     @JsonDeserialize(as = Builder.class)
     public interface Descriptor extends Member.Descriptor {
 
+        @JsonInclude(JsonInclude.Include.NON_NULL)
         Use<?> getType();
 
+        @JsonInclude(JsonInclude.Include.NON_NULL)
         Expression getExpression();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Set<Name> getExpand();
 
         interface Self extends Member.Descriptor.Self<Transient>, Descriptor {
