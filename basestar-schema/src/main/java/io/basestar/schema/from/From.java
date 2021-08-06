@@ -256,14 +256,14 @@ public interface From extends Serializable {
                     return from.build(resolver, context);
                 } else if(sql != null) {
                     final Map<String, From> using = Immutable.transformValues(getUsing(), (k, v) -> v.build(resolver, context));
-                    final FromSqlVisitor visitor = new FromSqlVisitor(resolver, using);
-                    From impl = null;
-                    try {
-                        impl = visitor.visit(Expression.parseAndBind(context, sql));
-                    } catch (final Exception e) {
-                        log.error("Failed to process SQL from clause, leaving as raw SQL", e);
-                    }
-                    return new FromSql(sql, getPrimaryKey(), using, impl);
+//                    final FromSqlVisitor visitor = new FromSqlVisitor(resolver, using);
+//                    From impl = null;
+//                    try {
+//                        impl = visitor.visit(Expression.parseAndBind(context, sql));
+//                    } catch (final Exception e) {
+//                        log.error("Failed to process SQL from clause, leaving as raw SQL", e);
+//                    }
+                    return new FromSql(sql, getPrimaryKey(), using, null);
                 } else if(union != null && !union.isEmpty()) {
                     final List<From> unionFrom = Immutable.transform(getUnion(), v -> v.build(resolver, context));
                     return new FromUnion(unionFrom, Nullsafe.orDefault(getAll()));
