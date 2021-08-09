@@ -252,7 +252,7 @@ public abstract class JSONDialect implements SQLDialect {
 
     protected Object castJson(final String value) {
 
-        return value;
+        return JSON.valueOf(value);
     }
 
     protected <T> T fromJson(final Object value, final TypeReference<T> ref) {
