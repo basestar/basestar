@@ -14,7 +14,7 @@ import io.basestar.schema.expression.TypedExpression;
 import io.basestar.schema.from.FromSql;
 import io.basestar.schema.from.Join;
 import io.basestar.schema.use.Use;
-import io.basestar.schema.use.UseStruct;
+import io.basestar.schema.use.UseComposite;
 import io.basestar.schema.util.Bucket;
 import io.basestar.spark.combiner.Combiner;
 import io.basestar.spark.expression.SparkExpressionVisitor;
@@ -62,24 +62,24 @@ public interface QueryResolver {
     default Stage sql(final String sql, final InstanceSchema schema, final Map<String, Stage> with) {
 
         SparkSession session = null;
-        for(final Map.Entry<String, Stage> entry : with.entrySet()) {
+        for (final Map.Entry<String, Stage> entry : with.entrySet()) {
             final String as = entry.getKey();
             final Stage query = entry.getValue();
             final Dataset<Row> ds = query.dataset();
             ds.registerTempTable(as);
             session = ds.sparkSession();
         }
-        if(session != null) {
+        if (session != null) {
             Dataset<Row> result = session.sql(sql);
-            if(schema instanceof ViewSchema) {
-                final ViewSchema view = (ViewSchema)schema;
-                final FromSql from = (FromSql)view.getFrom();
+            if (schema instanceof ViewSchema) {
+                final ViewSchema view = (ViewSchema) schema;
+                final FromSql from = (FromSql) view.getFrom();
                 final StructField idField = SparkRowUtils.field(view.id(), DataTypes.BinaryType);
                 final StructType sourceType = result.schema();
                 final StructType targetType = SparkRowUtils.append(sourceType, idField);
                 result = result.map(SparkUtils.map(row -> {
                     final List<Object> keys = new ArrayList<>();
-                    for(final String name : from.getPrimaryKey()) {
+                    for (final String name : from.getPrimaryKey()) {
                         keys.add(SparkSchemaUtils.fromSpark(SparkRowUtils.get(row, name)));
                     }
                     final byte[] id = BinaryKey.from(keys).getBytes();
@@ -232,7 +232,7 @@ public interface QueryResolver {
         }
 
         @Override
-        public Stage union(final List<Stage> inputs) {
+        public Stage union(final List<Stage> inputs, final boolean all) {
 
             if(inputs.isEmpty()) {
                 throw new IllegalStateException("Cannot create empty union");
@@ -269,13 +269,22 @@ public interface QueryResolver {
         @Override
         public Stage join(final Stage left, final Stage right, final Join join) {
 
-            final String leftAs = join.getLeft().getAs();
-            final String rightAs = join.getRight().getAs();
+            final String leftAs = join.getLeft().getAlias();
+            final String rightAs = join.getRight().getAlias();
 
             final Map<String, Use<?>> schema = new HashMap<>();
-            schema.put(leftAs, UseStruct.from(left.getLayout().getSchema()));
-            schema.put(rightAs, UseStruct.from(right.getLayout().getSchema()));
+            schema.putAll(left.getLayout().getSchema());
+            schema.putAll(right.getLayout().getSchema());
+            if(join.getLeft().hasAlias()) {
+                schema.put(leftAs, new UseComposite(left.getLayout().getSchema()));
+            }
+            if(join.getRight().hasAlias()) {
+                schema.put(rightAs, new UseComposite(right.getLayout().getSchema()));
+            }
             final Layout layout = Layout.simple(schema);
+            final StructType leftType = SparkSchemaUtils.structType(left.getLayout());
+            final StructType rightType = SparkSchemaUtils.structType(right.getLayout());
+            final StructType structType = SparkSchemaUtils.structType(layout);
 
             final String joinType = join.getType().name().toLowerCase();
 
@@ -290,15 +299,37 @@ public interface QueryResolver {
                                 return SparkRowUtils.resolveName(leftDs, name.withoutFirst());
                             } else if(name.first().equals(rightAs)) {
                                 return SparkRowUtils.resolveName(rightDs, name.withoutFirst());
+                            } else if(SparkRowUtils.findField(leftType, name.first()).isPresent()) {
+                                return SparkRowUtils.resolveName(leftDs, name);
+                            } else if(SparkRowUtils.findField(rightType, name.first()).isPresent()) {
+                                return SparkRowUtils.resolveName(rightDs, name);
                             } else {
                                 throw new IllegalStateException("Column " + name + " not found in join");
                             }
                         };
                         final SparkExpressionVisitor visitor = new SparkExpressionVisitor(columnResolver);
-                        final Column condition = visitor.visit(join.getOn());
+                        final Column condition = visitor.visit(join.getOn().bind(Context.init()));
 
-                        return leftDs.join(rightDs, condition, joinType);
+                        return leftDs.joinWith(rightDs, condition, joinType).map(SparkUtils.map(tuple -> {
 
+                            final Map<String, Object> result = new HashMap<>();
+                            for(final StructField field : leftType.fields()) {
+                                result.put(field.name(), SparkRowUtils.get(tuple._1(), field.name()));
+                            }
+                            for(final StructField field : rightType.fields()) {
+                                result.put(field.name(), SparkRowUtils.get(tuple._2(), field.name()));
+                            }
+                            if(join.getLeft().hasAlias()) {
+                                final Row leftRow = SparkRowUtils.conform(tuple._1(), leftType);
+                                result.put(leftAs, leftRow);
+                            }
+                            if(join.getRight().hasAlias()) {
+                                final Row rightRow = SparkRowUtils.conform(tuple._2(), rightType);
+                                result.put(rightAs, rightRow);
+                            }
+                            return SparkRowUtils.create(structType, result);
+
+                        }), RowEncoder.apply(structType));
                     },
                     layout
             );
@@ -384,18 +415,23 @@ public interface QueryResolver {
             final Layout inputLayout = getLayout();
             final Layout outputLayout = Layout.simple(Immutable.transformValues(expressions, (k, v) -> v.getType()));
 
+            final List<Pair<String, Expression>> groups = group.stream().map(k -> {
+
+                final TypedExpression<?> e = expressions.get(k);
+                if(e == null) {
+                    throw new UnsupportedOperationException("Grouped name " + k + " must appear in expressions");
+                } else {
+                    return Pair.of(k, expressions.get(k).getExpression());
+                }
+
+            }).collect(Collectors.toList());
+
             final Map<String, Aggregate> aggregates = expressions.entrySet().stream()
-                    .filter(e -> {
-                        if(e.getValue().getExpression().isAggregate()) {
-                            return true;
-                        } else {
-                            assert group.contains(e.getKey());
-                            return false;
-                        }
-                    }).collect(Collectors.toMap(Map.Entry::getKey, e -> (Aggregate)e.getValue().getExpression()));
+                    .filter(e -> e.getValue().getExpression().isAggregate())
+                    .collect(Collectors.toMap(Map.Entry::getKey, e -> (Aggregate)e.getValue().getExpression()));
 
             return then(AggregateTransform.builder()
-                            .group(group)
+                            .group(groups)
                             .aggregates(aggregates)
                             .inputLayout(inputLayout)
                             .outputLayout(outputLayout).build(), outputLayout);

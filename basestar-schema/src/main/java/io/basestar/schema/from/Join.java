@@ -2,6 +2,7 @@ package io.basestar.schema.from;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
@@ -20,8 +21,9 @@ public class Join implements Serializable {
     public enum Type {
 
         INNER,
-        LEFT,
-        RIGHT
+        LEFT_OUTER,
+        RIGHT_OUTER,
+        FULL_OUTER
     }
 
     @Nonnull
@@ -30,17 +32,25 @@ public class Join implements Serializable {
     @Nonnull
     private final From right;
 
-    private final Expression on;
-
     @Nonnull
     private final Type type;
 
-    public Join(final Schema.Resolver.Constructing resolver, final Descriptor builder) {
+    private final Expression on;
 
-        this.left = Nullsafe.require(builder.getLeft().build(resolver));
-        this.right = Nullsafe.require(builder.getRight().build(resolver));
-        this.on = Nullsafe.require(builder.getOn());
+    public Join(final From left, final From right, final Type type, final Expression on) {
+
+        this.left = Nullsafe.require(left);
+        this.right = Nullsafe.require(right);
+        this.type = Nullsafe.require(type);
+        this.on = Nullsafe.require(on);
+    }
+
+    public Join(final Schema.Resolver.Constructing resolver, final Context context, final Descriptor builder) {
+
+        this.left = Nullsafe.require(builder.getLeft().build(resolver, context));
+        this.right = Nullsafe.require(builder.getRight().build(resolver, context));
         this.type = Nullsafe.orDefault(builder.getType(), Type.INNER);
+        this.on = Nullsafe.require(builder.getOn()).bind(context);
     }
 
     public void collectMaterializationDependencies(final Map<Name, LinkableSchema> out) {
@@ -71,15 +81,15 @@ public class Join implements Serializable {
             }
 
             @Override
-            public Expression getOn() {
-
-                return on;
-            }
-
-            @Override
             public Type getType() {
 
                 return type;
+            }
+
+            @Override
+            public Expression getOn() {
+
+                return on;
             }
         };
     }
@@ -91,13 +101,13 @@ public class Join implements Serializable {
 
         From.Descriptor getRight();
 
-        Expression getOn();
-
         Type getType();
 
-        default Join build(final Schema.Resolver.Constructing resolver) {
+        Expression getOn();
 
-            return new Join(resolver, this);
+        default Join build(final Schema.Resolver.Constructing resolver, final Context context) {
+
+            return new Join(resolver, context, this);
         }
     }
 
@@ -110,8 +120,8 @@ public class Join implements Serializable {
 
         private From.Descriptor right;
 
-        private Expression on;
-
         private Type type;
+
+        private Expression on;
     }
 }

@@ -148,6 +148,10 @@ public interface ExpressionVisitor<T> {
 
     T visitCast(Cast expression);
 
+    T visitCase(Case expression);
+
+    T visitBinaryConcat(BinaryConcat expression);
+
     interface Defaulting<T> extends ExpressionVisitor<T> {
 
         T visitDefault(Expression expression);
@@ -459,6 +463,18 @@ public interface ExpressionVisitor<T> {
 
         @Override
         default T visitCast(final Cast expression) {
+
+            return visitDefault(expression);
+        }
+
+        @Override
+        default T visitCase(final Case expression) {
+
+            return visitDefault(expression);
+        }
+
+        @Override
+        default T visitBinaryConcat(final BinaryConcat expression) {
 
             return visitDefault(expression);
         }

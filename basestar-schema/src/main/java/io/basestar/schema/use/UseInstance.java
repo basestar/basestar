@@ -27,6 +27,7 @@ import io.basestar.util.Name;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 public interface UseInstance extends UseNamed<Instance> {
@@ -50,12 +51,13 @@ public interface UseInstance extends UseNamed<Instance> {
     }
 
     @Override
-    default Use<?> typeOf(final Name name) {
+    @SuppressWarnings("unchecked")
+    default Optional<Use<?>> optionalTypeOf(final Name name) {
 
         if(name.isEmpty()) {
-            return this;
+            return Optional.of(this);
         } else {
-            return getSchema().typeOf(name);
+            return (Optional<Use<?>>)(Optional<?>)getSchema().optionalTypeOf(name);
         }
     }
 

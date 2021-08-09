@@ -93,10 +93,13 @@ public class Transient implements Member {
     @JsonDeserialize(as = Builder.class)
     public interface Descriptor extends Member.Descriptor {
 
+        @JsonInclude(JsonInclude.Include.NON_NULL)
         Use<?> getType();
 
+        @JsonInclude(JsonInclude.Include.NON_NULL)
         Expression getExpression();
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Set<Name> getExpand();
 
         interface Self extends Member.Descriptor.Self<Transient>, Descriptor {
@@ -258,9 +261,9 @@ public class Transient implements Member {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T> Use<T> typeOf(final Name name) {
+    public <T> Optional<Use<T>> optionalTypeOf(final Name name) {
 
-        return (Use<T>)type.typeOf(name);
+        return (Optional<Use<T>>)(Optional<?>)type.optionalTypeOf(name);
     }
 
     @Override

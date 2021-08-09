@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -91,12 +92,12 @@ public class UseOptional<T> implements UseContainer<T, T> {
     }
 
     @Override
-    public Use<?> typeOf(final Name name) {
+    public Optional<Use<?>> optionalTypeOf(final Name name) {
 
         if(name.isEmpty()) {
-            return new UseOptional<>(type.typeOf(name));
+            return Optional.of(new UseOptional<>(type.typeOf(name)));
         } else {
-            return type.typeOf(name);
+            return type.optionalTypeOf(name);
         }
     }
 

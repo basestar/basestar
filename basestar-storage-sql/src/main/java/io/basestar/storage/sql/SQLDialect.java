@@ -1,13 +1,11 @@
 package io.basestar.storage.sql;
 
-import io.basestar.schema.Instance;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.ReferableSchema;
-import io.basestar.schema.Reserved;
+import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import io.basestar.secret.Secret;
 import io.basestar.util.Name;
 import io.basestar.util.*;
+import org.jooq.Constraint;
 import org.jooq.*;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
@@ -28,6 +26,31 @@ public interface SQLDialect {
     }
 
     DataType<?> stringType(UseString type);
+
+    default DataType<?> booleanType(final UseBoolean type) {
+
+        return SQLDataType.BOOLEAN;
+    }
+
+    default DataType<?> integerType(final UseInteger type) {
+
+        return SQLDataType.BIGINT;
+    }
+
+    default DataType<?> numberType(final UseNumber type) {
+
+        return SQLDataType.DOUBLE;
+    }
+
+    default DataType<?> dateType(final UseDate type) {
+
+        return SQLDataType.LOCALDATE;
+    }
+
+    default DataType<?> dateTimeType(final UseDateTime type) {
+
+        return SQLDataType.TIMESTAMP;
+    }
 
     default DataType<?> enumType(final UseEnum type) {
 
@@ -126,19 +149,19 @@ public interface SQLDialect {
             @Override
             public DataType<?> visitBoolean(final UseBoolean type) {
 
-                return SQLDataType.BOOLEAN;
+                return booleanType(type);
             }
 
             @Override
             public DataType<?> visitInteger(final UseInteger type) {
 
-                return SQLDataType.BIGINT;
+                return integerType(type);
             }
 
             @Override
             public DataType<?> visitNumber(final UseNumber type) {
 
-                return SQLDataType.DOUBLE;
+                return numberType(type);
             }
 
             @Override
@@ -178,6 +201,12 @@ public interface SQLDialect {
             }
 
             @Override
+            public DataType<?> visitComposite(final UseComposite type) {
+
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
             public <T> DataType<?> visitSet(final UseSet<T> type) {
 
                 return setType(type);
@@ -204,13 +233,13 @@ public interface SQLDialect {
             @Override
             public DataType<?> visitDate(final UseDate type) {
 
-                return SQLDataType.LOCALDATE;
+                return dateType(type);
             }
 
             @Override
             public DataType<?> visitDateTime(final UseDateTime type) {
 
-                return SQLDataType.TIMESTAMP;
+                return dateTimeType(type);
             }
 
             @Override
@@ -301,6 +330,12 @@ public interface SQLDialect {
             }
 
             @Override
+            public Object visitComposite(final UseComposite type) {
+
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
             public <T> Object visitSet(final UseSet<T> type) {
 
                 return setToSQLValue(type, type.create(value));
@@ -333,13 +368,13 @@ public interface SQLDialect {
             @Override
             public Object visitDate(final UseDate type) {
 
-                return type.create(value);
+                return ISO8601.toSqlDate(type.create(value));
             }
 
             @Override
             public Object visitDateTime(final UseDateTime type) {
 
-                return type.create(value);
+                return ISO8601.toSqlTimestamp(type.create(value));
             }
 
             @Override
@@ -425,6 +460,12 @@ public interface SQLDialect {
             }
 
             @Override
+            public Object visitComposite(final UseComposite type) {
+
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
             public <T> Collection<T> visitSet(final UseSet<T> type) {
 
                 return setFromSQLValue(type, value);
@@ -487,7 +528,7 @@ public interface SQLDialect {
     }
 
     @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
-    default List<Field<?>> fields(final ReferableSchema schema) {
+    default List<Field<?>> fields(final LinkableSchema schema) {
 
         return Stream.concat(
                 schema.metadataSchema().entrySet().stream()
@@ -613,8 +654,10 @@ public interface SQLDialect {
     @SuppressWarnings("unchecked")
     default <T> Field<T> cast(final Field<?> field, final Class<T> type) {
 
-        if(type == Object.class) {
-            return (Field<T>)field;
+        if (type == Object.class) {
+            return (Field<T>) field;
+        } else if (type.equals(Double.class)) {
+            return (Field<T>) field.cast(SQLDataType.DOUBLE);
         } else {
             return field.cast(type);
         }

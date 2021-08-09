@@ -210,12 +210,12 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     }
 
     @Override
-    public Use<?> typeOf(final Name name) {
+    public Optional<Use<?>> optionalTypeOf(final Name name) {
 
         if(name.isEmpty()) {
-            return this;
+            return Optional.of(this);
         } else {
-            return type.typeOf(name.withoutFirst());
+            return type.optionalTypeOf(name.withoutFirst());
         }
     }
 

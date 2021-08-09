@@ -20,6 +20,8 @@ package io.basestar.schema;
  * #L%
  */
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import javax.annotation.Nullable;
 
 public interface Described {
@@ -30,5 +32,6 @@ public interface Described {
     }
 
     @Nullable
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     String getDescription();
 }

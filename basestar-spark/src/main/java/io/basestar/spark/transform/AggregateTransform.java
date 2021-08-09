@@ -1,5 +1,7 @@
 package io.basestar.spark.transform;
 
+import io.basestar.expression.Context;
+import io.basestar.expression.Expression;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.schema.Layout;
 import io.basestar.schema.Reserved;
@@ -7,6 +9,7 @@ import io.basestar.spark.expression.SparkExpressionVisitor;
 import io.basestar.spark.util.SparkRowUtils;
 import io.basestar.spark.util.SparkSchemaUtils;
 import io.basestar.spark.util.SparkUtils;
+import io.basestar.util.Pair;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -23,7 +26,7 @@ import java.util.Map;
 @lombok.Builder(builderClassName = "Builder")
 public class AggregateTransform implements Transform<Dataset<Row>, Dataset<Row>> {
 
-    private final List<String> group;
+    private final List<Pair<String, Expression>> group;
 
     private final Map<String, Aggregate> aggregates;
 
@@ -49,13 +52,16 @@ public class AggregateTransform implements Transform<Dataset<Row>, Dataset<Row>>
             }
         });
 
-        final Column[] aggs = aggregates.entrySet().stream()
-                .map(v -> expressionVisitor.visit(v.getValue()).as(v.getKey()))
+        final Column[] aggCols = aggregates.entrySet().stream()
+                .map(v -> expressionVisitor.visit(v.getValue().bind(Context.init())).as(v.getKey()))
                 .toArray(Column[]::new);
 
-        final Column[] groupCols = group.stream().map(input::col).toArray(Column[]::new);
+        final Column[] groupCols = group.stream()
+                .map(e -> expressionVisitor.visit(e.getSecond().bind(Context.init())).as(e.getFirst()))
+                .toArray(Column[]::new);
+
         final Dataset<Row> grouped = input.groupBy(groupCols)
-                .agg(aggs[0], Arrays.copyOfRange(aggs, 1, aggs.length));
+                .agg(aggCols[0], Arrays.copyOfRange(aggCols, 1, aggCols.length));
 
         return grouped.map(SparkUtils.map(row -> SparkRowUtils.conform(row, outputStructType)),
                 RowEncoder.apply(outputStructType));

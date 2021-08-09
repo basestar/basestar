@@ -85,3 +85,36 @@ WithInline:
   properties:
     name:
       expression: name
+
+WithSqlSimple:
+  type: view
+  from:
+    sql: SELECT name FROM WithInline WHERE name != 'test'
+  properties:
+    name:
+      expression: name
+      type: string
+
+WithSqlGroup:
+  type: view
+  from:
+    sql: SELECT name, COUNT() AS count FROM WithInline WHERE name != 'test' GROUP BY name
+  properties:
+    name:
+      expression: name
+      type: string
+    count:
+      expression: count
+      type: integer
+
+WithSqlNested:
+  type: view
+  from:
+    sql: SELECT refId, COUNT(1) AS count FROM (SELECT name AS refId FROM A) GROUP BY refId
+    using:
+      A: WithSqlSimple
+  properties:
+    refId:
+      type: string
+    count:
+      type: integer

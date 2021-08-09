@@ -45,7 +45,7 @@ User:
           - BANNED
     stats:
       type:
-        struct:
+        composite:
           loginCount: integer
           clickCount: integer
 

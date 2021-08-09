@@ -1,7 +1,9 @@
 package io.basestar.storage.query;
 
+import com.google.common.collect.ImmutableList;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.expression.ExpressionVisitor;
 import io.basestar.expression.aggregate.AggregateExtractingVisitor;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.NameConstant;
@@ -18,6 +20,7 @@ import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Sort;
+import lombok.RequiredArgsConstructor;
 
 import java.util.*;
 import java.util.function.Predicate;
@@ -44,6 +47,11 @@ public interface QueryPlanner<T> {
         public Default(final Predicate<ViewSchema> materialized) {
 
             this.materialized = materialized;
+        }
+
+        protected boolean directSql() {
+
+            return true;
         }
 
         @Override
@@ -147,14 +155,14 @@ public interface QueryPlanner<T> {
 
         protected T viewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema, final Set<Bucket> buckets) {
 
-            if(materialized.test(schema)) {
+            if (materialized.test(schema)) {
                 return refStage(visitor, schema, buckets);
-            } else if(schema.getFrom() instanceof FromSql) {
-                final FromSql from = (FromSql)schema.getFrom();
+            } else if (directSql() && schema.getFrom() instanceof FromSql) {
+                final FromSql from = (FromSql) schema.getFrom();
                 final T result = visitor.sql(from.getSql(), schema, Immutable.transformValues(from.getUsing(),
                         (k, v) -> {
-                            final FromSchema from2 = (FromSchema)v;
-                            return stage(visitor, from2.getSchema(), Constant.TRUE, from2.getSort(), from2.getExpand(), null);
+                            final FromSchema from2 = (FromSchema) v;
+                            return stage(visitor, from2.getSchema(), Constant.TRUE, ImmutableList.of(), from2.getExpand(), null);
                         }));
                 return visitor.conform(result, schema, schema.getExpand());
             } else {
@@ -173,23 +181,102 @@ public interface QueryPlanner<T> {
 
         protected T viewFrom(final QueryStageVisitor<T> visitor, final From from, final Expression where, final Set<Bucket> buckets) {
 
-            if(from instanceof FromSchema) {
-                return viewFromSchema(visitor, (FromSchema)from, where, buckets);
-            } else if(from instanceof FromJoin) {
-                return viewFromJoin(visitor, (FromJoin)from, where, buckets);
-            } else if(from instanceof FromUnion) {
-                return viewFromUnion(visitor, (FromUnion)from, where, buckets);
-            } else {
-                throw new UnsupportedOperationException("View type " + from.getClass() + " not supported");
-            }
+            return from.visit(new FromVisitor<T>() {
+                @Override
+                public T visitAgg(final FromAgg from) {
+
+                    final T result = from.getFrom().visit(this);
+
+                    final InferenceContext inference = from.getFrom().inferenceContext();
+
+                    final List<String> group = from.getGroup();
+                    final Map<String, TypedExpression<?>> expressions = from.typedAgg();
+
+                    return aggViewStage(visitor, result, inference, group, expressions, buckets);
+                }
+
+                @Override
+                public T visitAlias(final FromAlias from) {
+
+                    return from.getFrom().visit(this);
+                }
+
+                @Override
+                public T visitFilter(final FromFilter from) {
+
+                    final T result = from.getFrom().visit(this);
+                    return visitor.filter(result, from.getCondition());
+                }
+
+                @Override
+                public T visitJoin(final FromJoin from) {
+
+                    return viewFromJoin(visitor, from, where, buckets);
+                }
+
+                @Override
+                public T visitMap(final FromMap from) {
+
+                    final T result = from.getFrom().visit(this);
+                    return visitor.map(result, from.typedMap());
+                }
+
+                @Override
+                public T visitSchema(final FromSchema from) {
+
+                    return viewFromSchema(visitor, from, where, buckets);
+                }
+
+                @Override
+                public T visitSort(final FromSort from) {
+
+                    final T result = from.getFrom().visit(this);
+                    return visitor.sort(result, from.getSort());
+                }
+
+                @Override
+                public T visitUnion(final FromUnion from) {
+
+                    return viewFromUnion(visitor, from, where, buckets);
+                }
+            });
         }
+
+//        protected T viewFrom(final QueryStageVisitor<T> visitor, final From from, final Expression where, final Set<Bucket> buckets) {
+//
+//            T result = viewFromImpl(visitor, from, where, buckets);
+//            if (from.hasSelect()) {
+//                if(from.isGrouping() || from.isAggregating()) {
+//                    result = visitor.agg(result, from.getGroup(), from.selectExpressions());
+//                } else {
+//                    result = visitor.map(result, from.selectExpressions());
+//                }
+//            }
+//            if(from.hasSort()) {
+//                result = visitor.sort(result, from.getSort());
+//            }
+//            return result;
+//        }
+//
+//        protected T viewFromImpl(final QueryStageVisitor<T> visitor, final From from, final Expression where, final Set<Bucket> buckets) {
+//
+//            if(from instanceof FromSchema) {
+//                return viewFromSchema(visitor, (FromSchema)from, where, buckets);
+//            } else if(from instanceof FromJoin) {
+//                return viewFromJoin(visitor, (FromJoin)from, where, buckets);
+//            } else if(from instanceof FromUnion) {
+//                return viewFromUnion(visitor, (FromUnion) from, where, buckets);
+//            } else {
+//                throw new UnsupportedOperationException("View type " + from.getClass() + " not supported");
+//            }
+//        }
 
         protected T viewFromSchema(final QueryStageVisitor<T> visitor, final FromSchema from, final Expression where, final Set<Bucket> buckets) {
 
             final LinkableSchema fromSchema = from.getSchema();
 
-            final List<Sort> sort = from.getSort();
-            return stage(visitor, fromSchema, where, sort, from.getExpand(), buckets);
+//            final List<Sort> sort = from.getSort();
+            return stage(visitor, fromSchema, where, Immutable.list(), from.getExpand(), buckets);
         }
 
         protected T viewFromJoin(final QueryStageVisitor<T> visitor, final FromJoin from, final Expression where, final Set<Bucket> buckets) {
@@ -208,7 +295,7 @@ public interface QueryPlanner<T> {
             final List<T> inputs = from.getUnion().stream().map(v -> viewFrom(visitor, v, Constant.TRUE, buckets))
                     .collect(Collectors.toList());
 
-            final T result = visitor.union(inputs);
+            final T result = visitor.union(inputs, false);
             return where == null ? result : visitor.filter(result, where);
         }
 
@@ -218,7 +305,8 @@ public interface QueryPlanner<T> {
             for(final Map.Entry<String, Property> entry : schema.getProperties().entrySet()) {
                 final String name = entry.getKey();
                 final Property property = entry.getValue();
-                final TypedExpression<?> expression = Nullsafe.require(property.getTypedExpression());
+                final TypedExpression<?> expression = Nullsafe.orDefault(property.getTypedExpression(),
+                        () -> TypedExpression.from(new NameConstant(property.getName()), property.getType()));
                 output.put(name, expression);
             }
             // Group names can be either properties in the view, or simple names of members / metadata in from
@@ -226,17 +314,25 @@ public interface QueryPlanner<T> {
             final InferenceContext context = from.inferenceContext();
             for(final String name : schema.getGroup()) {
                 if(!output.containsKey(name)) {
-                    final Use<?> typeOf = context.typeOf(Name.of(name));
+                    final Use<?> typeOf = context.requireTypeOf(Name.of(name));
                     output.put(name, TypedExpression.from(new NameConstant(name), typeOf));
                 }
             }
             return output;
         }
 
+
         protected T aggViewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema, final Set<Bucket> buckets) {
 
-            final T stage = viewFrom(visitor, schema, buckets);
-            return visitor.agg(stage, schema.getGroup(), viewExpressions(schema));
+            final T fromStage = viewFrom(visitor, schema, null);
+
+            final InferenceContext inference = schema.getFrom().inferenceContext()
+                    .overlay(Reserved.THIS, InferenceContext.from(schema));
+
+            final List<String> group = schema.getGroup();
+            final Map<String, TypedExpression<?>> expressions = viewExpressions(schema);
+
+            return aggViewStage(visitor, fromStage, inference, group, expressions, buckets);
         }
 
         protected T mapViewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema, final Set<Bucket> buckets) {
@@ -247,6 +343,12 @@ public interface QueryPlanner<T> {
             expressions.put(schema.id(), TypedExpression.from(from.id(), from.typeOfId()));
             final T stage = viewFrom(visitor, schema, buckets);
             return visitor.map(stage, expressions);
+        }
+
+        protected T aggViewStage(QueryStageVisitor<T> visitor, T from, InferenceContext inference,
+                                 List<String> group, Map<String, TypedExpression<?>> expressions, Set<Bucket> buckets) {
+
+            return visitor.agg(from, group, expressions);
         }
     }
 
@@ -262,35 +364,59 @@ public interface QueryPlanner<T> {
             super(ignoreMaterialization);
         }
 
-        @Override
-        protected T aggViewStage(final QueryStageVisitor<T> visitor, final ViewSchema schema, final Set<Bucket> buckets) {
+        @RequiredArgsConstructor
+        private static class CommonExpressionExtractingVisitor implements ExpressionVisitor.Defaulting<Expression> {
 
-            final FromSchema from = (FromSchema)schema.getFrom();
-            final LinkableSchema fromSchema = from.getSchema();
-            final List<String> group = schema.getGroup();
-            final Map<String, TypedExpression<?>> expressions = viewExpressions(schema);
+            private final Map<String, Expression> expressions;
+
+            @Override
+            public Expression visitDefault(final Expression expression) {
+
+                final Optional<NameConstant> found = expressions.entrySet().stream()
+                        .filter(e -> e.getValue().equals(expression))
+                        .map(e -> new NameConstant(e.getKey()))
+                        .findFirst();
+
+                if (found.isPresent()) {
+                    return found.get();
+                } else {
+                    return expression.copy(this::visit);
+                }
+            }
+        }
+
+        @Override
+        protected T aggViewStage(final QueryStageVisitor<T> visitor, final T from, final InferenceContext inference,
+                                 final List<String> group, final Map<String, TypedExpression<?>> expressions, final Set<Bucket> buckets) {
 
             // Move complex expressions around aggregates into a post-map stage
             final Map<String, TypedExpression<?>> postAgg = new HashMap<>();
             boolean requiresPostAgg = false;
             final AggregateExtractingVisitor extractAggregates = new AggregateExtractingVisitor();
-            for(final Map.Entry<String, TypedExpression<?>> entry : expressions.entrySet()) {
+            for (final Map.Entry<String, TypedExpression<?>> entry : expressions.entrySet()) {
                 final String name = entry.getKey();
                 final TypedExpression<?> typedExpr = Nullsafe.require(entry.getValue());
                 final Expression expr = typedExpr.getExpression();
-                if(expr.hasAggregates()) {
+                final Map<String, Expression> otherExpressions = new HashMap<>();
+                expressions.forEach((k, v) -> {
+                    if (!k.equals(entry.getKey())) {
+                        otherExpressions.put(k, v.getExpression());
+                    }
+                });
+                final CommonExpressionExtractingVisitor extractCommonExpressions = new CommonExpressionExtractingVisitor(otherExpressions);
+                if (expr.hasAggregates()) {
                     requiresPostAgg = requiresPostAgg || !expr.isAggregate();
                     final Expression withoutAggregates = extractAggregates.visit(expr);
-                    postAgg.put(name, TypedExpression.from(withoutAggregates, typedExpr.getType()));
-                } else if(group.contains(name)) {
+                    final Expression withCommon = extractCommonExpressions.visit(withoutAggregates);
+                    postAgg.put(name, TypedExpression.from(withCommon, typedExpr.getType()));
+                } else if (group.contains(name)) {
                     postAgg.put(name, TypedExpression.from(new NameConstant(name), typedExpr.getType()));
                 } else {
-                    throw new IllegalStateException("Property " + name + " must be group or aggregate");
+                    requiresPostAgg = true;
+                    final Expression withCommon = extractCommonExpressions.visit(expr);
+                    postAgg.put(name, TypedExpression.from(withCommon, typedExpr.getType()));
                 }
             }
-
-            final InferenceContext inference = InferenceContext.from(fromSchema)
-                    .overlay(Reserved.THIS, InferenceContext.from(schema));
 
             final Map<String, ? extends Expression> extractedAgg;
             if(requiresPostAgg) {
@@ -305,11 +431,11 @@ public interface QueryPlanner<T> {
             boolean requiresPreAgg = false;
             final Map<String, TypedExpression<?>> agg = new HashMap<>();
             final Map<String, TypedExpression<?>> preAgg = new HashMap<>();
-            for(final String name : schema.getGroup()) {
+            for(final String name : group) {
                 final TypedExpression<?> expr = Nullsafe.require(expressions.get(name));
                 requiresPreAgg = requiresPreAgg || !isSimpleName(expr.getExpression());
                 preAgg.put(name, expr);
-                agg.put(name, expr);
+                agg.put(name, new TypedExpression<>(new NameConstant(name), expr.getType()));
             }
             for(final Map.Entry<String, ? extends Expression> entry : extractedAgg.entrySet()) {
                 final String name = entry.getKey();
@@ -328,11 +454,11 @@ public interface QueryPlanner<T> {
                         preAgg.put(id, inference.typed(expr));
                     }
                 }
-                final Use<?> typeOf = inference.typeOf(original);
+                final Use<?> typeOf = inference.requireTypeOf(original);
                 agg.put(name, TypedExpression.from(original.copy(args), typeOf));
             }
 
-            T stage = viewFrom(visitor, schema, null);
+            T stage = from;
             if(requiresPreAgg) {
                 stage = visitor.map(stage, preAgg);
             }

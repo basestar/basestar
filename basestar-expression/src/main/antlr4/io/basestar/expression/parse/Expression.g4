@@ -16,7 +16,7 @@ pair
 // Important! must list all name-like tokens here
 
 identifier
- : (Identifier | With | For | In | Where | Any | All | Of | Like | ILike | Select | From | Union | Join | Left | Right | Inner | Outer | As | Group | Order | By |  Cast)
+ : (Identifier | With | For | In | Where | Any | All | Of | Like | ILike | Select | From | Union | Distinct | Join | Left | Right | Inner | Outer | As | Group | Order | By |  Cast | Full)
  ;
 
 name
@@ -72,7 +72,10 @@ selectExprs
 fromExpr
  : expr #fromAnon
  | expr As? identifier #fromNamed
- | fromExpr side=(Left | Right)* type=(Inner | Outer)* Join fromExpr On expr #fromJoin
+ | fromExpr Inner? Join fromExpr On expr #fromInnerJoin
+ | fromExpr Left Outer? Join fromExpr On expr #fromLeftOuterJoin
+ | fromExpr Right Outer? Join fromExpr On expr #fromRightOuterJoin
+ | fromExpr Full Outer? Join fromExpr On expr #fromFullOuterJoin
  ;
 
 fromExprs
@@ -80,7 +83,7 @@ fromExprs
  ;
 
 unionExpr
- : Union expr #unionDistinct
+ : Union Distinct? expr #unionDistinct
  | Union All expr #unionAll
  ;
 
@@ -106,6 +109,8 @@ expr
  | expr Cmp expr #exprCmp
  | expr op=(Gte | Lte | Gt | Lt) expr #exprRel
  | expr op=(Eq | EqEq | BangEq) expr #exprEq
+ | expr Is Null #exprIsNull
+ | expr Is Not Null #exprIsNotNull
  | expr Amp expr  #exprBitAnd
  | expr (Xor | Caret) expr #exprBitXor
  | expr Pipe expr #exprBitOr
@@ -130,8 +135,9 @@ expr
  | String #exprString
  | LParen expr RParen #exprExpr
  | (identifier | (LParen identifier (Comma identifier)* RParen)) Arrow expr #exprLambda
- | Select selectExprs From fromExprs (Where expr)? (Group By names)? (Order By sorts)? unionExpr* #exprSelect
- | Case caseExpr+ (Else expr)? End #exprCase
+ | Select selectExprs From fromExprs (Where expr)? (Group By exprs)? (Order By sorts)? unionExpr* #exprSelect
+ | Case expr caseExpr+ (Else expr)? End #exprSimpleCase
+ | Case caseExpr+ (Else expr)? End #exprSearchedCase
  | With withExprs expr #exprWith
  ;
 
@@ -148,11 +154,13 @@ ILike    : I L I K E;
 Select   : S E L E C T;
 From     : F R O M;
 Union    : U N I O N;
+Distinct : D I S T I N C T;
 Join     : J O I N;
 Left     : L E F T;
 Right    : R I G H T;
 Inner    : I N N E R;
-Outer    : R I G H T;
+Outer    : O U T E R;
+Full     : F U L L;
 On       : O N;
 As       : A S;
 Group    : G R O U P;

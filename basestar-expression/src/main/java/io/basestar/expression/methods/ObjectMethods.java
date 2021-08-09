@@ -10,37 +10,37 @@ import java.time.LocalDate;
 @SuppressWarnings("unused")
 public class ObjectMethods implements Serializable {
 
-    public Boolean toBoolean(final Object value) {
+    public Boolean toboolean(final Object value) {
 
         return Coercion.toBoolean(value);
     }
 
-    public Long toInteger(final Object value) {
+    public Long tointeger(final Object value) {
 
         return Coercion.toInteger(value);
     }
 
-    public Double toNumber(final Object value) {
+    public Double tonumber(final Object value) {
 
         return Coercion.toFloat(value);
     }
 
-    public String toString(final Object value) {
+    public String tostring(final Object value) {
 
         return Coercion.toString(value);
     }
 
-    public Bytes toBinary(final Object value) {
+    public Bytes tobinary(final Object value) {
 
         return Coercion.toBinary(value);
     }
 
-    public LocalDate toDate(final Object value) {
+    public LocalDate todate(final Object value) {
 
         return Coercion.toDate(value);
     }
 
-    public Instant toDatetime(final Object value) {
+    public Instant todatetime(final Object value) {
 
         return Coercion.toDateTime(value);
     }

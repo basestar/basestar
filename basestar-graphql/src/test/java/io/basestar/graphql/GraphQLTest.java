@@ -32,6 +32,8 @@ import graphql.schema.idl.*;
 import io.basestar.auth.Caller;
 import io.basestar.database.DatabaseServer;
 import io.basestar.database.options.CreateOptions;
+import io.basestar.event.Emitter;
+import io.basestar.event.Event;
 import io.basestar.graphql.schema.SchemaAdaptor;
 import io.basestar.graphql.schema.SchemaConverter;
 import io.basestar.graphql.subscription.SubscriberContext;
@@ -41,6 +43,7 @@ import io.basestar.schema.Namespace;
 import io.basestar.secret.SecretContext;
 import io.basestar.storage.MemoryStorage;
 import io.basestar.util.Name;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -53,6 +56,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.*;
 
+@Slf4j
 class GraphQLTest {
 
     private Namespace namespace() throws Exception {
@@ -62,15 +66,20 @@ class GraphQLTest {
 
     private GraphQL graphQL(final Namespace namespace) throws Exception {
 
+        return graphQL(namespace, Emitter.skip());
+    }
+
+    private GraphQL graphQL(final Namespace namespace, final Emitter emitter) throws Exception {
+
         final MemoryStorage storage = MemoryStorage.builder().build();
-        final DatabaseServer databaseServer = DatabaseServer.builder().namespace(namespace).storage(storage).build();
+        final DatabaseServer databaseServer = DatabaseServer.builder().namespace(namespace).storage(storage).emitter(emitter).build();
 
         databaseServer.create(Caller.SUPER, CreateOptions.builder()
                 .setSchema(Name.of("Test4"))
                 .setId("test4")
                 .setData(ImmutableMap.of(
                         "test", ImmutableMap.of(
-                                "id","test1"
+                                "id", "test1"
                         ),
                         "test2", ImmutableMap.of(
                                 "id","test1"
@@ -180,11 +189,11 @@ class GraphQLTest {
                         "a", ImmutableMap.of(
                                 "items", ImmutableList.of(
                                         ImmutableMap.of(
-                                            "schema", "Test4",
-                                            "id", "test4",
-                                            "test", ImmutableMap.of(
-                                                    "x", "test1"
-                                            )
+                                                "schema", "Test4",
+                                                "id", "test4",
+                                                "test", ImmutableMap.of(
+                                                        "x", "test1"
+                                                )
                                         )
                                 )
                         ),
@@ -474,9 +483,9 @@ class GraphQLTest {
                         "mapVersionedRef", ImmutableList.of(ImmutableMap.of(
                                 "key", "x",
                                 "value", ImmutableMap.of(
-                                    "id", "test7",
-                                    "version", 1,
-                                    "schema", "Test7"
+                                        "id", "test7",
+                                        "version", 1,
+                                        "schema", "Test7"
                                 )
                         )),
                         "arrayVersionedRef", ImmutableList.of(ImmutableMap.of(
@@ -571,5 +580,39 @@ class GraphQLTest {
 
         final SchemaPrinter printer = new SchemaPrinter();
         System.out.println(printer.print(schema));
+    }
+
+    private void configureMockEmitter(final Emitter emitter) {
+
+        when(emitter.emit(anyCollectionOf(Event.class))).thenReturn(CompletableFuture.completedFuture(null));
+        when(emitter.emit(any(Event.class))).thenReturn(CompletableFuture.completedFuture(null));
+        when(emitter.emit(anyCollectionOf(Event.class), any())).thenReturn(CompletableFuture.completedFuture(null));
+        when(emitter.emit(any(Event.class), any())).thenReturn(CompletableFuture.completedFuture(null));
+    }
+
+    @Test
+    void testEvents() throws Exception {
+
+        final Emitter emitter = mock(Emitter.class);
+        configureMockEmitter(emitter);
+
+        final Namespace namespace = namespace();
+        final GraphQL graphQL = graphQL(namespace, emitter);
+
+        reset(emitter);
+        configureMockEmitter(emitter);
+
+        final Map<String, Map<String, Object>> create = graphQL.execute(ExecutionInput.newExecutionInput()
+                .query("mutation {\n" +
+                        "  createTest1(id:\"x\", data:{x:\"x\"}) {\n" +
+                        "    id\n" +
+                        "  }\n" +
+                        "}")
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
+                .build()).getData();
+        assertNotNull(create.get("createTest1"));
+
+        verify(emitter, times(1))
+                .emit(anyCollectionOf(Event.class));
     }
 }

@@ -238,27 +238,32 @@ public abstract class JSONDialect implements SQLDialect {
         return field.cast(jsonType());
     }
 
-    protected JSON toJson(final Object value) {
+    protected Object toJson(final Object value) {
 
-        if(value == null) {
+        if (value == null) {
             return null;
         }
         try {
-            return JSON.valueOf(objectMapper.writeValueAsString(value));
+            return castJson(objectMapper.writeValueAsString(value));
         } catch (final IOException e) {
             throw new UncheckedIOException(e);
         }
     }
 
+    protected Object castJson(final String value) {
+
+        return JSON.valueOf(value);
+    }
+
     protected <T> T fromJson(final Object value, final TypeReference<T> ref) {
 
-        if(value == null) {
+        if (value == null) {
             return null;
         }
         final String str;
-        if(value instanceof JSON) {
-            str = unescapeJson(((JSON)value).data());
-        } else if(value instanceof JSONB) {
+        if (value instanceof JSON) {
+            str = unescapeJson(((JSON) value).data());
+        } else if (value instanceof JSONB) {
             str = unescapeJson(((JSONB) value).data());
         } else if(value instanceof String) {
             str = (String)value;

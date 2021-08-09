@@ -1,22 +1,28 @@
 package io.basestar.schema.from;
 
 import io.basestar.expression.Expression;
-import io.basestar.schema.*;
-import io.basestar.schema.exception.MissingPropertyException;
-import io.basestar.schema.exception.SchemaValidationException;
+import io.basestar.schema.Bucketing;
+import io.basestar.schema.LinkableSchema;
+import io.basestar.schema.Schema;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseBinary;
-import io.basestar.util.*;
-import lombok.Getter;
+import io.basestar.util.BinaryKey;
+import io.basestar.util.Immutable;
+import io.basestar.util.Name;
+import lombok.Data;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-@Getter
+/**
+ * Temporary wrapper to keep hold of SQL expression for codegen
+ */
+
+@Data
+@Deprecated
 public class FromSql implements From {
 
     private final String sql;
@@ -25,31 +31,17 @@ public class FromSql implements From {
 
     private final Map<String, From> using;
 
-    private final String as;
-
-    public FromSql(final Schema.Resolver.Constructing resolver, final From.Descriptor from) {
-
-        this.sql = Nullsafe.require(from.getSql());
-        this.primaryKey = Nullsafe.require(from.getPrimaryKey());
-        this.using = Immutable.transformValuesSorted(from.getUsing(), (k, v) -> v.build(resolver));
-        this.as = from.getAs();
-    }
+    private final From impl;
 
     @Override
-    public From.Descriptor descriptor() {
+    public Descriptor descriptor() {
 
-        return new From.Descriptor() {
+        return new Descriptor.Defaulting() {
 
             @Override
             public String getSql() {
 
                 return sql;
-            }
-
-            @Override
-            public Map<String, From.Descriptor> getUsing() {
-
-                return Immutable.transformValuesSorted(using, (k, v) -> v.descriptor());
             }
 
             @Override
@@ -59,9 +51,9 @@ public class FromSql implements From {
             }
 
             @Override
-            public String getAs() {
+            public Map<String, From.Descriptor> getUsing() {
 
-                return as;
+                return Immutable.transformValues(using, (k, v) -> v.descriptor());
             }
         };
     }
@@ -69,70 +61,98 @@ public class FromSql implements From {
     @Override
     public InferenceContext inferenceContext() {
 
-        return InferenceContext.empty();
+        if (impl != null) {
+            return impl.inferenceContext();
+        } else {
+            return InferenceContext.empty();
+        }
     }
 
     @Override
     public void collectMaterializationDependencies(final Map<Name, LinkableSchema> out) {
 
+        if (impl != null) {
+            impl.collectMaterializationDependencies(out);
+        }
         using.forEach((k, v) -> v.collectMaterializationDependencies(out));
+
     }
 
     @Override
     public void collectDependencies(final Map<Name, Schema<?>> out) {
 
+        if (impl != null) {
+            impl.collectDependencies(out);
+        }
         using.forEach((k, v) -> v.collectDependencies(out));
+    }
+
+    @Override
+    public Expression id() {
+
+        if (impl != null) {
+            return impl.id();
+        } else {
+            throw new UnsupportedOperationException("Raw SQL view cannot be processed");
+        }
     }
 
     @Override
     public Use<?> typeOfId() {
 
-        return UseBinary.DEFAULT;
+        if (impl != null) {
+            return impl.typeOfId();
+        } else {
+            return UseBinary.DEFAULT;
+        }
     }
 
     @Override
-    public void validateSchema(final ViewSchema schema) {
+    public Map<String, Use<?>> getProperties() {
 
-        From.super.validateSchema(schema);
-            primaryKey.forEach(k -> {
-                try {
-                    schema.requireProperty(k, true);
-                } catch (final MissingPropertyException e) {
-                    throw new IllegalStateException("Cannot use " + k + " in primary key (must be defined in the schema)");
-                }
-            });
-    }
-
-    @Override
-    public void validateProperty(final Property property) {
-
-        if (property.getExpression() != null) {
-            throw new SchemaValidationException(property.getQualifiedName(), "SQL view properties should not have expressions");
+        if (impl != null) {
+            return impl.getProperties();
+        } else {
+            throw new UnsupportedOperationException("Raw SQL view cannot be processed");
         }
     }
 
     @Override
     public BinaryKey id(final Map<String, Object> row) {
 
-        throw new UnsupportedOperationException();
+        if (impl != null) {
+            return impl.id(row);
+        } else {
+            throw new UnsupportedOperationException("Raw SQL view cannot be processed");
+        }
     }
 
     @Override
     public boolean isCompatibleBucketing(final List<Bucketing> other) {
 
-        return using.values().stream().allMatch(v -> v.isCompatibleBucketing(other));
+        if (impl != null) {
+            return impl.isCompatibleBucketing(other);
+        } else {
+            return false;
+        }
     }
 
     @Override
     public List<FromSchema> schemas() {
 
-        return getUsing().values().stream().flatMap(from -> from.schemas().stream())
-                .collect(Collectors.toList());
+        return Stream.concat(
+                getUsing().values().stream().flatMap(from -> from.schemas().stream()),
+                impl.schemas().stream()
+        ).collect(Collectors.toList());
     }
 
     @Override
-    public Expression id() {
+    public <T> T visit(final FromVisitor<T> visitor) {
 
-        throw new UnsupportedOperationException();
+        if (impl != null) {
+            return impl.visit(visitor);
+        } else {
+            throw new UnsupportedOperationException("Raw SQL view cannot be processed");
+        }
     }
 }

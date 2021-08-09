@@ -12,16 +12,37 @@ import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public interface InferenceContext {
 
     @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
-    Use<?> typeOf(Name name);
+    Optional<Use<?>> optionalTypeOf(Name name);
+
+    default Use<?> typeOf(Name name) {
+
+        return optionalTypeOf(name).orElse(UseAny.DEFAULT);
+    }
 
     @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
-    default Use<?> typeOf(final Expression expression) {
+    default Optional<Use<?>> optionalTypeOf(final Expression expression) {
 
         return new InferenceVisitor(this).visit(expression);
+    }
+
+    default Use<?> typeOf(final Expression expression) {
+
+        return optionalTypeOf(expression).orElse(UseAny.DEFAULT);
+    }
+
+    default Use<?> requireTypeOf(final Name name) {
+
+        return optionalTypeOf(name).orElseThrow(() -> new IllegalStateException("Type of " + name + " cannot be inferred"));
+    }
+
+    default Use<?> requireTypeOf(final Expression expression) {
+
+        return optionalTypeOf(expression).orElseThrow(() -> new IllegalStateException("Type of " + expression + " cannot be inferred"));
     }
 
     default InferenceContext overlay(final String name, final InferenceContext override) {
@@ -46,7 +67,7 @@ public interface InferenceContext {
 
     static InferenceContext empty() {
 
-        return name -> UseAny.DEFAULT;
+        return name -> Optional.empty();
     }
 
     default InferenceContext with(final Map<String, Use<?>> context) {
@@ -56,9 +77,9 @@ public interface InferenceContext {
             final String first = name.first();
             final Use<?> use = context.get(first);
             if(use != null) {
-                return use.typeOf(name.withoutFirst());
+                return Optional.of(use.typeOf(name.withoutFirst()));
             } else {
-                return InferenceContext.this.typeOf(name);
+                return InferenceContext.this.optionalTypeOf(name);
             }
         };
     }
@@ -84,9 +105,10 @@ public interface InferenceContext {
         }
 
         @Override
-        public Use<?> typeOf(final Name name) {
+        @SuppressWarnings("unchecked")
+        public Optional<Use<?>> optionalTypeOf(final Name name) {
 
-            return layout.typeOf(name);
+            return (Optional<Use<?>>)(Optional<?>)layout.optionalTypeOf(name);
         }
     }
 
@@ -98,14 +120,14 @@ public interface InferenceContext {
         private final Map<String, InferenceContext> overrides;
 
         @Override
-        public Use<?> typeOf(final Name name) {
+        public Optional<Use<?>> optionalTypeOf(final Name name) {
 
             final String first = name.first();
             final InferenceContext override = overrides.get(first);
             if(override != null) {
-                return override.typeOf(name.withoutFirst());
+                return override.optionalTypeOf(name.withoutFirst());
             } else {
-                return parent.typeOf(name);
+                return parent.optionalTypeOf(name);
             }
         }
     }
@@ -121,10 +143,38 @@ public interface InferenceContext {
 
         @Override
         @SuppressWarnings("rawtypes")
-        public Use<?> typeOf(final Name name) {
+        public Optional<Use<?>> optionalTypeOf(final Name name) {
 
-            return contexts.stream().map(v -> (Use)v.typeOf(name))
-                    .reduce(Use::commonBase).orElse(UseAny.DEFAULT);
+            // FIXME: should use optionalTypeOf rather than typeOf since handling of Any will not work in join context
+            return Optional.ofNullable((Use<?>)contexts.stream().map(v -> (Use)v.typeOf(name))
+                    .reduce(Use::commonBase).orElse(null));
+        }
+    }
+
+    class Join implements InferenceContext {
+
+        private final InferenceContext left;
+
+        private final InferenceContext right;
+
+        public Join(final InferenceContext left, final InferenceContext right) {
+
+            this.left = left;
+            this.right = right;
+        }
+
+        @Override
+        public Optional<Use<?>> optionalTypeOf(final Name name) {
+
+            final Optional<Use<?>> l = left.optionalTypeOf(Name.of(name.first()));
+            final Optional<Use<?>> r = right.optionalTypeOf(Name.of(name.first()));
+            if(l.isPresent() && r.isPresent()) {
+                throw new IllegalStateException("Ambiguous name " + name);
+            } else if(l.isPresent()) {
+                return left.optionalTypeOf(name);
+            } else {
+                return right.optionalTypeOf(name);
+            }
         }
     }
 }

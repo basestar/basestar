@@ -179,7 +179,7 @@ class TestInference {
         final InferenceContext context = InferenceContext.from(schema);
         final InferenceVisitor visitor = new InferenceVisitor(context);
         final Expression expression = Expression.parseAndBind(Context.init(), expressionStr);
-        final Use<?> actual = visitor.visit(expression);
+        final Use<?> actual = visitor.typeOf(expression);
         assertEquals(expected, actual);
     }
 }

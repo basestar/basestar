@@ -25,6 +25,7 @@ import io.basestar.expression.Expression;
 import io.basestar.expression.visitor.DisjunctionVisitor;
 import io.basestar.schema.Index;
 import io.basestar.schema.*;
+import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseRef;
 import io.basestar.schema.use.UseStruct;
@@ -139,14 +140,8 @@ public class SQLStorage implements DefaultLayerStorage {
     public Pager<Map<String, Object>> queryView(final Consistency consistency, final ViewSchema schema, final Expression query,
                                                   final List<Sort> sort, final Set<Name> expand) {
 
-        if(schema.isMaterialized()) {
-
-            final Expression bound = query.bind(Context.init());
-            return (stats, token, count) -> queryImpl(schema, null, bound, sort, expand, count, token, stats);
-
-        } else {
-            return DefaultLayerStorage.super.queryView(consistency, schema, query, sort, expand);
-        }
+        final Expression bound = query.bind(Context.init());
+        return (stats, token, count) -> queryImpl(schema, null, bound, sort, expand, count, token, stats);
     }
 
     @Override
@@ -186,12 +181,13 @@ public class SQLStorage implements DefaultLayerStorage {
         final SQLDialect dialect = strategy.dialect();
 
         final Function<Name, QueryPart> columnResolver;
-        if(index == null) {
+        if (index == null) {
             columnResolver = objectColumnResolver(context, schema);
         } else {
             columnResolver = indexColumnResolver(context, (ReferableSchema) schema, index);
         }
-        return new SQLExpressionVisitor(dialect, columnResolver).condition(expression);
+        final InferenceContext inferenceContext = InferenceContext.from(schema);
+        return new SQLExpressionVisitor(dialect, inferenceContext, columnResolver).condition(expression);
     }
 
     private List<OrderField<?>> orderFields(final List<Sort> sort) {
@@ -639,7 +635,7 @@ public class SQLStorage implements DefaultLayerStorage {
         public WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
 
             // Fixme: should support materialized views
-            if(schema instanceof ReferableSchema) {
+            if (schema instanceof ReferableSchema || schema instanceof ViewSchema && ((ViewSchema) schema).isMaterialized()) {
                 steps.add(context -> {
 
                     try {
@@ -648,7 +644,7 @@ public class SQLStorage implements DefaultLayerStorage {
                                 .set(toRecord(schema, after))
                                 .execute();
 
-                        return BatchResponse.fromRef(schema.getQualifiedName(), after);
+                        return BatchResponse.empty();
 
                     } catch (final DataAccessException e) {
                         if (SQLStateClass.C23_INTEGRITY_CONSTRAINT_VIOLATION.equals(e.sqlStateClass())) {
@@ -744,7 +740,7 @@ public class SQLStorage implements DefaultLayerStorage {
         if(schema instanceof ReferableSchema) {
             return strategy.objectTableName((ReferableSchema) schema);
         } else if(schema instanceof ViewSchema) {
-            return strategy.viewSchemaName((ViewSchema) schema);
+            return strategy.viewName((ViewSchema) schema);
         } else {
             throw new IllegalStateException("Cannot determine name for schema " + schema);
         }
@@ -792,8 +788,14 @@ public class SQLStorage implements DefaultLayerStorage {
         schema.getProperties().forEach((k, v) ->
                 result.put(k, dialect.fromSQLValue(v.typeOf(), data.get(k))));
 
-        if(Instance.getSchema(result) == null) {
+        if (Instance.getSchema(result) == null) {
             Instance.setSchema(result, schema.getQualifiedName());
+        }
+        // Make sure view records have a valid __key field
+        if (schema instanceof ViewSchema) {
+            if (result.get(ViewSchema.ID) == null) {
+                result.put(ViewSchema.ID, ((ViewSchema) schema).createId(result));
+            }
         }
         return result;
     }

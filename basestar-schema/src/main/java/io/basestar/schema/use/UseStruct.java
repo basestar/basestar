@@ -27,7 +27,6 @@ import io.basestar.schema.Constraint;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Schema;
 import io.basestar.schema.StructSchema;
-import io.basestar.schema.exception.TypeSyntaxException;
 import io.basestar.schema.util.Cascade;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
@@ -69,21 +68,6 @@ public class UseStruct implements UseInstance {
     public static UseStruct from(final StructSchema schema, final Object config) {
 
         return new UseStruct(schema);
-    }
-
-    public static UseStruct from(final Map<String, ?> schema) {
-
-        return new UseStruct(StructSchema.from(schema));
-    }
-
-    @SuppressWarnings("unchecked")
-    public static UseStruct from(final Object config) {
-
-        if(config instanceof Map) {
-            return from((Map<String, ?>)config);
-        } else {
-            throw new TypeSyntaxException();
-        }
     }
 
     @Override

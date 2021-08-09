@@ -290,7 +290,7 @@ class TestQueryPlanner {
         }
 
         @Override
-        public SimpleStage union(final List<SimpleStage> inputs) {
+        public SimpleStage union(final List<SimpleStage> inputs, final boolean all) {
 
             throw new UnsupportedOperationException();
         }

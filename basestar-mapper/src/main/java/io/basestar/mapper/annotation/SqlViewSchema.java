@@ -73,7 +73,7 @@ public @interface SqlViewSchema {
             return new AnnotationContext<>(SqlViewSchema.class, ImmutableMap.<String, Object>builder()
                     .put("name", schema.getQualifiedName().toString())
                     .put("materialized", schema.isMaterialized())
-                    .put("query", from.getSql())
+                    .put("query", from.getSql().toString())
                     .put("primaryKey", from.getPrimaryKey().toArray(new String[0]))
                     .put("using", from.getUsing().entrySet().stream().map(
                             e -> new AnnotationContext<>(Using.class, ImmutableMap.<String, Object>builder()

@@ -92,11 +92,11 @@ public class ExpandLinkStep extends AbstractExpandStep {
 
         this.leftKeyTypes = new TreeMap<>();
         for(final Map.Entry<String, Expression> entry : leftConstants.entrySet()) {
-            leftKeyTypes.put(entry.getKey(), inference.visit(entry.getValue()));
+            leftKeyTypes.put(entry.getKey(), inference.typeOf(entry.getValue()));
         }
         this.rightKeyTypes = new TreeMap<>();
         for(final Map.Entry<String, Expression> entry : rightConstants.entrySet()) {
-            rightKeyTypes.put(entry.getKey(), inference.visit(entry.getValue()));
+            rightKeyTypes.put(entry.getKey(), inference.typeOf(entry.getValue()));
         }
     }
 

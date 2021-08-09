@@ -94,6 +94,7 @@ public class Property implements Member {
     @JsonDeserialize(as = Builder.class)
     public interface Descriptor extends Member.Descriptor {
 
+        @JsonInclude(JsonInclude.Include.NON_NULL)
         Use<?> getType();
 
         @Deprecated
@@ -103,8 +104,10 @@ public class Property implements Member {
         @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         Boolean getImmutable();
 
+        @JsonInclude(JsonInclude.Include.NON_NULL)
         Expression getExpression();
 
+        @JsonInclude(JsonInclude.Include.NON_NULL)
         Serializable getDefault();
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
@@ -317,9 +320,9 @@ public class Property implements Member {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T> Use<T> typeOf(final Name name) {
+    public <T> Optional<Use<T>> optionalTypeOf(final Name name) {
 
-        return (Use<T>)type.typeOf(name);
+        return (Optional<Use<T>>)(Optional<?>)type.optionalTypeOf(name);
     }
 
     @Override

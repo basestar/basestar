@@ -4,7 +4,6 @@ import io.basestar.expression.Expression;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Layout;
 import io.basestar.schema.LinkableSchema;
-import io.basestar.schema.ViewSchema;
 import io.basestar.schema.expression.TypedExpression;
 import io.basestar.schema.from.Join;
 import io.basestar.schema.util.Bucket;
@@ -65,7 +64,7 @@ public class ESQueryStageVisitor implements QueryStageVisitor<ESQueryStage> {
     }
 
     @Override
-    public ESQueryStage union(final List<ESQueryStage> inputs) {
+    public ESQueryStage union(final List<ESQueryStage> inputs, final boolean all) {
 
         throw new UnsupportedOperationException();
     }

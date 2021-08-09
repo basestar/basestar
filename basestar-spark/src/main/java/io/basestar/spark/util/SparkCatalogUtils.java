@@ -41,7 +41,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
-import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -187,6 +186,7 @@ public class SparkCatalogUtils {
                     changed = true;
                 }
             }
+            // This is being marked as changed when it isn't
             if(changed) {
                 catalog.alterTableDataSchema(databaseName, tableName, dataType);
             }

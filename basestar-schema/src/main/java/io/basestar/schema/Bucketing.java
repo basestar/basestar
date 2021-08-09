@@ -1,5 +1,6 @@
 package io.basestar.schema;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
@@ -83,12 +84,15 @@ public class Bucketing implements Serializable {
     @Data
     public static class Builder {
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonDeserialize(using = AbbrevListDeserializer.class, contentUsing = NameDeserializer.class)
         @JsonSerialize(contentUsing = ToStringSerializer.class)
         private List<Name> using;
 
+        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         private Integer count;
 
+        @JsonInclude(JsonInclude.Include.NON_NULL)
         private BucketFunction function;
 
         public Bucketing build() {

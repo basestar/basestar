@@ -78,7 +78,9 @@ F:
 G:
   type: object
   properties:
-    x:
+    name:
+      type: string
+    value:
       type: integer
 
 AggView:
@@ -224,13 +226,15 @@ SqlView:
   type: view
   using:
     A: A
-  sql: SELECT ref.id AS refId, COUNT(*) AS count, DATE_DIFF('day', FROM_ISO8601_DATE('2020-01-01'), FROM_ISO8601_DATE('2020-01-02')) AS diff FROM A GROUP BY refId
+  sql: SELECT ref.id AS refId, COUNT(1) AS count FROM A GROUP BY refId
   primaryKey: refId
   properties:
     refId:
       type: string
     count:
       type: integer
+
+#DATE_DIFF('day', FROM_ISO8601_DATE('2020-01-01'), FROM_ISO8601_DATE('2020-01-02')) AS diff
 
 JoinLeft:
   type: object
@@ -288,3 +292,36 @@ WithInline:
   properties:
     name:
       expression: name
+
+WithSqlJoin:
+  type: view
+  from:
+    using:
+      A:
+        schema: A
+      B:
+        schema: B
+    sql: SELECT a.id AS id, key, DATE_ADD('DAY', 1, a.created) AS dayAfterCreated FROM A AS a INNER JOIN B AS b ON a.ref.id = b.id
+    primaryKey:
+      - id
+  properties:
+    id:
+      type: string
+    dayAfterCreated:
+      type: date
+    key:
+      type: D
+
+WithSqlAgg:
+  type: view
+  using:
+    G:
+      schema: G
+  sql: "SELECT SUM(value + 2) AS values, CONCAT('g', name) AS names FROM G AS a GROUP BY name"
+  primaryKey:
+    - names
+  properties:
+    names:
+      type: string
+    values:
+      type: integer

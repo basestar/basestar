@@ -107,12 +107,12 @@ public interface UseCollection<V, T extends Collection<V>> extends UseContainer<
     }
 
     @Override
-    default Use<?> typeOf(final Name name) {
+    default Optional<Use<?>> optionalTypeOf(final Name name) {
 
         if(name.isEmpty()) {
-            return this;
+            return Optional.of(this);
         } else {
-            return getType().typeOf(name);
+            return getType().optionalTypeOf(name);
         }
     }
 

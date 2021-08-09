@@ -61,9 +61,11 @@ class UpsertReducer extends UserDefinedAggregateFunction {
     @Override
     public void update(final MutableAggregationBuffer buffer, final Row row) {
 
-        final int size = row.size();
-        for(int i = 0; i != size; ++i) {
-            buffer.update(i, row.get(i));
+        if (isLater(buffer, row)) {
+            final int size = row.size();
+            for (int i = 0; i != size; ++i) {
+                buffer.update(i, row.get(i));
+            }
         }
     }
 
@@ -97,9 +99,7 @@ class UpsertReducer extends UserDefinedAggregateFunction {
     @Override
     public void merge(final MutableAggregationBuffer buffer, final Row row) {
 
-        if(isLater(buffer, row)) {
-            update(buffer, row);
-        }
+        update(buffer, row);
     }
 
     @Override

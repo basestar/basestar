@@ -6,6 +6,7 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAccessor;
 import java.util.Date;
@@ -131,10 +132,17 @@ public class ISO8601 {
 
     public static LocalDate toDate(final TemporalAccessor value) {
 
-        if(value instanceof Instant) {
+        if (value == null) {
+            return null;
+        } else if (value instanceof LocalDate) {
+            return (LocalDate) value;
+        } else if (value instanceof Instant) {
             return ((Instant) value).atZone(ZoneOffset.UTC).toLocalDate();
         } else {
-            return LocalDate.from(value);
+            final int year = value.isSupported(ChronoField.YEAR) ? value.get(ChronoField.YEAR) : 1970;
+            final int month = value.isSupported(ChronoField.MONTH_OF_YEAR) ? value.get(ChronoField.MONTH_OF_YEAR) : 1;
+            final int day = value.isSupported(ChronoField.DAY_OF_MONTH) ? value.get(ChronoField.DAY_OF_MONTH) : 1;
+            return LocalDate.of(year, month, day);
         }
     }
 
@@ -174,7 +182,7 @@ public class ISO8601 {
     public static LocalDate parseDate(final String value, final String format) {
 
         try {
-            return DateTimeFormatter.ofPattern(format).parse(value, LocalDate::from);
+            return DateTimeFormatter.ofPattern(format).parse(value, ISO8601::toDate);
         } catch (final DateTimeParseException e) {
             throw new InvalidDateTimeException(value);
         }
