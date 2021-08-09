@@ -27,6 +27,31 @@ public interface SQLDialect {
 
     DataType<?> stringType(UseString type);
 
+    default DataType<?> booleanType(final UseBoolean type) {
+
+        return SQLDataType.BOOLEAN;
+    }
+
+    default DataType<?> integerType(final UseInteger type) {
+
+        return SQLDataType.BIGINT;
+    }
+
+    default DataType<?> numberType(final UseNumber type) {
+
+        return SQLDataType.DOUBLE;
+    }
+
+    default DataType<?> dateType(final UseDate type) {
+
+        return SQLDataType.LOCALDATE;
+    }
+
+    default DataType<?> dateTimeType(final UseDateTime type) {
+
+        return SQLDataType.TIMESTAMP;
+    }
+
     default DataType<?> enumType(final UseEnum type) {
 
         return stringType(UseString.DEFAULT);
@@ -124,19 +149,19 @@ public interface SQLDialect {
             @Override
             public DataType<?> visitBoolean(final UseBoolean type) {
 
-                return SQLDataType.BOOLEAN;
+                return booleanType(type);
             }
 
             @Override
             public DataType<?> visitInteger(final UseInteger type) {
 
-                return SQLDataType.BIGINT;
+                return integerType(type);
             }
 
             @Override
             public DataType<?> visitNumber(final UseNumber type) {
 
-                return SQLDataType.DOUBLE;
+                return numberType(type);
             }
 
             @Override
@@ -208,13 +233,13 @@ public interface SQLDialect {
             @Override
             public DataType<?> visitDate(final UseDate type) {
 
-                return SQLDataType.LOCALDATE;
+                return dateType(type);
             }
 
             @Override
             public DataType<?> visitDateTime(final UseDateTime type) {
 
-                return SQLDataType.TIMESTAMP;
+                return dateTimeType(type);
             }
 
             @Override
@@ -343,13 +368,13 @@ public interface SQLDialect {
             @Override
             public Object visitDate(final UseDate type) {
 
-                return type.create(value);
+                return ISO8601.toSqlDate(type.create(value));
             }
 
             @Override
             public Object visitDateTime(final UseDateTime type) {
 
-                return type.create(value);
+                return ISO8601.toSqlTimestamp(type.create(value));
             }
 
             @Override
