@@ -21,6 +21,7 @@ package io.basestar.schema;
  */
 
 import io.basestar.expression.Expression;
+import io.basestar.schema.from.FromExternal;
 import io.basestar.schema.use.UseInteger;
 import io.basestar.schema.use.UseString;
 import org.junit.jupiter.api.Test;
@@ -38,10 +39,10 @@ class TestViewSchema {
         final Namespace namespace = Namespace.load(TestViewSchema.class.getResource("view.yml"));
 
         final ViewSchema schema = namespace.requireViewSchema("View");
-        final Property emailProp = schema.getProperties().get("email");
+        final Property prop = schema.getProperties().get("email");
 
-        assertTrue(emailProp.typeOf() instanceof UseString);
-        assertEquals(Expression.parse("email"), emailProp.getExpression());
+        assertTrue(prop.typeOf() instanceof UseString);
+        assertEquals(Expression.parse("email"), prop.getExpression());
     }
 
     @Test
@@ -50,9 +51,9 @@ class TestViewSchema {
         final Namespace namespace = Namespace.load(TestViewSchema.class.getResource("view.yml"));
 
         final ViewSchema schema = namespace.requireViewSchema("WithUnion");
-        final Property nameProp = schema.getProperties().get("name");
+        final Property prop = schema.getProperties().get("name");
 
-        assertTrue(nameProp.typeOf() instanceof UseString);
+        assertTrue(prop.typeOf() instanceof UseString);
     }
 
     @Test
@@ -61,9 +62,9 @@ class TestViewSchema {
         final Namespace namespace = Namespace.load(TestViewSchema.class.getResource("view.yml"));
 
         final ViewSchema schema = namespace.requireViewSchema("WithSqlGroup");
-        final Property nameProp = schema.getProperties().get("count");
+        final Property prop = schema.getProperties().get("count");
 
-        assertTrue(nameProp.typeOf() instanceof UseInteger);
+        assertTrue(prop.typeOf() instanceof UseInteger);
     }
 
     @Test
@@ -72,8 +73,22 @@ class TestViewSchema {
         final Namespace namespace = Namespace.load(TestViewSchema.class.getResource("view.yml"));
 
         final ViewSchema schema = namespace.requireViewSchema("WithSqlNested");
-        final Property nameProp = schema.getProperties().get("count");
+        final Property prop = schema.getProperties().get("count");
 
-        assertTrue(nameProp.typeOf() instanceof UseInteger);
+        assertTrue(prop.typeOf() instanceof UseInteger);
+    }
+
+    @Test
+    void testExternalView() throws IOException {
+
+        final Namespace namespace = Namespace.load(TestViewSchema.class.getResource("view.yml"));
+
+        final ViewSchema schema = namespace.requireViewSchema("ExternalView");
+
+        assertTrue(schema.getFrom() instanceof FromExternal);
+
+        final Property prop = schema.getProperties().get("value");
+
+        assertTrue(prop.typeOf() instanceof UseString);
     }
 }

@@ -55,7 +55,6 @@ abstract class TestSQLStorage extends TestStorage {
         // FIXME: versioned ref storage will need a strategy that supports multiple output columns per input value
     }
 
-
     @Override
     protected Storage storage(final Namespace namespace) {
 

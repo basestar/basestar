@@ -13,6 +13,8 @@ import java.util.List;
 
 public class BinaryKey extends Bytes {
 
+    private static final BinaryKey EMPTY = new BinaryKey(new byte[0]);
+
     public static final byte[] LO_PREFIX = new byte[]{0};
 
     public static final byte[] HI_PREFIX = new byte[]{127};
@@ -32,6 +34,11 @@ public class BinaryKey extends Bytes {
     public BinaryKey(final byte[] bytes) {
 
         super(bytes);
+    }
+
+    public static BinaryKey empty() {
+
+        return EMPTY;
     }
 
     public BinaryKey lo() {

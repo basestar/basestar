@@ -281,8 +281,7 @@ public class ViewSchema implements LinkableSchema {
         this.slot = slot;
         this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
         this.materialized = Nullsafe.orDefault(descriptor.getMaterialized());
-        final From.Descriptor from = Nullsafe.require(descriptor.getFrom());
-        this.from = from.build(resolver, Context.init());
+        this.from = Optional.ofNullable(descriptor.getFrom()).map(v -> v.build(resolver, Context.init())).orElse(From.EXTERNAL);
         this.sort = Immutable.list(descriptor.getSort());
         this.description = descriptor.getDescription();
         this.group = Immutable.list(descriptor.getGroup());

@@ -64,6 +64,8 @@ from:
 
 public interface From extends Serializable {
 
+    From EXTERNAL = new FromExternal();
+
 //    String getAs();
 //
 //    List<Sort> getSort();
@@ -277,9 +279,9 @@ public interface From extends Serializable {
                 }
 
             } else if(names.size() == 0) {
-                throw new IllegalStateException("Exactly one of " + args.keySet() + " is required");
+                return EXTERNAL;
             } else {
-                throw new IllegalStateException("Exactly one of " + args.keySet() + " is required (provided: " + names + ")");
+                throw new IllegalStateException("At most one of " + args.keySet() + " is supported (provided: " + names + ")");
             }
         }
 

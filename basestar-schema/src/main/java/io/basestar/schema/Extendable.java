@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.io.Serializable;
 import java.util.Map;
+import java.util.Optional;
 
 public interface Extendable {
 
@@ -38,6 +39,22 @@ public interface Extendable {
     @SuppressWarnings("unchecked")
     default <T extends Serializable> T getExtension(final String name) {
 
-        return (T)getExtensions().get(name);
+        return (T) this.getExtension(Serializable.class, name);
+    }
+
+    default <T extends Serializable> T getExtension(final Class<T> of, final String name) {
+
+        return this.getOptionalExtension(of, name).orElse(null);
+    }
+
+    default <T extends Serializable> Optional<T> getOptionalExtension(final Class<T> of, final String name) {
+
+        final Map<String, Serializable> extensions = getExtensions();
+        if (extensions != null) {
+            if (extensions.containsKey(name)) {
+                return Optional.of(of.cast(extensions.get(name)));
+            }
+        }
+        return Optional.empty();
     }
 }
