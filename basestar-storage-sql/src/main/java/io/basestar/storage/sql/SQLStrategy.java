@@ -88,29 +88,38 @@ public interface SQLStrategy {
             return schema.getOptionalExtension(String.class, CUSTOM_TABLE_NAME_EXTENSION).map(SQLUtils::parseName).orElseGet(defaultName);
         }
 
+        private org.jooq.Name combineNames(final org.jooq.Name schemaName, final org.jooq.Name name) {
+
+            if(name.getName().length == 1) {
+                return DSL.name(schemaName, name);
+            } else {
+                return name;
+            }
+        }
+
         @Override
         public org.jooq.Name objectTableName(final ReferableSchema schema) {
 
-            return customizeName(schema, () -> DSL.name(DSL.name(objectSchemaName), DSL.name(name(schema))));
+            return combineNames(DSL.name(objectSchemaName), customizeName(schema, () -> DSL.name(name(schema))));
         }
 
         @Override
         public Name viewName(final ViewSchema schema) {
 
-            return customizeName(schema, () -> DSL.name(DSL.name(objectSchemaName), DSL.name(name(schema))));
+            return combineNames(DSL.name(objectSchemaName), customizeName(schema, () -> DSL.name(name(schema))));
         }
 
         @Override
         public org.jooq.Name historyTableName(final ReferableSchema schema) {
 
-            return DSL.name(DSL.name(historySchemaName), DSL.name(name(schema)));
+            return combineNames(DSL.name(historySchemaName), DSL.name(name(schema)));
         }
 
         @Override
         public org.jooq.Name indexTableName(final ReferableSchema schema, final Index index) {
 
             final String name = name(schema) + Reserved.PREFIX + index.getName();
-            return DSL.name(DSL.name(objectSchemaName), DSL.name(name));
+            return combineNames(DSL.name(objectSchemaName), DSL.name(name));
         }
 
         @Override
