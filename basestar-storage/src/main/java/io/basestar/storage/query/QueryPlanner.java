@@ -239,6 +239,12 @@ public interface QueryPlanner<T> {
 
                     return viewFromUnion(visitor, from, where, buckets);
                 }
+
+                @Override
+                public T visitExternal(final FromExternal from) {
+
+                    throw new UnsupportedOperationException("External view not supported here");
+                }
             });
         }
 

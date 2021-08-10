@@ -118,3 +118,9 @@ WithSqlNested:
       type: string
     count:
       type: integer
+
+ExternalView:
+  type: view
+  properties:
+    value:
+      type: string

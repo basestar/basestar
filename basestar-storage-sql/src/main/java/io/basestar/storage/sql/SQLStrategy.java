@@ -37,6 +37,7 @@ import org.jooq.impl.DSL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Supplier;
 
 public interface SQLStrategy {
 
@@ -69,6 +70,8 @@ public interface SQLStrategy {
     @Builder(builderClassName = "Builder")
     class Simple implements SQLStrategy {
 
+        private static final String CUSTOM_TABLE_NAME_EXTENSION = "sql.table";
+
         private final String objectSchemaName;
 
         private final String historySchemaName;
@@ -80,16 +83,21 @@ public interface SQLStrategy {
             return schema.getQualifiedName().toString("_").toLowerCase();
         }
 
+        private org.jooq.Name customizeName(final LinkableSchema schema, final Supplier<org.jooq.Name> defaultName) {
+
+            return schema.getOptionalExtension(String.class, CUSTOM_TABLE_NAME_EXTENSION).map(SQLUtils::parseName).orElseGet(defaultName);
+        }
+
         @Override
         public org.jooq.Name objectTableName(final ReferableSchema schema) {
 
-            return DSL.name(DSL.name(objectSchemaName), DSL.name(name(schema)));
+            return customizeName(schema, () -> DSL.name(DSL.name(objectSchemaName), DSL.name(name(schema))));
         }
 
         @Override
         public Name viewName(final ViewSchema schema) {
 
-            return DSL.name(DSL.name(objectSchemaName), DSL.name(name(schema)));
+            return customizeName(schema, () -> DSL.name(DSL.name(objectSchemaName), DSL.name(name(schema))));
         }
 
         @Override

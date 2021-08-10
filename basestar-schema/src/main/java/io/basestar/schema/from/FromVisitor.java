@@ -17,4 +17,6 @@ public interface FromVisitor<T> {
     T visitSort(FromSort from);
 
     T visitUnion(FromUnion from);
+
+    T visitExternal(FromExternal from);
 }

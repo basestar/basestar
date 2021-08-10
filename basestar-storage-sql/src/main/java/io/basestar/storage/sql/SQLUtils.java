@@ -22,11 +22,17 @@ package io.basestar.storage.sql;
 
 import io.basestar.util.Sort;
 import org.jooq.SortOrder;
+import org.jooq.impl.DSL;
 
 public class SQLUtils {
 
     public static SortOrder sort(final Sort.Order order) {
 
         return order == Sort.Order.ASC ? SortOrder.ASC : SortOrder.DESC;
+    }
+
+    public static org.jooq.Name parseName(final String qualifiedName) {
+
+        return DSL.name(qualifiedName.split("\\."));
     }
 }
