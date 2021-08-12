@@ -237,7 +237,7 @@ public class UpsertTable {
         }
     }
 
-    private Dataset<Row> minimizePartitions(final List<String> partition, final Dataset<Row> ds) {
+    private <T> Dataset<T> minimizePartitions(final List<String> partition, final Dataset<T> ds) {
 
         if (minimizePartitions) {
             return ds.repartition(partition.stream().map(functions::col).toArray(Column[]::new));
@@ -256,13 +256,11 @@ public class UpsertTable {
         Dataset<Row> deltas = session.sqlContext().read()
                 .schema(deltaType)
                 .parquet(deltaLocation.toString());
-        if(beforeSequence != null) {
+        if (beforeSequence != null) {
             deltas = deltas.filter(functions.col(SEQUENCE).lt(beforeSequence));
         }
-        minimizePartitions(deltaPartition, deltas.select(deltaColumns()))
-                .write()
-                .partitionBy(deltaPartition.toArray(new String[0]))
-                .parquet(newDeltaLocation.toString());
+
+        writeToEmpty(newDeltaLocation, deltas.select(deltaColumns()), deltaPartition);
 
         final List<Column> outputCols = Lists.newArrayList(deltaColumnsToBaseColumns());
         outputCols.add(functions.lit("").as(SEQUENCE));
@@ -274,14 +272,23 @@ public class UpsertTable {
                 .filter(SparkUtils.filter(row -> !isDeltaDeleted(row)))
                 .select(outputCols.toArray(new Column[0]));
 
-        minimizePartitions(outputPartition, base)
-                .write()
-                .partitionBy(outputPartition.toArray(new String[0]))
-                .parquet(newBaseLocation.toString());
+        writeToEmpty(newBaseLocation, base, outputPartition);
 
         final UpsertTable copy = new UpsertTable(newTableName, schema, idColumn, versionColumn, newBaseLocation, newDeltaLocation, newState, basePartition, minimizePartitions, false, null);
         copy.repair(session);
         return copy;
+    }
+
+    private void writeToEmpty(URI outputLocation, Dataset<?> data, List<String> partitions) {
+        if (!HadoopFSUtils.isEmpty(data.sparkSession().sparkContext().hadoopConfiguration(), outputLocation)) {
+            throw new IllegalStateException("Cannot copy table - output location is not empty: " + outputLocation);
+        }
+
+        minimizePartitions(partitions, data)
+                // Can safely overwrite because of prior emptiness check (ErrorIfExists fails on empty dir).
+                .write().mode(SaveMode.Overwrite)
+                .partitionBy(partitions.toArray(new String[0]))
+                .parquet(outputLocation.toString());
     }
 
     protected Dataset<Row> selectBase(final SparkSession session) {
