@@ -45,6 +45,8 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.*;
+import org.jooq.conf.Settings;
+import org.jooq.conf.StatementType;
 import org.jooq.exception.DataAccessException;
 import org.jooq.exception.SQLStateClass;
 import org.jooq.impl.DSL;
@@ -699,7 +701,8 @@ public class SQLStorage implements DefaultLayerStorage {
         try {
             conn = dataSource.getConnection();
             conn.setAutoCommit(false);
-            final DSLContext context = DSL.using(conn, dialect.dmlDialect());
+            final DSLContext context = DSL.using(conn, dialect.dmlDialect(), new Settings().withStatementType(
+                StatementType.STATIC_STATEMENT));
             final Connection conn2 = conn;
             return with.apply(context)
                     .toCompletableFuture()
