@@ -76,7 +76,7 @@ public class SchemaAdaptor {
                     final InterfaceSchema interfaceSchema = (InterfaceSchema) instanceSchema;
                     registry.add(pageTypeDefinition(interfaceSchema));
                     registry.add(missingInterfaceRefDefinition(interfaceSchema));
-                } else if(schema instanceof ViewSchema) {
+                } else if (schema instanceof ViewSchema) {
                     final ViewSchema viewSchema = (ViewSchema) instanceSchema;
                     registry.add(pageTypeDefinition(viewSchema));
                 } else {
@@ -85,9 +85,11 @@ public class SchemaAdaptor {
             }
         });
         registry.add(queryDefinition());
-        registry.add(mutationDefinition());
-        registry.add(subscriptionDefinition());
-        registry.add(batchTypeDefinition());
+        if (namespace.hasObjectSchemas()) {
+            registry.add(mutationDefinition());
+            registry.add(subscriptionDefinition());
+            registry.add(batchTypeDefinition());
+        }
         registry.add(InputObjectTypeDefinition.newInputObjectDefinition()
                 .name(strategy.inputRefTypeName(false))
                 .inputValueDefinition(InputValueDefinition.newInputValueDefinition()
