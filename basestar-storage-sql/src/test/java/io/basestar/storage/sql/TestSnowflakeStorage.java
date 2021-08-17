@@ -4,6 +4,7 @@ import io.basestar.storage.sql.dialect.SnowflakeDialect;
 import io.basestar.util.Nullsafe;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import javax.sql.DataSource;
 import java.io.IOException;
@@ -46,6 +47,12 @@ public class TestSnowflakeStorage extends TestSQLStorage {
         ds.setPassword(SNOWFLAKE_PASSWORD);
         ds.setDefaultCatalog(SNOWFLAKE_DATABASE);
         return ds;
+    }
+
+    @Test
+    protected void testRefDeepExpandQuery() {
+
+        // Skip, concurrency controls not supported
     }
 
     @Override

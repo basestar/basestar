@@ -216,10 +216,24 @@ public class SQLStorage implements DefaultLayerStorage {
             if (tables == null) {
                 tables = context.meta().getTables();
             }
-            return tables.stream().filter(v -> v.getQualifiedName().equalsIgnoreCase(table.getQualifiedName()))
+            return tables.stream().filter(v -> nameMatch(v.getQualifiedName(), table.getQualifiedName()))
                     .findFirst()
                     .orElseThrow(() -> new IllegalStateException("Table " + table.getQualifiedName() + " not found"));
         }
+    }
+
+    private boolean nameMatch(final org.jooq.Name name, final org.jooq.Name matchName) {
+
+        final org.jooq.Name[] nameParts = name.parts();
+        final org.jooq.Name[] matchNameParts = matchName.parts();
+        for (int i = 0; i != Math.min(nameParts.length, matchNameParts.length); ++i) {
+            if (i < nameParts.length) {
+                if (!nameParts[nameParts.length - (i + 1)].equalsIgnoreCase(matchNameParts[matchNameParts.length - (i + 1)])) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     private CompletableFuture<Page<Map<String, Object>>> queryImpl(final LinkableSchema schema, final Index index,
