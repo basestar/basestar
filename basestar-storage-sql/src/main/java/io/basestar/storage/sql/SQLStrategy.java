@@ -95,7 +95,7 @@ public interface SQLStrategy {
 
         private org.jooq.Name combineNames(final org.jooq.Name schemaName, final org.jooq.Name name) {
 
-            if(name.getName().length == 1) {
+            if (name.getName().length == 1) {
                 return DSL.name(schemaName, name);
             } else {
                 return name;
@@ -301,7 +301,7 @@ public interface SQLStrategy {
 
         private CreateTableFinalStep withPrimaryKey(final LinkableSchema schema, final CreateTableColumnStep create) {
 
-            if(dialect.supportsConstraints()) {
+            if (dialect.supportsConstraints()) {
                 return create.constraint(DSL.primaryKey(schema.id()));
             } else {
                 return create;
@@ -310,7 +310,7 @@ public interface SQLStrategy {
 
         private CreateTableFinalStep withHistoryPrimaryKey(final ReferableSchema schema, final CreateTableColumnStep create) {
 
-            if(dialect.supportsConstraints()) {
+            if (dialect.supportsConstraints()) {
                 return create.constraint(DSL.primaryKey(ObjectSchema.ID, ObjectSchema.VERSION));
             } else {
                 return create;
