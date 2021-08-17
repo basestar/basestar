@@ -4,6 +4,7 @@ import com.google.common.collect.Sets;
 import io.basestar.event.Event;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
+import io.basestar.storage.exception.UnsupportedQueryException;
 import io.basestar.util.Name;
 import io.basestar.util.Pager;
 import io.basestar.util.Sort;
@@ -85,7 +86,7 @@ public interface DefaultLayerStorage extends LayeredStorage, ValidatingStorage {
 
     default Pager<Map<String, Object>> queryView(final Consistency consistency, final ViewSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        throw new UnsupportedOperationException();
+        throw new UnsupportedQueryException(schema.getQualifiedName(), query);
     }
 
     default Pager<Map<String, Object>> queryInterface(final Consistency consistency, final InterfaceSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
