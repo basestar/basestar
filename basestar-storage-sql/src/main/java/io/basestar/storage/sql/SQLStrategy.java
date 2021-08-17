@@ -32,6 +32,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.*;
+import org.jooq.conf.StatementType;
 import org.jooq.impl.DSL;
 
 import java.util.ArrayList;
@@ -65,6 +66,8 @@ public interface SQLStrategy {
 
     SQLDialect dialect();
 
+    StatementType statementType();
+
     @Data
     @Slf4j
     @Builder(builderClassName = "Builder")
@@ -77,6 +80,8 @@ public interface SQLStrategy {
         private final String historySchemaName;
 
         private final SQLDialect dialect;
+
+        private final StatementType statementType;
 
         private String name(final LinkableSchema schema) {
 
@@ -126,6 +131,11 @@ public interface SQLStrategy {
         public SQLDialect dialect() {
 
             return dialect;
+        }
+
+        @Override
+        public StatementType statementType() {
+            return statementType;
         }
 
         @Override
