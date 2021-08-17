@@ -59,7 +59,11 @@ public class AvroUtils {
 
     public static Schema schema(final io.basestar.schema.Schema<?> schema, final Map<String, Use<?>> additionalMetadata) {
 
-        return schema(schema, additionalMetadata, ImmutableSet.of());
+        if (schema instanceof InstanceSchema) {
+            return schema(schema, additionalMetadata, ((InstanceSchema) schema).getExpand());
+        } else {
+            return schema(schema, additionalMetadata, ImmutableSet.of());
+        }
     }
 
     public static Schema schema(final io.basestar.schema.Schema<?> schema, final Set<Name> expand) {
@@ -78,10 +82,10 @@ public class AvroUtils {
             final List<Schema.Field> fields = new ArrayList<>();
             final Map<String, Set<Name>> branches = Name.branch(expand);
             instanceSchema.metadataSchema()
-                    .forEach((k, v) -> fields.add(new Schema.Field(k, schema(v, Collections.emptySet()))));
+                    .forEach((k, v) -> fields.add(new Schema.Field(k, schema(v, Collections.emptySet(), false))));
             instanceSchema.getProperties()
                     .forEach((k, v) -> fields.add(new Schema.Field(k, schema(v, branches.get(k)))));
-            additionalMetadata.forEach((k, v) -> fields.add(new Schema.Field(k, schema(v, branches.get(k)))));
+            additionalMetadata.forEach((k, v) -> fields.add(new Schema.Field(k, schema(v, branches.get(k), false))));
             return Schema.createRecord(name(schema), schema.getDescription(), null, false, fields);
         } else {
             throw new IllegalStateException();
@@ -91,75 +95,75 @@ public class AvroUtils {
     public static Schema refSchema(final boolean versioned) {
 
         final List<Schema.Field> fields = new ArrayList<>();
-        ReferableSchema.refSchema(versioned).forEach((k, v) -> fields.add(new Schema.Field(k, schema(v, Collections.emptySet()))));
+        ReferableSchema.refSchema(versioned).forEach((k, v) -> fields.add(new Schema.Field(k, schema(v, Collections.emptySet(), false))));
         return Schema.createRecord(Reserved.PREFIX + "Ref", "Ref", null, false, fields);
     }
 
     public static Schema schema(final Property property, final Set<Name> expand) {
 
-        return schema(property.typeOf(), expand);
+        return schema(property.typeOf(), expand, false);
     }
 
-    public static Schema schema(final Use<?> use, final Set<Name> expand) {
+    public static Schema schema(final Use<?> use, final Set<Name> expand, final boolean optional) {
 
         return use.visit(new Use.Visitor<Schema>() {
 
             @Override
             public Schema visitBoolean(final UseBoolean type) {
 
-                return Schema.create(Schema.Type.BOOLEAN);
+                return makeOptional(Schema.create(Schema.Type.BOOLEAN), optional);
             }
 
             @Override
             public Schema visitInteger(final UseInteger type) {
 
-                return Schema.create(Schema.Type.LONG);
+                return makeOptional(Schema.create(Schema.Type.LONG), optional);
             }
 
             @Override
             public Schema visitNumber(final UseNumber type) {
 
-                return Schema.create(Schema.Type.DOUBLE);
+                return makeOptional(Schema.create(Schema.Type.DOUBLE), optional);
             }
 
             @Override
             public Schema visitString(final UseString type) {
 
-                return Schema.create(Schema.Type.STRING);
+                return makeOptional(Schema.create(Schema.Type.STRING), optional);
             }
 
             @Override
             public Schema visitEnum(final UseEnum type) {
 
-                return schema(type.getSchema(), expand);
+                return makeOptional(schema(type.getSchema(), expand), optional);
             }
 
             @Override
             public Schema visitRef(final UseRef type) {
 
                 if(expand == null) {
-                    return refSchema(type.isVersioned());
+                    return makeOptional(refSchema(type.isVersioned()), true);
                 } else {
-                    return schema(type.getSchema(), expand);
+                    return makeOptional(schema(type.getSchema(), expand), true);
                 }
             }
 
             @Override
             public <T> Schema visitArray(final UseArray<T> type) {
 
-                return Schema.createArray(schema(type.getType(), expand));
+                return makeOptional(Schema.createArray(schema(type.getType(), expand, false)), optional);
             }
 
             @Override
             public <T> Schema visitPage(final UsePage<T> type) {
 
-                return Schema.createArray(schema(type.getType(), expand));
+                return makeOptional(Schema.createArray(schema(type.getType(), expand, false)), optional);
             }
 
             @Override
             public Schema visitDecimal(final UseDecimal useDecimal) {
 
-                return Schema.create(Schema.Type.STRING);
+                return makeOptional(Schema.create(Schema.Type.STRING), optional);
             }
 
             @Override
@@ -171,49 +175,49 @@ public class AvroUtils {
             @Override
             public <T> Schema visitSet(final UseSet<T> type) {
 
-                return Schema.createArray(schema(type.getType(), expand));
+                return makeOptional(Schema.createArray(schema(type.getType(), expand, false)), optional);
             }
 
             @Override
             public <T> Schema visitMap(final UseMap<T> type) {
 
-                return Schema.createMap(schema(type.getType(), expand));
+                return makeOptional(Schema.createMap(schema(type.getType(), expand, false)), optional);
             }
 
             @Override
             public Schema visitStruct(final UseStruct type) {
 
-                return schema(type.getSchema(), expand);
+                return makeOptional(schema(type.getSchema(), expand), optional);
             }
 
             @Override
             public Schema visitBinary(final UseBinary type) {
 
-                return Schema.create(Schema.Type.BYTES);
+                return makeOptional(Schema.create(Schema.Type.BYTES), optional);
             }
 
             @Override
             public Schema visitDate(final UseDate type) {
 
-                return Schema.create(Schema.Type.STRING);
+                return makeOptional(Schema.create(Schema.Type.STRING), optional);
             }
 
             @Override
             public Schema visitDateTime(final UseDateTime type) {
 
-                return Schema.create(Schema.Type.STRING);
+                return makeOptional(Schema.create(Schema.Type.STRING), optional);
             }
 
             @Override
             public Schema visitView(final UseView type) {
 
-                return schema(type.getSchema(), expand);
+                return makeOptional(schema(type.getSchema(), expand), true);
             }
 
             @Override
             public <T> Schema visitOptional(final UseOptional<T> type) {
 
-                return Schema.createUnion(schema(type.getType(), expand), Schema.create(Schema.Type.NULL));
+                return schema(type.getType(), expand, true);
             }
 
             @Override
@@ -225,7 +229,7 @@ public class AvroUtils {
             @Override
             public Schema visitSecret(final UseSecret type) {
 
-                return Schema.create(Schema.Type.BYTES);
+                return makeOptional(Schema.create(Schema.Type.BYTES), true);
             }
         });
     }
@@ -250,16 +254,16 @@ public class AvroUtils {
         final GenericRecord record = new GenericData.Record(schema);
         instanceSchema.metadataSchema().forEach((k, v) -> {
             final Schema.Field field = schema.getField(k);
-            record.put(k, encode(v, field.schema(), Collections.emptySet(), object.get(k)));
+            record.put(k, encode(v, field.schema(), Collections.emptySet(), object.get(k), false));
         });
         final Map<String, Set<Name>> branches = Name.branch(expand);
         instanceSchema.getProperties().forEach((k, v) -> {
             final Schema.Field field = schema.getField(k);
-            record.put(k, encode(v.typeOf(), field.schema(), branches.get(k), object.get(k)));
+            record.put(k, encode(v.typeOf(), field.schema(), branches.get(k), object.get(k), false));
         });
         additionalMetadata.forEach((k, v) -> {
             final Schema.Field field = schema.getField(k);
-            record.put(k, encode(v, field.schema(), branches.get(k), object.get(k)));
+            record.put(k, encode(v, field.schema(), branches.get(k), object.get(k), false));
         });
         return record;
     }
@@ -269,79 +273,98 @@ public class AvroUtils {
         final GenericRecord record = new GenericData.Record(schema);
         ReferableSchema.refSchema(versioned).forEach((k, v) -> {
             final Schema.Field field = schema.getField(k);
-            record.put(k, encode(v, field.schema(), Collections.emptySet(), object.get(k)));
+            record.put(k, encode(v, field.schema(), Collections.emptySet(), object.get(k), false));
         });
         return record;
     }
 
     @SuppressWarnings("unchecked")
-    private static Object encode(final Use<?> use, final Schema schema, final Set<Name> expand, final Object value) {
+    private static Object encode(final Use<?> use, final Schema schema, final Set<Name> expand, final Object value, final boolean optional) {
 
-        if(value == null) {
-            if (use.isOptional()) {
-                return null;
-            } else {
-                return use.defaultValue();
-            }
-        }
         return use.visit(new Use.Visitor.Defaulting<Object>() {
 
             @Override
             public <T> Object visitDefault(final Use<T> type) {
 
-                return type.create(value);
+                if (value == null) {
+                    return optional ? null : use.defaultValue();
+                } else {
+                    return type.create(value);
+                }
             }
 
             @Override
             public GenericRecord visitRef(final UseRef type) {
 
-                if(expand == null) {
-                    return encodeRef(schema, type.isVersioned(), (Map<String, Object>) value);
+                if (value == null) {
+                    return null;
+                } else if (expand == null) {
+                    return encodeRef(unwrapOptionalSchema(schema), type.isVersioned(), (Map<String, Object>) value);
                 } else {
-                    return encode(type.getSchema(), schema, expand, (Map<String, Object>)value);
+                    return encode(type.getSchema(), unwrapOptionalSchema(schema), expand, (Map<String, Object>) value);
                 }
             }
 
             @Override
             public GenericRecord visitInstance(final UseInstance type) {
 
-                return encode(type.getSchema(), schema, expand, (Map<String, Object>)value);
+                if (value == null) {
+                    return null;
+                } else {
+                    return encode(type.getSchema(), unwrapOptionalSchema(schema), expand, (Map<String, Object>) value);
+                }
             }
 
             @Override
             public <V, T extends Collection<V>> List<?> visitCollection(final UseCollection<V, T> type) {
 
-                final Collection<?> arr = (Collection<?>)value;
-                return arr.stream()
-                        .map(v -> encode(type.getType(), schema.getElementType(), expand, v))
-                        .collect(Collectors.toList());
+                if (value == null) {
+                    return optional ? null : Collections.emptyList();
+                } else {
+                    final Collection<?> arr = (Collection<?>) value;
+                    return arr.stream()
+                            .map(v -> encode(type.getType(), unwrapOptionalSchema(schema.getElementType()), expand, v, false))
+                            .collect(Collectors.toList());
+                }
             }
 
             @Override
             public <T> Map<?, ?> visitMap(final UseMap<T> type) {
 
-                final Map<?, ?> map = (Map<?, ?>) value;
-                final Map<String, Object> result = new HashMap<>();
-                map.forEach((k, v) -> result.put(Coercion.toString(k), encode(type.getType(), schema.getValueType(), expand, v)));
-                return result;
+                if (value == null) {
+                    return optional ? null : Collections.emptyMap();
+                } else {
+                    final Map<?, ?> map = (Map<?, ?>) value;
+                    final Map<String, Object> result = new HashMap<>();
+                    map.forEach((k, v) -> result.put(Coercion.toString(k), encode(type.getType(), unwrapOptionalSchema(schema.getValueType()), expand, v, false)));
+                    return result;
+                }
             }
 
             @Override
             public <T> String visitStringLike(final UseStringLike<T> type) {
 
-                return type.toString(type.create(value));
+                if (value == null) {
+                    return optional ? null : type.toString(type.defaultValue());
+                } else {
+                    return type.toString(type.create(value));
+                }
             }
 
             @Override
             public <T> Object visitOptional(final UseOptional<T> type) {
 
-                return encode(type.getType(), unwrapOptionalSchema(schema), expand, value);
+                return encode(type.getType(), unwrapOptionalSchema(schema), expand, value, true);
             }
 
             @Override
             public Object visitBinary(final UseBinary type) {
 
-                return Nullsafe.map(type.create(value), v -> ByteBuffer.wrap(v.getBytes()));
+                if (value == null) {
+                    return optional ? null : ByteBuffer.wrap(new byte[0]);
+                } else {
+                    return Nullsafe.map(type.create(value), v -> ByteBuffer.wrap(v.getBytes()));
+                }
             }
         });
     }
@@ -385,7 +408,7 @@ public class AvroUtils {
         final Map<String, Object> object = new HashMap<>();
         ReferableSchema.refSchema(versioned).forEach((k, v) -> {
             final Schema.Field field = schema.getField(k);
-            object.put(k, encode(v, field.schema(), Collections.emptySet(), record.get(field.pos())));
+            object.put(k, encode(v, field.schema(), Collections.emptySet(), record.get(field.pos()), false));
         });
         return object;
     }
@@ -407,9 +430,9 @@ public class AvroUtils {
             public Map<String, Object> visitRef(final UseRef type) {
 
                 if(expand == null) {
-                    return decodeRef(schema, type.isVersioned(), (IndexedRecord) value);
+                    return decodeRef(unwrapOptionalSchema(schema), type.isVersioned(), (IndexedRecord) value);
                 } else {
-                    return decode(type.getSchema(), schema, expand, (IndexedRecord)value);
+                    return decode(type.getSchema(), unwrapOptionalSchema(schema), expand, (IndexedRecord) value);
                 }
             }
 
@@ -418,7 +441,7 @@ public class AvroUtils {
 
                 final Collection<?> arr = (Collection<?>)value;
                 return arr.stream()
-                        .map(v -> decode(type.getType(), schema.getElementType(), expand, v))
+                        .map(v -> decode(type.getType(), unwrapOptionalSchema(schema.getElementType()), expand, v))
                         .collect(Collectors.toList());
             }
 
@@ -429,14 +452,14 @@ public class AvroUtils {
                 return map.entrySet().stream()
                         .collect(Collectors.toMap(
                                 Map.Entry::getKey,
-                                e -> decode(type.getType(), schema.getValueType(), expand, e.getValue())
+                                e -> decode(type.getType(), unwrapOptionalSchema(schema.getValueType()), expand, e.getValue())
                         ));
             }
 
             @Override
             public Map<String, Object> visitInstance(final UseInstance type) {
 
-                return decode(type.getSchema(), schema, expand, (IndexedRecord)value);
+                return decode(type.getSchema(), unwrapOptionalSchema(schema), expand, (IndexedRecord) value);
             }
 
             @Override
@@ -455,9 +478,18 @@ public class AvroUtils {
 
     private static Schema unwrapOptionalSchema(final Schema schema) {
 
-        if(schema.getType() == Schema.Type.UNION) {
+        if (schema.getType() == Schema.Type.UNION) {
             return schema.getTypes().stream().filter(v -> v.getType() != Schema.Type.NULL).findFirst()
                     .orElseThrow(() -> new IllegalStateException("Invalid Avro schema"));
+        } else {
+            return schema;
+        }
+    }
+
+    private static Schema makeOptional(final Schema schema, final boolean optional) {
+
+        if (optional) {
+            return Schema.createUnion(schema, Schema.create(Schema.Type.NULL));
         } else {
             return schema;
         }

@@ -70,9 +70,9 @@ class TestAvroUtils {
                                 .build()
                 ))
                 .put("binary", new byte[]{1, 2, 3})
-                .build(), schema.getExpand(), false);
+                .build(), schema.getExpand(), true);
 
-        final Schema avroSchema = AvroUtils.schema(schema);
+        final Schema avroSchema = AvroUtils.schema(schema, ImmutableMap.of());
         final GenericRecord record = AvroUtils.encode(schema, avroSchema, before);
         final Map<String, Object> after = AvroUtils.decode(schema, avroSchema, record);
 
