@@ -131,9 +131,14 @@ public class SQLStorage implements DefaultLayerStorage {
 
         final List<SelectFieldOrAsterisk> fields = new ArrayList<>();
         schema.metadataSchema().forEach((name, type) -> {
-            resolveField(table, name).ifPresent(field -> {
-                fields.add(dialect.selectField(field, type).as(DSL.name(name)));
-            });
+            final Optional<Field<?>> opt = resolveField(table, name);
+            if (opt.isPresent()) {
+                fields.add(dialect.selectField(opt.get(), type).as(DSL.name(name)));
+            } else {
+                dialect.missingMetadataValue(schema, name).ifPresent(field -> {
+                    fields.add(dialect.selectField(field, type).as(DSL.name(name)));
+                });
+            }
         });
         schema.getProperties().forEach((name, prop) -> {
             resolveField(table, name).ifPresent(field -> {
@@ -259,7 +264,7 @@ public class SQLStorage implements DefaultLayerStorage {
             log.debug("SQL condition {}", condition);
 
             final SelectSeekStepN<Record> select = context.select(selectFields(schema, table))
-                    .from(table).where(condition).orderBy(orderFields);
+                    .from(rawTable.getQualifiedName()).where(condition).orderBy(orderFields);
 
             final SelectForUpdateStep<Record> seek;
             if (token == null) {
@@ -293,7 +298,7 @@ public class SQLStorage implements DefaultLayerStorage {
 
                 final Condition condition = condition(context, schema, index, expression);
 
-                return context.select(DSL.count().as(COUNT_AS)).from(rawTable).where(condition).fetchAsync().thenApply(results -> {
+                return context.select(DSL.count().as(COUNT_AS)).from(rawTable.getQualifiedName()).where(condition).fetchAsync().thenApply(results -> {
 
                     if (results.isEmpty()) {
                         return Page.Stats.ZERO;

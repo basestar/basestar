@@ -700,4 +700,9 @@ public interface SQLDialect {
             throw new UnsupportedOperationException("Query of this type is not supported");
         }
     }
+
+    default Optional<? extends Field<?>> missingMetadataValue(final LinkableSchema schema, final String name) {
+
+        return Optional.empty();
+    }
 }
