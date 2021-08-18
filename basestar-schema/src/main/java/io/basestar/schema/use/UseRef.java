@@ -33,6 +33,7 @@ import io.basestar.schema.util.Cascade;
 import io.basestar.schema.util.Expander;
 import io.basestar.schema.util.Ref;
 import io.basestar.schema.util.ValueContext;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -236,7 +237,7 @@ public class UseRef implements UseLinkable {
     @Override
     public Instance defaultValue() {
 
-        return schema.create(Collections.emptyMap());
+        return schema.create(Collections.emptyMap(), Immutable.set(), true);
     }
 
     @Override

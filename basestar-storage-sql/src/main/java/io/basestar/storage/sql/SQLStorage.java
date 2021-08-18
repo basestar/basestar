@@ -74,6 +74,8 @@ public class SQLStorage implements DefaultLayerStorage {
 
     private final EventStrategy eventStrategy;
 
+    private List<Table<?>> tables;
+
     private SQLStorage(final Builder builder) {
 
         this.dataSource = builder.dataSource;
@@ -104,38 +106,48 @@ public class SQLStorage implements DefaultLayerStorage {
         }
     }
 
-    private List<SelectFieldOrAsterisk> selectFields(final LinkableSchema schema) {
+    private Optional<org.jooq.Field<?>> resolveField(final Table<?> table, final String name) {
+
+        final String normalizedName = normalizeColumnName(name);
+        final List<org.jooq.Field<?>> fields = Arrays.stream(table.fields())
+                .filter(f -> normalizeColumnName(f.getName()).equals(normalizedName))
+                .collect(Collectors.toList());
+        if (fields.isEmpty()) {
+            return Optional.empty();
+        } else if (fields.size() > 1) {
+            throw new IllegalStateException("Field " + name + " is ambiguous in " + table.getQualifiedName());
+        } else {
+            return Optional.of(fields.get(0));
+        }
+    }
+
+    private String normalizeColumnName(final String name) {
+
+        return name.replaceAll("[^\\w\\d]", "").toLowerCase();
+    }
+
+    private List<SelectFieldOrAsterisk> selectFields(final LinkableSchema schema, final Table<?> table) {
 
         final SQLDialect dialect = strategy.dialect();
 
         final List<SelectFieldOrAsterisk> fields = new ArrayList<>();
         schema.metadataSchema().forEach((name, type) -> {
-            fields.add(dialect.selectField(DSL.field(DSL.name(name)), type).as(DSL.name(name)));
+            final Optional<Field<?>> opt = resolveField(table, name);
+            if (opt.isPresent()) {
+                fields.add(dialect.selectField(opt.get(), type).as(DSL.name(name)));
+            } else {
+                dialect.missingMetadataValue(schema, name).ifPresent(field -> {
+                    fields.add(dialect.selectField(field, type).as(DSL.name(name)));
+                });
+            }
         });
         schema.getProperties().forEach((name, prop) -> {
-            fields.add(dialect.selectField(DSL.field(DSL.name(name)), prop.typeOf()).as(DSL.name(name)));
+            resolveField(table, name).ifPresent(field -> {
+                fields.add(dialect.selectField(field, prop.typeOf()).as(DSL.name(name)));
+            });
         });
         return fields;
     }
-
-//    @Override
-//    public CompletableFuture<Map<String, Object>> readObject(final ObjectSchema schema, final String id, final Set<Name> expand) {
-//
-//        return withContext(context -> context.select(selectFields(schema))
-//                .from(DSL.table(objectTableName(schema)))
-//                .where(idField(schema).eq(DSL.inline(id)))
-//                .limit(DSL.inline(1)).fetchAsync().thenApply(result -> first(schema, result)));
-//    }
-//
-//    @Override
-//    public CompletableFuture<Map<String, Object>> readObjectVersion(final ObjectSchema schema, final String id, final long version, final Set<Name> expand) {
-//
-//        return withContext(context -> context.select(selectFields(schema))
-//                .from(DSL.table(historyTableName(schema)))
-//                .where(idField(schema).eq(DSL.inline(id))
-//                        .and(versionField(schema).eq(DSL.inline(version))))
-//                .limit(DSL.inline(1)).fetchAsync().thenApply(result -> first(schema, result)));
-//    }
 
     @Override
     public Pager<Map<String, Object>> queryView(final Consistency consistency, final ViewSchema schema, final Expression query,
@@ -203,6 +215,33 @@ public class SQLStorage implements DefaultLayerStorage {
                 .collect(Collectors.toList());
     }
 
+    private Table<?> resolveTable(final DSLContext context, final Table<Record> table) {
+
+        // FIXME: cache this for a short time rather than forever
+        synchronized (this) {
+            if (tables == null) {
+                tables = context.meta().getTables();
+            }
+            return tables.stream().filter(v -> nameMatch(v.getQualifiedName(), table.getQualifiedName()))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException("Table " + table.getQualifiedName() + " not found"));
+        }
+    }
+
+    private boolean nameMatch(final org.jooq.Name name, final org.jooq.Name matchName) {
+
+        final org.jooq.Name[] nameParts = name.parts();
+        final org.jooq.Name[] matchNameParts = matchName.parts();
+        for (int i = 0; i != Math.min(nameParts.length, matchNameParts.length); ++i) {
+            if (i < nameParts.length) {
+                if (!nameParts[nameParts.length - (i + 1)].equalsIgnoreCase(matchNameParts[matchNameParts.length - (i + 1)])) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     private CompletableFuture<Page<Map<String, Object>>> queryImpl(final LinkableSchema schema, final Index index,
                                                                    final Expression expression, final List<Sort> sort,
                                                                    final Set<Name> expand, final int count,
@@ -219,12 +258,14 @@ public class SQLStorage implements DefaultLayerStorage {
 
         final CompletableFuture<Page<Map<String, Object>>> pageFuture = withContext(context -> {
 
+            final Table<?> table = resolveTable(context, rawTable);
+
             final Condition condition = condition(context, schema, index, expression);
 
             log.debug("SQL condition {}", condition);
 
-            final SelectSeekStepN<Record> select = context.select(selectFields(schema))
-                    .from(table).where(condition).orderBy(orderFields);
+            final SelectSeekStepN<Record> select = context.select(selectFields(schema, table))
+                    .from(rawTable.getQualifiedName()).where(condition).orderBy(orderFields);
 
             final SelectForUpdateStep<Record> seek;
             if (token == null) {
@@ -258,7 +299,7 @@ public class SQLStorage implements DefaultLayerStorage {
 
                 final Condition condition = condition(context, schema, index, expression);
 
-                return context.select(DSL.count().as(COUNT_AS)).from(table).where(condition).fetchAsync().thenApply(results -> {
+                return context.select(DSL.count().as(COUNT_AS)).from(rawTable.getQualifiedName()).where(condition).fetchAsync().thenApply(results -> {
 
                     if (results.isEmpty()) {
                         return Page.Stats.ZERO;
@@ -439,9 +480,10 @@ public class SQLStorage implements DefaultLayerStorage {
 
                     for (final Map.Entry<ObjectSchema, Set<String>> entry : byId.entrySet()) {
                         final ObjectSchema schema = entry.getKey();
+                        final Table<?> table = resolveTable(context, DSL.table(schemaTableName(schema)));
                         final Set<String> ids = entry.getValue();
-                        all(schema, context.select(selectFields(schema))
-                                .from(objectTableName(schema))
+                        all(schema, context.select(selectFields(schema, table))
+                                .from(table)
                                 .where(idField(schema).in(literals(ids)))
                                 .fetch())
                                 .forEach(v -> results.put(BatchResponse.RefKey.from(schema.getQualifiedName(), v), v));
@@ -449,11 +491,12 @@ public class SQLStorage implements DefaultLayerStorage {
 
                     for (final Map.Entry<ObjectSchema, Set<IdVersion>> entry : byIdVersion.entrySet()) {
                         final ObjectSchema schema = entry.getKey();
+                        final Table<?> table = resolveTable(context, DSL.table(historyTableName(schema)));
                         final Set<Row2<String, Long>> idVersions = entry.getValue().stream()
                                 .map(v -> DSL.row(v.getId(), v.getVersion()))
                                 .collect(Collectors.toSet());
-                        all(schema, context.select(selectFields(schema))
-                                .from(objectTableName(schema))
+                        all(schema, context.select(selectFields(schema, table))
+                                .from(table)
                                 .where(DSL.row(idField(schema), versionField(schema))
                                         .in(idVersions))
                                 .fetch())
@@ -504,7 +547,7 @@ public class SQLStorage implements DefaultLayerStorage {
                 try {
 
                     context.insertInto(DSL.table(objectTableName(schema)))
-                            .set(toRecord(schema, after))
+                            .set(toRecord(context, schema, after))
                             .execute();
 
 //                    final History history = schema.getHistory();
@@ -538,7 +581,7 @@ public class SQLStorage implements DefaultLayerStorage {
                     condition = condition.and(versionField(schema).eq(version));
                 }
 
-                if (context.update(DSL.table(objectTableName(schema))).set(toRecord(schema, after))
+                if (context.update(DSL.table(objectTableName(schema))).set(toRecord(context, schema, after))
                         .where(condition).limit(DSL.inline(1)).execute() != 1) {
 
                     throw new VersionMismatchException(schema.getQualifiedName(), id, version);
@@ -617,7 +660,7 @@ public class SQLStorage implements DefaultLayerStorage {
                 try {
 
                     context.insertInto(DSL.table(historyTableName(schema)))
-                            .set(toRecord(schema, after))
+                            .set(toRecord(context, schema, after))
                             .execute();
 
                     return BatchResponse.fromRef(schema.getQualifiedName(), after);
@@ -642,7 +685,7 @@ public class SQLStorage implements DefaultLayerStorage {
                     try {
 
                         context.insertInto(DSL.table(schemaTableName(schema)))
-                                .set(toRecord(schema, after))
+                                .set(toRecord(context, schema, after))
                                 .execute();
 
                         return BatchResponse.empty();
@@ -801,15 +844,23 @@ public class SQLStorage implements DefaultLayerStorage {
         return result;
     }
 
-    private Map<Field<?>, Object> toRecord(final LinkableSchema schema, final Map<String, Object> object) {
+    private Map<Field<?>, Object> toRecord(final DSLContext context, final LinkableSchema schema, final Map<String, Object> object) {
 
         final SQLDialect dialect = strategy.dialect();
 
+        final Table<?> table = resolveTable(context, DSL.table(schemaTableName(schema)));
+
         final Map<Field<?>, Object> result = new HashMap<>();
-        schema.metadataSchema().forEach((k, v) ->
-                result.put(DSL.field(DSL.name(k)), dialect.toSQLValue(v, object.get(k))));
-        schema.getProperties().forEach((k, v) ->
-                result.put(DSL.field(DSL.name(k)), dialect.toSQLValue(v.typeOf(), object.get(k))));
+        schema.metadataSchema().forEach((k, v) -> {
+            resolveField(table, k).ifPresent(field -> {
+                result.put(field, dialect.toSQLValue(v, object.get(k)));
+            });
+        });
+        schema.getProperties().forEach((k, v) -> {
+            resolveField(table, k).ifPresent(field -> {
+                result.put(field, dialect.toSQLValue(v.typeOf(), object.get(k)));
+            });
+        });
 
         return result.entrySet().stream().filter(e -> e.getValue() != null)
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));

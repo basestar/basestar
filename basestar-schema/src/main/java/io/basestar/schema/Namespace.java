@@ -160,7 +160,7 @@ public class Namespace implements Loadable, Schema.Resolver {
 
     private Namespace(final Builder builder, final Version version, final Schema.Resolver resolver, final Renaming renaming) {
 
-        this(builder.getSchemas(), version, resolver, renaming);
+        this(Nullsafe.orDefault(builder.getSchemas()), version, resolver, renaming);
     }
 
     private Namespace(final Map<Name, Schema.Descriptor<?, ?>> schemas, final Version version, final Schema.Resolver resolver, final Renaming renaming) {
@@ -347,5 +347,10 @@ public class Namespace implements Loadable, Schema.Resolver {
         return () -> schemas.entrySet().stream().collect(Collectors.toMap(
                 Map.Entry::getKey,
                 e -> e.getValue().descriptor()));
+    }
+
+    public boolean hasObjectSchemas() {
+
+        return schemas.values().stream().anyMatch(v -> v instanceof ObjectSchema);
     }
 }

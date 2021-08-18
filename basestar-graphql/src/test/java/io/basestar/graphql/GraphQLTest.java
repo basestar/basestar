@@ -40,6 +40,9 @@ import io.basestar.graphql.subscription.SubscriberContext;
 import io.basestar.graphql.wiring.InterfaceResolver;
 import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.Namespace;
+import io.basestar.schema.Property;
+import io.basestar.schema.ViewSchema;
+import io.basestar.schema.use.UseString;
 import io.basestar.secret.SecretContext;
 import io.basestar.storage.MemoryStorage;
 import io.basestar.util.Name;
@@ -614,5 +617,17 @@ class GraphQLTest {
 
         verify(emitter, times(1))
                 .emit(anyCollectionOf(Event.class));
+    }
+
+    @Test
+    void testViewOnlyNamespace() {
+
+        final Namespace namespace = Namespace.builder().setSchema("Test", ViewSchema.builder()
+                .setProperty("test", Property.builder().setType(UseString.DEFAULT))).build();
+        final Emitter emitter = Emitter.skip();
+        final MemoryStorage storage = MemoryStorage.builder().build();
+        final DatabaseServer databaseServer = DatabaseServer.builder().namespace(namespace).storage(storage).emitter(emitter).build();
+
+        GraphQLAdaptor.builder().database(databaseServer).namespace(namespace).build().graphQL();
     }
 }

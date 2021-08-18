@@ -42,7 +42,7 @@ public class QueryDelegatingStorage implements DelegatingStorage {
     protected Pager<Map<String, Object>> tryQuery(final int offset, final Consistency consistency, final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         if (offset >= storage.size()) {
-            throw new UnsupportedQueryException(schema.getQualifiedName(), query);
+            throw new UnsupportedQueryException(schema.getQualifiedName(), query, "Tried " + storage.size() + " provider(s)");
         } else {
             try {
                 final Pager<Map<String, Object>> result = storage.get(offset).query(consistency, schema, query, sort, expand);

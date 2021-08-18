@@ -12,9 +12,13 @@ A:
         array?: C
     binary:
       type: binary
+    ref:
+      type: C
   expand:
     - array
     - struct.ref
+    - ref
+    - ref.ref
 
 B:
   type: struct
@@ -26,4 +30,9 @@ B:
 
 C:
   type: object
+  properties:
+    ref:
+      type: D
 
+D:
+  type: object
