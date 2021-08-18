@@ -32,6 +32,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.*;
+import org.jooq.conf.StatementType;
 import org.jooq.impl.DSL;
 
 import java.util.ArrayList;
@@ -65,6 +66,8 @@ public interface SQLStrategy {
 
     SQLDialect dialect();
 
+    StatementType statementType();
+
     @Data
     @Slf4j
     @Builder(builderClassName = "Builder")
@@ -78,6 +81,8 @@ public interface SQLStrategy {
 
         private final SQLDialect dialect;
 
+        private final StatementType statementType;
+
         private String name(final LinkableSchema schema) {
 
             return schema.getQualifiedName().toString("_").toLowerCase();
@@ -90,7 +95,7 @@ public interface SQLStrategy {
 
         private org.jooq.Name combineNames(final org.jooq.Name schemaName, final org.jooq.Name name) {
 
-            if(name.getName().length == 1) {
+            if (name.getName().length == 1) {
                 return DSL.name(schemaName, name);
             } else {
                 return name;
@@ -126,6 +131,11 @@ public interface SQLStrategy {
         public SQLDialect dialect() {
 
             return dialect;
+        }
+
+        @Override
+        public StatementType statementType() {
+            return statementType;
         }
 
         @Override
@@ -291,7 +301,7 @@ public interface SQLStrategy {
 
         private CreateTableFinalStep withPrimaryKey(final LinkableSchema schema, final CreateTableColumnStep create) {
 
-            if(dialect.supportsConstraints()) {
+            if (dialect.supportsConstraints()) {
                 return create.constraint(DSL.primaryKey(schema.id()));
             } else {
                 return create;
@@ -300,7 +310,7 @@ public interface SQLStrategy {
 
         private CreateTableFinalStep withHistoryPrimaryKey(final ReferableSchema schema, final CreateTableColumnStep create) {
 
-            if(dialect.supportsConstraints()) {
+            if (dialect.supportsConstraints()) {
                 return create.constraint(DSL.primaryKey(ObjectSchema.ID, ObjectSchema.VERSION));
             } else {
                 return create;

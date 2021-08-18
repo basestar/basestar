@@ -27,13 +27,15 @@ import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
 class TestUpsertTable extends AbstractSparkTest {
@@ -308,6 +310,102 @@ class TestUpsertTable extends AbstractSparkTest {
         assertEquals(originalCount, count);
 
         table.validate(session);
+    }
+
+    @Test
+    void testCopy() {
+
+        final SparkSession session = session();
+
+        final String database = "tmp_" + UUID.randomUUID().toString().replaceAll("-", "_");
+        final String location = testDataPath("spark/" + database);
+
+        final ExternalCatalog catalog = session.sharedState().externalCatalog();
+        SparkCatalogUtils.ensureDatabase(catalog, database, location);
+
+        final List<D> create = ImmutableList.of(new D("d:1", 5L), new D("d:2", 4L), new D("d:3", 3L), new D("d:4", 2L));
+
+        final BucketTransform bucket = BucketTransform.builder()
+                .bucketing(new Bucketing(ImmutableList.of(Name.of(ReferableSchema.ID)), 2))
+                .build();
+
+        final Dataset<Row> createSource = bucket.accept(session.createDataset(create, Encoders.bean(D.class)).toDF());
+        final StructType initial = createSource.schema();
+
+        final UpsertTable table = UpsertTable.builder()
+                .tableName(null)
+                .schema(initial)
+                .baseLocation(URI.create(location + "/D/base"))
+                .deltaLocation(URI.create(location + "/D/delta"))
+                .state(new UpsertState.Hdfs(URI.create(location + "/D/state")))
+                .partition(ImmutableList.of("__bucket"))
+                .idColumn(ReferableSchema.ID)
+                .build();
+
+        table.provision(session);
+
+        table.applyChanges(createSource, sequence(), r -> UpsertOp.CREATE, r -> r);
+        table.squashDeltas(session);
+
+        final long originalCount = table.select(session).count();
+        assertThat(originalCount).isEqualTo(4);
+
+        assertAll(
+                () -> assertCopyToNonEmptyBaseThrows(session, location, table),
+                () -> assertCopyToNonEmptyDeltaThrows(session, location, table),
+                () -> assertCopyToEmptyBaseDeltaCopies(session, location, table, originalCount),
+                () -> assertCopyToNewBaseDeltaCopies(session, location, table, originalCount)
+        );
+    }
+
+    private void assertCopyToNonEmptyBaseThrows(SparkSession session, String location, UpsertTable table) {
+        // create non-empty base dir and check that copy is not allowed
+        final URI nonEmptyBase = URI.create(location + "/NEB/base");
+        final URI nonEmptyBaseDelta = URI.create(location + "/NEB/delta");
+
+        Paths.get(nonEmptyBase).resolve("anotherSubDir").toFile().mkdirs();
+        Paths.get(nonEmptyBaseDelta).toFile().mkdirs();
+
+        assertThatThrownBy(() -> table.copy(session, null, nonEmptyBase, nonEmptyBaseDelta, table.state))
+                .hasMessageContaining("Cannot copy table - output location is not empty")
+                .hasMessageContaining(nonEmptyBase.toString());
+    }
+
+    private void assertCopyToNonEmptyDeltaThrows(SparkSession session, String location, UpsertTable table) {
+        // create non-empty delta dir and check that copy is not allowed
+        final URI nonEmptyDeltaBase = URI.create(location + "/NED/base");
+        final URI nonEmptyDelta = URI.create(location + "/NED/delta");
+
+        Paths.get(nonEmptyDeltaBase).toFile().mkdirs();
+        Paths.get(nonEmptyDelta).resolve("anotherSubDir").toFile().mkdirs();
+
+        assertThatThrownBy(() -> table.copy(session, null, nonEmptyDeltaBase, nonEmptyDelta, table.state))
+                .hasMessageContaining("Cannot copy table - output location is not empty")
+                .hasMessageContaining(nonEmptyDelta.toString());
+    }
+
+    private void assertCopyToEmptyBaseDeltaCopies(SparkSession session, String location, UpsertTable table, long originalCount) {
+        // create empty base/delta dir and check that copy is successful
+        final URI emptyBase = URI.create(location + "/E/base");
+        final URI emptyDelta = URI.create(location + "/E/delta");
+
+        Paths.get(emptyBase).toFile().mkdirs();
+        Paths.get(emptyDelta).toFile().mkdirs();
+
+        table.copy(session, null, emptyBase, emptyDelta, table.state);
+        assertThat(table.select(session).count()).isEqualTo(originalCount);
+    }
+
+    private void assertCopyToNewBaseDeltaCopies(SparkSession session, String location, UpsertTable table, long originalCount) {
+        // provide non-existent paths delta/base paths and check that copy is successful
+        final URI newBase = URI.create(location + "/N/base");
+        final URI newDelta = URI.create(location + "/N/delta");
+
+        assertThat(Paths.get(newBase).toFile()).doesNotExist();
+        assertThat(Paths.get(newDelta).toFile()).doesNotExist();
+
+        table.copy(session, null, newBase, newDelta, table.state);
+        assertThat(table.select(session).count()).isEqualTo(originalCount);
     }
 
 }
