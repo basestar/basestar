@@ -249,11 +249,11 @@ public class SQLStorage implements DefaultLayerStorage {
 
         final List<OrderField<?>> orderFields = orderFields(sort);
 
-        final Table<Record> table;
+        final Table<Record> rawTable;
         if (index == null) {
-            table = DSL.table(schemaTableName(schema));
+            rawTable = DSL.table(schemaTableName(schema));
         } else {
-            table = DSL.table(indexTableName((ReferableSchema) schema, index));
+            rawTable = DSL.table(indexTableName((ReferableSchema) schema, index));
         }
 
         final CompletableFuture<Page<Map<String, Object>>> pageFuture = withContext(context -> {
