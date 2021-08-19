@@ -139,6 +139,7 @@ public interface SQLStrategy {
 
         @Override
         public StatementType statementType() {
+
             return statementType;
         }
       

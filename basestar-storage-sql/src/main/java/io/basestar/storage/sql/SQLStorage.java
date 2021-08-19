@@ -108,16 +108,20 @@ public class SQLStorage implements DefaultLayerStorage {
 
     private Optional<org.jooq.Field<?>> resolveField(final Table<?> table, final String name) {
 
-        final String normalizedName = normalizeColumnName(name);
-        final List<org.jooq.Field<?>> fields = Arrays.stream(table.fields())
-                .filter(f -> normalizeColumnName(f.getName()).equals(normalizedName))
-                .collect(Collectors.toList());
-        if (fields.isEmpty()) {
-            return Optional.empty();
-        } else if (fields.size() > 1) {
-            throw new IllegalStateException("Field " + name + " is ambiguous in " + table.getQualifiedName());
+        if (strategy.useMetadata()) {
+            final String normalizedName = normalizeColumnName(name);
+            final List<org.jooq.Field<?>> fields = Arrays.stream(table.fields())
+                    .filter(f -> normalizeColumnName(f.getName()).equals(normalizedName))
+                    .collect(Collectors.toList());
+            if (fields.isEmpty()) {
+                return Optional.empty();
+            } else if (fields.size() > 1) {
+                throw new IllegalStateException("Field " + name + " is ambiguous in " + table.getQualifiedName());
+            } else {
+                return Optional.of(fields.get(0));
+            }
         } else {
-            return Optional.of(fields.get(0));
+            return Optional.of(DSL.field(DSL.name(name)));
         }
     }
 
@@ -487,7 +491,7 @@ public class SQLStorage implements DefaultLayerStorage {
                         final Table<?> table = resolveTable(context, DSL.table(schemaTableName(schema)));
                         final Set<String> ids = entry.getValue();
                         all(schema, context.select(selectFields(schema, table))
-                                .from(table)
+                                .from(table.getQualifiedName())
                                 .where(idField(schema).in(literals(ids)))
                                 .fetch())
                                 .forEach(v -> results.put(BatchResponse.RefKey.from(schema.getQualifiedName(), v), v));
@@ -500,7 +504,7 @@ public class SQLStorage implements DefaultLayerStorage {
                                 .map(v -> DSL.row(v.getId(), v.getVersion()))
                                 .collect(Collectors.toSet());
                         all(schema, context.select(selectFields(schema, table))
-                                .from(table)
+                                .from(table.getQualifiedName())
                                 .where(DSL.row(idField(schema), versionField(schema))
                                         .in(idVersions))
                                 .fetch())
