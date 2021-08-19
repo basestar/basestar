@@ -65,6 +65,8 @@ public interface SQLStrategy {
 
     SQLDialect dialect();
 
+    boolean useMetadata();
+
     @Data
     @Slf4j
     @Builder(builderClassName = "Builder")
@@ -77,6 +79,8 @@ public interface SQLStrategy {
         private final String historySchemaName;
 
         private final SQLDialect dialect;
+
+        private final boolean useMetadata;
 
         private String name(final LinkableSchema schema) {
 
@@ -126,6 +130,12 @@ public interface SQLStrategy {
         public SQLDialect dialect() {
 
             return dialect;
+        }
+
+        @Override
+        public boolean useMetadata() {
+
+            return useMetadata;
         }
 
         @Override

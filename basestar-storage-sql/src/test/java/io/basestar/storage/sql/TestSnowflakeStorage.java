@@ -119,6 +119,7 @@ public class TestSnowflakeStorage extends TestSQLStorage {
         final SQLStrategy strategy = SQLStrategy.Simple.builder()
                 .objectSchemaName(objectSchema)
                 .dialect(dialect)
+                .useMetadata(true)
                 .build();
 
         final String tableName = "CUSTOM_TABLE";
