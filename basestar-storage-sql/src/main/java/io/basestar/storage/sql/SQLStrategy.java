@@ -67,6 +67,8 @@ public interface SQLStrategy {
     SQLDialect dialect();
 
     StatementType statementType();
+  
+    boolean useMetadata();
 
     @Data
     @Slf4j
@@ -82,6 +84,8 @@ public interface SQLStrategy {
         private final SQLDialect dialect;
 
         private final StatementType statementType;
+      
+        private final boolean useMetadata;
 
         private String name(final LinkableSchema schema) {
 
@@ -136,6 +140,12 @@ public interface SQLStrategy {
         @Override
         public StatementType statementType() {
             return statementType;
+        }
+      
+        @Override
+        public boolean useMetadata() {
+
+            return useMetadata;
         }
 
         @Override

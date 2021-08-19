@@ -217,14 +217,18 @@ public class SQLStorage implements DefaultLayerStorage {
 
     private Table<?> resolveTable(final DSLContext context, final Table<Record> table) {
 
-        // FIXME: cache this for a short time rather than forever
-        synchronized (this) {
-            if (tables == null) {
-                tables = context.meta().getTables();
+        if (strategy.useMetadata()) {
+            // FIXME: cache this for a short time rather than forever
+            synchronized (this) {
+                if (tables == null) {
+                    tables = context.meta().getTables();
+                }
+                return tables.stream().filter(v -> nameMatch(v.getQualifiedName(), table.getQualifiedName()))
+                        .findFirst()
+                        .orElseThrow(() -> new IllegalStateException("Table " + table.getQualifiedName() + " not found"));
             }
-            return tables.stream().filter(v -> nameMatch(v.getQualifiedName(), table.getQualifiedName()))
-                    .findFirst()
-                    .orElseThrow(() -> new IllegalStateException("Table " + table.getQualifiedName() + " not found"));
+        } else {
+            return table;
         }
     }
 
