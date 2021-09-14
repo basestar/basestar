@@ -130,4 +130,10 @@ public class FromJoin implements From {
 
         return visitor.visitJoin(this);
     }
+
+    @Override
+    public boolean isExternal() {
+
+        return join.getLeft().isExternal() || join.getRight().isExternal();
+    }
 }

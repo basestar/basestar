@@ -123,6 +123,12 @@ public class FromAgg implements From {
     }
 
     @Override
+    public boolean isExternal() {
+
+        return from.isExternal();
+    }
+
+    @Override
     public <T> T visit(final FromVisitor<T> visitor) {
 
         return visitor.visitAgg(this);

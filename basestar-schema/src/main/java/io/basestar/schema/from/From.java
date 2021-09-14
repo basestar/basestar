@@ -143,13 +143,15 @@ public interface From extends Serializable {
 
     default String digest() {
 
-        return  "" + System.identityHashCode(this);
+        return "" + System.identityHashCode(this);
     }
 
     default String getAlias() {
 
         return "_anon_" + digest();
     }
+
+    boolean isExternal();
 
 //    default boolean isGrouping() {
 //

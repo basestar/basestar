@@ -114,4 +114,10 @@ public class FromMap implements From {
 
         return visitor.visitMap(this);
     }
+
+    @Override
+    public boolean isExternal() {
+
+        return from.isExternal();
+    }
 }

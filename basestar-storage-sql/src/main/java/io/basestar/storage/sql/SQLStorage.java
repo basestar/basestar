@@ -127,7 +127,7 @@ public class SQLStorage implements DefaultLayerStorage {
 
     private String normalizeColumnName(final String name) {
 
-        return name.replaceAll("[^\\w\\d]", "").toLowerCase();
+        return name.replaceAll("[^a-zA-Z0-9]", "").toLowerCase();
     }
 
     private List<SelectFieldOrAsterisk> selectFields(final LinkableSchema schema, final Table<?> table) {
@@ -333,12 +333,14 @@ public class SQLStorage implements DefaultLayerStorage {
 
         final SQLDialect dialect = strategy.dialect();
 
+        final Table<?> table = resolveTable(context, DSL.table(schemaTableName(schema)));
         return name -> {
 
             if (schema.metadataSchema().containsKey(name.first())) {
                 final Name rest = name.withoutFirst();
                 if (rest.isEmpty()) {
-                    return DSL.field(DSL.name(name.first()));
+                    return resolveField(table, name.first()).map(DSL::field)
+                            .orElseThrow(() -> new UnsupportedOperationException("Field " + name + " not found"));
                 } else {
                     throw new UnsupportedOperationException("Query of this type is not supported");
                 }
@@ -346,7 +348,8 @@ public class SQLStorage implements DefaultLayerStorage {
                 final Property prop = schema.requireProperty(name.first(), true);
                 final Name rest = name.withoutFirst();
                 if (rest.isEmpty()) {
-                    return DSL.field(DSL.name(name.first()));
+                    return resolveField(table, name.first()).map(DSL::field)
+                            .orElseThrow(() -> new UnsupportedOperationException("Field " + name + " not found"));
                 } else {
                     return prop.typeOf().visit(new Use.Visitor.Defaulting<QueryPart>() {
                         @Override
@@ -845,8 +848,11 @@ public class SQLStorage implements DefaultLayerStorage {
         }
         // Make sure view records have a valid __key field
         if (schema instanceof ViewSchema) {
-            if (result.get(ViewSchema.ID) == null) {
-                result.put(ViewSchema.ID, ((ViewSchema) schema).createId(result));
+            final ViewSchema viewSchema = (ViewSchema) schema;
+            if (!viewSchema.getFrom().isExternal()) {
+                if (result.get(ViewSchema.ID) == null) {
+                    result.put(ViewSchema.ID, viewSchema.createId(result));
+                }
             }
         }
         return result;

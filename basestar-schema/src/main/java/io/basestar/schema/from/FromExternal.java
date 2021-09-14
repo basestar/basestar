@@ -83,4 +83,10 @@ public class FromExternal implements From {
 
         return visitor.visitExternal(this);
     }
+
+    @Override
+    public boolean isExternal() {
+
+        return true;
+    }
 }

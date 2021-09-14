@@ -127,6 +127,7 @@
             <groupId>net.snowflake</groupId>
             <artifactId>snowflake-jdbc</artifactId>
             <version>${snowflake.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
