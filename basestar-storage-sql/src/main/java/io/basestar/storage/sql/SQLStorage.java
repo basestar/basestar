@@ -20,6 +20,8 @@ package io.basestar.storage.sql;
  * #L%
  */
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.visitor.DisjunctionVisitor;
@@ -37,6 +39,7 @@ import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;
 import io.basestar.storage.query.RangeVisitor;
+import io.basestar.storage.sql.util.DelegatingDatabaseMetaData;
 import io.basestar.storage.util.KeysetPagingUtils;
 import io.basestar.util.Name;
 import io.basestar.util.*;
@@ -52,9 +55,14 @@ import org.jooq.impl.DSL;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -66,6 +74,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class SQLStorage implements DefaultLayerStorage {
 
+    public static final Duration TABLE_CACHE_DURATION = Duration.ofMinutes(30);
+
     private static final String COUNT_AS = "__count";
 
     private final DataSource dataSource;
@@ -74,13 +84,14 @@ public class SQLStorage implements DefaultLayerStorage {
 
     private final EventStrategy eventStrategy;
 
-    private List<Table<?>> tables;
+    private final Cache<org.jooq.Name, Table<?>> tableCache;
 
     private SQLStorage(final Builder builder) {
 
         this.dataSource = builder.dataSource;
         this.strategy = builder.strategy;
         this.eventStrategy = Nullsafe.orDefault(builder.eventStrategy, EventStrategy.EMIT);
+        this.tableCache = CacheBuilder.newBuilder().expireAfterAccess(TABLE_CACHE_DURATION).build();
     }
 
     public static Builder builder() {
@@ -222,15 +233,7 @@ public class SQLStorage implements DefaultLayerStorage {
     private Table<?> resolveTable(final DSLContext context, final Table<Record> table) {
 
         if (strategy.useMetadata()) {
-            // FIXME: cache this for a short time rather than forever
-            synchronized (this) {
-                if (tables == null) {
-                    tables = context.meta().getTables();
-                }
-                return tables.stream().filter(v -> nameMatch(v.getQualifiedName(), table.getQualifiedName()))
-                        .findFirst()
-                        .orElseThrow(() -> new IllegalStateException("Table " + table.getQualifiedName() + " not found"));
-            }
+            return describeTable(context, table.getQualifiedName());
         } else {
             return table;
         }
@@ -907,5 +910,64 @@ public class SQLStorage implements DefaultLayerStorage {
             result.put(DSL.field(dialect.columnName(name)), dialect.toSQLValue(type, value));
         }
         return result;
+    }
+
+    public Table<?> describeTable(final DSLContext context, final org.jooq.Name name) {
+
+        try {
+            return tableCache.get(name, () -> {
+
+                final AtomicReference<Table<?>> result = new AtomicReference<>(null);
+                context.connection(c -> {
+
+                    final String catalog;
+                    final String schema;
+                    final String table;
+                    final String[] parts = name.getName();
+                    if (parts.length == 3) {
+                        catalog = parts[0];
+                        schema = parts[1];
+                        table = parts[2];
+                    } else if (name.parts().length == 2) {
+                        catalog = null;
+                        schema = parts[0];
+                        table = parts[1];
+                    } else {
+                        throw new IllegalStateException("Cannot understand table name " + name);
+                    }
+
+                    final DelegatingDatabaseMetaData jdbcMeta = new DelegatingDatabaseMetaData(c.getMetaData()) {
+
+                        @Override
+                        public ResultSet getSchemas() throws SQLException {
+
+                            return getSchemas(catalog, schema);
+                        }
+
+                        @Override
+                        public ResultSet getTables(final String catalog, final String schemaPattern, final String tableNamePattern, final String[] types) throws SQLException {
+
+                            return super.getTables(catalog, schema, table, types);
+                        }
+                    };
+                    final Meta meta = context.meta(jdbcMeta);
+                    final List<Table<?>> tables = meta.getTables();
+                    tables.stream().filter(v -> nameMatch(v.getQualifiedName(), name))
+                            .findFirst()
+                            .map(v -> {
+                                result.set(v);
+                                return null;
+                            });
+                });
+
+                if (result.get() == null) {
+                    throw new IllegalStateException("Table " + name + " not found");
+                } else {
+                    return result.get();
+                }
+            });
+        } catch (final ExecutionException e) {
+            throw new IllegalStateException(e);
+        }
     }
 }
