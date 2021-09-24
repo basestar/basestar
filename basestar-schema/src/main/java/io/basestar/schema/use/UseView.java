@@ -9,9 +9,9 @@ package io.basestar.schema.use;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -61,11 +61,11 @@ public class UseView implements UseLinkable {
     @Override
     public UseView resolve(final Schema.Resolver resolver) {
 
-        if(schema.isAnonymous()) {
+        if (schema.isAnonymous()) {
             return this;
         } else {
             final ViewSchema resolved = resolver.requireViewSchema(schema.getQualifiedName());
-            if(resolved == schema) {
+            if (resolved == schema) {
                 return this;
             } else {
                 return new UseView(resolved);
@@ -105,7 +105,7 @@ public class UseView implements UseLinkable {
     @Override
     public Instance expand(final Name parent, final Instance value, final Expander expander, final Set<Name> expand) {
 
-        if(value != null) {
+        if (value != null) {
             return schema.expand(parent, value, expander, expand);
         } else {
             return null;
@@ -119,13 +119,8 @@ public class UseView implements UseLinkable {
     }
 
     @Override
-    public Set<Constraint.Violation> validate(final Context context, final Name name, final Instance value) {
-
-        if(value == null) {
-            return Collections.emptySet();
-        } else {
-            return schema.validate(context, name, value);
-        }
+    public Set<Constraint.Violation> validateType(final Context context, final Name name, final Instance value) {
+        return schema.validate(context, name, value);
     }
 
     @Override
@@ -149,7 +144,7 @@ public class UseView implements UseLinkable {
     @Override
     public Map<Ref, Long> refVersions(final Instance value) {
 
-        if(value == null) {
+        if (value == null) {
             return Collections.emptyMap();
         }
         return schema.refVersions(value);

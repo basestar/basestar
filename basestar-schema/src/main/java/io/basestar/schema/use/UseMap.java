@@ -9,9 +9,9 @@ package io.basestar.schema.use;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -85,8 +85,8 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     public <T2> UseMap<T2> transform(final Function<Use<T>, Use<T2>> fn) {
 
         final Use<T2> type2 = fn.apply(type);
-        if(type2 == type ) {
-            return (UseMap<T2>)this;
+        if (type2 == type) {
+            return (UseMap<T2>) this;
         } else {
             return new UseMap<>(type2);
         }
@@ -114,7 +114,7 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     public UseMap<?> resolve(final Schema.Resolver resolver) {
 
         final Use<?> resolved = type.resolve(resolver);
-        if(resolved == type) {
+        if (resolved == type) {
             return this;
         } else {
             return new UseMap<>(resolved);
@@ -144,7 +144,7 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     public void serializeValue(final Map<String, T> value, final DataOutput out) throws IOException {
 
         out.writeInt(value.size());
-        for(final Map.Entry<String, T> entry : new TreeMap<>(value).entrySet()) {
+        for (final Map.Entry<String, T> entry : new TreeMap<>(value).entrySet()) {
             UseString.DEFAULT.serializeValue(entry.getKey(), out);
             type.serialize(entry.getValue(), out);
         }
@@ -160,7 +160,7 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
 
         final Map<String, T> result = new HashMap<>();
         final int size = in.readInt();
-        for(int i = 0; i != size; ++i) {
+        for (int i = 0; i != size; ++i) {
             final String key = UseString.DEFAULT.deserializeValue(in);
             final T value = Use.deserializeAny(in);
             result.put(key, value);
@@ -201,7 +201,7 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     @Override
     public Map<Ref, Long> refVersions(final Map<String, T> value) {
 
-        if(value == null) {
+        if (value == null) {
             return Collections.emptyMap();
         }
         final Map<Ref, Long> versions = new HashMap<>();
@@ -212,7 +212,7 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     @Override
     public Optional<Use<?>> optionalTypeOf(final Name name) {
 
-        if(name.isEmpty()) {
+        if (name.isEmpty()) {
             return Optional.of(this);
         } else {
             return type.optionalTypeOf(name.withoutFirst());
@@ -222,7 +222,7 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     @Override
     public Type javaType(final Name name) {
 
-        if(name.isEmpty()) {
+        if (name.isEmpty()) {
             return TypeFactory.parameterizedClass(Map.class, String.class, type.javaType());
         } else {
             return type.javaType(name.withoutFirst());
@@ -232,7 +232,7 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     public static Set<Name> branch(final Map<String, Set<Name>> branches, final String key) {
 
         final Set<Name> branch = branches.get(key);
-        if(branch == null) {
+        if (branch == null) {
             return branches.get(EXPAND_WILDCARD);
         } else {
             return branch;
@@ -245,7 +245,7 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
         final Map<String, Set<Name>> branches = Name.branch(expand);
         return transformKeyValues(value, (key, before) -> {
             final Set<Name> branch = branch(branches, key);
-            if(branch != null) {
+            if (branch != null) {
                 return type.expand(parent.with(key), before, expander, branch);
             } else {
                 return before;
@@ -257,7 +257,7 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     public void expand(final Name parent, final Expander expander, final Set<Name> expand) {
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
-        if(!branches.isEmpty()) {
+        if (!branches.isEmpty()) {
             final Set<Name> rest = branches.values().stream().flatMap(Set::stream).collect(Collectors.toSet());
             type.expand(parent.with(EXPAND_WILDCARD), expander, rest);
         }
@@ -275,7 +275,7 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
         final Map<String, Set<Name>> branches = Name.branch(expand);
         return transformKeyValues(value, (key, before) -> {
             final Set<Name> branch = branch(branches, key);
-            if(branch != null) {
+            if (branch != null) {
                 return type.evaluateTransients(context, before, branch);
             } else {
                 return before;
@@ -293,29 +293,24 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     }
 
     @Override
-    public Set<Constraint.Violation> validate(final Context context, final Name name, final Map<String, T> value) {
-
-        if(value == null) {
-            return Collections.emptySet();
-        } else {
-            return value.entrySet().stream()
-                    .flatMap(e -> type.validate(context, name.with(e.getKey()), e.getValue()).stream())
-                    .collect(Collectors.toSet());
-        }
+    public Set<Constraint.Violation> validateType(final Context context, final Name name, final Map<String, T> value) {
+        return value.entrySet().stream()
+                .flatMap(e -> type.validate(context, name.with(e.getKey()), e.getValue()).stream())
+                .collect(Collectors.toSet());
     }
 
     private static <T> Map<String, T> transformKeyValues(final Map<String, T> value, final BiFunction<String, T, T> fn) {
 
-        if(value != null) {
+        if (value != null) {
             final Map<String, T> changed = new HashMap<>();
-            for(final Map.Entry<String, T> entry : value.entrySet()) {
+            for (final Map.Entry<String, T> entry : value.entrySet()) {
                 final T before = entry.getValue();
                 final T after = fn.apply(entry.getKey(), before);
-                if(before != after) {
+                if (before != after) {
                     changed.put(entry.getKey(), after);
                 }
             }
-            if(changed.isEmpty()) {
+            if (changed.isEmpty()) {
                 return value;
             } else {
                 final Map<String, T> copy = new HashMap<>(value);
@@ -366,10 +361,10 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     @Override
     public Map<String, T> transformValues(final Map<String, T> value, final BiFunction<Use<T>, T, T> fn) {
 
-        if(value != null) {
+        if (value != null) {
             boolean changed = false;
             final Map<String, T> result = new HashMap<>();
-            for(final Map.Entry<String, T> entry : value.entrySet()) {
+            for (final Map.Entry<String, T> entry : value.entrySet()) {
                 final T before = entry.getValue();
                 final T after = fn.apply(type, before);
                 result.put(entry.getKey(), after);
@@ -384,7 +379,7 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     @Override
     public String toString(final Map<String, T> value) {
 
-        if(value == null) {
+        if (value == null) {
             return "null";
         } else {
             final Use<T> type = getType();
@@ -397,7 +392,7 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     @Override
     public boolean isCompatibleBucketing(final List<Bucketing> other, final Name name) {
 
-        if(name.isEmpty()) {
+        if (name.isEmpty()) {
             return false;
         } else {
             return type.isCompatibleBucketing(other, name.withoutFirst());
@@ -407,11 +402,11 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     @Override
     public boolean areEqual(final Map<String, T> a, final Map<String, T> b) {
 
-        if(a == null || b == null) {
+        if (a == null || b == null) {
             return a == null && b == null;
-        } else if(a.size() == b.size()) {
-            for(final Map.Entry<String, T> entry : a.entrySet()) {
-                if(!(b.containsKey(entry.getKey()) && type.areEqual(entry.getValue(), b.get(entry.getKey())))) {
+        } else if (a.size() == b.size()) {
+            for (final Map.Entry<String, T> entry : a.entrySet()) {
+                if (!(b.containsKey(entry.getKey()) && type.areEqual(entry.getValue(), b.get(entry.getKey())))) {
                     return false;
                 }
             }
