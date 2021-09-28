@@ -113,4 +113,10 @@ public class FromAlias implements From {
 
         return true;
     }
+
+    @Override
+    public boolean isExternal() {
+
+        return from.isExternal();
+    }
 }

@@ -3,7 +3,7 @@ package io.basestar.storage.sql;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import io.basestar.expression.constant.Constant;
+import io.basestar.expression.Expression;
 import io.basestar.schema.*;
 import io.basestar.schema.use.UseString;
 import io.basestar.storage.Storage;
@@ -119,13 +119,15 @@ public class TestSnowflakeStorage extends TestSQLStorage {
         final SQLStrategy strategy = SQLStrategy.Simple.builder()
                 .objectSchemaName(objectSchema)
                 .dialect(dialect)
+                .useMetadata(true)
                 .build();
 
         final String tableName = "CUSTOM_TABLE";
 
         final Namespace namespace = Namespace.builder()
                 .setSchema("Test", ViewSchema.builder()
-                        .setProperty("name", Property.builder().setType(UseString.DEFAULT))
+                        .setSql("INVALID SQL")
+                        .setProperty("nameWithUnderscores", Property.builder().setType(UseString.DEFAULT))
                         .setExtensions(ImmutableMap.of("sql.table", SNOWFLAKE_DATABASE + "." + objectSchema + "." + tableName)))
                 .build();
 
@@ -136,10 +138,10 @@ public class TestSnowflakeStorage extends TestSQLStorage {
             final DSLContext context = DSL.using(conn, dialect.ddlDialect());
             context.createSchema(DSL.name(SNOWFLAKE_DATABASE, objectSchema)).execute();
             context.createTable(DSL.name(SNOWFLAKE_DATABASE, objectSchema, tableName))
-                    .column("name", SQLDataType.VARCHAR)
+                    .column("name_with_underscores", SQLDataType.VARCHAR)
                     .execute();
             context.insertInto(DSL.table(DSL.name(SNOWFLAKE_DATABASE, objectSchema, tableName)))
-                    .set(DSL.field(DSL.name("name")), "record1")
+                    .set(DSL.field(DSL.name("name_with_underscores")), "record1")
                     .execute();
             conn.commit();
         } catch (final SQLException e) {
@@ -151,8 +153,9 @@ public class TestSnowflakeStorage extends TestSQLStorage {
                 .setStrategy(strategy)
                 .build();
 
-        final Page<Map<String, Object>> page = storage.query(Consistency.ASYNC, schema, new Constant(true), ImmutableList.of(Sort.asc("__key")), ImmutableSet.of())
+        final Page<Map<String, Object>> page = storage.query(Consistency.ASYNC, schema, Expression.parse("nameWithUnderscores == 'record1'"), ImmutableList.of(Sort.asc("__key")), ImmutableSet.of())
                 .page(10).get();
         assertEquals(1, page.size());
+        assertEquals("record1", page.get(0).get("nameWithUnderscores"));
     }
 }

@@ -20,6 +20,7 @@ package io.basestar.schema;
  * #L%
  */
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParseException;
@@ -147,8 +148,10 @@ public class Constraint implements Serializable {
         @Nullable
         private final String message;
 
+        @JsonIgnore
         private final Set<String> groups;
 
+        @JsonProperty("groups")
         public Set<String> getEffectiveGroups() {
 
             if(groups == null || groups.isEmpty()) {

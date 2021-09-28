@@ -42,6 +42,8 @@ import java.util.function.Supplier;
 
 public interface SQLStrategy {
 
+    org.jooq.Name catalogName(ReferableSchema schema);
+
     org.jooq.Name objectTableName(ReferableSchema schema);
 
     org.jooq.Name historyTableName(ReferableSchema schema);
@@ -67,6 +69,8 @@ public interface SQLStrategy {
     SQLDialect dialect();
 
     StatementType statementType();
+  
+    boolean useMetadata();
 
     @Data
     @Slf4j
@@ -75,6 +79,8 @@ public interface SQLStrategy {
 
         private static final String CUSTOM_TABLE_NAME_EXTENSION = "sql.table";
 
+        private final String catalogName;
+
         private final String objectSchemaName;
 
         private final String historySchemaName;
@@ -82,6 +88,8 @@ public interface SQLStrategy {
         private final SQLDialect dialect;
 
         private final StatementType statementType;
+
+        private final boolean useMetadata;
 
         private String name(final LinkableSchema schema) {
 
@@ -100,6 +108,12 @@ public interface SQLStrategy {
             } else {
                 return name;
             }
+        }
+
+        @Override
+        public Name catalogName(final ReferableSchema schema) {
+
+            return DSL.name(catalogName);
         }
 
         @Override
@@ -135,7 +149,14 @@ public interface SQLStrategy {
 
         @Override
         public StatementType statementType() {
+
             return statementType;
+        }
+      
+        @Override
+        public boolean useMetadata() {
+
+            return useMetadata;
         }
 
         @Override

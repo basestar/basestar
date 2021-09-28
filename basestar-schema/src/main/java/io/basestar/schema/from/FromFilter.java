@@ -92,4 +92,10 @@ public class FromFilter implements From {
 
         return from.isCompatibleBucketing(other);
     }
+
+    @Override
+    public boolean isExternal() {
+
+        return from.isExternal();
+    }
 }

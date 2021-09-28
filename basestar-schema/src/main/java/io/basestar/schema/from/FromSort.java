@@ -104,4 +104,10 @@ public class FromSort implements From {
 
         return visitor.visitSort(this);
     }
+
+    @Override
+    public boolean isExternal() {
+
+        return from.isExternal();
+    }
 }

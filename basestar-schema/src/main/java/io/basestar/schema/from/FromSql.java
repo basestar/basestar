@@ -155,4 +155,10 @@ public class FromSql implements From {
             throw new UnsupportedOperationException("Raw SQL view cannot be processed");
         }
     }
+
+    @Override
+    public boolean isExternal() {
+
+        return impl == null;
+    }
 }

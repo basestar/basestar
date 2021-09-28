@@ -144,4 +144,10 @@ public class FromUnion implements From {
 
         return visitor.visitUnion(this);
     }
+
+    @Override
+    public boolean isExternal() {
+
+        return union.stream().anyMatch(From::isExternal);
+    }
 }

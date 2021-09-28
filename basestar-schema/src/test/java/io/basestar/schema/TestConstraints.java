@@ -1,13 +1,17 @@
 package io.basestar.schema;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.jackson.BasestarModule;
+import io.basestar.schema.jsr380.groups.Default;
 import io.basestar.schema.jsr380.groups.Fatal;
 import io.basestar.schema.use.*;
 import io.basestar.schema.validation.*;
+import io.basestar.util.Name;
 import org.junit.jupiter.api.Test;
 
 import javax.validation.constraints.*;
@@ -16,6 +20,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -155,5 +160,16 @@ class TestConstraints {
         assertEquals("size must be at least 1", new SizeValidation.Validator(1, null).defaultMessage());
         assertEquals("size must be at most 2", new SizeValidation.Validator(null, 2).defaultMessage());
         assertEquals("size must be between 1 and 2", new SizeValidation.Validator(1, 2).defaultMessage());
+    }
+
+    @Test
+    void testViolationSerialization() {
+
+        final ObjectMapper objectMapper = new ObjectMapper().registerModule(BasestarModule.INSTANCE);
+        final Map<?, ?> withGroup = objectMapper.convertValue(new Constraint.Violation(Name.of("name"), "type", "message", ImmutableSet.of("group1")), Map.class);
+        assertEquals(ImmutableList.of("group1"), withGroup.get("groups"));
+
+        final Map<?, ?> defaultGroup = objectMapper.convertValue(new Constraint.Violation(Name.of("name"), "type", "message", ImmutableSet.of()), Map.class);
+        assertEquals(ImmutableList.of(Default.NAME), defaultGroup.get("groups"));
     }
 }

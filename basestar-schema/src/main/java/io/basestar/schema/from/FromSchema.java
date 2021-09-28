@@ -135,4 +135,10 @@ public class FromSchema implements From {
 
         return visitor.visitSchema(this);
     }
+
+    @Override
+    public boolean isExternal() {
+
+        return false;
+    }
 }
