@@ -156,12 +156,6 @@ public class UseAny implements Use<Object> {
     }
 
     @Override
-    public Set<Constraint.Violation> validate(final Context context, final Name name, final Object value) {
-
-        return Collections.emptySet();
-    }
-
-    @Override
     public Set<Name> requiredExpand(final Set<Name> names) {
 
         return Collections.emptySet();

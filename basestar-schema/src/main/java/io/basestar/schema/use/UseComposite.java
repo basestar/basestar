@@ -38,7 +38,7 @@ public class UseComposite implements Use<Map<String, Object>> {
 
     public static UseComposite from(final Object config) {
 
-        if(config instanceof Map) {
+        if (config instanceof Map) {
             final Map<String, Use<?>> types = new HashMap<>();
             ((Map<?, ?>) config).forEach((k, v) -> types.put((String) k, Use.fromNestedConfig(v)));
             return new UseComposite(types);
@@ -58,15 +58,15 @@ public class UseComposite implements Use<Map<String, Object>> {
 
         final Map<String, Use<?>> newTypes = new HashMap<>();
         boolean changed = false;
-        for(final Map.Entry<String, Use<?>> entry : types.entrySet()) {
+        for (final Map.Entry<String, Use<?>> entry : types.entrySet()) {
             final Use<?> type = entry.getValue();
             final Use<?> resolved = type.resolve(resolver);
-            if(resolved != type) {
+            if (resolved != type) {
                 changed = true;
             }
             newTypes.put(entry.getKey(), resolved);
         }
-        if(changed) {
+        if (changed) {
             return new UseComposite(newTypes);
         } else {
             return this;
@@ -88,12 +88,12 @@ public class UseComposite implements Use<Map<String, Object>> {
     @Override
     public Optional<Use<?>> optionalTypeOf(final Name name) {
 
-        if(name.isEmpty()) {
+        if (name.isEmpty()) {
             return Optional.of(this);
         } else {
             final String first = name.first();
             final Use<?> type = types.get(first);
-            if(type != null) {
+            if (type != null) {
                 return type.optionalTypeOf(name.withoutFirst());
             } else {
                 return Optional.empty();
@@ -104,12 +104,12 @@ public class UseComposite implements Use<Map<String, Object>> {
     @Override
     public Type javaType(final Name name) {
 
-        if(name.isEmpty()) {
+        if (name.isEmpty()) {
             return TypeFactory.parameterizedClass(Map.class, String.class, Object.class);
         } else {
             final String first = name.first();
             final Use<?> type = types.get(first);
-            if(type != null) {
+            if (type != null) {
                 return type.javaType(name.withoutFirst());
             } else {
                 throw new IllegalStateException("Composite has no member " + first);
@@ -125,7 +125,7 @@ public class UseComposite implements Use<Map<String, Object>> {
             @Override
             public <T> T apply(final String key, final Use<T> type, final T before) {
 
-                if(branches.containsKey(key)) {
+                if (branches.containsKey(key)) {
                     return type.expand(parent.with(key), before, expander, branches.get(key));
                 } else {
                     return before;
@@ -166,13 +166,12 @@ public class UseComposite implements Use<Map<String, Object>> {
     @Override
     public String toString(final Map<String, Object> value) {
 
-        if(value == null) {
+        if (value == null) {
             return "null";
         } else {
             return "{" + types.entrySet().stream().sorted(Map.Entry.comparingByKey())
                     .map(v -> {
-                        @SuppressWarnings("unchecked")
-                        final Use<Object> type = (Use<Object>)v.getValue();
+                        @SuppressWarnings("unchecked") final Use<Object> type = (Use<Object>) v.getValue();
                         return v.getKey() + ": " + type.toString(value.get(v.getKey()));
                     })
                     .collect(Collectors.joining(", ")) + "}";
@@ -183,10 +182,9 @@ public class UseComposite implements Use<Map<String, Object>> {
     public void serializeValue(final Map<String, Object> value, final DataOutput out) throws IOException {
 
         out.writeInt(types.size());
-        for(final Map.Entry<String, Use<?>> entry : types.entrySet()) {
+        for (final Map.Entry<String, Use<?>> entry : types.entrySet()) {
             UseString.DEFAULT.serializeValue(entry.getKey(), out);
-            @SuppressWarnings("unchecked")
-            final Use<Object> type = (Use<Object>)entry.getValue();
+            @SuppressWarnings("unchecked") final Use<Object> type = (Use<Object>) entry.getValue();
             type.serialize(value.get(entry.getKey()), out);
         }
     }
@@ -201,7 +199,7 @@ public class UseComposite implements Use<Map<String, Object>> {
 
         final Map<String, T> result = new HashMap<>();
         final int size = in.readInt();
-        for(int i = 0; i != size; ++i) {
+        for (int i = 0; i != size; ++i) {
             final String key = UseString.DEFAULT.deserializeValue(in);
             final T value = Use.deserializeAny(in);
             result.put(key, value);
@@ -230,7 +228,7 @@ public class UseComposite implements Use<Map<String, Object>> {
             public <T> T apply(final String key, final Use<T> type, final T before) {
 
                 final Set<Name> branch = branches.get(key);
-                if(branch != null) {
+                if (branch != null) {
                     return type.evaluateTransients(context, before, branch);
                 } else {
                     return before;
@@ -246,7 +244,7 @@ public class UseComposite implements Use<Map<String, Object>> {
         final Set<Name> result = new HashSet<>(expand);
         branch.forEach((k, v) -> {
             final Use<?> type = types.get(k);
-            if(type != null) {
+            if (type != null) {
                 result.addAll(type.transientExpand(name.with(k), v));
             }
         });
@@ -254,20 +252,14 @@ public class UseComposite implements Use<Map<String, Object>> {
     }
 
     @Override
-    public Set<Constraint.Violation> validate(final Context context, final Name name, final Map<String, Object> value) {
-
-        if(value == null) {
-            return Collections.emptySet();
-        } else {
-            return types.entrySet().stream()
-                    .flatMap(e -> {
-                        @SuppressWarnings("unchecked")
-                        final Use<Object> type = (Use<Object>)e.getValue();
-                        final Object v = value.get(e.getKey());
-                        return type.validate(context, name.with(e.getKey()), v).stream();
-                    })
-                    .collect(Collectors.toSet());
-        }
+    public Set<Constraint.Violation> validateType(final Context context, final Name name, final Map<String, Object> value) {
+        return types.entrySet().stream()
+                .flatMap(e -> {
+                    @SuppressWarnings("unchecked") final Use<Object> type = (Use<Object>) e.getValue();
+                    final Object v = value.get(e.getKey());
+                    return type.validate(context, name.with(e.getKey()), v).stream();
+                })
+                .collect(Collectors.toSet());
     }
 
     @Override
@@ -304,9 +296,9 @@ public class UseComposite implements Use<Map<String, Object>> {
     public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
-        for(final Map.Entry<String, Use<?>> entry : types.entrySet()) {
+        for (final Map.Entry<String, Use<?>> entry : types.entrySet()) {
             final Set<Name> branch = branches.get(entry.getKey());
-            if(branch != null) {
+            if (branch != null) {
                 entry.getValue().collectDependencies(branch, out);
             }
         }
@@ -316,9 +308,9 @@ public class UseComposite implements Use<Map<String, Object>> {
     public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, LinkableSchema> out) {
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
-        for(final Map.Entry<String, Use<?>> entry : types.entrySet()) {
+        for (final Map.Entry<String, Use<?>> entry : types.entrySet()) {
             final Set<Name> branch = branches.get(entry.getKey());
-            if(branch != null) {
+            if (branch != null) {
                 entry.getValue().collectMaterializationDependencies(branch, out);
             }
         }
@@ -327,11 +319,11 @@ public class UseComposite implements Use<Map<String, Object>> {
     @Override
     public boolean isCompatibleBucketing(final List<Bucketing> other, final Name name) {
 
-        if(name.isEmpty()) {
+        if (name.isEmpty()) {
             return false;
         } else {
             final Use<?> type = types.get(name.first());
-            if(type != null) {
+            if (type != null) {
                 return type.isCompatibleBucketing(other, name.withoutFirst());
             } else {
                 return false;
@@ -342,14 +334,13 @@ public class UseComposite implements Use<Map<String, Object>> {
     @Override
     public boolean areEqual(final Map<String, Object> a, final Map<String, Object> b) {
 
-        if(a == null || b == null) {
+        if (a == null || b == null) {
             return a == null && b == null;
-        } else if(a.size() == b.size()) {
-            for(final Map.Entry<String, Use<?>> entry : types.entrySet()) {
+        } else if (a.size() == b.size()) {
+            for (final Map.Entry<String, Use<?>> entry : types.entrySet()) {
                 final String key = entry.getKey();
-                @SuppressWarnings("unchecked")
-                final Use<Object> type = (Use<Object>)entry.getValue();
-                if(!type.areEqual(a.get(key), b.get(key))) {
+                @SuppressWarnings("unchecked") final Use<Object> type = (Use<Object>) entry.getValue();
+                if (!type.areEqual(a.get(key), b.get(key))) {
                     return false;
                 }
             }
@@ -366,19 +357,18 @@ public class UseComposite implements Use<Map<String, Object>> {
 
     private static Map<String, Object> transformTypedValues(final Map<String, Use<?>> types, final Map<String, Object> value, final TypedValueFunction fn) {
 
-        if(value != null) {
+        if (value != null) {
             final Map<String, Object> changed = new HashMap<>();
-            for(final Map.Entry<String, Use<?>> entry : types.entrySet()) {
+            for (final Map.Entry<String, Use<?>> entry : types.entrySet()) {
                 final String key = entry.getKey();
-                @SuppressWarnings("unchecked")
-                final Use<Object> type = (Use<Object>)entry.getValue();
+                @SuppressWarnings("unchecked") final Use<Object> type = (Use<Object>) entry.getValue();
                 final Object before = value.get(key);
                 final Object after = fn.apply(key, type, before);
-                if(before != after) {
+                if (before != after) {
                     changed.put(key, after);
                 }
             }
-            if(changed.isEmpty()) {
+            if (changed.isEmpty()) {
                 return value;
             } else {
                 final Map<String, Object> copy = new HashMap<>(value);
