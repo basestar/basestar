@@ -207,13 +207,6 @@ public class UseRef implements UseLinkable {
     }
 
     @Override
-    public Set<Constraint.Violation> validate(final Context context, final Name name, final Instance value) {
-
-        // Not our responsibility to validate another object
-        return Collections.emptySet();
-    }
-
-    @Override
     @Deprecated
     public Set<Name> requiredExpand(final Set<Name> names) {
 

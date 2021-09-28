@@ -9,9 +9,9 @@ package io.basestar.schema.use;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -49,14 +49,9 @@ public interface UseCollection<V, T extends Collection<V>> extends UseContainer<
     <V2> UseCollection<V2, ? extends Collection<V2>> transform(Function<Use<V>, Use<V2>> fn);
 
     @Override
-    default Set<Constraint.Violation> validate(final Context context, final Name name, final T value) {
-
-        if(value == null) {
-            return Collections.emptySet();
-        } else {
-            final Use<V> type = getType();
-            return value.stream().flatMap(v -> type.validate(context, name, v).stream()).collect(Collectors.toSet());
-        }
+    default Set<Constraint.Violation> validateType(final Context context, final Name name, final T value) {
+        final Use<V> type = getType();
+        return value.stream().flatMap(v -> type.validate(context, name, v).stream()).collect(Collectors.toSet());
     }
 
     @Override
@@ -64,7 +59,7 @@ public interface UseCollection<V, T extends Collection<V>> extends UseContainer<
 
         final Use<V> type = getType();
         out.writeInt(value.size());
-        for(final V v : value) {
+        for (final V v : value) {
             type.serialize(v, out);
         }
     }
@@ -98,7 +93,7 @@ public interface UseCollection<V, T extends Collection<V>> extends UseContainer<
     @Override
     default Map<Ref, Long> refVersions(final T value) {
 
-        if(value == null) {
+        if (value == null) {
             return Collections.emptyMap();
         }
         final Map<Ref, Long> versions = new HashMap<>();
@@ -109,7 +104,7 @@ public interface UseCollection<V, T extends Collection<V>> extends UseContainer<
     @Override
     default Optional<Use<?>> optionalTypeOf(final Name name) {
 
-        if(name.isEmpty()) {
+        if (name.isEmpty()) {
             return Optional.of(this);
         } else {
             return getType().optionalTypeOf(name);
@@ -177,7 +172,7 @@ public interface UseCollection<V, T extends Collection<V>> extends UseContainer<
     @Override
     default String toString(final T value) {
 
-        if(value == null) {
+        if (value == null) {
             return "null";
         } else {
             final Use<V> type = getType();

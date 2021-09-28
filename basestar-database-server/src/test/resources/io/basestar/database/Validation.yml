@@ -1,0 +1,58 @@
+$version: legacy
+Validation:
+  type: object
+  properties:
+    number:
+      type: number
+      required: true
+    string:
+      type: string
+      required: true
+    integer:
+      type: integer
+      required: true
+    boolean:
+      type: boolean
+      required: true
+    secret:
+      type: secret
+      required: true
+    mapString:
+      type:
+        map: string
+      required: true
+    arrayNumber:
+      type:
+        array: number
+      required: true
+    setNumber:
+      type:
+        array: number
+      required: true
+    struct:
+      type: Phone
+      required: true
+    object:
+      type: Simple
+      required: true
+    booleanOptional:
+      type: boolean
+
+Phone:
+  type: struct
+  properties:
+    home:
+      type: string
+    mobile:
+      type: string
+    work:
+      type: string
+
+Simple:
+  type: object
+  properties:
+    name:
+      type: string
+      required: true
+
+

@@ -17,10 +17,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -195,8 +192,10 @@ public class UseOptional<T> implements UseContainer<T, T> {
 
     @Override
     public Set<Constraint.Violation> validate(final Context context, final Name name, final T value) {
-
-        return type.validate(context, name, value);
+        if (value != null) {
+            return type.validate(context, name, value);
+        }
+        return Collections.emptySet();
     }
 
     @Override
