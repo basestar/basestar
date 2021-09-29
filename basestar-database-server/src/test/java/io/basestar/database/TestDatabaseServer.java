@@ -533,7 +533,7 @@ class TestDatabaseServer {
                 .putAction("a", CreateOptions.builder()
                         .setSchema(SIMPLE)
                         .setExpressions(ImmutableMap.of(
-                                "string", Expression.parse("batch.c.setId")
+                                "string", Expression.parse("batch.c.id")
                         ))
                         .build())
                 .putAction("b", CreateOptions.builder()
@@ -542,7 +542,7 @@ class TestDatabaseServer {
                                 "string", "b"
                         ))
                         .setExpressions(ImmutableMap.of(
-                                "array", Expression.parse("[batch.a.setId]")
+                                "array", Expression.parse("[batch.a.id]")
                         ))
                         .build())
                 .putAction("c", CreateOptions.builder()
@@ -553,6 +553,7 @@ class TestDatabaseServer {
                         .build())
                 .build()).join();
 
+        // FIXME
         log.debug("Batch results {}", results);
     }
 

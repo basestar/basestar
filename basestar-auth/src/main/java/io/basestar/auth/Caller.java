@@ -26,11 +26,12 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.basestar.util.Name;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.Map;
 
 @JsonDeserialize(as = SimpleCaller.class)
-public interface Caller {
+public interface Caller extends Serializable {
 
     Anon ANON = new Anon();
 

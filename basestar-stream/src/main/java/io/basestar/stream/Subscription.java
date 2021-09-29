@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.basestar.auth.Caller;
+import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.ExpressionDeserializer;
 import io.basestar.util.Name;
@@ -31,12 +32,14 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
+import java.util.Map;
 import java.util.Set;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Subscription {
+public class Subscription implements Serializable {
 
     private String sub;
 
@@ -62,5 +65,18 @@ public class Subscription {
     public boolean matches(final String sub, final String channel) {
 
         return this.sub.equals(sub) && this.channel.equals(channel);
+    }
+
+    public boolean matches(final Name schema, final Change.Event event, final Map<String, Object> before, final Map<String, Object> after) {
+
+        return before != null && matches(schema, event, before)
+                || after != null && matches(schema, event, after);
+    }
+
+    public boolean matches(final Name schema, final Change.Event event, final Map<String, Object> value) {
+
+        return getSchema().equals(schema)
+                && getEvents().contains(event)
+                && getExpression().evaluatePredicate(Context.init(value));
     }
 }
