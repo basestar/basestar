@@ -195,6 +195,18 @@
             </dependency>
             <dependency>
                 <groupId>io.basestar</groupId>
+                <artifactId>basestar-stream</artifactId>
+                <version>${project.version}</version>
+                <classifier>tests</classifier>
+                <type>test-jar</type>
+            </dependency>
+            <dependency>
+                <groupId>io.basestar</groupId>
+                <artifactId>basestar-stream-hazelcast</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.basestar</groupId>
                 <artifactId>basestar-test</artifactId>
                 <version>${project.version}</version>
             </dependency>
