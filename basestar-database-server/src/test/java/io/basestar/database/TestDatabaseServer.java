@@ -9,9 +9,9 @@ package io.basestar.database;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -130,8 +130,8 @@ class TestDatabaseServer {
             return CompletableFuture.completedFuture(null);
         });
         when(emitter.emit(any(Collection.class))).then(inv -> {
-            final Emitter emitter = (Emitter)inv.getMock();
-            inv.getArgumentAt(0, Collection.class).forEach(event -> emitter.emit((Event)event));
+            final Emitter emitter = (Emitter) inv.getMock();
+            inv.getArgumentAt(0, Collection.class).forEach(event -> emitter.emit((Event) event));
             return CompletableFuture.completedFuture(null);
         });
         this.storage = MemoryStorage.builder().build();
@@ -158,7 +158,7 @@ class TestDatabaseServer {
 
         assertEquals(schema, Instance.getSchema(object));
         assertEquals(id, Instance.getId(object));
-        assertEquals((Long)version, Instance.getVersion(object));
+        assertEquals((Long) version, Instance.getVersion(object));
         assertNotNull(Instance.getHash(object));
         assertNotNull(Instance.getCreated(object));
         assertNotNull(Instance.getUpdated(object));
@@ -241,7 +241,13 @@ class TestDatabaseServer {
 
         final String id = UUID.randomUUID().toString();
 
-        final Map<String, Object> data = ImmutableMap.of();
+        final Map<String, Object> data = ImmutableMap.of(
+                "string", "test2",
+                "number", 2,
+                "boolean", false,
+                "array", ImmutableList.of("b"),
+                "map", ImmutableMap.of("c", "d")
+        );
         final Map<String, Object> create = database.create(caller, SIMPLE, id, data).get();
 
         final Instance delete = database.delete(caller, SIMPLE, id, 1L).get();
@@ -346,7 +352,7 @@ class TestDatabaseServer {
         final String idA = UUID.randomUUID().toString();
         final Map<String, Object> dataA = ImmutableMap.of(
                 "target", ImmutableMap.of(
-                    "id", refA
+                        "id", refA
                 )
         );
 
@@ -363,7 +369,7 @@ class TestDatabaseServer {
 
         final Map<String, Object> expandLinkA = database.read(caller, ReadOptions.builder().setSchema(REF_TARGET)
                 .setId(refA).setExpand(Name.parseSet("sources,source")).build()).get();
-        final Page<?> sources = (Page<?>)expandLinkA.get("sources");
+        final Page<?> sources = (Page<?>) expandLinkA.get("sources");
         final Object source = expandLinkA.get("source");
         assertEquals(1, sources.size());
         assertEquals(createA, sources.get(0));
@@ -392,26 +398,26 @@ class TestDatabaseServer {
         final String idB = "b";
         final Map<String, Object> createRefB = database.create(caller, CreateOptions.builder().setSchema(REF_TARGET)
                 .setId(idB).setData(ImmutableMap.of(
-                "value", "b",
-                "target", ImmutableMap.of(
-                        "id", idA
-                )
-        )).setExpand(Name.parseSet("target")).build()).get();
+                        "value", "b",
+                        "target", ImmutableMap.of(
+                                "id", idA
+                        )
+                )).setExpand(Name.parseSet("target")).build()).get();
         // Check reading refs doesn't wipe properties
         assertNotNull(createRefB.get("value"));
-        assertEquals(createRefA, Instance.without((Map<String, Object>)createRefB.get("target"), Reserved.META));
+        assertEquals(createRefA, Instance.without((Map<String, Object>) createRefB.get("target"), Reserved.META));
 
         //System.err.println(Path.parseSet("target.target"));
 
         final String idC = UUID.randomUUID().toString();
         final Map<String, Object> createRefC = database.create(caller, CreateOptions.builder().setSchema(REF_TARGET)
                 .setId(idC).setData(ImmutableMap.of(
-                "value", "c",
-                "target", ImmutableMap.of(
-                        "id", idB
-                )
-        )).setExpand(Name.parseSet("target.target")).build()).get();
-        assertEquals(createRefB, Instance.without((Map<String, Object>)createRefC.get("target"), Reserved.META));
+                        "value", "c",
+                        "target", ImmutableMap.of(
+                                "id", idB
+                        )
+                )).setExpand(Name.parseSet("target.target")).build()).get();
+        assertEquals(createRefB, Instance.without((Map<String, Object>) createRefC.get("target"), Reserved.META));
     }
 
     @Test
@@ -421,13 +427,12 @@ class TestDatabaseServer {
         final String refA = UUID.randomUUID().toString();
         final Map<String, Object> createRefA = database.create(caller, CreateOptions.builder().setSchema(REF_SOURCE)
                 .setId(refA).setData(ImmutableMap.of(
-                "value", "test",
-                "target", ImmutableMap.of(
-                        "id", missing
-                )
-        )).setExpand(Name.parseSet("target")).build()).get();
-        @SuppressWarnings("unchecked")
-        final Map<String, Object> target = (Map<String, Object>)createRefA.get("target");
+                        "value", "test",
+                        "target", ImmutableMap.of(
+                                "id", missing
+                        )
+                )).setExpand(Name.parseSet("target")).build()).get();
+        @SuppressWarnings("unchecked") final Map<String, Object> target = (Map<String, Object>) createRefA.get("target");
         assertNotNull(target);
 //        assertEquals(REF_TARGET, Instance.getSchema(target));
         assertEquals(missing, Instance.getId(target));
@@ -450,11 +455,11 @@ class TestDatabaseServer {
         final String idB = UUID.randomUUID().toString();
 
         assertThrows(PermissionDeniedException.class, cause(() ->
-            database.create(caller, SIMPLE_PERMS, idB, ImmutableMap.of(
-                    "owner", ImmutableMap.of(
-                            "id", "test2"
-                    )
-            )).get()));
+                database.create(caller, SIMPLE_PERMS, idB, ImmutableMap.of(
+                        "owner", ImmutableMap.of(
+                                "id", "test2"
+                        )
+                )).get()));
     }
 
     @Test
@@ -522,12 +527,12 @@ class TestDatabaseServer {
         final Set<Name> expand = ImmutableSet.of(Name.of("residents"));
         final Instance readC = database.read(caller, ReadOptions.builder().setSchema(KENNEL)
                 .setId(idC).setExpand(expand).build()).join();
-        final Collection<Map<String, Object>> residents = (Collection<Map<String, Object>>)readC.get("residents");
+        final Collection<Map<String, Object>> residents = (Collection<Map<String, Object>>) readC.get("residents");
         assertTrue(residents.stream().allMatch(v -> v.get("breed") != null));
     }
 
     @Test
-    void batch() {
+    void batchExpressionPointers() {
 
         final Map<String, Instance> results = database.batch(caller, BatchOptions.builder()
                 .putAction("a", CreateOptions.builder()
@@ -553,8 +558,11 @@ class TestDatabaseServer {
                         .build())
                 .build()).join();
 
-        // FIXME
-        log.debug("Batch results {}", results);
+        assertEquals(3, results.size());
+        assertEquals(results.get("c").getId(), results.get("a").get("string"));
+        assertEquals("b", results.get("b").get("string"));
+        assertEquals(results.get("a").getId(), ((List)results.get("b").get("array")).get(0));
+        assertEquals("a", results.get("c").get("string"));
     }
 
     @Test
@@ -666,6 +674,7 @@ class TestDatabaseServer {
                 .putAction("user", CreateOptions.builder()
                         .setSchema(USER)
                         .setId("u1")
+                        .setData(ImmutableMap.of("password", Secret.encrypted("notreal")))
                         .build())
                 .putAction("member", CreateOptions.builder()
                         .setSchema(TEAM_MEMBER)
@@ -762,7 +771,8 @@ class TestDatabaseServer {
         final Instance member = database.create(Caller.SUPER, CreateOptions.builder()
                 .setSchema(TEAM_MEMBER)
                 .setData(ImmutableMap.of(
-                        "team", ReferableSchema.ref(teamB.getId())
+                        "team", ReferableSchema.ref(teamB.getId()),
+                        "role", "member"
                 ))
                 .build()).get();
 
@@ -905,9 +915,9 @@ class TestDatabaseServer {
         final Database database = DatabaseServer.builder().namespace(namespace).storage(storage)
                 .emitter(emitter).mode(DatabaseMode.READONLY).build();
         assertThrows(DatabaseReadonlyException.class, () -> database.create(Caller.SUPER, CreateOptions.builder()
-                    .setSchema(SIMPLE)
-                    .setData(ImmutableMap.of())
-                    .build()).get());
+                .setSchema(SIMPLE)
+                .setData(ImmutableMap.of())
+                .build()).get());
     }
 
     @Test
@@ -955,7 +965,7 @@ class TestDatabaseServer {
                 .build()).get();
 
         assertEquals(1L, Instance.<Long>get(read, Name.parse("ref.version")));
-        assertEquals(true,  Instance.get(read, Name.parse("ref.boolean")));
+        assertEquals(true, Instance.get(read, Name.parse("ref.boolean")));
     }
 
     @Test
