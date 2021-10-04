@@ -9,9 +9,9 @@ package io.basestar.event;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -72,7 +72,7 @@ public class DefaultPump implements Pump {
     @Override
     public void start() {
 
-        for(int i = 0; i != minThreads; ++i) {
+        for (int i = 0; i != minThreads; ++i) {
             another(INITIAL_DELAY_MILLIS + delay());
         }
     }
@@ -80,10 +80,10 @@ public class DefaultPump implements Pump {
     @Override
     public void flush() {
 
-        while(true) {
+        while (true) {
             final Integer results = receiver.receive(handler).join();
             assert results != null;
-            if(results == 0) {
+            if (results == 0) {
                 return;
             }
         }
@@ -130,7 +130,7 @@ public class DefaultPump implements Pump {
 
     private long delay() {
 
-        return (long)MIN_DELAY_MILLIS + (long)random.nextInt(MAX_DELAY_MILLIS - MIN_DELAY_MILLIS);
+        return (long) MIN_DELAY_MILLIS + (long) random.nextInt(MAX_DELAY_MILLIS - MIN_DELAY_MILLIS);
     }
 
     @Override

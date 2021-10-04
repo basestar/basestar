@@ -9,9 +9,9 @@ package io.basestar.util;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -37,9 +37,9 @@ import java.util.stream.Stream;
 
 /**
  * Assumes inputs are already sorted.
- *
+ * <p>
  * Also de-duplicates (where comparator(a, b) == 0).
- *
+ * <p>
  * Caller(s) must keep sources in same order.
  *
  * @param <T>
@@ -78,7 +78,7 @@ public interface Pager<T> {
             }
         });
     }
-    
+
     default CompletableFuture<Page<T>> page(final Page.Token token, final int count) {
 
         return page(Collections.emptySet(), token, count);
@@ -351,16 +351,16 @@ public interface Pager<T> {
                      final DataInputStream dis = new DataInputStream(bais)) {
 
                     final Set<String> seenKeys = new HashSet<>();
-                    while(true) {
+                    while (true) {
                         final char keyLength = dis.readChar();
-                        if(keyLength == 0) {
+                        if (keyLength == 0) {
                             break;
                         } else {
                             final byte[] keyBytes = new byte[keyLength];
                             dis.readFully(keyBytes);
                             final String key = new String(keyBytes, StandardCharsets.UTF_8);
                             final Pager<T> source = sources.get(key);
-                            if(source == null) {
+                            if (source == null) {
                                 throw new IllegalStateException("Page token not recognised: " + key);
                             } else {
                                 seenKeys.add(key);
@@ -368,7 +368,7 @@ public interface Pager<T> {
                             }
                         }
                     }
-                    if(!seenKeys.equals(sources.keySet())) {
+                    if (!seenKeys.equals(sources.keySet())) {
                         throw new IllegalStateException("Page tokens not matched: " + seenKeys + "!=" + sources.keySet());
                     }
 
@@ -382,7 +382,7 @@ public interface Pager<T> {
 
         private static <T> Page.Token encodeStates(final List<State<T>> states) {
 
-            if(states.isEmpty()) {
+            if (states.isEmpty()) {
                 return null;
             }
             try (final ByteArrayOutputStream baos = new ByteArrayOutputStream();

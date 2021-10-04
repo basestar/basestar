@@ -9,9 +9,9 @@ package io.basestar.util;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -60,32 +60,32 @@ public class Text {
     @SuppressWarnings("DuplicateExpressions")
     public static String plural(final String str) {
 
-        if(str == null || str.isEmpty()) {
+        if (str == null || str.isEmpty()) {
             return str;
         } else {
             final String lower = str.toLowerCase();
-            if(lower.endsWith("is")) {
+            if (lower.endsWith("is")) {
                 return caseConcat(str.substring(0, str.length() - 2), "es");
             }
-            for(final String suffix : PLURAL_ES) {
-                if(lower.endsWith(suffix)) {
+            for (final String suffix : PLURAL_ES) {
+                if (lower.endsWith(suffix)) {
                     return caseConcat(str, "es");
                 }
             }
-            for(final String suffix : PLURAL_VES) {
-                if(lower.endsWith(suffix)) {
+            for (final String suffix : PLURAL_VES) {
+                if (lower.endsWith(suffix)) {
                     return caseConcat(str.substring(0, str.length() - suffix.length()), "ves");
                 }
             }
-            if(lower.endsWith("y")) {
-                if(lower.length() > 1) {
+            if (lower.endsWith("y")) {
+                if (lower.length() > 1) {
                     final char before = lower.charAt(str.length() - 2);
-                    if(isConsonant(before)) {
+                    if (isConsonant(before)) {
                         return caseConcat(str.substring(0, str.length() - 1), "ies");
                     }
                 }
             }
-            if(lower.length() > 2 && lower.endsWith("on") && !lower.endsWith("ion")) {
+            if (lower.length() > 2 && lower.endsWith("on") && !lower.endsWith("ion")) {
                 return caseConcat(str.substring(0, str.length() - 2), "a");
             }
             return caseConcat(str, "s");
@@ -94,11 +94,11 @@ public class Text {
 
     private static String caseConcat(final String a, final String b) {
 
-        if(a == null || a.isEmpty()) {
+        if (a == null || a.isEmpty()) {
             return b;
-        } else if(a.length() == 1) {
+        } else if (a.length() == 1) {
             return a + b;
-        } else if(Character.isUpperCase(a.charAt(a.length() - 1))) {
+        } else if (Character.isUpperCase(a.charAt(a.length() - 1))) {
             return a + b.toUpperCase();
         } else {
             return a + b;
@@ -113,7 +113,7 @@ public class Text {
     public static String lowerCamel(final String str) {
 
         final List<String> words = words(str).collect(Collectors.toList());
-        if(words.isEmpty()) {
+        if (words.isEmpty()) {
             return "";
         } else {
             return words.get(0).toLowerCase() + words.stream().skip(1).map(Text::ucFirst).collect(Collectors.joining());
@@ -152,15 +152,15 @@ public class Text {
 
     public static Stream<String> words(final String str) {
 
-        if(str.isEmpty()) {
+        if (str.isEmpty()) {
             return Stream.empty();
-        } else if(str.contains(" ")) {
+        } else if (str.contains(" ")) {
             // Probably sentence case
             return Streams.stream(Splitter.on(Pattern.compile("[^A-Za-z0-9]+")).omitEmptyStrings().split(str));
-        } else if(str.contains("-")) {
+        } else if (str.contains("-")) {
             // Probably kebab-case
             return Streams.stream(Splitter.on("-").omitEmptyStrings().split(str));
-        } else if(str.contains("_")) {
+        } else if (str.contains("_")) {
             // Probably snake-case
             return Streams.stream(Splitter.on("_").omitEmptyStrings().split(str));
         } else {
@@ -181,7 +181,7 @@ public class Text {
 
     public static Number parseNumber(final String str) {
 
-        if(str.contains(".") || str.contains("e")) {
+        if (str.contains(".") || str.contains("e")) {
             return Double.parseDouble(str);
         } else {
             return Long.parseLong(str);
@@ -195,7 +195,7 @@ public class Text {
 
     public static String indent(final String input, final String using) {
 
-        if(input.isEmpty()) {
+        if (input.isEmpty()) {
             return input;
         } else {
             return using + input.replaceAll("\n", "\n" + using);
@@ -207,7 +207,7 @@ public class Text {
     public static long parseFileSizeBytes(final String size) {
 
         final Matcher matcher = FILE_SIZE_PATTERN.matcher(size);
-        if(matcher.matches()) {
+        if (matcher.matches()) {
             final long count = Long.parseLong(matcher.group(1).replaceAll(",", ""));
             switch (matcher.group(2).toUpperCase()) {
                 case "K":
@@ -227,7 +227,7 @@ public class Text {
 
     public static String ensureSuffix(final String str, final String suffix) {
 
-        if(str.endsWith(suffix)) {
+        if (str.endsWith(suffix)) {
             return str;
         } else {
             return str + suffix;
@@ -236,7 +236,7 @@ public class Text {
 
     public static String ensurePrefix(final String str, final String prefix) {
 
-        if(str.endsWith(prefix)) {
+        if (str.endsWith(prefix)) {
             return str;
         } else {
             return prefix + str;

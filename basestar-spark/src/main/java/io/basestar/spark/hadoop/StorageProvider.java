@@ -36,7 +36,7 @@ public interface StorageProvider extends AutoCloseable {
     default Name schema(final Configuration configuration) {
 
         final String str = configuration.get(SCHEMA);
-        if(str == null) {
+        if (str == null) {
             throw new IllegalStateException("Schema must be specified using " + SCHEMA);
         } else {
             return Name.parse(str);
@@ -72,7 +72,7 @@ public interface StorageProvider extends AutoCloseable {
 
         final String providerClassName = configuration.get(PROVIDER);
         try {
-            return (StorageProvider)Class.forName(providerClassName).newInstance();
+            return (StorageProvider) Class.forName(providerClassName).newInstance();
         } catch (final InstantiationException | IllegalAccessException | ClassNotFoundException e) {
             throw new IOException("Cannot create provider", e);
         }

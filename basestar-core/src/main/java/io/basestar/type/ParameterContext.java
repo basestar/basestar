@@ -9,9 +9,9 @@ package io.basestar.type;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -70,7 +70,7 @@ public class ParameterContext implements HasName, HasModifiers, HasAnnotations, 
     @SuppressWarnings("unchecked")
     public <V> Class<V> erasedType() {
 
-        return (Class<V>)parameter.getType();
+        return (Class<V>) parameter.getType();
     }
 
     protected static List<ParameterContext> from(final AnnotatedType type, final Executable exe) {
@@ -79,7 +79,7 @@ public class ParameterContext implements HasName, HasModifiers, HasAnnotations, 
         final java.lang.reflect.Parameter[] params = exe.getParameters();
         assert types.length == params.length;
         final ParameterContext[] result = new ParameterContext[types.length];
-        for(int i = 0; i != types.length; ++i) {
+        for (int i = 0; i != types.length; ++i) {
             result[i] = new ParameterContext(params[i], types[i]);
         }
         return Arrays.asList(result);

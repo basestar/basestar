@@ -40,8 +40,8 @@ class TestPath {
         Files.write(e.toPath(), "e".getBytes(Charsets.UTF_8), StandardOpenOption.CREATE);
 
         assertEquals(ImmutableSet.of(a), target.with(Path.parse("*.txt")).resolve().collect(Collectors.toSet()));
-        assertEquals(ImmutableSet.of(b, d),  target.with(Path.parse("**/*.yml")).resolve().collect(Collectors.toSet()));
-        assertEquals(ImmutableSet.of(e),  target.with(Path.parse("**/*.json")).resolve().collect(Collectors.toSet()));
-        assertEquals(ImmutableSet.of(c),  target.with(Path.parse("*/*/*.txt")).resolve().collect(Collectors.toSet()));
+        assertEquals(ImmutableSet.of(b, d), target.with(Path.parse("**/*.yml")).resolve().collect(Collectors.toSet()));
+        assertEquals(ImmutableSet.of(e), target.with(Path.parse("**/*.json")).resolve().collect(Collectors.toSet()));
+        assertEquals(ImmutableSet.of(c), target.with(Path.parse("*/*/*.txt")).resolve().collect(Collectors.toSet()));
     }
 }

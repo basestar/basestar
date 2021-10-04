@@ -39,7 +39,7 @@ public class SparkRowUtils {
 
     /**
      * Move row fields around and insert nulls to match the target schema.
-     *
+     * <p>
      * Note: this will not try to cast or coerce scalars.
      */
 
@@ -49,9 +49,9 @@ public class SparkRowUtils {
             return null;
         } else if (targetType instanceof ArrayType) {
             final DataType elementType = ((ArrayType) targetType).elementType();
-            final Seq<?> seq = (Seq<?>)source;
+            final Seq<?> seq = (Seq<?>) source;
             final Object[] arr = new Object[seq.size()];
-            for(int i = 0; i != seq.size(); ++i) {
+            for (int i = 0; i != seq.size(); ++i) {
                 arr[i] = conform(seq.apply(i), elementType);
             }
             return scala.Predef.wrapRefArray(arr);
@@ -67,7 +67,7 @@ public class SparkRowUtils {
 
     public static Row conform(final Row source, final StructType targetType) {
 
-        if(source == null) {
+        if (source == null) {
             return null;
         } else {
             final StructType sourceType = source.schema();
@@ -114,7 +114,7 @@ public class SparkRowUtils {
         for (int i = 0; i != sourceFields.length; ++i) {
             final StructField sourceField = sourceFields[i];
             final Object sourceValue = source.get(i);
-            if(!fn.test(sourceField, sourceValue)) {
+            if (!fn.test(sourceField, sourceValue)) {
                 outputFields.add(sourceField);
                 outputValues.add(sourceValue);
             }
@@ -130,13 +130,13 @@ public class SparkRowUtils {
 
     public static Object get(final NamingConvention naming, final Row source, final Name name) {
 
-        if(name.isEmpty()) {
+        if (name.isEmpty()) {
             return source;
         } else {
             final Object first = get(naming, source, name.first());
             final Name rest = name.withoutFirst();
-            if(!rest.isEmpty()) {
-                if(first instanceof Row) {
+            if (!rest.isEmpty()) {
+                if (first instanceof Row) {
                     return get(naming, (Row) first, rest);
                 } else {
                     return null;
@@ -158,7 +158,7 @@ public class SparkRowUtils {
         final StructField[] sourceFields = sourceType.fields();
         for (int i = 0; i != sourceFields.length; ++i) {
             final StructField sourceField = sourceFields[i];
-            if(naming.equals(name, sourceField.name())) {
+            if (naming.equals(name, sourceField.name())) {
                 return source.get(i);
             }
         }
@@ -180,14 +180,14 @@ public class SparkRowUtils {
 
     public static Column order(final Column column, final Sort.Order order, final Sort.Nulls nulls) {
 
-        if(order == Sort.Order.ASC) {
-            if(nulls == Sort.Nulls.FIRST) {
+        if (order == Sort.Order.ASC) {
+            if (nulls == Sort.Nulls.FIRST) {
                 return column.asc_nulls_first();
             } else {
                 return column.asc_nulls_last();
             }
         } else {
-            if(nulls == Sort.Nulls.FIRST) {
+            if (nulls == Sort.Nulls.FIRST) {
                 return column.desc_nulls_first();
             } else {
                 return column.desc_nulls_last();
@@ -197,7 +197,7 @@ public class SparkRowUtils {
 
     public static Column resolveName(final Dataset<?> input, final Name name) {
 
-        if(name.isEmpty()) {
+        if (name.isEmpty()) {
             return input.col(".*");
         }
         final StructType schema = input.schema();
@@ -221,10 +221,10 @@ public class SparkRowUtils {
 
     private static Optional<Column> resolveName(final Column col, final DataType fieldType, final Name name) {
 
-        if(name.isEmpty()) {
+        if (name.isEmpty()) {
             return Optional.of(col);
-        } else if(fieldType instanceof StructType) {
-            return resolveName(col, (StructType)fieldType, name);
+        } else if (fieldType instanceof StructType) {
+            return resolveName(col, (StructType) fieldType, name);
         } else {
             return Optional.empty();
         }
@@ -252,10 +252,10 @@ public class SparkRowUtils {
 
     public static Row nulled(final Row row) {
 
-        if(row == null) {
+        if (row == null) {
             return null;
         } else {
-            if(ScalaUtils.asJavaStream(row.toSeq()).allMatch(Objects::isNull)) {
+            if (ScalaUtils.asJavaStream(row.toSeq()).allMatch(Objects::isNull)) {
                 return null;
             } else {
                 return row;
@@ -277,7 +277,7 @@ public class SparkRowUtils {
 
         final Object[] row = new Object[structType.size()];
         int i = 0;
-        for(final StructField field : structType.fields()) {
+        for (final StructField field : structType.fields()) {
             row[i] = values.get(field.name());
             ++i;
         }

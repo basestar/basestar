@@ -18,7 +18,7 @@ class TestBasicAuthenticator {
             @Override
             protected CompletableFuture<Caller> verify(final String username, final String password) {
 
-                if("super".equals(username) && "password".equals(password)) {
+                if ("super".equals(username) && "password".equals(password)) {
                     return CompletableFuture.completedFuture(Caller.SUPER);
                 } else {
                     throw new AuthenticationFailedException("Authentication failed (invalid username/password)");

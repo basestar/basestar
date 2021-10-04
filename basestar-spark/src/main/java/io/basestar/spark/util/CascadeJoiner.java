@@ -44,7 +44,7 @@ public class CascadeJoiner {
         this.toSchema = toSchema;
         this.expressions = expressions;
         this.resultType = SparkSchemaUtils.structType(toSchema);
-        if(expressions.isEmpty()) {
+        if (expressions.isEmpty()) {
             throw new IllegalStateException("Must supply at least one cascade expression");
         }
     }
@@ -62,7 +62,7 @@ public class CascadeJoiner {
         final ClosureExtractingVisitor closeLeft = new ClosureExtractingVisitor(L_PREFIX, Reserved.THIS::equals);
         final Expression closedLeft = closeLeft.visit(expression);
         final SortedMap<String, Expression> leftConstants = Immutable.sortedMap(closeLeft.getConstants());
-        if(leftConstants.isEmpty()) {
+        if (leftConstants.isEmpty()) {
             throw new IllegalStateException("Link expression must have constants on left side");
         }
 
@@ -75,14 +75,14 @@ public class CascadeJoiner {
         final InferenceVisitor inference = new InferenceVisitor(inferenceContext);
 
         final SortedMap<String, Use<?>> leftLayout = new TreeMap<>();
-        for(final Map.Entry<String, Expression> entry : leftConstants.entrySet()) {
+        for (final Map.Entry<String, Expression> entry : leftConstants.entrySet()) {
             leftLayout.put(entry.getKey(), inference.typeOf(entry.getValue()));
         }
         final StructType leftType = SparkSchemaUtils.structType(leftLayout, null);
 
         final SortedMap<String, Use<?>> rightLayout = new TreeMap<>();
         rightLayout.putAll(toSchema.layoutSchema(ImmutableSet.of()));
-        for(final Map.Entry<String, Expression> entry : rightConstants.entrySet()) {
+        for (final Map.Entry<String, Expression> entry : rightConstants.entrySet()) {
             rightLayout.put(entry.getKey(), inference.typeOf(entry.getValue()));
         }
         final StructType rightType = SparkSchemaUtils.structType(rightLayout, null);
@@ -90,7 +90,7 @@ public class CascadeJoiner {
         final Dataset<Row> left = from.map(SparkUtils.map(row -> {
             final Map<String, Object> instance = SparkSchemaUtils.fromSpark(fromSchema, row);
             final Map<String, Object> result = new HashMap<>();
-            for(final Map.Entry<String, Expression> entry : leftConstants.entrySet()) {
+            for (final Map.Entry<String, Expression> entry : leftConstants.entrySet()) {
                 result.put(entry.getKey(), entry.getValue().evaluate(Context.init(ImmutableMap.of(Reserved.THIS, instance))));
             }
             return SparkSchemaUtils.toSpark(Layout.simple(leftLayout), leftType, result);
@@ -99,7 +99,7 @@ public class CascadeJoiner {
         final Dataset<Row> right = to.map(SparkUtils.map(row -> {
             final Map<String, Object> instance = SparkSchemaUtils.fromSpark(toSchema, row);
             final Map<String, Object> result = new HashMap<>(instance);
-            for(final Map.Entry<String, Expression> entry : rightConstants.entrySet()) {
+            for (final Map.Entry<String, Expression> entry : rightConstants.entrySet()) {
                 result.put(entry.getKey(), entry.getValue().evaluate(Context.init(instance)));
             }
             return SparkSchemaUtils.toSpark(Layout.simple(rightLayout), rightType, result);
@@ -107,10 +107,10 @@ public class CascadeJoiner {
 
         final Function<Name, Column> columnResolver = name -> {
             final String first = name.first();
-            if(leftConstants.containsKey(first)) {
+            if (leftConstants.containsKey(first)) {
                 return SparkRowUtils.resolveName(left, name);
-            } else if(rightConstants.containsKey(first)) {
-                return  SparkRowUtils.resolveName(right, name);
+            } else if (rightConstants.containsKey(first)) {
+                return SparkRowUtils.resolveName(right, name);
             } else {
                 throw new IllegalStateException("Cascade expression of the form " + expression + " not supported");
             }

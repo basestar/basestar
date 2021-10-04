@@ -64,7 +64,7 @@ public class StorageInputFormat extends InputFormat<Ref, Instance> {
         @Override
         public String[] getLocations() {
 
-            return new String[] { schema.toString() + ":" + split + ":" + splits };
+            return new String[]{schema.toString() + ":" + split + ":" + splits};
         }
     }
 
@@ -81,7 +81,7 @@ public class StorageInputFormat extends InputFormat<Ref, Instance> {
         final Scan scan = storage.scan(schema, expression, attemptSplits);
         final int splits = scan.getSegments();
         final List<InputSplit> result = new ArrayList<>();
-        for(int split = 0; split != splits; ++split) {
+        for (int split = 0; split != splits; ++split) {
             result.add(new StorageSplit(schema.getQualifiedName(), expression, split, splits));
         }
         return result;
@@ -94,7 +94,7 @@ public class StorageInputFormat extends InputFormat<Ref, Instance> {
         final StorageProvider provider = StorageProvider.provider(configuration);
         final Storage storage = provider.storage(configuration);
         final Namespace namespace = provider.namespace(configuration);
-        final StorageSplit storageSplit = (StorageSplit)inputSplit;
+        final StorageSplit storageSplit = (StorageSplit) inputSplit;
         final ReferableSchema schema = namespace.requireReferableSchema(storageSplit.getSchema());
         final Expression expression = storageSplit.getExpression();
         final Scan.Segment segment = storage.scan(schema, expression, storageSplit.getSplits()).segment(storageSplit.getSplit());
@@ -113,7 +113,7 @@ public class StorageInputFormat extends InputFormat<Ref, Instance> {
 
                 while (segment.hasNext()) {
                     next = new Instance(segment.next());
-                    if(expression.evaluatePredicate(Context.init(next))) {
+                    if (expression.evaluatePredicate(Context.init(next))) {
                         return true;
                     }
                 }

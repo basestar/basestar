@@ -9,9 +9,9 @@ package io.basestar.type;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -75,13 +75,13 @@ public class AnnotationContext<A extends Annotation> implements HasType, HasMeth
     @SuppressWarnings("unchecked")
     public AnnotationContext(final A annotation) {
 
-        this.annotationType = (Class<A>)annotation.annotationType();
+        this.annotationType = (Class<A>) annotation.annotationType();
         this.annotation = () -> annotation;
         this.values = Suppliers.memoize(() -> {
             final Map<String, Object> values = new HashMap<>();
             final TypeContext context = type();
             context.methods().forEach(m -> {
-                if(m.parameters().size() == 0 && !m.isStatic() && !NOT_VALUES.contains(m.name())) {
+                if (m.parameters().size() == 0 && !m.isStatic() && !NOT_VALUES.contains(m.name())) {
                     try {
                         values.put(m.name(), m.invoke(annotation));
                     } catch (final InvocationTargetException | IllegalAccessException | IllegalArgumentException e) {
@@ -98,7 +98,7 @@ public class AnnotationContext<A extends Annotation> implements HasType, HasMeth
 
         final Map<String, Object> values = new HashMap<>();
         context.methods().forEach(m -> {
-            if(m.parameters().size() == 0 && !m.isStatic() && !NOT_VALUES.contains(m.name())) {
+            if (m.parameters().size() == 0 && !m.isStatic() && !NOT_VALUES.contains(m.name())) {
                 values.put(m.name(), m.method().getDefaultValue());
             }
         });
@@ -118,7 +118,7 @@ public class AnnotationContext<A extends Annotation> implements HasType, HasMeth
     @SuppressWarnings("unchecked")
     public <T> T value(final String name) {
 
-        return (T)values.get().get(name);
+        return (T) values.get().get(name);
     }
 
     public Optional<TypeContext> valueType() {
@@ -136,10 +136,10 @@ public class AnnotationContext<A extends Annotation> implements HasType, HasMeth
 
         final Map<String, Object> values = values();
         final Map<String, Object> defaults = defaultValues();
-        if(values.containsKey(name)) {
-            final T value = (T)values.get(name);
+        if (values.containsKey(name)) {
+            final T value = (T) values.get(name);
             final Object def = defaults.get(name);
-            if(!Objects.deepEquals(value, def)) {
+            if (!Objects.deepEquals(value, def)) {
                 return Optional.of(value);
             }
         }
@@ -169,7 +169,7 @@ public class AnnotationContext<A extends Annotation> implements HasType, HasMeth
     @SuppressWarnings("unchecked")
     public <V> Class<V> erasedType() {
 
-        return (Class<V>)annotationType;
+        return (Class<V>) annotationType;
     }
 
     @Override

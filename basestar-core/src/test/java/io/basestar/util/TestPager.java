@@ -19,9 +19,9 @@ class TestPager {
 
     Page<String> source1(final Page.Token token) {
 
-        if(token == null) {
+        if (token == null) {
             return new Page<>(ImmutableList.of("a", "c"), page1, Page.Stats.fromTotal(10));
-        } else if(token.equals(page1)) {
+        } else if (token.equals(page1)) {
             return new Page<>(ImmutableList.of("e", "g"), null, Page.Stats.fromTotal(8));
         } else {
             return Page.empty();
@@ -30,9 +30,9 @@ class TestPager {
 
     Page<String> source2(final Page.Token token) {
 
-        if(token == null) {
+        if (token == null) {
             return new Page<>(ImmutableList.of("b", "d"), page1, Page.Stats.fromTotal(10));
-        } else if(token.equals(page1)) {
+        } else if (token.equals(page1)) {
             return new Page<>(ImmutableList.of("f", "h"), null, Page.Stats.fromTotal(8));
         } else {
             return Page.empty();
@@ -47,7 +47,7 @@ class TestPager {
 
         final Pager<String> pager = Pager.merge(String::compareTo, ImmutableMap.of("a", a, "b", b));
 
-        final Page<String> page = pager.page(EnumSet.of(Page.Stat.TOTAL), null,10).get();
+        final Page<String> page = pager.page(EnumSet.of(Page.Stat.TOTAL), null, 10).get();
         assertEquals(ImmutableList.of("a", "b", "c", "d", "e", "f", "g", "h"), page.getItems());
         assertNull(page.getPaging());
         assertNotNull(page.getStats());

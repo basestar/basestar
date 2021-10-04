@@ -9,9 +9,9 @@ package io.basestar.api;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -56,12 +56,12 @@ public class AuthenticatingAPI implements API {
 
         final List<Authorization> authorizations = new ArrayList<>();
         final String authHeader = request.getFirstHeader("Authorization");
-        if(authHeader != null && !authHeader.isEmpty()) {
+        if (authHeader != null && !authHeader.isEmpty()) {
             authorizations.add(Authorization.from(authHeader));
         }
-        for(final Map.Entry<String, String> header : request.getHeaders().entries()) {
+        for (final Map.Entry<String, String> header : request.getHeaders().entries()) {
             final String value = header.getValue();
-            if(value != null && !value.isEmpty() && !value.equalsIgnoreCase("null")) {
+            if (value != null && !value.isEmpty() && !value.equalsIgnoreCase("null")) {
                 final Matcher matcher = CUSTOM_AUTH_HEADER_PATTERN.matcher(header.getKey());
                 if (matcher.matches()) {
                     final String type = matcher.group(1);
@@ -70,9 +70,9 @@ public class AuthenticatingAPI implements API {
             }
         }
 
-        if(authorizations.size() == 0) {
+        if (authorizations.size() == 0) {
             return Authorization.of(null, null);
-        } else if(authorizations.size() == 1) {
+        } else if (authorizations.size() == 1) {
             return authorizations.get(0);
         } else {
             // Must be an error, otherwise proxy authorization cannot be trusted
@@ -85,7 +85,7 @@ public class AuthenticatingAPI implements API {
 
         final Authorization authorization = authorization(request);
 
-        if(authenticator.canAuthenticate(authorization)) {
+        if (authenticator.canAuthenticate(authorization)) {
             return authenticator.authenticate(authorization).thenCompose(caller -> {
 
                 log.debug("Authenticated as {} (anon: {}, super: {})", caller.getId(), caller.isAnon(), caller.isSuper());

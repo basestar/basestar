@@ -9,9 +9,9 @@ package io.basestar.util;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -62,7 +62,7 @@ public class Sort implements Serializable {
                 .collect(Collectors.toList());
     }
 
-    public static List<Sort> parseList(final String ... strs) {
+    public static List<Sort> parseList(final String... strs) {
 
         return parseList(Arrays.asList(strs));
     }
@@ -97,11 +97,11 @@ public class Sort implements Serializable {
         return new Sort(name, Order.DESC);
     }
 
-//    @JsonCreator
+    //    @JsonCreator
     public static Sort parse(final String v) {
 
         final List<String> parts = Lists.newArrayList(SPLITTER.split(v));
-        if(parts.isEmpty()) {
+        if (parts.isEmpty()) {
             throw new IllegalStateException();
         } else {
             final Name name = Name.parse(parts.get(0));
@@ -128,14 +128,14 @@ public class Sort implements Serializable {
     public static <T, V extends Comparable<V>> Comparator<T> comparator(final Collection<Sort> sort, final BiFunction<T, Name, V> getter) {
 
         Comparator<T> result = null;
-        for(final Sort s : sort) {
-            if(result == null) {
+        for (final Sort s : sort) {
+            if (result == null) {
                 result = s.comparator(getter);
             } else {
                 result = result.thenComparing(s.comparator(getter));
             }
         }
-        if(result == null) {
+        if (result == null) {
             // Need to return something
             return Comparator.comparing(System::identityHashCode);
         } else {

@@ -9,9 +9,9 @@ package io.basestar.util;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -32,9 +32,9 @@ public class TopologicalSort {
     public static <T> boolean isSorted(final Iterable<? extends T> in, final Function<T, ? extends Iterable<? extends T>> dependency) {
 
         final Set<T> seen = new HashSet<>();
-        for(final T current : in) {
-            for(final T dep : dependency.apply(current)) {
-                if(!seen.contains(dep)) {
+        for (final T current : in) {
+            for (final T dep : dependency.apply(current)) {
+                if (!seen.contains(dep)) {
                     return false;
                 }
             }
@@ -56,8 +56,8 @@ public class TopologicalSort {
 
         final LinkedList<T> stack = new LinkedList<>();
 
-        for(final T current : in) {
-            if(!seen.contains(current)) {
+        for (final T current : in) {
+            if (!seen.contains(current)) {
                 sortUtil(current, dependency, seen, stack);
             }
         }
@@ -70,8 +70,8 @@ public class TopologicalSort {
 
         seen.add(current);
 
-        for(final T next : dependency.apply(current)) {
-            if(!seen.contains(next)) {
+        for (final T next : dependency.apply(current)) {
+            if (!seen.contains(next)) {
                 sortUtil(next, dependency, seen, stack);
             }
         }

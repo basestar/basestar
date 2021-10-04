@@ -42,9 +42,9 @@ public class DeltaState {
 
         final List<Sequence> merged = new ArrayList<>();
         final Map<String, Map<UpsertOp, Set<Map<String, String>>>> unprocessed = new TreeMap<>(merge);
-        for(final Sequence seq : sequences) {
+        for (final Sequence seq : sequences) {
             final String sequence = seq.getSequence();
-            if(unprocessed.containsKey(sequence)) {
+            if (unprocessed.containsKey(sequence)) {
                 merged.add(seq.merge(unprocessed.get(sequence)));
                 unprocessed.remove(sequence);
             } else {
@@ -63,8 +63,8 @@ public class DeltaState {
     public DeltaState dropSequences(final Set<String> drop) {
 
         final List<Sequence> result = new ArrayList<>();
-        for(final Sequence seq : sequences) {
-            if(!drop.contains(seq.getSequence())) {
+        for (final Sequence seq : sequences) {
+            if (!drop.contains(seq.getSequence())) {
                 result.add(seq);
             }
         }
@@ -89,10 +89,10 @@ public class DeltaState {
                                      @Nullable final Set<Map<String, String>> partitionFilter) {
 
             final List<URI> locations = new ArrayList<>();
-            for(final Map.Entry<UpsertOp, Set<Map<String, String>>> entry : operations.entrySet()) {
+            for (final Map.Entry<UpsertOp, Set<Map<String, String>>> entry : operations.entrySet()) {
                 final UpsertOp op = entry.getKey();
-                for(final Map<String, String> spec : entry.getValue()) {
-                    if(matchesFilter(partitionFilter, op, spec)) {
+                for (final Map<String, String> spec : entry.getValue()) {
+                    if (matchesFilter(partitionFilter, op, spec)) {
                         locations.add(partitionLocation(location, partitionColumns, sequence, op, spec));
                     }
                 }

@@ -9,9 +9,9 @@ package io.basestar.type;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -62,9 +62,9 @@ public class PropertyContext implements AccessorContext {
         this.field = field;
         this.getter = getter;
         this.setter = setter;
-        if(getter != null) {
+        if (getter != null) {
             annotatedType = getter.annotatedType();
-        } else if(setter != null) {
+        } else if (setter != null) {
             annotatedType = setter.parameters().get(0).annotatedType();
         } else {
             annotatedType = field.annotatedType();
@@ -91,9 +91,9 @@ public class PropertyContext implements AccessorContext {
     @Override
     public <T, V> V get(final T target) throws IllegalAccessException, InvocationTargetException {
 
-        if(getter != null) {
+        if (getter != null) {
             return getter.invoke(target);
-        } else if(field != null) {
+        } else if (field != null) {
             return field.get(target);
         } else {
             throw new IllegalAccessException();
@@ -103,9 +103,9 @@ public class PropertyContext implements AccessorContext {
     @Override
     public <T, V> void set(final T target, final V value) throws IllegalAccessException, InvocationTargetException {
 
-        if(setter != null) {
+        if (setter != null) {
             setter.invoke(target, value);
-        } else if(field != null) {
+        } else if (field != null) {
             field.set(target, value);
         } else {
             throw new IllegalAccessException();
@@ -140,9 +140,9 @@ public class PropertyContext implements AccessorContext {
             @Override
             public <T, V> V get(final T target) throws IllegalAccessException, InvocationTargetException {
 
-                if(getter != null) {
+                if (getter != null) {
                     return getter.invoke(target);
-                } else if(field != null) {
+                } else if (field != null) {
                     return field.get(target);
                 } else {
                     throw new IllegalAccessException();
@@ -152,9 +152,9 @@ public class PropertyContext implements AccessorContext {
             @Override
             public <T, V> void set(final T target, final V value) throws IllegalAccessException, InvocationTargetException {
 
-                if(setter != null) {
+                if (setter != null) {
                     setter.invoke(target, value);
-                } else if(field != null) {
+                } else if (field != null) {
                     field.set(target, value);
                 } else {
                     throw new IllegalAccessException();

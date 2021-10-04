@@ -63,7 +63,7 @@ public class BinaryKey extends Bytes {
 
     private static byte[] bytes(final List<?> keys) {
 
-        try(final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+        try (final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             for (final Object v : keys) {
                 if (v == null) {
@@ -108,7 +108,7 @@ public class BinaryKey extends Bytes {
 
     public static byte[] concat(final byte[]... arrays) {
 
-        try(final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+        try (final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             for (final byte[] array : arrays) {
                 baos.write(array);
@@ -145,10 +145,10 @@ public class BinaryKey extends Bytes {
 
     private static byte[] genericBytes(final byte[] bytes) throws IOException {
 
-        try(final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+        try (final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
-            for(final byte b : bytes) {
-                if(b <= T_ESCAPE) {
+            for (final byte b : bytes) {
+                if (b <= T_ESCAPE) {
                     baos.write(T_ESCAPE);
                 }
                 baos.write(b);
