@@ -351,8 +351,8 @@ public interface QueryPlanner<T> {
             return visitor.map(stage, expressions);
         }
 
-        protected T aggViewStage(QueryStageVisitor<T> visitor, T from, InferenceContext inference,
-                                 List<String> group, Map<String, TypedExpression<?>> expressions, Set<Bucket> buckets) {
+        protected T aggViewStage(final QueryStageVisitor<T> visitor, final T from, final InferenceContext inference,
+                                 final List<String> group, final Map<String, TypedExpression<?>> expressions, final Set<Bucket> buckets) {
 
             return visitor.agg(from, group, expressions);
         }

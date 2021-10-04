@@ -671,6 +671,12 @@ public class SchemaAdaptor {
             }
 
             @Override
+            public Type<?> visitDecimal(final UseDecimal type) {
+
+                return new TypeName(strategy.decimalTypeName());
+            }
+
+            @Override
             public Type<?> visitAny(final UseAny type) {
 
                 return new TypeName(strategy.anyTypeName());
@@ -768,6 +774,12 @@ public class SchemaAdaptor {
             public Type<?> visitBinary(final UseBinary type) {
 
                 return new TypeName(strategy.binaryTypeName());
+            }
+
+            @Override
+            public Type<?> visitDecimal(final UseDecimal type) {
+
+                return new TypeName(strategy.decimalTypeName());
             }
 
             @Override

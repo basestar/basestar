@@ -96,7 +96,7 @@ public interface UpsertState {
         }
 
         @Override
-        public void dropState(SparkSession session, String key) {
+        public void dropState(final SparkSession session, finalString key) {
 
             try {
                 final Configuration configuration = session.sparkContext().hadoopConfiguration();

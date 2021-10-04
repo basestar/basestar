@@ -114,6 +114,10 @@ public class GraphQLAdaptor {
                 .coercing(BinaryCoercing.INSTANCE)
                 .build());
         builder.scalar(GraphQLScalarType.newScalar()
+                .name(strategy.decimalTypeName())
+                .coercing(DecimalCoercing.INSTANCE)
+                .build());
+        builder.scalar(GraphQLScalarType.newScalar()
                 .name(strategy.secretTypeName())
                 .coercing(new SecretCoercing(secretContext))
                 .build());

@@ -49,12 +49,12 @@ public interface SchemaMapper<T, O> extends Serializable {
 
     O unmarshall(T value);
 
-    default List<T> marshall(Collection<?> values) {
+    default List<T> marshall(final Collection<?> values) {
 
         return values.stream().map(this::marshall).collect(Collectors.toList());
     }
 
-    default List<O> unmarshall(Collection<? extends T> values) {
+    default List<O> unmarshall(final Collection<? extends T> values) {
 
         return values.stream().map(this::unmarshall).collect(Collectors.toList());
     }

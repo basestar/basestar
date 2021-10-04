@@ -71,7 +71,7 @@ public interface FieldType {
 
     SecretType SECRET = new SecretType();
 
-    static String keywordSuffix(boolean caseSensitive) {
+    static String keywordSuffix(final boolean caseSensitive) {
 
         // FIXME
         return caseSensitive ? "" : "." + IKEYWORD_FIELD;

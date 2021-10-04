@@ -436,7 +436,7 @@ public interface Use<T> extends Serializable {
 
     interface Visitor<R> {
 
-        default <T> R visit(Use<T> type) {
+        default <T> R visit(final Use<T> type) {
 
             return type.visit(this);
         }

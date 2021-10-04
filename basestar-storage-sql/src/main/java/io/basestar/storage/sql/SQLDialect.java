@@ -96,7 +96,7 @@ public interface SQLDialect {
 
     Object binaryToSQLValue(UseBinary type, Bytes value);
 
-    default Object secretToSQLValue(UseSecret type, Secret value) {
+    default Object secretToSQLValue(final UseSecret type, final Secret value) {
 
         return binaryToSQLValue(UseBinary.DEFAULT, new Bytes(value.encrypted()));
     }
@@ -119,7 +119,7 @@ public interface SQLDialect {
 
     Bytes binaryFromSQLValue(UseBinary type, Object value);
 
-    default Secret secretFromSQLValue(UseSecret type, Object value) {
+    default Secret secretFromSQLValue(final UseSecret type, final Object value) {
 
         return Secret.encrypted(binaryFromSQLValue(UseBinary.DEFAULT, value).getBytes());
     }
