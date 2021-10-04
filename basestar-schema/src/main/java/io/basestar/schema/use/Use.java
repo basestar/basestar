@@ -26,7 +26,6 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.type.Numbers;
 import io.basestar.schema.Bucketing;
-import io.basestar.schema.Constraint;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
 import io.basestar.schema.exception.InvalidKeyException;
@@ -60,7 +59,7 @@ import java.util.function.BiFunction;
  */
 
 @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
-public interface Use<T> extends Serializable {
+public interface Use<T> extends Serializable, UseValidated<T> {
 
     String OPTIONAL_SYMBOL = "?";
 
@@ -169,8 +168,6 @@ public interface Use<T> extends Serializable {
     T evaluateTransients(Context context, T value, Set<Name> expand);
 
     Set<Name> transientExpand(Name name, Set<Name> expand);
-
-    Set<Constraint.Violation> validate(Context context, Name name, T value);
 
     io.swagger.v3.oas.models.media.Schema<?> openApi(Set<Name> expand);
 

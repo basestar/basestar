@@ -9,9 +9,9 @@ package io.basestar.schema.use;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -34,7 +34,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Enum Type
@@ -60,11 +63,11 @@ public class UseEnum implements UseStringLike<String>, UseNamed<String> {
     @Override
     public UseEnum resolve(final Schema.Resolver resolver) {
 
-        if(schema.isAnonymous()) {
+        if (schema.isAnonymous()) {
             return this;
         } else {
             final EnumSchema resolved = resolver.requireEnumSchema(schema.getQualifiedName());
-            if(resolved == schema) {
+            if (resolved == schema) {
                 return this;
             } else {
                 return new UseEnum(resolved);
@@ -85,11 +88,11 @@ public class UseEnum implements UseStringLike<String>, UseNamed<String> {
 
     public static UseEnum from(final Object config) {
 
-        if(config instanceof List) {
+        if (config instanceof List) {
             final List<String> values = new ArrayList<>();
-            for(final Object value : (List<?>)config) {
-                if(value instanceof String) {
-                    values.add((String)value);
+            for (final Object value : (List<?>) config) {
+                if (value instanceof String) {
+                    values.add((String) value);
                 } else {
                     throw new TypeSyntaxException();
                 }
@@ -151,13 +154,8 @@ public class UseEnum implements UseStringLike<String>, UseNamed<String> {
     }
 
     @Override
-    public Set<Constraint.Violation> validate(final Context context, final Name name, final String value) {
-
-        if(value == null) {
-            return Collections.emptySet();
-        } else {
-            return schema.validate(context, name, value);
-        }
+    public Set<Constraint.Violation> validateType(final Context context, final Name name, final String value) {
+        return schema.validate(context, name, value);
     }
 
     @Override
@@ -170,7 +168,7 @@ public class UseEnum implements UseStringLike<String>, UseNamed<String> {
     @Override
     public Object toConfig(final boolean optional) {
 
-        if(schema.isAnonymous()) {
+        if (schema.isAnonymous()) {
             return ImmutableMap.of(
                     Use.name(NAME, optional), schema.getValues()
             );
@@ -182,7 +180,7 @@ public class UseEnum implements UseStringLike<String>, UseNamed<String> {
     @Override
     public io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 
-        if(schema.isAnonymous()) {
+        if (schema.isAnonymous()) {
             return new io.swagger.v3.oas.models.media.StringSchema()._enum(schema.getValues());
         } else {
             return UseNamed.super.openApi(expand);

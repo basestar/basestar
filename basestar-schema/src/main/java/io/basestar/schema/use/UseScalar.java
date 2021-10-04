@@ -36,12 +36,6 @@ import java.util.*;
 public interface UseScalar<T> extends Use<T> {
 
     @Override
-    default Set<Constraint.Violation> validate(final Context context, final Name name, final T value) {
-
-        return Collections.emptySet();
-    }
-
-    @Override
     default UseScalar<T> resolve(final Schema.Resolver resolver) {
 
         return this;
