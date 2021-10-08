@@ -719,15 +719,21 @@ public interface SQLDialect {
         result.append(name.toString());
         result.append("(");
         for (final Argument arg : arguments) {
-            result.append(DSL.name(arg.getName()));
+            result.append(arg.getName());
             result.append(" ");
             result.append(dataType(arg.getType()).getTypeName(configuration));
         }
         result.append(") RETURNS ");
         result.append(dataType(returns).getTypeName(configuration));
-        result.append(" LANGUAGE ");
-        result.append(language);
+        result.append(" ");
+        result.append(createFunctionDDLLanguage(language));
+        result.append(" ");
         return result.toString();
+    }
+
+    default String createFunctionDDLLanguage(final String language) {
+
+        return "LANGUAGE " + language;
     }
 
     default String createFunctionDDLBody(final DSLContext context, final String definition) {

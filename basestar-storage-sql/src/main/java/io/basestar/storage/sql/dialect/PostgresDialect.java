@@ -31,4 +31,14 @@ public class PostgresDialect extends JSONDialect {
 
         return false;
     }
+
+    @Override
+    public String createFunctionDDLLanguage(final String language) {
+
+        if ("sql".equalsIgnoreCase(language)) {
+            return super.createFunctionDDLLanguage("pgplsql");
+        } else {
+            return super.createFunctionDDLLanguage(language);
+        }
+    }
 }

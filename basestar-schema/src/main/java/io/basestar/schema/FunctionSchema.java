@@ -201,7 +201,7 @@ public class FunctionSchema implements Schema<Callable> {
     @Override
     public io.swagger.v3.oas.models.media.Schema<?> openApi() {
 
-        throw new UnsupportedOperationException();
+        return null;
     }
 
     @Override
@@ -225,13 +225,11 @@ public class FunctionSchema implements Schema<Callable> {
     @Override
     public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
-        throw new UnsupportedOperationException();
     }
 
     @Override
     public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, LinkableSchema> out) {
 
-        throw new UnsupportedOperationException();
     }
 
     public String getReplacedDefinition(final Function<Schema<?>, String> replacer) {
