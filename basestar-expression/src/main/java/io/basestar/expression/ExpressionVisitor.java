@@ -156,7 +156,7 @@ public interface ExpressionVisitor<T> {
 
         T visitDefault(Expression expression);
 
-        default T visitAggregate(Aggregate expression) {
+        default T visitAggregate(final Aggregate expression) {
 
             return visitDefault(expression);
         }

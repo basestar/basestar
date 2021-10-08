@@ -9,9 +9,9 @@ package io.basestar.event;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -52,11 +52,11 @@ public interface EventSerialization {
         @Override
         public byte[] serialize(final Event event) {
 
-            try(final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                final GZIPOutputStream gzos = new GZIPOutputStream(baos)) {
+            try (final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                 final GZIPOutputStream gzos = new GZIPOutputStream(baos)) {
                 objectMapper.writeValue(gzos, event);
                 return baos.toByteArray();
-            } catch(final IOException e) {
+            } catch (final IOException e) {
                 throw new UncheckedIOException(e);
             }
         }
@@ -64,10 +64,10 @@ public interface EventSerialization {
         @Override
         public <E extends Event> E deserialize(final Class<E> event, final byte[] bytes) {
 
-            try(final ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
-                final GZIPInputStream gzis = new GZIPInputStream(bais)) {
+            try (final ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+                 final GZIPInputStream gzis = new GZIPInputStream(bais)) {
                 return objectMapper.readValue(gzis, event);
-            } catch(final IOException e) {
+            } catch (final IOException e) {
                 throw new UncheckedIOException(e);
             }
         }

@@ -28,7 +28,7 @@ import java.util.*;
 
 /**
  * Joining is an expensive operation so this code is highly optimized to reduce the amount of work done in map stages.
- *
+ * <p>
  * Expand stages are designed so that the final stage of the previous step is fused to the first stage of the next step.
  */
 
@@ -61,10 +61,10 @@ public class ExpandRefsStep extends AbstractExpandStep {
         final Set<String> refIds = refKeys(root, names, row);
 
         final List<Row> result = new ArrayList<>();
-        for(final String refId : refIds) {
+        for (final String refId : refIds) {
             result.add(SparkRowUtils.append(row, field, refId));
         }
-        if(result.isEmpty()) {
+        if (result.isEmpty()) {
             result.add(SparkRowUtils.append(row, field, null));
         }
 
@@ -80,7 +80,7 @@ public class ExpandRefsStep extends AbstractExpandStep {
     @Override
     public Column[] projectedKeyColumns() {
 
-        return new Column[] { functions.col(KEY) };
+        return new Column[]{functions.col(KEY)};
     }
 
     @Override
@@ -91,7 +91,7 @@ public class ExpandRefsStep extends AbstractExpandStep {
 
     private boolean canElideGroup() {
 
-        if(names.size() == 1) {
+        if (names.size() == 1) {
             final Name name = names.iterator().next();
             final String first = name.first();
             return root.requireMember(first, true).typeOf().visit(new Use.Visitor.Defaulting<Boolean>() {
@@ -116,7 +116,7 @@ public class ExpandRefsStep extends AbstractExpandStep {
     protected <T> Dataset<Row> applyImpl(final QueryResolver resolver, final Dataset<Row> input, final Set<Bucket> buckets, final Use<T> typeOfId) {
 
         final boolean coBucketed = root.isCompatibleBucketing(root.getEffectiveBucketing(), names);
-        if(coBucketed) {
+        if (coBucketed) {
             log.info("Refs are co-bucketed: schema={}, link={}, buckets={}", root, names, buckets);
         } else {
             log.info("Refs are not co-bucketed: schema={}, link={}", root, names);
@@ -131,7 +131,7 @@ public class ExpandRefsStep extends AbstractExpandStep {
         final Dataset<Tuple2<Row, Row>> joined = input.joinWith(joinTo, condition, "left_outer");
         final StructType outputType = expandedType(root, names, SparkRowUtils.remove(input.schema(), KEY), joinToType);
 
-        if(canElideGroup()) {
+        if (canElideGroup()) {
 
             if (next != null) {
 
@@ -199,7 +199,7 @@ public class ExpandRefsStep extends AbstractExpandStep {
         final Set<String> refIds = new HashSet<>();
         root.getMembers().forEach((name, member) -> {
             final Set<Name> branch = branches.get(name);
-            if(branch != null) {
+            if (branch != null) {
                 refIds.addAll(refKeys(member.typeOf(), branch, SparkRowUtils.get(row, name)));
             }
         });
@@ -254,7 +254,7 @@ public class ExpandRefsStep extends AbstractExpandStep {
                 public Set<String> visitInstance(final UseInstance type) {
 
                     if (input instanceof Row) {
-                        return refKeys(type.getSchema(), expand, (Row)input);
+                        return refKeys(type.getSchema(), expand, (Row) input);
                     } else {
                         throw new IllegalStateException();
                     }
@@ -264,12 +264,12 @@ public class ExpandRefsStep extends AbstractExpandStep {
                 public Set<String> visitRef(final UseRef type) {
 
                     if (input instanceof Row) {
-                        if(expand.isEmpty()) {
+                        if (expand.isEmpty()) {
                             final Row row = (Row) input;
                             final String id = (String) SparkRowUtils.get(row, ObjectSchema.ID);
                             return id == null ? ImmutableSet.of() : ImmutableSet.of(id);
                         } else {
-                            return refKeys(type.getSchema(), expand, (Row)input);
+                            return refKeys(type.getSchema(), expand, (Row) input);
                         }
                     } else {
                         throw new IllegalStateException();
@@ -306,9 +306,9 @@ public class ExpandRefsStep extends AbstractExpandStep {
         return SparkRowUtils.transform(input, (field, oldValue) -> {
             final String name = field.name();
             final Set<Name> branch = branches.get(name);
-            if(branch != null) {
+            if (branch != null) {
                 final Member member = schema.getMember(name, true);
-                if(member != null) {
+                if (member != null) {
                     return applyRefs(member.typeOf(), branch, joinType, oldValue, lookup);
                 }
             }
@@ -351,7 +351,7 @@ public class ExpandRefsStep extends AbstractExpandStep {
                         final Set<Name> branch = branches.get(UseMap.EXPAND_WILDCARD);
                         if (branch != null) {
                             ((scala.collection.Map<?, ?>) input)
-                                    .foreach(ScalaUtils.scalaFunction(t -> results.put((String)t._1(), applyRefs(type.getType(), branch, joinType, t._2(), lookup))));
+                                    .foreach(ScalaUtils.scalaFunction(t -> results.put((String) t._1(), applyRefs(type.getType(), branch, joinType, t._2(), lookup))));
                         }
                         return ScalaUtils.asScalaMap(results);
                     } else {
@@ -363,7 +363,7 @@ public class ExpandRefsStep extends AbstractExpandStep {
                 public Row visitInstance(final UseInstance type) {
 
                     if (input instanceof Row) {
-                        return applyRefs(type.getSchema(), expand, joinType, (Row)input, lookup);
+                        return applyRefs(type.getSchema(), expand, joinType, (Row) input, lookup);
                     } else {
                         throw new IllegalStateException();
                     }
@@ -373,7 +373,7 @@ public class ExpandRefsStep extends AbstractExpandStep {
                 public Row visitRef(final UseRef type) {
 
                     if (input instanceof Row) {
-                        if(expand.isEmpty()) {
+                        if (expand.isEmpty()) {
                             final Row row = (Row) input;
                             final String id = (String) SparkRowUtils.get(row, ObjectSchema.ID);
                             if (id != null && lookup.get(id) != null) {
@@ -385,7 +385,7 @@ public class ExpandRefsStep extends AbstractExpandStep {
                                 return new GenericRowWithSchema(values, joinType);
                             }
                         } else {
-                            return applyRefs(type.getSchema(), expand, joinType, (Row)input, lookup);
+                            return applyRefs(type.getSchema(), expand, joinType, (Row) input, lookup);
                         }
                     } else {
                         throw new IllegalStateException();

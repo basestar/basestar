@@ -2,6 +2,7 @@ package io.basestar.schema.from;
 
 import io.basestar.expression.Expression;
 import io.basestar.schema.Bucketing;
+import io.basestar.schema.FunctionSchema;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
 import io.basestar.schema.expression.InferenceContext;
@@ -14,6 +15,7 @@ import lombok.Data;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -160,5 +162,10 @@ public class FromSql implements From {
     public boolean isExternal() {
 
         return impl == null;
+    }
+
+    public String getReplacedSql(final Function<Schema<?>, String> replacer) {
+
+        return FunctionSchema.getReplacedDefinition(sql, using, replacer);
     }
 }

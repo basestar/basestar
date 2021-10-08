@@ -5,5 +5,5 @@ import java.lang.reflect.InvocationTargetException;
 
 public interface SerializableInvoker extends Serializable {
 
-    <T, V> V invoke(T target, Object ... args) throws InvocationTargetException, IllegalAccessException;
+    <T, V> V invoke(T target, Object... args) throws InvocationTargetException, IllegalAccessException;
 }

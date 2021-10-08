@@ -9,9 +9,9 @@ package io.basestar.type;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -68,10 +68,10 @@ public class MethodContext implements HasName, HasModifiers, HasAnnotations, Has
     }
 
     @SuppressWarnings("unchecked")
-    public <T, V> V invoke(final T target, final Object ... args) throws InvocationTargetException, IllegalAccessException {
+    public <T, V> V invoke(final T target, final Object... args) throws InvocationTargetException, IllegalAccessException {
 
         method.setAccessible(true);
-        return (V)method.invoke(target, args);
+        return (V) method.invoke(target, args);
     }
 
     public SerializableInvoker serializableInvoker() {
@@ -110,7 +110,7 @@ public class MethodContext implements HasName, HasModifiers, HasAnnotations, Has
     @SuppressWarnings("unchecked")
     public <V> Class<V> erasedType() {
 
-        return (Class<V>)method.getReturnType();
+        return (Class<V>) method.getReturnType();
     }
 
     @Override

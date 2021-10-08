@@ -33,7 +33,7 @@ public interface Query<T> {
         return then(ds -> ds.select(columns));
     }
 
-    default Query<T> sort(final Sort ... sort) {
+    default Query<T> sort(final Sort... sort) {
 
         return sort(ImmutableList.copyOf(sort));
     }

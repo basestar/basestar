@@ -89,7 +89,7 @@ public interface ESQueryStage {
         }
 
         @Override
-        public ESQueryStage agg(final List<String> group, Map<String, TypedExpression<?>> expressions) {
+        public ESQueryStage agg(final List<String> group, final Map<String, TypedExpression<?>> expressions) {
 
             return new Agg(this, group, null, expressions);
         }
@@ -177,12 +177,12 @@ public interface ESQueryStage {
             return new Page<>(results, newPaging, Page.Stats.fromTotal(total));
         }
 
-        private long getTotal(Page.Token token, SearchHits hits) {
+        private long getTotal(final Page.Token token, final SearchHits hits) {
             if (token != null) {
                 CountPreservingTokenInfo countPreservingTokenInfo = KeysetPagingUtils.countPreservingTokenInfo(token);
                 return countPreservingTokenInfo.getTotal();
             }
-           return hits.getTotalHits().value;
+            return hits.getTotalHits().value;
         }
     }
 

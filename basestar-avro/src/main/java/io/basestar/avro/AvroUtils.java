@@ -9,9 +9,9 @@ package io.basestar.avro;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -141,7 +141,7 @@ public class AvroUtils {
             @Override
             public Schema visitRef(final UseRef type) {
 
-                if(expand == null) {
+                if (expand == null) {
                     return makeOptional(refSchema(type.isVersioned()), true);
                 } else {
                     return makeOptional(schema(type.getSchema(), expand), true);
@@ -415,7 +415,7 @@ public class AvroUtils {
 
     private static Object decode(final Use<?> use, final Schema schema, final Set<Name> expand, final Object value) {
 
-        if(value == null) {
+        if (value == null) {
             return null;
         }
         return use.visit(new Use.Visitor.Defaulting<Object>() {
@@ -429,7 +429,7 @@ public class AvroUtils {
             @Override
             public Map<String, Object> visitRef(final UseRef type) {
 
-                if(expand == null) {
+                if (expand == null) {
                     return decodeRef(unwrapOptionalSchema(schema), type.isVersioned(), (IndexedRecord) value);
                 } else {
                     return decode(type.getSchema(), unwrapOptionalSchema(schema), expand, (IndexedRecord) value);
@@ -439,7 +439,7 @@ public class AvroUtils {
             @Override
             public <V, T extends Collection<V>> List<?> visitCollection(final UseCollection<V, T> type) {
 
-                final Collection<?> arr = (Collection<?>)value;
+                final Collection<?> arr = (Collection<?>) value;
                 return arr.stream()
                         .map(v -> decode(type.getType(), unwrapOptionalSchema(schema.getElementType()), expand, v))
                         .collect(Collectors.toList());
@@ -448,7 +448,7 @@ public class AvroUtils {
             @Override
             public <T> Map<?, ?> visitMap(final UseMap<T> type) {
 
-                final Map<?, ?> map = (Map<?, ?>)value;
+                final Map<?, ?> map = (Map<?, ?>) value;
                 return map.entrySet().stream()
                         .collect(Collectors.toMap(
                                 Map.Entry::getKey,

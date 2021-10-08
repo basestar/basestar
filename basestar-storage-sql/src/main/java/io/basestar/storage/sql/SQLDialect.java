@@ -96,7 +96,7 @@ public interface SQLDialect {
 
     Object binaryToSQLValue(UseBinary type, Bytes value);
 
-    default Object secretToSQLValue(UseSecret type, Secret value) {
+    default Object secretToSQLValue(final UseSecret type, final Secret value) {
 
         return binaryToSQLValue(UseBinary.DEFAULT, new Bytes(value.encrypted()));
     }
@@ -119,7 +119,7 @@ public interface SQLDialect {
 
     Bytes binaryFromSQLValue(UseBinary type, Object value);
 
-    default Secret secretFromSQLValue(UseSecret type, Object value) {
+    default Secret secretFromSQLValue(final UseSecret type, final Object value) {
 
         return Secret.encrypted(binaryFromSQLValue(UseBinary.DEFAULT, value).getBytes());
     }
@@ -270,7 +270,7 @@ public interface SQLDialect {
 
     default Object toSQLValue(final Use<?> type, final Object value) {
 
-        if(value == null) {
+        if (value == null) {
             return null;
         }
         return type.visit(new Use.Visitor<Object>() {
@@ -308,7 +308,7 @@ public interface SQLDialect {
             @Override
             public Object visitRef(final UseRef type) {
 
-                return refToSQLValue(type, (Instance)value);
+                return refToSQLValue(type, (Instance) value);
             }
 
             @Override
@@ -399,7 +399,7 @@ public interface SQLDialect {
 
     default Object fromSQLValue(final Use<?> type, final Object value) {
 
-        if(value == null) {
+        if (value == null) {
             return null;
         }
 
@@ -552,7 +552,7 @@ public interface SQLDialect {
     default Field<Object> indexField(final ReferableSchema schema, final io.basestar.schema.Index index, final io.basestar.util.Name name) {
 
         // FIXME: BUG: hacky heuristic
-        if(ReferableSchema.ID.equals(name.last())) {
+        if (ReferableSchema.ID.equals(name.last())) {
             return DSL.field(DSL.name(name.withoutLast().toString()));
         } else {
             return DSL.field(DSL.name(name.toString()));
@@ -640,12 +640,12 @@ public interface SQLDialect {
 
     default <T> Field<T> field(final QueryPart part, final Class<T> type) {
 
-        if(part == null) {
+        if (part == null) {
             return null;
-        } else if(part instanceof Field<?>) {
+        } else if (part instanceof Field<?>) {
             return cast((Field<?>) part, type);
-        } else if(part instanceof Condition){
-            return cast(DSL.field((Condition)part), type);
+        } else if (part instanceof Condition) {
+            return cast(DSL.field((Condition) part), type);
         } else {
             throw new IllegalStateException();
         }
@@ -666,12 +666,12 @@ public interface SQLDialect {
     @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
     default Field<?> field(final QueryPart part) {
 
-        if(part == null) {
+        if (part == null) {
             return null;
-        } else if(part instanceof Field<?>) {
-            return (Field<?>)part;
-        } else if(part instanceof Condition){
-            return DSL.field((Condition)part);
+        } else if (part instanceof Field<?>) {
+            return (Field<?>) part;
+        } else if (part instanceof Condition) {
+            return DSL.field((Condition) part);
         } else {
             throw new IllegalStateException();
         }
@@ -679,12 +679,12 @@ public interface SQLDialect {
 
     default Condition condition(final QueryPart part) {
 
-        if(part == null) {
+        if (part == null) {
             return null;
-        } else if(part instanceof Field<?>) {
-            return DSL.condition(((Field<?>)part).cast(Boolean.class));
-        } else if(part instanceof Condition){
-            return (Condition)part;
+        } else if (part instanceof Field<?>) {
+            return DSL.condition(((Field<?>) part).cast(Boolean.class));
+        } else if (part instanceof Condition) {
+            return (Condition) part;
         } else {
             throw new IllegalStateException();
         }
@@ -704,5 +704,44 @@ public interface SQLDialect {
     default Optional<? extends Field<?>> missingMetadataValue(final LinkableSchema schema, final String name) {
 
         return Optional.empty();
+    }
+
+    default String createFunctionDDL(final DSLContext context, final org.jooq.Name name, final Use<?> returns, final List<Argument> arguments, final String language, final String definition) {
+
+        return createFunctionDDLHeader(context, name, returns, arguments, language) + " " + createFunctionDDLBody(context, definition);
+    }
+
+    default String createFunctionDDLHeader(final DSLContext context, final org.jooq.Name name, final Use<?> returns, final List<Argument> arguments, final String language) {
+
+        final Configuration configuration = context.configuration();
+        final StringBuilder result = new StringBuilder();
+        result.append("CREATE OR REPLACE FUNCTION ");
+        result.append(name.toString());
+        result.append("(");
+        for (final Argument arg : arguments) {
+            result.append(DSL.name(arg.getName()));
+            result.append(" ");
+            result.append(dataType(arg.getType()).getTypeName(configuration));
+        }
+        result.append(") RETURNS ");
+        result.append(dataType(returns).getTypeName(configuration));
+        result.append(" LANGUAGE ");
+        result.append(language);
+        return result.toString();
+    }
+
+    default String createFunctionDDLBody(final DSLContext context, final String definition) {
+
+        return "AS\n$$\n" + definition + "\n$$";
+    }
+
+    default boolean supportsUDFs() {
+
+        return true;
+    }
+
+    default boolean supportsMaterializedView(final ViewSchema schema) {
+
+        return false;
     }
 }

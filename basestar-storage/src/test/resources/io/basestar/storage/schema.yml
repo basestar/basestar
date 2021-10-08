@@ -299,3 +299,24 @@ MatView:
     bound: "[min(lat), min(lon), max(lat), max(lon)]"
   from:
     schema: Address
+
+SqlView:
+  type: view
+  sql: SELECT DISTINCT "city" FROM @{address} WHERE "country"='US'
+  using:
+    address: Address
+  properties:
+    city:
+      type: string
+
+SimpleSqlFunction:
+  type: function
+  arguments:
+    - name: x
+      type: string
+  returns: string
+  language: plpgsql
+  definition: |
+    begin
+      return "x" in ('a', 'b', 'c');
+    end;

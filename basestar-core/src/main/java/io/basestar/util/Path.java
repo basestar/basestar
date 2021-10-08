@@ -9,9 +9,9 @@ package io.basestar.util;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -44,7 +44,7 @@ public class Path extends AbstractPath<Path> implements Comparable<Path> {
 
     public static final char WILDCARD = '*';
 
-    protected Path(final String ... parts) {
+    protected Path(final String... parts) {
 
         super(parts);
     }
@@ -103,7 +103,7 @@ public class Path extends AbstractPath<Path> implements Comparable<Path> {
         return new Path(splitter(delimiter).split(str));
     }
 
-    public static Path of(final String ... parts) {
+    public static Path of(final String... parts) {
 
         return new Path(Arrays.asList(parts));
     }
@@ -140,19 +140,19 @@ public class Path extends AbstractPath<Path> implements Comparable<Path> {
 
     public Stream<Path> resolve() throws IOException {
 
-        if(isEmpty()) {
+        if (isEmpty()) {
             return Stream.of();
         }
         final List<String> unwild = new ArrayList<>();
         final List<String> wild = new ArrayList<>();
-        for(final String part : getParts()) {
-            if(!wild.isEmpty() || part.contains(Character.toString(WILDCARD))) {
+        for (final String part : getParts()) {
+            if (!wild.isEmpty() || part.contains(Character.toString(WILDCARD))) {
                 wild.add(part);
             } else {
                 unwild.add(part);
             }
         }
-        if(wild.isEmpty()) {
+        if (wild.isEmpty()) {
             return Stream.of(this);
         } else {
             final Path unwildPath = Path.of(unwild);
@@ -170,12 +170,12 @@ public class Path extends AbstractPath<Path> implements Comparable<Path> {
 
     public Pattern toPattern() {
 
-        if(isEmpty()) {
+        if (isEmpty()) {
             return Pattern.compile("^$");
         } else {
             final StringBuilder pattern = new StringBuilder();
             final int size = size();
-            for(int i = 0; i != size; ++i) {
+            for (int i = 0; i != size; ++i) {
                 final String part = at(i);
                 if (part.equals("**")) {
                     pattern.append(".*");
@@ -186,7 +186,7 @@ public class Path extends AbstractPath<Path> implements Comparable<Path> {
                     } else {
                         pattern.append(Pattern.quote(part));
                     }
-                    if(i + 1 != size) {
+                    if (i + 1 != size) {
                         pattern.append(Pattern.quote(Character.toString(DELIMITER)));
                     }
                 }
@@ -206,19 +206,19 @@ public class Path extends AbstractPath<Path> implements Comparable<Path> {
         final int thisSize = size();
         final int otherSize = other.size();
         int i = 0;
-        while(i < thisSize && i < otherSize) {
+        while (i < thisSize && i < otherSize) {
             final String part = at(i);
-            if(part.equals(other.at(i))) {
+            if (part.equals(other.at(i))) {
                 ++i;
             } else {
                 break;
             }
         }
         final List<String> parts = new ArrayList<>();
-        for(int j = i; j != thisSize; ++j) {
+        for (int j = i; j != thisSize; ++j) {
             parts.add("..");
         }
-        for(int j = i; j != otherSize; ++j) {
+        for (int j = i; j != otherSize; ++j) {
             parts.add(other.at(j));
         }
         return create(parts);
@@ -227,14 +227,14 @@ public class Path extends AbstractPath<Path> implements Comparable<Path> {
     public Path canonical() {
 
         final LinkedList<String> parts = new LinkedList<>();
-        for(final String part : this) {
-            if(part.equals(UP)) {
-                if(parts.isEmpty()) {
+        for (final String part : this) {
+            if (part.equals(UP)) {
+                if (parts.isEmpty()) {
                     parts.add(UP);
                 } else {
                     parts.pop();
                 }
-            } else if(!part.equals(S)) {
+            } else if (!part.equals(S)) {
                 parts.add(part);
             }
         }
@@ -244,7 +244,7 @@ public class Path extends AbstractPath<Path> implements Comparable<Path> {
     public Path up(final int count) {
 
         final List<String> parts = Lists.newArrayList(this);
-        for(int i = 0; i != count; ++i) {
+        for (int i = 0; i != count; ++i) {
             parts.add(UP);
         }
         return create(parts);

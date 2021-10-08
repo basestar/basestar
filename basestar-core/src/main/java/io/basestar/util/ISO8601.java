@@ -13,7 +13,7 @@ import java.util.Date;
 
 /**
  * Thin shared utility layer to make sure dates and times are always handled consistently.
- *
+ * <p>
  * Generally, reducing the precision of a date(time) is supported, but increasing the precision is not, thus any valid
  * datetime will parse as a date, but not necessarily vice-versa.
  */
@@ -49,7 +49,7 @@ public class ISO8601 {
 
     public static Instant toDateTime(final TemporalAccessor value) {
 
-        if(value instanceof LocalDate) {
+        if (value instanceof LocalDate) {
             return ((LocalDate) value).atStartOfDay().toInstant(ZoneOffset.UTC);
         } else {
             return Instant.from(value);
@@ -58,13 +58,13 @@ public class ISO8601 {
 
     public static Instant toDateTime(final Object value) {
 
-        if(value == null) {
+        if (value == null) {
             return null;
-        } else if(value instanceof TemporalAccessor) {
+        } else if (value instanceof TemporalAccessor) {
             return toDateTime((TemporalAccessor) value);
-        } else if(value instanceof java.sql.Timestamp) {
+        } else if (value instanceof java.sql.Timestamp) {
             return ((java.sql.Timestamp) value).toInstant();
-        } else if(value instanceof java.sql.Date) {
+        } else if (value instanceof java.sql.Date) {
             return toDateTime(((java.sql.Date) value).toLocalDate());
         } else if (value instanceof Date) {
             return ((Date) value).toInstant();
@@ -84,24 +84,24 @@ public class ISO8601 {
 
     public static Instant parseDateTime(final String value) {
 
-        if(Text.isInteger(value)) {
+        if (Text.isInteger(value)) {
             return toDateTime(Long.parseLong(value));
         }
-        for(final DateTimeFormatter formatter: ZONED_DATE_TIME_INPUT_FORMATS) {
+        for (final DateTimeFormatter formatter : ZONED_DATE_TIME_INPUT_FORMATS) {
             try {
                 return formatter.parse(value, ZonedDateTime::from).toInstant();
             } catch (final DateTimeParseException e) {
                 // suppress
             }
         }
-        for(final DateTimeFormatter formatter: LOCAL_DATE_TIME_INPUT_FORMATS) {
+        for (final DateTimeFormatter formatter : LOCAL_DATE_TIME_INPUT_FORMATS) {
             try {
                 return formatter.parse(value, LocalDateTime::from).toInstant(ZoneOffset.UTC);
             } catch (final DateTimeParseException e) {
                 // suppress
             }
         }
-        for(final DateTimeFormatter formatter: DATE_INPUT_FORMATS) {
+        for (final DateTimeFormatter formatter : DATE_INPUT_FORMATS) {
             try {
                 return toDateTime(formatter.parse(value, LocalDate::from));
             } catch (final DateTimeParseException e) {
@@ -148,13 +148,13 @@ public class ISO8601 {
 
     public static LocalDate toDate(final Object value) {
 
-        if(value == null) {
+        if (value == null) {
             return null;
-        } else if(value instanceof TemporalAccessor) {
+        } else if (value instanceof TemporalAccessor) {
             return toDate((TemporalAccessor) value);
-        } else if(value instanceof java.sql.Timestamp) {
+        } else if (value instanceof java.sql.Timestamp) {
             return toDate(((java.sql.Timestamp) value).toInstant());
-        } else if(value instanceof java.sql.Date) {
+        } else if (value instanceof java.sql.Date) {
             return ((java.sql.Date) value).toLocalDate();
         } else if (value instanceof Date) {
             return toDate(((Date) value).toInstant());
@@ -169,7 +169,7 @@ public class ISO8601 {
 
     public static LocalDate parseDate(final String value) {
 
-        for(final DateTimeFormatter formatter: DATE_INPUT_FORMATS) {
+        for (final DateTimeFormatter formatter : DATE_INPUT_FORMATS) {
             try {
                 return formatter.parse(value, LocalDate::from);
             } catch (final DateTimeParseException e) {
@@ -190,10 +190,10 @@ public class ISO8601 {
 
     public static String toString(final TemporalAccessor value) {
 
-        if(value instanceof LocalDate) {
-            return toString((LocalDate)value);
-        } else if(value instanceof Instant) {
-            return toString((Instant)value);
+        if (value instanceof LocalDate) {
+            return toString((LocalDate) value);
+        } else if (value instanceof Instant) {
+            return toString((Instant) value);
         } else {
             throw new InvalidDateTimeException(value);
         }
@@ -201,7 +201,7 @@ public class ISO8601 {
 
     public static String toString(final Date value) {
 
-        if(value instanceof java.sql.Date) {
+        if (value instanceof java.sql.Date) {
             return toString(((java.sql.Date) value).toLocalDate());
         } else {
             return toString(value.toInstant());
@@ -242,7 +242,7 @@ public class ISO8601 {
 
     public static Long toMillis(final Date value) {
 
-        if(value instanceof java.sql.Date) {
+        if (value instanceof java.sql.Date) {
             return toMillis(((java.sql.Date) value).toLocalDate());
         } else {
             return toMillis(value.toInstant());

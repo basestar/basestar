@@ -19,7 +19,7 @@ public interface InferenceContext {
     @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
     Optional<Use<?>> optionalTypeOf(Name name);
 
-    default Use<?> typeOf(Name name) {
+    default Use<?> typeOf(final Name name) {
 
         return optionalTypeOf(name).orElse(UseAny.DEFAULT);
     }

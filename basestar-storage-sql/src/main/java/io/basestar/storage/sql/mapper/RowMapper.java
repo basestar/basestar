@@ -24,16 +24,16 @@ public interface RowMapper<T> {
 
     List<SelectFieldOrAsterisk> select();
 
-    default List<T> all(Result<Record> result) {
+    default List<T> all(final Result<Record> result) {
 
         return result.stream()
                 .map(this::fromRecord)
                 .collect(Collectors.toList());
     }
 
-    default T first(Result<Record> result) {
+    default T first(final Result<Record> result) {
 
-        if(result.isEmpty()) {
+        if (result.isEmpty()) {
             return null;
         } else {
             return fromRecord(result.iterator().next());

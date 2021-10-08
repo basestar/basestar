@@ -9,9 +9,9 @@ package io.basestar.util;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -41,7 +41,7 @@ public abstract class AbstractPath<S extends AbstractPath<S>> implements Iterabl
 
     private final List<String> parts;
 
-    protected AbstractPath(final String ... parts) {
+    protected AbstractPath(final String... parts) {
 
         this.parts = ImmutableList.copyOf(parts);
     }
@@ -74,7 +74,7 @@ public abstract class AbstractPath<S extends AbstractPath<S>> implements Iterabl
 
     public String first() {
 
-        if(parts.isEmpty()) {
+        if (parts.isEmpty()) {
             return null;
         } else {
             return parts.get(0);
@@ -83,7 +83,7 @@ public abstract class AbstractPath<S extends AbstractPath<S>> implements Iterabl
 
     public S withoutFirst() {
 
-        if(parts.isEmpty() || parts.size() == 1) {
+        if (parts.isEmpty() || parts.size() == 1) {
             return create();
         } else {
             return create(parts.subList(1, parts.size()));
@@ -92,7 +92,7 @@ public abstract class AbstractPath<S extends AbstractPath<S>> implements Iterabl
 
     public S withoutFirst(final int size) {
 
-        if(parts.isEmpty() || parts.size() < size) {
+        if (parts.isEmpty() || parts.size() < size) {
             return create();
         } else {
             return create(parts.subList(size, parts.size()));
@@ -101,7 +101,7 @@ public abstract class AbstractPath<S extends AbstractPath<S>> implements Iterabl
 
     public String last() {
 
-        if(parts.isEmpty()) {
+        if (parts.isEmpty()) {
             return null;
         } else {
             return parts.get(parts.size() - 1);
@@ -110,7 +110,7 @@ public abstract class AbstractPath<S extends AbstractPath<S>> implements Iterabl
 
     public S withoutLast() {
 
-        if(parts.isEmpty() || parts.size() == 1) {
+        if (parts.isEmpty() || parts.size() == 1) {
             return create();
         } else {
             return create(parts.subList(0, parts.size() - 1));
@@ -134,7 +134,7 @@ public abstract class AbstractPath<S extends AbstractPath<S>> implements Iterabl
         return create(merged);
     }
 
-    public S with(final String ... parts) {
+    public S with(final String... parts) {
 
         return with(Arrays.asList(parts));
     }
@@ -175,10 +175,10 @@ public abstract class AbstractPath<S extends AbstractPath<S>> implements Iterabl
 
         final Object target = data.get(first());
         final AbstractPath<S> tail = withoutFirst();
-        if(tail.isEmpty()) {
+        if (tail.isEmpty()) {
             return target;
-        } else if(target instanceof Map) {
-            return tail.get((Map<String, Object>)target);
+        } else if (target instanceof Map) {
+            return tail.get((Map<String, Object>) target);
         } else {
             return null;
         }
@@ -190,11 +190,11 @@ public abstract class AbstractPath<S extends AbstractPath<S>> implements Iterabl
         final String first = first();
         final Object target = data.get(first);
         final AbstractPath<S> tail = withoutFirst();
-        if(tail.isEmpty()) {
+        if (tail.isEmpty()) {
             return Immutable.put(data, first, value);
-        } else if(target instanceof Map) {
-            return Immutable.put(data, first, tail.set((Map<String, Object>)target, value));
-        } else if(target == null) {
+        } else if (target instanceof Map) {
+            return Immutable.put(data, first, tail.set((Map<String, Object>) target, value));
+        } else if (target == null) {
             return Immutable.put(data, first, tail.set(ImmutableMap.of(), value));
         } else {
             throw new IllegalStateException();
@@ -204,12 +204,12 @@ public abstract class AbstractPath<S extends AbstractPath<S>> implements Iterabl
     @Nonnull
     public static <S extends AbstractPath<S>> Map<String, Set<S>> branch(@Nullable final Collection<S> paths) {
 
-        if(paths == null) {
+        if (paths == null) {
             return Collections.emptyMap();
         }
         final Multimap<String, S> results = HashMultimap.create();
-        for(final S path : paths) {
-            if(!path.isEmpty()) {
+        for (final S path : paths) {
+            if (!path.isEmpty()) {
                 final String head = path.first();
                 final S tail = path.withoutFirst();
                 results.put(head, tail);
@@ -228,7 +228,7 @@ public abstract class AbstractPath<S extends AbstractPath<S>> implements Iterabl
         final Set<T> results = new HashSet<>();
         paths.stream().sorted(Comparator.comparing(AbstractPath<T>::size).reversed())
                 .forEach(parent -> {
-                    if(results.stream().noneMatch(parent::isParentOrEqual)) {
+                    if (results.stream().noneMatch(parent::isParentOrEqual)) {
                         results.add(parent);
                     }
                 });
@@ -237,9 +237,9 @@ public abstract class AbstractPath<S extends AbstractPath<S>> implements Iterabl
 
     public boolean isParentOrEqual(final S of) {
 
-        if(this.parts.size() <= of.size()) {
-            for(int i = 0; i != this.parts.size(); ++i) {
-                if(!of.getParts().get(i).equals(parts.get(i))) {
+        if (this.parts.size() <= of.size()) {
+            for (int i = 0; i != this.parts.size(); ++i) {
+                if (!of.getParts().get(i).equals(parts.get(i))) {
                     return false;
                 }
             }
@@ -251,7 +251,7 @@ public abstract class AbstractPath<S extends AbstractPath<S>> implements Iterabl
 
     public boolean isParent(final S of) {
 
-        if(this.parts.size() < of.size()) {
+        if (this.parts.size() < of.size()) {
             return isParentOrEqual(of);
         } else {
             return false;
@@ -271,14 +271,14 @@ public abstract class AbstractPath<S extends AbstractPath<S>> implements Iterabl
     @SuppressWarnings("unchecked")
     private S self() {
 
-        return (S)this;
+        return (S) this;
     }
 
     public static <S extends AbstractPath<S>> Set<S> children(final Collection<S> paths, final S parent) {
 
         final Set<S> results = new HashSet<>();
-        for(final S path : paths) {
-            if(parent.isParentOrEqual(path)) {
+        for (final S path : paths) {
+            if (parent.isParentOrEqual(path)) {
                 results.add(path.range(parent.size()));
             }
         }

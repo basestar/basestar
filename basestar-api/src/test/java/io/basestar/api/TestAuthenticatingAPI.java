@@ -120,11 +120,11 @@ class TestAuthenticatingAPI {
     void testDuplicateAuth() {
 
         assertThrows(AuthenticationFailedException.class, () -> {
-                    api.handle(request(ImmutableMap.of(
-                            "X-Basic-Authorization", Base64.getEncoder().encodeToString("matt:password".getBytes(Charsets.UTF_8)),
-                            "x-basic-authorization", Base64.getEncoder().encodeToString("matt:password".getBytes(Charsets.UTF_8))
-                    ))).get();
-                });
+            api.handle(request(ImmutableMap.of(
+                    "X-Basic-Authorization", Base64.getEncoder().encodeToString("matt:password".getBytes(Charsets.UTF_8)),
+                    "x-basic-authorization", Base64.getEncoder().encodeToString("matt:password".getBytes(Charsets.UTF_8))
+            ))).get();
+        });
 
         assertThrows(AuthenticationFailedException.class, () -> {
             api.handle(request(ImmutableMap.of(

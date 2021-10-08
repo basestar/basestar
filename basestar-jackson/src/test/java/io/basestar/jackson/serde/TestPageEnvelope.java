@@ -29,21 +29,21 @@ public class TestPageEnvelope {
 
     @Test
     public void testPageEnvelope() throws Exception {
-        Page<Dummy> page = aDummyPage();
+        final Page<Dummy> page = aDummyPage();
         assertSer(page, "pageEnvelope.expected.json");
     }
 
     @Test
     public void testPageEnvelopeArray() throws Exception {
-        List<Page<Dummy>> pageList = singletonList(aDummyPage());
+        final List<Page<Dummy>> pageList = singletonList(aDummyPage());
         assertSer(pageList, "pageEnvelopeArray.expected.json");
     }
 
     @Test
     public void testPageInPageEnvelope() throws Exception {
-        Page<Dummy> page = aDummyPage();
+        final Page<Dummy> page = aDummyPage();
 
-        Page<Page<Dummy>> pageInPage = new Page<>(
+        final Page<Page<Dummy>> pageInPage = new Page<>(
                 singletonList(page),
                 new Page.Token("token999"),
                 new Page.Stats(987L, 654L)
@@ -54,19 +54,19 @@ public class TestPageEnvelope {
 
     @Test
     public void testPageEnvelopeNoStatsPaging() throws Exception {
-        Page<Dummy> page = Page.single(dummy3());
+        final Page<Dummy> page = Page.single(dummy3());
         assertSer(page, "pageEnvelopeNoStatsPaging.expected.json");
     }
 
     @Test
     public void testPageEnvelopeEmptyStats() throws Exception {
-        Page<Dummy> page = new Page<>(singletonList(dummy3()), null, Page.Stats.NULL);
+        final Page<Dummy> page = new Page<>(singletonList(dummy3()), null, Page.Stats.NULL);
         assertSer(page, "pageEnvelopeNoStatsPaging.expected.json");
     }
 
     @Test
     public void testEmptyPageEnvelope() throws Exception {
-        Page<Dummy> page = Page.empty();
+        final Page<Dummy> page = Page.empty();
         assertSer(page, "pageEmptyEnvelope.expected.json");
     }
 
@@ -85,17 +85,17 @@ public class TestPageEnvelope {
         return new Dummy(Name.parse("dummy3"), emptyList());
     }
 
-    private void assertSer(Object page, String expectedFile) throws IOException, JSONException {
-        String pageOutput = objectMapper.writeValueAsString(page);
+    private void assertSer(final Object page, final String expectedFile) throws IOException, JSONException {
+        final String pageOutput = objectMapper.writeValueAsString(page);
 
-        String expected = loadExpectedFile(expectedFile);
+        final String expected = loadExpectedFile(expectedFile);
 
         JSONAssert.assertEquals(expected, pageOutput, true);
     }
 
-    private String loadExpectedFile(String expectedFile) throws IOException {
-        String relativePath = "page-envelope/" + expectedFile;
-        URL expectedUrl = Objects.requireNonNull(this.getClass().getResource(relativePath));
+    private String loadExpectedFile(final String expectedFile) throws IOException {
+        final String relativePath = "page-envelope/" + expectedFile;
+        final URL expectedUrl = Objects.requireNonNull(this.getClass().getResource(relativePath));
         return IOUtils.toString(expectedUrl, StandardCharsets.UTF_8);
     }
 

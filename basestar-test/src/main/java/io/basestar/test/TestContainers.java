@@ -9,9 +9,9 @@ package io.basestar.test;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -46,7 +46,7 @@ import java.util.stream.Collectors;
  * For running docker containers in tests, for a given spec, only one container instance
  * will be run. Instance will NOT be terminated at end of tests, rather it will be re-used
  * for another run. This makes tests faster, and local development a lot smoother.
- *
+ * <p>
  * Because instances are re-used, it is important to make sure that different resources
  * are used within each container, e.g. always create queues/tables/etc with new random names.
  */
@@ -65,7 +65,7 @@ public class TestContainers {
 
         synchronized (LOCK) {
 
-            if(CLIENT == null) {
+            if (CLIENT == null) {
                 final DockerClientConfig config = DefaultDockerClientConfig.createDefaultConfigBuilder()
                         .build();
                 CLIENT = DockerClientBuilder.getInstance(config)
@@ -80,7 +80,7 @@ public class TestContainers {
 
         synchronized (LOCK) {
 
-            if(CLIENT != null) {
+            if (CLIENT != null) {
                 CLIENT.close();
                 CLIENT = null;
             }
@@ -104,7 +104,7 @@ public class TestContainers {
 
             final String containerId;
 
-            if(running.isEmpty()) {
+            if (running.isEmpty()) {
 
                 log.info("Creating container ({})", spec);
 
@@ -155,7 +155,7 @@ public class TestContainers {
                         public void onNext(final Frame frame) {
 
                             final String line = new String(frame.getPayload(), Charsets.UTF_8).trim();
-                            if(waiting) {
+                            if (waiting) {
                                 log.debug("{}: {}", logName, line);
                                 if (waitFor.matcher(line).matches()) {
                                     waiting = false;
@@ -181,7 +181,7 @@ public class TestContainers {
                         }
                     });
 
-            if(waitFor == null) {
+            if (waitFor == null) {
                 future.complete(null);
             }
 

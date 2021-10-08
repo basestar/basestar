@@ -38,7 +38,7 @@ public interface GraphQLStrategy {
 
     String typeName(Name name);
 
-    default String typeName(Schema<?> type) {
+    default String typeName(final Schema<?> type) {
 
         return typeName(type.getQualifiedName());
     }
@@ -124,6 +124,8 @@ public interface GraphQLStrategy {
 
     String secretTypeName();
 
+    String decimalTypeName();
+
     default GraphQLRequestTransform requestTransform() {
 
         return new GraphQLRequestTransform.Default(this);
@@ -199,7 +201,7 @@ public interface GraphQLStrategy {
         }
 
         @Override
-        public String inputRefTypeName(boolean versioned) {
+        public String inputRefTypeName(final boolean versioned) {
 
             return inputPrefix() + (versioned ? "VersionedRef" : "Ref");
         }
@@ -432,6 +434,12 @@ public interface GraphQLStrategy {
             return "Binary";
         }
 
+        @Override
+        public String decimalTypeName() {
+
+            return "Decimal";
+        }
+
         protected final Use.Visitor<String> typeNameVisitor = new Use.Visitor.Defaulting<String>() {
 
             @Override
@@ -468,6 +476,12 @@ public interface GraphQLStrategy {
             public String visitBinary(final UseBinary type) {
 
                 return binaryTypeName();
+            }
+
+            @Override
+            public String visitDecimal(final UseDecimal type) {
+
+                return decimalTypeName();
             }
 
             @Override

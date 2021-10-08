@@ -11,7 +11,7 @@ import io.basestar.util.Page;
 public class PageEnvelopeConverter<T> extends StdConverter<Page<T>, Page.Envelope<T>> {
 
     @Override
-    public Page.Envelope<T> convert(Page<T> value) {
+    public Page.Envelope<T> convert(final Page<T> value) {
         return value.toEnvelope();
     }
 }

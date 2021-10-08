@@ -77,7 +77,7 @@ public class ExpandLinkStep extends AbstractExpandStep {
         final ClosureExtractingVisitor closeLeft = new ClosureExtractingVisitor(L_PREFIX, Reserved.THIS::equals);
         final Expression closedLeft = closeLeft.visit(link.getExpression());
         this.leftConstants = Immutable.sortedMap(closeLeft.getConstants());
-        if(leftConstants.isEmpty()) {
+        if (leftConstants.isEmpty()) {
             throw new IllegalStateException("Link expression must have constants on left side");
         }
 
@@ -91,11 +91,11 @@ public class ExpandLinkStep extends AbstractExpandStep {
         final InferenceVisitor inference = new InferenceVisitor(inferenceContext);
 
         this.leftKeyTypes = new TreeMap<>();
-        for(final Map.Entry<String, Expression> entry : leftConstants.entrySet()) {
+        for (final Map.Entry<String, Expression> entry : leftConstants.entrySet()) {
             leftKeyTypes.put(entry.getKey(), inference.typeOf(entry.getValue()));
         }
         this.rightKeyTypes = new TreeMap<>();
-        for(final Map.Entry<String, Expression> entry : rightConstants.entrySet()) {
+        for (final Map.Entry<String, Expression> entry : rightConstants.entrySet()) {
             rightKeyTypes.put(entry.getKey(), inference.typeOf(entry.getValue()));
         }
     }
@@ -121,7 +121,7 @@ public class ExpandLinkStep extends AbstractExpandStep {
     private static StructType projectKeysType(final StructType inputType, final Map<String, Use<?>> keyTypes) {
 
         StructType outputType = inputType;
-        for(final Map.Entry<String, Use<?>> entry : keyTypes.entrySet()) {
+        for (final Map.Entry<String, Use<?>> entry : keyTypes.entrySet()) {
             outputType = SparkRowUtils.append(outputType, SparkSchemaUtils.field(entry.getKey(), entry.getValue(), ImmutableSet.of()));
         }
         return outputType;
@@ -140,21 +140,21 @@ public class ExpandLinkStep extends AbstractExpandStep {
         final Set<Row> keys = linkKeys(root, name, row);
 
         final List<Row> result = new ArrayList<>();
-        for(final Row key : keys) {
+        for (final Row key : keys) {
             // TODO: context that doesn't require row -> instance conversion
             final Map<String, Object> instance = SparkSchemaUtils.fromSpark(source, key);
             final Context context = Context.init(ImmutableMap.of(Reserved.THIS, instance));
             Row merged = row;
-            for(final Map.Entry<String, Expression> entry : leftConstants.entrySet()) {
+            for (final Map.Entry<String, Expression> entry : leftConstants.entrySet()) {
                 final StructField field = SparkRowUtils.requireField(outputType, entry.getKey());
                 final Object value = entry.getValue().evaluate(context);
                 merged = SparkRowUtils.append(merged, field, value);
             }
             result.add(merged);
         }
-        if(result.isEmpty()) {
+        if (result.isEmpty()) {
             Row merged = row;
-            for(final Map.Entry<String, Expression> entry : leftConstants.entrySet()) {
+            for (final Map.Entry<String, Expression> entry : leftConstants.entrySet()) {
                 final StructField field = SparkRowUtils.requireField(outputType, entry.getKey());
                 merged = SparkRowUtils.append(merged, field, null);
             }
@@ -169,7 +169,7 @@ public class ExpandLinkStep extends AbstractExpandStep {
         final Map<String, Object> instance = SparkSchemaUtils.fromSpark(link.getSchema(), row);
         final Context context = Context.init(instance);
         Row merged = row;
-        for(final Map.Entry<String, Expression> entry : rightConstants.entrySet()) {
+        for (final Map.Entry<String, Expression> entry : rightConstants.entrySet()) {
             final StructField field = SparkRowUtils.requireField(outputType, entry.getKey());
             final Object value = entry.getValue().evaluate(context);
             merged = SparkRowUtils.append(merged, field, value);
@@ -183,7 +183,7 @@ public class ExpandLinkStep extends AbstractExpandStep {
         final LinkableSchema linkSchema = link.getSchema();
 
         final boolean coBucketed = root.isCompatibleBucketing(root.getEffectiveBucketing(), name);
-        if(coBucketed) {
+        if (coBucketed) {
             log.info("Link is co-bucketed: schema={}, link={}, buckets={}", root, name, buckets);
         } else {
             log.info("Link is not co-bucketed: schema={}, link={}", root, name);
@@ -241,11 +241,11 @@ public class ExpandLinkStep extends AbstractExpandStep {
 
     private static Row cleanKeys(final Row row, final Map<String, Use<?>> keys) {
 
-        if(row == null) {
+        if (row == null) {
             return null;
         }
         Row clean = row;
-        for(final String key : keys.keySet()) {
+        for (final String key : keys.keySet()) {
             clean = SparkRowUtils.remove(clean, key);
         }
         return clean;
@@ -254,7 +254,7 @@ public class ExpandLinkStep extends AbstractExpandStep {
     private static StructType cleanKeys(final StructType type, final Map<String, Use<?>> keys) {
 
         StructType clean = type;
-        for(final String key : keys.keySet()) {
+        for (final String key : keys.keySet()) {
             clean = SparkRowUtils.remove(clean, key);
         }
         return clean;
@@ -264,10 +264,10 @@ public class ExpandLinkStep extends AbstractExpandStep {
 
         return name -> {
             final String first = name.first();
-            if(leftConstants.containsKey(first)) {
+            if (leftConstants.containsKey(first)) {
                 return SparkRowUtils.resolveName(left, name);
-            } else if(rightConstants.containsKey(first)) {
-                return  SparkRowUtils.resolveName(right, name);
+            } else if (rightConstants.containsKey(first)) {
+                return SparkRowUtils.resolveName(right, name);
             } else {
                 throw new IllegalStateException("Link expression of the form " + link.getExpression() + " not supported");
             }
@@ -320,7 +320,7 @@ public class ExpandLinkStep extends AbstractExpandStep {
 
                     if (input instanceof scala.collection.Map<?, ?>) {
                         final Set<Row> results = new HashSet<>();
-                        if(!name.isEmpty() && name.first().equals(UseMap.EXPAND_WILDCARD)) {
+                        if (!name.isEmpty() && name.first().equals(UseMap.EXPAND_WILDCARD)) {
                             ((scala.collection.Map<?, ?>) input)
                                     .foreach(ScalaUtils.scalaFunction(t -> results.addAll(linkKeys(type.getType(), name.withoutFirst(), t._2()))));
                         }
@@ -334,7 +334,7 @@ public class ExpandLinkStep extends AbstractExpandStep {
                 public Set<Row> visitInstance(final UseInstance type) {
 
                     if (input instanceof Row) {
-                        return linkKeys(type.getSchema(), name, (Row)input);
+                        return linkKeys(type.getSchema(), name, (Row) input);
                     } else {
                         throw new IllegalStateException();
                     }
@@ -349,13 +349,13 @@ public class ExpandLinkStep extends AbstractExpandStep {
         Row root = null;
         final List<Row> page = new ArrayList<>();
 
-        while(tuples.hasNext()) {
+        while (tuples.hasNext()) {
             final Tuple2<Row, Row> tuple = tuples.next();
 
-            if(root == null) {
+            if (root == null) {
                 root = tuple._1();
             }
-            if(tuple._2() != null) {
+            if (tuple._2() != null) {
                 page.add(tuple._2());
             }
         }
@@ -365,7 +365,7 @@ public class ExpandLinkStep extends AbstractExpandStep {
         // Need to handle scala -> java conversion here
         page.sort(Sort.comparator(link.getEffectiveSort(), (r, n) -> (Comparable) SparkRowUtils.get(r, n)));
         final Object value;
-        if(link.isSingle()) {
+        if (link.isSingle()) {
             value = page.isEmpty() ? null : page.get(0);
         } else {
             value = ScalaUtils.asScalaSeq(page);
@@ -378,10 +378,10 @@ public class ExpandLinkStep extends AbstractExpandStep {
 
         return SparkRowUtils.transform(input, (field, oldValue) -> {
 
-            if(field.name().equals(name.first())) {
+            if (field.name().equals(name.first())) {
                 final Member member = schema.getMember(name.first(), true);
-                if(member != null) {
-                    if(member instanceof Link && name.size() == 1) {
+                if (member != null) {
+                    if (member instanceof Link && name.size() == 1) {
                         return value;
                     } else {
                         return applyLink(member.typeOf(), name.withoutFirst(), oldValue, value);
@@ -423,9 +423,9 @@ public class ExpandLinkStep extends AbstractExpandStep {
 
                     if (input instanceof scala.collection.Map<?, ?>) {
                         final Map<String, Object> results = new HashMap<>();
-                        if(!name.isEmpty() && name.first().equals(UseMap.EXPAND_WILDCARD)) {
+                        if (!name.isEmpty() && name.first().equals(UseMap.EXPAND_WILDCARD)) {
                             ((scala.collection.Map<?, ?>) input)
-                                    .foreach(ScalaUtils.scalaFunction(t -> results.put((String)t._1(), applyLink(type.getType(), name.withoutFirst(), t._2(), value))));
+                                    .foreach(ScalaUtils.scalaFunction(t -> results.put((String) t._1(), applyLink(type.getType(), name.withoutFirst(), t._2(), value))));
                         }
                         return ScalaUtils.asScalaMap(results);
                     } else {
@@ -437,7 +437,7 @@ public class ExpandLinkStep extends AbstractExpandStep {
                 public Row visitInstance(final UseInstance type) {
 
                     if (input instanceof Row) {
-                        return applyLink(type.getSchema(), name, (Row)input, value);
+                        return applyLink(type.getSchema(), name, (Row) input, value);
                     } else {
                         throw new IllegalStateException();
                     }

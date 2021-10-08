@@ -9,9 +9,9 @@ package io.basestar.type;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -54,10 +54,10 @@ public class ConstructorContext implements HasModifiers, HasAnnotations, HasPara
     }
 
     @SuppressWarnings("unchecked")
-    public <T> T newInstance(final Object ... args) throws InvocationTargetException, IllegalAccessException, InstantiationException {
+    public <T> T newInstance(final Object... args) throws InvocationTargetException, IllegalAccessException, InstantiationException {
 
         constructor.setAccessible(true);
-        return (T)constructor.newInstance(args);
+        return (T) constructor.newInstance(args);
     }
 
     @Override

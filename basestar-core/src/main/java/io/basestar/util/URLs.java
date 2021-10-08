@@ -21,7 +21,7 @@ public class URLs {
         return all(urls.stream()).collect(Collectors.toList());
     }
 
-    public static URL[] all(final URL ... urls) {
+    public static URL[] all(final URL... urls) {
 
         return all(Arrays.stream(urls)).toArray(URL[]::new);
     }
@@ -29,7 +29,7 @@ public class URLs {
     public static Stream<URL> all(final Stream<URL> urls) {
 
         return urls.flatMap(url -> {
-            if(isLocalFile(url)) {
+            if (isLocalFile(url)) {
                 try {
                     final Path path = toPath(url);
                     return path.resolve().map(v -> toURLUnchecked(v.toFileUri()));
@@ -44,10 +44,10 @@ public class URLs {
     private static Path toPath(final URL url) {
 
         final Path path = Path.parse(url.getPath());
-        for(int i = 0; i != path.size(); ++i) {
+        for (int i = 0; i != path.size(); ++i) {
             final String v = path.at(i);
-            if(!v.isEmpty()) {
-                if(v.contains(":")) {
+            if (!v.isEmpty()) {
+                if (v.contains(":")) {
                     return path.range(i);
                 }
             }
@@ -76,7 +76,7 @@ public class URLs {
     public static boolean isLocalFile(final URL url) {
 
         // Copied this check from jackson TokenStreamFactory, assume % is some network path indicator
-        if(url != null && "file".equals(url.getProtocol())) {
+        if (url != null && "file".equals(url.getProtocol())) {
             final String host = url.getHost();
             if (host == null || host.length() == 0) {
                 final String path = url.getPath();

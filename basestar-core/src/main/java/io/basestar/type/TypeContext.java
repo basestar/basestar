@@ -9,9 +9,9 @@ package io.basestar.type;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -194,15 +194,15 @@ public class TypeContext implements HasName, HasModifiers, HasAnnotations, HasTy
         this.annotations = Suppliers.memoize(() -> AnnotationContext.from(annotatedType));
     }
 
-    public static TypeContext from(final Type type, final Type ... args) {
+    public static TypeContext from(final Type type, final Type... args) {
 
         return from(
-                (AnnotatedParameterizedType)GenericTypeReflector.annotate(type),
+                (AnnotatedParameterizedType) GenericTypeReflector.annotate(type),
                 Arrays.stream(args).map(GenericTypeReflector::annotate).toArray(AnnotatedType[]::new)
         );
     }
 
-    public static TypeContext from(final AnnotatedParameterizedType type, final AnnotatedType ... args) {
+    public static TypeContext from(final AnnotatedParameterizedType type, final AnnotatedType... args) {
 
         return from(GenericTypeReflector.replaceParameters(
                 type,
@@ -371,13 +371,13 @@ public class TypeContext implements HasName, HasModifiers, HasAnnotations, HasTy
     @SuppressWarnings("unchecked")
     public <V> Class<V> erasedType() {
 
-        return (Class<V>)erasedType;
+        return (Class<V>) erasedType;
     }
 
     @SuppressWarnings("unchecked")
     public <T extends Enum<?>> T[] enumConstants() {
 
-        return (T[])erasedType.getEnumConstants();
+        return (T[]) erasedType.getEnumConstants();
     }
 
     public TypeContext find(final Class<?> type) {
@@ -385,17 +385,17 @@ public class TypeContext implements HasName, HasModifiers, HasAnnotations, HasTy
         final TypeContext superclass = this.superclass();
         final List<TypeContext> interfaces = this.interfaces();
 
-        if(erasedType == type) {
+        if (erasedType == type) {
             return this;
-        } else if(superclass != null) {
+        } else if (superclass != null) {
             final TypeContext found = superclass.find(type);
-            if(found != null) {
+            if (found != null) {
                 return found;
             }
         }
-        for(final TypeContext iface : interfaces) {
+        for (final TypeContext iface : interfaces) {
             final TypeContext found = iface.find(type);
-            if(found != null) {
+            if (found != null) {
                 return found;
             }
         }

@@ -8,6 +8,7 @@ public class H2Dialect extends JSONDialect {
         return org.jooq.SQLDialect.H2;
     }
 
+
     @Override
     public boolean supportsConstraints() {
 
@@ -30,5 +31,11 @@ public class H2Dialect extends JSONDialect {
     protected boolean isJsonEscaped() {
 
         return true;
+    }
+
+    @Override
+    public boolean supportsUDFs() {
+
+        return false;
     }
 }

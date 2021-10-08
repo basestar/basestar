@@ -31,25 +31,25 @@ public interface ExpandStep extends Serializable {
 
     static ExpandStep from(final LinkableSchema root, final Set<Expansion> expansions) {
 
-        if(expansions.isEmpty()) {
+        if (expansions.isEmpty()) {
             return null;
         }
 
         ExpandStep last = from(root, Expansion.expansion(expansions));
 
         final Map<ReferableSchema, Set<Name>> refs = new HashMap<>();
-        for(final Expansion expansion : expansions) {
-            if(expansion instanceof Expansion.OfRef) {
-                final Expansion.OfRef ofRef = (Expansion.OfRef)expansion;
+        for (final Expansion expansion : expansions) {
+            if (expansion instanceof Expansion.OfRef) {
+                final Expansion.OfRef ofRef = (Expansion.OfRef) expansion;
                 refs.compute(ofRef.getTarget(), (k, v) -> Immutable.add(v, ofRef.getName()));
             } else {
                 assert expansion instanceof Expansion.OfLink;
-                final Expansion.OfLink ofLink = (Expansion.OfLink)expansion;
+                final Expansion.OfLink ofLink = (Expansion.OfLink) expansion;
                 last = new ExpandLinkStep(last, root, ofLink.getSource(), ofLink.getLink(), ofLink.getName());
             }
         }
 
-        for(final Map.Entry<ReferableSchema, Set<Name>> entry : refs.entrySet()) {
+        for (final Map.Entry<ReferableSchema, Set<Name>> entry : refs.entrySet()) {
             final ReferableSchema target = entry.getKey();
             final Set<Name> names = entry.getValue();
             last = new ExpandRefsStep(last, root, target, names);

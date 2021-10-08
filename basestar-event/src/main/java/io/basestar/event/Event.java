@@ -9,9 +9,9 @@ package io.basestar.event;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -42,7 +42,7 @@ public interface Event {
     /**
      * Module is only used for routing, default is to use the package of the event class with 'event' removed if it is
      * the last package name element.
-     *
+     * <p>
      * e.g. the module of io.basestar.custom.event.MyEvent will be io.basestar.custom
      */
 

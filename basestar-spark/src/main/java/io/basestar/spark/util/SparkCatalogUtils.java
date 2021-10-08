@@ -9,9 +9,9 @@ package io.basestar.spark.util;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -89,12 +89,12 @@ public class SparkCatalogUtils {
         final Set<scala.collection.immutable.Map<String, String>> union = new HashSet<>();
         union.addAll(target.keySet());
         union.addAll(source.keySet());
-        for(final scala.collection.immutable.Map<String, String> spec : union) {
+        for (final scala.collection.immutable.Map<String, String> spec : union) {
             final CatalogTablePartition before = target.get(spec);
             final CatalogTablePartition after = source.get(spec);
-            if(after == null) {
+            if (after == null) {
                 drop.add(spec);
-            } else if(before == null) {
+            } else if (before == null) {
                 create.add(after);
             } else {
                 alter.add(after);
@@ -103,13 +103,13 @@ public class SparkCatalogUtils {
 
         log.info("Syncing partitions of {}.{} (create:{}, alter:{}, drop:{})", databaseName, tableName, create, alter, drop);
 
-        if(!create.isEmpty()) {
+        if (!create.isEmpty()) {
             catalog.createPartitions(databaseName, tableName, ScalaUtils.asScalaSeq(create), false);
         }
-        if(!alter.isEmpty()) {
+        if (!alter.isEmpty()) {
             catalog.alterPartitions(databaseName, tableName, ScalaUtils.asScalaSeq(alter));
         }
-        if(missing != MissingPartitions.SKIP && !drop.isEmpty()) {
+        if (missing != MissingPartitions.SKIP && !drop.isEmpty()) {
             final boolean purge = missing != MissingPartitions.DROP_AND_PURGE;
             catalog.dropPartitions(databaseName, tableName, ScalaUtils.asScalaSeq(drop), false, purge, !purge);
         }
@@ -117,7 +117,7 @@ public class SparkCatalogUtils {
 
     public static CatalogDatabase ensureDatabase(final ExternalCatalog catalog, final String databaseName, final String location) {
 
-        if(!catalog.databaseExists(databaseName)) {
+        if (!catalog.databaseExists(databaseName)) {
             catalog.createDatabase(CatalogDatabase.apply(databaseName, databaseName, URI.create(location), ScalaUtils.emptyScalaMap()), true);
         }
         return catalog.getDatabase(databaseName);
@@ -125,7 +125,7 @@ public class SparkCatalogUtils {
 
     public static boolean tableExists(final ExternalCatalog catalog, final String databaseName, final String tableName) {
 
-        if(!catalog.databaseExists(databaseName)) {
+        if (!catalog.databaseExists(databaseName)) {
             return false;
         }
         return catalog.tableExists(databaseName, tableName);
@@ -143,7 +143,7 @@ public class SparkCatalogUtils {
         final boolean exists = catalog.tableExists(databaseName, tableName);
         final Option<CatalogStatistics> stats;
         final CatalogTable existing;
-        if(exists) {
+        if (exists) {
             existing = catalog.getTable(databaseName, tableName);
             created = existing.createTime();
             stats = existing.stats();
@@ -174,20 +174,20 @@ public class SparkCatalogUtils {
                 Option.empty()
         );
 
-        if(exists) {
+        if (exists) {
 
             catalog.alterTable(table);
             boolean changed = false;
             StructType dataType = existing.dataSchema();
-            for(final StructField field : structType.fields()) {
-                if(!partitionColumns.contains(field.name()) &&
+            for (final StructField field : structType.fields()) {
+                if (!partitionColumns.contains(field.name()) &&
                         !SparkRowUtils.findField(dataType, field.name()).isPresent()) {
                     dataType = SparkRowUtils.append(dataType, field);
                     changed = true;
                 }
             }
             // This is being marked as changed when it isn't
-            if(changed) {
+            if (changed) {
                 catalog.alterTableDataSchema(databaseName, tableName, dataType);
             }
 
@@ -239,7 +239,7 @@ public class SparkCatalogUtils {
                                                              final List<String> names, final Map<String, String> spec,
                                                              final FindPartitionsStrategy strategy) throws IOException {
 
-        if(names.isEmpty()) {
+        if (names.isEmpty()) {
             return strategy.location(fs, path).map(location -> {
                 final CatalogTablePartition partition = SparkCatalogUtils.partition(spec, Format.PARQUET, location);
                 return ImmutableList.of(partition);
@@ -257,7 +257,7 @@ public class SparkCatalogUtils {
                         final String key = entry.getFirst();
                         assert key.equals(name);
                         final String value = entry.getSecond();
-                        if(strategy.include(spec, key, value)) {
+                        if (strategy.include(spec, key, value)) {
                             final Map<String, String> newValues = Immutable.put(spec, name, value);
                             partitions.addAll(findPartitions(fs, newPath, names.subList(1, names.size()), newValues, strategy));
                         }
@@ -315,7 +315,7 @@ public class SparkCatalogUtils {
                 .collect(Collectors.joining("/")));
     }
 
-    public static String escapeName(final String ... names) {
+    public static String escapeName(final String... names) {
 
         return Arrays.stream(names).map(SparkCatalogUtils::escapeName)
                 .collect(Collectors.joining("."));
@@ -325,7 +325,7 @@ public class SparkCatalogUtils {
 
         // Escapes common characters in names like hyphen, dot, etc,
         // not sure how to escape backticks but not likely to appear anyway
-        if(name.contains("`")) {
+        if (name.contains("`")) {
             throw new IllegalStateException("Invalid name");
         }
         return "`" + name + "`";

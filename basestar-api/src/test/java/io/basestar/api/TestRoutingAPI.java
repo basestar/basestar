@@ -74,11 +74,11 @@ class TestRoutingAPI {
 
         final APIResponse response = api.handle(APIRequest.get(Caller.SUPER, path)).get();
 
-        try(final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+        try (final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             response.writeTo(baos);
-            try(final ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray())) {
-                return (String)(APIFormat.JSON.getMapper().readValue(bais, Map.class).get("api"));
+            try (final ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray())) {
+                return (String) (APIFormat.JSON.getMapper().readValue(bais, Map.class).get("api"));
             }
         }
     }

@@ -358,7 +358,7 @@ class TestUpsertTable extends AbstractSparkTest {
         );
     }
 
-    private void assertCopyToNonEmptyBaseThrows(SparkSession session, String location, UpsertTable table) {
+    private void assertCopyToNonEmptyBaseThrows(final SparkSession session, final String location, final UpsertTable table) {
         // create non-empty base dir and check that copy is not allowed
         final URI nonEmptyBase = URI.create(location + "/NEB/base");
         final URI nonEmptyBaseDelta = URI.create(location + "/NEB/delta");
@@ -371,7 +371,7 @@ class TestUpsertTable extends AbstractSparkTest {
                 .hasMessageContaining(nonEmptyBase.toString());
     }
 
-    private void assertCopyToNonEmptyDeltaThrows(SparkSession session, String location, UpsertTable table) {
+    private void assertCopyToNonEmptyDeltaThrows(final SparkSession session, final String location, final UpsertTable table) {
         // create non-empty delta dir and check that copy is not allowed
         final URI nonEmptyDeltaBase = URI.create(location + "/NED/base");
         final URI nonEmptyDelta = URI.create(location + "/NED/delta");
@@ -384,7 +384,7 @@ class TestUpsertTable extends AbstractSparkTest {
                 .hasMessageContaining(nonEmptyDelta.toString());
     }
 
-    private void assertCopyToEmptyBaseDeltaCopies(SparkSession session, String location, UpsertTable table, long originalCount) {
+    private void assertCopyToEmptyBaseDeltaCopies(final SparkSession session, final String location, final UpsertTable table, final long originalCount) {
         // create empty base/delta dir and check that copy is successful
         final URI emptyBase = URI.create(location + "/E/base");
         final URI emptyDelta = URI.create(location + "/E/delta");
@@ -396,7 +396,7 @@ class TestUpsertTable extends AbstractSparkTest {
         assertThat(table.select(session).count()).isEqualTo(originalCount);
     }
 
-    private void assertCopyToNewBaseDeltaCopies(SparkSession session, String location, UpsertTable table, long originalCount) {
+    private void assertCopyToNewBaseDeltaCopies(final SparkSession session, final String location, final UpsertTable table, final long originalCount) {
         // provide non-existent paths delta/base paths and check that copy is successful
         final URI newBase = URI.create(location + "/N/base");
         final URI newDelta = URI.create(location + "/N/delta");

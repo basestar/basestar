@@ -58,7 +58,8 @@ public class SparkUtils {
             sc.setJobGroup(id, id, true);
             return t.call();
         } finally {
-            sc.clearJobGroup();;
+            sc.clearJobGroup();
+            ;
         }
     }
 }

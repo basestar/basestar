@@ -51,26 +51,26 @@ class TestDatabaseAPI {
         final Database db = Mockito.mock(Database.class);
         final DatabaseAPI api = new DatabaseAPI(db);
 
-        QueryOptions queryOpts = QueryOptions.builder()
+        final QueryOptions queryOpts = QueryOptions.builder()
                 .setSchema(Name.of("Test1"))
                 .setExpression(Expression.parse("field1 == 'somevalue'"))
                 .setSort(asList(Sort.asc(Name.of("x")), Sort.asc(Name.of("y"))))
                 .setStats(EnumSet.of(Page.Stat.TOTAL))
                 .build();
 
-        Instance instance = new Instance(ImmutableMap.<String, Object>builder()
+        final Instance instance = new Instance(ImmutableMap.<String, Object>builder()
                 .put("testKey", "testValue")
                 .build());
 
         // mock returned page to test response values
-        Page<Instance> page = new Page<>(
+        final Page<Instance> page = new Page<>(
                 singletonList(instance),
                 new Page.Token("AAAAAAAAAAA"),
                 Page.Stats.fromTotal(123)
         );
         Mockito.when(db.query(Caller.ANON, queryOpts)).thenReturn(CompletableFuture.completedFuture(page));
 
-        APIResponse result = api.handle(request(
+        final APIResponse result = api.handle(request(
                 APIRequest.Method.GET,
                 "Test1",
                 ImmutableMap.of(
@@ -84,11 +84,11 @@ class TestDatabaseAPI {
                 singleton("<Test1?paging=AAAAAAAAAAA&sort=x%2Cy&stats=total&query=field1%3D%3D%27somevalue%27>; rel=\"next\""),
                 result.getHeaders().get("Link"));
 
-        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+        try (final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             result.writeTo(baos);
-            String outputEntity = baos.toString("UTF-8");
+            final String outputEntity = baos.toString("UTF-8");
 
-            String expected = loadExpectedFile("query.expected.json");
+            final String expected = loadExpectedFile("query.expected.json");
             JSONAssert.assertEquals(expected, outputEntity, true);
         }
     }
@@ -304,8 +304,8 @@ class TestDatabaseAPI {
         };
     }
 
-    private String loadExpectedFile(String expectedFile) throws IOException {
-        URL expectedUrl = Objects.requireNonNull(this.getClass().getResource(expectedFile));
+    private String loadExpectedFile(final String expectedFile) throws IOException {
+        final URL expectedUrl = Objects.requireNonNull(this.getClass().getResource(expectedFile));
         return IOUtils.toString(expectedUrl, StandardCharsets.UTF_8);
     }
 }

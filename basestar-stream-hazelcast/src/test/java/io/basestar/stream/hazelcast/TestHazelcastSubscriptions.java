@@ -5,6 +5,8 @@ import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import io.basestar.stream.Subscriptions;
 import io.basestar.stream.TestSubscriptions;
+import java.io.IOException;
+import java.net.InetAddress;
 
 public class TestHazelcastSubscriptions extends TestSubscriptions {
 
@@ -22,9 +24,7 @@ public class TestHazelcastSubscriptions extends TestSubscriptions {
     @Override
     protected Subscriptions subscriber() {
 
-        final Config config = new Config();
-        final HazelcastInstance instance = instance(config);
-
+        final HazelcastInstance instance = instance(new Config());
         return new HazelcastSubscriptions(instance, "subscriptions");
     }
 }

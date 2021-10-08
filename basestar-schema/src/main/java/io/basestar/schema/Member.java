@@ -133,9 +133,9 @@ public interface Member extends Named, Described, Serializable, Extendable {
     }
 
     @SuppressWarnings("unchecked")
-    default String toString(Object value) {
+    default String toString(final Object value) {
 
-        return ((Use<Object>)typeOf()).toString(value);
+        return ((Use<Object>) typeOf()).toString(value);
     }
 
     Type javaType(Name name);

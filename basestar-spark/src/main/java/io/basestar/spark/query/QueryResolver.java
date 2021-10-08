@@ -120,7 +120,7 @@ public interface QueryResolver {
             assert sort.isEmpty();
             assert expand.isEmpty();
             final Dataset<Row> result = fn.apply(schema, buckets);
-            if(query.evaluatePredicate(Context.init())) {
+            if (query.evaluatePredicate(Context.init())) {
                 return () -> result;
             } else {
                 final SQLContext sc = result.sparkSession().sqlContext();
@@ -234,13 +234,13 @@ public interface QueryResolver {
         @Override
         public Stage union(final List<Stage> inputs, final boolean all) {
 
-            if(inputs.isEmpty()) {
+            if (inputs.isEmpty()) {
                 throw new IllegalStateException("Cannot create empty union");
             }
             final Map<String, Use<?>> schema = new HashMap<>();
             inputs.forEach(input -> input.getLayout().getSchema().forEach((name, type) -> {
                 final Use<?> existing = schema.get(name);
-                if(existing != null) {
+                if (existing != null) {
                     final Use<?> common = Use.commonBase(existing, type);
                     schema.put(name, common);
                 } else {
@@ -275,10 +275,10 @@ public interface QueryResolver {
             final Map<String, Use<?>> schema = new HashMap<>();
             schema.putAll(left.getLayout().getSchema());
             schema.putAll(right.getLayout().getSchema());
-            if(join.getLeft().hasAlias()) {
+            if (join.getLeft().hasAlias()) {
                 schema.put(leftAs, new UseComposite(left.getLayout().getSchema()));
             }
-            if(join.getRight().hasAlias()) {
+            if (join.getRight().hasAlias()) {
                 schema.put(rightAs, new UseComposite(right.getLayout().getSchema()));
             }
             final Layout layout = Layout.simple(schema);
@@ -295,13 +295,13 @@ public interface QueryResolver {
                         final Dataset<Row> rightDs = right.dataset().as(rightAs);
 
                         final Function<Name, Column> columnResolver = name -> {
-                            if(name.first().equals(leftAs)) {
+                            if (name.first().equals(leftAs)) {
                                 return SparkRowUtils.resolveName(leftDs, name.withoutFirst());
-                            } else if(name.first().equals(rightAs)) {
+                            } else if (name.first().equals(rightAs)) {
                                 return SparkRowUtils.resolveName(rightDs, name.withoutFirst());
-                            } else if(SparkRowUtils.findField(leftType, name.first()).isPresent()) {
+                            } else if (SparkRowUtils.findField(leftType, name.first()).isPresent()) {
                                 return SparkRowUtils.resolveName(leftDs, name);
-                            } else if(SparkRowUtils.findField(rightType, name.first()).isPresent()) {
+                            } else if (SparkRowUtils.findField(rightType, name.first()).isPresent()) {
                                 return SparkRowUtils.resolveName(rightDs, name);
                             } else {
                                 throw new IllegalStateException("Column " + name + " not found in join");
@@ -313,17 +313,17 @@ public interface QueryResolver {
                         return leftDs.joinWith(rightDs, condition, joinType).map(SparkUtils.map(tuple -> {
 
                             final Map<String, Object> result = new HashMap<>();
-                            for(final StructField field : leftType.fields()) {
+                            for (final StructField field : leftType.fields()) {
                                 result.put(field.name(), SparkRowUtils.get(tuple._1(), field.name()));
                             }
-                            for(final StructField field : rightType.fields()) {
+                            for (final StructField field : rightType.fields()) {
                                 result.put(field.name(), SparkRowUtils.get(tuple._2(), field.name()));
                             }
-                            if(join.getLeft().hasAlias()) {
+                            if (join.getLeft().hasAlias()) {
                                 final Row leftRow = SparkRowUtils.conform(tuple._1(), leftType);
                                 result.put(leftAs, leftRow);
                             }
-                            if(join.getRight().hasAlias()) {
+                            if (join.getRight().hasAlias()) {
                                 final Row rightRow = SparkRowUtils.conform(tuple._2(), rightType);
                                 result.put(rightAs, rightRow);
                             }
@@ -418,7 +418,7 @@ public interface QueryResolver {
             final List<Pair<String, Expression>> groups = group.stream().map(k -> {
 
                 final TypedExpression<?> e = expressions.get(k);
-                if(e == null) {
+                if (e == null) {
                     throw new UnsupportedOperationException("Grouped name " + k + " must appear in expressions");
                 } else {
                     return Pair.of(k, expressions.get(k).getExpression());
@@ -428,13 +428,13 @@ public interface QueryResolver {
 
             final Map<String, Aggregate> aggregates = expressions.entrySet().stream()
                     .filter(e -> e.getValue().getExpression().isAggregate())
-                    .collect(Collectors.toMap(Map.Entry::getKey, e -> (Aggregate)e.getValue().getExpression()));
+                    .collect(Collectors.toMap(Map.Entry::getKey, e -> (Aggregate) e.getValue().getExpression()));
 
             return then(AggregateTransform.builder()
-                            .group(groups)
-                            .aggregates(aggregates)
-                            .inputLayout(inputLayout)
-                            .outputLayout(outputLayout).build(), outputLayout);
+                    .group(groups)
+                    .aggregates(aggregates)
+                    .inputLayout(inputLayout)
+                    .outputLayout(outputLayout).build(), outputLayout);
         }
 
         default Stage expand(final QueryResolver resolver, final LinkableSchema schema, final Set<Name> expand, final Set<Bucket> buckets) {
@@ -442,10 +442,10 @@ public interface QueryResolver {
             final Layout outputLayout = Layout.simple(schema.getSchema(), expand);
 
             return then(ExpandTransform.builder()
-                            .expand(expand)
-                            .schema(schema)
-                            .buckets(buckets)
-                            .resolver(resolver).build(), outputLayout);
+                    .expand(expand)
+                    .schema(schema)
+                    .buckets(buckets)
+                    .resolver(resolver).build(), outputLayout);
         }
 
         default Stage filter(final Expression condition) {
@@ -453,8 +453,8 @@ public interface QueryResolver {
             final Layout inputLayout = getLayout();
 
             return then(PredicateTransform.builder()
-                            .inputLayout(inputLayout)
-                            .predicate(condition).build(), inputLayout);
+                    .inputLayout(inputLayout)
+                    .predicate(condition).build(), inputLayout);
         }
 
         default Stage map(final Map<String, TypedExpression<?>> expressions) {
@@ -474,13 +474,13 @@ public interface QueryResolver {
             final Layout inputLayout = getLayout();
 
             return then(SortTransform.<Row>builder()
-                            .sort(sort).build(), inputLayout);
+                    .sort(sort).build(), inputLayout);
         }
 
         default Stage conform(final InstanceSchema schema, final Set<Name> expand) {
 
             return then(SchemaTransform.builder()
-                            .schema(schema).expand(expand).build(), Layout.simple(schema.getSchema(), expand));
+                    .schema(schema).expand(expand).build(), Layout.simple(schema.getSchema(), expand));
         }
     }
 }

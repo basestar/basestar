@@ -21,7 +21,7 @@ public interface WriteAction {
         @Override
         public Storage.WriteTransaction apply(final Storage.WriteTransaction transaction, final LinkableSchema schema) {
 
-            return transaction.createObject((ObjectSchema)schema,  Instance.getId(after), after);
+            return transaction.createObject((ObjectSchema) schema, Instance.getId(after), after);
         }
     }
 
@@ -35,7 +35,7 @@ public interface WriteAction {
         @Override
         public Storage.WriteTransaction apply(final Storage.WriteTransaction transaction, final LinkableSchema schema) {
 
-            return transaction.updateObject((ObjectSchema)schema, Instance.getId(after), before, after);
+            return transaction.updateObject((ObjectSchema) schema, Instance.getId(after), before, after);
         }
     }
 
@@ -47,7 +47,7 @@ public interface WriteAction {
         @Override
         public Storage.WriteTransaction apply(final Storage.WriteTransaction transaction, final LinkableSchema schema) {
 
-            return transaction.deleteObject((ObjectSchema)schema, Instance.getId(before), before);
+            return transaction.deleteObject((ObjectSchema) schema, Instance.getId(before), before);
         }
     }
 
@@ -60,7 +60,7 @@ public interface WriteAction {
         @Override
         public Storage.WriteTransaction apply(final Storage.WriteTransaction transaction, final LinkableSchema schema) {
 
-            return transaction.writeHistory((ObjectSchema)schema, Instance.getId(after), after);
+            return transaction.writeHistory((ObjectSchema) schema, Instance.getId(after), after);
         }
     }
 
