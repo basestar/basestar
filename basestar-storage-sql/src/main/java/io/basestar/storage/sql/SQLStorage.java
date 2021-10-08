@@ -65,6 +65,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * FIXME: currently we use literals/inline everywhere because Athena doesn't like ? params, need to make this
@@ -218,14 +219,19 @@ public class SQLStorage implements DefaultLayerStorage {
         return new SQLExpressionVisitor(dialect, inferenceContext, columnResolver).condition(expression);
     }
 
-    private List<OrderField<?>> orderFields(final List<Sort> sort) {
+    private List<OrderField<?>> orderFields(final Table<?> table, final List<Sort> sort) {
 
         final SQLDialect dialect = strategy.dialect();
 
         return sort.stream()
-                .map(v -> {
-                    final Field<?> field = DSL.field(dialect.columnName(v.getName()));
-                    return v.getOrder() == Sort.Order.ASC ? field.asc() : field.desc();
+                .flatMap(v -> {
+                    final Optional<Field<?>> opt = resolveField(table, v.getName().toString());
+                    if (opt.isPresent()) {
+                        final Field<?> field = opt.get();
+                        return Stream.of(v.getOrder() == Sort.Order.ASC ? field.asc() : field.desc());
+                    } else {
+                        return Stream.empty();
+                    }
                 })
                 .collect(Collectors.toList());
     }
@@ -258,7 +264,6 @@ public class SQLStorage implements DefaultLayerStorage {
                                                                    final Set<Name> expand, final int count,
                                                                    final Page.Token token, final Set<Page.Stat> stats) {
 
-        final List<OrderField<?>> orderFields = orderFields(sort);
 
         final Table<Record> rawTable;
         if (index == null) {
@@ -270,6 +275,8 @@ public class SQLStorage implements DefaultLayerStorage {
         final CompletableFuture<Page<Map<String, Object>>> pageFuture = withContext(context -> {
 
             final Table<?> table = resolveTable(context, rawTable);
+
+            final List<OrderField<?>> orderFields = orderFields(table, sort);
 
             final Condition condition = condition(context, schema, index, expression);
 
