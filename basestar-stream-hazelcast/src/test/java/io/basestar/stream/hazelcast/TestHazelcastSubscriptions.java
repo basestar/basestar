@@ -1,13 +1,10 @@
 package io.basestar.stream.hazelcast;
 
-import com.hazelcast.config.ClasspathYamlConfig;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import io.basestar.stream.Subscriptions;
 import io.basestar.stream.TestSubscriptions;
-import org.checkerframework.checker.units.qual.C;
-
 import java.io.IOException;
 import java.net.InetAddress;
 
