@@ -71,4 +71,14 @@ public class SnowflakeDialect extends JSONDialect {
 
         return schema.getFrom() instanceof FromSql && (((FromSql) schema.getFrom()).getUsing().size() == 1);
     }
+
+    @Override
+    public String createFunctionDDLLanguage(final String language) {
+
+        if ("sql".equalsIgnoreCase(language)) {
+            return "";
+        } else {
+            return super.createFunctionDDLLanguage(language);
+        }
+    }
 }

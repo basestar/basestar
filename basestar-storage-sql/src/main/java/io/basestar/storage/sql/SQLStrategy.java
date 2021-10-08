@@ -29,6 +29,7 @@ import io.basestar.schema.from.From;
 import io.basestar.schema.from.FromSchema;
 import io.basestar.schema.from.FromSql;
 import io.basestar.storage.sql.util.DDLStep;
+import io.basestar.util.Nullsafe;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -97,6 +98,13 @@ public interface SQLStrategy {
     @Builder(builderClassName = "Builder")
     class Simple implements SQLStrategy {
 
+        public static enum Casing {
+
+            AS_SPECIFIED,
+            LOWERCASE,
+            UPPERCASE
+        }
+
         private static final String CUSTOM_TABLE_NAME_EXTENSION = "sql.table";
 
         private final String catalogName;
@@ -112,9 +120,20 @@ public interface SQLStrategy {
 
         private final boolean useMetadata;
 
+        private final Casing casing;
+
         private String name(final Schema<?> schema) {
 
-            return schema.getQualifiedName().toString("_");
+            final String name = schema.getQualifiedName().toString("_");
+            switch (Nullsafe.orDefault(casing, Casing.AS_SPECIFIED)) {
+                case LOWERCASE:
+                    return name.toLowerCase();
+                case UPPERCASE:
+                    return name.toUpperCase();
+                case AS_SPECIFIED:
+                default:
+                    return name;
+            }
         }
 
         private org.jooq.Name customizeName(final Schema<?> schema, final Supplier<org.jooq.Name> defaultName) {
