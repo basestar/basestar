@@ -122,6 +122,8 @@ public interface SQLStrategy {
 
         private final Casing casing;
 
+        private EntityTypeStrategy entityTypeStrategy;
+
         private String name(final Schema<?> schema) {
 
             final String name = schema.getQualifiedName().toString("_");
@@ -205,6 +207,15 @@ public interface SQLStrategy {
             return useMetadata;
         }
 
+        public EntityType entityType(final SQLDialect dialect, final LinkableSchema schema) {
+
+            if(entityTypeStrategy == null) {
+                return EntityTypeStrategy.DEFAULT.entityType(dialect, schema);
+            } else {
+                return entityTypeStrategy.entityType(dialect, schema);
+            }
+        }
+
         @Override
         public List<DDLStep> createEntityDDL(final DSLContext context, final Collection<? extends Schema<?>> schemas) {
 
@@ -217,16 +228,31 @@ public interface SQLStrategy {
 
             for (final Schema<?> schema : schemas) {
 
-                if (schema instanceof ReferableSchema) {
-                    queries.addAll(createObjectDDL(context, (ReferableSchema) schema));
-                } else if (schema instanceof ViewSchema) {
-                    queries.addAll(createViewDDL(context, (ViewSchema) schema));
+                if(schema instanceof LinkableSchema) {
+                    queries.addAll(createEntityDDL(context, (LinkableSchema) schema));
                 } else if (schema instanceof FunctionSchema) {
                     queries.addAll(createFunctionDDL(context, (FunctionSchema) schema));
                 }
             }
 
             return queries;
+        }
+
+        protected List<DDLStep> createEntityDDL(final DSLContext context, final LinkableSchema schema) {
+
+            switch (entityType(dialect(), schema)) {
+                case VIEW:
+                    return createViewDDL(context, (ViewSchema)schema);
+                case MATERIALIZED_VIEW:
+                    return createMaterializedViewDDL(context, (ViewSchema)schema);
+                case TABLE:
+                default:
+                    if(schema instanceof ReferableSchema) {
+                        return createObjectDDL(context, (ReferableSchema) schema);
+                    } else {
+                        return createFakeViewDDL(context, schema);
+                    }
+            }
         }
 
         protected List<DDLStep> createFunctionDDL(final DSLContext context, final FunctionSchema schema) {
@@ -240,38 +266,45 @@ public interface SQLStrategy {
             return queries;
         }
 
+        protected List<DDLStep> createMaterializedViewDDL(final DSLContext context, final ViewSchema schema) {
+
+            final List<DDLStep> queries = new ArrayList<>();
+            final org.jooq.Name viewName = viewName(schema);
+
+            final String query;
+            if (schema.getFrom() instanceof FromSql) {
+                query = ((FromSql) schema.getFrom()).getReplacedSql(s -> entityName(s).toString());
+            } else {
+                query = viewQuery(context, schema).getSQL();
+            }
+            queries.add(DDLStep.from(context, "create or replace materialized view " + viewName + " as " + query));
+
+            return queries;
+        }
+
+        protected List<DDLStep> createFakeViewDDL(final DSLContext context, final LinkableSchema schema) {
+
+            final List<DDLStep> queries = new ArrayList<>();
+            final org.jooq.Name viewName = entityName(schema);
+
+            final List<Field<?>> columns = dialect.fields(schema);
+
+            queries.add(DDLStep.from(withPrimaryKey(schema, context.createTableIfNotExists(viewName)
+                    .columns(columns))));
+            return queries;
+        }
+
         protected List<DDLStep> createViewDDL(final DSLContext context, final ViewSchema schema) {
 
             final List<DDLStep> queries = new ArrayList<>();
-
             final org.jooq.Name viewName = viewName(schema);
-            if (schema.isMaterialized()) {
-                if (dialect.supportsMaterializedView(schema)) {
 
-                    final String query;
-                    if (schema.getFrom() instanceof FromSql) {
-                        query = ((FromSql) schema.getFrom()).getReplacedSql(s -> entityName(s).toString());
-                    } else {
-                        query = viewQuery(context, schema).getSQL();
-                    }
-                    queries.add(DDLStep.from(context, "create or replace materialized view " + viewName + " as " + query));
-
-                } else {
-
-                    final List<Field<?>> columns = dialect.fields(schema);
-
-                    queries.add(DDLStep.from(withPrimaryKey(schema, context.createTableIfNotExists(viewName)
-                            .columns(columns))));
-                }
+            if (schema.getFrom() instanceof FromSql) {
+                queries.add(DDLStep.from(context.createOrReplaceView(viewName)
+                        .as(DSL.sql(((FromSql) schema.getFrom()).getReplacedSql(s -> entityName(s).toString())))));
             } else {
-
-                if (schema.getFrom() instanceof FromSql) {
-                    queries.add(DDLStep.from(context.createOrReplaceView(viewName)
-                            .as(DSL.sql(((FromSql) schema.getFrom()).getReplacedSql(s -> entityName(s).toString())))));
-                } else {
-                    queries.add(DDLStep.from(context.createOrReplaceView(viewName)
-                            .as(viewQuery(context, schema))));
-                }
+                queries.add(DDLStep.from(context.createOrReplaceView(viewName)
+                        .as(viewQuery(context, schema))));
             }
 
             return queries;
@@ -384,6 +417,38 @@ public interface SQLStrategy {
                 return create.constraint(DSL.primaryKey(ObjectSchema.ID, ObjectSchema.VERSION));
             } else {
                 return create;
+            }
+        }
+    }
+
+    enum EntityType {
+
+        TABLE,
+        VIEW,
+        MATERIALIZED_VIEW
+    }
+
+    interface EntityTypeStrategy {
+
+        Default DEFAULT = new Default();
+
+        EntityType entityType(SQLDialect dialect, LinkableSchema schema);
+
+        class Default implements EntityTypeStrategy {
+
+            @Override
+            public EntityType entityType(final SQLDialect dialect, final LinkableSchema schema) {
+
+                if(schema instanceof ViewSchema) {
+                    final ViewSchema view = (ViewSchema) schema;
+                    if(view.isMaterialized()) {
+                        return dialect.supportsMaterializedView(view) ? EntityType.MATERIALIZED_VIEW : EntityType.TABLE;
+                    } else {
+                        return EntityType.VIEW;
+                    }
+                } else {
+                    return EntityType.TABLE;
+                }
             }
         }
     }
