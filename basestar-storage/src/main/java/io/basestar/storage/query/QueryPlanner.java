@@ -162,7 +162,7 @@ public interface QueryPlanner<T> {
                 final T result = visitor.sql(from.getSql(), schema, Immutable.transformValues(from.getUsing(),
                         (k, v) -> {
                             final FromSchema from2 = (FromSchema) v;
-                            return stage(visitor, from2.getSchema(), Constant.TRUE, ImmutableList.of(), from2.getExpand(), null);
+                            return stage(visitor, from2.getLinkableSchema(), Constant.TRUE, ImmutableList.of(), from2.getExpand(), null);
                         }));
                 return visitor.conform(result, schema, schema.getExpand());
             } else {
@@ -279,7 +279,7 @@ public interface QueryPlanner<T> {
 
         protected T viewFromSchema(final QueryStageVisitor<T> visitor, final FromSchema from, final Expression where, final Set<Bucket> buckets) {
 
-            final LinkableSchema fromSchema = from.getSchema();
+            final LinkableSchema fromSchema = from.getLinkableSchema();
 
 //            final List<Sort> sort = from.getSort();
             return stage(visitor, fromSchema, where, Immutable.list(), from.getExpand(), buckets);
