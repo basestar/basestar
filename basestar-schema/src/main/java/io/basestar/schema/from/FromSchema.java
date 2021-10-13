@@ -24,12 +24,12 @@ import java.util.Set;
 public class FromSchema implements From {
 
     @Nonnull
-    private final LinkableSchema schema;
+    private final Schema<?> schema;
 
     @Nonnull
     private final Set<Name> expand;
 
-    public FromSchema(final LinkableSchema schema, final Set<Name> expand) {
+    public FromSchema(final Schema<?> schema, final Set<Name> expand) {
 
         this.schema = Nullsafe.require(schema);
         this.expand = Immutable.set(expand);
@@ -72,16 +72,21 @@ public class FromSchema implements From {
         };
     }
 
+    public LinkableSchema getLinkableSchema() {
+
+        return (LinkableSchema) schema;
+    }
+
     @Override
     public InferenceContext inferenceContext() {
 
-        return InferenceContext.from(getSchema());
+        return InferenceContext.from(getLinkableSchema());
     }
 
     @Override
     public void collectMaterializationDependencies(final Map<Name, LinkableSchema> out) {
 
-        final LinkableSchema fromSchema = getSchema();
+        final LinkableSchema fromSchema = getLinkableSchema();
         if (!out.containsKey(fromSchema.getQualifiedName())) {
             out.put(fromSchema.getQualifiedName(), fromSchema);
             fromSchema.collectMaterializationDependencies(getExpand(), out);
@@ -97,31 +102,31 @@ public class FromSchema implements From {
     @Override
     public Use<?> typeOfId() {
 
-        return getSchema().typeOfId();
+        return getLinkableSchema().typeOfId();
     }
 
     @Override
     public Map<String, Use<?>> getProperties() {
 
-        return schema.layoutSchema(expand);
+        return getLinkableSchema().layoutSchema(expand);
     }
 
     @Override
     public BinaryKey id(final Map<String, Object> row) {
 
-        return BinaryKey.from(ImmutableList.of(row.get(schema.id())));
+        return BinaryKey.from(ImmutableList.of(row.get(getLinkableSchema().id())));
     }
 
     @Override
     public Expression id() {
 
-        return new NameConstant(schema.id());
+        return new NameConstant(getLinkableSchema().id());
     }
 
     @Override
     public boolean isCompatibleBucketing(final List<Bucketing> other) {
 
-        return schema.isCompatibleBucketing(other);
+        return getLinkableSchema().isCompatibleBucketing(other);
     }
 
     @Override

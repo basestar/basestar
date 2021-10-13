@@ -351,7 +351,7 @@ public interface SQLStrategy {
 
             final From from = schema.getFrom();
             if (from instanceof FromSchema) {
-                return InferenceContext.from(((FromSchema) from).getSchema());
+                return InferenceContext.from(((FromSchema) from).getLinkableSchema());
             } else {
                 throw new UnsupportedOperationException("Cannot create view from " + schema.getFrom().getClass());
             }
