@@ -1,0 +1,8 @@
+Unique:
+  type: struct
+  properties:
+    my-name:
+      required: true
+      type: string
+    MyName:
+      type: integer

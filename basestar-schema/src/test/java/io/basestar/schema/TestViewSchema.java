@@ -21,6 +21,7 @@ package io.basestar.schema;
  */
 
 import io.basestar.expression.Expression;
+import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.from.FromExternal;
 import io.basestar.schema.use.UseInteger;
 import io.basestar.schema.use.UseString;
@@ -28,8 +29,8 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class TestViewSchema {
 
@@ -54,6 +55,18 @@ class TestViewSchema {
         final Property prop = schema.getProperties().get("name");
 
         assertTrue(prop.typeOf() instanceof UseString);
+    }
+
+    @Test
+    void testUniqueNames() throws IOException {
+        SchemaValidationException schemaValidationException = assertThrows(SchemaValidationException.class,
+                () -> Namespace.load(TestViewSchema.class.getResource("uniqueNamesView.yml")));
+
+        assertTrue(schemaValidationException.getMessage().contains("my-name"));
+        assertTrue(schemaValidationException.getMessage().contains("MyName"));
+        assertTrue(schemaValidationException.getMessage().contains("MySurname"));
+        assertTrue(schemaValidationException.getMessage().contains("MY_SURNAME"));
+        assertFalse(schemaValidationException.getMessage().contains("first"));
     }
 
     @Test

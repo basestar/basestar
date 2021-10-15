@@ -3,6 +3,7 @@ package io.basestar.schema;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Context;
 import io.basestar.schema.encoding.FlatEncoding;
+import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.test.CsvUtils;
 import io.basestar.util.ISO8601;
 import io.basestar.util.Immutable;
@@ -16,8 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 class TestInterfaceSchema {
 
@@ -62,5 +62,17 @@ class TestInterfaceSchema {
             }
             assertEquals(instance, schema.create(deserialized));
         });
+    }
+
+    @Test
+    void testUniqueNames() {
+        SchemaValidationException schemaValidationException = assertThrows(SchemaValidationException.class,
+                () -> Namespace.load(TestInterfaceSchema.class.getResource("uniqueNamesInterface.yml")));
+
+        assertTrue(schemaValidationException.getMessage().contains("my-name"));
+        assertTrue(schemaValidationException.getMessage().contains("MyName"));
+        assertTrue(schemaValidationException.getMessage().contains("MySurname"));
+        assertTrue(schemaValidationException.getMessage().contains("MY_SURNAME"));
+        assertFalse(schemaValidationException.getMessage().contains("first"));
     }
 }

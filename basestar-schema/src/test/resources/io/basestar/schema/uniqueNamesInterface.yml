@@ -1,0 +1,23 @@
+Unique:
+  type: interface
+
+  properties:
+    my-name:
+      required: true
+      type: string
+    MyName:
+      type: integer
+    MySurname:
+      type: integer
+    first:
+      type: integer
+  links:
+    MY_SURNAME:
+      schema: A
+      expression: true
+
+A:
+  properties:
+    first:
+      required: true
+      type: string

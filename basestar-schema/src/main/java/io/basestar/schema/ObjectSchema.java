@@ -9,9 +9,9 @@ package io.basestar.schema;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -44,13 +44,14 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
  * Object Schema
- *
+ * <p>
  * Objects are persisted by reference, and may be polymorphic.
- *
+ * <p>
  * Objects may contain properties, transients and links, these member types share the same
  * namespace, meaning you cannot define a property and a transient or link with the same name.
  *
@@ -324,7 +325,7 @@ public class ObjectSchema implements ReferableSchema {
 
     private ObjectSchema(final Descriptor descriptor, final Schema.Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
-        resolver.constructing(qualifiedName,this);
+        resolver.constructing(qualifiedName, this);
         this.qualifiedName = qualifiedName;
         this.slot = slot;
         this.version = Nullsafe.orDefault(descriptor.getVersion(), 1L);
@@ -353,12 +354,15 @@ public class ObjectSchema implements ReferableSchema {
         if (Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
-        Stream.of(this.declaredProperties, this.declaredLinks, this.declaredTransients)
-                .flatMap(v -> v.keySet().stream()).forEach(k -> {
+        List<String> fieldsNames = Stream.of(this.declaredProperties, this.declaredLinks, this.declaredTransients)
+                .flatMap(v -> v.keySet().stream())
+                .collect(Collectors.toList());
+        fieldsNames.forEach(k -> {
             if (METADATA_SCHEMA.containsKey(k)) {
                 throw new ReservedNameException(k);
             }
         });
+        validateFieldNames(fieldsNames);
     }
 
     @Override
@@ -404,28 +408,28 @@ public class ObjectSchema implements ReferableSchema {
 
     public boolean requiresMigration(final Schema<?> schema, final Widening widening) {
 
-        if(!(schema instanceof ObjectSchema)) {
+        if (!(schema instanceof ObjectSchema)) {
             return true;
         }
-        final ObjectSchema target = (ObjectSchema)schema;
-        if(!Objects.equals(getId(), target.getId())) {
+        final ObjectSchema target = (ObjectSchema) schema;
+        if (!Objects.equals(getId(), target.getId())) {
             return true;
         }
-        if(!Sets.difference(target.getExpand(), getExpand()).isEmpty()) {
+        if (!Sets.difference(target.getExpand(), getExpand()).isEmpty()) {
             return true;
         }
-        for(final Map.Entry<String, ? extends Member> entry : target.getMembers().entrySet()) {
+        for (final Map.Entry<String, ? extends Member> entry : target.getMembers().entrySet()) {
             final Member targetMember = entry.getValue();
             final Member sourceMember = getProperty(entry.getKey(), true);
-            if(sourceMember.requiresMigration(targetMember, widening)) {
+            if (sourceMember.requiresMigration(targetMember, widening)) {
                 return true;
             }
         }
-        for(final Map.Entry<String, Index> entry : target.getIndexes().entrySet()) {
+        for (final Map.Entry<String, Index> entry : target.getIndexes().entrySet()) {
             final Index targetIndex = entry.getValue();
             final Index sourceIndex = getIndex(entry.getKey(), true);
-            if(sourceIndex != null) {
-                if(sourceIndex.requiresMigration(targetIndex)) {
+            if (sourceIndex != null) {
+                if (sourceIndex.requiresMigration(targetIndex)) {
                     return true;
                 }
             } else {
