@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestStructSchema {
 
     @Test
-    void testUniqueNames2() throws IOException {
+    void testUniqueNames() throws IOException {
         SchemaValidationException schemaValidationException = assertThrows(SchemaValidationException.class,
                 () -> Namespace.load(TestStructSchema.class.getResource("uniqueNamesStruct.yml")));
 
