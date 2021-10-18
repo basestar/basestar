@@ -90,6 +90,8 @@ public interface SQLStrategy {
     SQLDialect dialect();
 
     StatementType statementType();
+  
+    boolean useMetadata();
 
     boolean useMetadata();
 
