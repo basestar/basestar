@@ -9,9 +9,9 @@ package io.basestar.api;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -54,15 +54,15 @@ public interface APIRequest {
 
     default <T> T readBody(final Class<T> as) throws IOException {
 
-        try(final InputStream is = readBody()) {
+        try (final InputStream is = readBody()) {
             return getContentType().getMapper().readValue(is, as);
         }
     }
 
     default String getFirstHeader(final String key) {
 
-        for(final Map.Entry<String, String> entry : getHeaders().entries()) {
-            if(entry.getKey().equalsIgnoreCase(key)) {
+        for (final Map.Entry<String, String> entry : getHeaders().entries()) {
+            if (entry.getKey().equalsIgnoreCase(key)) {
                 return entry.getValue();
             }
         }
@@ -79,9 +79,9 @@ public interface APIRequest {
 
         final String format = getFirstQuery("format");
         final String contentType = getFirstHeader("content-type");
-        if(format == null && contentType == null) {
+        if (format == null && contentType == null) {
             return APIFormat.JSON;
-        } else if(format != null) {
+        } else if (format != null) {
             return APIFormat.forFormat(format);
         } else {
             final APIFormat match = APIFormat.bestMatch(contentType);
@@ -96,9 +96,9 @@ public interface APIRequest {
 
         final String format = getFirstQuery("format");
         final String accept = getFirstHeader("accept");
-        if(format == null && accept == null) {
+        if (format == null && accept == null) {
             return getContentType();
-        } else if(format != null) {
+        } else if (format != null) {
             return APIFormat.forFormat(format);
         } else {
             final APIFormat match = APIFormat.bestMatch(accept);
@@ -136,8 +136,8 @@ public interface APIRequest {
 
     static Simple request(final Caller caller, final Method method, final String path, final Map<String, String> query, final Map<String, String> headers, final APIFormat format, final Object body) throws IOException {
 
-        try(final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-            if(body != null) {
+        try (final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            if (body != null) {
                 format.getMapper().writeValue(baos, body);
             }
             return request(caller, method, path, query, headers, format, baos.toByteArray());
@@ -151,7 +151,7 @@ public interface APIRequest {
         final ListMultimap<String, String> allHeaders = ArrayListMultimap.create();
         headers.forEach(allHeaders::put);
         allHeaders.put("Accept", format.getContentType());
-        if(body != null) {
+        if (body != null) {
             allHeaders.put("Content-Type", format.getContentType());
         }
         return new Simple(caller, method, path, allQuery, allHeaders, body, UUID.randomUUID().toString());

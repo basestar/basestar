@@ -100,7 +100,7 @@ public interface Database {
 
     CompletableFuture<Map<String, Instance>> batch(Caller caller, BatchOptions options);
 
-    default CompletableFuture<Instance> expand(Caller caller, Map<String, Object> instance, Set<Name> expand) {
+    default CompletableFuture<Instance> expand(final Caller caller, final Map<String, Object> instance, final Set<Name> expand) {
 
         // FIXME: should not read the root object (will break in versioning scenario anyway)
         return read(caller, ReadOptions.builder()

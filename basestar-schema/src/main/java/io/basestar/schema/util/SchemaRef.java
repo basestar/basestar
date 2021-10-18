@@ -2,7 +2,6 @@ package io.basestar.schema.util;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
 import io.basestar.schema.Version;
 import io.basestar.util.Name;
@@ -50,10 +49,10 @@ public class SchemaRef {
         }
     }
 
-    public LinkableSchema resolve(final Schema.Resolver.Constructing resolver) {
+    public Schema<?> resolve(final Schema.Resolver.Constructing resolver) {
 
-        if(inline != null) {
-            return (LinkableSchema) inline.build(null, new Schema.Resolver.Constructing() {
+        if (inline != null) {
+            return inline.build(null, new Schema.Resolver.Constructing() {
 
                 @Override
                 public void constructing(final Name qualifiedName, final Schema<?> schema) {
@@ -70,7 +69,7 @@ public class SchemaRef {
 
             }, Version.CURRENT, Schema.anonymousQualifiedName(), Schema.anonymousSlot());
         } else {
-            return resolver.requireLinkableSchema(name);
+            return resolver.requireSchema(name);
         }
     }
 }

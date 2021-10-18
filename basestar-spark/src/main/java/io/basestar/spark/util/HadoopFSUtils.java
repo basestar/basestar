@@ -22,7 +22,7 @@ public class HadoopFSUtils {
 
             // will return self if it is a file, or contents if it is a directory
             return !fs.listStatusIterator(path).hasNext();
-        } catch (IOException e) {
+        } catch (final IOException e) {
             throw new IllegalStateException("Failed check if empty location: " + location, e);
         }
     }

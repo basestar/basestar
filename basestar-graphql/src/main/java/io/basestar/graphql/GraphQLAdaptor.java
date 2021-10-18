@@ -23,6 +23,7 @@ package io.basestar.graphql;
 import com.google.common.collect.ImmutableMap;
 import graphql.GraphQL;
 import graphql.execution.AsyncExecutionStrategy;
+import graphql.language.Argument;
 import graphql.language.*;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
@@ -112,6 +113,10 @@ public class GraphQLAdaptor {
         builder.scalar(GraphQLScalarType.newScalar()
                 .name(strategy.binaryTypeName())
                 .coercing(BinaryCoercing.INSTANCE)
+                .build());
+        builder.scalar(GraphQLScalarType.newScalar()
+                .name(strategy.decimalTypeName())
+                .coercing(DecimalCoercing.INSTANCE)
                 .build());
         builder.scalar(GraphQLScalarType.newScalar()
                 .name(strategy.secretTypeName())

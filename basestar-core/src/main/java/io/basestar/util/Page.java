@@ -48,7 +48,7 @@ public class Page<T> extends AbstractList<T> implements Serializable {
 
         private final Set<String> aliases;
 
-        Stat(String... aliases) {
+        Stat(final String... aliases) {
             this.aliases = new HashSet<>(Arrays.asList(aliases));
             this.aliases.add(name());
         }

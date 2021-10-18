@@ -342,7 +342,7 @@ public class Link implements Member {
     }
 
     @Override
-    public Set<Expression> refQueries(Name otherSchemaName, final Set<Name> expand, final Name name) {
+    public Set<Expression> refQueries(final Name otherSchemaName, final Set<Name> expand, final Name name) {
 
         // FIXME
         return Collections.emptySet();
@@ -355,7 +355,7 @@ public class Link implements Member {
     }
 
     @Override
-    public Set<Name> refExpand(Name otherSchemaName, final Set<Name> expand) {
+    public Set<Name> refExpand(final Name otherSchemaName, final Set<Name> expand) {
 
         // FIXME
         return Collections.emptySet();

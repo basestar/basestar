@@ -9,9 +9,9 @@ package io.basestar.api;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -42,8 +42,8 @@ public interface APIResponse {
 
     default String getFirstHeader(final String key) {
 
-        for(final Map.Entry<String, String> entry : getHeaders().entries()) {
-            if(entry.getKey().equalsIgnoreCase(key)) {
+        for (final Map.Entry<String, String> entry : getHeaders().entries()) {
+            if (entry.getKey().equalsIgnoreCase(key)) {
                 return entry.getValue();
             }
         }
@@ -55,7 +55,7 @@ public interface APIResponse {
     default APIFormat getContentType() {
 
         final String contentType = getFirstHeader("content-type");
-        if(contentType == null) {
+        if (contentType == null) {
             return APIFormat.JSON;
         } else {
             final APIFormat match = APIFormat.bestMatch(contentType);
@@ -68,9 +68,9 @@ public interface APIResponse {
 
     default <T> T readAs(final Class<T> cls) throws IOException {
 
-        try(final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+        try (final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             writeTo(baos);
-            if(baos.size() != 0) {
+            if (baos.size() != 0) {
                 return getContentType().getMapper().readValue(baos.toByteArray(), cls);
             } else {
                 return null;
@@ -161,7 +161,7 @@ public interface APIResponse {
     static APIResponse response(final APIRequest request, final int status, final Multimap<String, String> extraHeaders, final Entity entity) {
 
         final Multimap<String, String> headers = HashMultimap.create();
-        if(entity != null) {
+        if (entity != null) {
             headers.put("Content-Type", entity.getContentType());
         }
         final String origin = request.getFirstHeader("Origin");
@@ -192,7 +192,7 @@ public interface APIResponse {
             headers.put("X-Caller-Anonymous", caller.isAnon() ? "true" : "false");
         }
         final String requestId = request.getRequestId();
-        if(requestId != null) {
+        if (requestId != null) {
             headers.put("X-Request-Id", requestId);
         }
         if (extraHeaders != null) {
@@ -215,7 +215,7 @@ public interface APIResponse {
             @Override
             public void writeTo(final OutputStream out) throws IOException {
 
-                if(entity != null) {
+                if (entity != null) {
                     entity.writeTo(out);
                 }
             }

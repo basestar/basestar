@@ -86,7 +86,7 @@ public class Immutable {
             }
         } else {
             final List<V> copy = new ArrayList<>(l);
-            if(vs != null) {
+            if (vs != null) {
                 copy.addAll(vs);
             }
             return Collections.unmodifiableList(copy);
@@ -122,7 +122,7 @@ public class Immutable {
             }
         } else {
             final Set<V> copy = new HashSet<>(s);
-            if(vs != null) {
+            if (vs != null) {
                 copy.addAll(vs);
             }
             return Collections.unmodifiableSet(copy);
@@ -136,7 +136,7 @@ public class Immutable {
             return Collections.emptySet();
         } else {
             final Set<V> copy = new HashSet<>(s);
-            if(vs != null) {
+            if (vs != null) {
                 copy.removeAll(vs);
             }
             return Collections.unmodifiableSet(copy);

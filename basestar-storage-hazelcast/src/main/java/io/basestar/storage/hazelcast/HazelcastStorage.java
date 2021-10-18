@@ -112,8 +112,6 @@ public class HazelcastStorage implements DefaultLayerStorage {
         }
     }
 
-
-
     private Map<String, Object> fromRecord(final CustomPortable record) {
 
         return record == null ? null : record.getData();

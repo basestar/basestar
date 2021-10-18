@@ -2,8 +2,10 @@ package io.basestar.storage.sql.dialect;
 
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.ViewSchema;
+import io.basestar.schema.from.FromSql;
 import org.jooq.DataType;
 import org.jooq.Field;
+import org.jooq.SQLDialect;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 
@@ -15,7 +17,7 @@ public class SnowflakeDialect extends JSONDialect {
     @Override
     public org.jooq.SQLDialect dmlDialect() {
 
-        return org.jooq.SQLDialect.POSTGRES;
+        return SQLDialect.POSTGRES;
     }
 
     @Override
@@ -61,6 +63,22 @@ public class SnowflakeDialect extends JSONDialect {
             return Optional.of(DSL.inline((String) null));
         } else {
             return Optional.empty();
+        }
+    }
+
+    @Override
+    public boolean supportsMaterializedView(final ViewSchema schema) {
+
+        return schema.getFrom() instanceof FromSql && (((FromSql) schema.getFrom()).getUsing().size() == 1);
+    }
+
+    @Override
+    public String createFunctionDDLLanguage(final String language) {
+
+        if ("sql".equalsIgnoreCase(language)) {
+            return "";
+        } else {
+            return super.createFunctionDDLLanguage(language);
         }
     }
 }

@@ -9,9 +9,9 @@ package io.basestar.api;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -57,7 +57,7 @@ public class OpenAPIUtils {
 
     public static Paths prefix(final Paths input, final String prefix) {
 
-        if(input == null) {
+        if (input == null) {
             return null;
         } else {
             final Paths paths = new Paths();
@@ -73,14 +73,14 @@ public class OpenAPIUtils {
 
     private static String joinPaths(final String a, final String b) {
 
-        if(a.endsWith("/") && b.startsWith("/")) {
+        if (a.endsWith("/") && b.startsWith("/")) {
             return a + b.substring(1);
         } else {
             return a + b;
         }
     }
 
-    public static OpenAPI merge(final OpenAPI ... input) {
+    public static OpenAPI merge(final OpenAPI... input) {
 
         return merge(Arrays.asList(input));
     }

@@ -66,13 +66,14 @@ abstract class TestSQLStorage extends TestStorage {
         final SQLStrategy strategy = SQLStrategy.Simple.builder()
                 .objectSchemaName(objectSchema)
                 .historySchemaName(historySchema)
+                .useMetadata(useMetadata())
                 .dialect(dialect)
                 .build();
 
         try(final Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             final DSLContext context = DSL.using(conn, dialect.ddlDialect());
-            strategy.createTables(context, namespace.getSchemas().values());
+            strategy.createEntities(context, namespace.getSchemas().values());
             conn.commit();
         } catch (final SQLException e) {
             throw new IllegalStateException(e);
@@ -82,6 +83,11 @@ abstract class TestSQLStorage extends TestStorage {
                 .setDataSource(ds)
                 .setStrategy(strategy)
                 .build();
+    }
+
+    protected boolean useMetadata() {
+
+        return true;
     }
 
     protected abstract SQLDialect dialect();
@@ -106,6 +112,12 @@ abstract class TestSQLStorage extends TestStorage {
 
     @Override
     protected boolean supportsMaterializedView() {
+
+        return true;
+    }
+
+    @Override
+    protected boolean supportsSql() {
 
         return true;
     }

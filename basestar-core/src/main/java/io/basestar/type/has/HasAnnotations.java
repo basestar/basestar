@@ -9,9 +9,9 @@ package io.basestar.type.has;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -42,7 +42,7 @@ public interface HasAnnotations {
     @SuppressWarnings("unchecked")
     default <A extends Annotation> AnnotationContext<A> annotation(final Class<A> of) {
 
-        return (AnnotationContext<A>)annotations().stream().filter(v -> v.erasedType().equals(of))
+        return (AnnotationContext<A>) annotations().stream().filter(v -> v.erasedType().equals(of))
                 .findFirst().orElse(null);
     }
 
@@ -54,12 +54,12 @@ public interface HasAnnotations {
         return annotations().stream()
                 .flatMap(annotation -> {
                     final Class<?> erased = annotation.erasedType();
-                    if(erased.equals(of)) {
-                        return Stream.of((AnnotationContext<A>)annotation);
-                    } else if(erased.equals(repType)) {
+                    if (erased.equals(of)) {
+                        return Stream.of((AnnotationContext<A>) annotation);
+                    } else if (erased.equals(repType)) {
                         try {
                             final Method value = repType.getMethod(VALUE);
-                            final A[] as = (A[])value.invoke(annotation.annotation());
+                            final A[] as = (A[]) value.invoke(annotation.annotation());
                             return Arrays.stream(as).map(AnnotationContext::new);
                         } catch (final NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
                             throw new IllegalStateException(e);

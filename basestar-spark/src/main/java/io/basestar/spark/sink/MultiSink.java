@@ -10,7 +10,7 @@ public class MultiSink<T> implements Sink<T> {
     private final List<Sink<T>> sinks;
 
     @SafeVarargs
-    public MultiSink(final Sink<T> ... sinks) {
+    public MultiSink(final Sink<T>... sinks) {
 
         this.sinks = ImmutableList.copyOf(sinks);
     }

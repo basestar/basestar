@@ -96,13 +96,13 @@ public interface UpsertState {
         }
 
         @Override
-        public void dropState(SparkSession session, String key) {
+        public void dropState(final SparkSession session, final String key) {
 
             try {
                 final Configuration configuration = session.sparkContext().hadoopConfiguration();
                 final Path path = keyPath(key);
                 final FileSystem fs = path.getFileSystem(configuration);
-                if(fs.exists(path)) {
+                if (fs.exists(path)) {
                     fs.delete(path, true);
                 }
             } catch (final IOException e) {

@@ -210,4 +210,10 @@ public class TrinoDialect extends JSONDialect {
             return "row(id varchar)";
         }
     }
+
+    @Override
+    public boolean supportsUDFs() {
+
+        return false;
+    }
 }

@@ -28,13 +28,18 @@ import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.from.From;
 import io.basestar.schema.from.FromSchema;
 import io.basestar.schema.from.FromSql;
+import io.basestar.storage.sql.util.DDLStep;
+import io.basestar.util.Nullsafe;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.*;
 import org.jooq.conf.StatementType;
 import org.jooq.impl.DSL;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -48,14 +53,18 @@ public interface SQLStrategy {
 
     org.jooq.Name historyTableName(ReferableSchema schema);
 
+    org.jooq.Name functionName(FunctionSchema schema);
+
     org.jooq.Name viewName(ViewSchema schema);
 
-    default org.jooq.Name tableName(final LinkableSchema schema) {
+    default org.jooq.Name entityName(final Schema<?> schema) {
 
         if (schema instanceof ReferableSchema) {
             return objectTableName((ReferableSchema) schema);
         } else if (schema instanceof ViewSchema) {
             return viewName((ViewSchema) schema);
+        } else if (schema instanceof FunctionSchema) {
+            return functionName((FunctionSchema) schema);
         } else {
             throw new UnsupportedOperationException();
         }
@@ -64,7 +73,19 @@ public interface SQLStrategy {
     // Only used for multi-value indexes
     org.jooq.Name indexTableName(ReferableSchema schema, Index index);
 
-    void createTables(DSLContext context, Collection<? extends Schema<?>> schemas);
+    default void createEntities(final DSLContext context, final Collection<? extends Schema<?>> schemas) {
+
+        final Logger log = LoggerFactory.getLogger(SQLStrategy.class);
+        for (final DDLStep query : createEntityDDL(context, schemas)) {
+            try {
+                query.execute();
+            } catch (final Exception e) {
+                log.error("Failed to execute DDL query " + query.getSQL(), e);
+            }
+        }
+    }
+
+    List<DDLStep> createEntityDDL(DSLContext context, Collection<? extends Schema<?>> schemas);
 
     SQLDialect dialect();
 
@@ -72,10 +93,19 @@ public interface SQLStrategy {
   
     boolean useMetadata();
 
+    boolean useMetadata();
+
     @Data
     @Slf4j
     @Builder(builderClassName = "Builder")
     class Simple implements SQLStrategy {
+
+        public static enum Casing {
+
+            AS_SPECIFIED,
+            LOWERCASE,
+            UPPERCASE
+        }
 
         private static final String CUSTOM_TABLE_NAME_EXTENSION = "sql.table";
 
@@ -83,6 +113,7 @@ public interface SQLStrategy {
 
         private final String objectSchemaName;
 
+        @Nullable
         private final String historySchemaName;
 
         private final SQLDialect dialect;
@@ -91,12 +122,25 @@ public interface SQLStrategy {
 
         private final boolean useMetadata;
 
-        private String name(final LinkableSchema schema) {
+        private final Casing casing;
 
-            return schema.getQualifiedName().toString("_").toLowerCase();
+        private EntityTypeStrategy entityTypeStrategy;
+
+        private String name(final Schema<?> schema) {
+
+            final String name = schema.getQualifiedName().toString("_");
+            switch (Nullsafe.orDefault(casing, Casing.AS_SPECIFIED)) {
+                case LOWERCASE:
+                    return name.toLowerCase();
+                case UPPERCASE:
+                    return name.toUpperCase();
+                case AS_SPECIFIED:
+                default:
+                    return name;
+            }
         }
 
-        private org.jooq.Name customizeName(final LinkableSchema schema, final Supplier<org.jooq.Name> defaultName) {
+        private org.jooq.Name customizeName(final Schema<?> schema, final Supplier<org.jooq.Name> defaultName) {
 
             return schema.getOptionalExtension(String.class, CUSTOM_TABLE_NAME_EXTENSION).map(SQLUtils::parseName).orElseGet(defaultName);
         }
@@ -118,6 +162,12 @@ public interface SQLStrategy {
 
         @Override
         public org.jooq.Name objectTableName(final ReferableSchema schema) {
+
+            return combineNames(DSL.name(objectSchemaName), customizeName(schema, () -> DSL.name(name(schema))));
+        }
+
+        @Override
+        public org.jooq.Name functionName(final FunctionSchema schema) {
 
             return combineNames(DSL.name(objectSchemaName), customizeName(schema, () -> DSL.name(name(schema))));
         }
@@ -159,61 +209,107 @@ public interface SQLStrategy {
             return useMetadata;
         }
 
-        @Override
-        public void createTables(final DSLContext context, final Collection<? extends Schema<?>> schemas) {
+        public EntityType entityType(final SQLDialect dialect, final LinkableSchema schema) {
 
-            try (final CreateSchemaFinalStep create = context.createSchemaIfNotExists(DSL.name(objectSchemaName))) {
-                create.execute();
-            } catch (final Exception e) {
-                log.error("Failed to create object schema", e);
+            if(entityTypeStrategy == null) {
+                return EntityTypeStrategy.DEFAULT.entityType(dialect, schema);
+            } else {
+                return entityTypeStrategy.entityType(dialect, schema);
             }
+        }
 
-            try (final CreateSchemaFinalStep create = context.createSchemaIfNotExists(DSL.name(historySchemaName))) {
-                create.execute();
-            } catch (final Exception e) {
-                log.error("Failed to create history schema", e);
+        @Override
+        public List<DDLStep> createEntityDDL(final DSLContext context, final Collection<? extends Schema<?>> schemas) {
+
+            final List<DDLStep> queries = new ArrayList<>();
+
+            queries.add(DDLStep.from(context.createSchemaIfNotExists(DSL.name(objectSchemaName))));
+            if (historySchemaName != null) {
+                queries.add(DDLStep.from(context.createSchemaIfNotExists(DSL.name(historySchemaName))));
             }
 
             for (final Schema<?> schema : schemas) {
 
-                if (schema instanceof ReferableSchema) {
-
-                    createObjectTable(context, (ReferableSchema) schema);
-
-                } else if (schema instanceof ViewSchema) {
-
-                    createViewTable(context, (ViewSchema) schema);
+                if(schema instanceof LinkableSchema) {
+                    queries.addAll(createEntityDDL(context, (LinkableSchema) schema));
+                } else if (schema instanceof FunctionSchema) {
+                    queries.addAll(createFunctionDDL(context, (FunctionSchema) schema));
                 }
+            }
+
+            return queries;
+        }
+
+        protected List<DDLStep> createEntityDDL(final DSLContext context, final LinkableSchema schema) {
+
+            switch (entityType(dialect(), schema)) {
+                case VIEW:
+                    return createViewDDL(context, (ViewSchema)schema);
+                case MATERIALIZED_VIEW:
+                    return createMaterializedViewDDL(context, (ViewSchema)schema);
+                case TABLE:
+                default:
+                    if(schema instanceof ReferableSchema) {
+                        return createObjectDDL(context, (ReferableSchema) schema);
+                    } else {
+                        return createFakeViewDDL(context, schema);
+                    }
             }
         }
 
-        private void createViewTable(final DSLContext context, final ViewSchema schema) {
+        protected List<DDLStep> createFunctionDDL(final DSLContext context, final FunctionSchema schema) {
 
-            final org.jooq.Name viewName = viewName(schema);
-            if (schema.isMaterialized()) {
-
-                final List<Field<?>> columns = dialect.fields(schema);
-
-                try (final CreateTableFinalStep create = withPrimaryKey(schema, context.createTableIfNotExists(viewName)
-                        .columns(columns))) {
-                    create.execute();
-                } catch (final Exception e) {
-                    log.error("Failed to create view table {}", schema.getQualifiedName(), e);
-                }
-
-            } else {
-
-                if (schema.getFrom() instanceof FromSql) {
-                    log.info("Inline SQL views not currently supported (must be manually created in storage)");
-                } else {
-
-                    try (final CreateViewFinalStep create = context.createOrReplaceView(viewName).as(viewQuery(context, schema))) {
-                        create.execute();
-                    } catch (final Exception e) {
-                        log.error("Failed to create view {}", schema.getQualifiedName(), e);
-                    }
-                }
+            final List<DDLStep> queries = new ArrayList<>();
+            if (dialect.supportsUDFs()) {
+                final String definition = schema.getReplacedDefinition(s -> entityName(s).toString());
+                final String sql = dialect().createFunctionDDL(context, functionName(schema), schema.getReturns(), schema.getArguments(), schema.getLanguage(), definition);
+                queries.add(DDLStep.from(context, sql));
             }
+            return queries;
+        }
+
+        protected List<DDLStep> createMaterializedViewDDL(final DSLContext context, final ViewSchema schema) {
+
+            final List<DDLStep> queries = new ArrayList<>();
+            final org.jooq.Name viewName = viewName(schema);
+
+            final String query;
+            if (schema.getFrom() instanceof FromSql) {
+                query = ((FromSql) schema.getFrom()).getReplacedSql(s -> entityName(s).toString());
+            } else {
+                query = viewQuery(context, schema).getSQL();
+            }
+            queries.add(DDLStep.from(context, "create or replace materialized view " + viewName + " as " + query));
+
+            return queries;
+        }
+
+        protected List<DDLStep> createFakeViewDDL(final DSLContext context, final LinkableSchema schema) {
+
+            final List<DDLStep> queries = new ArrayList<>();
+            final org.jooq.Name viewName = entityName(schema);
+
+            final List<Field<?>> columns = dialect.fields(schema);
+
+            queries.add(DDLStep.from(withPrimaryKey(schema, context.createTableIfNotExists(viewName)
+                    .columns(columns))));
+            return queries;
+        }
+
+        protected List<DDLStep> createViewDDL(final DSLContext context, final ViewSchema schema) {
+
+            final List<DDLStep> queries = new ArrayList<>();
+            final org.jooq.Name viewName = viewName(schema);
+
+            if (schema.getFrom() instanceof FromSql) {
+                queries.add(DDLStep.from(context.createOrReplaceView(viewName)
+                        .as(DSL.sql(((FromSql) schema.getFrom()).getReplacedSql(s -> entityName(s).toString())))));
+            } else {
+                queries.add(DDLStep.from(context.createOrReplaceView(viewName)
+                        .as(viewQuery(context, schema))));
+            }
+
+            return queries;
         }
 
         protected Select<?> viewQuery(final DSLContext context, final ViewSchema schema) {
@@ -247,7 +343,7 @@ public interface SQLStrategy {
 
             final From from = schema.getFrom();
             if (from instanceof FromSchema) {
-                return DSL.table(tableName(((FromSchema) from).getSchema()));
+                return DSL.table(entityName(((FromSchema) from).getSchema()));
             } else {
                 throw new UnsupportedOperationException("Cannot create view from " + schema.getFrom().getClass());
             }
@@ -257,13 +353,15 @@ public interface SQLStrategy {
 
             final From from = schema.getFrom();
             if (from instanceof FromSchema) {
-                return InferenceContext.from(((FromSchema) from).getSchema());
+                return InferenceContext.from(((FromSchema) from).getLinkableSchema());
             } else {
                 throw new UnsupportedOperationException("Cannot create view from " + schema.getFrom().getClass());
             }
         }
 
-        private void createObjectTable(final DSLContext context, final ReferableSchema schema) {
+        protected List<DDLStep> createObjectDDL(final DSLContext context, final ReferableSchema schema) {
+
+            final List<DDLStep> queries = new ArrayList<>();
 
             final org.jooq.Name objectTableName = objectTableName(schema);
             final org.jooq.Name historyTableName = historyTableName(schema);
@@ -271,53 +369,39 @@ public interface SQLStrategy {
             final List<Field<?>> columns = dialect.fields(schema); //rowMapper(schema, schema.getExpand()).columns();
 
             log.info("Creating table {}", objectTableName);
-            try (final CreateTableFinalStep create = withPrimaryKey(schema, context.createTableIfNotExists(objectTableName)
-                    .columns(columns))) {
-                create.execute();
-            } catch (final Exception e) {
-                log.error("Failed to create object table {}", schema.getQualifiedName(), e);
-            }
+            queries.add(DDLStep.from(withPrimaryKey(schema, context.createTableIfNotExists(objectTableName)
+                    .columns(columns))));
 
             if (dialect.supportsIndexes()) {
                 for (final Index index : schema.getIndexes().values()) {
                     if (index.isMultiValue()) {
                         final org.jooq.Name indexTableName = indexTableName(schema, index);
                         log.info("Creating multi-value index table {}", indexTableName);
-                        try (final CreateTableFinalStep create = context.createTableIfNotExists(indexTableName(schema, index))
+                        queries.add(DDLStep.from(context.createTableIfNotExists(indexTableName(schema, index))
                                 .columns(dialect.fields(schema, index))
-                                .constraints(dialect.primaryKey(schema, index))) {
-                            create.execute();
-                        } catch (final Exception e) {
-                            log.error("Failed to create index table {}.{}", schema.getQualifiedName(), index.getName(), e);
-                        }
+                                .constraints(dialect.primaryKey(schema, index))));
                     } else if (index.isUnique()) {
                         log.info("Creating unique index {}:{}", objectTableName, index.getName());
-                        try (final CreateIndexFinalStep create = context.createUniqueIndexIfNotExists(index.getName())
-                                .on(DSL.table(objectTableName), dialect.indexKeys(schema, index))) {
-                            create.execute();
-                        } catch (final Exception e) {
-                            log.error("Failed to create unique index {}.{}", schema.getQualifiedName(), index.getName(), e);
-                        }
+                        queries.add(DDLStep.from(context.createUniqueIndexIfNotExists(index.getName())
+                                .on(DSL.table(objectTableName), dialect.indexKeys(schema, index))));
                     } else {
                         log.info("Creating index {}:{}", objectTableName, index.getName());
                         // Fixme
                         if (!index.getName().equals("expanded")) {
-                            try (final CreateIndexFinalStep create = context.createIndexIfNotExists(index.getName())
-                                    .on(DSL.table(objectTableName), dialect.indexKeys(schema, index))) {
-                                create.execute();
-                            } catch (final Exception e) {
-                                log.error("Failed to create index {}.{}", schema.getQualifiedName(), index.getName(), e);
-                            }
+                            queries.add(DDLStep.from(context.createIndexIfNotExists(index.getName())
+                                    .on(DSL.table(objectTableName), dialect.indexKeys(schema, index))));
                         }
                     }
                 }
             }
 
-            log.info("Creating table {}", historyTableName);
-            try (final CreateTableFinalStep create = withHistoryPrimaryKey(schema, context.createTableIfNotExists(historyTableName)
-                    .columns(columns))) {
-                create.execute();
+            if (historySchemaName != null) {
+                log.info("Creating history table {}", historyTableName);
+                queries.add(DDLStep.from(withHistoryPrimaryKey(schema, context.createTableIfNotExists(historyTableName)
+                        .columns(columns))));
             }
+
+            return queries;
         }
 
         private CreateTableFinalStep withPrimaryKey(final LinkableSchema schema, final CreateTableColumnStep create) {
@@ -335,6 +419,38 @@ public interface SQLStrategy {
                 return create.constraint(DSL.primaryKey(ObjectSchema.ID, ObjectSchema.VERSION));
             } else {
                 return create;
+            }
+        }
+    }
+
+    enum EntityType {
+
+        TABLE,
+        VIEW,
+        MATERIALIZED_VIEW
+    }
+
+    interface EntityTypeStrategy {
+
+        Default DEFAULT = new Default();
+
+        EntityType entityType(SQLDialect dialect, LinkableSchema schema);
+
+        class Default implements EntityTypeStrategy {
+
+            @Override
+            public EntityType entityType(final SQLDialect dialect, final LinkableSchema schema) {
+
+                if(schema instanceof ViewSchema) {
+                    final ViewSchema view = (ViewSchema) schema;
+                    if(view.isMaterialized()) {
+                        return dialect.supportsMaterializedView(view) ? EntityType.MATERIALIZED_VIEW : EntityType.TABLE;
+                    } else {
+                        return EntityType.VIEW;
+                    }
+                } else {
+                    return EntityType.TABLE;
+                }
             }
         }
     }

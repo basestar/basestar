@@ -41,7 +41,7 @@ public class BaseState {
     public Stream<Partition> filter(@Nullable final Set<Map<String, String>> partitionFilter) {
 
         return partitions.stream().filter(part -> partitionFilter == null || partitionFilter.isEmpty() || partitionFilter.stream()
-                    .anyMatch(filter -> part.getSpec().entrySet().containsAll(filter.entrySet())));
+                .anyMatch(filter -> part.getSpec().entrySet().containsAll(filter.entrySet())));
     }
 
     public Stream<URI> locations(final URI location, final List<String> partitionColumns, @Nullable final Set<Map<String, String>> partitionFilter) {
@@ -53,9 +53,9 @@ public class BaseState {
 
         final List<Partition> merged = new ArrayList<>();
         final Map<Map<String, String>, String> unprocessed = new HashMap<>(merge);
-        for(final Partition partition : partitions) {
+        for (final Partition partition : partitions) {
             final String sequence = unprocessed.get(partition.getSpec());
-            if(sequence != null) {
+            if (sequence != null) {
                 merged.add(partition.withSequence(sequence));
                 unprocessed.remove(partition.getSpec());
             } else {

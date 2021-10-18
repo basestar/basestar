@@ -322,7 +322,7 @@ public class Transient implements Member {
 
         interface Builder<B extends Builder<B>> extends Descriptor {
 
-            default B setTransient(String name, Transient.Descriptor v) {
+            default B setTransient(final String name, final Transient.Descriptor v) {
 
                 return setTransients(Immutable.put(getTransients(), name, v));
             }

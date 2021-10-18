@@ -1,7 +1,6 @@
 package io.basestar.stream;
 
 import io.basestar.auth.Caller;
-import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.util.Page;
@@ -47,7 +46,7 @@ public class MemorySubscriptions implements Subscriptions {
         final List<Subscription> results = new ArrayList<>();
         synchronized (lock) {
             subscriptions.forEach(v -> {
-                if(matches(v, schema, event, before, after)) {
+                if (v.matches(schema.getQualifiedName(), event, before, after)) {
                     results.add(v);
                 }
             });
@@ -71,18 +70,5 @@ public class MemorySubscriptions implements Subscriptions {
             subscriptions.removeIf(v -> v.matches(sub));
         }
         return CompletableFuture.completedFuture(null);
-    }
-
-    private boolean matches(final Subscription subscription, final LinkableSchema schema, final Change.Event event, final Map<String, Object> before, final Map<String, Object> after) {
-
-        return before != null && matches(subscription, schema, event, before)
-                || after != null && matches(subscription, schema, event, after);
-    }
-
-    private boolean matches(final Subscription subscription, final LinkableSchema schema, final Change.Event event, final Map<String, Object> value) {
-
-        return subscription.getSchema().equals(schema.getQualifiedName())
-                && subscription.getEvents().contains(event)
-                && subscription.getExpression().evaluatePredicate(Context.init(value));
     }
 }

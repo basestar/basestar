@@ -99,6 +99,7 @@
         <module>basestar-maven-plugin</module>
         <module>basestar-storage-leveldb</module>
         <module>basestar-storage-aws</module>
+        <module>basestar-stream-hazelcast</module>
     </modules>
 
     <dependencies>

@@ -9,9 +9,9 @@ package io.basestar.api;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -44,7 +44,7 @@ public class RoutingAPI implements API {
 
     private String removeTrailingSlash(final String path) {
 
-        if(path.endsWith("/")) {
+        if (path.endsWith("/")) {
             return path.substring(0, path.length() - 1);
         } else {
             return path;
@@ -53,7 +53,7 @@ public class RoutingAPI implements API {
 
     private String addLeadingSlash(final String path) {
 
-        if(!path.startsWith("/")) {
+        if (!path.startsWith("/")) {
             return "/" + path;
         } else {
             return path;
@@ -65,16 +65,16 @@ public class RoutingAPI implements API {
 
         // FIXME: use longest match
         final String path = request.getPath();
-        for(final Map.Entry<String, API> entry : apis.entrySet()) {
+        for (final Map.Entry<String, API> entry : apis.entrySet()) {
             final String key = entry.getKey();
-            if(path.equals(key)) {
+            if (path.equals(key)) {
                 return entry.getValue().handle(new APIRequest.Delegating(request) {
                     @Override
                     public String getPath() {
                         return "/";
                     }
                 });
-            } else if(path.startsWith(key + "/")) {
+            } else if (path.startsWith(key + "/")) {
                 return entry.getValue().handle(new APIRequest.Delegating(request) {
                     @Override
                     public String getPath() {
@@ -84,7 +84,7 @@ public class RoutingAPI implements API {
             }
         }
         final API defaultAPI = apis.get("/");
-        if(defaultAPI != null) {
+        if (defaultAPI != null) {
             return defaultAPI.handle(request);
         } else {
             return CompletableFuture.completedFuture(APIResponse.response(request, 404, null));

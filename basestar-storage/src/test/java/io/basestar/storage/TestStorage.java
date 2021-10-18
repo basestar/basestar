@@ -85,6 +85,8 @@ public abstract class TestStorage {
 
     protected static final String MAT_VIEW = "MatView";
 
+    protected static final String SQL_VIEW = "SqlView";
+
     protected final Namespace namespace;
 
     protected TestStorage() {
@@ -1271,5 +1273,28 @@ public abstract class TestStorage {
 
         final Page<Map<String, Object>> page = storage.query(Consistency.ATOMIC, viewSchema, Constant.TRUE, sort, ImmutableSet.of()).page(1).get();
         assertEquals(1, page.size());
+    }
+
+    protected boolean supportsSql() {
+
+        return false;
+    }
+
+    @Test
+    public void testSqlQuery() throws Exception {
+
+        assumeTrue(supportsSql());
+
+        final Storage storage = storage(namespace);
+        final ViewSchema viewSchema = namespace.requireViewSchema(SQL_VIEW);
+
+        bulkLoad(storage, loadAddresses());
+
+        final List<Sort> sort = ImmutableList.of(
+                Sort.asc(Name.of("__key"))
+        );
+
+        final Page<Map<String, Object>> page = storage.query(Consistency.ATOMIC, viewSchema, Constant.TRUE, sort, ImmutableSet.of()).page(100).get();
+        assertEquals(13, page.size());
     }
 }

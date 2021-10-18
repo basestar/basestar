@@ -56,7 +56,8 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
             @JsonSubTypes.Type(name = StructSchema.Descriptor.TYPE, value = StructSchema.Builder.class),
             @JsonSubTypes.Type(name = ObjectSchema.Descriptor.TYPE, value = ObjectSchema.Builder.class),
             @JsonSubTypes.Type(name = InterfaceSchema.Descriptor.TYPE, value = InterfaceSchema.Builder.class),
-            @JsonSubTypes.Type(name = ViewSchema.Descriptor.TYPE, value = ViewSchema.Builder.class)
+            @JsonSubTypes.Type(name = ViewSchema.Descriptor.TYPE, value = ViewSchema.Builder.class),
+            @JsonSubTypes.Type(name = FunctionSchema.Descriptor.TYPE, value = FunctionSchema.Builder.class)
     })
     interface Descriptor<S extends Schema<V>, V> extends Described, Extendable {
 

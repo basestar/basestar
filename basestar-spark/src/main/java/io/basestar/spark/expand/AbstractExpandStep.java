@@ -67,7 +67,7 @@ public abstract class AbstractExpandStep implements ExpandStep {
         final Encoder<T> keyEncoder = (Encoder<T>) SparkSchemaUtils.encoder(root.typeOfId());
         return input
                 .groupByKey(
-                        (MapFunction<Tuple2<Row, Row>, T>) (tuple -> (T)SparkRowUtils.get(tuple._1(), root.id())),
+                        (MapFunction<Tuple2<Row, Row>, T>) (tuple -> (T) SparkRowUtils.get(tuple._1(), root.id())),
                         keyEncoder
                 );
     }
@@ -81,7 +81,7 @@ public abstract class AbstractExpandStep implements ExpandStep {
             final int i = inputType.fieldIndex(name);
             final StructField field = fields.get(i);
             assert field != null;
-            if(expand.isEmpty() && member instanceof Link) {
+            if (expand.isEmpty() && member instanceof Link) {
                 fields.set(i, SparkRowUtils.field(name, joinToType));
             } else {
                 fields.set(i, SparkRowUtils.field(name, expandedType(member.typeOf(), expand, field.dataType(), joinToType)));
@@ -108,7 +108,7 @@ public abstract class AbstractExpandStep implements ExpandStep {
             public <T> DataType visitMap(final UseMap<T> type) {
 
                 if (inputType instanceof MapType) {
-                    final MapType mapType = (MapType)inputType;
+                    final MapType mapType = (MapType) inputType;
                     final Map<String, Set<Name>> branches = Name.branch(expand);
                     final Set<Name> branch = branches.get(UseMap.EXPAND_WILDCARD);
                     if (branch != null) {
@@ -129,7 +129,7 @@ public abstract class AbstractExpandStep implements ExpandStep {
                         assert joinToType instanceof StructType;
                         return joinToType;
                     } else {
-                        return expandedType(type.getSchema(), expand, (StructType)inputType, joinToType);
+                        return expandedType(type.getSchema(), expand, (StructType) inputType, joinToType);
                     }
                 } else {
                     throw new IllegalStateException();

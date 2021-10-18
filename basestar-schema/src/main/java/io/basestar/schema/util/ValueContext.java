@@ -30,7 +30,7 @@ public interface ValueContext {
         return Suppressing.INSTANCE;
     }
 
-    static ValueContext standardOrSuppressing(boolean suppress) {
+    static ValueContext standardOrSuppressing(final boolean suppress) {
 
         return suppress ? ValueContext.suppressing() : ValueContext.standard();
     }
@@ -168,7 +168,7 @@ public interface ValueContext {
         }
 
         @Override
-        public Object createAny(final UseAny type, Object value, final Set<Name> expand) {
+        public Object createAny(final UseAny type, final Object value, final Set<Name> expand) {
 
             return value;
         }

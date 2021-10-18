@@ -279,7 +279,7 @@ public class UpsertTable {
         return copy;
     }
 
-    private void writeToEmpty(URI outputLocation, Dataset<?> data, List<String> partitions) {
+    private void writeToEmpty(final URI outputLocation, final Dataset<?> data, final List<String> partitions) {
         if (!HadoopFSUtils.isEmpty(data.sparkSession().sparkContext().hadoopConfiguration(), outputLocation)) {
             throw new IllegalStateException("Cannot copy table - output location is not empty: " + outputLocation);
         }

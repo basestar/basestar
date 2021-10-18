@@ -189,7 +189,7 @@ public interface DefaultIndexStorage extends IndexStorage, DefaultLayerStorage {
         default IndexStorage.WriteTransaction updateIndexes(final ReferableSchema schema, final List<Index> indexes, final String id, final Map<String, Object> before, final Map<String, Object> after) {
 
             if(before != null) {
-                long version = Instance.getVersion(before);
+                final long version = Instance.getVersion(before);
                 indexes.forEach(index -> {
                     final Index.Diff diff = Index.Diff.from(index.readValues(before), index.readValues(after));
                     diff.getCreate().forEach((key, projection) -> createIndex(schema, index, id, version, key, projection));
@@ -209,7 +209,7 @@ public interface DefaultIndexStorage extends IndexStorage, DefaultLayerStorage {
         default IndexStorage.WriteTransaction deleteIndexes(final ReferableSchema schema, final List<Index> indexes, final String id, final Map<String, Object> before) {
 
             if(before != null) {
-                long version = Instance.getVersion(before);
+                final long version = Instance.getVersion(before);
                 indexes.forEach(index -> {
                     final Map<Index.Key, Map<String, Object>> records = index.readValues(before);
                     records.keySet().forEach((key) -> deleteIndex(schema, index, id, version, key));

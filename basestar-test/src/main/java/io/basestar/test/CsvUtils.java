@@ -20,7 +20,7 @@ public class CsvUtils {
 
     public static List<Map<String, String>> read(final Class<?> resourceClass, final String resource) throws IOException {
 
-        try(final InputStream is = resourceClass.getResourceAsStream(resource)) {
+        try (final InputStream is = resourceClass.getResourceAsStream(resource)) {
             return read(is);
         }
     }
@@ -42,7 +42,7 @@ public class CsvUtils {
 
     public static void write(final OutputStream os, final List<? extends Map<String, ?>> records) throws IOException {
 
-        try(final OutputStreamWriter writer = new OutputStreamWriter(os)) {
+        try (final OutputStreamWriter writer = new OutputStreamWriter(os)) {
             write(writer, records);
         }
     }
@@ -52,8 +52,8 @@ public class CsvUtils {
         final Set<String> names = new LinkedHashSet<>();
         records.forEach(record -> names.addAll(record.keySet()));
 
-        try(final CSVPrinter printer = FORMAT.withHeader(names.toArray(new String[0])).print(writer)) {
-            for(final Map<String, ?> record : records) {
+        try (final CSVPrinter printer = FORMAT.withHeader(names.toArray(new String[0])).print(writer)) {
+            for (final Map<String, ?> record : records) {
                 printer.printRecord(names.stream().map(record::get).toArray(Object[]::new));
             }
         }

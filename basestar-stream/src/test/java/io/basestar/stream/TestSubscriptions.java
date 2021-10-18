@@ -18,7 +18,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-abstract class TestSubscriptions {
+public abstract class TestSubscriptions {
 
     protected abstract Subscriptions subscriber();
 
