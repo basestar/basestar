@@ -121,9 +121,9 @@ public class SQLStorage implements DefaultLayerStorage {
     private Optional<org.jooq.Field<?>> resolveField(final Table<?> table, final String name) {
 
         if (strategy.useMetadata()) {
-            final String normalizedName = normalizeColumnName(name);
+            final String normalizedName = strategy.columnName(name);
             final List<org.jooq.Field<?>> fields = Arrays.stream(table.fields())
-                    .filter(f -> normalizeColumnName(f.getName()).equals(normalizedName))
+                    .filter(f -> strategy.columnName(f.getName()).equals(normalizedName))
                     .collect(Collectors.toList());
             if (fields.isEmpty()) {
                 return Optional.empty();
@@ -135,11 +135,6 @@ public class SQLStorage implements DefaultLayerStorage {
         } else {
             return Optional.of(DSL.field(DSL.name(name)));
         }
-    }
-
-    private String normalizeColumnName(final String name) {
-
-        return name.replaceAll("[^a-zA-Z0-9]", "").toLowerCase();
     }
 
     private List<SelectFieldOrAsterisk> selectFields(final LinkableSchema schema, final Table<?> table) {
@@ -372,7 +367,7 @@ public class SQLStorage implements DefaultLayerStorage {
                         public QueryPart visitStruct(final UseStruct type) {
 
                             // FIXME
-                            return DSL.field(dialect.columnName(name));
+                            return DSL.field(strategy.columnName(name));
                         }
 
                         @Override
@@ -391,7 +386,7 @@ public class SQLStorage implements DefaultLayerStorage {
         final SQLDialect dialect = strategy.dialect();
 
         // FIXME
-        return name -> DSL.field(dialect.columnName(name));
+        return name -> DSL.field(strategy.columnName(name));
     }
 //
 //    @Override
@@ -905,7 +900,7 @@ public class SQLStorage implements DefaultLayerStorage {
             final Name name = partitionNames.get(i);
             final Object value = partition.get(i);
             final Use<?> type = schema.typeOf(name);
-            result.put(DSL.field(dialect.columnName(name)), dialect.toSQLValue(type, value));
+            result.put(DSL.field(strategy.columnName(name)), dialect.toSQLValue(type, value));
         }
         final List<Sort> sortPaths = index.getSort();
         final List<Object> sort = key.getSort();
@@ -914,7 +909,7 @@ public class SQLStorage implements DefaultLayerStorage {
             final Name name = sortPaths.get(i).getName();
             final Object value = sort.get(i);
             final Use<?> type = schema.typeOf(name);
-            result.put(DSL.field(dialect.columnName(name)), dialect.toSQLValue(type, value));
+            result.put(DSL.field(strategy.columnName(name)), dialect.toSQLValue(type, value));
         }
         return result;
     }

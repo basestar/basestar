@@ -27,6 +27,7 @@ import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.storage.Storage;
 import io.basestar.storage.TestStorage;
+import io.basestar.storage.sql.util.Casing;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
 import org.junit.jupiter.api.Test;
@@ -68,6 +69,8 @@ abstract class TestSQLStorage extends TestStorage {
                 .historySchemaName(historySchema)
                 .useMetadata(useMetadata())
                 .dialect(dialect)
+                .entityCasing(Casing.UPPERCASE_SNAKE)
+                .columnCasing(Casing.UPPERCASE_SNAKE)
                 .build();
 
         try(final Connection conn = ds.getConnection()) {

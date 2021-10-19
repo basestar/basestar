@@ -3,6 +3,7 @@ package io.basestar.storage.sql;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import io.basestar.secret.Secret;
+import io.basestar.storage.sql.util.Casing;
 import io.basestar.util.Name;
 import io.basestar.util.*;
 import org.jooq.Constraint;
@@ -528,28 +529,28 @@ public interface SQLDialect {
     }
 
     @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
-    default List<Field<?>> fields(final LinkableSchema schema) {
+    default List<Field<?>> fields(final Casing casing, final LinkableSchema schema) {
 
         return Stream.concat(
                 schema.metadataSchema().entrySet().stream()
-                        .map(e -> DSL.field(DSL.name(e.getKey()), dataType(e.getValue()))),
+                        .map(e -> DSL.field(DSL.name(casing.name(e.getKey())), dataType(e.getValue()))),
                 schema.getProperties().entrySet().stream()
-                        .map(e -> DSL.field(DSL.name(e.getKey()),
+                        .map(e -> DSL.field(DSL.name(casing.name(e.getKey())),
                                 dataType(e.getValue().typeOf())))
         ).collect(Collectors.toList());
     }
 
     @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
-    default List<OrderField<?>> indexKeys(final ReferableSchema schema, final io.basestar.schema.Index index) {
+    default List<OrderField<?>> indexKeys(final Casing casing, final ReferableSchema schema, final io.basestar.schema.Index index) {
 
         return Stream.concat(
-                index.getPartition().stream().map(v -> indexField(schema, index, v)),
-                index.getSort().stream().map(v -> indexField(schema, index, v.getName())
+                index.getPartition().stream().map(v -> indexField(casing, schema, index, v)),
+                index.getSort().stream().map(v -> indexField(casing, schema, index, v.getName())
                         .sort(SQLUtils.sort(v.getOrder())))
         ).collect(Collectors.toList());
     }
 
-    default Field<Object> indexField(final ReferableSchema schema, final io.basestar.schema.Index index, final io.basestar.util.Name name) {
+    default Field<Object> indexField(final Casing casing, final ReferableSchema schema, final io.basestar.schema.Index index, final io.basestar.util.Name name) {
 
         // FIXME: BUG: hacky heuristic
         if (ReferableSchema.ID.equals(name.last())) {
@@ -560,17 +561,17 @@ public interface SQLDialect {
     }
 
     @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
-    default List<Field<?>> fields(final ReferableSchema schema, final io.basestar.schema.Index index) {
+    default List<Field<?>> fields(final Casing casing, final ReferableSchema schema, final io.basestar.schema.Index index) {
 
         final List<io.basestar.util.Name> partitionNames = index.resolvePartitionNames();
         final List<Sort> sortPaths = index.getSort();
 
         return Stream.of(
                 partitionNames.stream()
-                        .map(v -> DSL.field(columnName(v), dataType(schema.typeOf(v)).nullable(true))),
+                        .map(v -> DSL.field(columnName(casing, v), dataType(schema.typeOf(v)).nullable(true))),
                 sortPaths.stream()
                         .map(Sort::getName)
-                        .map(v -> DSL.field(columnName(v), dataType(schema.typeOf(v)).nullable(true))),
+                        .map(v -> DSL.field(columnName(casing, v), dataType(schema.typeOf(v)).nullable(true))),
                 index.projectionSchema(schema).entrySet().stream()
                         .map(e -> DSL.field(DSL.name(e.getKey()), dataType(e.getValue()).nullable(true)))
 
@@ -582,16 +583,16 @@ public interface SQLDialect {
         return io.basestar.util.Name.of(v.toString(Reserved.PREFIX));
     }
 
-    default org.jooq.Name columnName(final io.basestar.util.Name v) {
+    default org.jooq.Name columnName(final Casing casing, final io.basestar.util.Name v) {
 
-        return DSL.name(v.toString(Reserved.PREFIX));
+        return DSL.name(v.stream().map(casing::name).collect(Collectors.joining(Reserved.PREFIX)));
     }
 
-    default Constraint primaryKey(final ReferableSchema schema, final io.basestar.schema.Index index) {
+    default Constraint primaryKey(final Casing casing, final ReferableSchema schema, final io.basestar.schema.Index index) {
 
         final List<org.jooq.Name> names = new ArrayList<>();
-        index.resolvePartitionNames().forEach(v -> names.add(columnName(v)));
-        index.getSort().forEach(v -> names.add(columnName(v.getName())));
+        index.resolvePartitionNames().forEach(v -> names.add(columnName(casing, v)));
+        index.getSort().forEach(v -> names.add(columnName(casing, v.getName())));
         return DSL.primaryKey(names.toArray(new org.jooq.Name[0]));
     }
 

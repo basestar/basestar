@@ -28,6 +28,7 @@ import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.from.From;
 import io.basestar.schema.from.FromSchema;
 import io.basestar.schema.from.FromSql;
+import io.basestar.storage.sql.util.Casing;
 import io.basestar.storage.sql.util.DDLStep;
 import io.basestar.util.Nullsafe;
 import lombok.Builder;
@@ -44,6 +45,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public interface SQLStrategy {
 
@@ -56,6 +58,10 @@ public interface SQLStrategy {
     org.jooq.Name functionName(FunctionSchema schema);
 
     org.jooq.Name viewName(ViewSchema schema);
+
+    String columnName(String name);
+
+    org.jooq.Name columnName(io.basestar.util.Name name);
 
     default org.jooq.Name entityName(final Schema<?> schema) {
 
@@ -98,13 +104,6 @@ public interface SQLStrategy {
     @Builder(builderClassName = "Builder")
     class Simple implements SQLStrategy {
 
-        public static enum Casing {
-
-            AS_SPECIFIED,
-            LOWERCASE,
-            UPPERCASE
-        }
-
         private static final String CUSTOM_TABLE_NAME_EXTENSION = "sql.table";
 
         private final String catalogName;
@@ -120,22 +119,16 @@ public interface SQLStrategy {
 
         private final boolean useMetadata;
 
-        private final Casing casing;
+        private final Casing entityCasing;
+
+        private final Casing columnCasing;
 
         private EntityTypeStrategy entityTypeStrategy;
 
         private String name(final Schema<?> schema) {
 
-            final String name = schema.getQualifiedName().toString("_");
-            switch (Nullsafe.orDefault(casing, Casing.AS_SPECIFIED)) {
-                case LOWERCASE:
-                    return name.toLowerCase();
-                case UPPERCASE:
-                    return name.toUpperCase();
-                case AS_SPECIFIED:
-                default:
-                    return name;
-            }
+            final Casing casing = Nullsafe.orDefault(entityCasing, Casing.AS_SPECIFIED);
+            return schema.getQualifiedName().stream().map(casing::name).collect(Collectors.joining("_"));
         }
 
         private org.jooq.Name customizeName(final Schema<?> schema, final Supplier<org.jooq.Name> defaultName) {
@@ -174,6 +167,18 @@ public interface SQLStrategy {
         public Name viewName(final ViewSchema schema) {
 
             return combineNames(DSL.name(objectSchemaName), customizeName(schema, () -> DSL.name(name(schema))));
+        }
+
+        @Override
+        public String columnName(final String name) {
+
+            return Nullsafe.orDefault(columnCasing, Casing.AS_SPECIFIED).name(name);
+        }
+
+        @Override
+        public Name columnName(final io.basestar.util.Name name) {
+
+            return dialect().columnName(Nullsafe.orDefault(columnCasing, Casing.AS_SPECIFIED), name);
         }
 
         @Override
@@ -287,7 +292,7 @@ public interface SQLStrategy {
             final List<DDLStep> queries = new ArrayList<>();
             final org.jooq.Name viewName = entityName(schema);
 
-            final List<Field<?>> columns = dialect.fields(schema);
+            final List<Field<?>> columns = dialect.fields(columnCasing, schema);
 
             queries.add(DDLStep.from(withPrimaryKey(schema, context.createTableIfNotExists(viewName)
                     .columns(columns))));
@@ -364,7 +369,7 @@ public interface SQLStrategy {
             final org.jooq.Name objectTableName = objectTableName(schema);
             final org.jooq.Name historyTableName = historyTableName(schema);
 
-            final List<Field<?>> columns = dialect.fields(schema); //rowMapper(schema, schema.getExpand()).columns();
+            final List<Field<?>> columns = dialect.fields(columnCasing, schema); //rowMapper(schema, schema.getExpand()).columns();
 
             log.info("Creating table {}", objectTableName);
             queries.add(DDLStep.from(withPrimaryKey(schema, context.createTableIfNotExists(objectTableName)
@@ -376,18 +381,18 @@ public interface SQLStrategy {
                         final org.jooq.Name indexTableName = indexTableName(schema, index);
                         log.info("Creating multi-value index table {}", indexTableName);
                         queries.add(DDLStep.from(context.createTableIfNotExists(indexTableName(schema, index))
-                                .columns(dialect.fields(schema, index))
-                                .constraints(dialect.primaryKey(schema, index))));
+                                .columns(dialect.fields(columnCasing, schema, index))
+                                .constraints(dialect.primaryKey(columnCasing, schema, index))));
                     } else if (index.isUnique()) {
                         log.info("Creating unique index {}:{}", objectTableName, index.getName());
                         queries.add(DDLStep.from(context.createUniqueIndexIfNotExists(index.getName())
-                                .on(DSL.table(objectTableName), dialect.indexKeys(schema, index))));
+                                .on(DSL.table(objectTableName), dialect.indexKeys(columnCasing, schema, index))));
                     } else {
                         log.info("Creating index {}:{}", objectTableName, index.getName());
                         // Fixme
                         if (!index.getName().equals("expanded")) {
                             queries.add(DDLStep.from(context.createIndexIfNotExists(index.getName())
-                                    .on(DSL.table(objectTableName), dialect.indexKeys(schema, index))));
+                                    .on(DSL.table(objectTableName), dialect.indexKeys(columnCasing, schema, index))));
                         }
                     }
                 }
