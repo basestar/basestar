@@ -30,10 +30,7 @@ import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseInstance;
 import io.basestar.schema.use.UseString;
-import io.basestar.schema.util.Cascade;
-import io.basestar.schema.util.Expander;
-import io.basestar.schema.util.Ref;
-import io.basestar.schema.util.ValueContext;
+import io.basestar.schema.util.*;
 import io.basestar.util.Name;
 import io.basestar.util.Text;
 import io.leangen.geantyref.TypeFactory;
@@ -138,8 +135,8 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         List<String> duplicates = names.stream()
                 .filter(key -> names.stream()
                         .filter(target -> !key.equals(target))
-                        .map(Text::lowerCamel)
-                        .anyMatch(target -> lowerCamel(key).equals(target)))
+                        .map(Casing.LOWERCASE_SNAKE::name)
+                        .anyMatch(target -> Casing.LOWERCASE_SNAKE.name(key).equals(target)))
                 .collect(Collectors.toList());
         if (duplicates.size() > 0) {
             String duplicateFieldNames = duplicates.stream()

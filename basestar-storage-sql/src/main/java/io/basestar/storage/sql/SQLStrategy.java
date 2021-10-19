@@ -28,7 +28,7 @@ import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.from.From;
 import io.basestar.schema.from.FromSchema;
 import io.basestar.schema.from.FromSql;
-import io.basestar.storage.sql.util.Casing;
+import io.basestar.schema.util.Casing;
 import io.basestar.storage.sql.util.DDLStep;
 import io.basestar.util.Nullsafe;
 import lombok.Builder;
