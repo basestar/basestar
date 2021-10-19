@@ -554,9 +554,9 @@ public interface SQLDialect {
 
         // FIXME: BUG: hacky heuristic
         if (ReferableSchema.ID.equals(name.last())) {
-            return DSL.field(DSL.name(name.withoutLast().toString()));
+            return DSL.field(DSL.name(columnName(casing, name.withoutLast())));
         } else {
-            return DSL.field(DSL.name(name.toString()));
+            return DSL.field(DSL.name(columnName(casing, name)));
         }
     }
 

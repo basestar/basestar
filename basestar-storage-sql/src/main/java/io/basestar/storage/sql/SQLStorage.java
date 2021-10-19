@@ -133,7 +133,7 @@ public class SQLStorage implements DefaultLayerStorage {
                 return Optional.of(fields.get(0));
             }
         } else {
-            return Optional.of(DSL.field(DSL.name(name)));
+            return Optional.of(DSL.field(DSL.name(strategy.columnName(name))));
         }
     }
 
@@ -787,12 +787,12 @@ public class SQLStorage implements DefaultLayerStorage {
 
     private Field<String> idField(final ReferableSchema schema) {
 
-        return DSL.field(DSL.name(ObjectSchema.ID), String.class);
+        return DSL.field(DSL.name(strategy.columnName(ObjectSchema.ID)), String.class);
     }
 
     private Field<Long> versionField(final ReferableSchema schema) {
 
-        return DSL.field(DSL.name(ObjectSchema.VERSION), Long.class);
+        return DSL.field(DSL.name(strategy.columnName(ObjectSchema.VERSION)), Long.class);
     }
 
     private org.jooq.Name schemaTableName(final LinkableSchema schema) {

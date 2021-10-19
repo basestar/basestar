@@ -292,6 +292,8 @@ public interface SQLStrategy {
             final List<DDLStep> queries = new ArrayList<>();
             final org.jooq.Name viewName = entityName(schema);
 
+            final Casing columnCasing = Nullsafe.orDefault(this.columnCasing, Casing.AS_SPECIFIED);
+
             final List<Field<?>> columns = dialect.fields(columnCasing, schema);
 
             queries.add(DDLStep.from(withPrimaryKey(schema, context.createTableIfNotExists(viewName)
@@ -319,7 +321,7 @@ public interface SQLStrategy {
 
             final Collection<SelectFieldOrAsterisk> fields = new ArrayList<>();
             final InferenceContext inferenceContext = viewInferenceContext(schema);
-            final SQLExpressionVisitor visitor = new SQLExpressionVisitor(dialect(), inferenceContext, name -> DSL.field(DSL.name(name.first())));
+            final SQLExpressionVisitor visitor = new SQLExpressionVisitor(dialect(), inferenceContext, name -> DSL.field(DSL.name(columnName(name.first()))));
             final Field<?> idField = visitor.field(new Constant(null));
             fields.add(idField.cast(String.class).as(ViewSchema.ID));
             schema.getProperties().forEach((k, v) -> {
@@ -335,7 +337,7 @@ public interface SQLStrategy {
 
             if (schema.isGrouping()) {
                 final Collection<GroupField> groupFields = new ArrayList<>();
-                schema.getGroup().forEach(k -> groupFields.add(DSL.field(DSL.name(k))));
+                schema.getGroup().forEach(k -> groupFields.add(DSL.field(DSL.name(columnName(k)))));
                 return step.groupBy(groupFields);
             } else {
                 return step;
@@ -365,6 +367,8 @@ public interface SQLStrategy {
         protected List<DDLStep> createObjectDDL(final DSLContext context, final ReferableSchema schema) {
 
             final List<DDLStep> queries = new ArrayList<>();
+
+            final Casing columnCasing = Nullsafe.orDefault(this.columnCasing, Casing.AS_SPECIFIED);
 
             final org.jooq.Name objectTableName = objectTableName(schema);
             final org.jooq.Name historyTableName = historyTableName(schema);
@@ -410,7 +414,7 @@ public interface SQLStrategy {
         private CreateTableFinalStep withPrimaryKey(final LinkableSchema schema, final CreateTableColumnStep create) {
 
             if (dialect.supportsConstraints()) {
-                return create.constraint(DSL.primaryKey(schema.id()));
+                return create.constraint(DSL.primaryKey(columnName(schema.id())));
             } else {
                 return create;
             }
@@ -419,7 +423,7 @@ public interface SQLStrategy {
         private CreateTableFinalStep withHistoryPrimaryKey(final ReferableSchema schema, final CreateTableColumnStep create) {
 
             if (dialect.supportsConstraints()) {
-                return create.constraint(DSL.primaryKey(ObjectSchema.ID, ObjectSchema.VERSION));
+                return create.constraint(DSL.primaryKey(columnName(ObjectSchema.ID), columnName(ObjectSchema.VERSION)));
             } else {
                 return create;
             }
