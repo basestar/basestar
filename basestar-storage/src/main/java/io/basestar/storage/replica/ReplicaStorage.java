@@ -14,6 +14,7 @@ import io.basestar.storage.replica.event.ReplicaSyncEvent;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import lombok.Builder;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -22,6 +23,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
+@Slf4j
 @Builder(builderClassName = "Builder", setterPrefix = "set")
 public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
 
@@ -175,22 +177,31 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
 
     private CompletableFuture<BatchResponse> mergeFutures(final CompletableFuture<BatchResponse> primaryFuture, final CompletableFuture<BatchResponse> replicaFuture) {
 
-        return primaryFuture.thenCombine(replicaFuture, (primaryResponse, replicaResponse) -> {
+        return primaryFuture.thenCombine(replicaFuture.exceptionally(e -> {
+            log.error("Failed to replicate", e);
+            return BatchResponse.empty();
+        }), (primaryResponse, replicaResponse) -> {
 
-            final Map<BatchResponse.RefKey, Map<String, Object>> refs = new HashMap<>();
-            Sets.union(primaryResponse.getRefs().keySet(), replicaResponse.getRefs().keySet()).forEach(key -> {
+            try {
 
-                final Map<String, Object> primary = primaryResponse.get(key);
-                final Map<String, Object> replica = replicaResponse.get(key);
+                final Map<BatchResponse.RefKey, Map<String, Object>> refs = new HashMap<>();
+                Sets.union(primaryResponse.getRefs().keySet(), replicaResponse.getRefs().keySet()).forEach(key -> {
 
-                if(primary != null) {
+                    final Map<String, Object> primary = primaryResponse.get(key);
+                    final Map<String, Object> replica = replicaResponse.get(key);
 
-                    final ReplicaMetadata meta = ReplicaMetadata.wrap(primary, replica);
-                    refs.put(key, meta.applyTo(primary));
-                }
-            });
+                    if (primary != null) {
 
-            return new BatchResponse(refs);
+                        final ReplicaMetadata meta = ReplicaMetadata.wrap(primary, replica);
+                        refs.put(key, meta.applyTo(primary));
+                    }
+                });
+
+                return new BatchResponse(refs);
+            } catch (final Exception e) {
+                log.error("Failed to process replica response");
+                return primaryResponse;
+            }
         });
     }
 
