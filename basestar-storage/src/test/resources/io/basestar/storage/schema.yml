@@ -314,9 +314,11 @@ SimpleSqlFunction:
   arguments:
     - name: x
       type: string
+    - name: y
+      type: string
   returns: string
   language: plpgsql
   definition: |
     begin
-      return "x" in ('a', 'b', 'c');
+      return "x" in ('a', 'b', 'c') and "y" in ('x', 'y', 'z');
     end;
