@@ -719,10 +719,15 @@ public interface SQLDialect {
         result.append("CREATE OR REPLACE FUNCTION ");
         result.append(name.toString());
         result.append("(");
+        boolean first = true;
         for (final Argument arg : arguments) {
+            if (!first) {
+                result.append(",");
+            }
             result.append(arg.getName());
             result.append(" ");
             result.append(dataType(arg.getType()).getTypeName(configuration));
+            first = false;
         }
         result.append(") RETURNS ");
         result.append(dataType(returns).getTypeName(configuration));
