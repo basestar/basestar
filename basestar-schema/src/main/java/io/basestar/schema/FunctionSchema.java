@@ -225,11 +225,16 @@ public class FunctionSchema implements Schema<Callable> {
     @Override
     public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
+        if (!out.containsKey(qualifiedName)) {
+            out.put(qualifiedName, this);
+            using.forEach((k, v) -> v.collectDependencies(out));
+        }
     }
 
     @Override
     public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, LinkableSchema> out) {
 
+        using.forEach((k, v) -> v.collectMaterializationDependencies(out));
     }
 
     public String getReplacedDefinition(final Function<Schema<?>, String> replacer) {
