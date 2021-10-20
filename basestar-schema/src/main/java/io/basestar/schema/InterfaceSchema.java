@@ -269,15 +269,15 @@ public class InterfaceSchema implements ReferableSchema {
         if (Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
-        List<String> fieldsNames = Stream.of(this.declaredProperties, this.declaredLinks, this.declaredTransients)
+        List<String> fieldNames = Stream.of(this.declaredProperties, this.declaredLinks, this.declaredTransients)
                 .flatMap(v -> v.keySet().stream())
                 .collect(Collectors.toList());
-        fieldsNames.forEach(k -> {
+        fieldNames.forEach(k -> {
             if (METADATA_SCHEMA.containsKey(k)) {
                 throw new ReservedNameException(k);
             }
         });
-        validateFieldNames(fieldsNames);
+        validateFieldNames(fieldNames);
     }
 
     @Override

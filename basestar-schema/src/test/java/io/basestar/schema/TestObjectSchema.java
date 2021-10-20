@@ -73,23 +73,14 @@ class TestObjectSchema {
     @Test
     void testUniqueNames() throws IOException {
         SchemaValidationException schemaValidationException = assertThrows(SchemaValidationException.class,
-                () -> Namespace.load(TestObjectSchema.class.getResource("uniqueNamesObject.yml")));
+                () -> Namespace.load(TestObjectSchema.class.getResource("conflictingNamesObject.yml")));
 
         assertTrue(schemaValidationException.getMessage().contains("my-name"));
         assertTrue(schemaValidationException.getMessage().contains("MyName"));
         assertTrue(schemaValidationException.getMessage().contains("MySurname"));
         assertTrue(schemaValidationException.getMessage().contains("MY_SURNAME"));
-        assertFalse(schemaValidationException.getMessage().contains("first"));
-    }
-
-    @Test
-    void testUniqueNames2() throws IOException {
-        SchemaValidationException schemaValidationException = assertThrows(SchemaValidationException.class,
-                () -> Namespace.load(TestObjectSchema.class.getResource("uniqueNamesStruct.yml")));
-
-        assertTrue(schemaValidationException.getMessage().contains("my-name"));
-        assertTrue(schemaValidationException.getMessage().contains("MyName"));
-
+        assertFalse(schemaValidationException.getMessage().contains("first"));//assert that only properties at the same level is validated against each other
+        assertFalse(schemaValidationException.getMessage().contains("key"));//assert that reserved keywords doesn't trigger validation
     }
 
     @Test

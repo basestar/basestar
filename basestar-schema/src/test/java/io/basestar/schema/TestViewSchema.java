@@ -58,9 +58,9 @@ class TestViewSchema {
     }
 
     @Test
-    void testUniqueNames() throws IOException {
+    void testConflictingNames() throws IOException {
         SchemaValidationException schemaValidationException = assertThrows(SchemaValidationException.class,
-                () -> Namespace.load(TestViewSchema.class.getResource("uniqueNamesView.yml")));
+                () -> Namespace.load(TestViewSchema.class.getResource("conflictingNamesView.yml")));
 
         assertTrue(schemaValidationException.getMessage().contains("my-name"));
         assertTrue(schemaValidationException.getMessage().contains("MyName"));

@@ -42,6 +42,7 @@ import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import static io.basestar.util.Text.lowerCamel;
+import static java.util.stream.Collectors.groupingBy;
 
 public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Property.Resolver, Layout {
 
@@ -132,11 +133,10 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
     }
 
     default void validateFieldNames(List<String> names) {
-        List<String> duplicates = names.stream()
-                .filter(key -> names.stream()
-                        .filter(target -> !key.equals(target))
-                        .map(Casing.LOWERCASE_SNAKE::name)
-                        .anyMatch(target -> Casing.LOWERCASE_SNAKE.name(key).equals(target)))
+        Map<String, List<String>> groupedNames = names.stream().collect(groupingBy(Casing.LOWERCASE_SNAKE::name));
+        List<String> duplicates = groupedNames.entrySet().stream()
+                .filter(entry -> entry.getValue().size() > 1)
+                .flatMap(entry -> entry.getValue().stream())
                 .collect(Collectors.toList());
         if (duplicates.size() > 0) {
             String duplicateFieldNames = duplicates.stream()

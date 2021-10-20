@@ -65,9 +65,9 @@ class TestInterfaceSchema {
     }
 
     @Test
-    void testUniqueNames() {
+    void testConflictingNames() {
         SchemaValidationException schemaValidationException = assertThrows(SchemaValidationException.class,
-                () -> Namespace.load(TestInterfaceSchema.class.getResource("uniqueNamesInterface.yml")));
+                () -> Namespace.load(TestInterfaceSchema.class.getResource("conflictingNamesInterface.yml")));
 
         assertTrue(schemaValidationException.getMessage().contains("my-name"));
         assertTrue(schemaValidationException.getMessage().contains("MyName"));

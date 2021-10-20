@@ -31,9 +31,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestStructSchema {
 
     @Test
-    void testUniqueNames() throws IOException {
+    void testConflictingNames() throws IOException {
         SchemaValidationException schemaValidationException = assertThrows(SchemaValidationException.class,
-                () -> Namespace.load(TestStructSchema.class.getResource("uniqueNamesStruct.yml")));
+                () -> Namespace.load(TestStructSchema.class.getResource("conflictingNamesStruct.yml")));
 
         assertTrue(schemaValidationException.getMessage().contains("my-name"));
         assertTrue(schemaValidationException.getMessage().contains("MyName"));
