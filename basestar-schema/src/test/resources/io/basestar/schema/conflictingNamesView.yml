@@ -3,6 +3,9 @@ Conflicting:
   from:
     schema: Base
   properties:
+    key:
+      required: true
+      type: string
     my-name:
       required: true
       type: string

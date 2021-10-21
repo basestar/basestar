@@ -67,6 +67,7 @@ class TestViewSchema {
         assertTrue(schemaValidationException.getMessage().contains("MySurname"));
         assertTrue(schemaValidationException.getMessage().contains("MY_SURNAME"));
         assertFalse(schemaValidationException.getMessage().contains("first"));
+        assertFalse(schemaValidationException.getMessage().contains("key"));//assert that reserved keywords doesn't trigger validation
     }
 
     @Test
