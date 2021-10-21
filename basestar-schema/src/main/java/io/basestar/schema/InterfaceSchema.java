@@ -24,6 +24,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Getter
@@ -268,12 +269,15 @@ public class InterfaceSchema implements ReferableSchema {
         if (Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
-        Stream.of(this.declaredProperties, this.declaredLinks, this.declaredTransients)
-                .flatMap(v -> v.keySet().stream()).forEach(k -> {
+        List<String> fieldNames = Stream.of(this.declaredProperties, this.declaredLinks, this.declaredTransients)
+                .flatMap(v -> v.keySet().stream())
+                .collect(Collectors.toList());
+        fieldNames.forEach(k -> {
             if (METADATA_SCHEMA.containsKey(k)) {
                 throw new ReservedNameException(k);
             }
         });
+        validateFieldNames(fieldNames);
     }
 
     @Override

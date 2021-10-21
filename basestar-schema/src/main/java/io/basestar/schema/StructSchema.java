@@ -46,10 +46,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -174,6 +171,7 @@ public class StructSchema implements InstanceSchema {
         }
 
         this.extensions = Nullsafe.orDefault(descriptor.getExtensions());
+        validateFieldNames(new ArrayList<>(this.declaredProperties.keySet()));
     }
 
     @Override
