@@ -1,4 +1,4 @@
-Unique:
+Conflicting:
   type: object
   properties:
     key:
