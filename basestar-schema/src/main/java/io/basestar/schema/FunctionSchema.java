@@ -33,7 +33,7 @@ import java.util.regex.Pattern;
 @Accessors(chain = true)
 public class FunctionSchema implements Schema<Callable> {
 
-    public static final Pattern DEFINITION_REPLACEMENT_REGEX = Pattern.compile("@\\{(.*?)}");
+    public static final Pattern DEFINITION_REPLACEMENT_REGEX = Pattern.compile("\"@\\{(.*?)}\"|@\\{(.*?)}");
 
     @Nonnull
     private final Name qualifiedName;
@@ -247,7 +247,7 @@ public class FunctionSchema implements Schema<Callable> {
         final Matcher matcher = DEFINITION_REPLACEMENT_REGEX.matcher(definition);
         final StringBuffer buffer = new StringBuffer();
         while (matcher.find()) {
-            final String name = matcher.group(1);
+            final String name = Nullsafe.orDefault(matcher.group(1), matcher.group(2));
             final From use = using.get(name);
             if (use instanceof FromSchema) {
                 matcher.appendReplacement(buffer, replacer.apply(((FromSchema) use).getSchema()));
