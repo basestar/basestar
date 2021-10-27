@@ -111,5 +111,9 @@ Point:
     length:
       expression: (this.x ** 2 + this.y ** 2).sqrt()
 
-
+Function:
+  type: function
+  language: sql
+  returns: boolean
+  definition: ""
 
