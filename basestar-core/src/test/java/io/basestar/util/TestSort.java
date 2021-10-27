@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Test;
 
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -43,13 +44,28 @@ class TestSort {
         );
         final Map<String, String> v1 = ImmutableMap.of("a", "1", "b", "7");
         final Map<String, String> v2 = ImmutableMap.of("a", "2", "b", "6");
-        final Map<String, String> v3 = ImmutableMap.of("a", "3", "b", "5");
-        final Map<String, String> v4 = ImmutableMap.of("a", "3", "b", "4");
-        final Map<String, String> v5 = ImmutableMap.of("a", "3", "b", "3");
-        final Map<String, String> v6 = ImmutableMap.of("a", "3", "b", "2");
-        final Map<String, String> v7 = ImmutableMap.of("a", "3", "b", "1");
-        final List<Map<String, String>> expected = ImmutableList.of(v1, v2, v3, v4, v5, v6, v7);
-        final List<Map<String, String>> unsorted = ImmutableList.of(v7, v3, v1, v6, v4, v5, v2);
+        final Map<String, String> v3 = new HashMap<String, String>() {{
+            put("a", "3");
+            put("b", null);
+        }};
+        final Map<String, String> v4 = ImmutableMap.of("a", "3", "b", "5");
+        final Map<String, String> v5 = ImmutableMap.of("a", "3", "b", "4");
+        final Map<String, String> v6 = ImmutableMap.of("a", "3", "b", "3");
+        final Map<String, String> v7 = ImmutableMap.of("a", "3", "b", "2");
+        final Map<String, String> v8 = ImmutableMap.of("a", "3", "b", "1");
+
+        final Map<String, String> v9 = new HashMap<String, String>() {{
+            put("a", null);
+            put("b", null);
+        }};
+        final Map<String, String> v10 = new HashMap<String, String>() {{
+            put("a", null);
+            put("b", "1");
+        }};
+
+
+        final List<Map<String, String>> expected = ImmutableList.of(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10);
+        final List<Map<String, String>> unsorted = ImmutableList.of(v7, v3, v1, v6, v4, v5, v2, v8, v10, v9);
         final List<Map<String, String>> sorted = unsorted.stream().sorted(cmp).collect(Collectors.toList());
         assertEquals(expected, sorted);
     }
