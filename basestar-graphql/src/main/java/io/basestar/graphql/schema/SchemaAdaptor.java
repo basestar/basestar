@@ -57,7 +57,7 @@ public class SchemaAdaptor {
         });
         final Map<String, Use<?>> mapTypes = new HashMap<>();
         namespace.getSchemas().forEach((k, schema) -> {
-            registry.add(typeDefinition(schema));
+            typeDefinition(schema).ifPresent(registry::add);
             if(schema instanceof InstanceSchema) {
                 final InstanceSchema instanceSchema = (InstanceSchema)schema;
                 mapTypes.putAll(mapTypes(instanceSchema));
@@ -420,14 +420,14 @@ public class SchemaAdaptor {
         return builder.build();
     }
 
-    public TypeDefinition<?> typeDefinition(final Schema<?> schema) {
+    public Optional<TypeDefinition<?>> typeDefinition(final Schema<?> schema) {
 
         if (schema instanceof InstanceSchema) {
-            return typeDefinition((InstanceSchema) schema);
+            return Optional.of(typeDefinition((InstanceSchema) schema));
         } else if (schema instanceof EnumSchema) {
-            return typeDefinition((EnumSchema) schema);
+            return Optional.of(typeDefinition((EnumSchema) schema));
         } else {
-            throw new UnsupportedOperationException();
+            return Optional.empty();
         }
     }
 
