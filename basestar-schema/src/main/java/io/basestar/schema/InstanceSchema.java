@@ -9,9 +9,9 @@ package io.basestar.schema;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,15 +24,15 @@ import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.schema.exception.ReservedNameException;
+import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseInstance;
 import io.basestar.schema.use.UseString;
-import io.basestar.schema.util.Cascade;
-import io.basestar.schema.util.Expander;
-import io.basestar.schema.util.Ref;
-import io.basestar.schema.util.ValueContext;
+import io.basestar.schema.util.*;
 import io.basestar.util.Name;
+import io.basestar.util.Text;
 import io.leangen.geantyref.TypeFactory;
 
 import java.io.*;
@@ -40,6 +40,9 @@ import java.lang.reflect.Type;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
+
+import static io.basestar.util.Text.lowerCamel;
+import static java.util.stream.Collectors.groupingBy;
 
 public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Property.Resolver, Layout {
 
@@ -122,10 +125,23 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
 
     default InstanceSchema resolveExtended(final Name name) {
 
-        if(getQualifiedName().equals(name)) {
+        if (getQualifiedName().equals(name)) {
             return this;
         } else {
             throw new IllegalStateException(name + " is not a valid subtype of " + getQualifiedName());
+        }
+    }
+
+    default void validateFieldNames(List<String> names) {
+        Map<String, List<String>> groupedNames = names.stream().collect(groupingBy(Casing.LOWERCASE_SNAKE::name));
+        List<String> duplicates = groupedNames.entrySet().stream()
+                .filter(entry -> entry.getValue().size() > 1)
+                .flatMap(entry -> entry.getValue().stream())
+                .collect(Collectors.toList());
+        if (duplicates.size() > 0) {
+            String duplicateFieldNames = duplicates.stream()
+                    .collect(Collectors.joining(",", "[", "]"));
+            throw new SchemaValidationException(String.format("Property names should be unique ignoring casing %s", duplicateFieldNames));
         }
     }
 
@@ -133,9 +149,9 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
     @SuppressWarnings("unchecked")
     default Instance create(final ValueContext context, final Object value, final Set<Name> expand) {
 
-        if(value == null) {
+        if (value == null) {
             return null;
-        } else if(value instanceof Map) {
+        } else if (value instanceof Map) {
             return create(context, (Map<String, Object>) value, expand);
         } else {
             throw new UnexpectedTypeException(this, value);
@@ -147,8 +163,8 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         final Set<Name> result = new HashSet<>();
         for (final Map.Entry<String, Set<Name>> branch : Name.branch(names).entrySet()) {
             final Member member = getMember(branch.getKey(), true);
-            if(member != null) {
-                for(final Name tail : member.requiredExpand(branch.getValue())) {
+            if (member != null) {
+                for (final Name tail : member.requiredExpand(branch.getValue())) {
                     result.add(Name.of(branch.getKey()).with(tail));
                 }
             }
@@ -161,7 +177,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         final Set<Name> transientExpand = new HashSet<>(expand);
         final Map<String, Set<Name>> branch = Name.branch(expand);
         getMembers().forEach((name, member) -> {
-            if(branch.containsKey(name)) {
+            if (branch.containsKey(name)) {
                 final Set<Name> memberExpand = branch.get(name);
                 transientExpand.addAll(member.transientExpand(path.with(name), memberExpand));
             }
@@ -173,16 +189,16 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
     @Override
     default <T> Optional<Use<T>> optionalTypeOf(final Name name) {
 
-        if(name.isEmpty()) {
+        if (name.isEmpty()) {
             return Optional.of((Use<T>) typeOf());
         } else {
             final String first = name.first();
             final Map<String, Use<?>> metadataSchema = metadataSchema();
-            if(metadataSchema.containsKey(first)) {
-                return Optional.of((Use<T>)metadataSchema.get(first).typeOf(name.withoutFirst()));
+            if (metadataSchema.containsKey(first)) {
+                return Optional.of((Use<T>) metadataSchema.get(first).typeOf(name.withoutFirst()));
             } else {
                 final Member member = getMember(first, true);
-                if(member == null) {
+                if (member == null) {
                     return Optional.empty();
                 } else {
                     return member.optionalTypeOf(name.withoutFirst());
@@ -194,12 +210,12 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
     @Override
     default Type javaType(final Name name) {
 
-        if(name.isEmpty()) {
+        if (name.isEmpty()) {
             return TypeFactory.parameterizedClass(Map.class, String.class, Object.class);
         } else {
             final String first = name.first();
             final Map<String, Use<?>> metadataSchema = metadataSchema();
-            if(metadataSchema.containsKey(first)) {
+            if (metadataSchema.containsKey(first)) {
                 return metadataSchema.get(first).javaType(name.withoutFirst());
             } else {
                 final Member member = requireMember(first, true);
@@ -212,11 +228,11 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
     @SuppressWarnings("unchecked")
     default String toString(final Instance value) {
 
-        if(value == null) {
+        if (value == null) {
             return "null";
         }
         final Map<String, String> entries = new TreeMap<>();
-        metadataSchema().forEach((k, v) -> entries.put(k, ((Use<Object>)v).toString(value.get(k))));
+        metadataSchema().forEach((k, v) -> entries.put(k, ((Use<Object>) v).toString(value.get(k))));
         getMembers().forEach((k, v) -> entries.put(k, v.toString(value.get(k))));
 
         return "{" + entries.entrySet().stream()
@@ -248,9 +264,9 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         final HashMap<String, Object> result = new HashMap<>();
         object.forEach((k, v) -> {
             final Use<?> type = metadataSchema.get(k);
-            if(type != null) {
+            if (type != null) {
                 result.put(k, type.create(context, v, null));
-            } else if(Reserved.isMeta(k)) {
+            } else if (Reserved.isMeta(k)) {
                 result.put(k, v);
             }
         });
@@ -261,7 +277,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
 
         final Map<String, Property> properties = getProperties();
         out.writeInt(properties.size());
-        for(final Map.Entry<String, Property> entry : new TreeMap<>(properties).entrySet()) {
+        for (final Map.Entry<String, Property> entry : new TreeMap<>(properties).entrySet()) {
             UseString.DEFAULT.serializeValue(entry.getKey(), out);
             final Object value = object.get(entry.getKey());
             entry.getValue().serialize(value, out);
@@ -274,8 +290,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
             try (final ByteArrayOutputStream baos = new ByteArrayOutputStream();
                  final DataOutputStream daos = new DataOutputStream(baos)) {
                 serializeProperties(object, daos);
-                @SuppressWarnings("all")
-                final byte[] bytes = Hashing.md5().newHasher().putBytes(baos.toByteArray()).hash().asBytes();
+                @SuppressWarnings("all") final byte[] bytes = Hashing.md5().newHasher().putBytes(baos.toByteArray()).hash().asBytes();
                 return BaseEncoding.base64().encode(bytes);
             }
         } catch (final IOException e) {
@@ -294,7 +309,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
             properties.put(name, type.openApi(branches.get(name)));
         });
         getMembers().forEach((name, member) -> {
-            if(!member.isAlwaysHidden()) {
+            if (!member.isAlwaysHidden()) {
                 properties.put(name, member.openApi(branches.get(name)));
             }
         });
@@ -311,7 +326,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
 
     default void expand(final Name parent, final Expander expander, final Set<Name> expand) {
 
-        if(!expand.isEmpty()) {
+        if (!expand.isEmpty()) {
             final Map<String, Set<Name>> branches = Name.branch(expand);
             getMembers().forEach((name, member) -> {
                 final Set<Name> branch = branches.get(member.getName());
@@ -346,7 +361,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
                 return null;
             }
         });
-        if(delete.isEmpty()) {
+        if (delete.isEmpty()) {
             return tmp;
         } else {
             final Map<String, Object> result = new HashMap<>(tmp);
@@ -360,7 +375,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         final Map<String, Set<Name>> branches = Name.branch(expand);
         final Context thisContext = context.with(VAR_THIS, object);
         return transformMembers(object, (member, value) -> {
-            if(branches.containsKey(member.getName())) {
+            if (branches.containsKey(member.getName())) {
                 return member.evaluateTransients(thisContext, value, branches.get(member.getName()));
             } else {
                 return value;
@@ -379,7 +394,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
                 changed.put(member.getName(), after);
             }
         });
-        if(changed.isEmpty()) {
+        if (changed.isEmpty()) {
             return object;
         } else {
             final Map<String, Object> result = new HashMap<>(object);
@@ -392,7 +407,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
 
         final Map<String, Object> data = new HashMap<>();
         final int size = in.readInt();
-        for(int i = 0; i != size; ++i) {
+        for (int i = 0; i != size; ++i) {
             final String key = UseString.DEFAULT.deserializeValue(in);
             final Object value = Use.deserializeAny(in);
             data.put(key, value);
@@ -449,7 +464,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
             final String name = entry.getKey();
             final Member member = entry.getValue();
             final Set<Name> memberExpand = branches.get(name);
-            if(memberExpand != null) {
+            if (memberExpand != null) {
                 return member.supportsTrivialJoin(memberExpand);
             } else {
                 return true;
@@ -460,16 +475,16 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
     @SuppressWarnings("unchecked")
     default boolean areEqual(final Map<String, Object> a, final Map<String, Object> b) {
 
-        if(a == null || b == null) {
+        if (a == null || b == null) {
             return a == null && b == null;
         } else {
-            for(final Map.Entry<String, Use<?>> entry : metadataSchema().entrySet()) {
-                if(!((Use<Object>)entry.getValue()).areEqual(a.get(entry.getKey()), b.get(entry.getKey()))) {
+            for (final Map.Entry<String, Use<?>> entry : metadataSchema().entrySet()) {
+                if (!((Use<Object>) entry.getValue()).areEqual(a.get(entry.getKey()), b.get(entry.getKey()))) {
                     return false;
                 }
             }
-            for(final Map.Entry<String, ? extends Member> entry : getMembers().entrySet()) {
-                if(!((Use<Object>)entry.getValue().typeOf()).areEqual(a.get(entry.getKey()), b.get(entry.getKey()))) {
+            for (final Map.Entry<String, ? extends Member> entry : getMembers().entrySet()) {
+                if (!((Use<Object>) entry.getValue().typeOf()).areEqual(a.get(entry.getKey()), b.get(entry.getKey()))) {
                     return false;
                 }
             }
@@ -482,7 +497,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
         getDeclaredMembers().forEach((k, v) -> {
-            if(branches.containsKey(k)) {
+            if (branches.containsKey(k)) {
                 v.collectMaterializationDependencies(branches.get(k), out);
             }
         });
@@ -490,8 +505,8 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
 
     default boolean isCompatibleBucketing(final List<Bucketing> other, final Set<Name> names) {
 
-        for(final Name name : names) {
-            if(!isCompatibleBucketing(other, name)) {
+        for (final Name name : names) {
+            if (!isCompatibleBucketing(other, name)) {
                 return false;
             }
         }

@@ -7,7 +7,7 @@ import io.basestar.schema.use.*;
 import io.basestar.secret.Secret;
 import io.basestar.storage.sql.resolver.FieldResolver;
 import io.basestar.storage.sql.resolver.ValueResolver;
-import io.basestar.storage.sql.util.Casing;
+import io.basestar.schema.util.Casing;
 import io.basestar.util.Name;
 import io.basestar.util.*;
 import org.jooq.Constraint;

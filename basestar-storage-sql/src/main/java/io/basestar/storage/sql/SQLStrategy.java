@@ -28,7 +28,7 @@ import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.from.From;
 import io.basestar.schema.from.FromSchema;
 import io.basestar.schema.from.FromSql;
-import io.basestar.storage.sql.util.Casing;
+import io.basestar.schema.util.Casing;
 import io.basestar.storage.sql.util.DDLStep;
 import io.basestar.util.Nullsafe;
 import lombok.Builder;
@@ -205,7 +205,7 @@ public interface SQLStrategy {
 
             return statementType;
         }
-      
+
         @Override
         public boolean useMetadata() {
 
@@ -214,7 +214,7 @@ public interface SQLStrategy {
 
         public EntityType entityType(final SQLDialect dialect, final LinkableSchema schema) {
 
-            if(entityTypeStrategy == null) {
+            if (entityTypeStrategy == null) {
                 return EntityTypeStrategy.DEFAULT.entityType(dialect, schema);
             } else {
                 return entityTypeStrategy.entityType(dialect, schema);
@@ -233,7 +233,7 @@ public interface SQLStrategy {
 
             for (final Schema<?> schema : schemas) {
 
-                if(schema instanceof LinkableSchema) {
+                if (schema instanceof LinkableSchema) {
                     queries.addAll(createEntityDDL(context, (LinkableSchema) schema));
                 } else if (schema instanceof FunctionSchema) {
                     queries.addAll(createFunctionDDL(context, (FunctionSchema) schema));
@@ -247,12 +247,12 @@ public interface SQLStrategy {
 
             switch (entityType(dialect(), schema)) {
                 case VIEW:
-                    return createViewDDL(context, (ViewSchema)schema);
+                    return createViewDDL(context, (ViewSchema) schema);
                 case MATERIALIZED_VIEW:
-                    return createMaterializedViewDDL(context, (ViewSchema)schema);
+                    return createMaterializedViewDDL(context, (ViewSchema) schema);
                 case TABLE:
                 default:
-                    if(schema instanceof ReferableSchema) {
+                    if (schema instanceof ReferableSchema) {
                         return createObjectDDL(context, (ReferableSchema) schema);
                     } else {
                         return createFakeViewDDL(context, schema);
@@ -448,9 +448,9 @@ public interface SQLStrategy {
             @Override
             public EntityType entityType(final SQLDialect dialect, final LinkableSchema schema) {
 
-                if(schema instanceof ViewSchema) {
+                if (schema instanceof ViewSchema) {
                     final ViewSchema view = (ViewSchema) schema;
-                    if(view.isMaterialized()) {
+                    if (view.isMaterialized()) {
                         return dialect.supportsMaterializedView(view) ? EntityType.MATERIALIZED_VIEW : EntityType.TABLE;
                     } else {
                         return EntityType.VIEW;

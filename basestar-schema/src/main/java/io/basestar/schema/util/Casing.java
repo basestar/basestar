@@ -1,4 +1,4 @@
-package io.basestar.storage.sql.util;
+package io.basestar.schema.util;
 
 import io.basestar.schema.Reserved;
 import io.basestar.util.Text;
