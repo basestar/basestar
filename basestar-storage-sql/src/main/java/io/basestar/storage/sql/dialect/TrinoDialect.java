@@ -5,8 +5,12 @@ import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.use.UseRef;
 import io.basestar.schema.use.UseString;
+import io.basestar.storage.sql.resolver.ValueResolver;
 import io.basestar.util.Name;
-import org.jooq.*;
+import org.jooq.Configuration;
+import org.jooq.DataType;
+import org.jooq.QueryPart;
+import org.jooq.SQLDialect;
 import org.jooq.impl.DSL;
 import org.jooq.impl.DefaultDataType;
 import org.jooq.impl.SQLDataType;
@@ -64,23 +68,17 @@ public class TrinoDialect extends JSONDialect {
     }
 
     @Override
-    public Object refToSQLValue(final UseRef type, final Instance value) {
-
-        return toJson(value);
-    }
-
-    @Override
-    public Field<?> selectRef(final UseRef type, final Field<?> field) {
-
-        return field.cast(jsonType());
-    }
-
-    @Override
     @SuppressWarnings("unchecked")
-    public Instance refFromSQLValue(final UseRef type, final Object value) {
+    public Instance refFromSQLValue(final UseRef type, final ValueResolver value) {
 
-        final Map<String, ?> map = fromJson(value, new TypeReference<Map<String, ?>>() {});
-        return map == null ? null : new Instance((Map<String, Object>) map);
+        final Object v = value.value();
+        if (v == null) {
+            return null;
+        } else {
+            final Map<String, ?> map = fromJson(v, new TypeReference<Map<String, ?>>() {
+            });
+            return map == null ? null : new Instance((Map<String, Object>) map);
+        }
     }
 
     @Override

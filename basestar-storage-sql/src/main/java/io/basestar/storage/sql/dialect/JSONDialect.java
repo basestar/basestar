@@ -2,12 +2,18 @@ package io.basestar.storage.sql.dialect;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import io.basestar.jackson.BasestarModule;
 import io.basestar.schema.Instance;
+import io.basestar.schema.Property;
 import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.use.*;
 import io.basestar.storage.sql.SQLDialect;
+import io.basestar.storage.sql.resolver.FieldResolver;
+import io.basestar.storage.sql.resolver.ValueResolver;
 import io.basestar.util.Bytes;
+import io.basestar.util.Name;
 import io.basestar.util.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.StringEscapeUtils;
@@ -19,10 +25,7 @@ import org.jooq.impl.SQLDataType;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @Slf4j
 public abstract class JSONDialect implements SQLDialect {
@@ -97,145 +100,217 @@ public abstract class JSONDialect implements SQLDialect {
     }
 
     @Override
-    public <T> Object arrayToSQLValue(final UseArray<T> type, final List<T> value) {
+    public <T> Map<Field<?>, Object> arrayToSQLValues(final UseArray<T> type, final FieldResolver field, final List<T> value) {
 
-        return toJson(value);
+        return field.field().<Map<Field<?>, Object>>map(f -> ImmutableMap.of(f, toJson(value))).orElseGet(ImmutableMap::of);
     }
 
     @Override
-    public <T> Object pageToSQLValue(final UsePage<T> type, final Page<T> value) {
+    public <T> Map<Field<?>, Object> pageToSQLValues(final UsePage<T> type, final FieldResolver field, final Page<T> value) {
 
-        return toJson(value);
+        return field.field().<Map<Field<?>, Object>>map(f -> ImmutableMap.of(f, toJson(value))).orElseGet(ImmutableMap::of);
     }
 
     @Override
-    public <T> Object setToSQLValue(final UseSet<T> type, final Set<T> value) {
+    public <T> Map<Field<?>, Object> setToSQLValues(final UseSet<T> type, final FieldResolver field, final Set<T> value) {
 
-        return toJson(value);
+        return field.field().<Map<Field<?>, Object>>map(f -> ImmutableMap.of(f, toJson(value))).orElseGet(ImmutableMap::of);
     }
 
     @Override
-    public <T> Object mapToSQLValue(final UseMap<T> type, final Map<String, T> value) {
+    public <T> Map<Field<?>, Object> mapToSQLValues(final UseMap<T> type, final FieldResolver field, final Map<String, T> value) {
 
-        return toJson(value);
+        return field.field().<Map<Field<?>, Object>>map(f -> ImmutableMap.of(f, toJson(value))).orElseGet(ImmutableMap::of);
     }
 
     @Override
-    public Object structToSQLValue(final UseStruct type, final Instance value) {
+    public Map<Field<?>, Object> structToSQLValues(final UseStruct type, final FieldResolver field, final Instance value) {
 
-        return toJson(value);
+        final Map<Field<?>, Object> fields = new HashMap<>();
+        for (final Map.Entry<String, Property> entry : type.getSchema().getProperties().entrySet()) {
+            final FieldResolver column = field.resolver(Name.of(entry.getKey()));
+            fields.putAll(toSQLValues(entry.getValue().typeOf(), column, value.get(entry.getKey())));
+        }
+        return fields;
     }
 
     @Override
-    public Object viewToSQLValue(final UseView type, final Instance value) {
+    public Map<Field<?>, Object> viewToSQLValues(final UseView type, final FieldResolver field, final Instance value) {
 
-        return toJson(value);
+        return field.field().<Map<Field<?>, Object>>map(f -> ImmutableMap.of(f, toJson(value))).orElseGet(ImmutableMap::of);
     }
 
     @Override
-    public Object refToSQLValue(final UseRef type, final Instance value) {
+    public Map<Field<?>, Object> refToSQLValues(final UseRef type, final FieldResolver field, final Instance value) {
 
-        return Instance.getId(value);
+        final Map<Field<?>, Object> fields = new HashMap<>(toSQLValues(UseString.DEFAULT, field.resolver(Name.of(ReferableSchema.ID)), value.getId()));
+        if (type.isVersioned()) {
+            fields.putAll(toSQLValues(UseInteger.DEFAULT, field.resolver(Name.of(ReferableSchema.VERSION)), value.getVersion()));
+
+        }
+        return fields;
     }
 
     @Override
-    public Object binaryToSQLValue(final UseBinary type, final Bytes value) {
+    public Map<Field<?>, Object> binaryToSQLValues(final UseBinary type, final FieldResolver field, final Bytes value) {
 
-        return value.toBase64();
+        return field.field().<Map<Field<?>, Object>>map(f -> ImmutableMap.of(f, value.toBase64())).orElseGet(ImmutableMap::of);
     }
 
     @Override
-    public Object anyToSQLValue(final UseAny type, final Object value) {
+    public Map<Field<?>, Object> anyToSQLValues(final UseAny type, final FieldResolver field, final Object value) {
 
-        return toJson(value);
+        return field.field().<Map<Field<?>, Object>>map(f -> ImmutableMap.of(f, toJson(value))).orElseGet(ImmutableMap::of);
     }
 
     @Override
-    public <T> List<T> arrayFromSQLValue(final UseArray<T> type, final Object value) {
+    public <T> List<T> arrayFromSQLValue(final UseArray<T> type, final ValueResolver value) {
 
-        final Collection<?> results = fromJson(value, new TypeReference<Collection<?>>() {});
-        return type.create(results);
+        final Object v = value.value();
+        if (v == null) {
+            return null;
+        } else {
+            final Collection<?> results = fromJson(v, new TypeReference<Collection<?>>() {
+            });
+            return type.create(results);
+        }
     }
 
     @Override
-    public <T> Page<T> pageFromSQLValue(final UsePage<T> type, final Object value) {
+    public <T> Page<T> pageFromSQLValue(final UsePage<T> type, final ValueResolver value) {
 
-        final Collection<?> results = fromJson(value, new TypeReference<Collection<?>>() {});
-        return type.create(results);
+        final Object v = value.value();
+        if (v == null) {
+            return null;
+        } else {
+            final Collection<?> results = fromJson(v, new TypeReference<Collection<?>>() {
+            });
+            return type.create(results);
+        }
     }
 
     @Override
-    public <T> Set<T> setFromSQLValue(final UseSet<T> type, final Object value) {
+    public <T> Set<T> setFromSQLValue(final UseSet<T> type, final ValueResolver value) {
 
-        final Collection<?> results = fromJson(value, new TypeReference<Collection<?>>() {});
-        return type.create(results);
+        final Object v = value.value();
+        if (v == null) {
+            return null;
+        } else {
+            final Collection<?> results = fromJson(v, new TypeReference<Collection<?>>() {
+            });
+            return type.create(results);
+        }
     }
 
     @Override
-    public <T> Map<String, T> mapFromSQLValue(final UseMap<T> type, final Object value) {
+    public <T> Map<String, T> mapFromSQLValue(final UseMap<T> type, final ValueResolver value) {
 
-        return type.create(fromJson(value, new TypeReference<Map<String, ?>>() {}));
+        final Object v = value.value();
+        if (v == null) {
+            return null;
+        } else {
+            return type.create(fromJson(v, new TypeReference<Map<String, ?>>() {
+            }));
+        }
     }
 
     @Override
-    public Instance structFromSQLValue(final UseStruct type, final Object value) {
+    public Instance structFromSQLValue(final UseStruct type, final ValueResolver value) {
 
-        return type.create(fromJson(value, new TypeReference<Map<String, Object>>() {}));
+        final Map<String, Object> result = new HashMap<>();
+        for (final Map.Entry<String, Property> entry : type.getSchema().getProperties().entrySet()) {
+            result.put(entry.getKey(), fromSQLValue(entry.getValue().typeOf(), value.resolver(Name.of(entry.getKey()))));
+        }
+        return new Instance(result);
     }
 
     @Override
-    public Instance viewFromSQLValue(final UseView type, final Object value) {
+    public Instance viewFromSQLValue(final UseView type, final ValueResolver value) {
 
-        return type.create(fromJson(value, new TypeReference<Map<String, Object>>() {}));
+        final Object v = value.value();
+        if (v == null) {
+            return null;
+        } else {
+            return type.create(fromJson(v, new TypeReference<Map<String, Object>>() {
+            }));
+        }
     }
 
     @Override
-    public Instance refFromSQLValue(final UseRef type, final Object value) {
+    public Instance refFromSQLValue(final UseRef type, final ValueResolver value) {
 
-        final String id = (String)value;
-        return ReferableSchema.ref(id);
+        final String id = (String) value.value(Name.of(ReferableSchema.ID));
+        if (id != null) {
+            final Map<String, Object> result = new HashMap<>();
+            result.put(ReferableSchema.ID, id);
+            if (type.isVersioned()) {
+                result.put(ReferableSchema.VERSION, UseInteger.DEFAULT.create(value.value(Name.of(ReferableSchema.VERSION))));
+            }
+            return new Instance(result);
+        } else {
+            return null;
+        }
     }
 
     @Override
-    public Bytes binaryFromSQLValue(final UseBinary type, final Object value) {
+    public Bytes binaryFromSQLValue(final UseBinary type, final ValueResolver value) {
 
-        return Bytes.fromBase64((String)value);
+        final Object v = value.value();
+        if (v == null) {
+            return null;
+        } else {
+            return Bytes.fromBase64((String) v);
+        }
     }
 
     @Override
-    public Object anyFromSQLValue(final UseAny type, final Object value) {
+    public Object anyFromSQLValue(final UseAny type, final ValueResolver value) {
 
-        return fromJson(value, new TypeReference<Object>() {});
+        final Object v = value.value();
+        if (v == null) {
+            return null;
+        } else {
+            return fromJson(v, new TypeReference<Object>() {
+            });
+        }
     }
 
     @Override
-    public <V, T extends Collection<V>> Field<?> selectCollection(final UseCollection<V, T> type, final Field<?> field) {
+    public <V, T extends Collection<V>> List<Field<?>> selectCollection(final UseCollection<V, T> type, final Name name, final FieldResolver field) {
 
-        return field.cast(jsonType());
+        return field.field().<List<Field<?>>>map(f -> ImmutableList.of(f.cast(jsonType()).as(columnName(name)))).orElseGet(ImmutableList::of);
     }
 
     @Override
-    public Field<?> selectRef(final UseRef type, final Field<?> field) {
+    public List<Field<?>> selectRef(final UseRef type, final Name name, final FieldResolver field) {
 
-        return field.cast(stringType(UseString.DEFAULT));
+        final List<Field<?>> fields = new ArrayList<>(selectFields(field.resolver(Name.of(ReferableSchema.ID)), name.with(ReferableSchema.ID), UseString.DEFAULT));
+        if (type.isVersioned()) {
+            fields.addAll(selectFields(field.resolver(Name.of(ReferableSchema.VERSION)), name.with(ReferableSchema.VERSION), UseInteger.DEFAULT));
+        }
+        return fields;
     }
 
     @Override
-    public <V> Field<?> selectMap(final UseMap<V> type, final Field<?> field) {
+    public <V> List<Field<?>> selectMap(final UseMap<V> type, final Name name, final FieldResolver field) {
 
-        return field.cast(jsonType());
+        return field.field().<List<Field<?>>>map(f -> ImmutableList.of(f.cast(jsonType()).as(columnName(name)))).orElseGet(ImmutableList::of);
     }
 
     @Override
-    public Field<?> selectStruct(final UseStruct type, final Field<?> field) {
+    public List<Field<?>> selectStruct(final UseStruct type, final Name name, final FieldResolver field) {
 
-        return field.cast(jsonType());
+        final List<Field<?>> fields = new ArrayList<>();
+        for (final Map.Entry<String, Property> entry : type.getSchema().getProperties().entrySet()) {
+            fields.addAll(selectFields(field.resolver(Name.of(entry.getKey())), name.with(entry.getKey()), entry.getValue().typeOf()));
+        }
+        return fields;
     }
 
     @Override
-    public Field<?> selectView(final UseView type, final Field<?> field) {
+    public List<Field<?>> selectView(final UseView type, final Name name, final FieldResolver field) {
 
-        return field.cast(jsonType());
+        return field.field().<List<Field<?>>>map(f -> ImmutableList.of(f.cast(jsonType()).as(columnName(name)))).orElseGet(ImmutableList::of);
     }
 
     protected Object toJson(final Object value) {
