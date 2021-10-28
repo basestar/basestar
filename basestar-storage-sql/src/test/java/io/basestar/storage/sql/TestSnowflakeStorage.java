@@ -8,6 +8,9 @@ import io.basestar.schema.*;
 import io.basestar.schema.use.UseString;
 import io.basestar.storage.Storage;
 import io.basestar.storage.sql.dialect.SnowflakeDialect;
+import io.basestar.storage.sql.strategy.DefaultNamingStrategy;
+import io.basestar.storage.sql.strategy.SQLStrategy;
+import io.basestar.storage.sql.strategy.Simple;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Page;
 import io.basestar.util.Sort;
@@ -116,9 +119,13 @@ public class TestSnowflakeStorage extends TestSQLStorage {
         final SQLDialect dialect = dialect();
 
         final String objectSchema = "obj_" + UUID.randomUUID().toString().replaceAll("-", "_");
-        final SQLStrategy strategy = SQLStrategy.Simple.builder()
-                .objectSchemaName(objectSchema)
+        final SQLStrategy strategy = Simple.builder()
+                .namingStrategy(DefaultNamingStrategy.builder()
+                        .objectSchemaName(objectSchema)
+                        .dialect(dialect)
+                        .build())
                 .dialect(dialect)
+                .objectSchemaName(objectSchema)
                 .useMetadata(true)
                 .build();
 
