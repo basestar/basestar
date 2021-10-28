@@ -117,7 +117,7 @@ public class Sort implements Serializable {
 
     public <T, V extends Comparable<V>> Comparator<T> comparator(final BiFunction<T, Name, V> getter) {
 
-        final Comparator<V> cmp = (order == Order.DESC) ? Comparator.reverseOrder() : Comparator.naturalOrder();
+        final Comparator<V> cmp = (order == Order.DESC) ? Comparator.nullsFirst(Comparator.reverseOrder()) : Comparator.nullsLast(Comparator.naturalOrder());
         return (a, b) -> {
             final V va = getter.apply(a, name);
             final V vb = getter.apply(b, name);
