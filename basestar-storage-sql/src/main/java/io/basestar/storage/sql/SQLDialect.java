@@ -1,8 +1,12 @@
 package io.basestar.storage.sql;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
 import io.basestar.secret.Secret;
+import io.basestar.storage.sql.resolver.FieldResolver;
+import io.basestar.storage.sql.resolver.ValueResolver;
 import io.basestar.schema.util.Casing;
 import io.basestar.util.Name;
 import io.basestar.util.*;
@@ -11,8 +15,6 @@ import org.jooq.*;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 
-import java.time.Instant;
-import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -81,61 +83,61 @@ public interface SQLDialect {
 
     DataType<?> anyType(UseAny type);
 
-    <T> Object arrayToSQLValue(UseArray<T> type, List<T> value);
+    <T> Map<Field<?>, Object> arrayToSQLValues(UseArray<T> type, FieldResolver field, List<T> value);
 
-    <T> Object pageToSQLValue(UsePage<T> type, Page<T> value);
+    <T> Map<Field<?>, Object> pageToSQLValues(UsePage<T> type, FieldResolver field, Page<T> value);
 
-    <T> Object setToSQLValue(UseSet<T> type, Set<T> value);
+    <T> Map<Field<?>, Object> setToSQLValues(UseSet<T> type, FieldResolver field, Set<T> value);
 
-    <T> Object mapToSQLValue(UseMap<T> type, Map<String, T> value);
+    <T> Map<Field<?>, Object> mapToSQLValues(UseMap<T> type, FieldResolver field, Map<String, T> value);
 
-    Object structToSQLValue(UseStruct type, Instance value);
+    Map<Field<?>, Object> structToSQLValues(UseStruct type, FieldResolver field, Instance value);
 
-    Object viewToSQLValue(UseView type, Instance value);
+    Map<Field<?>, Object> viewToSQLValues(UseView type, FieldResolver field, Instance value);
 
-    Object refToSQLValue(UseRef type, Instance value);
+    Map<Field<?>, Object> refToSQLValues(UseRef type, FieldResolver field, Instance value);
 
-    Object binaryToSQLValue(UseBinary type, Bytes value);
+    Map<Field<?>, Object> binaryToSQLValues(UseBinary type, FieldResolver field, Bytes value);
 
-    default Object secretToSQLValue(final UseSecret type, final Secret value) {
+    default Map<Field<?>, Object> secretToSQLValues(final UseSecret type, final FieldResolver field, final Secret value) {
 
-        return binaryToSQLValue(UseBinary.DEFAULT, new Bytes(value.encrypted()));
+        return binaryToSQLValues(UseBinary.DEFAULT, field, new Bytes(value.encrypted()));
     }
 
-    Object anyToSQLValue(UseAny type, Object value);
+    Map<Field<?>, Object> anyToSQLValues(UseAny type, FieldResolver field, Object value);
 
-    <T> List<T> arrayFromSQLValue(UseArray<T> type, Object value);
+    <T> List<T> arrayFromSQLValue(UseArray<T> type, ValueResolver value);
 
-    <T> Page<T> pageFromSQLValue(UsePage<T> type, Object value);
+    <T> Page<T> pageFromSQLValue(UsePage<T> type, ValueResolver value);
 
-    <T> Set<T> setFromSQLValue(UseSet<T> type, Object value);
+    <T> Set<T> setFromSQLValue(UseSet<T> type, ValueResolver value);
 
-    <T> Map<String, T> mapFromSQLValue(UseMap<T> type, Object value);
+    <T> Map<String, T> mapFromSQLValue(UseMap<T> type, ValueResolver value);
 
-    Instance structFromSQLValue(UseStruct type, Object value);
+    Instance structFromSQLValue(UseStruct type, ValueResolver value);
 
-    Instance viewFromSQLValue(UseView type, Object value);
+    Instance viewFromSQLValue(UseView type, ValueResolver value);
 
-    Instance refFromSQLValue(UseRef type, Object value);
+    Instance refFromSQLValue(UseRef type, ValueResolver value);
 
-    Bytes binaryFromSQLValue(UseBinary type, Object value);
+    Bytes binaryFromSQLValue(UseBinary type, ValueResolver value);
 
-    default Secret secretFromSQLValue(final UseSecret type, final Object value) {
+    default Secret secretFromSQLValue(final UseSecret type, final ValueResolver value) {
 
         return Secret.encrypted(binaryFromSQLValue(UseBinary.DEFAULT, value).getBytes());
     }
 
-    Object anyFromSQLValue(UseAny type, Object value);
+    Object anyFromSQLValue(UseAny type, ValueResolver value);
 
-    <V, T extends Collection<V>> Field<?> selectCollection(final UseCollection<V, T> type, final Field<?> field);
+    <V, T extends Collection<V>> List<Field<?>> selectCollection(final UseCollection<V, T> type, final Name name, final FieldResolver field);
 
-    <V> Field<?> selectMap(final UseMap<V> type, final Field<?> field);
+    <V> List<Field<?>> selectMap(final UseMap<V> type, final Name name, final FieldResolver field);
 
-    Field<?> selectRef(final UseRef type, final Field<?> field);
+    List<Field<?>> selectRef(final UseRef type, final Name name, final FieldResolver field);
 
-    Field<?> selectStruct(final UseStruct type, final Field<?> field);
+    List<Field<?>> selectStruct(final UseStruct type, final Name name, final FieldResolver field);
 
-    Field<?> selectView(final UseView type, final Field<?> field);
+    List<Field<?>> selectView(final UseView type, final Name name, final FieldResolver field);
 
     boolean supportsConstraints();
 
@@ -269,171 +271,119 @@ public interface SQLDialect {
         });
     }
 
-    default Object toSQLValue(final Use<?> type, final Object value) {
+    default Map<Field<?>, Object> toSQLValues(final Use<?> type, final FieldResolver field, final Object value) {
 
         if (value == null) {
-            return null;
+            return Collections.emptyMap();
         }
-        return type.visit(new Use.Visitor<Object>() {
+
+        return type.visit(new Use.Visitor.Defaulting<Map<Field<?>, Object>>() {
 
             @Override
-            public Boolean visitBoolean(final UseBoolean type) {
+            public <T> Map<Field<?>, Object> visitScalar(final UseScalar<T> type) {
 
-                return type.create(value);
+                return field.field().<Map<Field<?>, Object>>map(f -> ImmutableMap.of(f, type.create(value))).orElseGet(ImmutableMap::of);
             }
 
             @Override
-            public Long visitInteger(final UseInteger type) {
+            public Map<Field<?>, Object> visitRef(final UseRef type) {
 
-                return type.create(value);
+                return refToSQLValues(type, field, (Instance) value);
             }
 
             @Override
-            public Number visitNumber(final UseNumber type) {
+            public <T> Map<Field<?>, Object> visitArray(final UseArray<T> type) {
 
-                return type.create(value);
+                return arrayToSQLValues(type, field, type.create(value));
             }
 
             @Override
-            public String visitString(final UseString type) {
+            public <T> Map<Field<?>, Object> visitPage(final UsePage<T> type) {
 
-                return type.create(value);
+                return pageToSQLValues(type, field, type.create(value));
             }
 
             @Override
-            public String visitEnum(final UseEnum type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public Object visitRef(final UseRef type) {
-
-                return refToSQLValue(type, (Instance) value);
-            }
-
-            @Override
-            public <T> Object visitArray(final UseArray<T> type) {
-
-                return arrayToSQLValue(type, type.create(value));
-            }
-
-            @Override
-            public <T> Object visitPage(final UsePage<T> type) {
-
-                return pageToSQLValue(type, type.create(value));
-            }
-
-            @Override
-            public Object visitDecimal(final UseDecimal type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public Object visitComposite(final UseComposite type) {
+            public Map<Field<?>, Object> visitComposite(final UseComposite type) {
 
                 throw new UnsupportedOperationException();
             }
 
             @Override
-            public <T> Object visitSet(final UseSet<T> type) {
+            public <T> Map<Field<?>, Object> visitSet(final UseSet<T> type) {
 
-                return setToSQLValue(type, type.create(value));
+                return setToSQLValues(type, field, type.create(value));
             }
 
             @Override
-            public <T> Object visitMap(final UseMap<T> type) {
+            public <T> Map<Field<?>, Object> visitMap(final UseMap<T> type) {
 
-                return mapToSQLValue(type, type.create(value));
+                return mapToSQLValues(type, field, type.create(value));
             }
 
             @Override
-            public Object visitStruct(final UseStruct type) {
+            public Map<Field<?>, Object> visitStruct(final UseStruct type) {
 
-                return structToSQLValue(type, type.create(value));
+                return structToSQLValues(type, field, type.create(value));
             }
 
             @Override
-            public Object visitAny(final UseAny type) {
+            public Map<Field<?>, Object> visitAny(final UseAny type) {
 
-                return anyToSQLValue(type, type.create(value));
+                return anyToSQLValues(type, field, type.create(value));
             }
 
             @Override
-            public Object visitBinary(final UseBinary type) {
+            public Map<Field<?>, Object> visitBinary(final UseBinary type) {
 
-                return binaryToSQLValue(type, type.create(value));
+                return binaryToSQLValues(type, field, type.create(value));
             }
 
             @Override
-            public Object visitDate(final UseDate type) {
+            public Map<Field<?>, Object> visitDate(final UseDate type) {
 
-                return ISO8601.toSqlDate(type.create(value));
+                return field.field().<Map<Field<?>, Object>>map(f -> ImmutableMap.of(f, ISO8601.toSqlDate(type.create(value)))).orElseGet(ImmutableMap::of);
             }
 
             @Override
-            public Object visitDateTime(final UseDateTime type) {
+            public Map<Field<?>, Object> visitDateTime(final UseDateTime type) {
 
-                return ISO8601.toSqlTimestamp(type.create(value));
+                return field.field().<Map<Field<?>, Object>>map(f -> ImmutableMap.of(f, ISO8601.toSqlTimestamp(type.create(value)))).orElseGet(ImmutableMap::of);
             }
 
             @Override
-            public Object visitView(final UseView type) {
+            public Map<Field<?>, Object> visitView(final UseView type) {
 
-                return viewToSQLValue(type, type.create(value));
+                return viewToSQLValues(type, field, type.create(value));
             }
 
             @Override
-            public <T> Object visitOptional(final UseOptional<T> type) {
+            public <T> Map<Field<?>, Object> visitOptional(final UseOptional<T> type) {
 
                 return type.getType().visit(this);
             }
 
             @Override
-            public Object visitSecret(final UseSecret type) {
+            public Map<Field<?>, Object> visitSecret(final UseSecret type) {
 
-                return secretToSQLValue(type, type.create(value));
+                return secretToSQLValues(type, field, type.create(value));
             }
         });
     }
 
-    default Object fromSQLValue(final Use<?> type, final Object value) {
+    default Object fromSQLValue(final Use<?> type, final ValueResolver value) {
 
-        if (value == null) {
-            return null;
-        }
-
-        return type.visit(new Use.Visitor<Object>() {
+        return type.visit(new Use.Visitor.Defaulting<Object>() {
 
             @Override
-            public Boolean visitBoolean(final UseBoolean type) {
+            public <T> Object visitScalar(final UseScalar<T> type) {
 
-                return type.create(value);
-            }
-
-            @Override
-            public Long visitInteger(final UseInteger type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public Number visitNumber(final UseNumber type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public String visitString(final UseString type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public String visitEnum(final UseEnum type) {
-
-                return type.create(value);
+                final Object v = value.value();
+                if (v == null) {
+                    return null;
+                } else {
+                    return type.create(v);
+                }
             }
 
             @Override
@@ -457,7 +407,7 @@ public interface SQLDialect {
             @Override
             public Object visitDecimal(final UseDecimal type) {
 
-                return type.create(value);
+                return type.create(value.value());
             }
 
             @Override
@@ -491,18 +441,6 @@ public interface SQLDialect {
             }
 
             @Override
-            public LocalDate visitDate(final UseDate type) {
-
-                return type.create(value);
-            }
-
-            @Override
-            public Instant visitDateTime(final UseDateTime type) {
-
-                return type.create(value);
-            }
-
-            @Override
             public Object visitView(final UseView type) {
 
                 return viewFromSQLValue(type, value);
@@ -528,15 +466,65 @@ public interface SQLDialect {
         });
     }
 
+    default List<Field<?>> fields(final Casing casing, final Name name, final Use<?> type) {
+
+        return type.visit(new Use.Visitor.Defaulting<List<Field<?>>>() {
+
+            @Override
+            public <T> List<Field<?>> visitDefault(final Use<T> type) {
+
+                return Immutable.list(DSL.field(columnName(casing, name), dataType(type)));
+            }
+
+            @Override
+            public List<Field<?>> visitStruct(final UseStruct type) {
+
+                final InstanceSchema schema = type.getSchema();
+                return fields(casing, name, schema);
+            }
+
+            @Override
+            public List<Field<?>> visitRef(final UseRef type) {
+
+                if (type.isVersioned()) {
+                    return ImmutableList.of(
+                            DSL.field(columnName(casing, name.with(ReferableSchema.ID)), dataType(UseString.DEFAULT)),
+                            DSL.field(columnName(casing, name.with(ReferableSchema.VERSION)), dataType(UseInteger.DEFAULT))
+                    );
+                } else {
+                    return ImmutableList.of(
+                            DSL.field(columnName(casing, name.with(ReferableSchema.ID)), dataType(UseString.DEFAULT))
+                    );
+                }
+            }
+
+            @Override
+            public List<Field<?>> visitComposite(final UseComposite type) {
+
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public <T> List<Field<?>> visitOptional(final UseOptional<T> type) {
+
+                return type.getType().visit(this);
+            }
+        });
+    }
+
+    default List<Field<?>> fields(final Casing casing, final InstanceSchema schema) {
+
+        return fields(casing, Name.empty(), schema);
+    }
+
     @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
-    default List<Field<?>> fields(final Casing casing, final LinkableSchema schema) {
+    default List<Field<?>> fields(final Casing casing, final Name name, final InstanceSchema schema) {
 
         return Stream.concat(
                 schema.metadataSchema().entrySet().stream()
-                        .map(e -> DSL.field(DSL.name(casing.name(e.getKey())), dataType(e.getValue()))),
+                        .flatMap(e -> fields(casing, name.with(e.getKey()), e.getValue()).stream()),
                 schema.getProperties().entrySet().stream()
-                        .map(e -> DSL.field(DSL.name(casing.name(e.getKey())),
-                                dataType(e.getValue().typeOf())))
+                        .flatMap(e -> fields(casing, name.with(e.getKey()), e.getValue().typeOf()).stream())
         ).collect(Collectors.toList());
     }
 
@@ -553,11 +541,11 @@ public interface SQLDialect {
     default Field<Object> indexField(final Casing casing, final ReferableSchema schema, final io.basestar.schema.Index index, final io.basestar.util.Name name) {
 
         // FIXME: BUG: hacky heuristic
-        if (ReferableSchema.ID.equals(name.last())) {
-            return DSL.field(DSL.name(columnName(casing, name.withoutLast())));
-        } else {
-            return DSL.field(DSL.name(columnName(casing, name)));
-        }
+//        if (ReferableSchema.ID.equals(name.last())) {
+//            return DSL.field(DSL.name(columnName(casing, name.withoutLast())));
+//        } else {
+        return DSL.field(DSL.name(columnName(casing, name)));
+//        }
     }
 
     @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
@@ -578,14 +566,14 @@ public interface SQLDialect {
         ).flatMap(v -> v).collect(Collectors.toList());
     }
 
-    default io.basestar.util.Name columnPath(final io.basestar.util.Name v) {
-
-        return io.basestar.util.Name.of(v.toString(Reserved.PREFIX));
-    }
-
     default org.jooq.Name columnName(final Casing casing, final io.basestar.util.Name v) {
 
-        return DSL.name(v.stream().map(casing::name).collect(Collectors.joining(Reserved.PREFIX)));
+        return DSL.name(v.stream().map(casing::name).collect(Collectors.joining("_")));
+    }
+
+    default org.jooq.Name columnName(final io.basestar.util.Name v) {
+
+        return columnName(Casing.AS_SPECIFIED, v);
     }
 
     default Constraint primaryKey(final Casing casing, final ReferableSchema schema, final io.basestar.schema.Index index) {
@@ -597,44 +585,45 @@ public interface SQLDialect {
     }
 
     @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
-    default Field<?> selectField(final Field<?> field, final Use<?> type) {
+    default List<Field<?>> selectFields(final FieldResolver field, final Name name, final Use<?> type) {
 
-        return type.visit(new Use.Visitor.Defaulting<Field<?>>() {
+        return type.visit(new Use.Visitor.Defaulting<List<Field<?>>>() {
 
             @Override
-            public <T> Field<?> visitDefault(final Use<T> type) {
+            public <T> List<Field<?>> visitDefault(final Use<T> type) {
 
-                return field;
+                return field.field().<List<Field<?>>>map(f -> ImmutableList.of(f.as(columnName(name)))).orElseGet(ImmutableList::of);
+
             }
 
             @Override
-            public <V, T extends Collection<V>> Field<?> visitCollection(final UseCollection<V, T> type) {
+            public <V, T extends Collection<V>> List<Field<?>> visitCollection(final UseCollection<V, T> type) {
 
-                return selectCollection(type, field);
+                return selectCollection(type, name, field);
             }
 
             @Override
-            public <V> Field<?> visitMap(final UseMap<V> type) {
+            public <V> List<Field<?>> visitMap(final UseMap<V> type) {
 
-                return selectMap(type, field);
+                return selectMap(type, name, field);
             }
 
             @Override
-            public Field<?> visitRef(final UseRef type) {
+            public List<Field<?>> visitRef(final UseRef type) {
 
-                return selectRef(type, field);
+                return selectRef(type, name, field);
             }
 
             @Override
-            public Field<?> visitStruct(final UseStruct type) {
+            public List<Field<?>> visitStruct(final UseStruct type) {
 
-                return selectStruct(type, field);
+                return selectStruct(type, name, field);
             }
 
             @Override
-            public Field<?> visitView(final UseView type) {
+            public List<Field<?>> visitView(final UseView type) {
 
-                return selectView(type, field);
+                return selectView(type, name, field);
             }
         });
     }
@@ -693,13 +682,7 @@ public interface SQLDialect {
 
     default QueryPart refIdField(final UseRef type, final Name name) {
 
-        final Name rest = name.withoutFirst();
-        final Field<String> sourceId = DSL.field(DSL.name(name.first()), String.class);
-        if (rest.equals(ObjectSchema.ID_NAME)) {
-            return sourceId;
-        } else {
-            throw new UnsupportedOperationException("Query of this type is not supported");
-        }
+        return DSL.field(columnName(name));
     }
 
     default Optional<? extends Field<?>> missingMetadataValue(final LinkableSchema schema, final String name) {

@@ -39,6 +39,8 @@ import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;
 import io.basestar.storage.query.RangeVisitor;
+import io.basestar.storage.sql.resolver.FieldResolver;
+import io.basestar.storage.sql.resolver.ValueResolver;
 import io.basestar.storage.sql.util.DelegatingDatabaseMetaData;
 import io.basestar.storage.util.KeysetPagingUtils;
 import io.basestar.util.Name;
@@ -137,25 +139,34 @@ public class SQLStorage implements DefaultLayerStorage {
         }
     }
 
+    private FieldResolver fieldResolver(final Table<?> table, final String name) {
+
+        final Name root = Name.of(name);
+        return new FieldResolver() {
+            @Override
+            public Optional<Field<?>> field() {
+
+                return field(Name.empty());
+            }
+
+            @Override
+            public Optional<Field<?>> field(final Name name) {
+
+                return resolveField(table, root.with(name).toString("_"));
+            }
+        };
+    }
+
     private List<SelectFieldOrAsterisk> selectFields(final LinkableSchema schema, final Table<?> table) {
 
         final SQLDialect dialect = strategy.dialect();
 
         final List<SelectFieldOrAsterisk> fields = new ArrayList<>();
         schema.metadataSchema().forEach((name, type) -> {
-            final Optional<Field<?>> opt = resolveField(table, name);
-            if (opt.isPresent()) {
-                fields.add(dialect.selectField(opt.get(), type).as(DSL.name(name)));
-            } else {
-                dialect.missingMetadataValue(schema, name).ifPresent(field -> {
-                    fields.add(dialect.selectField(field, type).as(DSL.name(name)));
-                });
-            }
+            fields.addAll(dialect.selectFields(fieldResolver(table, name), Name.of(name), type));
         });
         schema.getProperties().forEach((name, prop) -> {
-            resolveField(table, name).ifPresent(field -> {
-                fields.add(dialect.selectField(field, prop.typeOf()).as(DSL.name(name)));
-            });
+            fields.addAll(dialect.selectFields(fieldResolver(table, name), Name.of(name), prop.typeOf()));
         });
         return fields;
     }
@@ -844,9 +855,21 @@ public class SQLStorage implements DefaultLayerStorage {
         final Map<String, Object> data = record.intoMap();
         final Map<String, Object> result = new HashMap<>();
         schema.metadataSchema().forEach((k, v) ->
-                result.put(k, dialect.fromSQLValue(v, data.get(k))));
+                result.put(k, dialect.fromSQLValue(v, ValueResolver.of(data.get(k)))));
         schema.getProperties().forEach((k, v) ->
-                result.put(k, dialect.fromSQLValue(v.typeOf(), data.get(k))));
+                result.put(k, dialect.fromSQLValue(v.typeOf(), new ValueResolver() {
+                    @Override
+                    public Object value() {
+
+                        return data.get(k);
+                    }
+
+                    @Override
+                    public Object value(final Name name) {
+
+                        return data.get(Name.of(k).with(name).toString("_"));
+                    }
+                })));
 
         if (Instance.getSchema(result) == null) {
             Instance.setSchema(result, schema.getQualifiedName());
@@ -871,48 +894,44 @@ public class SQLStorage implements DefaultLayerStorage {
 
         final Map<Field<?>, Object> result = new HashMap<>();
         schema.metadataSchema().forEach((k, v) -> {
-            resolveField(table, k).ifPresent(field -> {
-                result.put(field, dialect.toSQLValue(v, object.get(k)));
-            });
+            result.putAll(dialect.toSQLValues(v, fieldResolver(table, k), object.get(k)));
         });
         schema.getProperties().forEach((k, v) -> {
-            resolveField(table, k).ifPresent(field -> {
-                result.put(field, dialect.toSQLValue(v.typeOf(), object.get(k)));
-            });
+            result.putAll(dialect.toSQLValues(v.typeOf(), fieldResolver(table, k), object.get(k)));
         });
 
         return result.entrySet().stream().filter(e -> e.getValue() != null)
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
-    private Map<Field<?>, Object> toRecord(final ReferableSchema schema, final Index index, final Index.Key key, final Map<String, Object> object) {
-
-        final SQLDialect dialect = strategy.dialect();
-
-        final Map<Field<?>, Object> result = new HashMap<>();
-        index.projectionSchema(schema).forEach((k, v) ->
-                result.put(DSL.field(DSL.name(k)), dialect.toSQLValue(v, object.get(k))));
-
-        final List<Name> partitionNames = index.resolvePartitionNames();
-        final List<Object> partition = key.getPartition();
-        assert partitionNames.size() == partition.size();
-        for (int i = 0; i != partition.size(); ++i) {
-            final Name name = partitionNames.get(i);
-            final Object value = partition.get(i);
-            final Use<?> type = schema.typeOf(name);
-            result.put(DSL.field(strategy.columnName(name)), dialect.toSQLValue(type, value));
-        }
-        final List<Sort> sortPaths = index.getSort();
-        final List<Object> sort = key.getSort();
-        assert sortPaths.size() == sort.size();
-        for (int i = 0; i != sort.size(); ++i) {
-            final Name name = sortPaths.get(i).getName();
-            final Object value = sort.get(i);
-            final Use<?> type = schema.typeOf(name);
-            result.put(DSL.field(strategy.columnName(name)), dialect.toSQLValue(type, value));
-        }
-        return result;
-    }
+//    private Map<Field<?>, Object> toRecord(final ReferableSchema schema, final Index index, final Index.Key key, final Map<String, Object> object) {
+//
+//        final SQLDialect dialect = strategy.dialect();
+//
+//        final Map<Field<?>, Object> result = new HashMap<>();
+//        index.projectionSchema(schema).forEach((k, v) ->
+//                result.put(DSL.field(DSL.name(k)), dialect.toSQLValue(v, object.get(k))));
+//
+//        final List<Name> partitionNames = index.resolvePartitionNames();
+//        final List<Object> partition = key.getPartition();
+//        assert partitionNames.size() == partition.size();
+//        for (int i = 0; i != partition.size(); ++i) {
+//            final Name name = partitionNames.get(i);
+//            final Object value = partition.get(i);
+//            final Use<?> type = schema.typeOf(name);
+//            result.put(DSL.field(strategy.columnName(name)), dialect.toSQLValue(type, value));
+//        }
+//        final List<Sort> sortPaths = index.getSort();
+//        final List<Object> sort = key.getSort();
+//        assert sortPaths.size() == sort.size();
+//        for (int i = 0; i != sort.size(); ++i) {
+//            final Name name = sortPaths.get(i).getName();
+//            final Object value = sort.get(i);
+//            final Use<?> type = schema.typeOf(name);
+//            result.put(DSL.field(strategy.columnName(name)), dialect.toSQLValue(type, value));
+//        }
+//        return result;
+//    }
 
     public Table<?> describeTable(final DSLContext context, final org.jooq.Name name) {
 
