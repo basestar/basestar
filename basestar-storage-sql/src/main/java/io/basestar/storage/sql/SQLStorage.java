@@ -39,6 +39,7 @@ import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;
 import io.basestar.storage.query.RangeVisitor;
+import io.basestar.storage.sql.strategy.SQLStrategy;
 import io.basestar.storage.sql.util.DelegatingDatabaseMetaData;
 import io.basestar.storage.util.KeysetPagingUtils;
 import io.basestar.util.Name;
@@ -121,9 +122,9 @@ public class SQLStorage implements DefaultLayerStorage {
     private Optional<org.jooq.Field<?>> resolveField(final Table<?> table, final String name) {
 
         if (strategy.useMetadata()) {
-            final String normalizedName = strategy.columnName(name);
+            final String normalizedName = strategy.getNamingStrategy().columnName(name);
             final List<org.jooq.Field<?>> fields = Arrays.stream(table.fields())
-                    .filter(f -> strategy.columnName(f.getName()).equals(normalizedName))
+                    .filter(f -> strategy.getNamingStrategy().columnName(f.getName()).equals(normalizedName))
                     .collect(Collectors.toList());
             if (fields.isEmpty()) {
                 return Optional.empty();
@@ -133,7 +134,7 @@ public class SQLStorage implements DefaultLayerStorage {
                 return Optional.of(fields.get(0));
             }
         } else {
-            return Optional.of(DSL.field(DSL.name(strategy.columnName(name))));
+            return Optional.of(DSL.field(DSL.name(strategy.getNamingStrategy().columnName(name))));
         }
     }
 
@@ -367,7 +368,7 @@ public class SQLStorage implements DefaultLayerStorage {
                         public QueryPart visitStruct(final UseStruct type) {
 
                             // FIXME
-                            return DSL.field(strategy.columnName(name));
+                            return DSL.field(strategy.getNamingStrategy().columnName(name));
                         }
 
                         @Override
@@ -386,7 +387,7 @@ public class SQLStorage implements DefaultLayerStorage {
         final SQLDialect dialect = strategy.dialect();
 
         // FIXME
-        return name -> DSL.field(strategy.columnName(name));
+        return name -> DSL.field(strategy.getNamingStrategy().columnName(name));
     }
 //
 //    @Override
@@ -787,20 +788,20 @@ public class SQLStorage implements DefaultLayerStorage {
 
     private Field<String> idField(final ReferableSchema schema) {
 
-        return DSL.field(DSL.name(strategy.columnName(ObjectSchema.ID)), String.class);
+        return DSL.field(DSL.name(strategy.getNamingStrategy().columnName(ObjectSchema.ID)), String.class);
     }
 
     private Field<Long> versionField(final ReferableSchema schema) {
 
-        return DSL.field(DSL.name(strategy.columnName(ObjectSchema.VERSION)), Long.class);
+        return DSL.field(DSL.name(strategy.getNamingStrategy().columnName(ObjectSchema.VERSION)), Long.class);
     }
 
     private org.jooq.Name schemaTableName(final LinkableSchema schema) {
 
         if (schema instanceof ReferableSchema) {
-            return strategy.objectTableName((ReferableSchema) schema);
+            return strategy.getNamingStrategy().objectTableName((ReferableSchema) schema);
         } else if (schema instanceof ViewSchema) {
-            return strategy.viewName((ViewSchema) schema);
+            return strategy.getNamingStrategy().viewName((ViewSchema) schema);
         } else {
             throw new IllegalStateException("Cannot determine name for schema " + schema);
         }
@@ -808,17 +809,17 @@ public class SQLStorage implements DefaultLayerStorage {
 
     private org.jooq.Name objectTableName(final ReferableSchema schema) {
 
-        return strategy.objectTableName(schema);
+        return strategy.getNamingStrategy().objectTableName(schema);
     }
 
     private org.jooq.Name historyTableName(final ReferableSchema schema) {
 
-        return strategy.historyTableName(schema);
+        return strategy.getNamingStrategy().historyTableName(schema);
     }
 
     private org.jooq.Name indexTableName(final ReferableSchema schema, final Index index) {
 
-        return strategy.indexTableName(schema, index);
+        return strategy.getNamingStrategy().indexTableName(schema, index);
     }
 
     private Map<String, Object> first(final LinkableSchema schema, final Result<Record> result) {
@@ -900,7 +901,7 @@ public class SQLStorage implements DefaultLayerStorage {
             final Name name = partitionNames.get(i);
             final Object value = partition.get(i);
             final Use<?> type = schema.typeOf(name);
-            result.put(DSL.field(strategy.columnName(name)), dialect.toSQLValue(type, value));
+            result.put(DSL.field(strategy.getNamingStrategy().columnName(name)), dialect.toSQLValue(type, value));
         }
         final List<Sort> sortPaths = index.getSort();
         final List<Object> sort = key.getSort();
@@ -909,7 +910,7 @@ public class SQLStorage implements DefaultLayerStorage {
             final Name name = sortPaths.get(i).getName();
             final Object value = sort.get(i);
             final Use<?> type = schema.typeOf(name);
-            result.put(DSL.field(strategy.columnName(name)), dialect.toSQLValue(type, value));
+            result.put(DSL.field(strategy.getNamingStrategy().columnName(name)), dialect.toSQLValue(type, value));
         }
         return result;
     }

@@ -27,6 +27,9 @@ import io.basestar.schema.Namespace;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.storage.Storage;
 import io.basestar.storage.TestStorage;
+import io.basestar.storage.sql.strategy.DefaultNamingStrategy;
+import io.basestar.storage.sql.strategy.SQLStrategy;
+import io.basestar.storage.sql.strategy.Simple;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
 import org.junit.jupiter.api.Test;
@@ -63,9 +66,12 @@ abstract class TestSQLStorage extends TestStorage {
 
         final String objectSchema = "obj_" + UUID.randomUUID().toString().replaceAll("-", "_");
         final String historySchema = "his_" + UUID.randomUUID().toString().replaceAll("-", "_");
-        final SQLStrategy strategy = SQLStrategy.Simple.builder()
-                .objectSchemaName(objectSchema)
-                .historySchemaName(historySchema)
+        final SQLStrategy strategy = Simple.builder()
+                .namingStrategy(DefaultNamingStrategy.builder()
+                        .objectSchemaName(objectSchema)
+                        .historySchemaName(historySchema)
+                        .dialect(dialect)
+                        .build())
                 .useMetadata(useMetadata())
                 .dialect(dialect)
                 .build();
