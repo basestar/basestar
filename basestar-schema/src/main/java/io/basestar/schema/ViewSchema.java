@@ -27,6 +27,7 @@ import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import io.basestar.expression.Context;
@@ -56,6 +57,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Getter
 public class ViewSchema implements LinkableSchema {
@@ -299,6 +301,9 @@ public class ViewSchema implements LinkableSchema {
         }
         this.aggregating = getProperties().values().stream().map(Property::getExpression)
                 .filter(Objects::nonNull).anyMatch(Expression::isAggregate);
+        List<String> declaredNames = Stream.concat(this.declaredProperties.keySet().stream(), declaredLinks.keySet().stream())
+                .collect(Collectors.toList());
+        validateFieldNames(declaredNames);
     }
 
     @Override

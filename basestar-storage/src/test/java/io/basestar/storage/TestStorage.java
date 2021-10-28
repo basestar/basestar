@@ -9,9 +9,9 @@ package io.basestar.storage;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -47,6 +47,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -134,7 +135,7 @@ public abstract class TestStorage {
 
     protected void writeAll(final Storage storage, final Namespace namespace, final Multimap<String, Map<String, Object>> data) {
 
-        if(!data.isEmpty()) {
+        if (!data.isEmpty()) {
             final Storage.WriteTransaction write = storage.write(Consistency.QUORUM, Versioning.CHECKED);
 
             data.asMap().forEach((k, vs) -> {
@@ -157,7 +158,7 @@ public abstract class TestStorage {
         final Instant now = ISO8601.now();
         final Multimap<String, Map<String, Object>> results = ArrayListMultimap.create();
 
-        try(final InputStream is = TestStorage.class.getResourceAsStream("/data/Petstore/Address.csv")) {
+        try (final InputStream is = TestStorage.class.getResourceAsStream("/data/Petstore/Address.csv")) {
             final CSVParser parser = CSVParser.parse(is, Charsets.UTF_8, CSVFormat.DEFAULT.withFirstRecordAsHeader());
             final List<String> headers = parser.getHeaderNames();
             Streams.stream(parser).forEach(record -> {
@@ -196,7 +197,7 @@ public abstract class TestStorage {
 
         final List<String> ids = Arrays.asList("123", "189", "26", "67", "129", "159", "151", "116", "142", "179");
         assertEquals(ids, results.map(Instance::getId).getItems());
-        if(results.getStats() != null && results.getStats().getTotal() != null) {
+        if (results.getStats() != null && results.getStats().getTotal() != null) {
             assertEquals(16, results.getStats().getTotal());
         }
     }
@@ -234,7 +235,7 @@ public abstract class TestStorage {
         // Horrible index usage, but high storage support
         final String country = UUID.randomUUID().toString();
         final Multimap<String, Map<String, Object>> init = HashMultimap.create();
-        for(int i = 0; i != 100; ++i) {
+        for (int i = 0; i != 100; ++i) {
 
             final String id = UUID.randomUUID().toString();
 
@@ -242,6 +243,70 @@ public abstract class TestStorage {
             data.put("country", country);
             data.put("city", UUID.randomUUID().toString());
             data.put("zip", UUID.randomUUID().toString());
+
+            Instance.setId(data, id);
+            Instance.setVersion(data, 1L);
+            Instance.setCreated(data, now);
+            Instance.setUpdated(data, now);
+
+            init.put(ADDRESS, data);
+        }
+
+        final Storage storage = storage(namespace);
+
+        final ObjectSchema schema = namespace.requireObjectSchema(ADDRESS);
+
+        bulkLoad(storage, init);
+
+        final List<Sort> sort = ImmutableList.of(
+                Sort.desc(Name.of("city")),
+                Sort.asc(Name.of("zip"))
+        );
+
+        final Expression expr = Expression.parse("country == '" + country + "'");
+        final Pager<Map<String, Object>> pager = storage.query(Consistency.ASYNC, schema, expr, sort, Collections.emptySet());
+
+        final Set<String> results = new HashSet<>();
+        Page.Token token = null;
+        for (int i = 0; i != 10; ++i) {
+            final Page<Map<String, Object>> page = pager.page(ImmutableSet.of(Page.Stat.TOTAL, Page.Stat.APPROX_TOTAL), token, 10).join();
+            final Page.Stats stats = page.getStats();
+            if (stats != null) {
+                if (stats.getTotal() != null) {
+                    assertEquals(100, stats.getTotal());
+                }
+                if (stats.getApproxTotal() != null) {
+                    assertEquals(100, stats.getApproxTotal());
+                }
+            }
+            page.forEach(object -> results.add(Instance.getId(object)));
+            token = page.getPaging();
+        }
+        assertEquals(100, results.size());
+    }
+
+    @Test
+    protected void testSortAndPagingNulls() {
+
+        assumeTrue(supportsIndexes());
+
+        final Instant now = ISO8601.now();
+
+        // Horrible index usage, but high storage support
+        final String country = UUID.randomUUID().toString();
+        final Multimap<String, Map<String, Object>> init = HashMultimap.create();
+        for (int i = 0; i != 100; ++i) {
+
+            final String id = ((Integer) i).toString();
+
+            final Map<String, Object> data = new HashMap<>();
+            data.put("country", country);
+            if (i != 2) { // to check if desc ordering works with nulls
+                data.put("city", UUID.randomUUID().toString());
+            }
+            if (i != 1) {  // to check if asc ordering works with nulls
+                data.put("zip", UUID.randomUUID().toString());
+            }
             Instance.setId(data, id);
             Instance.setVersion(data, 1L);
             Instance.setCreated(data, now);
@@ -266,20 +331,22 @@ public abstract class TestStorage {
 
         final Set<String> results = new HashSet<>();
         Page.Token token = null;
-        for(int i = 0; i != 10; ++i) {
-            final Page<Map<String, Object>> page = pager.page(ImmutableSet.of(Page.Stat.TOTAL, Page.Stat.APPROX_TOTAL), token,10).join();
+        for (int i = 0; i != 10; ++i) {
+            final Page<Map<String, Object>> page = pager.page(ImmutableSet.of(Page.Stat.TOTAL, Page.Stat.APPROX_TOTAL), token, 10).join();
             final Page.Stats stats = page.getStats();
-               if(stats != null) {
-                   if(stats.getTotal() != null) {
-                       assertEquals(100, stats.getTotal());
-                   }
-                   if(stats.getApproxTotal() != null) {
-                       assertEquals(100, stats.getApproxTotal());
-                   }
-               }
+            if (stats != null) {
+                if (stats.getTotal() != null) {
+                    assertEquals(100, stats.getTotal());
+                }
+                if (stats.getApproxTotal() != null) {
+                    assertEquals(100, stats.getApproxTotal());
+                }
+            }
             page.forEach(object -> results.add(Instance.getId(object)));
             token = page.getPaging();
         }
+        List<String> collect = results.stream().sorted()
+                .collect(Collectors.toList());
         assertEquals(100, results.size());
     }
 
@@ -308,7 +375,7 @@ public abstract class TestStorage {
             assertTrue(Values.equals(v, v2), k + ": " + v + " != " + v2);
         });
 
-        if(storage.storageTraits(schema).getHistoryConsistency().isStronger(Consistency.EVENTUAL)) {
+        if (storage.storageTraits(schema).getHistoryConsistency().isStronger(Consistency.EVENTUAL)) {
             final Map<String, Object> v1 = storage.getVersion(Consistency.ATOMIC, schema, id, 1L, ImmutableSet.of()).join();
             assertNotNull(v1);
             assertEquals(1, Instance.getVersion(v1));
@@ -366,7 +433,7 @@ public abstract class TestStorage {
                 .put("mapDecimal", Collections.singletonMap("a", BigDecimal.valueOf(3.5)))
                 .put("mapString", Collections.singletonMap("a", "test"))
                 .put("mapBinary", Collections.singletonMap("a", Bytes.valueOf(1, 2, 3, 4)))
-                .put("mapStruct", Collections.singletonMap("a",new Instance(ImmutableMap.of("x", 10L, "y", 5L))))
+                .put("mapStruct", Collections.singletonMap("a", new Instance(ImmutableMap.of("x", 10L, "y", 5L))))
                 .put("mapObject", Collections.singletonMap("a", new Instance(ImmutableMap.of("id", "test"))))
                 .put("mapDate", Collections.singletonMap("a", ISO8601.parseDate("2030-01-01")))
                 .put("mapDatetime", Collections.singletonMap("a", ISO8601.parseDateTime("2030-01-01T01:02:03Z")))
@@ -402,7 +469,7 @@ public abstract class TestStorage {
         final Map<String, Object> current = storage.get(Consistency.ATOMIC, schema, id, ImmutableSet.of()).join();
         assertNotNull(current);
         assertEquals(2, Instance.getVersion(current));
-        if(storage.storageTraits(schema).getHistoryConsistency().isStronger(Consistency.EVENTUAL)) {
+        if (storage.storageTraits(schema).getHistoryConsistency().isStronger(Consistency.EVENTUAL)) {
             final Map<String, Object> v2 = storage.getVersion(Consistency.ATOMIC, schema, id, 2L, ImmutableSet.of()).join();
             assertNotNull(v2);
             assertEquals(2, Instance.getVersion(v2));
@@ -460,7 +527,7 @@ public abstract class TestStorage {
         final String id = UUID.randomUUID().toString();
 
         final StringBuilder str = new StringBuilder();
-        for(int i = 0; i != 1000000; ++i) {
+        for (int i = 0; i != 1000000; ++i) {
             str.append("test");
         }
 
@@ -495,8 +562,8 @@ public abstract class TestStorage {
                 .write().join();
 
         assertCause(ObjectExistsException.class, () -> storage.write(Consistency.ATOMIC, Versioning.CHECKED)
-                    .createObject(schema, id, after)
-                    .write().get());
+                .createObject(schema, id, after)
+                .write().get());
     }
 
     @Test
@@ -900,7 +967,7 @@ public abstract class TestStorage {
 
         final ObjectSchema dateSort = namespace.requireObjectSchema(DATE_SORT);
 
-        for(int i = 0; i != 10; ++i) {
+        for (int i = 0; i != 10; ++i) {
             createComplete(storage, dateSort, ImmutableMap.of(
                     "grp", "test"
             ));
@@ -1047,11 +1114,11 @@ public abstract class TestStorage {
         final Map<String, Object> instance = instance(schema, id, 1L, data);
         final Storage.WriteTransaction write = storage.write(Consistency.ATOMIC, Versioning.CHECKED);
         write.createObject(schema, id, instance);
-        for(final Index index : schema.getIndexes().values()) {
+        for (final Index index : schema.getIndexes().values()) {
             final Consistency best = traits.getIndexConsistency(index.isMultiValue());
-            if(index.getConsistency(best).isAsync() && write instanceof DefaultIndexStorage.WriteTransaction) {
+            if (index.getConsistency(best).isAsync() && write instanceof DefaultIndexStorage.WriteTransaction) {
                 final Map<Index.Key, Map<String, Object>> records = index.readValues(instance);
-                records.forEach((key, projection) -> ((DefaultIndexStorage.WriteTransaction)write).createIndex(schema, index, id, 0L, key, projection));
+                records.forEach((key, projection) -> ((DefaultIndexStorage.WriteTransaction) write).createIndex(schema, index, id, 0L, key, projection));
             }
         }
 
@@ -1092,7 +1159,7 @@ public abstract class TestStorage {
                 }
             });
         }
-        if(!thrown) {
+        if (!thrown) {
             // Should have thrown
             assertThrows(except, () -> {
             });
@@ -1211,7 +1278,7 @@ public abstract class TestStorage {
         final ObjectSchema schema = namespace.requireObjectSchema(SIMPLE);
 
         final Storage.WriteTransaction write = storage.write(Consistency.ASYNC, Versioning.CHECKED);
-        for(int i = 0; i != 200; ++i) {
+        for (int i = 0; i != 200; ++i) {
             final String id = UUID.randomUUID().toString();
             final Map<String, Object> data = data();
             final Map<String, Object> instance = instance(schema, id, 1L, data);
@@ -1229,9 +1296,9 @@ public abstract class TestStorage {
 
         final Scan scan = storage.scan(schema, new Constant(true), 4);
         final List<Map<String, Object>> results = new ArrayList<>();
-        for(int i = 0; i != 4; ++i) {
+        for (int i = 0; i != 4; ++i) {
             final Scan.Segment segment = scan.segment(i);
-            while(segment.hasNext()) {
+            while (segment.hasNext()) {
                 results.add(segment.next());
             }
         }

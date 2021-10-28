@@ -136,7 +136,8 @@ public class ElasticsearchUtils {
     public static SortBuilder<?> sort(final Sort sort) {
 
         return SortBuilders.fieldSort(sort.getName().toString())
-                .order(order(sort.getOrder()));
+                .order(order(sort.getOrder()))
+                .missing(sort.getNulls() == Sort.Nulls.FIRST ? "_first" : "_last");
     }
 
     public static SortOrder order(final Sort.Order order) {
