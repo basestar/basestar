@@ -18,7 +18,6 @@ public interface NamingStrategy {
 
     org.jooq.Name columnName(io.basestar.util.Name name);
 
-    //TODO should we apply entity Casing to these names?
     default org.jooq.Name entityName(final Schema<?> schema) {
         if (schema instanceof ReferableSchema) {
             return objectTableName((ReferableSchema) schema);

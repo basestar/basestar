@@ -1,6 +1,6 @@
 package io.basestar.storage.sql.strategy;
 
-enum EntityType {
+public enum EntityType {
 
     TABLE,
     VIEW,

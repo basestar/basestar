@@ -10,7 +10,7 @@ interface EntityTypeStrategy {
 
     EntityType entityType(io.basestar.storage.sql.SQLDialect dialect, LinkableSchema schema);
 
-    class Default implements EntityTypeStrategy {
+    public class Default implements EntityTypeStrategy {
 
         @Override
         public EntityType entityType(final SQLDialect dialect, final LinkableSchema schema) {
