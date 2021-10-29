@@ -4,7 +4,7 @@ import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.ViewSchema;
 import io.basestar.storage.sql.SQLDialect;
 
-interface EntityTypeStrategy {
+public interface EntityTypeStrategy {
 
     Default DEFAULT = new Default();
 
