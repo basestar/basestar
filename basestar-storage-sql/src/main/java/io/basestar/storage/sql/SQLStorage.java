@@ -574,8 +574,11 @@ public class SQLStorage implements DefaultLayerStorage {
 
                 try {
 
+                    final Map<Field<?>, SelectField<?>> record = toRecord(context, schema, after);
+
                     context.insertInto(DSL.table(objectTableName(schema)))
-                            .set(toRecord(context, schema, after))
+                            .columns(record.keySet())
+                            .select(DSL.select(record.values().toArray(new SelectFieldOrAsterisk[0])))
                             .execute();
 
 //                    final History history = schema.getHistory();
@@ -687,8 +690,11 @@ public class SQLStorage implements DefaultLayerStorage {
 
                 try {
 
+                    final Map<Field<?>, SelectField<?>> record = toRecord(context, schema, after);
+
                     context.insertInto(DSL.table(historyTableName(schema)))
-                            .set(toRecord(context, schema, after))
+                            .columns(record.keySet())
+                            .select(DSL.select(record.values().toArray(new SelectFieldOrAsterisk[0])))
                             .execute();
 
                     return BatchResponse.fromRef(schema.getQualifiedName(), after);
@@ -712,8 +718,11 @@ public class SQLStorage implements DefaultLayerStorage {
 
                     try {
 
+                        final Map<Field<?>, SelectField<?>> record = toRecord(context, schema, after);
+
                         context.insertInto(DSL.table(schemaTableName(schema)))
-                                .set(toRecord(context, schema, after))
+                                .columns(record.keySet())
+                                .select(DSL.select(record.values().toArray(new SelectFieldOrAsterisk[0])))
                                 .execute();
 
                         return BatchResponse.empty();
@@ -887,13 +896,13 @@ public class SQLStorage implements DefaultLayerStorage {
         return result;
     }
 
-    private Map<Field<?>, Object> toRecord(final DSLContext context, final LinkableSchema schema, final Map<String, Object> object) {
+    private Map<Field<?>, SelectField<?>> toRecord(final DSLContext context, final LinkableSchema schema, final Map<String, Object> object) {
 
         final SQLDialect dialect = strategy.dialect();
 
         final Table<?> table = resolveTable(context, DSL.table(schemaTableName(schema)));
 
-        final Map<Field<?>, Object> result = new HashMap<>();
+        final Map<Field<?>, SelectField<?>> result = new HashMap<>();
         schema.metadataSchema().forEach((k, v) -> {
             result.putAll(dialect.toSQLValues(v, fieldResolver(table, k), object.get(k)));
         });
