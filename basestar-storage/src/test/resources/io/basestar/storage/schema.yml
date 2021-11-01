@@ -317,7 +317,7 @@ SimpleSqlFunction:
     - name: y
       type: string
   returns: string
-  language: plpgsql
+  language: sql
   definition: |
     begin
       return "x" in ('a', 'b', 'c') and "y" in ('x', 'y', 'z');
