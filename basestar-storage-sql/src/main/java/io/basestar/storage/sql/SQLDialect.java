@@ -4,10 +4,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.*;
 import io.basestar.schema.use.*;
+import io.basestar.schema.util.Casing;
 import io.basestar.secret.Secret;
 import io.basestar.storage.sql.resolver.FieldResolver;
 import io.basestar.storage.sql.resolver.ValueResolver;
-import io.basestar.schema.util.Casing;
 import io.basestar.util.Name;
 import io.basestar.util.*;
 import org.jooq.Constraint;
@@ -15,6 +15,8 @@ import org.jooq.*;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -83,28 +85,32 @@ public interface SQLDialect {
 
     DataType<?> anyType(UseAny type);
 
-    <T> Map<Field<?>, Object> arrayToSQLValues(UseArray<T> type, FieldResolver field, List<T> value);
+    <T> Map<Field<?>, SelectField<?>> arrayToSQLValues(UseArray<T> type, FieldResolver field, List<T> value);
 
-    <T> Map<Field<?>, Object> pageToSQLValues(UsePage<T> type, FieldResolver field, Page<T> value);
+    Map<Field<?>, SelectField<?>> dateToSQLValues(UseDate type, FieldResolver field, LocalDate value);
 
-    <T> Map<Field<?>, Object> setToSQLValues(UseSet<T> type, FieldResolver field, Set<T> value);
+    Map<Field<?>, SelectField<?>> dateTimeToSQLValues(UseDateTime type, FieldResolver field, Instant value);
 
-    <T> Map<Field<?>, Object> mapToSQLValues(UseMap<T> type, FieldResolver field, Map<String, T> value);
+    <T> Map<Field<?>, SelectField<?>> pageToSQLValues(UsePage<T> type, FieldResolver field, Page<T> value);
 
-    Map<Field<?>, Object> structToSQLValues(UseStruct type, FieldResolver field, Instance value);
+    <T> Map<Field<?>, SelectField<?>> setToSQLValues(UseSet<T> type, FieldResolver field, Set<T> value);
 
-    Map<Field<?>, Object> viewToSQLValues(UseView type, FieldResolver field, Instance value);
+    <T> Map<Field<?>, SelectField<?>> mapToSQLValues(UseMap<T> type, FieldResolver field, Map<String, T> value);
 
-    Map<Field<?>, Object> refToSQLValues(UseRef type, FieldResolver field, Instance value);
+    Map<Field<?>, SelectField<?>> structToSQLValues(UseStruct type, FieldResolver field, Instance value);
 
-    Map<Field<?>, Object> binaryToSQLValues(UseBinary type, FieldResolver field, Bytes value);
+    Map<Field<?>, SelectField<?>> viewToSQLValues(UseView type, FieldResolver field, Instance value);
 
-    default Map<Field<?>, Object> secretToSQLValues(final UseSecret type, final FieldResolver field, final Secret value) {
+    Map<Field<?>, SelectField<?>> refToSQLValues(UseRef type, FieldResolver field, Instance value);
+
+    Map<Field<?>, SelectField<?>> binaryToSQLValues(UseBinary type, FieldResolver field, Bytes value);
+
+    default Map<Field<?>, SelectField<?>> secretToSQLValues(final UseSecret type, final FieldResolver field, final Secret value) {
 
         return binaryToSQLValues(UseBinary.DEFAULT, field, new Bytes(value.encrypted()));
     }
 
-    Map<Field<?>, Object> anyToSQLValues(UseAny type, FieldResolver field, Object value);
+    Map<Field<?>, SelectField<?>> anyToSQLValues(UseAny type, FieldResolver field, Object value);
 
     <T> List<T> arrayFromSQLValue(UseArray<T> type, ValueResolver value);
 
@@ -271,105 +277,106 @@ public interface SQLDialect {
         });
     }
 
-    default Map<Field<?>, Object> toSQLValues(final Use<?> type, final FieldResolver field, final Object value) {
+    default Map<Field<?>, SelectField<?>> toSQLValues(final Use<?> type, final FieldResolver field, final Object value) {
 
         if (value == null) {
             return Collections.emptyMap();
         }
 
-        return type.visit(new Use.Visitor.Defaulting<Map<Field<?>, Object>>() {
+        return type.visit(new Use.Visitor.Defaulting<Map<Field<?>, SelectField<?>>>() {
 
             @Override
-            public <T> Map<Field<?>, Object> visitScalar(final UseScalar<T> type) {
+            public <T> Map<Field<?>, SelectField<?>> visitScalar(final UseScalar<T> type) {
 
-                return field.field().<Map<Field<?>, Object>>map(f -> ImmutableMap.of(f, type.create(value))).orElseGet(ImmutableMap::of);
+                return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, DSL.val(type.create(value)))).orElseGet(ImmutableMap::of);
             }
 
             @Override
-            public Map<Field<?>, Object> visitRef(final UseRef type) {
+            public Map<Field<?>, SelectField<?>> visitRef(final UseRef type) {
 
                 return refToSQLValues(type, field, (Instance) value);
             }
 
             @Override
-            public <T> Map<Field<?>, Object> visitArray(final UseArray<T> type) {
+            public <T> Map<Field<?>, SelectField<?>> visitArray(final UseArray<T> type) {
 
                 return arrayToSQLValues(type, field, type.create(value));
             }
 
             @Override
-            public <T> Map<Field<?>, Object> visitPage(final UsePage<T> type) {
+            public <T> Map<Field<?>, SelectField<?>> visitPage(final UsePage<T> type) {
 
                 return pageToSQLValues(type, field, type.create(value));
             }
 
             @Override
-            public Map<Field<?>, Object> visitComposite(final UseComposite type) {
+            public Map<Field<?>, SelectField<?>> visitComposite(final UseComposite type) {
 
                 throw new UnsupportedOperationException();
             }
 
             @Override
-            public <T> Map<Field<?>, Object> visitSet(final UseSet<T> type) {
+            public <T> Map<Field<?>, SelectField<?>> visitSet(final UseSet<T> type) {
 
                 return setToSQLValues(type, field, type.create(value));
             }
 
             @Override
-            public <T> Map<Field<?>, Object> visitMap(final UseMap<T> type) {
+            public <T> Map<Field<?>, SelectField<?>> visitMap(final UseMap<T> type) {
 
                 return mapToSQLValues(type, field, type.create(value));
             }
 
             @Override
-            public Map<Field<?>, Object> visitStruct(final UseStruct type) {
+            public Map<Field<?>, SelectField<?>> visitStruct(final UseStruct type) {
 
                 return structToSQLValues(type, field, type.create(value));
             }
 
             @Override
-            public Map<Field<?>, Object> visitAny(final UseAny type) {
+            public Map<Field<?>, SelectField<?>> visitAny(final UseAny type) {
 
                 return anyToSQLValues(type, field, type.create(value));
             }
 
             @Override
-            public Map<Field<?>, Object> visitBinary(final UseBinary type) {
+            public Map<Field<?>, SelectField<?>> visitBinary(final UseBinary type) {
 
                 return binaryToSQLValues(type, field, type.create(value));
             }
 
             @Override
-            public Map<Field<?>, Object> visitDate(final UseDate type) {
+            public Map<Field<?>, SelectField<?>> visitDate(final UseDate type) {
 
-                return field.field().<Map<Field<?>, Object>>map(f -> ImmutableMap.of(f, ISO8601.toSqlDate(type.create(value)))).orElseGet(ImmutableMap::of);
+                return dateToSQLValues(type, field, type.create(value));
             }
 
             @Override
-            public Map<Field<?>, Object> visitDateTime(final UseDateTime type) {
+            public Map<Field<?>, SelectField<?>> visitDateTime(final UseDateTime type) {
 
-                return field.field().<Map<Field<?>, Object>>map(f -> ImmutableMap.of(f, ISO8601.toSqlTimestamp(type.create(value)))).orElseGet(ImmutableMap::of);
+                return dateTimeToSQLValues(type, field, type.create(value));
             }
 
             @Override
-            public Map<Field<?>, Object> visitView(final UseView type) {
+            public Map<Field<?>, SelectField<?>> visitView(final UseView type) {
 
                 return viewToSQLValues(type, field, type.create(value));
             }
 
             @Override
-            public <T> Map<Field<?>, Object> visitOptional(final UseOptional<T> type) {
+            public <T> Map<Field<?>, SelectField<?>> visitOptional(final UseOptional<T> type) {
 
-                return type.getType().visit(this);
+                return toSQLValues(type.getType(), field, value);
             }
 
             @Override
-            public Map<Field<?>, Object> visitSecret(final UseSecret type) {
+            public Map<Field<?>, SelectField<?>> visitSecret(final UseSecret type) {
 
                 return secretToSQLValues(type, field, type.create(value));
             }
         });
     }
+
 
     default Object fromSQLValue(final Use<?> type, final ValueResolver value) {
 
