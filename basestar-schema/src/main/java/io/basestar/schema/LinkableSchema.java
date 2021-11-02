@@ -19,11 +19,11 @@ import java.util.SortedSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public interface LinkableSchema extends InstanceSchema, Link.Resolver, Permission.Resolver {
+public interface LinkableSchema extends InstanceSchema, Link.Resolver, Query.Resolver, Permission.Resolver {
 
     String __ID = "__id";
 
-    interface Descriptor<S extends LinkableSchema> extends InstanceSchema.Descriptor<S>, Link.Resolver.Descriptor, Permission.Resolver.Descriptor {
+    interface Descriptor<S extends LinkableSchema> extends InstanceSchema.Descriptor<S>, Link.Resolver.Descriptor, Query.Resolver.Descriptor, Permission.Resolver.Descriptor {
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonDeserialize(using = AbbrevListDeserializer.class)
@@ -57,10 +57,16 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver, Permissio
 
                 return self().describeDeclaredPermissions();
             }
+
+            @Override
+            default Map<String, Query.Descriptor> getQueries() {
+
+                return self().describeDeclaredQueries();
+            }
         }
     }
 
-    interface Builder<B extends Builder<B, S>, S extends LinkableSchema> extends InstanceSchema.Builder<B, S>, Descriptor<S>, Link.Resolver.Builder<B>, Permission.Resolver.Builder<B> {
+    interface Builder<B extends Builder<B, S>, S extends LinkableSchema> extends InstanceSchema.Builder<B, S>, Descriptor<S>, Link.Resolver.Builder<B>, Query.Resolver.Builder<B>, Permission.Resolver.Builder<B> {
 
         B setExpand(Set<Name> expand);
 

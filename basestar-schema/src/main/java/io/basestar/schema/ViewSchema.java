@@ -27,7 +27,6 @@ import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import io.basestar.expression.Context;
@@ -63,6 +62,7 @@ import java.util.stream.Stream;
 public class ViewSchema implements LinkableSchema {
 
     public static final String ID = Reserved.PREFIX + "key";
+
 
     @JsonDeserialize(as = Builder.class)
     public interface Descriptor extends LinkableSchema.Descriptor<ViewSchema> {
@@ -166,6 +166,10 @@ public class ViewSchema implements LinkableSchema {
 
         @Nullable
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
+        private Map<String, Query.Descriptor> queries;
+
+        @Nullable
+        @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         @JsonDeserialize(contentUsing = NameDeserializer.class)
         private Set<Name> expand;
 
@@ -261,6 +265,9 @@ public class ViewSchema implements LinkableSchema {
     private final SortedMap<String, Link> declaredLinks;
 
     @Nonnull
+    private final SortedMap<String, Query> declaredQueries;
+
+    @Nonnull
     private final SortedSet<Name> declaredExpand;
 
     @Nonnull
@@ -293,15 +300,17 @@ public class ViewSchema implements LinkableSchema {
                 (k, v) -> v.build(resolver, context, version, qualifiedName.with(k)));
         this.declaredLinks = Immutable.transformValuesSorted(descriptor.getLinks(), (k, v) -> v.build(resolver, qualifiedName.with(k)));
         this.declaredPermissions = Immutable.transformValuesSorted(descriptor.getPermissions(), (k, v) -> v.build(k));
+        this.declaredQueries = Immutable.transformValuesSorted(descriptor.getQueries(), (k, v) -> v.build(resolver, this, qualifiedName.with(k)));
         this.declaredBucketing = Immutable.list(descriptor.getBucket());
         this.declaredExpand = Immutable.sortedSet(descriptor.getExpand());
         this.extensions = Immutable.sortedMap(descriptor.getExtensions());
-        if(Reserved.isReserved(qualifiedName.last())) {
+        if (Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName.toString());
         }
         this.aggregating = getProperties().values().stream().map(Property::getExpression)
                 .filter(Objects::nonNull).anyMatch(Expression::isAggregate);
-        List<String> declaredNames = Stream.concat(this.declaredProperties.keySet().stream(), declaredLinks.keySet().stream())
+        final List<String> declaredNames = Stream.of(this.declaredProperties, this.declaredLinks, this.declaredQueries)
+                .flatMap(v -> v.keySet().stream())
                 .collect(Collectors.toList());
         validateFieldNames(declaredNames);
     }
@@ -376,7 +385,7 @@ public class ViewSchema implements LinkableSchema {
 
         return declaredProperties;
     }
-    
+
     @Override
     public Map<String, Permission> getPermissions() {
 
@@ -423,11 +432,18 @@ public class ViewSchema implements LinkableSchema {
     }
 
     @Override
+    public Map<String, Query> getQueries() {
+
+        return getDeclaredQueries();
+    }
+
+    @Override
     public Map<String, ? extends Member> getDeclaredMembers() {
 
         return ImmutableMap.<String, Member>builder()
                 .putAll(getDeclaredProperties())
                 .putAll(getDeclaredLinks())
+                .putAll(getDeclaredQueries())
                 .build();
     }
 
@@ -437,6 +453,7 @@ public class ViewSchema implements LinkableSchema {
         return ImmutableMap.<String, Member>builder()
                 .putAll(getProperties())
                 .putAll(getLinks())
+                .putAll(getQueries())
                 .build();
     }
 
