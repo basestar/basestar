@@ -137,7 +137,7 @@ public class Simple implements SQLStrategy {
         final List<DDLStep> queries = new ArrayList<>();
 
         if (dialect.supportsUDFs()) {
-            final String definition = schema.getReplacedDefinition(s -> namingStrategy.entityName(s).toString());
+            final String definition = schema.getReplacedDefinition(s -> namingStrategy.reference(s).toString());
             final String sql = dialect().createFunctionDDL(context, namingStrategy.functionName(schema), schema.getReturns(), schema.getArguments(), schema.getLanguage(), definition);
             queries.add(DDLStep.from(context, sql));
         }
@@ -151,7 +151,7 @@ public class Simple implements SQLStrategy {
 
         final String query;
         if (schema.getFrom() instanceof FromSql) {
-            query = ((FromSql) schema.getFrom()).getReplacedSql(s -> namingStrategy.entityName(s).toString());
+            query = ((FromSql) schema.getFrom()).getReplacedSql(s -> namingStrategy.reference(s).toString());
         } else {
             query = viewQuery(context, schema).getSQL();
         }
@@ -182,7 +182,7 @@ public class Simple implements SQLStrategy {
 
         if (schema.getFrom() instanceof FromSql) {
             queries.add(DDLStep.from(context.createOrReplaceView(viewName)
-                    .as(DSL.sql(((FromSql) schema.getFrom()).getReplacedSql(s -> namingStrategy.entityName(s).toString())))));
+                    .as(DSL.sql(((FromSql) schema.getFrom()).getReplacedSql(s -> namingStrategy.reference(s).toString())))));
         } else {
             queries.add(DDLStep.from(context.createOrReplaceView(viewName)
                     .as(viewQuery(context, schema))));

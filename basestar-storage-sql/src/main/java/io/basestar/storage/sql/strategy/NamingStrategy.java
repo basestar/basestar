@@ -30,6 +30,10 @@ public interface NamingStrategy {
         }
     }
 
+    default org.jooq.Name reference(final Schema<?> schema) {
+        return entityName(schema);
+    }
+
     String name(Schema<?> schema);
 
     Casing getColumnCasing();
