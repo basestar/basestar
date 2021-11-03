@@ -168,6 +168,20 @@ public class ObjectSchema implements ReferableSchema {
     private final SortedMap<String, Link> links;
 
     /**
+     * Map of named queries (shares namespace with properties and transients)
+     */
+
+    @Nonnull
+    private final SortedMap<String, Query> declaredQueries;
+
+    /**
+     * Map of named queries (shares namespace with properties and transients)
+     */
+
+    @Nonnull
+    private final SortedMap<String, Query> queries;
+
+    /**
      * Map of index definitions
      */
 
@@ -298,6 +312,10 @@ public class ObjectSchema implements ReferableSchema {
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         private Map<String, Index.Descriptor> indexes;
 
+        @Nullable
+        @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
+        private Map<String, Query.Descriptor> queries;
+
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         private List<? extends Constraint> constraints;
 
@@ -343,6 +361,8 @@ public class ObjectSchema implements ReferableSchema {
         this.links = Link.extend(extend, declaredLinks);
         this.declaredIndexes = Immutable.transformValuesSorted(descriptor.getIndexes(), (k, v) -> v.build(this, qualifiedName.with(k)));
         this.indexes = Index.extend(extend, declaredIndexes);
+        this.declaredQueries = Immutable.transformValuesSorted(descriptor.getQueries(), (k, v) -> v.build(resolver, this, qualifiedName.with(k)));
+        this.queries = Query.extend(extend, declaredQueries);
         this.constraints = Immutable.list(descriptor.getConstraints());
         this.declaredPermissions = Immutable.transformValuesSorted(descriptor.getPermissions(), (k, v) -> v.build(k));
         this.permissions = Permission.extend(extend, declaredPermissions);
@@ -354,15 +374,15 @@ public class ObjectSchema implements ReferableSchema {
         if (Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
-        List<String> fieldNames = Stream.of(this.declaredProperties, this.declaredLinks, this.declaredTransients)
+        final List<String> declaredNames = Stream.of(this.declaredProperties, this.declaredLinks, this.declaredTransients, this.declaredQueries)
                 .flatMap(v -> v.keySet().stream())
                 .collect(Collectors.toList());
-        fieldNames.forEach(k -> {
+        declaredNames.forEach(k -> {
             if (METADATA_SCHEMA.containsKey(k)) {
                 throw new ReservedNameException(k);
             }
         });
-        validateFieldNames(fieldNames);
+        validateFieldNames(declaredNames);
     }
 
     @Override

@@ -274,6 +274,7 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
         members.putAll(getDeclaredProperties());
         members.putAll(getDeclaredTransients());
         members.putAll(getDeclaredLinks());
+        members.putAll(getDeclaredQueries());
         return members;
     }
 
@@ -284,6 +285,7 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
         members.putAll(getProperties());
         members.putAll(getTransients());
         members.putAll(getLinks());
+        members.putAll(getQueries());
         return members;
     }
 

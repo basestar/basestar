@@ -81,6 +81,25 @@ Order:
       type: Store
     user:
       type: User
+  queries:
+    byPet:
+      arguments:
+        - name: petId
+          type: string
+      expression: pet.id == petId
+      sort: id:ASC
+    byStore:
+      arguments:
+        - name: storeId
+          type: string
+      expression: store.id == storeId
+      sort: id:ASC
+    byUser:
+      arguments:
+        - name: userId
+          type: string
+      expression: user.id == userId
+      sort: id:ASC
   indexes:
     user:
       partition: user.id
