@@ -20,12 +20,9 @@ package io.basestar.storage.sql.strategy;
  * #L%
  */
 
-import io.basestar.schema.Index;
-import io.basestar.schema.ReferableSchema;
 import io.basestar.schema.Schema;
 import io.basestar.storage.sql.util.DDLStep;
 import org.jooq.DSLContext;
-import org.jooq.Name;
 import org.jooq.conf.StatementType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,8 +53,4 @@ public interface SQLStrategy {
     StatementType statementType();
 
     boolean useMetadata();
-
-    Name historyTableName(ReferableSchema schema);
-
-    Name indexTableName(ReferableSchema schema, Index index);
 }

@@ -2,7 +2,6 @@ package io.basestar.storage.sql.strategy;
 
 import io.basestar.expression.constant.Constant;
 import io.basestar.schema.Index;
-import io.basestar.schema.Schema;
 import io.basestar.schema.*;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.from.From;
@@ -11,8 +10,10 @@ import io.basestar.schema.from.FromSql;
 import io.basestar.schema.util.Casing;
 import io.basestar.storage.sql.SQLExpressionVisitor;
 import io.basestar.storage.sql.util.DDLStep;
-import lombok.Builder;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.*;
 import org.jooq.conf.StatementType;
@@ -22,13 +23,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import static io.basestar.storage.sql.strategy.DefaultNamingStrategy.combineNames;
-
 
 @Data
 @Slf4j
-@Builder(builderClassName = "Builder")
-public class Simple implements SQLStrategy {
+@SuperBuilder
+@RequiredArgsConstructor
+@AllArgsConstructor
+public abstract class BaseSQLStrategy implements SQLStrategy {
 
     private final io.basestar.storage.sql.SQLDialect dialect;
 
@@ -39,13 +40,6 @@ public class Simple implements SQLStrategy {
     private EntityTypeStrategy entityTypeStrategy;
 
     private NamingStrategy namingStrategy;
-
-    //TODO never used?
-    private final String catalogName;
-
-    private final String objectSchemaName;
-
-    private final String historySchemaName;
 
     @Override
     public io.basestar.storage.sql.SQLDialect dialect() {
@@ -80,40 +74,6 @@ public class Simple implements SQLStrategy {
         return namingStrategy;
     }
 
-    @Override
-    public List<DDLStep> createEntityDDL(final DSLContext context, final Collection<? extends Schema<?>> schemas) {
-
-        final List<DDLStep> queries = new ArrayList<>();
-
-        queries.add(DDLStep.from(context.createSchemaIfNotExists(DSL.name(getObjectSchemaName()))));
-        if (getHistorySchemaName() != null) {
-            queries.add(DDLStep.from(context.createSchemaIfNotExists(DSL.name(getHistorySchemaName()))));
-        }
-
-        for (final Schema<?> schema : schemas) {
-
-            if (schema instanceof LinkableSchema) {
-                queries.addAll(createEntityDDL(context, (LinkableSchema) schema));
-            } else if (schema instanceof FunctionSchema) {
-                queries.addAll(createFunctionDDL(context, (FunctionSchema) schema));
-            }
-        }
-
-        return queries;
-    }
-
-    @Override
-    public org.jooq.Name historyTableName(final ReferableSchema schema) {
-
-        return combineNames(DSL.name(historySchemaName), DSL.name(namingStrategy.name(schema)));
-    }
-
-    @Override
-    public org.jooq.Name indexTableName(final ReferableSchema schema, final Index index) {
-
-        final String name = namingStrategy.name(schema) + Reserved.PREFIX + index.getName();
-        return combineNames(DSL.name(objectSchemaName), DSL.name(name));
-    }
 
     protected List<DDLStep> createEntityDDL(final DSLContext context, final LinkableSchema schema) {
 
@@ -147,7 +107,7 @@ public class Simple implements SQLStrategy {
     protected List<DDLStep> createMaterializedViewDDL(final DSLContext context, final ViewSchema schema) {
 
         final List<DDLStep> queries = new ArrayList<>();
-        final org.jooq.Name viewName = namingStrategy.viewName(schema);
+        final Name viewName = namingStrategy.viewName(schema);
 
         final String query;
         if (schema.getFrom() instanceof FromSql) {
@@ -163,7 +123,7 @@ public class Simple implements SQLStrategy {
     protected List<DDLStep> createFakeViewDDL(final DSLContext context, final LinkableSchema schema) {
 
         final List<DDLStep> queries = new ArrayList<>();
-        final org.jooq.Name viewName = namingStrategy.entityName(schema);
+        final Name viewName = namingStrategy.entityName(schema);
 
         final Casing columnCasing = namingStrategy.getColumnCasing();
 
@@ -178,7 +138,7 @@ public class Simple implements SQLStrategy {
     protected List<DDLStep> createViewDDL(final DSLContext context, final ViewSchema schema) {
 
         final List<DDLStep> queries = new ArrayList<>();
-        final org.jooq.Name viewName = namingStrategy.viewName(schema);
+        final Name viewName = namingStrategy.viewName(schema);
 
         if (schema.getFrom() instanceof FromSql) {
             queries.add(DDLStep.from(context.createOrReplaceView(viewName)
@@ -244,8 +204,8 @@ public class Simple implements SQLStrategy {
 
         final Casing columnCasing = namingStrategy.getColumnCasing();
 
-        final org.jooq.Name objectTableName = getNamingStrategy().objectTableName(schema);
-        final org.jooq.Name historyTableName = historyTableName(schema);
+        final Name objectTableName = getNamingStrategy().objectTableName(schema);
+        final Name historyTableName = getNamingStrategy().historyTableName(schema);
 
         final List<Field<?>> columns = dialect.fields(columnCasing, schema); //rowMapper(schema, schema.getExpand()).columns();
 
@@ -256,9 +216,9 @@ public class Simple implements SQLStrategy {
         if (dialect.supportsIndexes()) {
             for (final Index index : schema.getIndexes().values()) {
                 if (index.isMultiValue()) {
-                    final org.jooq.Name indexTableName = indexTableName(schema, index);
+                    final Name indexTableName = getNamingStrategy().indexTableName(schema, index);
                     log.info("Creating multi-value index table {}", indexTableName);
-                    queries.add(DDLStep.from(context.createTableIfNotExists(indexTableName(schema, index))
+                    queries.add(DDLStep.from(context.createTableIfNotExists(indexTableName)
                             .columns(dialect.fields(columnCasing, schema, index))
                             .constraints(dialect.primaryKey(columnCasing, schema, index))));
                 } else if (index.isUnique()) {
@@ -276,7 +236,7 @@ public class Simple implements SQLStrategy {
             }
         }
 
-        if (getHistorySchemaName() != null) {
+        if (isHistoryTableEnabled()) {
             log.info("Creating history table {}", historyTableName);
             queries.add(DDLStep.from(withHistoryPrimaryKey(schema, context.createTableIfNotExists(historyTableName)
                     .columns(columns))));
@@ -284,6 +244,8 @@ public class Simple implements SQLStrategy {
 
         return queries;
     }
+
+    protected abstract boolean isHistoryTableEnabled();
 
     private CreateTableFinalStep withPrimaryKey(final LinkableSchema schema, final CreateTableColumnStep create) {
 

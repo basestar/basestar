@@ -1,10 +1,10 @@
 package io.basestar.storage.sql.strategy;
 
-import io.basestar.schema.FunctionSchema;
-import io.basestar.schema.ReferableSchema;
-import io.basestar.schema.Schema;
-import io.basestar.schema.ViewSchema;
+import io.basestar.schema.*;
 import io.basestar.schema.util.Casing;
+import org.jooq.Name;
+
+import java.util.Optional;
 
 public interface NamingStrategy {
 
@@ -41,4 +41,12 @@ public interface NamingStrategy {
     Casing getEntityCasing();
 
     String getDelimiter();
+
+    Name historyTableName(ReferableSchema schema);
+
+    Name indexTableName(ReferableSchema schema, Index index);
+
+    Optional<Name> getSchema(ReferableSchema schema);
+
+    Optional<Name> getCatalog(ReferableSchema schema);
 }

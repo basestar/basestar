@@ -1,9 +1,6 @@
 package io.basestar.storage.sql.strategy;
 
-import io.basestar.schema.FunctionSchema;
-import io.basestar.schema.ReferableSchema;
-import io.basestar.schema.Schema;
-import io.basestar.schema.ViewSchema;
+import io.basestar.schema.*;
 import io.basestar.schema.util.Casing;
 import io.basestar.storage.sql.SQLUtils;
 import io.basestar.util.Nullsafe;
@@ -14,6 +11,7 @@ import org.jooq.Name;
 import org.jooq.impl.DSL;
 
 import javax.annotation.Nullable;
+import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -36,24 +34,27 @@ public class DefaultNamingStrategy implements NamingStrategy {
     @Nullable
     private final String objectSchemaName;
 
+    @Nullable
+    private final String historySchemaName;
+
     private final io.basestar.storage.sql.SQLDialect dialect;
 
     @Override
     public org.jooq.Name objectTableName(final ReferableSchema schema) {
 
-        return combineNames(DSL.name(objectSchemaName), customizeName(schema, () -> DSL.name(name(schema))));
+        return combineNames(DSL.name(objectSchemaName), customizeName(schema, () -> DSL.name(fullName(schema))));
     }
 
     @Override
     public org.jooq.Name functionName(final FunctionSchema schema) {
 
-        return combineNames(DSL.name(objectSchemaName), customizeName(schema, () -> DSL.name(name(schema))));
+        return combineNames(DSL.name(objectSchemaName), customizeName(schema, () -> DSL.name(fullName(schema))));
     }
 
     @Override
     public Name viewName(final ViewSchema schema) {
 
-        return combineNames(DSL.name(objectSchemaName), customizeName(schema, () -> DSL.name(name(schema))));
+        return combineNames(DSL.name(objectSchemaName), customizeName(schema, () -> DSL.name(fullName(schema))));
     }
 
     @Override
@@ -109,5 +110,36 @@ public class DefaultNamingStrategy implements NamingStrategy {
     public String getDelimiter() {
 
         return Nullsafe.orDefault(delimiter, "_");
+    }
+
+    @Override
+    public org.jooq.Name historyTableName(final ReferableSchema schema) {
+
+        return combineNames(DSL.name(historySchemaName), DSL.name(fullName(schema)));
+    }
+
+    @Override
+    public org.jooq.Name indexTableName(final ReferableSchema schema, final Index index) {
+
+        final String name = fullName(schema) + Reserved.PREFIX + index.getName();
+        return combineNames(DSL.name(objectSchemaName), DSL.name(name));
+    }
+
+    @Override
+    public Optional<Name> getSchema(ReferableSchema schema) {
+        return Optional.empty();
+    }
+
+    @Override
+    public Optional<Name> getCatalog(ReferableSchema schema) {
+        return Optional.empty();
+    }
+
+    private String fullName(final Schema<?> schema) {
+
+        final Casing casing = getEntityCasing();
+        return schema.getQualifiedName().stream()
+                .map(casing::name)
+                .collect(Collectors.joining(getDelimiter()));
     }
 }

@@ -834,12 +834,12 @@ public class SQLStorage implements DefaultLayerStorage {
 
     private org.jooq.Name historyTableName(final ReferableSchema schema) {
 
-        return strategy.historyTableName(schema);
+        return strategy.getNamingStrategy().historyTableName(schema);
     }
 
     private org.jooq.Name indexTableName(final ReferableSchema schema, final Index index) {
 
-        return strategy.indexTableName(schema, index);
+        return strategy.getNamingStrategy().indexTableName(schema, index);
     }
 
     private Map<String, Object> first(final LinkableSchema schema, final Result<Record> result) {
