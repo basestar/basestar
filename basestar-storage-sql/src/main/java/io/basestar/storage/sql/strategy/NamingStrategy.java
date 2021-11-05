@@ -34,8 +34,6 @@ public interface NamingStrategy {
         return entityName(schema);
     }
 
-    String name(Schema<?> schema);
-
     Casing getColumnCasing();
 
     Casing getEntityCasing();

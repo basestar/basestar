@@ -69,15 +69,6 @@ public class DefaultNamingStrategy implements NamingStrategy {
         return dialect.columnName(getColumnCasing(), name);
     }
 
-    @Override
-    public String name(final Schema<?> schema) {
-
-        final Casing casing = getEntityCasing();
-        return schema.getQualifiedName().stream()
-                .map(casing::name)
-                .collect(Collectors.joining(getDelimiter()));
-    }
-
     private org.jooq.Name customizeName(final Schema<?> schema, final Supplier<Name> defaultName) {
 
         return schema.getOptionalExtension(String.class, CUSTOM_TABLE_NAME_EXTENSION)
