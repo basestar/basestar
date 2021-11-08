@@ -22,6 +22,7 @@ import org.jooq.impl.DSL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 
 @Data
@@ -205,7 +206,7 @@ public abstract class BaseSQLStrategy implements SQLStrategy {
         final Casing columnCasing = namingStrategy.getColumnCasing();
 
         final Name objectTableName = getNamingStrategy().objectTableName(schema);
-        final Name historyTableName = getNamingStrategy().historyTableName(schema);
+        final Optional<Name> historyTableName = getNamingStrategy().historyTableName(schema);
 
         final List<Field<?>> columns = dialect.fields(columnCasing, schema); //rowMapper(schema, schema.getExpand()).columns();
 
@@ -216,11 +217,11 @@ public abstract class BaseSQLStrategy implements SQLStrategy {
         if (dialect.supportsIndexes()) {
             for (final Index index : schema.getIndexes().values()) {
                 if (index.isMultiValue()) {
-                    final Name indexTableName = getNamingStrategy().indexTableName(schema, index);
+                    final Optional<Name> indexTableName = getNamingStrategy().indexTableName(schema, index);
                     log.info("Creating multi-value index table {}", indexTableName);
-                    queries.add(DDLStep.from(context.createTableIfNotExists(indexTableName)
+                    indexTableName.ifPresent(name -> queries.add(DDLStep.from(context.createTableIfNotExists(name)
                             .columns(dialect.fields(columnCasing, schema, index))
-                            .constraints(dialect.primaryKey(columnCasing, schema, index))));
+                            .constraints(dialect.primaryKey(columnCasing, schema, index)))));
                 } else if (index.isUnique()) {
                     log.info("Creating unique index {}:{}", objectTableName, index.getName());
                     queries.add(DDLStep.from(context.createUniqueIndexIfNotExists(index.getName())
@@ -238,8 +239,9 @@ public abstract class BaseSQLStrategy implements SQLStrategy {
 
         if (isHistoryTableEnabled()) {
             log.info("Creating history table {}", historyTableName);
-            queries.add(DDLStep.from(withHistoryPrimaryKey(schema, context.createTableIfNotExists(historyTableName)
-                    .columns(columns))));
+            historyTableName.ifPresent(name -> queries.add(DDLStep.from(withHistoryPrimaryKey(schema, context.createTableIfNotExists(name)
+                    .columns(columns)))));
+
         }
 
         return queries;

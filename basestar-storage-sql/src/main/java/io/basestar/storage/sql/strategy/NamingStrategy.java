@@ -40,11 +40,11 @@ public interface NamingStrategy {
 
     String getDelimiter();
 
-    Name historyTableName(ReferableSchema schema);
+    Optional<Name> historyTableName(ReferableSchema schema);
 
-    Name indexTableName(ReferableSchema schema, Index index);
+    Optional<Name> indexTableName(ReferableSchema schema, Index index);
 
-    Optional<Name> getSchema(ReferableSchema schema);
+    Optional<Name> getSchema(Schema<?> schema);
 
-    Optional<Name> getCatalog(ReferableSchema schema);
+    Optional<Name> getCatalog(Schema<?> schema);
 }
