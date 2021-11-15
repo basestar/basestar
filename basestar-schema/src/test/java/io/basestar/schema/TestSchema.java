@@ -1,6 +1,8 @@
 package io.basestar.schema;
 
 import com.google.common.collect.ImmutableSet;
+import io.basestar.expression.Context;
+import io.basestar.expression.Expression;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import org.junit.jupiter.api.Test;
@@ -32,5 +34,17 @@ public class TestSchema {
 
         assertEquals(ImmutableSet.of(Name.of("BaseView"), Name.of("Object1"), Name.of("Object2"),
                 Name.of("Linked"), Name.of("Ref1"), Name.of("Ref2"), Name.of("Ref3")), deps);
+    }
+
+    @Test
+    void testQueries() throws Exception {
+
+        final Namespace namespace = Namespace.load(TestInterfaceSchema.class.getResource("/schema/Petstore.yml"));
+
+        final ObjectSchema schema = namespace.requireObjectSchema("Order");
+        assertEquals(3, schema.getQueries().size());
+        final Query query = schema.requireQuery("byPet", true);
+        assertEquals(Expression.parseAndBind(Context.init(), "pet.id == petId"), query.getExpression());
+        assertEquals(1, query.getArguments().size());
     }
 }

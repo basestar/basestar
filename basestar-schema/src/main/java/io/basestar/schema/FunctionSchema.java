@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Getter
 @Accessors(chain = true)
@@ -242,7 +243,8 @@ public class FunctionSchema implements Schema<Callable> {
         return getReplacedDefinition(definition, using, replacer);
     }
 
-    public static String getReplacedDefinition(final String definition, final Map<String, From> using, final Function<Schema<?>, String> replacer) {
+    public static String replaceConcrete(final String definition, final Map<String, From> using,
+                                         final Function<Schema<?>, String> replacer) {
 
         final Matcher matcher = DEFINITION_REPLACEMENT_REGEX.matcher(definition);
         final StringBuffer buffer = new StringBuffer();
@@ -257,5 +259,46 @@ public class FunctionSchema implements Schema<Callable> {
         }
         matcher.appendTail(buffer);
         return buffer.toString();
+    }
+
+
+    public static String getReplacedDefinition(final String definition, final Map<String, From> using,
+                                               final Function<Schema<?>, String> replacer) {
+
+        if (using.keySet().size() == 0) {
+            return definition;
+        }
+        final String groups = using.keySet().stream()
+                .map(Pattern::quote)
+                .collect(Collectors.joining("|"));
+
+        final String regex = String.format("(?:[\\s]|(^))(%s)(?:[(\\s]|($))", groups);
+        final Pattern pattern = Pattern.compile(regex);
+        final int groupToReplace = 2;
+
+        final String withReplacements = replace(definition, using, replacer, groupToReplace, pattern);
+        return replaceConcrete(withReplacements, using, replacer);
+    }
+
+    private static String replace(final String definition, final Map<String, From> using,
+                                  final Function<Schema<?>, String> replacer,
+                                  final int groupToReplace, Pattern pattern) {
+
+        final StringBuilder stringBuilder = new StringBuilder(definition);
+        final Matcher matcher = pattern.matcher(definition);
+        if (matcher.find()) {
+            String name = matcher.group(groupToReplace);
+
+            final From use = using.get(name);
+            if (use instanceof FromSchema) {
+                stringBuilder.replace(matcher.start(groupToReplace), matcher.end(groupToReplace), replacer.apply(((FromSchema) use).getSchema()));
+                return replace(stringBuilder.toString(), using, replacer, groupToReplace, pattern);
+            } else {
+                throw new IllegalStateException("SQL view schema does not declare " + name);
+            }
+
+        }
+
+        return stringBuilder.toString();
     }
 }

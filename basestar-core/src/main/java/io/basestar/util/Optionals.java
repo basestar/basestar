@@ -2,6 +2,7 @@ package io.basestar.util;
 
 import java.util.Optional;
 import java.util.function.BiFunction;
+import java.util.stream.Stream;
 
 public class Optionals {
 
@@ -13,5 +14,10 @@ public class Optionals {
         } else {
             return Optional.empty();
         }
+    }
+
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+    public static <T> Stream<T> stream(final Optional<T> opt) {
+        return opt.map(Stream::of).orElseGet(Stream::empty);
     }
 }

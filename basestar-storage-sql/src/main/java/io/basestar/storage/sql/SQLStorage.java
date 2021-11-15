@@ -41,6 +41,7 @@ import io.basestar.storage.query.Range;
 import io.basestar.storage.query.RangeVisitor;
 import io.basestar.storage.sql.resolver.FieldResolver;
 import io.basestar.storage.sql.resolver.ValueResolver;
+import io.basestar.storage.sql.strategy.SQLStrategy;
 import io.basestar.storage.sql.util.DelegatingDatabaseMetaData;
 import io.basestar.storage.util.KeysetPagingUtils;
 import io.basestar.util.Name;
@@ -102,30 +103,23 @@ public class SQLStorage implements DefaultLayerStorage {
         return new Builder();
     }
 
-    @Setter
-    @Accessors(chain = true)
-    public static class Builder {
+    private static void closeQuietly(final Connection conn) {
 
-        private DataSource dataSource;
-
-        private SQLDialect dialect;
-
-        private SQLStrategy strategy;
-
-        private EventStrategy eventStrategy;
-
-        public SQLStorage build() {
-
-            return new SQLStorage(this);
+        try {
+            if (conn != null) {
+                conn.close();
+            }
+        } catch (final Exception e2) {
+            throw new IllegalStateException(e2);
         }
     }
 
     private Optional<org.jooq.Field<?>> resolveField(final Table<?> table, final String name) {
 
         if (strategy.useMetadata()) {
-            final String normalizedName = strategy.columnName(name);
+            final String normalizedName = strategy.getNamingStrategy().columnName(name);
             final List<org.jooq.Field<?>> fields = Arrays.stream(table.fields())
-                    .filter(f -> strategy.columnName(f.getName()).equals(normalizedName))
+                    .filter(f -> strategy.getNamingStrategy().columnName(f.getName()).equals(normalizedName))
                     .collect(Collectors.toList());
             if (fields.isEmpty()) {
                 return Optional.empty();
@@ -135,7 +129,7 @@ public class SQLStorage implements DefaultLayerStorage {
                 return Optional.of(fields.get(0));
             }
         } else {
-            return Optional.of(DSL.field(DSL.name(strategy.columnName(name))));
+            return Optional.of(DSL.field(DSL.name(strategy.getNamingStrategy().columnName(name))));
         }
     }
 
@@ -271,12 +265,10 @@ public class SQLStorage implements DefaultLayerStorage {
                                                                    final Page.Token token, final Set<Page.Stat> stats) {
 
 
-        final Table<Record> rawTable;
-        if (index == null) {
-            rawTable = DSL.table(schemaTableName(schema));
-        } else {
-            rawTable = DSL.table(indexTableName((ReferableSchema) schema, index));
-        }
+        org.jooq.Name tableName = Optional.ofNullable(index)
+                .flatMap(index1 -> indexTableName((ReferableSchema) schema, index1))
+                .orElseGet(() -> schemaTableName(schema));
+        final Table<Record> rawTable = DSL.table(tableName);
 
         final CompletableFuture<Page<Map<String, Object>>> pageFuture = withContext(context -> {
 
@@ -378,7 +370,7 @@ public class SQLStorage implements DefaultLayerStorage {
                         public QueryPart visitStruct(final UseStruct type) {
 
                             // FIXME
-                            return DSL.field(strategy.columnName(name));
+                            return DSL.field(strategy.getNamingStrategy().columnName(name));
                         }
 
                         @Override
@@ -397,7 +389,7 @@ public class SQLStorage implements DefaultLayerStorage {
         final SQLDialect dialect = strategy.dialect();
 
         // FIXME
-        return name -> DSL.field(strategy.columnName(name));
+        return name -> DSL.field(strategy.getNamingStrategy().columnName(name));
     }
 //
 //    @Override
@@ -518,7 +510,9 @@ public class SQLStorage implements DefaultLayerStorage {
 
                     for (final Map.Entry<ObjectSchema, Set<IdVersion>> entry : byIdVersion.entrySet()) {
                         final ObjectSchema schema = entry.getKey();
-                        final Table<?> table = resolveTable(context, DSL.table(historyTableName(schema)));
+                        org.jooq.Name historyTableName = historyTableName(schema)
+                                .orElseThrow(() -> new IllegalStateException("History table is not available, therefore querying by id_version is not allowed"));
+                        final Table<?> table = resolveTable(context, DSL.table(historyTableName));
                         final Set<Row2<String, Long>> idVersions = entry.getValue().stream()
                                 .map(v -> DSL.row(v.getId(), v.getVersion()))
                                 .collect(Collectors.toSet());
@@ -542,6 +536,238 @@ public class SQLStorage implements DefaultLayerStorage {
         return values.stream().map(DSL::inline).collect(Collectors.toList());
     }
 
+    @Override
+    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
+
+        return new WriteTransaction();
+    }
+
+    @Override
+    public EventStrategy eventStrategy(final ReferableSchema schema) {
+
+        return eventStrategy;
+    }
+
+    @Override
+    public StorageTraits storageTraits(final ReferableSchema schema) {
+
+        return SQLStorageTraits.INSTANCE;
+    }
+
+    @Override
+    public Set<Name> supportedExpand(final LinkableSchema schema, final Set<Name> expand) {
+
+        return Collections.emptySet();
+    }
+
+    private <T> CompletableFuture<T> withContext(final Function<DSLContext, CompletionStage<T>> with) {
+
+        final SQLDialect dialect = strategy.dialect();
+
+        Connection conn = null;
+        try {
+            conn = dataSource.getConnection();
+            conn.setAutoCommit(false);
+            final DSLContext context = DSL.using(conn, dialect.dmlDialect(), new Settings().withStatementType(strategy.statementType()));
+            final Connection conn2 = conn;
+            return with.apply(context)
+                    .toCompletableFuture()
+                    .whenComplete((a, b) -> closeQuietly(conn2));
+        } catch (final Exception e) {
+            closeQuietly(conn);
+            if (e instanceof RuntimeException) {
+                throw (RuntimeException) e;
+            } else {
+                throw new IllegalStateException(e);
+            }
+        }
+    }
+
+    private Field<String> idField(final ReferableSchema schema) {
+
+        return DSL.field(DSL.name(strategy.getNamingStrategy().columnName(ObjectSchema.ID)), String.class);
+    }
+
+    private Field<Long> versionField(final ReferableSchema schema) {
+
+        return DSL.field(DSL.name(strategy.getNamingStrategy().columnName(ObjectSchema.VERSION)), Long.class);
+    }
+
+    private org.jooq.Name schemaTableName(final LinkableSchema schema) {
+
+        if (schema instanceof ReferableSchema) {
+            return strategy.getNamingStrategy().objectTableName((ReferableSchema) schema);
+        } else if (schema instanceof ViewSchema) {
+            return strategy.getNamingStrategy().viewName((ViewSchema) schema);
+        } else {
+            throw new IllegalStateException("Cannot determine name for schema " + schema);
+        }
+    }
+
+    private org.jooq.Name objectTableName(final ReferableSchema schema) {
+
+        return strategy.getNamingStrategy().objectTableName(schema);
+    }
+
+    private Optional<org.jooq.Name> historyTableName(final ReferableSchema schema) {
+
+        return strategy.getNamingStrategy().historyTableName(schema);
+    }
+
+    private Optional<org.jooq.Name> indexTableName(final ReferableSchema schema, final Index index) {
+
+        return strategy.getNamingStrategy().indexTableName(schema, index);
+    }
+
+    private Map<String, Object> first(final LinkableSchema schema, final Result<Record> result) {
+
+        if (result.isEmpty()) {
+            return null;
+        } else {
+            return fromRecord(schema, result.iterator().next());
+        }
+    }
+
+    private List<Map<String, Object>> all(final LinkableSchema schema, final Result<Record> result) {
+
+        return result.stream()
+                .map(v -> fromRecord(schema, v))
+                .collect(Collectors.toList());
+    }
+
+    private Map<String, Object> fromRecord(final LinkableSchema schema, final Record record) {
+
+        final SQLDialect dialect = strategy.dialect();
+
+        final Map<String, Object> data = record.intoMap();
+        final Map<String, Object> result = new HashMap<>();
+        schema.metadataSchema().forEach((k, v) ->
+                result.put(k, dialect.fromSQLValue(v, ValueResolver.of(data.get(k)))));
+        schema.getProperties().forEach((k, v) ->
+                result.put(k, dialect.fromSQLValue(v.typeOf(), new ValueResolver() {
+                    @Override
+                    public Object value() {
+
+                        return data.get(k);
+                    }
+
+                    @Override
+                    public Object value(final Name name) {
+
+                        return data.get(Name.of(k).with(name).toString("_"));
+                    }
+                })));
+
+        if (Instance.getSchema(result) == null) {
+            Instance.setSchema(result, schema.getQualifiedName());
+        }
+        // Make sure view records have a valid __key field
+        if (schema instanceof ViewSchema) {
+            final ViewSchema viewSchema = (ViewSchema) schema;
+            if (!viewSchema.getFrom().isExternal()) {
+                if (result.get(ViewSchema.ID) == null) {
+                    result.put(ViewSchema.ID, viewSchema.createId(result));
+                }
+            }
+        }
+        return result;
+    }
+
+    private Map<Field<?>, SelectField<?>> toRecord(final DSLContext context, final LinkableSchema schema, final Map<String, Object> object) {
+
+        final SQLDialect dialect = strategy.dialect();
+
+        final Table<?> table = resolveTable(context, DSL.table(schemaTableName(schema)));
+
+        final Map<Field<?>, SelectField<?>> result = new HashMap<>();
+        schema.metadataSchema().forEach((k, v) -> {
+            result.putAll(dialect.toSQLValues(v, fieldResolver(table, k), object.get(k)));
+        });
+        schema.getProperties().forEach((k, v) -> {
+            result.putAll(dialect.toSQLValues(v.typeOf(), fieldResolver(table, k), object.get(k)));
+        });
+
+        return result.entrySet().stream().filter(e -> e.getValue() != null)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    public Table<?> describeTable(final DSLContext context, final org.jooq.Name name) {
+
+        try {
+            return tableCache.get(name, () -> {
+
+                final AtomicReference<Table<?>> result = new AtomicReference<>(null);
+                context.connection(c -> {
+
+                    final String catalog;
+                    final String schema;
+                    final String table;
+                    final String[] parts = name.getName();
+                    if (parts.length == 3) {
+                        catalog = parts[0];
+                        schema = parts[1];
+                        table = parts[2];
+                    } else if (name.parts().length == 2) {
+                        catalog = null;
+                        schema = parts[0];
+                        table = parts[1];
+                    } else {
+                        throw new IllegalStateException("Cannot understand table name " + name);
+                    }
+
+                    final DelegatingDatabaseMetaData jdbcMeta = new DelegatingDatabaseMetaData(c.getMetaData()) {
+
+                        @Override
+                        public ResultSet getSchemas() throws SQLException {
+
+                            return getSchemas(catalog, schema);
+                        }
+
+                        @Override
+                        public ResultSet getTables(final String catalog, final String schemaPattern, final String tableNamePattern, final String[] types) throws SQLException {
+
+                            return super.getTables(catalog, schema, table, types);
+                        }
+                    };
+                    final Meta meta = context.meta(jdbcMeta);
+                    final List<Table<?>> tables = meta.getTables();
+                    tables.stream().filter(v -> nameMatch(v.getQualifiedName(), name))
+                            .findFirst()
+                            .map(v -> {
+                                result.set(v);
+                                return null;
+                            });
+                });
+
+                if (result.get() == null) {
+                    throw new IllegalStateException("Table " + name + " not found");
+                } else {
+                    return result.get();
+                }
+            });
+        } catch (final ExecutionException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @Setter
+    @Accessors(chain = true)
+    public static class Builder {
+
+        private DataSource dataSource;
+
+        private SQLDialect dialect;
+
+        private SQLStrategy strategy;
+
+        private EventStrategy eventStrategy;
+
+        public SQLStorage build() {
+
+            return new SQLStorage(this);
+        }
+    }
+
     @Data
     private static class IdVersion {
 
@@ -550,11 +776,34 @@ public class SQLStorage implements DefaultLayerStorage {
         private final long version;
     }
 
-    @Override
-    public WriteTransaction write(final Consistency consistency, final Versioning versioning) {
-
-        return new WriteTransaction();
-    }
+//    private Map<Field<?>, Object> toRecord(final ReferableSchema schema, final Index index, final Index.Key key, final Map<String, Object> object) {
+//
+//        final SQLDialect dialect = strategy.dialect();
+//
+//        final Map<Field<?>, Object> result = new HashMap<>();
+//        index.projectionSchema(schema).forEach((k, v) ->
+//                result.put(DSL.field(DSL.name(k)), dialect.toSQLValue(v, object.get(k))));
+//
+//        final List<Name> partitionNames = index.resolvePartitionNames();
+//        final List<Object> partition = key.getPartition();
+//        assert partitionNames.size() == partition.size();
+//        for (int i = 0; i != partition.size(); ++i) {
+//            final Name name = partitionNames.get(i);
+//            final Object value = partition.get(i);
+//            final Use<?> type = schema.typeOf(name);
+//            result.put(DSL.field(strategy.columnName(name)), dialect.toSQLValue(type, value));
+//        }
+//        final List<Sort> sortPaths = index.getSort();
+//        final List<Object> sort = key.getSort();
+//        assert sortPaths.size() == sort.size();
+//        for (int i = 0; i != sort.size(); ++i) {
+//            final Name name = sortPaths.get(i).getName();
+//            final Object value = sort.get(i);
+//            final Use<?> type = schema.typeOf(name);
+//            result.put(DSL.field(strategy.columnName(name)), dialect.toSQLValue(type, value));
+//        }
+//        return result;
+//    }
 
     protected class WriteTransaction implements DefaultLayerStorage.WriteTransaction {
 
@@ -573,8 +822,11 @@ public class SQLStorage implements DefaultLayerStorage {
 
                 try {
 
+                    final Map<Field<?>, SelectField<?>> record = toRecord(context, schema, after);
+
                     context.insertInto(DSL.table(objectTableName(schema)))
-                            .set(toRecord(context, schema, after))
+                            .columns(record.keySet())
+                            .select(DSL.select(record.values().toArray(new SelectFieldOrAsterisk[0])))
                             .execute();
 
 //                    final History history = schema.getHistory();
@@ -686,9 +938,12 @@ public class SQLStorage implements DefaultLayerStorage {
 
                 try {
 
-                    context.insertInto(DSL.table(historyTableName(schema)))
-                            .set(toRecord(context, schema, after))
-                            .execute();
+                    final Map<Field<?>, SelectField<?>> record = toRecord(context, schema, after);
+
+                    historyTableName(schema).ifPresent(name -> context.insertInto(DSL.table(name))
+                            .columns(record.keySet())
+                            .select(DSL.select(record.values().toArray(new SelectFieldOrAsterisk[0])))
+                            .execute());
 
                     return BatchResponse.fromRef(schema.getQualifiedName(), after);
 
@@ -711,8 +966,11 @@ public class SQLStorage implements DefaultLayerStorage {
 
                     try {
 
+                        final Map<Field<?>, SelectField<?>> record = toRecord(context, schema, after);
+
                         context.insertInto(DSL.table(schemaTableName(schema)))
-                                .set(toRecord(context, schema, after))
+                                .columns(record.keySet())
+                                .select(DSL.select(record.values().toArray(new SelectFieldOrAsterisk[0])))
                                 .execute();
 
                         return BatchResponse.empty();
@@ -741,254 +999,6 @@ public class SQLStorage implements DefaultLayerStorage {
                 steps.forEach(step -> changes.putAll(step.apply(context).getRefs()));
 
             }).thenApply(v -> new BatchResponse(changes)));
-        }
-    }
-
-    @Override
-    public EventStrategy eventStrategy(final ReferableSchema schema) {
-
-        return eventStrategy;
-    }
-
-    @Override
-    public StorageTraits storageTraits(final ReferableSchema schema) {
-
-        return SQLStorageTraits.INSTANCE;
-    }
-
-    @Override
-    public Set<Name> supportedExpand(final LinkableSchema schema, final Set<Name> expand) {
-
-        return Collections.emptySet();
-    }
-
-    private <T> CompletableFuture<T> withContext(final Function<DSLContext, CompletionStage<T>> with) {
-
-        final SQLDialect dialect = strategy.dialect();
-
-        Connection conn = null;
-        try {
-            conn = dataSource.getConnection();
-            conn.setAutoCommit(false);
-            final DSLContext context = DSL.using(conn, dialect.dmlDialect(), new Settings().withStatementType(strategy.statementType()));
-            final Connection conn2 = conn;
-            return with.apply(context)
-                    .toCompletableFuture()
-                    .whenComplete((a, b) -> closeQuietly(conn2));
-        } catch (final Exception e) {
-            closeQuietly(conn);
-            if (e instanceof RuntimeException) {
-                throw (RuntimeException) e;
-            } else {
-                throw new IllegalStateException(e);
-            }
-        }
-    }
-
-    private static void closeQuietly(final Connection conn) {
-
-        try {
-            if (conn != null) {
-                conn.close();
-            }
-        } catch (final Exception e2) {
-            throw new IllegalStateException(e2);
-        }
-    }
-
-    private Field<String> idField(final ReferableSchema schema) {
-
-        return DSL.field(DSL.name(strategy.columnName(ObjectSchema.ID)), String.class);
-    }
-
-    private Field<Long> versionField(final ReferableSchema schema) {
-
-        return DSL.field(DSL.name(strategy.columnName(ObjectSchema.VERSION)), Long.class);
-    }
-
-    private org.jooq.Name schemaTableName(final LinkableSchema schema) {
-
-        if (schema instanceof ReferableSchema) {
-            return strategy.objectTableName((ReferableSchema) schema);
-        } else if (schema instanceof ViewSchema) {
-            return strategy.viewName((ViewSchema) schema);
-        } else {
-            throw new IllegalStateException("Cannot determine name for schema " + schema);
-        }
-    }
-
-    private org.jooq.Name objectTableName(final ReferableSchema schema) {
-
-        return strategy.objectTableName(schema);
-    }
-
-    private org.jooq.Name historyTableName(final ReferableSchema schema) {
-
-        return strategy.historyTableName(schema);
-    }
-
-    private org.jooq.Name indexTableName(final ReferableSchema schema, final Index index) {
-
-        return strategy.indexTableName(schema, index);
-    }
-
-    private Map<String, Object> first(final LinkableSchema schema, final Result<Record> result) {
-
-        if (result.isEmpty()) {
-            return null;
-        } else {
-            return fromRecord(schema, result.iterator().next());
-        }
-    }
-
-    private List<Map<String, Object>> all(final LinkableSchema schema, final Result<Record> result) {
-
-        return result.stream()
-                .map(v -> fromRecord(schema, v))
-                .collect(Collectors.toList());
-    }
-
-    private Map<String, Object> fromRecord(final LinkableSchema schema, final Record record) {
-
-        final SQLDialect dialect = strategy.dialect();
-
-        final Map<String, Object> data = record.intoMap();
-        final Map<String, Object> result = new HashMap<>();
-        schema.metadataSchema().forEach((k, v) ->
-                result.put(k, dialect.fromSQLValue(v, ValueResolver.of(data.get(k)))));
-        schema.getProperties().forEach((k, v) ->
-                result.put(k, dialect.fromSQLValue(v.typeOf(), new ValueResolver() {
-                    @Override
-                    public Object value() {
-
-                        return data.get(k);
-                    }
-
-                    @Override
-                    public Object value(final Name name) {
-
-                        return data.get(Name.of(k).with(name).toString("_"));
-                    }
-                })));
-
-        if (Instance.getSchema(result) == null) {
-            Instance.setSchema(result, schema.getQualifiedName());
-        }
-        // Make sure view records have a valid __key field
-        if (schema instanceof ViewSchema) {
-            final ViewSchema viewSchema = (ViewSchema) schema;
-            if (!viewSchema.getFrom().isExternal()) {
-                if (result.get(ViewSchema.ID) == null) {
-                    result.put(ViewSchema.ID, viewSchema.createId(result));
-                }
-            }
-        }
-        return result;
-    }
-
-    private Map<Field<?>, Object> toRecord(final DSLContext context, final LinkableSchema schema, final Map<String, Object> object) {
-
-        final SQLDialect dialect = strategy.dialect();
-
-        final Table<?> table = resolveTable(context, DSL.table(schemaTableName(schema)));
-
-        final Map<Field<?>, Object> result = new HashMap<>();
-        schema.metadataSchema().forEach((k, v) -> {
-            result.putAll(dialect.toSQLValues(v, fieldResolver(table, k), object.get(k)));
-        });
-        schema.getProperties().forEach((k, v) -> {
-            result.putAll(dialect.toSQLValues(v.typeOf(), fieldResolver(table, k), object.get(k)));
-        });
-
-        return result.entrySet().stream().filter(e -> e.getValue() != null)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
-
-//    private Map<Field<?>, Object> toRecord(final ReferableSchema schema, final Index index, final Index.Key key, final Map<String, Object> object) {
-//
-//        final SQLDialect dialect = strategy.dialect();
-//
-//        final Map<Field<?>, Object> result = new HashMap<>();
-//        index.projectionSchema(schema).forEach((k, v) ->
-//                result.put(DSL.field(DSL.name(k)), dialect.toSQLValue(v, object.get(k))));
-//
-//        final List<Name> partitionNames = index.resolvePartitionNames();
-//        final List<Object> partition = key.getPartition();
-//        assert partitionNames.size() == partition.size();
-//        for (int i = 0; i != partition.size(); ++i) {
-//            final Name name = partitionNames.get(i);
-//            final Object value = partition.get(i);
-//            final Use<?> type = schema.typeOf(name);
-//            result.put(DSL.field(strategy.columnName(name)), dialect.toSQLValue(type, value));
-//        }
-//        final List<Sort> sortPaths = index.getSort();
-//        final List<Object> sort = key.getSort();
-//        assert sortPaths.size() == sort.size();
-//        for (int i = 0; i != sort.size(); ++i) {
-//            final Name name = sortPaths.get(i).getName();
-//            final Object value = sort.get(i);
-//            final Use<?> type = schema.typeOf(name);
-//            result.put(DSL.field(strategy.columnName(name)), dialect.toSQLValue(type, value));
-//        }
-//        return result;
-//    }
-
-    public Table<?> describeTable(final DSLContext context, final org.jooq.Name name) {
-
-        try {
-            return tableCache.get(name, () -> {
-
-                final AtomicReference<Table<?>> result = new AtomicReference<>(null);
-                context.connection(c -> {
-
-                    final String catalog;
-                    final String schema;
-                    final String table;
-                    final String[] parts = name.getName();
-                    if (parts.length == 3) {
-                        catalog = parts[0];
-                        schema = parts[1];
-                        table = parts[2];
-                    } else if (name.parts().length == 2) {
-                        catalog = null;
-                        schema = parts[0];
-                        table = parts[1];
-                    } else {
-                        throw new IllegalStateException("Cannot understand table name " + name);
-                    }
-
-                    final DelegatingDatabaseMetaData jdbcMeta = new DelegatingDatabaseMetaData(c.getMetaData()) {
-
-                        @Override
-                        public ResultSet getSchemas() throws SQLException {
-
-                            return getSchemas(catalog, schema);
-                        }
-
-                        @Override
-                        public ResultSet getTables(final String catalog, final String schemaPattern, final String tableNamePattern, final String[] types) throws SQLException {
-
-                            return super.getTables(catalog, schema, table, types);
-                        }
-                    };
-                    final Meta meta = context.meta(jdbcMeta);
-                    final List<Table<?>> tables = meta.getTables();
-                    tables.stream().filter(v -> nameMatch(v.getQualifiedName(), name))
-                            .findFirst()
-                            .map(v -> {
-                                result.set(v);
-                                return null;
-                            });
-                });
-
-                if (result.get() == null) {
-                    throw new IllegalStateException("Table " + name + " not found");
-                } else {
-                    return result.get();
-                }
-            });
-        } catch (final ExecutionException e) {
-            throw new IllegalStateException(e);
         }
     }
 }
