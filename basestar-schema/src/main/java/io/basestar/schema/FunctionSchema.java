@@ -29,6 +29,7 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Getter
 @Accessors(chain = true)
@@ -269,6 +270,7 @@ public class FunctionSchema implements Schema<Callable> {
             return definition;
         }
         final String groups = using.keySet().stream()
+                .flatMap(name -> Stream.of(name, "\"" + name + "\""))
                 .map(Pattern::quote)
                 .collect(Collectors.joining("|"));
 
@@ -289,7 +291,7 @@ public class FunctionSchema implements Schema<Callable> {
         if (matcher.find()) {
             String name = matcher.group(groupToReplace);
 
-            final From use = using.get(name);
+            final From use = using.getOrDefault(name, using.get(name.replaceAll("^\"|\"$", "")));
             if (use instanceof FromSchema) {
                 stringBuilder.replace(matcher.start(groupToReplace), matcher.end(groupToReplace), replacer.apply(((FromSchema) use).getSchema()));
                 return replace(stringBuilder.toString(), using, replacer, groupToReplace, pattern);
