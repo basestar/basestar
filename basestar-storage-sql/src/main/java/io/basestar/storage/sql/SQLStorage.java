@@ -50,6 +50,7 @@ import lombok.Data;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
+import org.jooq.Named;
 import org.jooq.*;
 import org.jooq.conf.Settings;
 import org.jooq.exception.DataAccessException;
@@ -699,18 +700,18 @@ public class SQLStorage implements DefaultLayerStorage {
                 final AtomicReference<Table<?>> result = new AtomicReference<>(null);
                 context.connection(c -> {
 
-                    final String catalog;
-                    final String schema;
-                    final String table;
+                    final String tableCatalog;
+                    final String tableSchema;
+                    final String tableName;
                     final String[] parts = name.getName();
                     if (parts.length == 3) {
-                        catalog = parts[0];
-                        schema = parts[1];
-                        table = parts[2];
+                        tableCatalog = parts[0];
+                        tableSchema = parts[1];
+                        tableName = parts[2];
                     } else if (name.parts().length == 2) {
-                        catalog = null;
-                        schema = parts[0];
-                        table = parts[1];
+                        tableCatalog = null;
+                        tableSchema = parts[0];
+                        tableName = parts[1];
                     } else {
                         throw new IllegalStateException("Cannot understand table name " + name);
                     }
@@ -720,23 +721,31 @@ public class SQLStorage implements DefaultLayerStorage {
                         @Override
                         public ResultSet getSchemas() throws SQLException {
 
-                            return getSchemas(catalog, schema);
+                            return getSchemas(tableCatalog, tableSchema);
                         }
 
                         @Override
                         public ResultSet getTables(final String catalog, final String schemaPattern, final String tableNamePattern, final String[] types) throws SQLException {
 
-                            return super.getTables(catalog, schema, table, types);
+                            return super.getTables(tableCatalog, tableSchema, tableName, types);
                         }
                     };
                     final Meta meta = context.meta(jdbcMeta);
                     final List<Table<?>> tables = meta.getTables();
-                    tables.stream().filter(v -> nameMatch(v.getQualifiedName(), name))
-                            .findFirst()
-                            .map(v -> {
-                                result.set(v);
-                                return null;
-                            });
+                    List<Table<?>> matchingTables = tables.stream()
+                            .filter(v -> nameMatch(v.getQualifiedName(), name))
+                            .collect(Collectors.toList());
+
+                    if (matchingTables.size() > 1) {
+                        List<String> matchingNames = matchingTables.stream()
+                                .map(Named::getQualifiedName)
+                                .map(n -> n.quotedName().toString())
+                                .collect(Collectors.toList());
+                        throw new IllegalStateException("Multiple matching tables found for " + name + ": " + matchingNames);
+                    } else if (!matchingTables.isEmpty()) {
+                        result.set(matchingTables.get(0));
+                    }
+
                 });
 
                 if (result.get() == null) {
