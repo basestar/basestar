@@ -43,7 +43,8 @@ public class TestFunctionSchema {
         return Stream.of(
                 Arguments.of("SELECT DOG,CONTEST FROM DOG.CONTEST", "DOG.CONTEST", "SELECT DOG,CONTEST FROM dog.contestWinners"),
                 Arguments.of("SELECT DOG,CONTEST FROM \"DOG\".\"CONTEST\"", "\"DOG\".\"CONTEST\"", "SELECT DOG,CONTEST FROM dog.contestWinners"),
-                Arguments.of("SELECT DOG_CONTEST FROM \"DOG\".\"CONTEST\"", "\"DOG\".\"CONTEST\"", "SELECT DOG_CONTEST FROM dog.contestWinners")
+                Arguments.of("SELECT DOG_CONTEST FROM \"DOG\".\"CONTEST\"", "\"DOG\".\"CONTEST\"", "SELECT DOG_CONTEST FROM dog.contestWinners"),
+                Arguments.of("SELECT DOG_CONTEST FROM \"DOG.CONTEST\"", "DOG.CONTEST", "SELECT DOG_CONTEST FROM dog.contestWinners")
         );
     }
 
@@ -65,7 +66,8 @@ public class TestFunctionSchema {
                 Arguments.of(" DOG_CONTEST(ARRAY_TO_STRING(ARRAY_AGG(DISTINCT  MVW.SOURCE), ',')) AS SCORE", "DOG_CONTEST", " dog.contest(ARRAY_TO_STRING(ARRAY_AGG(DISTINCT  MVW.SOURCE), ',')) AS SCORE"),
                 Arguments.of("\"DOG_CONTEST\"(ARRAY_TO_STRING(ARRAY_AGG(DISTINCT  MVW.SOURCE), ',')) AS SCORE", "\"DOG_CONTEST\"", "dog.contest(ARRAY_TO_STRING(ARRAY_AGG(DISTINCT  MVW.SOURCE), ',')) AS SCORE"),
                 Arguments.of("\"DOG\".\"CONTEST\"(ARRAY_TO_STRING(ARRAY_AGG(DISTINCT  MVW.SOURCE), ',')) AS SCORE", "\"DOG\".\"CONTEST\"", "dog.contest(ARRAY_TO_STRING(ARRAY_AGG(DISTINCT  MVW.SOURCE), ',')) AS SCORE"),
-                Arguments.of("\"DOG\".\"CONTEST\" (ARRAY_TO_STRING(ARRAY_AGG(DISTINCT  MVW.SOURCE), ',')) AS SCORE", "\"DOG\".\"CONTEST\"", "dog.contest (ARRAY_TO_STRING(ARRAY_AGG(DISTINCT  MVW.SOURCE), ',')) AS SCORE")
+                Arguments.of("\"DOG\".\"CONTEST\" (ARRAY_TO_STRING(ARRAY_AGG(DISTINCT  MVW.SOURCE), ',')) AS SCORE", "\"DOG\".\"CONTEST\"", "dog.contest (ARRAY_TO_STRING(ARRAY_AGG(DISTINCT  MVW.SOURCE), ',')) AS SCORE"),
+                Arguments.of("\"DOG.CONTEST\" (ARRAY_TO_STRING(ARRAY_AGG(DISTINCT  MVW.SOURCE), ',')) AS SCORE", "DOG.CONTEST", "dog.contest (ARRAY_TO_STRING(ARRAY_AGG(DISTINCT  MVW.SOURCE), ',')) AS SCORE")
         );
     }
 
@@ -86,7 +88,8 @@ public class TestFunctionSchema {
                 Arguments.of("SELECT * FROM test", "test", "SELECT * FROM test.Object"),
                 Arguments.of("SELECT * FROM test.targets", "test.targets", "SELECT * FROM test.Object"),
                 Arguments.of("SELECT * FROM \"test\".\"targets\"", "\"test\".\"targets\"", "SELECT * FROM test.Object"),
-                Arguments.of("SELECT * FROM test_targets", "test_targets", "SELECT * FROM test.Object")
+                Arguments.of("SELECT * FROM test_targets", "test_targets", "SELECT * FROM test.Object"),
+                Arguments.of("SELECT * FROM \"test_targets\"", "test_targets", "SELECT * FROM test.Object")
         );
     }
 
@@ -113,14 +116,14 @@ public class TestFunctionSchema {
     @Test
     public void shouldReplaceIfMultipleDifferentMatches() {
 
-        final String input = "SELECT * FROM test where result is null JOIN \"badTestRuns\" btr ON btr.id = id JOIN @{example_test_runs} on id";
+        final String input = "SELECT * FROM test where result is null JOIN \"badTestRuns\" btr ON btr.id = id JOIN @{example_test_runs} on id JOIN badTestRuns ON id";
         final String output = FunctionSchema.getReplacedDefinition(input,
                 ImmutableMap.of("test", new FromSchema(ObjectSchema.builder().build(Name.of("test", "Object")), ImmutableSet.of()),
-                        "\"badTestRuns\"", new FromSchema(ObjectSchema.builder().build(Name.of("bad", "test", "runs")), ImmutableSet.of()),
+                        "badTestRuns", new FromSchema(ObjectSchema.builder().build(Name.of("bad", "test", "runs")), ImmutableSet.of()),
                         "example_test_runs", new FromSchema(ObjectSchema.builder().build(Name.of("example_test_runs")), ImmutableSet.of())
                 ),
                 v -> v.getQualifiedName().toString());
 
-        assertEquals("SELECT * FROM test.Object where result is null JOIN bad.test.runs btr ON btr.id = id JOIN example_test_runs on id", output);
+        assertEquals("SELECT * FROM test.Object where result is null JOIN bad.test.runs btr ON btr.id = id JOIN example_test_runs on id JOIN bad.test.runs ON id", output);
     }
 }
