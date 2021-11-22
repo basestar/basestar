@@ -51,7 +51,44 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Index
+ * Index configuration
+ * <p>
+ * Certain storage engines (DDB, SQL) require indexes for optimal querying, basestar indexes are of the partition/sort type,
+ * where to be a candidate index for a query, equality expressions must exist for all partition properties, and for the initial
+ * sequence of sort properties.
+ *
+ * <strong>Example</strong>
+ * <pre>
+ * Address:
+ *   properties:
+ *     country:
+ *       type: string?
+ *     state:
+ *       type: string?
+ *     city:
+ *       type: string?
+ *     zip:
+ *       type: string?
+ *   indexes:
+ *     Country:
+ *       sparse: true
+ *       partition:
+ *         - country
+ *       sort:
+ *         - city
+ *         - zip
+ *     State:
+ *       sparse: true
+ *       partition:
+ *         - state
+ *       sort:
+ *         - city
+ *         - zip
+ * </pre>
+ * <p>
+ * The <code>Country</code> index will support queries of the form <code>country == 'UK'</code>,
+ * <code>country == 'UK' && city == 'London'</code>, <code>country == 'UK' && city == 'London' && zip >= 'SE1'</code>.
+ * </p>
  */
 
 @Getter
@@ -70,17 +107,37 @@ public class Index implements Named, Described, Serializable, Extendable {
     @Nullable
     private final String description;
 
+    /**
+     * List of properties that form the partition (hash) key
+     **/
+
     @Nonnull
     private final List<Name> partition;
+
+    /**
+     * Optional list of properties that form the sort (range) key
+     **/
 
     @Nonnull
     private final List<Sort> sort;
 
+    /**
+     * Optional set of properties to be included in the index record for faster server-side filtering, default is all properties
+     **/
+
     @Nonnull
     private final SortedSet<String> projection;
 
+    /**
+     * Closure for multi-valued indexes
+     **/
+
     @Nonnull
     private final SortedMap<String, Name> over;
+
+    /**
+     * Storage consistency for the index, default is EVENTUAL
+     **/
 
     @Nullable
     private final Consistency consistency;
@@ -88,18 +145,30 @@ public class Index implements Named, Described, Serializable, Extendable {
     @Nonnull
     private final SortedMap<String, Serializable> extensions;
 
+    /**
+     * If true, this index also acts as a uniqueness constraint on the set of indexed properties
+     **/
+
     private final boolean unique;
 
+    /**
+     * If true, records with null values for indexed properties will be excluded from the index (space optimization)
+     **/
+
     private final boolean sparse;
+
+    /**
+     * Maximum number of multi-value index records per input record, if this is exceeded the create or update will fail (default is 100)
+     **/
 
     private final int max;
 
     public boolean requiresMigration(final Index target) {
 
-        if(unique != target.isUnique()) {
+        if (unique != target.isUnique()) {
             return true;
         }
-        if(sparse != target.isSparse()) {
+        if (sparse != target.isSparse()) {
             return true;
         }
         if(!Objects.equals(partition, target.getPartition())) {
