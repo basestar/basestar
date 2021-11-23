@@ -20,7 +20,6 @@ package io.basestar.database;
  * #L%
  */
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import io.basestar.auth.Caller;
@@ -118,10 +117,7 @@ public class ReadProcessor {
     protected CompletableFuture<Page<Instance>> queryImpl(final Context context, final Consistency consistency, final LinkableSchema schema, final Expression expression,
                                                           final List<Sort> sort, final Set<Name> expand, final int count, final Page.Token paging, final Set<Page.Stat> stats) {
 
-        final List<Sort> pageSort = ImmutableList.<Sort>builder()
-                .addAll(sort)
-                .add(Sort.asc(Name.of(schema.id())))
-                .build();
+        final List<Sort> pageSort = schema.sort(sort);
 
         final Set<Name> queryExpand = Sets.union(Nullsafe.orDefault(expand), Nullsafe.orDefault(schema.getExpand()));
 
