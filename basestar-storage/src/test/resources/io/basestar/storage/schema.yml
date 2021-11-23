@@ -322,3 +322,9 @@ SimpleSqlFunction:
     begin
       return "x" in ('a', 'b', 'c') and "y" in ('x', 'y', 'z');
     end;
+
+ExternalView:
+  type: view
+  properties:
+    value:
+      type: string
