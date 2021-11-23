@@ -10,6 +10,7 @@ import io.basestar.schema.use.*;
 import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
+import io.basestar.util.Sort;
 
 import javax.annotation.Nullable;
 import java.io.DataInput;
@@ -116,11 +117,17 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
     List<? extends Constraint> getConstraints();
 
     @Override
+    default List<Sort> sort() {
+
+        return Immutable.list(Sort.asc(Name.of(id())));
+    }
+
+    @Override
     Descriptor<? extends ReferableSchema> descriptor();
 
     default boolean isOrExtending(final Name name) {
 
-        if(name.equals(this.getQualifiedName())) {
+        if (name.equals(this.getQualifiedName())) {
             return true;
         } else {
             return isExtending(name);

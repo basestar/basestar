@@ -7,21 +7,28 @@ import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Context;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.schema.use.Use;
-import io.basestar.util.Immutable;
-import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
-import io.basestar.util.Warnings;
+import io.basestar.util.*;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedSet;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public interface LinkableSchema extends InstanceSchema, Link.Resolver, Query.Resolver, Permission.Resolver {
 
     String __ID = "__id";
+
+    default List<Sort> sort(final List<Sort> sort) {
+
+        final List<Sort> result = new ArrayList<>(sort);
+        sort().forEach(s -> {
+            if (sort.stream().noneMatch(s2 -> s2.getName().equals(s.getName()))) {
+                result.add(s);
+            }
+        });
+        return result;
+    }
+
+    List<Sort> sort();
 
     interface Descriptor<S extends LinkableSchema> extends InstanceSchema.Descriptor<S>, Link.Resolver.Descriptor, Query.Resolver.Descriptor, Permission.Resolver.Descriptor {
 

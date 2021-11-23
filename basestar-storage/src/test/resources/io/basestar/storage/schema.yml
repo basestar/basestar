@@ -302,12 +302,19 @@ MatView:
 
 SqlView:
   type: view
-  sql: SELECT DISTINCT "city" FROM @{address} WHERE "country"='US'
+  sql: SELECT "state", "city", COUNT(*) AS "count" FROM @{address} WHERE "country"='US' GROUP BY "state", "city"
+  primaryKey:
+    - state
+    - city
   using:
     address: Address
   properties:
+    state:
+      type: string
     city:
       type: string
+    count:
+      type: integer
 
 SimpleSqlFunction:
   type: function
