@@ -39,6 +39,7 @@ import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.from.From;
+import io.basestar.schema.from.FromSql;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseBinary;
 import io.basestar.schema.use.UseView;
@@ -517,6 +518,18 @@ public class ViewSchema implements LinkableSchema {
             fromBucketing.add(new Bucketing(using, bucket.getCount(), bucket.getFunction()));
         }
         return from.isCompatibleBucketing(fromBucketing);
+    }
+
+    @Override
+    public List<Sort> sort() {
+
+        if (from instanceof FromSql) {
+            final List<String> primaryKey = ((FromSql) from).getPrimaryKey();
+            if (primaryKey != null) {
+                return primaryKey.stream().map(Sort::asc).collect(Collectors.toList());
+            }
+        }
+        return Immutable.list(Sort.asc(Name.of(id())));
     }
 
     @Override

@@ -327,26 +327,54 @@ Each view property must have an expression.
 
 - `visibility` **[Visibility](#visibility)**
 
-  
 
 - `extensions` **map of java.lang.Object**
 
-  
-
-
 ## Index
 
+Certain storage engines (DDB, SQL) require indexes for optimal querying, basestar indexes are of the partition/sort
+type, where to be a candidate index for a query, equality expressions must exist for all partition properties, and for
+the initial sequence of sort properties.
 
+<strong>Example</strong>
+<pre>
+Address:
+properties:
+    country:
+      type: string?
+    state:
+      type: string?
+    city:
+      type: string?
+    zip:
+      type: string?
+indexes:
+    Country:
+      sparse: true
+      partition:
+        - country
+      sort:
+        - city
+        - zip
+    State:
+      sparse: true
+      partition:
+        - state
+      sort:
+        - city
+        - zip
+</pre>
+
+The <code>Country</code> index will support queries of the form <code>country == 'UK'</code>,
+<code>country == 'UK' && city == 'London'</code>, <code>country == 'UK' && city == 'London' && zip >= 'SE1'</code>.
 
 **Fields**
 
 - `qualifiedName` **io.basestar.util.Name**
 
-  
 
 - `version` **long**
 
-  
 
 - `description` **string**
 
@@ -354,23 +382,24 @@ Each view property must have an expression.
 
 - `partition` **array of io.basestar.util.Name**
 
-  
+  List of properties that form the partition (hash) key
 
 - `sort` **array of Sort**
 
-  
+  Optional list of properties that form the sort (range) key
 
 - `projection` **set of string**
 
-  
+  Optional set of properties to be included in the index record for faster server-side filtering, default is all
+  properties
 
 - `over` **map of io.basestar.util.Name**
 
-  
+  Optional closure for multi-valued indexes
 
 - `consistency` **io.basestar.schema.Consistency**
 
-  
+  Storage consistency for the index, default is EVENTUAL
 
 - `extensions` **map of java.lang.Object**
 
@@ -378,15 +407,16 @@ Each view property must have an expression.
 
 - `unique` **boolean**
 
-  
+  If true, this index also acts as a uniqueness constraint on the set of indexed propertie
 
 - `sparse` **boolean**
 
-  
+  If true, records with null values for indexed properties will be excluded from the index (space optimization)
 
 - `max` **int**
 
-  
+  Maximum number of multi-value index records per input record, if this is exceeded the create or update will fail (
+  default is 100)
 
 
 ## Permission

@@ -5,6 +5,7 @@ import io.basestar.schema.Index;
 import io.basestar.schema.*;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.from.From;
+import io.basestar.schema.from.FromExternal;
 import io.basestar.schema.from.FromSchema;
 import io.basestar.schema.from.FromSql;
 import io.basestar.schema.util.Casing;
@@ -144,7 +145,7 @@ public abstract class BaseSQLStrategy implements SQLStrategy {
         if (schema.getFrom() instanceof FromSql) {
             queries.add(DDLStep.from(context.createOrReplaceView(viewName)
                     .as(DSL.sql(((FromSql) schema.getFrom()).getReplacedSql(s -> namingStrategy.reference(s).toString())))));
-        } else {
+        } else if (!(schema.getFrom() instanceof FromExternal)) {
             queries.add(DDLStep.from(context.createOrReplaceView(viewName)
                     .as(viewQuery(context, schema))));
         }

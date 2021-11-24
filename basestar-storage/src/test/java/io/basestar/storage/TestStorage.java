@@ -21,6 +21,7 @@ package io.basestar.storage;
  */
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.Comparators;
 import com.google.common.collect.*;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
@@ -1352,16 +1353,35 @@ public abstract class TestStorage {
 
         assumeTrue(supportsSql());
 
+        // Default sort by PK
+        testSqlQueryWithSort(ImmutableList.of());
+        // Sort by field not in PK
+        testSqlQueryWithSort(ImmutableList.of(Sort.desc("count")));
+        // Sort by partial PK
+        testSqlQueryWithSort(ImmutableList.of(Sort.asc("city")));
+        // Sort by reversed PK
+        testSqlQueryWithSort(ImmutableList.of(Sort.desc("city"), Sort.desc("state")));
+    }
+
+    @SuppressWarnings("UnstableApiUsage")
+    private void testSqlQueryWithSort(final List<Sort> overrideSort) throws Exception {
+
         final Storage storage = storage(namespace);
-        final ViewSchema viewSchema = namespace.requireViewSchema(SQL_VIEW);
 
         bulkLoad(storage, loadAddresses());
 
-        final List<Sort> sort = ImmutableList.of(
-                Sort.asc(Name.of("__key"))
-        );
+        final ViewSchema schema = namespace.requireViewSchema(SQL_VIEW);
 
-        final Page<Map<String, Object>> page = storage.query(Consistency.ATOMIC, viewSchema, Constant.TRUE, sort, ImmutableSet.of()).page(100).get();
-        assertEquals(13, page.size());
+        final List<Sort> sort = schema.sort(overrideSort);
+
+        final Page<Map<String, Object>> firstPage = storage.query(Consistency.ATOMIC, schema, Constant.TRUE, sort, ImmutableSet.of()).page(10).get();
+        assertEquals(10, firstPage.size());
+        assertNotNull(firstPage.getPaging());
+        assertTrue(Comparators.isInOrder(firstPage, Sort.comparator(sort, Instance::get)));
+
+        final Page<Map<String, Object>> secondPage = storage.query(Consistency.ATOMIC, schema, Constant.TRUE, sort, ImmutableSet.of()).page(firstPage.getPaging(), 10).get();
+        assertEquals(3, secondPage.size());
+        assertNull(secondPage.getPaging());
+        assertTrue(Comparators.isInOrder(secondPage, Sort.comparator(sort, Instance::get)));
     }
 }
