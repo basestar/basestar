@@ -35,6 +35,7 @@ import com.nimbusds.jwt.proc.DefaultJWTProcessor;
 import io.basestar.auth.Authenticator;
 import io.basestar.auth.Authorization;
 import io.basestar.auth.Caller;
+import io.basestar.auth.SimpleCaller;
 import io.basestar.auth.exception.AuthenticationFailedException;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -73,38 +74,12 @@ public class NimbusAuthenticator implements Authenticator {
             jwtProcessor.setJWSKeySelector(keySelector);
             final JWTClaimsSet claims = jwtProcessor.process(token, null);
 
-            return CompletableFuture.completedFuture(new Caller() {
-
-                @Override
-                public boolean isAnon() {
-
-                    return false;
-                }
-
-                @Override
-                public boolean isSuper() {
-
-                    return false;
-                }
-
-                @Override
-                public Name getSchema() {
-
-                    return Name.of("User");
-                }
-
-                @Override
-                public String getId() {
-
-                    return userId(claims);
-                }
-
-                @Override
-                public Map<String, Object> getClaims() {
-
-                    return claims.getClaims();
-                }
-            });
+            final String id = userId(claims);
+            return CompletableFuture.completedFuture(SimpleCaller.builder()
+                    .setId(id)
+                    .setSchema(Name.of("User"))
+                    .setClaims(claims.getClaims())
+                    .build());
 
         } catch (final JOSEException | ParseException | BadJOSEException e) {
 

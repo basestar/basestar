@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.BaseEncoding;
 import io.basestar.auth.BasicAuthenticator;
 import io.basestar.auth.Caller;
+import io.basestar.auth.SimpleCaller;
 import io.basestar.auth.exception.AuthenticationFailedException;
 import io.basestar.util.Name;
 import io.basestar.util.Throwables;
@@ -77,8 +78,8 @@ public class CognitoBasicAuthenticator extends BasicAuthenticator {
 
         }).thenApply(result -> {
 
-            if(result.authenticationResult() == null) {
-                if(result.challengeName() != null) {
+            if (result.authenticationResult() == null) {
+                if (result.challengeName() != null) {
                     throw new AuthenticationFailedException("Authentication failed (reason: challenge was " + result.challengeName() + ")");
                 } else {
                     throw new AuthenticationFailedException("Authentication failed (reason: unknown)");
@@ -87,38 +88,12 @@ public class CognitoBasicAuthenticator extends BasicAuthenticator {
 
             final Map<String, Object> claims = parseClaims(result.authenticationResult().idToken());
 
-            return new Caller() {
-                @Override
-                public boolean isAnon() {
-
-                    return false;
-                }
-
-                @Override
-                public boolean isSuper() {
-
-                    return false;
-                }
-
-                @Override
-                public Name getSchema() {
-
-                    return Name.of("User");
-                }
-
-                @Override
-                public String getId() {
-
-                    return (String)claims.get("sub");
-                }
-
-                @Override
-                public Map<String, Object> getClaims() {
-
-                    return claims;
-                }
-            };
-
+            final String id = (String) claims.get("sub");
+            return SimpleCaller.builder()
+                    .setId(id)
+                    .setSchema(Name.of("User"))
+                    .setClaims(claims)
+                    .build();
         });
     }
 
