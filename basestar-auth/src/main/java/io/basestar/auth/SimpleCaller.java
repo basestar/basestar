@@ -13,6 +13,8 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
+import java.io.Serializable;
+import java.util.HashMap;
 import java.util.Map;
 
 @Data
@@ -30,7 +32,7 @@ public class SimpleCaller implements Caller {
 
     private final String id;
 
-    private final Map<String, Object> claims;
+    private final Map<String, Serializable> claims;
 
     public boolean isSuper() {
 
@@ -43,7 +45,20 @@ public class SimpleCaller implements Caller {
         this._super = builder._super;
         this.schema = builder.schema;
         this.id = builder.id;
-        this.claims = Immutable.map(builder.claims);
+        this.claims = serializableClaims(builder.claims);
+    }
+
+    private static Map<String, Serializable> serializableClaims(final Map<String, Object> input) {
+
+        final Map<String, Serializable> output = new HashMap<>();
+        if (input != null) {
+            input.forEach((k, v) -> {
+                if (v instanceof Serializable) {
+                    output.put(k, (Serializable) v);
+                }
+            });
+        }
+        return Immutable.map(output);
     }
 
     public static Builder builder() {

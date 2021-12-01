@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.basestar.util.Name;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
 import java.util.Collections;
@@ -46,7 +47,7 @@ public interface Caller extends Serializable {
 
     String getId();
 
-    Map<String, Object> getClaims();
+    Map<String, Serializable> getClaims();
 
     static SimpleCaller.Builder builder() {
 
@@ -83,12 +84,13 @@ public interface Caller extends Serializable {
         }
 
         @Override
-        public Map<String, Object> getClaims() {
+        public Map<String, Serializable> getClaims() {
 
             return delegate.getClaims();
         }
     }
 
+    @EqualsAndHashCode
     class Anon implements Caller {
 
         @Override
@@ -116,12 +118,13 @@ public interface Caller extends Serializable {
         }
 
         @Override
-        public Map<String, Object> getClaims() {
+        public Map<String, Serializable> getClaims() {
 
             return Collections.emptyMap();
         }
     }
 
+    @EqualsAndHashCode
     class Super implements Caller {
 
         @Override
@@ -149,7 +152,7 @@ public interface Caller extends Serializable {
         }
 
         @Override
-        public Map<String, Object> getClaims() {
+        public Map<String, Serializable> getClaims() {
 
             return Collections.emptyMap();
         }

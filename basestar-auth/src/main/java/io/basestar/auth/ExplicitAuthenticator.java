@@ -48,37 +48,16 @@ public class ExplicitAuthenticator implements Authenticator {
     public CompletableFuture<Caller> authenticate(final Authorization auth) {
 
         final String id = auth.getCredentials();
-        return CompletableFuture.completedFuture(new Caller() {
-            @Override
-            public boolean isAnon() {
-
-                return "anon".equalsIgnoreCase(id);
-            }
-
-            @Override
-            public boolean isSuper() {
-
-                return "super".equalsIgnoreCase(id);
-            }
-
-            @Override
-            public Name getSchema() {
-
-                return Name.of("User");
-            }
-
-            @Override
-            public String getId() {
-
-                return id;
-            }
-
-            @Override
-            public Map<String, Object> getClaims() {
-
-                return ImmutableMap.of();
-            }
-        });
+        if ("anon".equalsIgnoreCase(id)) {
+            return CompletableFuture.completedFuture(Caller.ANON);
+        } else if ("super".equalsIgnoreCase(id)) {
+            return CompletableFuture.completedFuture(Caller.SUPER);
+        } else {
+            return CompletableFuture.completedFuture(SimpleCaller.builder()
+                    .setId(id)
+                    .setSchema(Name.of("User"))
+                    .build());
+        }
     }
 
     @Override
@@ -86,4 +65,5 @@ public class ExplicitAuthenticator implements Authenticator {
 
         return ImmutableMap.of();
     }
+
 }
