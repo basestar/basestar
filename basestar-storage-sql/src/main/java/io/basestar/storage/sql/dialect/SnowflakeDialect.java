@@ -2,7 +2,6 @@ package io.basestar.storage.sql.dialect;
 
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.ViewSchema;
-import io.basestar.schema.from.FromSql;
 import io.basestar.schema.use.UseAny;
 import io.basestar.schema.use.UseArray;
 import io.basestar.schema.use.UseMap;
@@ -103,7 +102,8 @@ public class SnowflakeDialect extends JSONDialect {
     @Override
     public boolean supportsMaterializedView(final ViewSchema schema) {
 
-        return schema.getFrom() instanceof FromSql && (((FromSql) schema.getFrom()).getUsing().size() == 1);
+//        return schema.getFrom() instanceof FromSql && (((FromSql) schema.getFrom()).getUsing().size() == 1);
+        return false;
     }
 
     @Override
