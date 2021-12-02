@@ -120,7 +120,7 @@ public class DefaultPump implements Pump {
                                 }
                             }
                         } catch (final Throwable e) {
-                            log.error("Uncaught in event pump", e);
+                            log.error("Uncaught in event pump: " + e.getClass() + ": " + e.getMessage(), e);
                         }
                     }
                 }, delay, TimeUnit.MILLISECONDS);

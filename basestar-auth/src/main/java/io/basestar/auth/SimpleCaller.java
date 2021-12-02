@@ -21,6 +21,8 @@ import java.util.Map;
 @JsonDeserialize(builder = SimpleCaller.Builder.class)
 public class SimpleCaller implements Caller {
 
+    private static final long serialVersionUID = 1L;
+
     private final boolean anon;
 
     @JsonIgnore
