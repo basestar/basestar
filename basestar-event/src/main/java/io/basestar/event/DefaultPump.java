@@ -64,6 +64,9 @@ public class DefaultPump implements Pump {
         this.receiver = receiver;
         this.handler = handler;
         this.minThreads = minThreads;
+        if (this.minThreads < 1) {
+            throw new IllegalArgumentException("Min threads must be >= 1");
+        }
         this.maxThreads = maxThreads;
         this.executorService = Executors.newScheduledThreadPool(minThreads);
         Metrics.gauge("events.pump.threads", this, t -> t.count);
@@ -105,6 +108,7 @@ public class DefaultPump implements Pump {
                             final Integer results = receiver.receive(handler).join();
                             assert results != null;
                             total.increment(results);
+                            boolean another = false;
                             synchronized (lock) {
                                 if (Thread.interrupted()) {
                                     --count;
@@ -116,8 +120,11 @@ public class DefaultPump implements Pump {
                                         return;
                                     }
                                 } else {
-                                    another();
+                                    another = true;
                                 }
+                            }
+                            if (another) {
+                                another();
                             }
                         } catch (final Throwable e) {
                             log.error("Uncaught in event pump: " + e.getClass() + ": " + e.getMessage(), e);
