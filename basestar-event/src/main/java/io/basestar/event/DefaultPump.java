@@ -54,14 +54,16 @@ public class DefaultPump implements Pump {
 
     private final ScheduledExecutorService executorService;
 
-    private final Counter total;
+    private final Counter totalCounter;
 
     private final Object lock = new Object();
 
     @SuppressWarnings("all")
     private final Random random = new Random();
 
-    private volatile int count;
+    private volatile long count;
+
+    private volatile int total;
 
     private volatile boolean shutdown;
 
@@ -76,7 +78,7 @@ public class DefaultPump implements Pump {
         }
         this.maxThreads = maxThreads;
         this.executorService = Executors.newScheduledThreadPool(minThreads + 1);
-        this.total = Metrics.counter("events.pump.total." + name);
+        this.totalCounter = Metrics.counter("events.pump.total." + name);
         Metrics.gauge("events.pump.threads." + name, this, t -> t.count);
     }
 
@@ -118,9 +120,10 @@ public class DefaultPump implements Pump {
                             try {
                                 final Integer results = receiver.receive(handler).join();
                                 assert results != null;
-                                total.increment(results);
+                                totalCounter.increment(results);
                                 boolean another = false;
                                 synchronized (lock) {
+                                    total += results;
                                     if (Thread.interrupted()) {
                                         if (shutdown) {
                                             log.error("Pump interrupted, exiting thread");
@@ -154,7 +157,7 @@ public class DefaultPump implements Pump {
 
     private void logInfo() {
 
-        log.info("Pump {} stats: (thread count: {}, total events: {})", name, count, total.count());
+        log.info("Pump {} stats: (thread count: {}, total events: {})", name, count, total);
     }
 
     private long delay() {
