@@ -73,7 +73,7 @@ public class DefaultPump implements Pump {
         }
         this.maxThreads = maxThreads;
         this.executorService = Executors.newScheduledThreadPool(minThreads + 1);
-        Metrics.gauge("events.pump.threads", this, t -> t.count);
+        Metrics.gauge("events.pump.total", this, t -> t.count);
     }
 
     @Override
