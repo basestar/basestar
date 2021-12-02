@@ -63,7 +63,7 @@ public class DefaultPump implements Pump {
 
     private volatile boolean shutdown;
 
-    public DefaultPump(final Receiver receiver, final Handler<Event> handler, final int minThreads, final int maxThreads) {
+    public DefaultPump(final String name, final Receiver receiver, final Handler<Event> handler, final int minThreads, final int maxThreads) {
 
         this.receiver = receiver;
         this.handler = handler;
@@ -73,7 +73,7 @@ public class DefaultPump implements Pump {
         }
         this.maxThreads = maxThreads;
         this.executorService = Executors.newScheduledThreadPool(minThreads + 1);
-        Metrics.gauge("events.pump.total", this, t -> t.count);
+        Metrics.gauge("events.pump.threads", this, t -> t.count);
     }
 
     @Override
