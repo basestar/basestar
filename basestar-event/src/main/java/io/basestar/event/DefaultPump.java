@@ -42,6 +42,8 @@ public class DefaultPump implements Pump {
 
     private static final int LOG_STATS_MILLIS = 60 * 1000;
 
+    private final String name;
+
     private final Receiver receiver;
 
     private final Handler<Event> handler;
@@ -52,7 +54,7 @@ public class DefaultPump implements Pump {
 
     private final ScheduledExecutorService executorService;
 
-    private final Counter total = Metrics.counter("events.pump.total");
+    private final Counter total;
 
     private final Object lock = new Object();
 
@@ -65,6 +67,7 @@ public class DefaultPump implements Pump {
 
     public DefaultPump(final String name, final Receiver receiver, final Handler<Event> handler, final int minThreads, final int maxThreads) {
 
+        this.name = name;
         this.receiver = receiver;
         this.handler = handler;
         this.minThreads = minThreads;
@@ -73,7 +76,8 @@ public class DefaultPump implements Pump {
         }
         this.maxThreads = maxThreads;
         this.executorService = Executors.newScheduledThreadPool(minThreads + 1);
-        Metrics.gauge("events.pump.threads", this, t -> t.count);
+        this.total = Metrics.counter("events.pump.total." + name);
+        Metrics.gauge("events.pump.threads." + name, this, t -> t.count);
     }
 
     @Override
@@ -150,7 +154,7 @@ public class DefaultPump implements Pump {
 
     private void logInfo() {
 
-        log.info("Pump stats: (thread count: {}, total events: {})", count, total.count());
+        log.info("Pump {} stats: (thread count: {}, total events: {})", name, count, total.count());
     }
 
     private long delay() {

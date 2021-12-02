@@ -28,8 +28,8 @@ public interface Pump { //extends Registry {
 
     void flush();
 
-    static Pump create(final Receiver receiver, final Handler<Event> handler, final int minThreads, final int maxThreads) {
+    static Pump create(final String name, final Receiver receiver, final Handler<Event> handler, final int minThreads, final int maxThreads) {
 
-        return new DefaultPump(receiver, handler, minThreads, maxThreads);
+        return new DefaultPump(name, receiver, handler, minThreads, maxThreads);
     }
 }
