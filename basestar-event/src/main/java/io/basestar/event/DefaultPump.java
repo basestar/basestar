@@ -40,6 +40,8 @@ public class DefaultPump implements Pump {
 
     private static final int SHUTDOWN_WAIT_SECONDS = 5;
 
+    private static final int LOG_STATS_MILLIS = 60 * 1000;
+
     private final Receiver receiver;
 
     private final Handler<Event> handler;
@@ -70,7 +72,7 @@ public class DefaultPump implements Pump {
             throw new IllegalArgumentException("Min threads must be >= 1");
         }
         this.maxThreads = maxThreads;
-        this.executorService = Executors.newScheduledThreadPool(minThreads);
+        this.executorService = Executors.newScheduledThreadPool(minThreads + 1);
         Metrics.gauge("events.pump.threads", this, t -> t.count);
     }
 
@@ -80,6 +82,7 @@ public class DefaultPump implements Pump {
         for (int i = 0; i != minThreads; ++i) {
             another(INITIAL_DELAY_MILLIS + delay());
         }
+        executorService.scheduleWithFixedDelay(this::logInfo, LOG_STATS_MILLIS, LOG_STATS_MILLIS, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -143,6 +146,11 @@ public class DefaultPump implements Pump {
                 }, delay, TimeUnit.MILLISECONDS);
             }
         }
+    }
+
+    private void logInfo() {
+
+        log.info("Pump stats: (thread count: {}, total events: {})", count, total.count());
     }
 
     private long delay() {
