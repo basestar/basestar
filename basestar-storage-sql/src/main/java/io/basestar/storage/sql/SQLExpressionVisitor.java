@@ -305,7 +305,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
 
         final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
         final Field<Object> rhs = dialect.field(expression.getRhs().visit(this), Object.class);
-        return (lhs != null && rhs != null) ? lhs.in(rhs) : null;
+        return (lhs != null && rhs != null) ? dialect.in(lhs, rhs) : null;
     }
 
     @Override

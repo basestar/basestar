@@ -746,4 +746,9 @@ public interface SQLDialect {
 
         return false;
     }
+
+    default QueryPart in(final Field<Object> lhs, final Field<Object> rhs) {
+
+        return lhs.in(rhs);
+    }
 }
