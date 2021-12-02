@@ -29,7 +29,7 @@ public class SubscriptionPredicate implements Serializable, Predicate<Subscripti
         try {
             return entry.getValue().matches(schema, event, before, after);
         } catch (final Exception e) {
-            log.debug("Failed subscription predicate: " + e.getClass() + ": " + e.getMessage());
+            log.error("Failed subscription predicate: " + e.getClass() + ": " + e.getMessage());
             return false;
         }
     }
