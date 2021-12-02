@@ -19,8 +19,6 @@ public class HazelcastSubscriptions implements Subscriptions {
 
     private final IMap<SubscriptionKey, Subscription> subscriptions;
 
-    private final Object lock = new Object();
-
     public HazelcastSubscriptions(final HazelcastInstance instance, final String mapName) {
 
         subscriptions = instance.getMap(mapName);
@@ -50,7 +48,8 @@ public class HazelcastSubscriptions implements Subscriptions {
     @Override
     public CompletableFuture<?> unsubscribe(final String sub, final String channel) {
 
-        return subscriptions.removeAsync(new SubscriptionKey(sub, channel)).toCompletableFuture();
+        subscriptions.remove(new SubscriptionKey(sub, channel));
+        return CompletableFuture.completedFuture(null);
     }
 
     @Override

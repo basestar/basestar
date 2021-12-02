@@ -61,12 +61,26 @@ public class GraphQLAPI implements API {
             case HEAD:
             case OPTIONS:
                 return CompletableFuture.completedFuture(APIResponse.success(request));
-            case GET:
+            case GET: {
                 final String query = request.getFirstQuery("query");
-                return query(request, ExecutionInput.newExecutionInput(query).build());
-            case POST:
+                final ExecutionInput input;
+                try {
+                    input = ExecutionInput.newExecutionInput(query).build();
+                } catch (final Exception e) {
+                    return CompletableFuture.completedFuture(APIResponse.error(request, e));
+                }
+                return query(request, input);
+            }
+            case POST: {
                 final RequestBody body = request.readBody(RequestBody.class);
-                return query(request, body.toInput(caller));
+                final ExecutionInput input;
+                try {
+                    input = body.toInput(caller);
+                } catch (final Exception e) {
+                    return CompletableFuture.completedFuture(APIResponse.error(request, e));
+                }
+                return query(request, input);
+            }
             default:
                 return CompletableFuture.completedFuture(APIResponse.error(request, ExceptionMetadata.notFound()));
         }
