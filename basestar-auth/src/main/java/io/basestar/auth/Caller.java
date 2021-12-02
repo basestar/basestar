@@ -57,6 +57,8 @@ public interface Caller extends Serializable {
     @Data
     class Delegating implements Caller {
 
+        private static final long serialVersionUID = 1L;
+
         private final Caller delegate;
 
         @Override
@@ -93,6 +95,8 @@ public interface Caller extends Serializable {
     @EqualsAndHashCode
     class Anon implements Caller {
 
+        private static final long serialVersionUID = 1L;
+
         @Override
         public boolean isAnon() {
 
@@ -126,6 +130,8 @@ public interface Caller extends Serializable {
 
     @EqualsAndHashCode
     class Super implements Caller {
+
+        private static final long serialVersionUID = 1L;
 
         @Override
         public boolean isAnon() {
