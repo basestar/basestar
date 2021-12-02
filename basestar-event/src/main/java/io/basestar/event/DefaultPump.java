@@ -111,6 +111,7 @@ public class DefaultPump implements Pump {
                             boolean another = false;
                             synchronized (lock) {
                                 if (Thread.interrupted()) {
+                                    log.error("Pump interrupted, exiting thread");
                                     --count;
                                     return;
                                 }
