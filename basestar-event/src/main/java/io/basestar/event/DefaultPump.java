@@ -40,6 +40,10 @@ public class DefaultPump implements Pump {
 
     private static final int SHUTDOWN_WAIT_SECONDS = 5;
 
+    private static final int LOG_STATS_MILLIS = 60 * 1000;
+
+    private final String name;
+
     private final Receiver receiver;
 
     private final Handler<Event> handler;
@@ -50,23 +54,32 @@ public class DefaultPump implements Pump {
 
     private final ScheduledExecutorService executorService;
 
-    private final Counter total = Metrics.counter("events.pump.total");
+    private final Counter totalCounter;
 
     private final Object lock = new Object();
 
     @SuppressWarnings("all")
     private final Random random = new Random();
 
-    private volatile int count;
+    private volatile long count;
 
-    public DefaultPump(final Receiver receiver, final Handler<Event> handler, final int minThreads, final int maxThreads) {
+    private volatile int total;
 
+    private volatile boolean shutdown;
+
+    public DefaultPump(final String name, final Receiver receiver, final Handler<Event> handler, final int minThreads, final int maxThreads) {
+
+        this.name = name;
         this.receiver = receiver;
         this.handler = handler;
         this.minThreads = minThreads;
+        if (this.minThreads < 1) {
+            throw new IllegalArgumentException("Min threads must be >= 1");
+        }
         this.maxThreads = maxThreads;
-        this.executorService = Executors.newScheduledThreadPool(minThreads);
-        Metrics.gauge("events.pump.threads", this, t -> t.count);
+        this.executorService = Executors.newScheduledThreadPool(minThreads + 1);
+        this.totalCounter = Metrics.counter("events.pump.total." + name);
+        Metrics.gauge("events.pump.threads." + name, this, t -> t.count);
     }
 
     @Override
@@ -75,6 +88,7 @@ public class DefaultPump implements Pump {
         for (int i = 0; i != minThreads; ++i) {
             another(INITIAL_DELAY_MILLIS + delay());
         }
+        executorService.scheduleWithFixedDelay(this::logInfo, LOG_STATS_MILLIS, LOG_STATS_MILLIS, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -100,32 +114,50 @@ public class DefaultPump implements Pump {
             if (count < maxThreads) {
                 ++count;
                 executorService.schedule(() -> {
-                    while (true) {
-                        try {
-                            final Integer results = receiver.receive(handler).join();
-                            assert results != null;
-                            total.increment(results);
-                            synchronized (lock) {
-                                if (Thread.interrupted()) {
-                                    --count;
-                                    return;
-                                }
-                                if (results == 0) {
-                                    if (count > minThreads) {
-                                        --count;
-                                        return;
+                    log.info("Starting event pump thread");
+                    try {
+                        while (true) {
+                            try {
+                                final Integer results = receiver.receive(handler).join();
+                                assert results != null;
+                                totalCounter.increment(results);
+                                boolean another = false;
+                                synchronized (lock) {
+                                    total += results;
+                                    if (Thread.interrupted()) {
+                                        if (shutdown) {
+                                            log.error("Pump interrupted, exiting thread");
+                                            --count;
+                                            return;
+                                        }
                                     }
-                                } else {
+                                    if (results == 0) {
+                                        if (count > minThreads) {
+                                            --count;
+                                            return;
+                                        }
+                                    } else {
+                                        another = true;
+                                    }
+                                }
+                                if (another) {
                                     another();
                                 }
+                            } catch (final Throwable e) {
+                                log.error("Uncaught in event pump: " + e.getClass() + ": " + e.getMessage(), e);
                             }
-                        } catch (final Throwable e) {
-                            log.error("Uncaught in event pump", e);
                         }
+                    } finally {
+                        log.info("Leaving event pump thread");
                     }
                 }, delay, TimeUnit.MILLISECONDS);
             }
         }
+    }
+
+    private void logInfo() {
+
+        log.info("Pump {} stats: (thread count: {}, total events: {})", name, count, total);
     }
 
     private long delay() {
@@ -136,6 +168,7 @@ public class DefaultPump implements Pump {
     @Override
     public void stop() {
 
+        shutdown = true;
         executorService.shutdown();
         try {
             if (!executorService.awaitTermination(SHUTDOWN_WAIT_SECONDS, TimeUnit.SECONDS)) {

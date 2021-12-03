@@ -2,15 +2,11 @@ package io.basestar.storage.sql.dialect;
 
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.ViewSchema;
-import io.basestar.schema.from.FromSql;
 import io.basestar.schema.use.UseAny;
 import io.basestar.schema.use.UseArray;
 import io.basestar.schema.use.UseMap;
 import io.basestar.schema.use.UseSet;
-import org.jooq.DataType;
-import org.jooq.Field;
-import org.jooq.SQLDialect;
-import org.jooq.SelectField;
+import org.jooq.*;
 import org.jooq.impl.DSL;
 import org.jooq.impl.DefaultDataType;
 
@@ -106,7 +102,8 @@ public class SnowflakeDialect extends JSONDialect {
     @Override
     public boolean supportsMaterializedView(final ViewSchema schema) {
 
-        return schema.getFrom() instanceof FromSql && (((FromSql) schema.getFrom()).getUsing().size() == 1);
+//        return schema.getFrom() instanceof FromSql && (((FromSql) schema.getFrom()).getUsing().size() == 1);
+        return false;
     }
 
     @Override
@@ -117,5 +114,11 @@ public class SnowflakeDialect extends JSONDialect {
         } else {
             return super.createFunctionDDLLanguage(language);
         }
+    }
+
+    @Override
+    public QueryPart in(final Field<Object> lhs, final Field<Object> rhs) {
+
+        return DSL.condition(DSL.sql("ARRAY_CONTAINS(?::VARIANT, ?)", lhs, rhs));
     }
 }

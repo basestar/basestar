@@ -393,6 +393,8 @@ public class ReadProcessor {
 
     protected static class ExpandedCaller extends Caller.Delegating {
 
+        private static final long serialVersionUID = 1L;
+
         private final Instance object;
 
         public ExpandedCaller(final Caller caller, final Instance object) {

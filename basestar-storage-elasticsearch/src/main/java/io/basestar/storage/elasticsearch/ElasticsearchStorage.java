@@ -337,7 +337,7 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
                         req.setIfSeqNo(meta.getSeqNo());
                         req.setIfPrimaryTerm(meta.getPrimaryTerm());
                     } else {
-                        log.warn("No seqNo/primaryTerm in before state");
+                        log.debug("No seqNo/primaryTerm in before state");
                     }
                 }
             } else {
