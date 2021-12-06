@@ -94,6 +94,7 @@ class GraphQLTest {
                 .setSchema(Name.of("Test1"))
                 .setId("test1")
                 .setData(ImmutableMap.of(
+                        "d", 0.25,
                         "x", "test1",
                         "z", ImmutableMap.of(
                                 "test", ImmutableMap.of(
@@ -173,6 +174,7 @@ class GraphQLTest {
                 .query("query {\n" +
                         "  readTest1(id:\"test1\") {\n" +
                         "    id\n" +
+                        "    d\n" +
                         "    a { items { schema id test { x } } }\n" +
                         "    z {\n" +
                         "      key\n" +
@@ -189,6 +191,7 @@ class GraphQLTest {
         assertEquals(Collections.singletonMap(
                 "readTest1", ImmutableMap.of(
                         "id", "test1",
+                        "d", "0.25",
                         "a", ImmutableMap.of(
                                 "items", ImmutableList.of(
                                         ImmutableMap.of(
