@@ -9,9 +9,9 @@ package io.basestar.database;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -111,13 +111,13 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final Map<String, Action> actions = new HashMap<>();
         options.getActions().forEach((name, action) -> {
             if (action instanceof CreateOptions) {
-                final CreateOptions create = (CreateOptions)action;
+                final CreateOptions create = (CreateOptions) action;
                 actions.put(name, new CreateAction(namespace.requireObjectSchema(create.getSchema()), create));
             } else if (action instanceof UpdateOptions) {
-                final UpdateOptions update = (UpdateOptions)action;
+                final UpdateOptions update = (UpdateOptions) action;
                 actions.put(name, new UpdateAction(namespace.requireObjectSchema(update.getSchema()), update));
             } else if (action instanceof DeleteOptions) {
-                final DeleteOptions delete = (DeleteOptions)action;
+                final DeleteOptions delete = (DeleteOptions) action;
                 actions.put(name, new DeleteAction(namespace.requireObjectSchema(delete.getSchema()), delete));
             }
         });
@@ -145,7 +145,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final Set<ExpandKey<RefKey>> beforeKeys = new HashSet<>();
         final Set<Name> beforeCallerExpand = new HashSet<>();
 
-        if(mode.isReadonly()) {
+        if (mode.isReadonly()) {
             throw new DatabaseReadonlyException();
         }
 
@@ -207,10 +207,11 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
                 final Map<String, RefKey> resultLookup = new HashMap<>();
                 final Map<String, Instance> overlay = new HashMap<>();
+                final Map<String, Action.Result.Type> actionTypes = new HashMap<>();
 
                 // Compute changes
 
-                actionOrder(actions).forEach(name-> {
+                actionOrder(actions).forEach(name -> {
                     final Action action = actions.get(name);
                     final ObjectSchema schema = action.schema();
                     final String id = action.id();
@@ -223,14 +224,15 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         beforeKey = null;
                         before = null;
                     }
-                    final Instance after = action.after(valueContext, beforeContext.with(VAR_BATCH, overlay), before);
-                    if (after != null) {
-                        final RefKey afterKey = RefKey.latest(after);
+                    final Action.Result actionResult = action.after(valueContext, beforeContext.with(VAR_BATCH, overlay), before);
+                    actionTypes.put(name, actionResult.getType());
+                    if (actionResult.getAfter() != null) {
+                        final RefKey afterKey = RefKey.latest(actionResult.getAfter());
                         if (!afterCheck.add(afterKey)) {
                             throw new BatchKeyRepeatedException(afterKey.getSchema(), afterKey.getId());
                         }
                         resultLookup.put(name, afterKey);
-                        overlay.put(name, after);
+                        overlay.put(name, actionResult.getAfter());
                         final Set<Name> permissionExpand = permissionExpand(schema, action.permission(before));
                         afterCallerExpand.addAll(Name.children(permissionExpand, Name.of(VAR_CALLER)));
                         final Set<Name> readExpand = Sets.union(
@@ -240,7 +242,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         final Set<Name> transientExpand = schema.transientExpand(Name.of(), readExpand);
                         final Set<Name> writeExpand = Sets.union(transientExpand, schema.getExpand());
                         final ExpandKey<RefKey> expandKey = ExpandKey.from(afterKey, writeExpand);
-                        afterKeys.put(expandKey, after);
+                        afterKeys.put(expandKey, actionResult.getAfter());
                     } else {
                         assert beforeKey != null;
                         if (!afterCheck.add(beforeKey)) {
@@ -282,10 +284,10 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                             final Permission permission = action.permission(before);
                             final Map<String, Object> scope = new HashMap<>();
                             // FIXME: might make sense for before/after to be allowed to be null in scope
-                            if(before != null) {
+                            if (before != null) {
                                 scope.put(VAR_BEFORE, before);
                             }
-                            if(after != null) {
+                            if (after != null) {
                                 scope.put(VAR_AFTER, after);
                             }
                             checkPermission(afterCaller, schema, permission, scope);
@@ -311,12 +313,13 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                             } else {
                                 writeDelete(write, schema, key.getId(), before);
                             }
-                            if (storage.eventStrategy(schema) == Storage.EventStrategy.EMIT) {
+                            if (!Action.Result.Type.NO_OP.equals(actionTypes.get(name)) &&
+                                    storage.eventStrategy(schema) == Storage.EventStrategy.EMIT) {
                                 events.add(action.event(before, after));
                             }
                             // Remove superfluous expand data that was only used for permissions
                             final Instance restricted;
-                            if(after == null) {
+                            if (after == null) {
                                 restricted = null;
                             } else {
                                 final Instance expanded = schema.expand(after, Expander.noop(), Nullsafe.orDefault(action.afterExpand()));
@@ -402,7 +405,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
     // FIXME need to create a deeper permission expand for nested permissions
     private CompletableFuture<Instance> expandAndRestrict(final Consistency consistency, final Consistency linkConsistency, final Caller caller, final Instance instance, final Set<Name> expand) {
 
-        if(instance == null) {
+        if (instance == null) {
             return CompletableFuture.completedFuture(null);
         }
 
@@ -415,7 +418,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         return expandCaller(consistency, linkConsistency, Context.init(), caller, callerExpand)
                 .thenCompose(expandedCaller -> expand(consistency, linkConsistency, context(expandedCaller), instance, transientExpand)
-                .thenApply(v -> restrict(expandedCaller, v, expand)));
+                        .thenApply(v -> restrict(expandedCaller, v, expand)));
     }
 
     // FIXME need to create a deeper permission expand for nested permissions
@@ -423,7 +426,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         final Set<Name> callerExpand = new HashSet<>();
         final Set<Name> transientExpand = new HashSet<>();
-        for(final Instance instance : instances) {
+        for (final Instance instance : instances) {
             final LinkableSchema schema = linkableSchema(Instance.getSchema(instance));
             final Permission read = schema.getPermission(Permission.READ);
             final Set<Name> permissionExpand = permissionExpand(schema, read);
@@ -434,7 +437,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         return expandCaller(consistency, linkConsistency, Context.init(), caller, callerExpand)
                 .thenCompose(expandedCaller -> expand(consistency, linkConsistency, context(expandedCaller), instances, transientExpand)
-                .thenApply(vs -> vs.map(v -> restrict(expandedCaller, v, expand))));
+                        .thenApply(vs -> vs.map(v -> restrict(expandedCaller, v, expand))));
     }
 
     @Override
@@ -480,8 +483,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                     }
 
                     final int count = Nullsafe.orDefault(options.getCount(), QueryLinkOptions.DEFAULT_COUNT);
-                    if(count > QueryLinkOptions.MAX_COUNT) {
-                        throw new IllegalStateException("Count too high (max " +  QueryLinkOptions.MAX_COUNT + ")");
+                    if (count > QueryLinkOptions.MAX_COUNT) {
+                        throw new IllegalStateException("Count too high (max " + QueryLinkOptions.MAX_COUNT + ")");
                     }
                     final Page.Token paging = options.getPaging();
                     final Set<Page.Stat> stats = Nullsafe.orDefault(options.getStats());
@@ -539,8 +542,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
     protected void checkPermission(final Caller caller, final LinkableSchema schema, final Permission permission, final Map<String, Object> scope) {
 
-        if(caller.isAnon()) {
-            if(permission == null || !permission.isAnonymous()) {
+        if (caller.isAnon()) {
+            if (permission == null || !permission.isAnonymous()) {
                 throw new PermissionDeniedException("Anonymous not allowed");
             }
         }
@@ -619,7 +622,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         return query.thenApply(page -> {
             final Set<Event> events = new HashSet<>();
             page.forEach(instance -> events.add(RefRefreshEvent.of(event.getRef(), schema.getQualifiedName(), Instance.getId(instance))));
-            if(page.hasMore()) {
+            if (page.hasMore()) {
                 events.add(event.withPaging(page.getPaging()));
             }
             return emitter.emit(events);
@@ -638,7 +641,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final Set<Name> expand = schema.getExpand();
         return read.read().thenCompose(readResponse -> {
             final Instance before = schema.create(readResponse.get(schema, id), expand, true);
-            if(before != null) {
+            if (before != null) {
                 final Set<Name> refExpand = schema.refExpand(refSchema.getQualifiedName(), schema.getExpand());
                 final Instance unexpandedRefAfter = refSchema.create(readResponse.get(refSchema, refId), refExpand, true);
                 final Long refAfterVersion = unexpandedRefAfter == null ? null : Instance.getVersion(unexpandedRefAfter);
@@ -696,7 +699,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         final Set<Event> events = new HashSet<>();
         namespace.forEachObjectSchema((k, v) -> {
             final Set<Expression> queries = v.refQueries(schema.getQualifiedName(), v.getExpand());
-            if(!queries.isEmpty()) {
+            if (!queries.isEmpty()) {
                 final Or merged = new Or(queries.toArray(new Expression[0]));
                 final Expression bound = merged.bind(context(Caller.ANON, ImmutableMap.of(Reserved.THIS, ReferableSchema.ref(id))));
                 events.add(RefQueryEvent.of(Ref.of(schema.getQualifiedName(), id), k, bound));

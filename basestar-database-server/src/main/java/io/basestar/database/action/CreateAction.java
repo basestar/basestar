@@ -9,9 +9,9 @@ package io.basestar.database.action;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -64,17 +64,17 @@ public class CreateAction implements Action {
     }
 
     @Override
-    public Instance after(final ValueContext valueContext, final Context expressionContext, final Instance before) {
+    public Result after(final ValueContext valueContext, final Context expressionContext, final Instance before) {
 
-        if(before != null) {
+        if (before != null) {
             throw new ObjectExistsException(schema.getQualifiedName(), Instance.getId(before));
         }
 
         final Map<String, Object> data = new HashMap<>();
-        if(options.getData() != null) {
+        if (options.getData() != null) {
             data.putAll(options.getData());
         }
-        if(options.getExpressions() != null) {
+        if (options.getExpressions() != null) {
             options.getExpressions().forEach((k, expr) -> data.put(k, expr.evaluate(expressionContext)));
         }
 
@@ -89,9 +89,9 @@ public class CreateAction implements Action {
         final String requestedId = options.getId() == null ? Instance.getId(initial) : options.getId();
 
         final String actualId;
-        if(schema.getId() != null) {
+        if (schema.getId() != null) {
             actualId = schema.getId().evaluate(requestedId, expressionContext.with(CommonVars.VAR_THIS, initial));
-        } else if(requestedId != null) {
+        } else if (requestedId != null) {
             actualId = requestedId;
         } else {
             actualId = UUID.randomUUID().toString();
@@ -106,11 +106,11 @@ public class CreateAction implements Action {
         final Instance evaluated = schema.evaluateProperties(expressionContext.with(CommonVars.VAR_THIS, initial), new Instance(initial), Collections.emptySet());
 
         final Set<Constraint.Violation> violations = schema.validate(expressionContext.with(CommonVars.VAR_THIS, evaluated), evaluated, evaluated);
-        if(!violations.isEmpty()) {
+        if (!violations.isEmpty()) {
             throw new ConstraintViolationException(violations);
         }
 
-        return evaluated;
+        return new Result(Result.Type.CREATE, evaluated);
     }
 
     @Override

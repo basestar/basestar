@@ -73,7 +73,7 @@ public class UpdateAction implements Action {
     }
 
     @Override
-    public Instance after(final ValueContext valueContext, final Context expressionContext, final Instance before) {
+    public Result after(final ValueContext valueContext, final Context expressionContext, final Instance before) {
 
         final String id = options.getId();
 
@@ -130,7 +130,6 @@ public class UpdateAction implements Action {
             Instance.setVersion(initial, Instance.getVersion(before));
             Instance.setUpdated(initial, Instance.getUpdated(before));
         }
-
         if (!schema.areEqual(before, initial)) {
             Instance.setVersion(initial, afterVersion);
             Instance.setUpdated(initial, updated);
@@ -143,8 +142,18 @@ public class UpdateAction implements Action {
         if (!violations.isEmpty()) {
             throw new ConstraintViolationException(violations);
         }
+        Result.Type resultType = getResultType(evaluated.getVersion(), before);
+        return new Result(resultType, evaluated);
+    }
 
-        return evaluated;
+    private Result.Type getResultType(Long newVersion, Instance before) {
+        if (before == null) {
+            return Result.Type.CREATE;
+        } else if (!before.getVersion().equals(newVersion)) {
+            return Result.Type.UPDATE;
+        } else {
+            return Result.Type.NO_OP;
+        }
     }
 
     @SuppressWarnings("unchecked")
