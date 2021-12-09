@@ -9,9 +9,9 @@ package io.basestar.database.action;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,6 +29,7 @@ import io.basestar.schema.Permission;
 import io.basestar.schema.util.ValueContext;
 import io.basestar.storage.exception.UnsupportedWriteException;
 import io.basestar.util.Name;
+import lombok.Data;
 
 import java.util.Set;
 
@@ -40,7 +41,7 @@ public interface Action {
 
     Permission permission(Instance before);
 
-    Instance after(ValueContext valueContext, Context expressionContext, Instance before);
+    Result after(ValueContext valueContext, Context expressionContext, Instance before);
 
     Set<Name> afterExpand();
 
@@ -53,8 +54,23 @@ public interface Action {
     default void validate() {
 
         final ObjectSchema schema = schema();
-        if(schema.isReadonly()) {
+        if (schema.isReadonly()) {
             throw new UnsupportedWriteException(schema.getQualifiedName(), "schema is readonly");
+        }
+    }
+
+    @Data
+    class Result {
+
+        private final Type type;
+        private final Instance after;
+
+        public enum Type {
+
+            CREATE,
+            UPDATE,
+            DELETE,
+            NO_OP
         }
     }
 }

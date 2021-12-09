@@ -9,9 +9,9 @@ package io.basestar.database.action;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,6 +20,7 @@ package io.basestar.database.action;
  * #L%
  */
 
+import io.basestar.database.action.Action.Result;
 import io.basestar.database.event.ObjectDeletedEvent;
 import io.basestar.database.options.DeleteOptions;
 import io.basestar.event.Event;
@@ -71,7 +72,7 @@ public class DeleteAction implements Action {
     }
 
     @Override
-    public Instance after(final ValueContext valueContext, final Context expressionContext, final Instance before) {
+    public Result after(final ValueContext valueContext, final Context expressionContext, final Instance before) {
 
         final String id = options.getId();
 
@@ -79,14 +80,14 @@ public class DeleteAction implements Action {
             throw new ObjectMissingException(options.getSchema(), id);
         }
 
-        if(!id.equals(Instance.getId(before))) {
+        if (!id.equals(Instance.getId(before))) {
             log.warn("Allowing delete of object {} with mismatched id", id);
         }
 
         final Name schemaName = Instance.getSchema(before);
         assert schemaName != null;
-        if(!schemaName.equals(schema.getQualifiedName())) {
-            if(schema.isOrExtending(schemaName)) {
+        if (!schemaName.equals(schema.getQualifiedName())) {
+            if (schema.isOrExtending(schemaName)) {
                 throw new IllegalStateException("Must delete using actual schema");
             } else {
                 log.warn("Allowing delete of object {} with mismatched schema", id);
@@ -96,11 +97,11 @@ public class DeleteAction implements Action {
         final Long beforeVersion = Instance.getVersion(before);
         assert beforeVersion != null;
 
-        if(options.getVersion() != null && !beforeVersion.equals(options.getVersion())) {
+        if (options.getVersion() != null && !beforeVersion.equals(options.getVersion())) {
             throw new VersionMismatchException(options.getSchema(), id, options.getVersion());
         }
 
-        if(TOMBSTONE) {
+        if (TOMBSTONE) {
 
             final long afterVersion = beforeVersion + 1;
 
@@ -112,9 +113,9 @@ public class DeleteAction implements Action {
             Instance.setUpdated(tombstone, now);
             Instance.setHash(tombstone, schema.hash(tombstone));
 
-            return schema.create(tombstone);
+            return new Result(Result.Type.DELETE, schema.create(tombstone));
         } else {
-            return null;
+            return new Result(Result.Type.DELETE, null);
         }
     }
 
