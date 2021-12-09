@@ -305,15 +305,16 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                             assert key != null;
                             final Instance before = beforeResults.get(key);
                             final Instance after = afterResults.get(key);
-                            if (before == null) {
+                            final Action.Result.Type type = actionTypes.get(name);
+                            if (Action.Result.Type.CREATE.equals(type)) {
                                 assert after != null;
                                 writeCreate(write, schema, key.getId(), after);
-                            } else if (after != null) {
+                            } else if (Action.Result.Type.UPDATE.equals(type)) {
                                 writeUpdate(write, schema, key.getId(), before, after);
-                            } else {
+                            } else if (Action.Result.Type.DELETE.equals(type)){
                                 writeDelete(write, schema, key.getId(), before);
                             }
-                            if (!Action.Result.Type.NO_OP.equals(actionTypes.get(name)) &&
+                            if (!Action.Result.Type.NO_OP.equals(type) &&
                                     storage.eventStrategy(schema) == Storage.EventStrategy.EMIT) {
                                 events.add(action.event(before, after));
                             }
