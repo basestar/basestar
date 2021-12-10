@@ -751,4 +751,9 @@ public interface SQLDialect {
 
         return lhs.in(rhs);
     }
+
+    default QueryPart bind(final Object value) {
+
+        return DSL.val(value);
+    }
 }
