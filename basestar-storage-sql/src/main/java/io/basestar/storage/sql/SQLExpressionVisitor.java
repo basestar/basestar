@@ -257,8 +257,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     @Override
     public QueryPart visitConstant(final Constant expression) {
 
-        // Use inline rather than val because some JDBC drivers (Athena) don't support positional params
-        return DSL.inline(expression.getValue());
+        return dialect.bind(expression.getValue());
     }
 
     @Override

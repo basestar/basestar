@@ -214,4 +214,11 @@ public class TrinoDialect extends JSONDialect {
 
         return false;
     }
+
+    @Override
+    public QueryPart bind(final Object value) {
+
+        // Use inline rather than val because some JDBC drivers (Athena) don't support positional params
+        return DSL.inline(value);
+    }
 }
