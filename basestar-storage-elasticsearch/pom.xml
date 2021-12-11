@@ -9,10 +9,6 @@
 
     <artifactId>basestar-storage-elasticsearch</artifactId>
 
-    <properties>
-        <log4j.version>2.12.1</log4j.version>
-    </properties>
-
     <dependencyManagement>
         <dependencies>
             <dependency>
