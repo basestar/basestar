@@ -2,6 +2,8 @@ Test1:
   type: object
   description: Project
   properties:
+    d:
+      type: decimal?
     x:
       type: string?
     y:

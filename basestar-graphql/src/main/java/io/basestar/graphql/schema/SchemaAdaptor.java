@@ -9,9 +9,9 @@ package io.basestar.graphql.schema;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -47,24 +47,24 @@ public class SchemaAdaptor {
     public TypeDefinitionRegistry typeDefinitionRegistry() {
 
         final TypeDefinitionRegistry registry = new TypeDefinitionRegistry();
-        Stream.of(strategy.anyTypeName(), strategy.dateTypeName(),
-                strategy.dateTimeTypeName(), strategy.secretTypeName(),
-                strategy.binaryTypeName()).forEach(scalar -> {
-            registry.add(new ScalarTypeDefinition(scalar));
-            if(namespace.getSchema(Name.parse(scalar)) != null) {
-                throw new IllegalStateException("Namespace defines a schema called '" + scalar + "' but this is a scalar type name");
-            }
-        });
+        Stream.of(strategy.anyTypeName(), strategy.dateTypeName(), strategy.dateTimeTypeName(),
+                        strategy.secretTypeName(), strategy.binaryTypeName(), strategy.decimalTypeName())
+                .forEach(scalar -> {
+                    registry.add(new ScalarTypeDefinition(scalar));
+                    if (namespace.getSchema(Name.parse(scalar)) != null) {
+                        throw new IllegalStateException("Namespace defines a schema called '" + scalar + "' but this is a scalar type name");
+                    }
+                });
         final Map<String, Use<?>> mapTypes = new HashMap<>();
         namespace.getSchemas().forEach((k, schema) -> {
             typeDefinition(schema).ifPresent(registry::add);
-            if(schema instanceof InstanceSchema) {
-                final InstanceSchema instanceSchema = (InstanceSchema)schema;
+            if (schema instanceof InstanceSchema) {
+                final InstanceSchema instanceSchema = (InstanceSchema) schema;
                 mapTypes.putAll(mapTypes(instanceSchema));
-                if(schema instanceof ObjectSchema) {
+                if (schema instanceof ObjectSchema) {
                     final ObjectSchema objectSchema = (ObjectSchema) instanceSchema;
                     registry.add(pageTypeDefinition(objectSchema));
-                    if(objectSchema.hasProperties()) {
+                    if (objectSchema.hasProperties()) {
                         registry.add(createInputTypeDefinition(objectSchema));
                         registry.add(inputExpressionTypeDefinition(objectSchema));
                     }
@@ -72,7 +72,7 @@ public class SchemaAdaptor {
                         registry.add(updateInputTypeDefinition(objectSchema));
                         registry.add(patchInputTypeDefinition(objectSchema));
                     }
-                } else if(schema instanceof InterfaceSchema) {
+                } else if (schema instanceof InterfaceSchema) {
                     final InterfaceSchema interfaceSchema = (InterfaceSchema) instanceSchema;
                     registry.add(pageTypeDefinition(interfaceSchema));
                     registry.add(missingInterfaceRefDefinition(interfaceSchema));
@@ -138,8 +138,8 @@ public class SchemaAdaptor {
         final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
         builder.name(GraphQLUtils.QUERY_TYPE);
         namespace.forEachLinkableSchema((schemaName, schema) -> {
-            if(schema instanceof ReferableSchema) {
-                builder.fieldDefinition(readDefinition((ReferableSchema)schema));
+            if (schema instanceof ReferableSchema) {
+                builder.fieldDefinition(readDefinition((ReferableSchema) schema));
             }
             builder.fieldDefinition(queryDefinition(schema));
             schema.getLinks()
@@ -208,7 +208,7 @@ public class SchemaAdaptor {
     private void addMutations(final ObjectTypeDefinition.Builder builder) {
 
         namespace.forEachObjectSchema((k, v) -> {
-            if(!v.isReadonly()) {
+            if (!v.isReadonly()) {
                 builder.fieldDefinition(createDefinition(v));
                 if (v.hasMutableProperties()) {
                     builder.fieldDefinition(updateDefinition(v));
@@ -243,7 +243,7 @@ public class SchemaAdaptor {
         final EnumTypeDefinition.Builder builder = EnumTypeDefinition.newEnumTypeDefinition();
         builder.name(strategy.consistencyTypeName());
         Arrays.stream(Consistency.values()).forEach(v -> {
-            if(v != Consistency.NONE) {
+            if (v != Consistency.NONE) {
                 builder.enumValueDefinition(EnumValueDefinition.newEnumValueDefinition().name(v.name()).build());
             }
         });
@@ -257,13 +257,13 @@ public class SchemaAdaptor {
         builder.type(new TypeName(strategy.typeName(schema)));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(strategy.idArgumentName()).type(new TypeName(GraphQLUtils.ID_TYPE)).build());
-        if(schema.hasProperties()) {
+        if (schema.hasProperties()) {
             builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                     .name(strategy.dataArgumentName()).type(new TypeName(strategy.createInputTypeName(schema))).build());
         }
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(strategy.consistencyArgumentName()).type(new TypeName(strategy.consistencyTypeName())).build());
-        if(schema.hasProperties()) {
+        if (schema.hasProperties()) {
             builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                     .name(strategy.expressionsArgumentName()).type(new TypeName(strategy.inputExpressionsTypeName(schema))).build());
         }
@@ -364,7 +364,7 @@ public class SchemaAdaptor {
         builder.description(description(schema.getDescription()));
         schema.getProperties()
                 .forEach((k, v) -> {
-                    if(create || !v.isImmutable()) {
+                    if (create || !v.isImmutable()) {
                         builder.inputValueDefinition(inputValueDefinition(v, required));
                     }
                 });
@@ -402,7 +402,7 @@ public class SchemaAdaptor {
 
         final InputValueDefinition.Builder builder = InputValueDefinition.newInputValueDefinition();
         builder.name(property.getName());
-        if(property.getDescription() != null) {
+        if (property.getDescription() != null) {
             builder.description(new Description(property.getDescription(), null, true));
         }
         final Type<?> type = inputType(required ? property.typeOf() : property.typeOf().optional(true));
@@ -433,12 +433,12 @@ public class SchemaAdaptor {
 
     public TypeDefinition<?> typeDefinition(final InstanceSchema schema) {
 
-        if(schema.isConcrete()) {
+        if (schema.isConcrete()) {
             final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
             builder.name(strategy.typeName(schema));
             builder.description(description(schema.getDescription()));
-            if(schema instanceof ReferableSchema) {
-                builder.implementz(implementz((ReferableSchema)schema));
+            if (schema instanceof ReferableSchema) {
+                builder.implementz(implementz((ReferableSchema) schema));
             }
             fieldDefinitions(schema).forEach(builder::fieldDefinition);
             return builder.build();
@@ -455,9 +455,9 @@ public class SchemaAdaptor {
     private List<Type> implementz(final ReferableSchema schema) {
 
         final List<? extends ReferableSchema> extend = schema.getExtend();
-        if(extend != null) {
+        if (extend != null) {
             final List<Type> result = new ArrayList<>();
-            for(final ReferableSchema parent : extend) {
+            for (final ReferableSchema parent : extend) {
                 result.addAll(implementz(parent));
                 result.add(new TypeName(strategy.typeName(parent)));
             }
@@ -472,20 +472,20 @@ public class SchemaAdaptor {
         final List<FieldDefinition> fields = new ArrayList<>();
         schema.metadataSchema()
                 .forEach((k, v) -> {
-                    if(!Reserved.isReserved(k)) {
+                    if (!Reserved.isReserved(k)) {
                         fields.add(metadataFieldDefinition(k, v));
                     }
                 });
         schema.getProperties()
                 .forEach((k, v) -> {
-                    if(!v.isAlwaysHidden()) {
+                    if (!v.isAlwaysHidden()) {
                         fields.add(fieldDefinition(v));
                     }
                 });
-        if(schema instanceof Link.Resolver) {
+        if (schema instanceof Link.Resolver) {
             ((Link.Resolver) schema).getLinks()
                     .forEach((k, v) -> {
-                        if(!v.isAlwaysHidden()) {
+                        if (!v.isAlwaysHidden()) {
                             fields.add(FieldDefinition.newFieldDefinition()
                                     .name(k)
                                     .type(new TypeName(strategy.pageTypeName(v.getSchema())))
@@ -493,11 +493,11 @@ public class SchemaAdaptor {
                         }
                     });
         }
-        if(schema instanceof Transient.Resolver) {
+        if (schema instanceof Transient.Resolver) {
             ((Transient.Resolver) schema).getDeclaredTransients()
                     .forEach((k, v) -> {
                         // Can only show typed transients
-                        if(!v.isAlwaysHidden() && v.typeOf() != null) {
+                        if (!v.isAlwaysHidden() && v.typeOf() != null) {
                             fields.add(FieldDefinition.newFieldDefinition()
                                     .name(k)
                                     .type(type(v.typeOf()))
@@ -510,7 +510,7 @@ public class SchemaAdaptor {
 
     private Description description(final String description) {
 
-        if(description != null) {
+        if (description != null) {
             return new Description(description, null, true);
         } else {
             return null;
@@ -521,7 +521,7 @@ public class SchemaAdaptor {
 
         final EnumTypeDefinition.Builder builder = EnumTypeDefinition.newEnumTypeDefinition();
         builder.name(strategy.typeName(schema));
-        if(schema.getDescription() != null) {
+        if (schema.getDescription() != null) {
             builder.description(new Description(schema.getDescription(), null, true));
         }
         schema.getValues().forEach(v -> builder.enumValueDefinition(EnumValueDefinition.newEnumValueDefinition()
@@ -533,7 +533,7 @@ public class SchemaAdaptor {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
         builder.name(property.getName());
-        if(property.getDescription() != null) {
+        if (property.getDescription() != null) {
             builder.description(new Description(property.getDescription(), null, true));
         }
         final Type<?> type = type(property.typeOf());
@@ -545,7 +545,7 @@ public class SchemaAdaptor {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
         builder.name(name);
-        if(strategy.idArgumentName().equals(name)) {
+        if (strategy.idArgumentName().equals(name)) {
             builder.type(new TypeName(GraphQLUtils.ID_TYPE));
         } else {
             builder.type(type(type));
@@ -644,7 +644,7 @@ public class SchemaAdaptor {
             public <T> Type<?> visitPage(final UsePage<T> type) {
 
                 final Use<T> itemType = type.getType();
-                if(itemType instanceof UseLinkable) {
+                if (itemType instanceof UseLinkable) {
                     final LinkableSchema schema = ((UseLinkable) itemType).getSchema();
                     return new TypeName(strategy.pageTypeName(schema));
                 } else {
@@ -687,7 +687,7 @@ public class SchemaAdaptor {
     // FIXME: generalize with type
     public Type<?> inputType(final Use<?> type) {
 
-        if(type.isOptional()) {
+        if (type.isOptional()) {
             return inputTypeImpl(type);
         } else {
             return new NonNullType(inputTypeImpl(type));

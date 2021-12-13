@@ -266,7 +266,9 @@ public class SQLStorage implements DefaultLayerStorage {
                                                                    final Page.Token token, final Set<Page.Stat> stats) {
 
 
-        org.jooq.Name tableName = Optional.ofNullable(index)
+        final SQLDialect dialect = strategy.dialect();
+
+        final org.jooq.Name tableName = Optional.ofNullable(index)
                 .flatMap(index1 -> indexTableName((ReferableSchema) schema, index1))
                 .orElseGet(() -> schemaTableName(schema));
         final Table<Record> rawTable = DSL.table(tableName);
@@ -289,7 +291,7 @@ public class SQLStorage implements DefaultLayerStorage {
                 seek = select.limit(DSL.inline(count));
             } else {
                 final List<Object> values = KeysetPagingUtils.keysetValues(schema, sort, token);
-                seek = select.seek(values.stream().map(DSL::inline).toArray(Object[]::new)).limit(DSL.inline(count));
+                seek = select.seek(values.stream().map(dialect::bind).toArray(Object[]::new)).limit(DSL.inline(count));
             }
 
             return seek.fetchAsync().thenApply(results -> {

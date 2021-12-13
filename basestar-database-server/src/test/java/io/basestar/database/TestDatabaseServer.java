@@ -216,7 +216,6 @@ class TestDatabaseServer {
 
         final Map<String, Object> repeatedDataUpdate = database.update(caller, SIMPLE, id, 1L, data1).get();
 
-
         assertEquals(1, Instance.getVersion(repeatedDataUpdate));
         assertEquals(Instance.getCreated(repeatedDataUpdate), Instance.getUpdated(repeatedDataUpdate));
 
@@ -234,6 +233,9 @@ class TestDatabaseServer {
 
         verify(emitter, times(1))
                 .emit(ObjectUpdatedEvent.of(SIMPLE, id, 1L, create, update));
+
+        verify(emitter, times(2)) //dont emmit events for identical values updates
+                .emit(any(ObjectUpdatedEvent.class));
     }
 
     @Test
