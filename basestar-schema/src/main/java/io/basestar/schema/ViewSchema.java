@@ -321,19 +321,29 @@ public class ViewSchema implements LinkableSchema {
 
         final Object key = record.get(ID);
         if(key instanceof String) {
-            return (String)key;
-        } else if(key instanceof byte[]) {
-            return Bytes.valueOf((byte[])key).toBase64();
-        } else if(key instanceof Bytes) {
-            return ((Bytes)key).toBase64();
+            return (String) key;
+        } else if (key instanceof byte[]) {
+            return Bytes.valueOf((byte[]) key).toBase64();
+        } else if (key instanceof Bytes) {
+            return ((Bytes) key).toBase64();
         } else {
             throw new IllegalStateException("Missing or invalid " + ID + " (" + key + ")");
         }
     }
 
+    @Override
+    public String forceId(final Map<String, Object> record) {
+
+        if (record.get(ID) != null) {
+            return id(record);
+        } else {
+            return hash(record);
+        }
+    }
+
     public BinaryKey createId(final Map<String, Object> row) {
 
-        if(isAggregating() || isGrouping()) {
+        if (isAggregating() || isGrouping()) {
             final List<Object> values = new ArrayList<>();
             group.forEach(name -> {
                 final Object[] keys = typeOf(Name.of(name)).key(row.get(name));

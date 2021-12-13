@@ -227,7 +227,7 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                     final Action.Result actionResult = action.after(valueContext, beforeContext.with(VAR_BATCH, overlay), before);
                     actionTypes.put(name, actionResult.getType());
                     if (actionResult.getAfter() != null) {
-                        final RefKey afterKey = RefKey.latest(actionResult.getAfter());
+                        final RefKey afterKey = latestRefKey(actionResult.getAfter());
                         if (!afterCheck.add(afterKey)) {
                             throw new BatchKeyRepeatedException(afterKey.getSchema(), afterKey.getId());
                         }

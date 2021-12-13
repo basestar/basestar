@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import io.basestar.auth.Caller;
 import io.basestar.database.util.ExpandKey;
-import io.basestar.database.util.LinkKey;
+import io.basestar.database.util.QueryKey;
 import io.basestar.database.util.RefKey;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
@@ -139,18 +139,35 @@ public class ReadProcessor {
                 });
     }
 
+    protected RefKey latestRefKey(final Instance instance) {
+
+        return latestRefKey(null, instance);
+    }
+
+    protected RefKey latestRefKey(final Name defaultSchema, final Instance instance) {
+
+        assert instance != null;
+        final Name schemaName = Nullsafe.orDefault(instance.getSchema(), defaultSchema);
+        final LinkableSchema schema = linkableSchema(schemaName);
+        assert schema != null;
+        final String id = schema.forceId(instance);
+        return new RefKey(schema.getQualifiedName(), id, null);
+
+    }
+
     protected CompletableFuture<Instance> expand(final Consistency consistency, final Consistency linkConsistency, final Context context, final Instance item, final Set<Name> expand) {
 
-        if(item == null) {
+        if (item == null) {
             return CompletableFuture.completedFuture(null);
-        } else if(expand == null || expand.isEmpty()) {
+        } else if (expand == null || expand.isEmpty()) {
             return CompletableFuture.completedFuture(item);
         } else {
-            final ExpandKey<RefKey> expandKey = ExpandKey.from(RefKey.latest(item), expand);
+            final ExpandKey<RefKey> expandKey = ExpandKey.from(latestRefKey(item), expand);
             return expand(consistency, linkConsistency, context, Collections.singletonMap(expandKey, item))
                     .thenApply(results -> results.get(expandKey));
         }
     }
+
 
     protected CompletableFuture<Page<Instance>> expand(final Consistency consistency, final Consistency linkConsistency, final Context context, final Page<Instance> items, final Set<Name> expand) {
 
@@ -161,13 +178,13 @@ public class ReadProcessor {
         } else {
             final Map<ExpandKey<RefKey>, Instance> expandKeys = items.stream()
                     .collect(Collectors.toMap(
-                            item -> ExpandKey.from(RefKey.latest(item), expand),
+                            item -> ExpandKey.from(latestRefKey(item), expand),
                             item -> item
                     ));
             return expand(consistency, linkConsistency, context, expandKeys)
                     .thenApply(expanded -> items.withItems(
                             items.stream()
-                                    .map(v -> expanded.get(ExpandKey.from(RefKey.latest(v), expand)))
+                                    .map(v -> expanded.get(ExpandKey.from(latestRefKey(v), expand)))
                                     .collect(Collectors.toList())
                     ));
         }
@@ -190,7 +207,7 @@ public class ReadProcessor {
     protected CompletableFuture<Map<ExpandKey<RefKey>, Instance>> expandImpl(final Consistency consistency, final Consistency linkConsistency, final Context context, final Map<ExpandKey<RefKey>, Instance> items) {
 
         final Set<ExpandKey<RefKey>> refs = new HashSet<>();
-        final Map<ExpandKey<LinkKey>, CompletableFuture<Page<Instance>>> links = new HashMap<>();
+        final Map<ExpandKey<QueryKey>, CompletableFuture<Page<Instance>>> links = new HashMap<>();
 
         items.forEach((ref, object) -> {
             if(!ref.getExpand().isEmpty()) {
@@ -204,7 +221,7 @@ public class ReadProcessor {
                         if(ref == null) {
                             return null;
                         } else {
-                            refs.add(ExpandKey.from(RefKey.latest(schema.getQualifiedName(), ref), expand));
+                            refs.add(ExpandKey.from(latestRefKey(schema.getQualifiedName(), ref), expand));
                             return ref;
                         }
                     }
@@ -224,7 +241,7 @@ public class ReadProcessor {
                     public Page<Instance> expandLink(final Name name, final Link link, final Page<Instance> value, final Set<Name> expand) {
 
                         final RefKey refKey = ref.getKey();
-                        final ExpandKey<LinkKey> linkKey = ExpandKey.from(LinkKey.from(refKey, link.getName()), expand);
+                        final ExpandKey<QueryKey> linkKey = ExpandKey.from(QueryKey.from(refKey, link.getName()), expand);
                         log.debug("Expanding link: {}", linkKey);
                         // FIXME: do we need to pre-expand here? original implementation did
                         links.put(linkKey, queryLinkImpl(context, linkConsistency, link, object, linkKey.getExpand(), EXPAND_LINK_SIZE, null, Collections.emptySet())
@@ -294,13 +311,13 @@ public class ReadProcessor {
                             final RefKey refKey = ref.getKey();
                             final Name baseSchemaName = ref.getKey().getSchema();
                             final Name instanceSchemaName = Instance.getSchema(object);
-                            final ReferableSchema resolvedSchema = referableSchema(Nullsafe.orDefault(instanceSchemaName, baseSchemaName));
+                            final LinkableSchema resolvedSchema = linkableSchema(Nullsafe.orDefault(instanceSchemaName, baseSchemaName));
 
                             result.put(ref, resolvedSchema.expand(object, new Expander() {
                                 @Override
                                 public Instance expandRef(final Name name, final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
-                                    final ExpandKey<RefKey> expandKey = ExpandKey.from(RefKey.latest(schema.getQualifiedName(), ref), expand);
+                                    final ExpandKey<RefKey> expandKey = ExpandKey.from(latestRefKey(schema.getQualifiedName(), ref), expand);
                                     Instance result = expanded.get(expandKey);
                                     if (result == null) {
                                         result = ReferableSchema.ref(Instance.getId(ref));
@@ -322,7 +339,7 @@ public class ReadProcessor {
                                 @Override
                                 public Page<Instance> expandLink(final Name name, final Link link, final Page<Instance> value, final Set<Name> expand) {
 
-                                    final ExpandKey<LinkKey> linkKey = ExpandKey.from(LinkKey.from(refKey, link.getName()), expand);
+                                    final ExpandKey<QueryKey> linkKey = ExpandKey.from(QueryKey.from(refKey, link.getName()), expand);
                                     final CompletableFuture<Page<Instance>> future = links.get(linkKey);
                                     if(future != null) {
                                         final Page<Instance> result = future.getNow(null);

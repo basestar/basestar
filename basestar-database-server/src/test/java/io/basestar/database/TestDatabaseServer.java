@@ -37,19 +37,16 @@ import io.basestar.expression.compare.Eq;
 import io.basestar.expression.constant.Constant;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.logical.Or;
-import io.basestar.schema.Instance;
-import io.basestar.schema.Namespace;
-import io.basestar.schema.ReferableSchema;
-import io.basestar.schema.Reserved;
+import io.basestar.schema.*;
 import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.schema.util.Ref;
 import io.basestar.secret.Secret;
 import io.basestar.secret.SecretContext;
+import io.basestar.storage.DelegatingStorage;
 import io.basestar.storage.MemoryStorage;
 import io.basestar.storage.Storage;
 import io.basestar.storage.exception.UnsupportedWriteException;
-import io.basestar.util.Name;
-import io.basestar.util.Page;
+import io.basestar.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -87,6 +84,8 @@ class TestDatabaseServer {
     private static final Name TEAM = Name.of("Team");
 
     private static final Name TEAM_MEMBER = Name.of("TeamMember");
+
+    private static final Name TEAM_MEMBER_STATS = Name.of("TeamMemberStats");
 
     private static final Name CAT = Name.of("Cat");
 
@@ -134,7 +133,30 @@ class TestDatabaseServer {
             inv.getArgumentAt(0, Collection.class).forEach(event -> emitter.emit((Event) event));
             return CompletableFuture.completedFuture(null);
         });
-        this.storage = MemoryStorage.builder().build();
+        final MemoryStorage memoryStorage = MemoryStorage.builder().build();
+        this.storage = new DelegatingStorage() {
+            @Override
+            public Storage storage(final LinkableSchema schema) {
+
+                return memoryStorage;
+            }
+
+            @Override
+            public Pager<Map<String, Object>> query(final Consistency consistency, final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+                if (schema.getQualifiedName().equals(TEAM_MEMBER_STATS)) {
+                    return Pager.simple(ImmutableList.of(
+                            ImmutableMap.of(
+                                    "schema", TEAM_MEMBER_STATS.toString(),
+                                    "team", "team1",
+                                    "count", 10
+                            )
+                    ));
+                } else {
+                    return DelegatingStorage.super.query(consistency, schema, query, sort, expand);
+                }
+            }
+        };
         final SecretContext secretContext = new SecretContext() {
             @Override
             public CompletableFuture<Secret.Encrypted> encrypt(final Secret.Plaintext plaintext) {
@@ -804,26 +826,32 @@ class TestDatabaseServer {
         assertEquals("a2", Instance.get(get, Name.parse("team.parent.name")));
     }
 
-//    @Test
-//    void aggregate() throws Exception {
-//
-//        database.batch(Caller.SUPER, BatchOptions.builder()
-//                .action("a", CreateOptions.builder()
-//                        .setSchema(TEAM_MEMBER)
-//                        .setData(ImmutableMap.of(
-//                                "user", ImmutableMap.of("id", "u1"),
-//                                "team", ImmutableMap.of("id", "t1"),
-//                                "role", "owner",
-//                                "accepted", true
-//                        )).build())
-//                .build()).get();
-//
-//        final Page<Instance> results = database.query(Caller.SUPER, QueryOptions.builder()
-//                .setSchema(Name.of("TeamMemberStats"))
-//                .build()).get();
-//
-//        log.debug("Aggregate results: {}", results);
-//    }
+    @Test
+    void viewExpand() throws Exception {
+
+        final Page<Instance> results = database.query(Caller.SUPER, QueryOptions.builder()
+                .setSchema(TEAM_MEMBER_STATS)
+                .setExpand(ImmutableSet.of(Name.of("all")))
+                .build()).get();
+
+        assertEquals(results.getItems(), ImmutableList.of(
+                new Instance(ImmutableMap.of(
+                        ReferableSchema.SCHEMA, TEAM_MEMBER_STATS.toString(),
+                        ViewSchema.ID, BinaryKey.fromBase64("BXRlYW0x"),
+                        "count", 10L,
+                        "team", "team1",
+                        "all", new Page<>(ImmutableList.of(
+                                new Instance(ImmutableMap.of(
+                                        ReferableSchema.SCHEMA, TEAM_MEMBER_STATS.toString(),
+                                        ViewSchema.ID, BinaryKey.fromBase64("BXRlYW0x"),
+                                        "count", 10L,
+                                        "team", "team1"
+                                ))), null, new Page.Stats(1L, 1L))
+                ))
+        ));
+
+        log.debug("Aggregate results: {}", results);
+    }
 
     @Test
     void merge() throws Exception {
