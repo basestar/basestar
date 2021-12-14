@@ -142,6 +142,12 @@ class TestDatabaseServer {
             }
 
             @Override
+            public CompletableFuture<Map<String, Object>> get(final Consistency consistency, final ReferableSchema schema, final String id, final Set<Name> expand) {
+
+                return storage(schema).get(consistency, schema, id, expand);
+            }
+
+            @Override
             public Pager<Map<String, Object>> query(final Consistency consistency, final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
                 if (schema.getQualifiedName().equals(TEAM_MEMBER_STATS)) {
