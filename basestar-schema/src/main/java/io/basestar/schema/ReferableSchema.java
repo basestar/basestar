@@ -269,6 +269,14 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
     }
 
     @Override
+    default String forceId(final Map<String, Object> data) {
+
+        final String id = id(data);
+        assert id != null;
+        return id;
+    }
+
+    @Override
     default Use<?> typeOfId() {
 
         return UseString.DEFAULT;

@@ -126,6 +126,10 @@ TeamMemberStats:
   group:
     - team
   where: accepted
+  links:
+    all:
+      schema: TeamMemberStats
+      expression: true
 
   permissions:
     read:

@@ -111,6 +111,13 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver, Query.Res
 
     String id(Map<String, Object> data);
 
+    /**
+     * For treating a view record as an object type record regardless of primary key configuration,
+     * temporary measure until view-id considerations are resolved
+     */
+
+    String forceId(Map<String, Object> data);
+
     @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
     Use<?> typeOfId();
 

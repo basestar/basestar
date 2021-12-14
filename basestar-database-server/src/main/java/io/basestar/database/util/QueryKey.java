@@ -27,21 +27,21 @@ import lombok.Data;
 import java.util.Map;
 
 @Data
-public class LinkKey {
+public class QueryKey {
 
     private final Name schema;
 
     private final String id;
 
-    private final String link;
+    private final String query;
 
-    public static LinkKey from(final Map<String, Object> item, final String link) {
+    public static QueryKey from(final Map<String, Object> item, final String query) {
 
-        return new LinkKey(Instance.getSchema(item), Instance.getId(item), link);
+        return new QueryKey(Instance.getSchema(item), Instance.getId(item), query);
     }
 
-    public static LinkKey from(final RefKey ref, final String link) {
+    public static QueryKey from(final RefKey ref, final String query) {
 
-        return new LinkKey(ref.getSchema(), ref.getId(), link);
+        return new QueryKey(ref.getSchema(), ref.getId(), query);
     }
 }

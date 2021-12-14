@@ -30,29 +30,13 @@ import java.util.Map;
 
 @Data
 @RequiredArgsConstructor
-public class RefKey {
+public class RefKey implements LinkableKey {
 
     private final Name schema;
 
     private final String id;
 
     private final Long version;
-
-    public static RefKey latest(final Map<String, Object> item) {
-
-        final Name schema = Instance.getSchema(item);
-        final String id = Instance.getId(item);
-        assert schema != null && id != null;
-        return new RefKey(schema, id, null);
-    }
-
-    public static RefKey latest(final Name defaultSchema, final Map<String, Object> item) {
-
-        final Name schema = Instance.getSchema(item);
-        final String id = Instance.getId(item);
-        assert id != null;
-        return new RefKey(Nullsafe.orDefault(schema, defaultSchema), id, null);
-    }
 
     public static RefKey versioned(final Map<String, Object> item) {
 
