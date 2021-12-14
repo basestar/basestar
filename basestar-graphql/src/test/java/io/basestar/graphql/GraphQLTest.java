@@ -176,6 +176,7 @@ class GraphQLTest {
                         "    id\n" +
                         "    d\n" +
                         "    a { items { schema id test { x } } }\n" +
+                        "    b { schema id test { x } }\n" +
                         "    z {\n" +
                         "      key\n" +
                         "      value {\n" +
@@ -201,6 +202,13 @@ class GraphQLTest {
                                                         "x", "test1"
                                                 )
                                         )
+                                )
+                        ),
+                        "b", ImmutableMap.of(
+                                "schema", "Test4",
+                                "id", "test4",
+                                "test", ImmutableMap.of(
+                                        "x", "test1"
                                 )
                         ),
                         "z", ImmutableList.of(ImmutableMap.of(
