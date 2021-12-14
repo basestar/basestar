@@ -15,6 +15,10 @@ Test1:
     a:
       schema: Test3
       expression: test.id == this.id
+    b:
+      schema: Test3
+      expression: test.id == this.id
+      single: true
 
 Test2:
   type: struct

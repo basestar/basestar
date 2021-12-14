@@ -488,7 +488,7 @@ public class SchemaAdaptor {
                         if (!v.isAlwaysHidden()) {
                             fields.add(FieldDefinition.newFieldDefinition()
                                     .name(k)
-                                    .type(new TypeName(strategy.pageTypeName(v.getSchema())))
+                                    .type(new TypeName(v.isSingle() ? strategy.typeName(v.getSchema()) : strategy.pageTypeName(v.getSchema())))
                                     .build());
                         }
                     });
