@@ -27,7 +27,6 @@ import io.basestar.expression.iterate.ContextIterator;
 import io.basestar.expression.iterate.ForAny;
 import io.basestar.schema.Bucketing;
 import io.basestar.schema.Constraint;
-import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
 import io.basestar.schema.util.Cascade;
 import io.basestar.schema.util.Expander;
@@ -158,7 +157,7 @@ public interface UseCollection<V, T extends Collection<V>> extends UseContainer<
     }
 
     @Override
-    default void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, LinkableSchema> out) {
+    default void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
         getType().collectMaterializationDependencies(expand, out);
     }

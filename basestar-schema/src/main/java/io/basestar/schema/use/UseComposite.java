@@ -5,7 +5,6 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Bucketing;
 import io.basestar.schema.Constraint;
-import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
 import io.basestar.schema.exception.TypeSyntaxException;
 import io.basestar.schema.util.Cascade;
@@ -305,7 +304,7 @@ public class UseComposite implements Use<Map<String, Object>> {
     }
 
     @Override
-    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, LinkableSchema> out) {
+    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
         for (final Map.Entry<String, Use<?>> entry : types.entrySet()) {

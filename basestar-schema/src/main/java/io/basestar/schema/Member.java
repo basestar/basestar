@@ -157,7 +157,7 @@ public interface Member extends Named, Described, Serializable, Extendable {
         typeOf().collectDependencies(expand, out);
     }
 
-    default void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, LinkableSchema> out) {
+    default void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
         typeOf().collectMaterializationDependencies(expand, out);
     }
