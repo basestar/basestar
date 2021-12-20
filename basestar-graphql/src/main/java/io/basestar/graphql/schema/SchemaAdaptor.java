@@ -280,6 +280,8 @@ public class SchemaAdaptor {
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(strategy.versionArgumentName()).type(new TypeName(GraphQLUtils.INT_TYPE)).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name(strategy.createArgumentName()).type(new TypeName(GraphQLUtils.BOOLEAN_TYPE)).build());
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(strategy.dataArgumentName()).type(new TypeName(typeName)).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(strategy.consistencyArgumentName()).type(new TypeName(strategy.consistencyTypeName())).build());

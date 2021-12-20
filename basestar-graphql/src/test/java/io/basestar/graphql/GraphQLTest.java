@@ -270,6 +270,35 @@ class GraphQLTest {
     }
 
     @Test
+    void testUpdateCreate() throws Exception {
+
+        final Namespace namespace = namespace();
+        final GraphQL graphQL = graphQL(namespace);
+
+        final ExecutionResult update = graphQL.execute(ExecutionInput.newExecutionInput()
+                .query("mutation {\n" +
+                        "  updateTest1(id:\"x\", data:{x:\"x\"}) {\n" +
+                        "    id\n" +
+                        "  }\n" +
+                        "}")
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
+                .build());
+        assertEquals(1, update.getErrors().size());
+
+        final ExecutionResult updateCreate = graphQL.execute(ExecutionInput.newExecutionInput()
+                .query("mutation {\n" +
+                        "  updateTest1(id:\"x\", data:{x:\"x\"}, create:true) {\n" +
+                        "    id\n" +
+                        "  }\n" +
+                        "}")
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
+                .build());
+
+        assertEquals(0, updateCreate.getErrors().size());
+        assertEquals(1, updateCreate.<Map<String, Map<String, Object>>>getData().get("updateTest1").size());
+    }
+
+    @Test
     void testMultiMutate() throws Exception {
 
         final Namespace namespace = namespace();

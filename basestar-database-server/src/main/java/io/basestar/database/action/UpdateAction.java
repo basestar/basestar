@@ -79,13 +79,14 @@ public class UpdateAction implements Action {
 
         final Map<String, Object> data = new HashMap<>();
         final UpdateOptions.Mode mode = Nullsafe.orDefault(options.getMode(), UpdateOptions.Mode.REPLACE);
+        final boolean create = Nullsafe.orDefault(options.getCreate(), Boolean.FALSE);
 
         final long afterVersion;
         final Instant created;
         final Instant updated = ISO8601.now();
 
         if (before == null) {
-            if (mode == UpdateOptions.Mode.CREATE) {
+            if (create) {
                 afterVersion = 1L;
                 created = updated;
             } else {

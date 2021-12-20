@@ -300,10 +300,11 @@ public class GraphQLAdaptor {
             final Map<String, Object> data = requestTransform.fromRequest(schema, env.getArgument(strategy.dataArgumentName()));
             final Consistency consistency = consistency(env);
             final Map<String, Expression> expressions = parseExpressions(env.getArgument(strategy.expressionsArgumentName()));
+            final Boolean create = env.getArgument(strategy.createArgumentName());
 
             final UpdateOptions options = UpdateOptions.builder()
                     .setSchema(schema.getQualifiedName()).setId(id)
-                    .setMode(mode).setConsistency(consistency)
+                    .setMode(mode).setCreate(create).setConsistency(consistency)
                     .setData(data).setVersion(version)
                     .setExpressions(expressions)
                     .setExpand(expand)
