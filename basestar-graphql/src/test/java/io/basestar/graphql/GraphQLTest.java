@@ -34,18 +34,19 @@ import io.basestar.database.DatabaseServer;
 import io.basestar.database.options.CreateOptions;
 import io.basestar.event.Emitter;
 import io.basestar.event.Event;
+import io.basestar.expression.Expression;
 import io.basestar.graphql.schema.SchemaAdaptor;
 import io.basestar.graphql.schema.SchemaConverter;
 import io.basestar.graphql.subscription.SubscriberContext;
 import io.basestar.graphql.wiring.InterfaceResolver;
-import io.basestar.schema.InstanceSchema;
-import io.basestar.schema.Namespace;
-import io.basestar.schema.Property;
-import io.basestar.schema.ViewSchema;
+import io.basestar.schema.*;
 import io.basestar.schema.use.UseString;
 import io.basestar.secret.SecretContext;
 import io.basestar.storage.MemoryStorage;
+import io.basestar.storage.Storage;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
+import io.basestar.util.Pager;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 
@@ -148,6 +149,11 @@ class GraphQLTest {
                         "y", 4
                 ))
                 .build()).get();
+
+        return graphQL(namespace, emitter, databaseServer);
+    }
+
+    private GraphQL graphQL(final Namespace namespace, final Emitter emitter, final DatabaseServer databaseServer) throws Exception {
 
         return GraphQLAdaptor.builder().database(databaseServer).namespace(namespace).build().graphQL();
     }
@@ -628,6 +634,39 @@ class GraphQLTest {
 
         verify(emitter, times(1))
                 .emit(anyCollectionOf(Event.class));
+    }
+
+    @Test
+    void testQuerySchema() throws Exception {
+
+        final Emitter emitter = mock(Emitter.class);
+        configureMockEmitter(emitter);
+
+        final Storage storage = mock(Storage.class);
+        when(storage.query(any(), any(), any(), any(), any(), any())).thenReturn(Pager.empty());
+
+        final Namespace namespace = namespace();
+        final DatabaseServer databaseServer = DatabaseServer.builder().namespace(namespace).storage(storage).emitter(emitter).build();
+        final GraphQL graphQL = graphQL(namespace, emitter, databaseServer);
+
+        final Map<String, Map<String, Object>> create = graphQL.execute(ExecutionInput.newExecutionInput()
+                .query("query {\n" +
+                        "  queryNearPoints(x:1, y:2) {\n" +
+                        "    items{ x y }\n" +
+                        "  }\n" +
+                        "}")
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
+                .build()).getData();
+        assertNotNull(create.get("queryNearPoints"));
+
+        verify(storage, times(1))
+                .query(Consistency.EVENTUAL, namespace.requireQuerySchema("NearPoints"),
+                        Immutable.map(
+                                Immutable.entry("x", 1.0),
+                                Immutable.entry("y", 2.0),
+                                Immutable.entry("distance", null)
+                        ),
+                        Expression.parse("true"), Immutable.list(), Immutable.set());
     }
 
     @Test

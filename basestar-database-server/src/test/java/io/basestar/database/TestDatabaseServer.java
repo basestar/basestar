@@ -27,6 +27,7 @@ import io.basestar.auth.Caller;
 import io.basestar.auth.exception.PermissionDeniedException;
 import io.basestar.database.event.*;
 import io.basestar.database.exception.DatabaseReadonlyException;
+import io.basestar.database.exception.MissingArgumentException;
 import io.basestar.database.options.*;
 import io.basestar.event.Emitter;
 import io.basestar.event.Event;
@@ -87,6 +88,8 @@ class TestDatabaseServer {
 
     private static final Name TEAM_MEMBER_STATS = Name.of("TeamMemberStats");
 
+    private static final Name TEAM_MEMBER_STATS_QUERY = Name.of("TeamMemberStatsQuery");
+
     private static final Name CAT = Name.of("Cat");
 
     private static final Name DOG = Name.of("Dog");
@@ -136,7 +139,7 @@ class TestDatabaseServer {
         final MemoryStorage memoryStorage = MemoryStorage.builder().build();
         this.storage = new DelegatingStorage() {
             @Override
-            public Storage storage(final LinkableSchema schema) {
+            public Storage storage(final QueryableSchema schema) {
 
                 return memoryStorage;
             }
@@ -148,7 +151,7 @@ class TestDatabaseServer {
             }
 
             @Override
-            public Pager<Map<String, Object>> query(final Consistency consistency, final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+            public Pager<Map<String, Object>> query(final Consistency consistency, final QueryableSchema schema, final Map<String, Object> arguments, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
                 if (schema.getQualifiedName().equals(TEAM_MEMBER_STATS)) {
                     return Pager.simple(ImmutableList.of(
@@ -158,8 +161,17 @@ class TestDatabaseServer {
                                     "count", 10
                             )
                     ));
+                } else if (schema.getQualifiedName().equals(TEAM_MEMBER_STATS_QUERY)) {
+                    return Pager.simple(ImmutableList.of(
+                            ImmutableMap.of(
+                                    "schema", TEAM_MEMBER_STATS_QUERY.toString(),
+                                    "team", arguments.get("team"),
+                                    "count", 10
+                            )
+                    ));
+
                 } else {
-                    return DelegatingStorage.super.query(consistency, schema, query, sort, expand);
+                    return DelegatingStorage.super.query(consistency, schema, arguments, query, sort, expand);
                 }
             }
         };
@@ -1029,6 +1041,26 @@ class TestDatabaseServer {
     }
 
     @Test
+    void testQuery() throws Exception {
+
+        final Page<Instance> page = database.query(Caller.SUPER, QueryOptions.builder()
+                .setSchema(TEAM_MEMBER_STATS_QUERY)
+                .setArguments(Immutable.map(
+                        "team", "team1"
+                ))
+                .build()).get();
+
+        assertEquals(1, page.size());
+
+        assertThrows(MissingArgumentException.class, () -> {
+
+            database.query(Caller.SUPER, QueryOptions.builder()
+                    .setSchema(TEAM_MEMBER_STATS_QUERY)
+                    .build()).get();
+        });
+    }
+
+    @Test
     void testRefQueryEvents() throws Exception {
 
         final String id = UUID.randomUUID().toString();
@@ -1059,7 +1091,7 @@ class TestDatabaseServer {
         final Set<Page.Stat> expected = ImmutableSet.of(Page.Stat.TOTAL);
 
         final Storage storage = mock(Storage.class);
-        when(storage.query(any(), any(), any(), any(), any()))
+        when(storage.query(any(), any(), any(), any(), any(), any()))
                 .thenReturn(((stats, token, count) -> {
                     assertEquals(expected, stats);
                     return CompletableFuture.completedFuture(Page.empty());

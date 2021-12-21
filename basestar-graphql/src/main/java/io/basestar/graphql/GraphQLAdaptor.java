@@ -149,15 +149,18 @@ public class GraphQLAdaptor {
     private Map<String, DataFetcher> queryFetchers() {
 
         final Map<String, DataFetcher> results = new HashMap<>();
-        namespace.forEachLinkableSchema((schemaName, schema) -> {
-            if(schema instanceof ReferableSchema) {
-                final ReferableSchema objectSchema = (ReferableSchema)schema;
+        namespace.forEachQueryableSchema((schemaName, schema) -> {
+            if (schema instanceof ReferableSchema) {
+                final ReferableSchema objectSchema = (ReferableSchema) schema;
                 results.put(strategy.readMethodName(objectSchema), readFetcher(objectSchema));
             }
             results.put(strategy.queryMethodName(schema), queryFetcher(schema));
-            schema.getLinks().forEach((linkName, link) -> {
-                results.put(strategy.queryLinkMethodName(schema, link), queryLinkFetcher(schema, link));
-            });
+            if (schema instanceof LinkableSchema) {
+                final LinkableSchema linkableSchema = (LinkableSchema) schema;
+                schema.getLinks().forEach((linkName, link) -> {
+                    results.put(strategy.queryLinkMethodName(linkableSchema, link), queryLinkFetcher(linkableSchema, link));
+                });
+            }
         });
         return results;
     }
@@ -185,7 +188,7 @@ public class GraphQLAdaptor {
                 .thenApply(object -> responseTransform.toResponse(schema, object));
     }
 
-    private DataFetcher<CompletableFuture<?>> queryFetcher(final LinkableSchema schema) {
+    private DataFetcher<CompletableFuture<?>> queryFetcher(final QueryableSchema schema) {
 
         return (env) -> {
             final Caller caller = GraphQLUtils.caller(env.getContext());
@@ -193,6 +196,14 @@ public class GraphQLAdaptor {
             final String query = env.getArgument(strategy.queryArgumentName());
             final Expression expression = query == null ? Constant.TRUE : Expression.parse(query);
             final Page.Token paging = paging(env);
+            final Map<String, Object> arguments = new HashMap<>();
+            if (schema instanceof QuerySchema) {
+                ((QuerySchema) schema).getArguments().forEach(argument -> {
+                    final String name = argument.getName();
+                    final Object value = env.getArgumentOrDefault(name, null);
+                    arguments.put(name, value);
+                });
+            }
             final Integer count = count(env);
             final List<Sort> sort = sort(env);
             final Set<Page.Stat> stats = stats(env);
@@ -206,6 +217,7 @@ public class GraphQLAdaptor {
                     .setSort(sort)
                     .setExpand(expand)
                     .setConsistency(consistency)
+                    .setArguments(arguments)
                     .build();
             return database.query(caller, options)
                     .thenApply(result -> responseTransform.toResponsePage(schema, result));

@@ -5,6 +5,7 @@ import io.basestar.schema.Consistency;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.ReferableSchema;
+import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Pager;
 import io.basestar.util.Sort;
@@ -26,7 +27,7 @@ public class SplitLayerStorage implements DefaultLayerStorage {
     @Override
     public Pager<Map<String, Object>> queryObject(final Consistency consistency, final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        return objectStorage.query(consistency, schema, query, sort, expand);
+        return objectStorage.query(consistency, schema, Immutable.map(), query, sort, expand);
     }
 
     @Override

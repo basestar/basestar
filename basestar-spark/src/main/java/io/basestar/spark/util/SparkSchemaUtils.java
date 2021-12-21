@@ -249,6 +249,12 @@ public class SparkSchemaUtils {
             }
 
             @Override
+            public DataType visitQuery(final UseQuery type) {
+
+                return structType(type.getSchema(), expand);
+            }
+
+            @Override
             public <T> DataType visitOptional(final UseOptional<T> type) {
 
                 return type.getType().visit(this).asNullable();
@@ -546,6 +552,16 @@ public class SparkSchemaUtils {
             }
 
             @Override
+            public Object visitQuery(final UseQuery type) {
+
+                if (value instanceof Row) {
+                    return fromSpark(type.getSchema(), naming, expand, (Row) value);
+                } else {
+                    throw new IllegalStateException();
+                }
+            }
+
+            @Override
             public <T> Object visitOptional(final UseOptional<T> type) {
 
                 return type.getType().visit(this);
@@ -804,6 +820,17 @@ public class SparkSchemaUtils {
             }
 
             @Override
+            @SuppressWarnings("unchecked")
+            public Object visitQuery(final UseQuery type) {
+
+                if (value instanceof Map<?, ?> && dataType instanceof StructType) {
+                    return toSpark(type.getSchema(), expand, (StructType) dataType, (Map<String, Object>) value);
+                } else {
+                    throw new IllegalStateException();
+                }
+            }
+
+            @Override
             public <T> Object visitOptional(final UseOptional<T> type) {
 
                 return type.getType().visit(this);
@@ -930,6 +957,12 @@ public class SparkSchemaUtils {
 
             @Override
             public Encoder<?> visitView(final UseView type) {
+
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public Encoder<?> visitQuery(final UseQuery type) {
 
                 throw new UnsupportedOperationException();
             }

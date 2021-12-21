@@ -119,10 +119,16 @@ public interface ColumnStrategy {
                 }
 
                 @Override
+                public ColumnMapper<T> visitQuery(final UseQuery type) {
+
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
                 @SuppressWarnings("unchecked")
                 public <V> ColumnMapper<T> visitOptional(final UseOptional<V> type) {
 
-                    return columnMapper((Use<T>)type.getType(), true, expand);
+                    return columnMapper((Use<T>) type.getType(), true, expand);
                 }
 
                 @Override

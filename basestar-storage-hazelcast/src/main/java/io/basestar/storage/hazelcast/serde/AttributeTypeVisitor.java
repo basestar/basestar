@@ -135,6 +135,12 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
     }
 
     @Override
+    public AttributeType<?> visitQuery(final UseQuery type) {
+
+        return AttributeType.struct(type.getSchema());
+    }
+
+    @Override
     public <T> AttributeType<?> visitOptional(final UseOptional<T> type) {
 
         return type.getType().visit(this);
@@ -248,6 +254,12 @@ public class AttributeTypeVisitor implements Use.Visitor<AttributeType<?>> {
 
         @Override
         public AttributeType<?> visitView(final UseView type) {
+
+            return AttributeType.structArray(type.getSchema());
+        }
+
+        @Override
+        public AttributeType<?> visitQuery(final UseQuery type) {
 
             return AttributeType.structArray(type.getSchema());
         }

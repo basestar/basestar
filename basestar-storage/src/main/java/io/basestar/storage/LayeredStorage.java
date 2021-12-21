@@ -24,15 +24,19 @@ public interface LayeredStorage extends Storage {
 
     Pager<Map<String, Object>> queryView(Consistency consistency, ViewSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
 
-    @Override
-    default Pager<Map<String, Object>> query(final Consistency consistency, final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    Pager<Map<String, Object>> queryQuery(Consistency consistency, QuerySchema schema, Map<String, Object> arguments, Expression query, List<Sort> sort, Set<Name> expand);
 
-        if(schema instanceof ViewSchema) {
-            return queryView(consistency, (ViewSchema)schema, query, sort, expand);
-        } else if(schema instanceof InterfaceSchema) {
-            return queryInterface(consistency, (InterfaceSchema)schema, query, sort, expand);
+    @Override
+    default Pager<Map<String, Object>> query(final Consistency consistency, final QueryableSchema schema, final Map<String, Object> arguments, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        if (schema instanceof QuerySchema) {
+            return queryQuery(consistency, (QuerySchema) schema, arguments, query, sort, expand);
+        } else if (schema instanceof ViewSchema) {
+            return queryView(consistency, (ViewSchema) schema, query, sort, expand);
+        } else if (schema instanceof InterfaceSchema) {
+            return queryInterface(consistency, (InterfaceSchema) schema, query, sort, expand);
         } else {
-            return queryObject(consistency, (ObjectSchema)schema, query, sort, expand);
+            return queryObject(consistency, (ObjectSchema) schema, query, sort, expand);
         }
     }
 

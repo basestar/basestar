@@ -89,6 +89,8 @@ public abstract class TestStorage {
 
     protected static final String SQL_VIEW = "SqlView";
 
+    protected static final String SQL_QUERY = "SqlQuery";
+
     protected final Namespace namespace;
 
     protected TestStorage() {
@@ -194,7 +196,7 @@ public abstract class TestStorage {
         );
 
         final Expression expr = Expression.parse("country == 'US' || state == 'England'");
-        final Page<Map<String, Object>> results = storage.query(Consistency.ATOMIC, schema, expr, sort, Collections.emptySet()).page(EnumSet.of(Page.Stat.TOTAL), null, 10).join();
+        final Page<Map<String, Object>> results = storage.query(Consistency.ATOMIC, schema, Immutable.map(), expr, sort, Collections.emptySet()).page(EnumSet.of(Page.Stat.TOTAL), null, 10).join();
 
         final List<String> ids = Arrays.asList("123", "189", "26", "67", "129", "159", "151", "116", "142", "179");
         assertEquals(ids, results.map(Instance::getId).getItems());
@@ -219,7 +221,7 @@ public abstract class TestStorage {
         );
 
         final Expression expr = Expression.parse("country == 'US' || state == 'England'");
-        final Page<Map<String, Object>> results = storage.query(Consistency.ATOMIC, schema, expr, sort, Collections.emptySet()).page(EnumSet.of(Page.Stat.TOTAL), null, 10).join();
+        final Page<Map<String, Object>> results = storage.query(Consistency.ATOMIC, schema, Immutable.map(), expr, sort, Collections.emptySet()).page(EnumSet.of(Page.Stat.TOTAL), null, 10).join();
 
         assertEquals(ImmutableList.of(), results.getItems());
     }
@@ -265,7 +267,7 @@ public abstract class TestStorage {
         );
 
         final Expression expr = Expression.parse("country == '" + country + "'");
-        final Pager<Map<String, Object>> pager = storage.query(Consistency.ASYNC, schema, expr, sort, Collections.emptySet());
+        final Pager<Map<String, Object>> pager = storage.query(Consistency.ASYNC, schema, Immutable.map(), expr, sort, Collections.emptySet());
 
         final Set<String> results = new HashSet<>();
         Page.Token token = null;
@@ -328,7 +330,7 @@ public abstract class TestStorage {
         );
 
         final Expression expr = Expression.parse("country == '" + country + "'");
-        final Pager<Map<String, Object>> pager = storage.query(Consistency.ASYNC, schema, expr, sort, Collections.emptySet());
+        final Pager<Map<String, Object>> pager = storage.query(Consistency.ASYNC, schema, Immutable.map(), expr, sort, Collections.emptySet());
 
         final Set<String> results = new HashSet<>();
         Page.Token token = null;
@@ -718,7 +720,7 @@ public abstract class TestStorage {
 
         final List<Sort> sort = ImmutableList.of(Sort.asc(Name.of(ObjectSchema.ID)));
         final Expression expr = Expression.parse("p.x == 10 && p.y == 100 for any p of points");
-        final Page<Map<String, Object>> results = storage.query(Consistency.ATOMIC, schema, expr, Collections.emptyList(), Collections.emptySet()).page(100).join();
+        final Page<Map<String, Object>> results = storage.query(Consistency.ATOMIC, schema, Immutable.map(), expr, Collections.emptyList(), Collections.emptySet()).page(100).join();
         assertEquals(1, results.size());
     }
 
@@ -833,7 +835,7 @@ public abstract class TestStorage {
         bulkLoad(storage, addresses);
 
         final List<Sort> sort = ImmutableList.of(Sort.desc(Name.of("country")), Sort.asc(Name.of("state")));
-        final Pager<Map<String, Object>> sources = storage.query(Consistency.ATOMIC, schema, Expression.parse("true"), sort, null);
+        final Pager<Map<String, Object>> sources = storage.query(Consistency.ATOMIC, schema, Immutable.map(), Expression.parse("true"), sort, null);
 
         final Page<Map<String, Object>> results = sources.page(300).join();
         log.debug("Aggregation results: {}", results);
@@ -1101,7 +1103,7 @@ public abstract class TestStorage {
 
     private Page<Map<String, Object>> page(final Storage storage, final ObjectSchema schema, final Expression expression, final List<Sort> sort, final Set<Name> expand, final int count) {
 
-        return storage.query(Consistency.ATOMIC, schema, expression.bind(Context.init()), sort, expand).page(count).join();
+        return storage.query(Consistency.ATOMIC, schema, Immutable.map(), expression.bind(Context.init()), sort, expand).page(count).join();
     }
 
     private String createComplete(final Storage storage, final ObjectSchema schema, final Map<String, Object> data) {
@@ -1339,7 +1341,7 @@ public abstract class TestStorage {
                 Sort.asc(Name.of("__key"))
         );
 
-        final Page<Map<String, Object>> page = storage.query(Consistency.ATOMIC, viewSchema, Constant.TRUE, sort, ImmutableSet.of()).page(1).get();
+        final Page<Map<String, Object>> page = storage.query(Consistency.ATOMIC, viewSchema, Immutable.map(), Constant.TRUE, sort, ImmutableSet.of()).page(1).get();
         assertEquals(1, page.size());
     }
 
@@ -1349,22 +1351,22 @@ public abstract class TestStorage {
     }
 
     @Test
-    public void testSqlQuery() throws Exception {
+    public void testSqlView() throws Exception {
 
         assumeTrue(supportsSql());
 
         // Default sort by PK
-        testSqlQueryWithSort(ImmutableList.of());
+        testSqlViewWithSort(ImmutableList.of());
         // Sort by field not in PK
-        testSqlQueryWithSort(ImmutableList.of(Sort.desc("count")));
+        testSqlViewWithSort(ImmutableList.of(Sort.desc("count")));
         // Sort by partial PK
-        testSqlQueryWithSort(ImmutableList.of(Sort.asc("city")));
+        testSqlViewWithSort(ImmutableList.of(Sort.asc("city")));
         // Sort by reversed PK
-        testSqlQueryWithSort(ImmutableList.of(Sort.desc("city"), Sort.desc("state")));
+        testSqlViewWithSort(ImmutableList.of(Sort.desc("city"), Sort.desc("state")));
     }
 
     @SuppressWarnings("UnstableApiUsage")
-    private void testSqlQueryWithSort(final List<Sort> overrideSort) throws Exception {
+    private void testSqlViewWithSort(final List<Sort> overrideSort) throws Exception {
 
         final Storage storage = storage(namespace);
 
@@ -1374,14 +1376,36 @@ public abstract class TestStorage {
 
         final List<Sort> sort = schema.sort(overrideSort);
 
-        final Page<Map<String, Object>> firstPage = storage.query(Consistency.ATOMIC, schema, Constant.TRUE, sort, ImmutableSet.of()).page(10).get();
+        final Page<Map<String, Object>> firstPage = storage.query(Consistency.ATOMIC, schema, Immutable.map(), Constant.TRUE, sort, ImmutableSet.of()).page(10).get();
         assertEquals(10, firstPage.size());
         assertNotNull(firstPage.getPaging());
         assertTrue(Comparators.isInOrder(firstPage, Sort.comparator(sort, Instance::get)));
 
-        final Page<Map<String, Object>> secondPage = storage.query(Consistency.ATOMIC, schema, Constant.TRUE, sort, ImmutableSet.of()).page(firstPage.getPaging(), 10).get();
+        final Page<Map<String, Object>> secondPage = storage.query(Consistency.ATOMIC, schema, Immutable.map(), Constant.TRUE, sort, ImmutableSet.of()).page(firstPage.getPaging(), 10).get();
         assertEquals(3, secondPage.size());
         assertNull(secondPage.getPaging());
         assertTrue(Comparators.isInOrder(secondPage, Sort.comparator(sort, Instance::get)));
+    }
+
+    @Test
+    public void testSqlQuery() throws Exception {
+
+        assumeTrue(supportsSql());
+
+        final Storage storage = storage(namespace);
+
+        bulkLoad(storage, loadAddresses());
+
+        final QuerySchema schema = namespace.requireQuerySchema(SQL_QUERY);
+
+        final Page<Map<String, Object>> firstPage = storage.query(Consistency.ATOMIC, schema, Immutable.map("city", "Washington"), Constant.TRUE, Immutable.list(), ImmutableSet.of())
+                .page(10).get();
+
+        assertEquals(1, firstPage.size());
+        assertEquals(schema.create(ImmutableMap.of(
+                "city", "Washington",
+                "count", 2L,
+                "state", "District of Columbia"
+        )), firstPage.get(0));
     }
 }
