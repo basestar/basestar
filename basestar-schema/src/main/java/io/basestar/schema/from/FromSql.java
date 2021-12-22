@@ -179,7 +179,7 @@ public class FromSql implements From {
 
         final Pattern pattern = Pattern.compile("\\$\\{(.*?)}");
         final Matcher matcher = pattern.matcher(sql);
-        if (matcher.find()) {
+        while (matcher.find()) {
             final String name = matcher.group(1);
             final Argument argument = arguments.stream().filter(arg -> name.equals(arg.getName()))
                     .findFirst().orElseThrow(() -> new IllegalStateException("Argument " + name + " not found"));
