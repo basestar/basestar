@@ -31,6 +31,11 @@ import java.util.stream.Collectors;
 @Slf4j
 public class StepFunctionStorage implements DefaultLayerStorage {
 
+    // Collect more results than requested, for in memory paging
+    private static final int BUFFER_MULTIPLIER = 5;
+
+    private static final int BUFFER_MAX = 1000;
+
     // An execution object is at version 1 if running, 2 if complete
     private static final long MIN_VERSION = 1L;
 
@@ -173,9 +178,9 @@ public class StepFunctionStorage implements DefaultLayerStorage {
 
         final String stepFunctionArn = strategy.stateMachineArn(schema);
         return (stats, paging, count) -> client.listExecutions(ListExecutionsRequest.builder()
-            .stateMachineArn(stepFunctionArn)
-            .nextToken(toRequestToken(paging))
-            .maxResults(count)
+                .stateMachineArn(stepFunctionArn)
+                .nextToken(toRequestToken(paging))
+                .maxResults(Math.min(count * BUFFER_MULTIPLIER, BUFFER_MAX))
             .build()).thenCompose(v -> toResponse(schema, v));
     }
 

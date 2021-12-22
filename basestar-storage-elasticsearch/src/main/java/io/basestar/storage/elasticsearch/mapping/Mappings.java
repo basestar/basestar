@@ -226,6 +226,12 @@ public class Mappings {
                     }
 
                     @Override
+                    public FieldType visitQuery(final UseQuery type) {
+
+                        return new FieldType.NestedType(properties(type.getSchema(), expand));
+                    }
+
+                    @Override
                     public <T> FieldType visitOptional(final UseOptional<T> type) {
 
                         return type.getType().visit(this);

@@ -215,6 +215,12 @@ public class AvroUtils {
             }
 
             @Override
+            public Schema visitQuery(final UseQuery type) {
+
+                return makeOptional(schema(type.getSchema(), expand), true);
+            }
+
+            @Override
             public <T> Schema visitOptional(final UseOptional<T> type) {
 
                 return schema(type.getType(), expand, true);

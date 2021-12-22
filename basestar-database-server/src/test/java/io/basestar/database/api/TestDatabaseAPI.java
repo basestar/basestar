@@ -160,7 +160,8 @@ class TestDatabaseAPI {
         final DatabaseAPI api = new DatabaseAPI(db);
         api.handle(request(APIRequest.Method.PUT, "Test1/1", ImmutableMap.of(), new Properties("a", "b"))).join();
         Mockito.verify(db).update(Caller.ANON, UpdateOptions.builder()
-                .setSchema(Name.of("Test1")).setId("1").setData(ImmutableMap.of("f1", "a", "f2", "b")).setMode(UpdateOptions.Mode.CREATE).build());
+                .setSchema(Name.of("Test1")).setId("1").setData(ImmutableMap.of("f1", "a", "f2", "b"))
+                .setMode(UpdateOptions.Mode.REPLACE).setCreate(true).build());
     }
 
     @Test
@@ -170,7 +171,8 @@ class TestDatabaseAPI {
         final DatabaseAPI api = new DatabaseAPI(db);
         api.handle(request(APIRequest.Method.PATCH, "Test1/1", ImmutableMap.of(), new Properties("a", "b"))).join();
         Mockito.verify(db).update(Caller.ANON, UpdateOptions.builder()
-                .setSchema(Name.of("Test1")).setId("1").setData(ImmutableMap.of("f1", "a", "f2", "b")).setMode(UpdateOptions.Mode.MERGE_DEEP).build());
+                .setSchema(Name.of("Test1")).setId("1").setData(ImmutableMap.of("f1", "a", "f2", "b"))
+                .setMode(UpdateOptions.Mode.MERGE_DEEP).setCreate(false).build());
     }
 
     @Test

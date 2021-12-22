@@ -33,6 +33,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -52,6 +53,8 @@ public class QueryOptions implements Options {
     private final Expression expression;
 
     private final Integer count;
+
+    private final Map<String, Object> arguments;
 
     private final List<Sort> sort;
 

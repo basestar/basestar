@@ -4,33 +4,25 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import io.basestar.expression.Context;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.schema.use.Use;
-import io.basestar.util.*;
+import io.basestar.util.Immutable;
+import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
+import io.basestar.util.Warnings;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public interface LinkableSchema extends InstanceSchema, Link.Resolver, Query.Resolver, Permission.Resolver {
+public interface LinkableSchema extends QueryableSchema, Query.Resolver {
 
     String __ID = "__id";
 
-    default List<Sort> sort(final List<Sort> sort) {
-
-        final List<Sort> result = new ArrayList<>(sort);
-        sort().forEach(s -> {
-            if (sort.stream().noneMatch(s2 -> s2.getName().equals(s.getName()))) {
-                result.add(s);
-            }
-        });
-        return result;
-    }
-
-    List<Sort> sort();
-
-    interface Descriptor<S extends LinkableSchema> extends InstanceSchema.Descriptor<S>, Link.Resolver.Descriptor, Query.Resolver.Descriptor, Permission.Resolver.Descriptor {
+    interface Descriptor<S extends LinkableSchema> extends QueryableSchema.Descriptor<S>, Query.Resolver.Descriptor {
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonDeserialize(using = AbbrevListDeserializer.class)
@@ -40,7 +32,7 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver, Query.Res
         @JsonDeserialize(using = AbbrevListDeserializer.class)
         List<Bucketing> getBucket();
 
-        interface Self<S extends LinkableSchema> extends InstanceSchema.Descriptor.Self<S>, Descriptor<S> {
+        interface Self<S extends LinkableSchema> extends QueryableSchema.Descriptor.Self<S>, Descriptor<S> {
 
             @Override
             default Set<Name> getExpand() {
@@ -54,18 +46,6 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver, Query.Res
             }
 
             @Override
-            default Map<String, Link.Descriptor> getLinks() {
-
-                return self().describeDeclaredLinks();
-            }
-
-            @Override
-            default Map<String, Permission.Descriptor> getPermissions() {
-
-                return self().describeDeclaredPermissions();
-            }
-
-            @Override
             default Map<String, Query.Descriptor> getQueries() {
 
                 return self().describeDeclaredQueries();
@@ -73,7 +53,7 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver, Query.Res
         }
     }
 
-    interface Builder<B extends Builder<B, S>, S extends LinkableSchema> extends InstanceSchema.Builder<B, S>, Descriptor<S>, Link.Resolver.Builder<B>, Query.Resolver.Builder<B>, Permission.Resolver.Builder<B> {
+    interface Builder<B extends Builder<B, S>, S extends LinkableSchema> extends QueryableSchema.Builder<B, S>, Descriptor<S>, Query.Resolver.Builder<B> {
 
         B setExpand(Set<Name> expand);
 
@@ -111,6 +91,13 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver, Query.Res
 
     String id(Map<String, Object> data);
 
+    /**
+     * For treating a view record as an object type record regardless of primary key configuration,
+     * temporary measure until view-id considerations are resolved
+     */
+
+    String forceId(Map<String, Object> data);
+
     @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
     Use<?> typeOfId();
 
@@ -120,24 +107,6 @@ public interface LinkableSchema extends InstanceSchema, Link.Resolver, Query.Res
                 id(), id,
                 Reserved.DELETED, true
         ));
-    }
-
-    @Override
-    default Set<Constraint.Violation> validate(final Context context, final Name name, final Instance after) {
-
-        return validate(context, name, after, after);
-    }
-
-    default Set<Constraint.Violation> validate(final Context context, final Instance before, final Instance after) {
-
-        return validate(context, Name.empty(), before, after);
-    }
-
-    default Set<Constraint.Violation> validate(final Context context, final Name name, final Instance before, final Instance after) {
-
-        return this.getProperties().values().stream()
-                .flatMap(v -> v.validate(context, name, before.get(v.getName()), after.get(v.getName())).stream())
-                .collect(Collectors.toSet());
     }
 
     default boolean isCompatibleBucketing(final List<Bucketing> other) {

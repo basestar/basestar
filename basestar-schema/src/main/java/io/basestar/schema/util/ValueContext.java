@@ -65,6 +65,8 @@ public interface ValueContext {
 
     Instance createView(UseView type, Object value, Set<Name> expand);
 
+    Instance createQuery(UseQuery type, Object value, Set<Name> expand);
+
     Secret createSecret(UseSecret type, Object value, Set<Name> expand);
 
     <T> Page<T> createPage(UsePage<T> type, Object value, Set<Name> expand);
@@ -156,12 +158,19 @@ public interface ValueContext {
         }
 
         @Override
+        public Instance createQuery(final UseQuery type, final Object value, final Set<Name> expand) {
+
+            final QuerySchema schema = type.getSchema();
+            return schema.create(this, value, expand);
+        }
+
+        @Override
         public Secret createSecret(final UseSecret secret, final Object value, final Set<Name> expand) {
 
-            if(value instanceof Secret) {
+            if (value instanceof Secret) {
                 return (Secret) value;
-            } else if(value instanceof byte[]) {
-                return Secret.encrypted((byte[])value);
+            } else if (value instanceof byte[]) {
+                return Secret.encrypted((byte[]) value);
             } else {
                 throw new TypeConversionException(Secret.class, "<redacted>");
             }

@@ -15,6 +15,10 @@ Test1:
     a:
       schema: Test3
       expression: test.id == this.id
+    b:
+      schema: Test3
+      expression: test.id == this.id
+      single: true
 
 Test2:
   type: struct
@@ -119,3 +123,20 @@ Function:
   returns: boolean
   definition: ""
 
+NearPoints:
+  type: query
+  sql: SELECT X, Y FROM ${point}
+  using:
+    point: Point
+  arguments:
+    - name: x
+      type: number
+    - name: y
+      type: number
+    - name: distance
+      type: number?
+  properties:
+    x:
+      type: number
+    y:
+      type: number
