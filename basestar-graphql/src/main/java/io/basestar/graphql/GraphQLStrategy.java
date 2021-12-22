@@ -98,6 +98,8 @@ public interface GraphQLStrategy {
 
     String dataArgumentName();
 
+    String createArgumentName();
+
     String expressionsArgumentName();
 
     String consistencyArgumentName();
@@ -348,6 +350,12 @@ public interface GraphQLStrategy {
         public String dataArgumentName() {
 
             return "data";
+        }
+
+        @Override
+        public String createArgumentName() {
+
+            return "create";
         }
 
         @Override

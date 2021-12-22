@@ -74,6 +74,8 @@ public class DatabaseAPI implements API {
 
     private static final String PARAM_MODE = "mode";
 
+    private static final String PARAM_CREATE = "create";
+
     private static final String PARAM_COUNT = "count";
 
     private static final String PARAM_SORT = "sort";
@@ -91,10 +93,14 @@ public class DatabaseAPI implements API {
     private static final String IN_PATH = "path";
 
     // FIXME: make configurable
-    private static final UpdateOptions.Mode DEFAULT_PUT_MODE = UpdateOptions.Mode.CREATE;
+    private static final UpdateOptions.Mode DEFAULT_PUT_MODE = UpdateOptions.Mode.REPLACE;
+
+    private static final Boolean DEFAULT_PUT_CREATE = Boolean.TRUE;
 
     // FIXME: make configurable
     private static final UpdateOptions.Mode DEFAULT_PATCH_MODE = UpdateOptions.Mode.MERGE_DEEP;
+
+    private static final Boolean DEFAULT_PATCH_CREATE = Boolean.FALSE;
 
     private final Database database;
 
@@ -155,9 +161,9 @@ public class DatabaseAPI implements API {
                         case GET:
                             return read(caller, Name.parse(path.get(0)), path.get(1), request);
                         case PUT:
-                            return update(caller, Name.parse(path.get(0)), path.get(1), DEFAULT_PUT_MODE, request);
+                            return update(caller, Name.parse(path.get(0)), path.get(1), DEFAULT_PUT_CREATE, DEFAULT_PUT_MODE, request);
                         case PATCH:
-                            return update(caller, Name.parse(path.get(0)), path.get(1), DEFAULT_PATCH_MODE, request);
+                            return update(caller, Name.parse(path.get(0)), path.get(1), DEFAULT_PATCH_CREATE, DEFAULT_PATCH_MODE, request);
                         case DELETE:
                             return delete(caller, Name.parse(path.get(0)), path.get(1), request);
                         default:
@@ -241,7 +247,7 @@ public class DatabaseAPI implements API {
         }));
     }
 
-    private CompletableFuture<APIResponse> update(final Caller caller, final Name schema, final String id, final UpdateOptions.Mode mode, final APIRequest request) {
+    private CompletableFuture<APIResponse> update(final Caller caller, final Name schema, final String id, final Boolean create, final UpdateOptions.Mode mode, final APIRequest request) {
 
         final Map<String, Object> data = parseData(request);
 
@@ -249,6 +255,7 @@ public class DatabaseAPI implements API {
                 .setSchema(schema).setId(id).setData(data)
                 .setExpand(parseExpand(request))
                 .setMode(Nullsafe.orDefault(parseUpdateMode(request), mode))
+                .setCreate(Nullsafe.orDefault(parseUpdateCreate(request), create))
                 .setVersion(parseVersion(request))
                 .build();
 
@@ -305,6 +312,20 @@ public class DatabaseAPI implements API {
             }
         } catch (final Exception e) {
             throw new InvalidQueryException(PARAM_EXPAND, e.getMessage());
+        }
+    }
+
+    private Boolean parseUpdateCreate(final APIRequest request) {
+
+        try {
+            final String create = request.getFirstQuery(PARAM_CREATE);
+            if (create != null) {
+                return Boolean.valueOf(create.toLowerCase());
+            } else {
+                return null;
+            }
+        } catch (final Exception e) {
+            throw new InvalidQueryException(PARAM_CREATE, e.getMessage());
         }
     }
 
