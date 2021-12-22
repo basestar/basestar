@@ -28,6 +28,7 @@ import io.basestar.expression.visitor.DisjunctionVisitor;
 import io.basestar.schema.Index;
 import io.basestar.schema.*;
 import io.basestar.schema.expression.InferenceContext;
+import io.basestar.schema.from.FromSql;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseRef;
 import io.basestar.schema.use.UseStruct;
@@ -41,6 +42,7 @@ import io.basestar.storage.query.Range;
 import io.basestar.storage.query.RangeVisitor;
 import io.basestar.storage.sql.resolver.FieldResolver;
 import io.basestar.storage.sql.resolver.ValueResolver;
+import io.basestar.storage.sql.strategy.NamingStrategy;
 import io.basestar.storage.sql.strategy.SQLStrategy;
 import io.basestar.storage.sql.util.DelegatingDatabaseMetaData;
 import io.basestar.storage.util.KeysetPagingUtils;
@@ -57,6 +59,7 @@ import org.jooq.exception.DataAccessException;
 import org.jooq.exception.SQLStateClass;
 import org.jooq.impl.DSL;
 
+import javax.annotation.Nullable;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -115,9 +118,9 @@ public class SQLStorage implements DefaultLayerStorage {
         }
     }
 
-    private Optional<org.jooq.Field<?>> resolveField(final Table<?> table, final String name) {
+    private Optional<org.jooq.Field<?>> resolveField(@Nullable final Table<?> table, final String name) {
 
-        if (strategy.useMetadata()) {
+        if (strategy.useMetadata() && table != null) {
             final String normalizedName = strategy.getNamingStrategy().columnName(name);
             final List<org.jooq.Field<?>> fields = Arrays.stream(table.fields())
                     .filter(f -> strategy.getNamingStrategy().columnName(f.getName()).equals(normalizedName))
@@ -134,7 +137,7 @@ public class SQLStorage implements DefaultLayerStorage {
         }
     }
 
-    private FieldResolver fieldResolver(final Table<?> table, final String name) {
+    private FieldResolver fieldResolver(@Nullable final Table<?> table, final String name) {
 
         final Name root = Name.of(name);
         return new FieldResolver() {
@@ -152,7 +155,7 @@ public class SQLStorage implements DefaultLayerStorage {
         };
     }
 
-    private List<SelectFieldOrAsterisk> selectFields(final LinkableSchema schema, final Table<?> table) {
+    private List<SelectFieldOrAsterisk> selectFields(final QueryableSchema schema, @Nullable final Table<?> table) {
 
         final SQLDialect dialect = strategy.dialect();
 
@@ -172,6 +175,84 @@ public class SQLStorage implements DefaultLayerStorage {
 
         final Expression bound = query.bind(Context.init());
         return (stats, token, count) -> queryImpl(schema, null, bound, sort, expand, count, token, stats);
+    }
+
+
+    @Override
+    public Pager<Map<String, Object>> queryQuery(final Consistency consistency, final QuerySchema schema, final Map<String, Object> arguments,
+                                                 final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        final Expression bound = query.bind(Context.init());
+
+        final SQLDialect dialect = strategy.dialect();
+        final NamingStrategy namingStrategy = strategy.getNamingStrategy();
+
+        final io.basestar.schema.from.From from = schema.getFrom();
+        if (from instanceof FromSql) {
+            final InferenceContext inferenceContext = InferenceContext.from(schema);
+            final SQLExpressionVisitor visitor = new SQLExpressionVisitor(dialect, inferenceContext,
+                    name -> DSL.field(DSL.name(namingStrategy.columnName(name.first()))));
+            final Condition condition = visitor.condition(bound);
+
+            final Pair<String, List<Object>> sqlAndBindings = ((FromSql) from)
+                    .getReplacedSqlWithBindings(s -> namingStrategy.reference(s).toString(), schema.getArguments(), arguments);
+            final SQL sql = DSL.sql("(" + sqlAndBindings.getFirst() + ")", sqlAndBindings.getSecond().toArray());
+
+            return (stats, token, count) -> {
+
+                final long offset = Nullsafe.mapOrDefault(token, Page.Token::getLongValue, 0L);
+
+                final CompletableFuture<Page<Map<String, Object>>> pageFuture = withContext(context -> {
+
+                    final List<SelectFieldOrAsterisk> fields = selectFields(schema, null);
+                    final List<OrderField<?>> orderFields = orderFields(null, sort);
+
+                    return context.select(fields).from(sql).where(condition).orderBy(orderFields).offset(offset).fetchAsync().thenApply(results -> {
+
+                        final List<Map<String, Object>> objects = all(schema, results);
+
+                        final Page.Token nextToken;
+                        if (objects.size() < count) {
+                            nextToken = null;
+                        } else {
+                            nextToken = Page.Token.fromLongValue(offset + count);
+                        }
+
+                        return new Page<>(objects, nextToken);
+                    });
+                });
+
+                if (stats != null && (stats.contains(Page.Stat.TOTAL) || stats.contains(Page.Stat.APPROX_TOTAL))) {
+
+                    // Runs in parallel with query
+                    final CompletableFuture<Page.Stats> statsFuture = withContext(context -> {
+
+                        return context.select(DSL.count().as(COUNT_AS)).from(sql).where(condition).fetchAsync().thenApply(results -> {
+
+                            if (results.isEmpty()) {
+                                return Page.Stats.ZERO;
+                            } else {
+                                final Record1<Integer> record = results.iterator().next();
+                                return Page.Stats.fromTotal(record.value1());
+                            }
+                        });
+                    });
+
+                    return CompletableFuture.allOf(pageFuture, statsFuture).thenApply(ignored -> {
+
+                        final Page<Map<String, Object>> page = pageFuture.getNow(Page.empty());
+                        return page.withStats(statsFuture.getNow(Page.Stats.ZERO));
+                    });
+
+                } else {
+                    return pageFuture;
+                }
+
+            };
+
+        } else {
+            throw new UnsupportedOperationException("Query only supported with SQL from definition");
+        }
     }
 
     @Override
@@ -220,9 +301,7 @@ public class SQLStorage implements DefaultLayerStorage {
         return new SQLExpressionVisitor(dialect, inferenceContext, columnResolver).condition(expression);
     }
 
-    private List<OrderField<?>> orderFields(final Table<?> table, final List<Sort> sort) {
-
-        final SQLDialect dialect = strategy.dialect();
+    private List<OrderField<?>> orderFields(@Nullable final Table<?> table, final List<Sort> sort) {
 
         return sort.stream()
                 .flatMap(v -> {
@@ -631,14 +710,14 @@ public class SQLStorage implements DefaultLayerStorage {
         }
     }
 
-    private List<Map<String, Object>> all(final LinkableSchema schema, final Result<Record> result) {
+    private List<Map<String, Object>> all(final QueryableSchema schema, final Result<Record> result) {
 
         return result.stream()
                 .map(v -> fromRecord(schema, v))
                 .collect(Collectors.toList());
     }
 
-    private Map<String, Object> fromRecord(final LinkableSchema schema, final Record record) {
+    private Map<String, Object> fromRecord(final QueryableSchema schema, final Record record) {
 
         final SQLDialect dialect = strategy.dialect();
 

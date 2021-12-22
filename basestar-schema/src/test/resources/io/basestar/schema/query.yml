@@ -1,0 +1,23 @@
+Point:
+  type: object
+  properties:
+    x:
+      type: integer
+    y:
+      type: integer
+
+PointQuery:
+  type: query
+  sql: SELECT X, Y FROM ${point} WHERE X>${minX} AND X<${maxX}
+  using:
+    point: Point
+  arguments:
+    - name: minX
+      type: integer
+    - name: maxX
+      type: integer
+  properties:
+    x:
+      type: integer
+    y:
+      type: integer

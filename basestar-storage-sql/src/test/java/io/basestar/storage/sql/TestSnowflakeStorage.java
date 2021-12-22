@@ -9,8 +9,9 @@ import io.basestar.schema.use.UseString;
 import io.basestar.storage.Storage;
 import io.basestar.storage.sql.dialect.SnowflakeDialect;
 import io.basestar.storage.sql.strategy.DefaultNamingStrategy;
-import io.basestar.storage.sql.strategy.SQLStrategy;
 import io.basestar.storage.sql.strategy.DefaultSQLStrategy;
+import io.basestar.storage.sql.strategy.SQLStrategy;
+import io.basestar.util.Immutable;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Page;
 import io.basestar.util.Sort;
@@ -160,7 +161,7 @@ public class TestSnowflakeStorage extends TestSQLStorage {
                 .setStrategy(strategy)
                 .build();
 
-        final Page<Map<String, Object>> page = storage.query(Consistency.ASYNC, schema, Expression.parse("nameWithUnderscores == 'record1'"), ImmutableList.of(Sort.asc("__key")), ImmutableSet.of())
+        final Page<Map<String, Object>> page = storage.query(Consistency.ASYNC, schema, Immutable.map(), Expression.parse("nameWithUnderscores == 'record1'"), ImmutableList.of(Sort.asc("__key")), ImmutableSet.of())
                 .page(10).get();
         assertEquals(1, page.size());
         assertEquals("record1", page.get(0).get("nameWithUnderscores"));

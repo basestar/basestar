@@ -123,3 +123,20 @@ Function:
   returns: boolean
   definition: ""
 
+NearPoints:
+  type: query
+  sql: SELECT X, Y FROM ${point}
+  using:
+    point: Point
+  arguments:
+    - name: x
+      type: number
+    - name: y
+      type: number
+    - name: distance
+      type: number?
+  properties:
+    x:
+      type: number
+    y:
+      type: number

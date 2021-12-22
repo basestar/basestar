@@ -76,7 +76,7 @@ public interface GraphQLStrategy {
 
     String subscribeQueryMethodName(ObjectSchema type);
 
-    String queryMethodName(LinkableSchema type);
+    String queryMethodName(QueryableSchema type);
 
     String queryLinkMethodName(LinkableSchema type, Link link);
 
@@ -287,7 +287,7 @@ public interface GraphQLStrategy {
         }
 
         @Override
-        public String queryMethodName(final LinkableSchema type) {
+        public String queryMethodName(final QueryableSchema type) {
 
             return "query" + typeName(type);
         }

@@ -3,7 +3,7 @@ package io.basestar.storage;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Consistency;
 import io.basestar.schema.Instance;
-import io.basestar.schema.LinkableSchema;
+import io.basestar.schema.QueryableSchema;
 import io.basestar.schema.Reserved;
 import io.basestar.storage.exception.UnsupportedQueryException;
 import io.basestar.util.Immutable;
@@ -28,31 +28,31 @@ public class QueryDelegatingStorage implements DelegatingStorage {
     }
 
     @Override
-    public Storage storage(final LinkableSchema schema) {
+    public Storage storage(final QueryableSchema schema) {
 
         return storage.get(0);
     }
 
     @Override
-    public Pager<Map<String, Object>> query(final Consistency consistency, final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    public Pager<Map<String, Object>> query(final Consistency consistency, final QueryableSchema schema, final Map<String, Object> arguments, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        return tryQuery(0, consistency, schema, query, sort, expand);
+        return tryQuery(0, consistency, schema, arguments, query, sort, expand);
     }
 
-    protected Pager<Map<String, Object>> tryQuery(final int offset, final Consistency consistency, final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    protected Pager<Map<String, Object>> tryQuery(final int offset, final Consistency consistency, final QueryableSchema schema, final Map<String, Object> arguments, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         if (offset >= storage.size()) {
             throw new UnsupportedQueryException(schema.getQualifiedName(), query, "Tried " + storage.size() + " provider(s)");
         } else {
             try {
-                final Pager<Map<String, Object>> result = storage.get(offset).query(consistency, schema, query, sort, expand);
-                if(offset != 0) {
+                final Pager<Map<String, Object>> result = storage.get(offset).query(consistency, schema, arguments, query, sort, expand);
+                if (offset != 0) {
                     return result.map(v -> Instance.without(v, Reserved.META));
                 } else {
                     return result;
                 }
             } catch (final UnsupportedQueryException e) {
-                return tryQuery(offset + 1, consistency, schema, query, sort, expand);
+                return tryQuery(offset + 1, consistency, schema, arguments, query, sort, expand);
             }
         }
     }

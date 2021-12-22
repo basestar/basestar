@@ -336,8 +336,17 @@ public class Namespace implements Loadable, Schema.Resolver {
     public void forEachLinkableSchema(final BiConsumer<? super Name, ? super LinkableSchema> fn) {
 
         schemas.forEach((k, v) -> {
-            if(v instanceof LinkableSchema) {
-                fn.accept(k, (LinkableSchema)v);
+            if (v instanceof LinkableSchema) {
+                fn.accept(k, (LinkableSchema) v);
+            }
+        });
+    }
+
+    public void forEachQueryableSchema(final BiConsumer<? super Name, ? super QueryableSchema> fn) {
+
+        schemas.forEach((k, v) -> {
+            if (v instanceof QueryableSchema) {
+                fn.accept(k, (QueryableSchema) v);
             }
         });
     }

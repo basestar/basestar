@@ -258,6 +258,12 @@ public interface SQLDialect {
             }
 
             @Override
+            public DataType<?> visitQuery(final UseQuery type) {
+
+                throw new IllegalStateException();
+            }
+
+            @Override
             public <T> DataType<?> visitOptional(final UseOptional<T> type) {
 
                 return type.getType().visit(this).nullable(true);

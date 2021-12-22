@@ -22,10 +22,7 @@ package io.basestar.storage;
 
 import io.basestar.event.Event;
 import io.basestar.expression.Expression;
-import io.basestar.schema.Consistency;
-import io.basestar.schema.LinkableSchema;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.ReferableSchema;
+import io.basestar.schema.*;
 import io.basestar.util.Name;
 import io.basestar.util.Pager;
 import io.basestar.util.Sort;
@@ -79,7 +76,7 @@ public interface Storage {
                 .read().thenApply(results -> results.getVersion(schema.getQualifiedName(), id, version));
     }
 
-    Pager<Map<String, Object>> query(Consistency consistency, LinkableSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
+    Pager<Map<String, Object>> query(Consistency consistency, QueryableSchema schema, Map<String, Object> arguments, Expression query, List<Sort> sort, Set<Name> expand);
 
     CompletableFuture<Set<Event>> afterCreate(ObjectSchema schema, String id, Map<String, Object> after);
 

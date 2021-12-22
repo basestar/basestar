@@ -84,11 +84,19 @@ public interface DefaultLayerStorage extends LayeredStorage, ValidatingStorage {
 
     Pager<Map<String, Object>> queryObject(Consistency consistency, ObjectSchema schema, Expression query, List<Sort> sort, Set<Name> expand);
 
+    @Override
     default Pager<Map<String, Object>> queryView(final Consistency consistency, final ViewSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         throw new UnsupportedQueryException(schema.getQualifiedName(), query);
     }
 
+    @Override
+    default Pager<Map<String, Object>> queryQuery(final Consistency consistency, final QuerySchema schema, final Map<String, Object> arguments, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        throw new UnsupportedQueryException(schema.getQualifiedName(), query);
+    }
+
+    @Override
     default Pager<Map<String, Object>> queryInterface(final Consistency consistency, final InterfaceSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         final Collection<ObjectSchema> objectSchemas = schema.getConcreteExtended();
@@ -97,18 +105,6 @@ public interface DefaultLayerStorage extends LayeredStorage, ValidatingStorage {
             pagers.put(objectSchema.getQualifiedName().toString(), queryObject(consistency, objectSchema, query, sort, expand));
         });
         return Pager.merge(Instance.comparator(sort), pagers);
-    }
-
-    @Override
-    default Pager<Map<String, Object>> query(final Consistency consistency, final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
-
-        if(schema instanceof ViewSchema) {
-            return queryView(consistency, (ViewSchema)schema, query, sort, expand);
-        } else if(schema instanceof InterfaceSchema) {
-            return queryInterface(consistency, (InterfaceSchema)schema, query, sort, expand);
-        } else {
-            return queryObject(consistency, (ObjectSchema)schema, query, sort, expand);
-        }
     }
 
     interface ReadTransaction extends LayeredStorage.ReadTransaction {

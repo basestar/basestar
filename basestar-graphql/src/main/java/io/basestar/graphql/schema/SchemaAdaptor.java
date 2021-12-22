@@ -76,9 +76,9 @@ public class SchemaAdaptor {
                     final InterfaceSchema interfaceSchema = (InterfaceSchema) instanceSchema;
                     registry.add(pageTypeDefinition(interfaceSchema));
                     registry.add(missingInterfaceRefDefinition(interfaceSchema));
-                } else if (schema instanceof ViewSchema) {
-                    final ViewSchema viewSchema = (ViewSchema) instanceSchema;
-                    registry.add(pageTypeDefinition(viewSchema));
+                } else if (schema instanceof QueryableSchema) {
+                    final QueryableSchema queryableSchema = (QueryableSchema) instanceSchema;
+                    registry.add(pageTypeDefinition(queryableSchema));
                 } else {
                     registry.add(inputTypeDefinition(instanceSchema));
                 }
@@ -110,7 +110,7 @@ public class SchemaAdaptor {
         return registry;
     }
 
-    private ObjectTypeDefinition pageTypeDefinition(final InstanceSchema instanceSchema) {
+    private ObjectTypeDefinition pageTypeDefinition(final QueryableSchema instanceSchema) {
 
         final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
         builder.name(strategy.pageTypeName(instanceSchema));
@@ -137,13 +137,15 @@ public class SchemaAdaptor {
 
         final ObjectTypeDefinition.Builder builder = ObjectTypeDefinition.newObjectTypeDefinition();
         builder.name(GraphQLUtils.QUERY_TYPE);
-        namespace.forEachLinkableSchema((schemaName, schema) -> {
+        namespace.forEachQueryableSchema((schemaName, schema) -> {
             if (schema instanceof ReferableSchema) {
                 builder.fieldDefinition(readDefinition((ReferableSchema) schema));
             }
             builder.fieldDefinition(queryDefinition(schema));
-            schema.getLinks()
-                    .forEach((linkName, link) -> builder.fieldDefinition(queryLinkDefinition(schema, link)));
+            if (schema instanceof LinkableSchema) {
+                schema.getLinks()
+                        .forEach((linkName, link) -> builder.fieldDefinition(queryLinkDefinition((LinkableSchema) schema, link)));
+            }
         });
         return builder.build();
     }
@@ -162,13 +164,20 @@ public class SchemaAdaptor {
         return builder.build();
     }
 
-    public FieldDefinition queryDefinition(final LinkableSchema schema) {
+    public FieldDefinition queryDefinition(final QueryableSchema schema) {
 
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
         builder.name(strategy.queryMethodName(schema));
         builder.type(new TypeName(strategy.pageTypeName(schema)));
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(strategy.queryArgumentName()).type(new TypeName(GraphQLUtils.STRING_TYPE)).build());
+        if (schema instanceof QuerySchema) {
+            final QuerySchema querySchema = (QuerySchema) schema;
+            querySchema.getArguments().forEach(argument -> {
+                builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                        .name(argument.getName()).type(inputType(argument.getType())).build());
+            });
+        }
         addQueryArguments(builder);
         return builder.build();
     }
@@ -646,8 +655,8 @@ public class SchemaAdaptor {
             public <T> Type<?> visitPage(final UsePage<T> type) {
 
                 final Use<T> itemType = type.getType();
-                if (itemType instanceof UseLinkable) {
-                    final LinkableSchema schema = ((UseLinkable) itemType).getSchema();
+                if (itemType instanceof UseQueryable) {
+                    final QueryableSchema schema = ((UseQueryable) itemType).getSchema();
                     return new TypeName(strategy.pageTypeName(schema));
                 } else {
                     throw new UnsupportedOperationException();

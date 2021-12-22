@@ -97,24 +97,24 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
     @Nullable
     private final Emitter emitter;
 
-    private final Function<LinkableSchema, Storage> primary;
+    private final Function<QueryableSchema, Storage> primary;
 
-    private final Function<LinkableSchema, Optional<Storage>> replica;
+    private final Function<QueryableSchema, Optional<Storage>> replica;
 
     private final UnaryOperator<Consistency> readConsistency;
 
     private final UnaryOperator<Consistency> writeConsistency;
 
-    private final BiFunction<LinkableSchema, Consistency, Consistency> primaryConsistency;
+    private final BiFunction<QueryableSchema, Consistency, Consistency> primaryConsistency;
 
-    private final BiFunction<LinkableSchema, Versioning, Versioning> primaryVersioning;
+    private final BiFunction<QueryableSchema, Versioning, Versioning> primaryVersioning;
 
-    private final BiFunction<LinkableSchema, Consistency, Consistency> replicaConsistency;
+    private final BiFunction<QueryableSchema, Consistency, Consistency> replicaConsistency;
 
-    private final BiFunction<LinkableSchema, Versioning, Versioning> replicaVersioning;
+    private final BiFunction<QueryableSchema, Versioning, Versioning> replicaVersioning;
 
     @Override
-    public Storage storage(final LinkableSchema schema) {
+    public Storage storage(final QueryableSchema schema) {
 
         return primary.apply(schema);
     }
