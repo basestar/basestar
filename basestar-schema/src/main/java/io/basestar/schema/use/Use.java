@@ -465,6 +465,8 @@ public interface Use<T> extends Serializable, UseValidated<T> {
 
         R visitView(UseView type);
 
+        R visitQuery(UseQuery type);
+
         <T> R visitOptional(UseOptional<T> type);
 
         R visitAny(UseAny type);
@@ -618,6 +620,12 @@ public interface Use<T> extends Serializable, UseValidated<T> {
             default R visitView(final UseView type) {
 
                 return visitLinkable(type);
+            }
+
+            @Override
+            default R visitQuery(final UseQuery type) {
+
+                return visitInstance(type);
             }
 
             @Override

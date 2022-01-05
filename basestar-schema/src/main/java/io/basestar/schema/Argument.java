@@ -37,6 +37,11 @@ public class Argument implements Described, Extendable {
         this.extensions = Immutable.map(builder.getExtensions());
     }
 
+    public static Builder builder() {
+
+        return new Builder();
+    }
+
     public Descriptor descriptor() {
 
         return (Descriptor.Self) () -> Argument.this;

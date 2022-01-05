@@ -68,6 +68,11 @@ public class ReadProcessor {
         return namespace.requireLinkableSchema(schema);
     }
 
+    protected QueryableSchema queryableSchema(final Name schema) {
+
+        return namespace.requireQueryableSchema(schema);
+    }
+
     protected CompletableFuture<Instance> readImpl(final ReferableSchema objectSchema, final String id, final Long version, final Set<Name> expand) {
 
         return readRaw(objectSchema, id, version, expand).thenApply(raw -> create(raw, expand));
@@ -111,17 +116,23 @@ public class ReadProcessor {
                 )));
 
         final LinkableSchema linkSchema = link.getSchema();
-        return queryImpl(context, consistency, linkSchema, expression, link.getSort(), expand, count, paging, stats);
+        return queryImpl(context, consistency, linkSchema, Immutable.map(), expression, link.getSort(), expand, count, paging, stats);
     }
 
-    protected CompletableFuture<Page<Instance>> queryImpl(final Context context, final Consistency consistency, final LinkableSchema schema, final Expression expression,
+    protected CompletableFuture<Page<Instance>> queryImpl(final Context context, final Consistency consistency, final QueryableSchema schema, final Map<String, Object> arguments, final Expression expression,
                                                           final List<Sort> sort, final Set<Name> expand, final int count, final Page.Token paging, final Set<Page.Stat> stats) {
 
         final List<Sort> pageSort = schema.sort(sort);
 
         final Set<Name> queryExpand = Sets.union(Nullsafe.orDefault(expand), Nullsafe.orDefault(schema.getExpand()));
 
-        final Pager<Instance> pager = storage.query(consistency, schema, expression, pageSort, queryExpand)
+        if (!arguments.isEmpty()) {
+            if (!(schema instanceof QuerySchema)) {
+                throw new IllegalStateException("Arguments not supported for query on " + schema.getQualifiedName());
+            }
+        }
+
+        final Pager<Instance> pager = storage.query(consistency, schema, arguments, expression, pageSort, queryExpand)
                 .map(v -> create(v, expand));
 
         return pager.page(stats, paging, count)
@@ -366,7 +377,7 @@ public class ReadProcessor {
         if(data == null) {
             return null;
         }
-        final LinkableSchema schema = linkableSchema(Instance.getSchema(data));
+        final QueryableSchema schema = queryableSchema(Instance.getSchema(data));
         return schema.create(data, schema.getExpand(), true);
     }
 
@@ -375,7 +386,7 @@ public class ReadProcessor {
         if(data == null) {
             return null;
         }
-        final LinkableSchema schema = linkableSchema(Instance.getSchema(data));
+        final QueryableSchema schema = queryableSchema(Instance.getSchema(data));
         return schema.create(data, Immutable.addAll(schema.getExpand(), expand), true);
     }
 

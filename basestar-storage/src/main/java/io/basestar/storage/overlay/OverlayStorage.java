@@ -60,12 +60,12 @@ public class OverlayStorage implements Storage {
     }
 
     @Override
-    public Pager<Map<String, Object>> query(final Consistency consistency, final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    public Pager<Map<String, Object>> query(final Consistency consistency, final QueryableSchema schema, final Map<String, Object> arguments, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         final Map<String, Pager<Map<String, Object>>> pagers = new HashMap<>();
         // Overlay entries appear first, so they will be chosen
-        pagers.put("o", overlay.query(consistency, schema, query, sort, expand).map(v -> Immutable.put(v, OVERLAY_KEY, 0)));
-        pagers.put("b", baseline.query(consistency, schema, query, sort, expand).map(v -> Immutable.put(v, OVERLAY_KEY, 1)));
+        pagers.put("o", overlay.query(consistency, schema, arguments, query, sort, expand).map(v -> Immutable.put(v, OVERLAY_KEY, 0)));
+        pagers.put("b", baseline.query(consistency, schema, arguments, query, sort, expand).map(v -> Immutable.put(v, OVERLAY_KEY, 1)));
 
         return Pager.merge(Instance.comparator(sort)
                 .thenComparing(v -> ((Number) v.get(OVERLAY_KEY)).intValue()), pagers);

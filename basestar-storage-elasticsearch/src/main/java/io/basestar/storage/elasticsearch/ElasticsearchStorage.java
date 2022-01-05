@@ -127,17 +127,19 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
     }
 
     @Override
-    public Pager<Map<String, Object>> query(final Consistency consistency, final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    public Pager<Map<String, Object>> query(final Consistency consistency, final QueryableSchema schema, final Map<String, Object> arguments, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        final LinkableSchema linkableSchema = (LinkableSchema) schema;
 
         final QueryPlanner<ESQueryStage> planner = new QueryPlanner.Default<>(false);
-        final ESQueryStage stage = planner.plan(new ESQueryStageVisitor(strategy), schema, query, sort, expand);
+        final ESQueryStage stage = planner.plan(new ESQueryStageVisitor(strategy), linkableSchema, query, sort, expand);
 
-        final Mappings mappings = strategy.mappings(schema);
+        final Mappings mappings = strategy.mappings(linkableSchema);
 
         return (stats, token, count) -> {
             final CompletableFuture<?> refreshFuture;
             final Set<String> indices = stage.indices();
-            if(consistency.isStrongerOrEqual(Consistency.QUORUM) && !indices.isEmpty()) {
+            if (consistency.isStrongerOrEqual(Consistency.QUORUM) && !indices.isEmpty()) {
                 final RefreshRequest refresh = new RefreshRequest(indices.toArray(new String[0]))
                         .indicesOptions(IndicesOptions.lenientExpandOpen());
                 refreshFuture = ElasticsearchUtils.<RefreshResponse>future(listener -> client.indices().refreshAsync(refresh, OPTIONS, listener));
@@ -161,13 +163,13 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
     @Override
     public Pager<Map<String, Object>> queryObject(final Consistency consistency, final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        return query(consistency, schema, query, sort, expand);
+        return query(consistency, schema, Immutable.map(), query, sort, expand);
     }
 
     @Override
     public Pager<Map<String, Object>> queryView(final Consistency consistency, final ViewSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        return query(consistency, schema, query, sort, expand);
+        return query(consistency, schema, Immutable.map(), query, sort, expand);
     }
 
     @Override

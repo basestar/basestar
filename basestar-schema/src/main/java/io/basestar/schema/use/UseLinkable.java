@@ -9,14 +9,14 @@ import io.basestar.util.Name;
 import java.util.Map;
 import java.util.Set;
 
-public interface UseLinkable extends UseInstance {
+public interface UseLinkable extends UseQueryable {
 
     static UseLinkable from(final LinkableSchema schema, final Object config) {
 
-        if(schema instanceof ReferableSchema) {
-            return UseRef.from((ReferableSchema)schema, config);
-        } else if(schema instanceof ViewSchema) {
-            return UseView.from((ViewSchema)schema, config);
+        if (schema instanceof ReferableSchema) {
+            return UseRef.from((ReferableSchema) schema, config);
+        } else if (schema instanceof ViewSchema) {
+            return UseView.from((ViewSchema) schema, config);
         } else {
             throw new UnsupportedOperationException();
         }
@@ -24,7 +24,6 @@ public interface UseLinkable extends UseInstance {
 
     @Override
     LinkableSchema getSchema();
-
 
     @Override
     default void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
@@ -34,6 +33,6 @@ public interface UseLinkable extends UseInstance {
             out.put(schema.getQualifiedName(), schema);
             schema.collectMaterializationDependencies(expand, out);
         }
-        UseInstance.super.collectMaterializationDependencies(expand, out);
+        UseQueryable.super.collectMaterializationDependencies(expand, out);
     }
 }

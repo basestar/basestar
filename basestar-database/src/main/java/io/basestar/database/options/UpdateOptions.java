@@ -43,7 +43,6 @@ public class UpdateOptions implements ActionOptions {
 
     public enum Mode {
 
-        CREATE,
         REPLACE,
         MERGE,
         MERGE_DEEP
@@ -64,6 +63,8 @@ public class UpdateOptions implements ActionOptions {
     private final Set<Name> projection;
 
     private final Long version;
+
+    private final Boolean create;
 
     private final Mode mode;
 

@@ -231,6 +231,12 @@ public class GlueSchemaAdaptor {
             }
 
             @Override
+            public String visitQuery(final UseQuery type) {
+
+                return structType(type.getSchema(), expand);
+            }
+
+            @Override
             public <T> String visitOptional(final UseOptional<T> type) {
 
                 return visit(type.getType());

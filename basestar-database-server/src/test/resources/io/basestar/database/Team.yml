@@ -112,9 +112,7 @@ TeamRole:
 
 
 TeamMemberStats:
-
   type: view
-
   from: TeamMember
   properties:
     count:
@@ -134,6 +132,20 @@ TeamMemberStats:
   permissions:
     read:
       expression: this.team in caller.teams
+
+TeamMemberStatsQuery:
+  type: query
+  sql: SELECT * FROM @{teamMemberStats} WHERE team=${team}
+  using:
+    teamMemberStats: TeamMemberStats
+  arguments:
+    - name: team
+      type: string
+  properties:
+    count:
+      type: integer?
+    team:
+      type: string?
 
 NestedRef3:
   type: object

@@ -329,9 +329,24 @@ SimpleSqlFunction:
     begin
       return "x" in ('a', 'b', 'c') and "y" in ('x', 'y', 'z');
     end;
-
 ExternalView:
   type: view
   properties:
     value:
       type: string
+
+SqlQuery:
+  type: query
+  sql: SELECT * FROM @{sqlView} WHERE "city" = ${city}
+  arguments:
+    - name: city
+      type: string
+  using:
+    sqlView: SqlView
+  properties:
+    state:
+      type: string
+    city:
+      type: string
+    count:
+      type: integer

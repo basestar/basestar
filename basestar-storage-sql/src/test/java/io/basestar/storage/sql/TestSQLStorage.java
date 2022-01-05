@@ -28,8 +28,9 @@ import io.basestar.schema.ObjectSchema;
 import io.basestar.storage.Storage;
 import io.basestar.storage.TestStorage;
 import io.basestar.storage.sql.strategy.DefaultNamingStrategy;
-import io.basestar.storage.sql.strategy.SQLStrategy;
 import io.basestar.storage.sql.strategy.DefaultSQLStrategy;
+import io.basestar.storage.sql.strategy.SQLStrategy;
+import io.basestar.util.Immutable;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
 import org.junit.jupiter.api.Test;
@@ -108,7 +109,7 @@ abstract class TestSQLStorage extends TestStorage {
         final Storage storage = storage(namespace);
         final ObjectSchema schema = namespace.requireObjectSchema(ADDRESS);
 
-        storage.query(Consistency.ASYNC, schema, Expression.parse("id == 'SOME:ID'"), ImmutableList.of(), ImmutableSet.of())
+        storage.query(Consistency.ASYNC, schema, Immutable.map(), Expression.parse("id == 'SOME:ID'"), ImmutableList.of(), ImmutableSet.of())
                 .page(1).get();
     }
 

@@ -22,10 +22,7 @@ package io.basestar.storage;
 
 import io.basestar.event.Event;
 import io.basestar.expression.Expression;
-import io.basestar.schema.Consistency;
-import io.basestar.schema.LinkableSchema;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.ReferableSchema;
+import io.basestar.schema.*;
 import io.basestar.util.CompletableFutures;
 import io.basestar.util.Name;
 import io.basestar.util.Pager;
@@ -39,7 +36,7 @@ import java.util.concurrent.CompletableFuture;
 
 public interface DelegatingStorage extends Storage {
 
-    Storage storage(LinkableSchema schema);
+    Storage storage(QueryableSchema schema);
 
     @Override
     default void validate(final ObjectSchema schema) {
@@ -80,9 +77,9 @@ public interface DelegatingStorage extends Storage {
     }
 
     @Override
-    default Pager<Map<String, Object>> query(final Consistency consistency, final LinkableSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+    default Pager<Map<String, Object>> query(final Consistency consistency, final QueryableSchema schema, final Map<String, Object> arguments, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        return storage(schema).query(consistency, schema, query, sort, expand);
+        return storage(schema).query(consistency, schema, arguments, query, sort, expand);
     }
 
     @Override

@@ -57,7 +57,8 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
             @JsonSubTypes.Type(name = ObjectSchema.Descriptor.TYPE, value = ObjectSchema.Builder.class),
             @JsonSubTypes.Type(name = InterfaceSchema.Descriptor.TYPE, value = InterfaceSchema.Builder.class),
             @JsonSubTypes.Type(name = ViewSchema.Descriptor.TYPE, value = ViewSchema.Builder.class),
-            @JsonSubTypes.Type(name = FunctionSchema.Descriptor.TYPE, value = FunctionSchema.Builder.class)
+            @JsonSubTypes.Type(name = FunctionSchema.Descriptor.TYPE, value = FunctionSchema.Builder.class),
+            @JsonSubTypes.Type(name = QuerySchema.Descriptor.TYPE, value = QuerySchema.Builder.class)
     })
     interface Descriptor<S extends Schema<V>, V> extends Described, Extendable {
 
@@ -329,6 +330,22 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         }
 
         @Nonnull
+        default QuerySchema requireQuerySchema(final Name qualifiedName) {
+
+            final Schema<?> schema = requireSchema(qualifiedName);
+            if (schema instanceof QuerySchema) {
+                return (QuerySchema) schema;
+            } else {
+                throw new IllegalStateException(qualifiedName + " is not a query schema");
+            }
+        }
+
+        default QuerySchema requireQuerySchema(final String name) {
+
+            return requireQuerySchema(Name.parse(name));
+        }
+
+        @Nonnull
         default LinkableSchema requireLinkableSchema(final Name qualifiedName) {
 
             final Schema<?> schema = requireSchema(qualifiedName);
@@ -342,6 +359,22 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         default LinkableSchema requireLinkableSchema(final String name) {
 
             return requireLinkableSchema(Name.parse(name));
+        }
+
+        @Nonnull
+        default QueryableSchema requireQueryableSchema(final Name qualifiedName) {
+
+            final Schema<?> schema = requireSchema(qualifiedName);
+            if (schema instanceof QueryableSchema) {
+                return (QueryableSchema) schema;
+            } else {
+                throw new IllegalStateException(qualifiedName + " is not a queryable schema");
+            }
+        }
+
+        default QueryableSchema requireQueryableSchema(final String name) {
+
+            return requireQueryableSchema(Name.parse(name));
         }
 
         @Nonnull

@@ -197,8 +197,16 @@ public interface TypeModel {
                     public SchemaModel getSchema() {
 
                         return new ViewSchemaModel(context, type.getSchema());
-                    };
+                    }
+
+                    ;
                 };
+            }
+
+            @Override
+            public TypeModel visitQuery(final UseQuery type) {
+
+                throw new UnsupportedOperationException();
             }
 
             @Override
