@@ -24,7 +24,6 @@ import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.schema.exception.ReservedNameException;
 import io.basestar.schema.exception.SchemaValidationException;
 import io.basestar.schema.exception.UnexpectedTypeException;
 import io.basestar.schema.use.Use;
@@ -32,7 +31,6 @@ import io.basestar.schema.use.UseInstance;
 import io.basestar.schema.use.UseString;
 import io.basestar.schema.util.*;
 import io.basestar.util.Name;
-import io.basestar.util.Text;
 import io.leangen.geantyref.TypeFactory;
 
 import java.io.*;
@@ -41,7 +39,6 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
-import static io.basestar.util.Text.lowerCamel;
 import static java.util.stream.Collectors.groupingBy;
 
 public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Property.Resolver, Layout {
@@ -493,7 +490,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
     }
 
     @Override
-    default void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, LinkableSchema> out) {
+    default void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
         getDeclaredMembers().forEach((k, v) -> {

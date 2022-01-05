@@ -84,7 +84,7 @@ public class FromSchema implements From {
     }
 
     @Override
-    public void collectMaterializationDependencies(final Map<Name, LinkableSchema> out) {
+    public void collectMaterializationDependencies(final Map<Name, Schema<?>> out) {
 
         final LinkableSchema fromSchema = getLinkableSchema();
         if (!out.containsKey(fromSchema.getQualifiedName())) {

@@ -29,7 +29,6 @@ import io.basestar.expression.iterate.ContextIterator;
 import io.basestar.expression.iterate.ForAny;
 import io.basestar.schema.Bucketing;
 import io.basestar.schema.Constraint;
-import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
 import io.basestar.schema.util.Cascade;
 import io.basestar.schema.util.Expander;
@@ -352,7 +351,7 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     }
 
     @Override
-    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, LinkableSchema> out) {
+    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
         final Set<Name> union = Name.branch(expand).values().stream().reduce(Collections.emptySet(), Sets::union);
         type.collectMaterializationDependencies(union, out);

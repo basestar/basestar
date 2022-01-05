@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
-import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -53,7 +52,7 @@ public class Join implements Serializable {
         this.on = Nullsafe.require(builder.getOn()).bind(context);
     }
 
-    public void collectMaterializationDependencies(final Map<Name, LinkableSchema> out) {
+    public void collectMaterializationDependencies(final Map<Name, Schema<?>> out) {
 
         left.collectMaterializationDependencies(out);
         right.collectMaterializationDependencies(out);

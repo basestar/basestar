@@ -2,7 +2,6 @@ package io.basestar.schema.from;
 
 import io.basestar.expression.Expression;
 import io.basestar.schema.Bucketing;
-import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.expression.TypedExpression;
@@ -66,7 +65,7 @@ public class FromAgg implements From {
     }
 
     @Override
-    public void collectMaterializationDependencies(final Map<Name, LinkableSchema> out) {
+    public void collectMaterializationDependencies(final Map<Name, Schema<?>> out) {
 
         from.collectMaterializationDependencies(out);
     }

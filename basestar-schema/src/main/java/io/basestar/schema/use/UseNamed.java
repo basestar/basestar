@@ -227,7 +227,7 @@ public interface UseNamed<T> extends Use<T> {
         }
 
         @Override
-        public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, LinkableSchema> out) {
+        public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
             throw new UnsupportedOperationException();
         }
